@@ -1,456 +1,5 @@
 {% extends "layouts/dashboard.html" %}
 
-{% block extra_css %}
-{{ block.super }}
-<style>
-.dash-welcome {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(16, 185, 129, 0.1));
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-}
-
-[data-theme="dark"] .dash-welcome {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(16, 185, 129, 0.18));
-}
-
-.dash-kpi {
-    border-radius: 14px;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
-}
-
-.dash-kpi .stat-label {
-    font-size: 0.82rem;
-}
-
-.dash-block {
-    background: var(--surface);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    height: 100%;
-}
-
-.dash-block .card-header {
-    background: transparent;
-    border-bottom: 1px solid var(--border-color);
-    padding: 0.8rem 1rem;
-}
-
-.dash-block .card-body {
-    padding: 1rem;
-}
-
-.dash-sales-value {
-    font-size: 1.7rem;
-    font-weight: 700;
-    line-height: 1.1;
-}
-
-.dash-alert {
-    border-radius: 14px;
-    border: 1px solid transparent;
-    padding: 0.9rem 1rem;
-}
-
-.dash-alert h5 {
-    margin-bottom: 0.2rem;
-    font-size: 1rem;
-}
-
-.dash-quick {
-    border-radius: 14px;
-    border: 1px solid var(--border-color);
-}
-
-.dash-chart {
-    border-radius: 14px;
-    border: 1px solid rgba(59, 130, 246, 0.2);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.86));
-    height: 100%;
-    box-shadow: 0 10px 26px rgba(2, 6, 23, 0.06);
-}
-
-[data-theme="dark"] .dash-chart {
-    border-color: rgba(96, 165, 250, 0.28);
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.9));
-}
-
-.dash-chart .card-header {
-    background: linear-gradient(90deg, rgba(37, 99, 235, 0.08), rgba(16, 185, 129, 0.08));
-    border-bottom: 1px solid rgba(59, 130, 246, 0.16);
-    padding: 0.72rem 0.9rem;
-}
-
-.dash-chart .card-body {
-    padding: 0.95rem;
-}
-
-.chart-meta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.32rem;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    background: rgba(148, 163, 184, 0.14);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 999px;
-    padding: 0.15rem 0.5rem;
-}
-
-.line-chart {
-    width: 100%;
-    height: 170px;
-    border-radius: 14px;
-    border: 1px solid rgba(59, 130, 246, 0.16);
-    background:
-        linear-gradient(to top, rgba(37, 99, 235, 0.12), rgba(14, 165, 233, 0.05) 45%, transparent 78%),
-        repeating-linear-gradient(
-            to right,
-            rgba(148, 163, 184, 0.12) 0,
-            rgba(148, 163, 184, 0.12) 1px,
-            transparent 1px,
-            transparent 46px
-        ),
-        repeating-linear-gradient(
-            to top,
-            rgba(148, 163, 184, 0.1) 0,
-            rgba(148, 163, 184, 0.1) 1px,
-            transparent 1px,
-            transparent 34px
-        );
-    padding: 0.3rem;
-}
-
-.line-chart svg {
-    width: 100%;
-    height: 100%;
-}
-
-.chart-path-main {
-    fill: none;
-    stroke: #0f766e;
-    stroke-width: 3.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    filter: drop-shadow(0 2px 5px rgba(15, 118, 110, 0.35));
-}
-
-.chart-path-soft {
-    fill: none;
-    stroke: #2563eb;
-    stroke-width: 2;
-    stroke-dasharray: 5 5;
-    opacity: 0.75;
-}
-
-.mini-bars {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.5rem;
-    align-items: end;
-    height: 170px;
-    padding: 0.3rem 0.2rem;
-}
-
-.mini-bar-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.35rem;
-}
-
-.mini-bar {
-    width: 100%;
-    border-radius: 10px 10px 7px 7px;
-    background: linear-gradient(180deg, #10b981, #0ea5e9 55%, #2563eb);
-    box-shadow: 0 8px 14px rgba(14, 165, 233, 0.2);
-}
-
-.mini-bar-label {
-    font-size: 0.72rem;
-    color: var(--text-secondary);
-}
-
-.category-list {
-    display: grid;
-    gap: 0.55rem;
-}
-
-.category-row {
-    display: grid;
-    grid-template-columns: 86px 1fr 42px;
-    gap: 0.55rem;
-    align-items: center;
-    font-size: 0.78rem;
-}
-
-.category-track {
-    width: 100%;
-    height: 9px;
-    border-radius: 99px;
-    background: rgba(148, 163, 184, 0.18);
-    overflow: hidden;
-}
-
-.category-fill {
-    height: 100%;
-    border-radius: 99px;
-    background: linear-gradient(90deg, #2563eb, #10b981 55%, #f59e0b);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-}
-
-.category-value {
-    text-align: left;
-    color: var(--text-secondary);
-}
-
-.chart-surface {
-    border-radius: 12px;
-    background: linear-gradient(180deg, rgba(99, 102, 241, 0.08), rgba(14, 165, 233, 0.06));
-    padding: 0.4rem;
-}
-
-.kpi-strip .stat-card {
-    height: 100%;
-}
-
-.insight-card {
-    border-radius: 14px;
-    border: 1px solid var(--border-color);
-    background: var(--surface);
-    height: 100%;
-}
-
-.insight-card .card-body {
-    padding: 0.95rem;
-}
-
-.insight-title {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.35rem;
-}
-
-.insight-value {
-    font-size: 1.45rem;
-    font-weight: 700;
-    line-height: 1.1;
-}
-
-.trend-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    background: rgba(16, 185, 129, 0.14);
-    color: #047857;
-}
-
-.status-list {
-    display: grid;
-    gap: 0.55rem;
-}
-
-.status-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.55rem 0.6rem;
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    font-size: 0.8rem;
-}
-
-.status-row .value {
-    font-weight: 700;
-}
-
-.circle-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.75rem;
-}
-
-.circle-card {
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.6);
-    padding: 0.7rem 0.5rem;
-    text-align: center;
-}
-
-[data-theme="dark"] .circle-card {
-    background: rgba(15, 23, 42, 0.5);
-}
-
-.radial-chart {
-    --size: 86px;
-    --thickness: 9px;
-    --angle: calc(var(--percent) * 3.6deg);
-    position: relative;
-    width: var(--size);
-    height: var(--size);
-    margin: 0 auto 0.45rem;
-    border-radius: 50%;
-    background: conic-gradient(var(--ring-color, #2563eb) var(--angle), rgba(148, 163, 184, 0.22) 0deg);
-    display: grid;
-    place-items: center;
-}
-
-.radial-chart::before {
-    content: '';
-    width: calc(var(--size) - (var(--thickness) * 2));
-    height: calc(var(--size) - (var(--thickness) * 2));
-    background: var(--surface);
-    border-radius: 50%;
-    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16);
-}
-
-[data-theme="dark"] .radial-chart::before {
-    background: rgba(15, 23, 42, 0.95);
-}
-
-.radial-value {
-    position: absolute;
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.circle-title {
-    font-size: 0.76rem;
-    color: var(--text-secondary);
-}
-
-.pipe-board {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0.7rem;
-    align-items: end;
-    min-height: 190px;
-}
-
-.pipe-col {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.pipe-track {
-    width: 20px;
-    height: 140px;
-    border-radius: 999px;
-    background: rgba(148, 163, 184, 0.22);
-    position: relative;
-    overflow: hidden;
-    border: 1px solid rgba(148, 163, 184, 0.25);
-}
-
-.pipe-fill {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 999px;
-    background: linear-gradient(180deg, #22c55e, #06b6d4 55%, #2563eb);
-    box-shadow: 0 0 14px rgba(14, 165, 233, 0.35);
-}
-
-.pipe-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #0ea5e9;
-    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.2);
-}
-
-.pipe-label {
-    font-size: 0.74rem;
-    color: var(--text-secondary);
-}
-
-.dash-actions-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.55rem;
-}
-
-@media (max-width: 992px) {
-    .dash-actions-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .circle-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .pipe-board {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 576px) {
-    .dash-actions-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .circle-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.quick-action {
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-    width: 100%;
-    padding: 0.75rem 0.8rem;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    background: var(--surface);
-    color: var(--text-primary);
-    transition: all var(--transition);
-}
-
-.quick-action i {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.95rem;
-}
-
-.quick-action .qa-title {
-    font-size: 0.87rem;
-    font-weight: 600;
-    line-height: 1.25;
-}
-
-.quick-action .qa-sub {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-}
-
-.quick-action.primary i { background: rgba(99, 102, 241, 0.12); color: #4f46e5; }
-.quick-action.success i { background: rgba(16, 185, 129, 0.12); color: #047857; }
-.quick-action.info i { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
-.quick-action.warning i { background: rgba(245, 158, 11, 0.14); color: #b45309; }
-
-.quick-action:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
-    border-color: var(--primary);
-    color: var(--text-primary);
-}
-</style>
-{% endblock %}
-
 {% block page_title %}لوحة التحكم{% endblock %}
 {% block page_description %}نظرة عامة على نشاطك التجاري{% endblock %}
 
@@ -470,19 +19,19 @@
             <div class="card-body">
                 <div class="circle-grid">
                     <div class="circle-card">
-                        <div class="radial-chart" style="--percent: 82; --ring-color: #10b981;">
+                        <div class="radial-chart radial-chart-82 radial-chart-success">
                             <span class="radial-value">82%</span>
                         </div>
                         <div class="circle-title">تحقيق الهدف</div>
                     </div>
                     <div class="circle-card">
-                        <div class="radial-chart" style="--percent: 67; --ring-color: #3b82f6;">
+                        <div class="radial-chart radial-chart-67 radial-chart-info">
                             <span class="radial-value">67%</span>
                         </div>
                         <div class="circle-title">رضا العملاء</div>
                     </div>
                     <div class="circle-card">
-                        <div class="radial-chart" style="--percent: 91; --ring-color: #f59e0b;">
+                        <div class="radial-chart radial-chart-91 radial-chart-warning">
                             <span class="radial-value">91%</span>
                         </div>
                         <div class="circle-title">دقة المخزون</div>
@@ -500,27 +49,27 @@
             <div class="card-body">
                 <div class="pipe-board">
                     <div class="pipe-col">
-                        <div class="pipe-track"><div class="pipe-fill" style="height: 92%;"></div></div>
+                        <div class="pipe-track"><div class="pipe-fill pipe-fill-92"></div></div>
                         <span class="pipe-dot"></span>
                         <span class="pipe-label">Lead</span>
                     </div>
                     <div class="pipe-col">
-                        <div class="pipe-track"><div class="pipe-fill" style="height: 76%;"></div></div>
+                        <div class="pipe-track"><div class="pipe-fill pipe-fill-76"></div></div>
                         <span class="pipe-dot"></span>
                         <span class="pipe-label">Quote</span>
                     </div>
                     <div class="pipe-col">
-                        <div class="pipe-track"><div class="pipe-fill" style="height: 61%;"></div></div>
+                        <div class="pipe-track"><div class="pipe-fill pipe-fill-61"></div></div>
                         <span class="pipe-dot"></span>
                         <span class="pipe-label">Order</span>
                     </div>
                     <div class="pipe-col">
-                        <div class="pipe-track"><div class="pipe-fill" style="height: 44%;"></div></div>
+                        <div class="pipe-track"><div class="pipe-fill pipe-fill-44"></div></div>
                         <span class="pipe-dot"></span>
                         <span class="pipe-label">Invoice</span>
                     </div>
                     <div class="pipe-col">
-                        <div class="pipe-track"><div class="pipe-fill" style="height: 33%;"></div></div>
+                        <div class="pipe-track"><div class="pipe-fill pipe-fill-33"></div></div>
                         <span class="pipe-dot"></span>
                         <span class="pipe-label">Paid</span>
                     </div>
@@ -609,22 +158,22 @@
                 <div class="category-list">
                     <div class="category-row">
                         <span>مواد غذائية</span>
-                        <div class="category-track"><div class="category-fill" style="width: 82%;"></div></div>
+                        <div class="category-track"><div class="category-fill category-fill-82"></div></div>
                         <span class="category-value">82%</span>
                     </div>
                     <div class="category-row">
                         <span>مشروبات</span>
-                        <div class="category-track"><div class="category-fill" style="width: 64%;"></div></div>
+                        <div class="category-track"><div class="category-fill category-fill-64"></div></div>
                         <span class="category-value">64%</span>
                     </div>
                     <div class="category-row">
                         <span>مستلزمات</span>
-                        <div class="category-track"><div class="category-fill" style="width: 47%;"></div></div>
+                        <div class="category-track"><div class="category-fill category-fill-47"></div></div>
                         <span class="category-value">47%</span>
                     </div>
                     <div class="category-row">
                         <span>خدمات</span>
-                        <div class="category-track"><div class="category-fill" style="width: 31%;"></div></div>
+                        <div class="category-track"><div class="category-fill category-fill-31"></div></div>
                         <span class="category-value">31%</span>
                     </div>
                 </div>

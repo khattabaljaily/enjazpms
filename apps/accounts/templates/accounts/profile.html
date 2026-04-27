@@ -1,39 +1,68 @@
-{% extends "layouts/auth.html" %}
+{% extends "layouts/dashboard.html" %}
 
-{% block auth_content %}
-<div class="text-center">
-    <div class="mb-4">
-        <i class="fas fa-user-circle fa-5x text-muted"></i>
-    </div>
-    <h3 class="mb-3">الملف الشخصي</h3>
-    
-    <div class="card">
-        <div class="card-body">
-            <div class="mb-3">
-                <strong>الاسم:</strong> {{ user.get_full_name }}
+{% block page_title %}الملف الشخصي{% endblock %}
+{% block page_description %}مراجعة معلومات الحساب الحالي{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">الملف الشخصي</li>
+{% endblock %}
+
+{% block content %}
+<div class="profile-shell">
+    <div class="profile-hero">
+        <div class="d-flex align-items-center gap-3">
+            <div class="profile-avatar">
+                <i class="fas fa-user"></i>
             </div>
-            <div class="mb-3">
-                <strong>اسم المستخدم:</strong> {{ user.username }}
+            <div>
+                <h3>{{ user.get_full_name|default:user.username }}</h3>
+                <p>{{ user.email|default:"لا يوجد بريد إلكتروني" }}</p>
             </div>
-            <div class="mb-3">
-                <strong>البريد:</strong> {{ user.email }}
-            </div>
-            <div class="mb-3">
-                <strong>الدور:</strong> {{ user.get_role_display }}
-            </div>
-            {% if user.tenant %}
-            <div class="mb-3">
-                <strong>النشاط التجاري:</strong> {{ user.tenant.name }}
-            </div>
-            {% endif %}
+        </div>
+        <div class="profile-actions">
+            <span class="badge badge-success">{{ user.get_role_display }}</span>
+            <a href="{% url 'core:dashboard' %}" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>
+                العودة للرئيسية
+            </a>
         </div>
     </div>
-    
-    <div class="mt-3">
-        <a href="{% url 'core:dashboard' %}" class="btn btn-primary">
-            <i class="fas fa-home me-2"></i>
-            العودة للرئيسية
-        </a>
+
+    <div class="card profile-card">
+        <div class="card-header">
+            <i class="fas fa-id-card text-primary"></i>
+            بيانات الحساب
+        </div>
+        <div class="card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <small class="info-label">الاسم</small>
+                    <strong class="info-value">{{ user.get_full_name|default:"-" }}</strong>
+                </div>
+                <div class="info-item">
+                    <small class="info-label">اسم المستخدم</small>
+                    <strong class="info-value">{{ user.username }}</strong>
+                </div>
+                <div class="info-item">
+                    <small class="info-label">البريد الإلكتروني</small>
+                    <strong class="info-value">{{ user.email|default:"-" }}</strong>
+                </div>
+                <div class="info-item">
+                    <small class="info-label">الدور</small>
+                    <strong class="info-value">{{ user.get_role_display }}</strong>
+                </div>
+                {% if user.tenant %}
+                <div class="info-item">
+                    <small class="info-label">النشاط التجاري</small>
+                    <strong class="info-value">{{ user.tenant.name }}</strong>
+                </div>
+                <div class="info-item">
+                    <small class="info-label">نوع النسخة</small>
+                    <strong class="info-value">{{ user.tenant.get_version_type_display|default:"-" }}</strong>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

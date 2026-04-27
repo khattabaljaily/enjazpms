@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     
     <!-- Favicon -->
@@ -21,15 +20,13 @@
     <!-- DataTables RTL -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     
-    <!-- Toastr Notifications -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-    
     <!-- Custom CSS - v2.6 with Enjaz Logos -->
-    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=2.6">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=4.9">
     
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <div id="global-alerts" class="container mt-3"></div>
     
     {% block body %}
     <!-- Page content goes here -->
@@ -45,11 +42,8 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     
-    <!-- Toastr -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    
     <!-- Custom JS -->
-    <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/main.js' %}?v=3.3"></script>
     
     {% block extra_js %}{% endblock %}
     
@@ -63,14 +57,6 @@
             }
         });
         
-        // Toastr default configuration
-        toastr.options = {
-            closeButton: true,
-            progressBar: true,
-            positionClass: "toast-top-left",
-            timeOut: "3000",
-            rtl: true
-        };
     </script>
 </body>
 </html>

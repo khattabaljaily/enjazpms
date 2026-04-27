@@ -1,0 +1,120 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block page_title %}إعدادات المتجر{% endblock %}
+{% block page_description %}مراجعة بيانات النشاط التجاري والإعدادات الأساسية{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">إعدادات المتجر</li>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card h-100 settings-card">
+            <div class="card-header">
+                <i class="fas fa-store me-2 text-primary"></i>
+                بيانات النشاط التجاري
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <small class="info-label">اسم النشاط</small>
+                        <strong class="info-value">{{ current_tenant.name|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">نوع النشاط</small>
+                        <strong class="info-value">{{ current_tenant.business_type.name_ar|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">الهاتف</small>
+                        <strong class="info-value">{{ current_tenant.phone|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">المدينة</small>
+                        <strong class="info-value">{{ current_tenant.city|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item info-item-full">
+                        <small class="info-label">العنوان</small>
+                        <strong class="info-value">{{ current_tenant.address|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">الحالة</small>
+                        {% if current_tenant.is_active %}
+                        <span class="badge badge-success">نشط</span>
+                        {% else %}
+                        <span class="badge badge-danger">غير نشط</span>
+                        {% endif %}
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">رمز النشاط</small>
+                        <strong class="info-value">{{ current_tenant.slug|default:"-" }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100 settings-card">
+            <div class="card-header">
+                <i class="fas fa-sliders-h me-2 text-success"></i>
+                إعدادات النظام
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <small class="info-label">نوع النسخة</small>
+                        <strong class="info-value">{{ current_tenant.get_version_type_display|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">المنطقة الزمنية</small>
+                        <strong class="info-value">{{ current_tenant.timezone|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">العملة</small>
+                        <strong class="info-value">{{ current_tenant.currency|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">بادئة الفاتورة</small>
+                        <strong class="info-value">{{ tenant_settings.invoice_prefix|default:"INV" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">الضرائب</small>
+                        {% if tenant_settings.tax_enabled %}
+                        <span class="badge badge-success">مفعلة</span>
+                        {% else %}
+                        <span class="badge badge-warning">غير مفعلة</span>
+                        {% endif %}
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">قيمة الضريبة</small>
+                        <strong class="info-value">{{ tenant_settings.tax_value }}%</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">العناصر في الصفحة</small>
+                        <strong class="info-value">{{ tenant_settings.items_per_page }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">تنسيق التاريخ</small>
+                        <strong class="info-value">{{ tenant_settings.date_format }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card settings-note">
+            <div class="card-header">
+                <i class="fas fa-circle-info me-2 text-info"></i>
+                ملاحظة
+            </div>
+            <div class="card-body">
+                <p class="mb-0 text-muted">
+                    هذه الصفحة تعرض الإعدادات الحالية فقط. عند بدء تطوير وحدة الإعدادات الكاملة سنضيف التعديل المباشر على بيانات النشاط والضرائب والفواتير والصلاحيات.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

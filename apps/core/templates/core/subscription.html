@@ -1,0 +1,69 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block page_title %}معلومات الاشتراك{% endblock %}
+{% block page_description %}عرض حالة الاشتراك الحالي للنشاط التجاري{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">معلومات الاشتراك</li>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-credit-card me-2 text-primary"></i>
+                بيانات الاشتراك
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <small class="info-label">اسم النشاط</small>
+                        <strong class="info-value">{{ current_tenant.name|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">الباقة</small>
+                        <strong class="info-value">{{ current_tenant.get_subscription_plan_display|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">بداية الاشتراك</small>
+                        <strong class="info-value">{{ current_tenant.subscription_start|date:"Y-m-d"|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">نهاية الاشتراك</small>
+                        <strong class="info-value">{{ current_tenant.subscription_expires|date:"Y-m-d"|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">الأيام المتبقية</small>
+                        <strong class="info-value">{{ days_remaining|default:"-" }}</strong>
+                    </div>
+                    <div class="info-item">
+                        <small class="info-label">الحالة</small>
+                        {% if current_tenant.is_subscription_valid %}
+                        <span class="badge badge-success">ساري</span>
+                        {% else %}
+                        <span class="badge badge-danger">منتهي / غير صالح</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card h-100 subscription-note">
+            <div class="card-header">
+                <i class="fas fa-lightbulb me-2 text-warning"></i>
+                ملاحظات
+            </div>
+            <div class="card-body">
+                <ul class="subscription-note-list">
+                    <li class="mb-2">يمكن متابعة تاريخ الانتهاء من هذه الصفحة.</li>
+                    <li class="mb-2">إدارة الباقات والفوترة ستضاف لاحقًا في لوحة المطور.</li>
+                    <li>سيتم ربط التنبيهات تلقائيًا قبل انتهاء الاشتراك.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

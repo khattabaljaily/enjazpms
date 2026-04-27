@@ -1,0 +1,172 @@
+[
+  {
+    "name": "General Retail",
+    "name_ar": "تجزئة عامة",
+    "slug": "general-retail",
+    "icon": "fa-store",
+    "description": "متاجر بيع عامة بدون تعقيد خاص",
+    "display_order": 1,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": false,
+      "supports_weight_items": false,
+      "supports_batch_numbers": false,
+      "supports_serial_numbers": false,
+      "supports_size_color_variants": false,
+      "supports_service_items": false
+    }
+  },
+  {
+    "name": "Food & Grocery",
+    "name_ar": "مواد غذائية وبقالة",
+    "slug": "food-grocery",
+    "icon": "fa-basket-shopping",
+    "description": "أنشطة تبيع مواد غذائية ومنتجات استهلاكية",
+    "display_order": 2,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": true,
+      "supports_weight_items": true,
+      "supports_batch_numbers": true,
+      "supports_serial_numbers": false,
+      "supports_size_color_variants": false,
+      "supports_service_items": false
+    }
+  },
+  {
+    "name": "Pharma & Medical",
+    "name_ar": "طبي وصيدلي",
+    "slug": "pharma-medical",
+    "icon": "fa-pills",
+    "description": "الأدوية والمستلزمات الطبية وما يرتبط بانتهاء الصلاحية",
+    "display_order": 3,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": true,
+      "supports_weight_items": false,
+      "supports_batch_numbers": true,
+      "supports_serial_numbers": false,
+      "supports_size_color_variants": false,
+      "supports_service_items": false
+    }
+  },
+  {
+    "name": "Fashion & Apparel",
+    "name_ar": "أزياء وملابس",
+    "slug": "fashion-apparel",
+    "icon": "fa-shirt",
+    "description": "منتجات لها مقاسات وألوان وتشكيلات",
+    "display_order": 4,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": false,
+      "supports_weight_items": false,
+      "supports_batch_numbers": false,
+      "supports_serial_numbers": false,
+      "supports_size_color_variants": true,
+      "supports_service_items": false
+    }
+  },
+  {
+    "name": "Electronics & Devices",
+    "name_ar": "إلكترونيات وأجهزة",
+    "slug": "electronics-devices",
+    "icon": "fa-laptop",
+    "description": "أجهزة ومنتجات تعتمد على رقم تسلسلي وضمان",
+    "display_order": 5,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": false,
+      "supports_weight_items": false,
+      "supports_batch_numbers": false,
+      "supports_serial_numbers": true,
+      "supports_size_color_variants": false,
+      "supports_service_items": false
+    }
+  },
+  {
+    "name": "Restaurant & Cafe",
+    "name_ar": "مطاعم وكافيهات",
+    "slug": "restaurant-cafe",
+    "icon": "fa-utensils",
+    "description": "مبيعات سريعة مع منتجات قد تكون بالوزن أو الوصفة",
+    "display_order": 6,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": true,
+      "supports_weight_items": true,
+      "supports_batch_numbers": false,
+      "supports_serial_numbers": false,
+      "supports_size_color_variants": false,
+      "supports_service_items": false
+    }
+  },
+  {
+    "name": "Services & Maintenance",
+    "name_ar": "خدمات وصيانة",
+    "slug": "services-maintenance",
+    "icon": "fa-screwdriver-wrench",
+    "description": "أنشطة خدمية تعتمد على أوامر عمل وخدمات",
+    "display_order": 7,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": false,
+      "supports_weight_items": false,
+      "supports_batch_numbers": false,
+      "supports_serial_numbers": true,
+      "supports_size_color_variants": false,
+      "supports_service_items": true
+    }
+  },
+  {
+    "name": "Wholesale & Distribution",
+    "name_ar": "جملة وتوزيع",
+    "slug": "wholesale-distribution",
+    "icon": "fa-warehouse",
+    "description": "تجارة كميات كبيرة مع وحدات متعددة وتسعير خاص",
+    "display_order": 8,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": true,
+      "supports_weight_items": true,
+      "supports_batch_numbers": true,
+      "supports_serial_numbers": false,
+      "supports_size_color_variants": false,
+      "supports_service_items": false
+    }
+  },
+  {
+    "name": "Beauty & Personal Care",
+    "name_ar": "تجميل وعناية شخصية",
+    "slug": "beauty-personal-care",
+    "icon": "fa-spa",
+    "description": "منتجات عناية وخدمات شخصية",
+    "display_order": 9,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": true,
+      "supports_weight_items": false,
+      "supports_batch_numbers": true,
+      "supports_serial_numbers": false,
+      "supports_size_color_variants": false,
+      "supports_service_items": true
+    }
+  },
+  {
+    "name": "Specialized Business",
+    "name_ar": "نشاط متخصص",
+    "slug": "specialized-business",
+    "icon": "fa-briefcase",
+    "description": "خيار عام للأنشطة غير المغطاة بالفئات السابقة",
+    "display_order": 10,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": false,
+      "supports_weight_items": false,
+      "supports_batch_numbers": false,
+      "supports_serial_numbers": false,
+      "supports_size_color_variants": false,
+      "supports_service_items": true
+    }
+  }
+]

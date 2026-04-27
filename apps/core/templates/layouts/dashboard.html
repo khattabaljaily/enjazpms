@@ -1,235 +1,5 @@
 {% extends "base.html" %}
 
-{% block extra_css %}
-<style>
-.dashboard-shell {
-    background:
-        radial-gradient(1100px 420px at 100% -12%, rgba(59, 130, 246, 0.14), transparent 60%),
-        radial-gradient(900px 380px at -10% -15%, rgba(16, 185, 129, 0.14), transparent 58%),
-        var(--bg-secondary);
-}
-
-.dashboard-body {
-    align-items: flex-start;
-    gap: 0.85rem;
-    padding: 0.75rem;
-}
-
-.dashboard-shell .sidebar {
-    position: sticky;
-    top: 86px;
-    z-index: 25;
-    width: 260px;
-    min-height: calc(100vh - 90px);
-    border: 1px solid rgba(99, 102, 241, 0.18);
-    border-radius: 18px;
-    padding: 0.8rem 0.55rem;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
-    box-shadow: 0 16px 36px rgba(2, 6, 23, 0.08);
-}
-
-[data-theme="dark"] .dashboard-shell .sidebar {
-    border-color: rgba(99, 102, 241, 0.3);
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
-}
-
-.dashboard-shell .sidebar .nav-link {
-    color: var(--text-primary);
-    margin-bottom: 0.16rem;
-    border-radius: 12px;
-    font-weight: 600;
-}
-
-.dashboard-shell .sidebar .nav-link:hover {
-    background: rgba(99, 102, 241, 0.14);
-    color: var(--primary-hover);
-}
-
-.dashboard-shell .sidebar .nav-link.active {
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.18), rgba(59, 130, 246, 0.12));
-    color: var(--primary-hover);
-}
-
-.dashboard-shell .sidebar .nav-link.sidebar-link-muted {
-    color: var(--text-secondary);
-}
-
-.dashboard-shell .sidebar-divider {
-    border: 0;
-    border-top: 1px solid var(--border-color);
-    margin: 0.65rem 0.5rem;
-    opacity: 1;
-}
-
-.dashboard-main {
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(99, 102, 241, 0.14);
-    border-radius: 20px;
-    padding: 1rem;
-    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
-    min-height: calc(100vh - 90px);
-    backdrop-filter: blur(7px);
-    -webkit-backdrop-filter: blur(7px);
-}
-
-[data-theme="dark"] .dashboard-main {
-    background: rgba(15, 23, 42, 0.82);
-    border-color: rgba(99, 102, 241, 0.22);
-}
-
-.dashboard-main .breadcrumb {
-    margin-bottom: 0.7rem;
-}
-
-.dashboard-main .breadcrumb-wrap {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    background: #f1f3f5;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 0.45rem 0.8rem;
-}
-
-[data-theme="dark"] .dashboard-main .breadcrumb-wrap {
-    background: #1f2937;
-    border-color: #374151;
-}
-
-.dashboard-main .breadcrumb {
-    margin-bottom: 0;
-    gap: 0.35rem;
-    font-size: 0.79rem;
-}
-
-.dashboard-main .breadcrumb-item,
-.dashboard-main .breadcrumb-item a {
-    color: var(--text-secondary);
-}
-
-.dashboard-main .breadcrumb-item.active {
-    color: var(--primary-hover);
-    font-weight: 700;
-}
-
-.dashboard-main .breadcrumb-item + .breadcrumb-item::before {
-    color: var(--text-tertiary);
-    margin: 0 0.2rem;
-}
-
-.dashboard-main .page-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.85rem;
-    margin-bottom: 0.95rem;
-    padding: 0.85rem 0.95rem;
-    border-radius: 14px;
-    border: 1px solid rgba(99, 102, 241, 0.14);
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0.08), rgba(16, 185, 129, 0.08));
-}
-
-[data-theme="dark"] .dashboard-main .page-head {
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0.14), rgba(16, 185, 129, 0.12));
-    border-color: rgba(99, 102, 241, 0.26);
-}
-
-.dashboard-main .page-head-title {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 800;
-    line-height: 1.2;
-}
-
-.dashboard-main .page-head-subtitle {
-    margin: 0.2rem 0 0;
-    color: var(--text-secondary);
-    font-size: 0.84rem;
-}
-
-.dashboard-main .page-head-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-}
-
-.dashboard-main h2 {
-    font-size: 1.32rem;
-    margin-bottom: 0.2rem;
-}
-
-.dashboard-main .text-muted {
-    font-size: 0.86rem;
-}
-
-.dashboard-main .card,
-.dashboard-main .stat-card,
-.dashboard-main .alert {
-    margin-bottom: 0;
-}
-
-.dashboard-main .row.g-3 {
-    --bs-gutter-x: 0.75rem;
-    --bs-gutter-y: 0.75rem;
-}
-
-.dashboard-shell .navbar {
-    position: sticky;
-    top: 0;
-    z-index: 70;
-    margin: 0.6rem 0.75rem 0;
-    border-radius: 14px;
-    border: 1px solid rgba(99, 102, 241, 0.16);
-    box-shadow: 0 12px 24px rgba(2, 6, 23, 0.07);
-}
-
-.app-footer {
-    background: transparent;
-    border-top: 0;
-    color: var(--text-primary);
-    padding-top: 0.4rem !important;
-    padding-bottom: 0.65rem !important;
-}
-
-.footer-subtitle {
-    color: var(--text-secondary);
-}
-
-@media (max-width: 992px) {
-    .dashboard-body {
-        flex-direction: column;
-        padding: 0.75rem;
-    }
-
-    .dashboard-shell .sidebar {
-        position: static;
-        width: 100%;
-        min-height: auto;
-        border-radius: 12px;
-        margin-bottom: 0.2rem;
-    }
-
-    .dashboard-main {
-        width: 100%;
-        min-height: auto;
-    }
-
-    .dashboard-shell .navbar {
-        margin: 0.45rem 0.5rem 0;
-    }
-
-    .dashboard-main .page-head {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .dashboard-main .page-head-actions {
-        width: 100%;
-    }
-}
-</style>
-{% endblock %}
-
 {% block body %}
 <div class="dashboard-shell d-flex flex-column min-vh-100">
     <!-- Navbar -->
@@ -241,6 +11,28 @@
         
         <!-- Main Content -->
         <main class="dashboard-main flex-grow-1">
+            <div class="dropdown mobile-page-menu my-2">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bars me-1"></i>
+                    القائمة
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'core:dashboard' %}"><i class="fas fa-home me-2"></i>الرئيسية</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-shopping-cart me-2"></i>المبيعات</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-shopping-bag me-2"></i>المشتريات</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-box me-2"></i>المنتجات</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-users me-2"></i>العملاء</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-truck me-2"></i>الموردين</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-warehouse me-2"></i>المخازن</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar me-2"></i>التقارير</a></li>
+                    {% if user.is_tenant_admin or user.is_superuser %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'core:tenant_settings' %}"><i class="fas fa-cog me-2"></i>الإعدادات</a></li>
+                    <li><a class="dropdown-item" href="{% url 'core:subscription' %}"><i class="fas fa-credit-card me-2"></i>الاشتراك</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+
             <!-- Breadcrumb -->
             {% block breadcrumb %}
             <nav aria-label="breadcrumb" class="mb-2">

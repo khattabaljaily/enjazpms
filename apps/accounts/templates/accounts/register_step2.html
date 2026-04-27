@@ -29,50 +29,53 @@
 </div>
 
 <!-- Form -->
-<form method="post" class="animate-fade-in">
+<form method="post" action="{% url 'accounts:register_step2_api' %}" class="animate-fade-in js-auth-ajax" autocomplete="off" data-lpignore="true" novalidate>
     {% csrf_token %}
-    
-    <div class="mb-3">
-        {{ form.business_type.label_tag }}
-        {{ form.business_type }}
-        {% if form.business_type.errors %}
-        <div class="text-danger small mt-1">{{ form.business_type.errors }}</div>
-        {% endif %}
+    <div class="alert alert-danger auth-alert js-form-errors d-none mb-3"></div>
+
+    <div class="auth-form-grid auth-form-grid-compact">
+        <div class="mb-3">
+            {{ form.business_type.label_tag }}
+            {{ form.business_type }}
+            {% if form.business_type.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="business_type">{{ form.business_type.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.business_name.label_tag }}
+            {{ form.business_name }}
+            {% if form.business_name.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="business_name">{{ form.business_name.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.phone.label_tag }}
+            {{ form.phone }}
+            {% if form.phone.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="phone">{{ form.phone.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.city.label_tag }}
+            {{ form.city }}
+            {% if form.city.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="city">{{ form.city.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3 field-span-2">
+            {{ form.address.label_tag }}
+            {{ form.address }}
+            {% if form.address.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="address">{{ form.address.errors }}</div>
+            {% endif %}
+        </div>
     </div>
     
-    <div class="mb-3">
-        {{ form.business_name.label_tag }}
-        {{ form.business_name }}
-        {% if form.business_name.errors %}
-        <div class="text-danger small mt-1">{{ form.business_name.errors }}</div>
-        {% endif %}
-    </div>
-    
-    <div class="mb-3">
-        {{ form.phone.label_tag }}
-        {{ form.phone }}
-        {% if form.phone.errors %}
-        <div class="text-danger small mt-1">{{ form.phone.errors }}</div>
-        {% endif %}
-    </div>
-    
-    <div class="mb-3">
-        {{ form.address.label_tag }}
-        {{ form.address }}
-        {% if form.address.errors %}
-        <div class="text-danger small mt-1">{{ form.address.errors }}</div>
-        {% endif %}
-    </div>
-    
-    <div class="mb-3">
-        {{ form.city.label_tag }}
-        {{ form.city }}
-        {% if form.city.errors %}
-        <div class="text-danger small mt-1">{{ form.city.errors }}</div>
-        {% endif %}
-    </div>
-    
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 auth-form-actions field-span-2">
         <a href="{% url 'accounts:register_step1' %}" class="btn btn-outline-primary flex-fill">
             <i class="fas fa-arrow-right me-2"></i> السابق
         </a>

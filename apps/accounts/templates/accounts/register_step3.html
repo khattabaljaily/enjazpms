@@ -29,61 +29,56 @@
 </div>
 
 <!-- Form -->
-<form method="post" class="animate-fade-in">
+<form method="post" action="{% url 'accounts:register_step3_api' %}" class="animate-fade-in js-auth-ajax" autocomplete="off" data-lpignore="true" novalidate>
     {% csrf_token %}
-    
-    <div class="mb-3">
-        <label class="form-label">{{ form.version_type.label }}</label>
-        {% for radio in form.version_type %}
-        <div class="form-check">
-            {{ radio.tag }}
-            <label class="form-check-label" for="{{ radio.id_for_label }}">
-                {{ radio.choice_label }}
-            </label>
-        </div>
-        {% endfor %}
+    <div class="alert alert-danger auth-alert js-form-errors d-none mb-3"></div>
+
+    <div class="mb-3 field-span-2">
+        {{ form.version_type.label_tag }}
+        {{ form.version_type }}
         {% if form.version_type.errors %}
-        <div class="text-danger small">{{ form.version_type.errors }}</div>
+        <div class="text-danger small js-field-errors" data-field="version_type">{{ form.version_type.errors }}</div>
         {% endif %}
     </div>
-    
-    <div class="mb-3">
-        {{ form.timezone.label_tag }}
-        {{ form.timezone }}
-        {% if form.timezone.errors %}
-        <div class="text-danger small">{{ form.timezone.errors }}</div>
-        {% endif %}
-    </div>
-    
-    <div class="mb-3">
-        {{ form.currency.label_tag }}
-        {{ form.currency }}
-        {% if form.currency.errors %}
-        <div class="text-danger small">{{ form.currency.errors }}</div>
-        {% endif %}
-    </div>
-    
-    <hr>
-    
-    <div class="mb-3">
-        <div class="form-check">
-            {{ form.tax_enabled }}
-            <label class="form-check-label" for="{{ form.tax_enabled.id_for_label }}">
-                {{ form.tax_enabled.label }}
-            </label>
+
+    <div class="auth-form-grid">
+        <div class="mb-3">
+            {{ form.timezone.label_tag }}
+            {{ form.timezone }}
+            {% if form.timezone.errors %}
+            <div class="text-danger small js-field-errors" data-field="timezone">{{ form.timezone.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.currency.label_tag }}
+            {{ form.currency }}
+            {% if form.currency.errors %}
+            <div class="text-danger small js-field-errors" data-field="currency">{{ form.currency.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3 field-span-2">
+            <hr>
+            <div class="form-check">
+                {{ form.tax_enabled }}
+                <label class="form-check-label" for="{{ form.tax_enabled.id_for_label }}">
+                    {{ form.tax_enabled.label }}
+                </label>
+            </div>
+        </div>
+        
+        <div class="mb-3 field-span-2">
+            {{ form.tax_value.label_tag }}
+            {{ form.tax_value }}
+            {% if form.tax_value.errors %}
+            <div class="text-danger small js-field-errors" data-field="tax_value">{{ form.tax_value.errors }}</div>
+            {% endif %}
+            <small class="text-muted">يمكنك تغيير هذه القيمة لاحقاً من الإعدادات</small>
         </div>
     </div>
     
-    <div class="mb-3">
-        {{ form.tax_value.label_tag }}
-        {{ form.tax_value }}
-        {% if form.tax_value.errors %}
-        <div class="text-danger small">{{ form.tax_value.errors }}</div>
-        {% endif %}
-        <small class="text-muted">يمكنك تغيير هذه القيمة لاحقاً من الإعدادات</small>
-    </div>
-    
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 auth-form-actions field-span-2">
         <a href="{% url 'accounts:register_step2' %}" class="btn btn-outline-secondary flex-fill">
             <i class="fas fa-arrow-right me-2"></i> السابق
         </a>

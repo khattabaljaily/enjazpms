@@ -208,12 +208,27 @@ CORS_ALLOW_CREDENTIALS = True
 # Email Configuration
 # ==========================================
 
-EMAIL_BACKEND = creds['EMAIL_BACKEND']
-EMAIL_HOST = creds['EMAIL_HOST']
-EMAIL_PORT = creds['EMAIL_PORT']
-EMAIL_USE_SSL = creds['EMAIL_USE_SSL']
-EMAIL_HOST_USER = creds['EMAIL_HOST_USER']
-EMAIL_HOST_PASSWORD = creds['EMAIL_HOST_PASSWORD']
+email_settings = creds.get('EMAIL', {})
+default_email_account = email_settings.get('INFO', {})
+
+
+def _as_bool(value, default=False):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+EMAIL_BACKEND = creds.get(
+    'EMAIL_BACKEND',
+    email_settings.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+)
+EMAIL_HOST = creds.get('EMAIL_HOST', default_email_account.get('HOST', 'localhost'))
+EMAIL_PORT = int(creds.get('EMAIL_PORT', default_email_account.get('PORT', 25)))
+EMAIL_USE_SSL = _as_bool(creds.get('EMAIL_USE_SSL', email_settings.get('EMAIL_USE_SSL')), default=False)
+EMAIL_HOST_USER = creds.get('EMAIL_HOST_USER', default_email_account.get('USER', ''))
+EMAIL_HOST_PASSWORD = creds.get('EMAIL_HOST_PASSWORD', default_email_account.get('PASSWORD', ''))
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # ==========================================

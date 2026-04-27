@@ -74,9 +74,13 @@
         <!-- Settings (Tenant Admin only) -->
         {% if user.is_tenant_admin or user.is_superuser %}
         <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="#">
+            <a class="nav-link sidebar-link-muted" href="{% url 'core:tenant_settings' %}">
                 <i class="fas fa-cog me-2"></i> الإعدادات
-                <small>(قريباً)</small>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="{% url 'core:subscription' %}">
+                <i class="fas fa-credit-card me-2"></i> الاشتراك
             </a>
         </li>
         {% endif %}

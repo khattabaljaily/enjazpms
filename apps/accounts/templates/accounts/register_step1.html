@@ -29,48 +29,51 @@
 </div>
 
 <!-- Form -->
-<form method="post" class="animate-fade-in">
+<form method="post" action="{% url 'accounts:register_step1_api' %}" class="animate-fade-in js-auth-ajax" autocomplete="off" data-lpignore="true" novalidate>
     {% csrf_token %}
-    
-    <div class="mb-3">
-        {{ form.username.label_tag }}
-        {{ form.username }}
-        {% if form.username.errors %}
-        <div class="text-danger small mt-1">{{ form.username.errors }}</div>
-        {% endif %}
-    </div>
-    
-    <div class="mb-3">
-        {{ form.email.label_tag }}
-        {{ form.email }}
-        {% if form.email.errors %}
-        <div class="text-danger small mt-1">{{ form.email.errors }}</div>
-        {% endif %}
-    </div>
-    
-    <div class="mb-3">
-        {{ form.password.label_tag }}
-        {{ form.password }}
-        {% if form.password.errors %}
-        <div class="text-danger small mt-1">{{ form.password.errors }}</div>
-        {% endif %}
-    </div>
-    
-    <div class="mb-3">
-        {{ form.password_confirm.label_tag }}
-        {{ form.password_confirm }}
-        {% if form.password_confirm.errors %}
-        <div class="text-danger small mt-1">{{ form.password_confirm.errors }}</div>
-        {% endif %}
+    <div class="alert alert-danger auth-alert js-form-errors d-none mb-3"></div>
+
+    <div class="auth-form-grid">
+        <div class="mb-3">
+            {{ form.username.label_tag }}
+            {{ form.username }}
+            {% if form.username.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="username">{{ form.username.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.email.label_tag }}
+            {{ form.email }}
+            {% if form.email.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="email">{{ form.email.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.password.label_tag }}
+            {{ form.password }}
+            {% if form.password.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="password">{{ form.password.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.password_confirm.label_tag }}
+            {{ form.password_confirm }}
+            {% if form.password_confirm.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="password_confirm">{{ form.password_confirm.errors }}</div>
+            {% endif %}
+        </div>
     </div>
     
     {% if form.non_field_errors %}
-    <div class="alert alert-danger">
+    <div class="alert alert-danger field-span-2 mt-3 mb-0">
         {{ form.non_field_errors }}
     </div>
     {% endif %}
-    
-    <button type="submit" class="btn btn-primary w-100">
+
+    <button type="submit" class="btn btn-primary w-100 auth-form-actions">
         التالي <i class="fas fa-arrow-left me-2"></i>
     </button>
 </form>

@@ -1,8 +1,8 @@
 {% load static %}
 <nav class="navbar">
-    <div class="container-fluid d-flex align-items-center gap-3">
+    <div class="container-fluid d-flex align-items-center gap-3 navbar-shell">
         <!-- Brand with Logo -->
-        <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'core:dashboard' %}">
+        <a class="navbar-brand d-flex align-items-center gap-2 navbar-brand-wrap" href="{% url 'core:dashboard' %}">
             <!-- Logo changes based on theme -->
             <img src="{% static 'img/logo/logo-161616.png' %}" 
                  alt="إنجاز" 
@@ -14,7 +14,7 @@
                  class="navbar-logo logo-dark">
         </a>
         
-        <div class="d-flex align-items-center gap-3 me-auto">
+        <div class="d-flex align-items-center gap-3 me-auto navbar-actions">
             <!-- Theme Toggle -->
             <button class="theme-toggle" onclick="toggleTheme()" aria-label="تبديل الوضع">
                 <i class="fas fa-moon" id="theme-icon"></i>
@@ -23,9 +23,9 @@
             <!-- Tenant Info -->
             {% if current_tenant %}
             <div class="dropdown">
-                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                <a class="nav-link dropdown-toggle navbar-menu-link" href="#" data-bs-toggle="dropdown" data-bs-display="static">
                     <i class="fas fa-store me-1"></i>
-                    {{ current_tenant.name }}
+                    <span class="navbar-label">{{ current_tenant.name }}</span>
                 </a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="{% url 'core:tenant_settings' %}">
@@ -40,9 +40,9 @@
             
             <!-- User Menu -->
             <div class="dropdown">
-                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                <a class="nav-link dropdown-toggle navbar-menu-link" href="#" data-bs-toggle="dropdown" data-bs-display="static">
                     <i class="fas fa-user-circle me-1"></i>
-                    {{ user.get_full_name }}
+                    <span class="navbar-label">{{ user.get_full_name }}</span>
                 </a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">

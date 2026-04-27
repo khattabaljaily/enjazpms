@@ -4,12 +4,43 @@ Forms للتسجيل وتسجيل الدخول
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
+from zoneinfo import available_timezones
 from apps.core.models import BusinessType, Tenant, Settings
 from .models import User
 
 
+ALL_TIMEZONE_CHOICES = [(timezone, timezone) for timezone in sorted(available_timezones())]
+
+
+def apply_arabic_error_messages(form_instance):
+    """تعريب رسائل التحقق الافتراضية"""
+    for field in form_instance.fields.values():
+        field.error_messages['required'] = 'هذا الحقل مطلوب'
+
+        if isinstance(field, forms.EmailField):
+            field.error_messages['invalid'] = 'أدخل بريدًا إلكترونيًا صحيحًا'
+
+        if isinstance(field, forms.DecimalField):
+            field.error_messages['invalid'] = 'أدخل رقمًا صحيحًا'
+
+        if isinstance(field, forms.IntegerField):
+            field.error_messages['invalid'] = 'أدخل رقمًا صحيحًا'
+
+        if isinstance(field, forms.ChoiceField):
+            field.error_messages['invalid_choice'] = 'الاختيار غير صحيح'
+
+
 class Step1UserForm(forms.Form):
     """الخطوة 1: معلومات المستخدم"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_arabic_error_messages(self)
+        for field_name, field in self.fields.items():
+            if field_name in ['password', 'password_confirm']:
+                field.widget.attrs['autocomplete'] = 'new-password'
+            else:
+                field.widget.attrs['autocomplete'] = 'off'
     
     username = forms.CharField(
         label='اسم المستخدم',
@@ -24,8 +55,9 @@ class Step1UserForm(forms.Form):
     email = forms.EmailField(
         label='البريد الإلكتروني',
         widget=forms.EmailInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'example@email.com'
+            'class': 'form-control text-start',
+            'placeholder': 'example@email.com',
+            'dir': 'ltr'
         })
     )
     
@@ -71,6 +103,12 @@ class Step1UserForm(forms.Form):
 
 class Step2BusinessForm(forms.Form):
     """الخطوة 2: معلومات النشاط التجاري"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_arabic_error_messages(self)
+        for field in self.fields.values():
+            field.widget.attrs['autocomplete'] = 'off'
     
     business_type = forms.ModelChoiceField(
         label='نوع النشاط التجاري',
@@ -86,7 +124,7 @@ class Step2BusinessForm(forms.Form):
         max_length=200,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'مثال: صيدلية النور'
+            'placeholder': 'مثال: اسم النشاط التجاري'
         })
     )
     
@@ -96,7 +134,7 @@ class Step2BusinessForm(forms.Form):
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '+20 123 456 7890'
+            'placeholder': '+000 000 000000'
         })
     )
     
@@ -106,7 +144,7 @@ class Step2BusinessForm(forms.Form):
         widget=forms.Textarea(attrs={
             'class': 'form-control',
             'rows': 3,
-            'placeholder': 'العنوان الكامل'
+            'placeholder': 'أدخل العنوان الكامل'
         })
     )
     
@@ -116,13 +154,19 @@ class Step2BusinessForm(forms.Form):
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'القاهرة'
+            'placeholder': 'المدينة / المنطقة'
         })
     )
 
 
 class Step3SettingsForm(forms.Form):
     """الخطوة 3: إعدادات النظام"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_arabic_error_messages(self)
+        for field in self.fields.values():
+            field.widget.attrs['autocomplete'] = 'off'
     
     VERSION_CHOICES = (
         ('single_store', 'محل واحد بمخزن واحد'),
@@ -130,43 +174,32 @@ class Step3SettingsForm(forms.Form):
         ('multi_branch', 'فروع متعددة (محلات ومخازن)'),
     )
     
-    TIMEZONE_CHOICES = (
-        ('Africa/Cairo', 'القاهرة (GMT+2)'),
-        ('Asia/Riyadh', 'الرياض (GMT+3)'),
-        ('Asia/Dubai', 'دبي (GMT+4)'),
-    )
-    
-    CURRENCY_CHOICES = (
-        ('EGP', 'جنيه مصري'),
-        ('SAR', 'ريال سعودي'),
-        ('AED', 'درهم إماراتي'),
-        ('USD', 'دولار أمريكي'),
-    )
-    
     version_type = forms.ChoiceField(
         label='نوع النسخة',
         choices=VERSION_CHOICES,
         initial='single_store',
-        widget=forms.RadioSelect(attrs={
-            'class': 'form-check-input'
+        widget=forms.Select(attrs={
+            'class': 'form-select'
         })
     )
     
     timezone = forms.ChoiceField(
         label='المنطقة الزمنية',
-        choices=TIMEZONE_CHOICES,
-        initial='Africa/Cairo',
+        choices=ALL_TIMEZONE_CHOICES,
+        initial='UTC',
         widget=forms.Select(attrs={
             'class': 'form-select'
         })
     )
     
-    currency = forms.ChoiceField(
+    currency = forms.CharField(
         label='العملة',
-        choices=CURRENCY_CHOICES,
-        initial='EGP',
-        widget=forms.Select(attrs={
-            'class': 'form-select'
+        max_length=3,
+        initial='USD',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control text-start',
+            'dir': 'ltr',
+            'placeholder': 'مثال: ج.س'
         })
     )
     
@@ -195,6 +228,17 @@ class Step3SettingsForm(forms.Form):
 
 class LoginForm(AuthenticationForm):
     """نموذج تسجيل الدخول"""
+
+    error_messages = {
+        'invalid_login': 'اسم المستخدم أو كلمة المرور غير صحيحة',
+        'inactive': 'هذا الحساب غير نشط',
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_arabic_error_messages(self)
+        self.fields['username'].widget.attrs['autocomplete'] = 'off'
+        self.fields['password'].widget.attrs['autocomplete'] = 'new-password'
     
     username = forms.CharField(
         label='اسم المستخدم أو البريد الإلكتروني',
@@ -217,6 +261,7 @@ class LoginForm(AuthenticationForm):
         label='تذكرني',
         required=False,
         widget=forms.CheckboxInput(attrs={
-            'class': 'form-check-input'
+            'class': 'form-check-input',
+            'autocomplete': 'off'
         })
     )
