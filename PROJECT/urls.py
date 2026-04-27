@@ -13,6 +13,7 @@ urlpatterns = [
     # Apps
     path('', include('apps.core.urls')),
     path('accounts/', include('apps.accounts.urls')),
+    path('customers/', include('apps.customers.urls')),
 ]
 
 # Serve media files in development

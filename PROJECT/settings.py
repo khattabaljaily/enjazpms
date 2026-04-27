@@ -48,11 +48,11 @@ INSTALLED_APPS = [
     # Local apps
     'apps.core',
     'apps.accounts',
+    'apps.customers',
     
     # Local apps (will be added as we create them)
     # 'apps.branches',
     # 'apps.items',
-    # 'apps.customers',
     # 'apps.suppliers',
     # 'apps.sales',
     # 'apps.purchases',

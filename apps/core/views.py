@@ -30,9 +30,13 @@ def dashboard(request):
     if tenant:
         stats['total_users'] = User.objects.filter(tenant=tenant).count()
     
+    # Customers stats
+    from apps.customers.models import Customer
+    if tenant:
+        stats['total_customers'] = Customer.objects.filter(tenant=tenant).count()
+
     # TODO: Add more stats when other apps are created
     # stats['total_products'] = Item.objects.filter(tenant=tenant).count()
-    # stats['total_customers'] = Customer.objects.filter(tenant=tenant).count()
     # etc...
     
     context = {

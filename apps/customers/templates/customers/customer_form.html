@@ -1,0 +1,76 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block page_title %}{{ page_title_text }}{% endblock %}
+{% block page_description %}إدارة بيانات العميل{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'customers:list' %}">العملاء</a></li>
+<li class="breadcrumb-item active">{{ page_title_text }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="card customers-form-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{{ page_title_text }}</strong>
+        <span class="badge badge-primary">العملاء</span>
+    </div>
+    <div class="card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+
+            <div class="col-md-6">
+                <label class="form-label">{{ form.name.label }}</label>
+                {{ form.name }}
+                {{ form.name.errors }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">{{ form.phone.label }}</label>
+                {{ form.phone }}
+                {{ form.phone.errors }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">{{ form.email.label }}</label>
+                {{ form.email }}
+                {{ form.email.errors }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">{{ form.city.label }}</label>
+                {{ form.city }}
+                {{ form.city.errors }}
+            </div>
+            <div class="col-12">
+                <label class="form-label">{{ form.address.label }}</label>
+                {{ form.address }}
+                {{ form.address.errors }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">{{ form.opening_balance.label }}</label>
+                {{ form.opening_balance }}
+                {{ form.opening_balance.errors }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">{{ form.credit_limit.label }}</label>
+                {{ form.credit_limit }}
+                {{ form.credit_limit.errors }}
+            </div>
+            <div class="col-12">
+                <label class="form-label">{{ form.notes.label }}</label>
+                {{ form.notes }}
+                {{ form.notes.errors }}
+            </div>
+            <div class="col-12">
+                <div class="form-check">
+                    {{ form.is_active }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>
+                </div>
+                {{ form.is_active.errors }}
+            </div>
+
+            <div class="col-12 d-flex gap-2 customers-form-actions">
+                <button type="submit" class="btn btn-primary">{{ submit_text }}</button>
+                <a href="{% url 'customers:list' %}" class="btn btn-outline-secondary">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

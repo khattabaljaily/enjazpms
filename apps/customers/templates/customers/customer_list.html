@@ -1,0 +1,437 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+
+<!-- ══════════════════════════ PAGE HERO HEADER ══════════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-users"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">العملاء</h1>
+                <p class="cx-hero-desc">إدارة وتتبع سجلات زبائن النشاط التجاري</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <button type="button" class="cx-btn-add" id="btnOpenCreateCustomer">
+                <i class="fas fa-plus"></i>
+                <span>إضافة عميل</span>
+            </button>
+        </div>
+    </div>
+
+    {# KPI row #}
+    <div class="cx-kpi-row">
+        <div class="cx-kpi-item">
+            <span class="cx-kpi-num" id="kpiTotal">{{ stats.total }}</span>
+            <span class="cx-kpi-label">إجمالي العملاء</span>
+            <div class="cx-kpi-dot cx-kpi-dot--primary"></div>
+        </div>
+        <div class="cx-kpi-divider"></div>
+        <div class="cx-kpi-item">
+            <span class="cx-kpi-num cx-kpi-num--green" id="kpiActive">{{ stats.active }}</span>
+            <span class="cx-kpi-label">نشطون</span>
+            <div class="cx-kpi-dot cx-kpi-dot--green"></div>
+        </div>
+        <div class="cx-kpi-divider"></div>
+        <div class="cx-kpi-item">
+            <span class="cx-kpi-num cx-kpi-num--muted" id="kpiInactive">{{ stats.inactive }}</span>
+            <span class="cx-kpi-label">غير نشطين</span>
+            <div class="cx-kpi-dot cx-kpi-dot--muted"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ MAIN TABLE PANEL ══════════════════════════ -->
+<div class="cx-panel">
+
+    {# ── Inline Toolbar ── #}
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="customerSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو الكود أو الهاتف...">
+        </div>
+
+        <div class="cx-toolbar-end">
+            {# Status tabs #}
+            <div class="cx-filter-tabs" role="group">
+                <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
+                <button type="button" class="cx-filter-tab" data-status="active">نشط</button>
+                <button type="button" class="cx-filter-tab" data-status="inactive">موقوف</button>
+            </div>
+        </div>
+    </div>
+
+    {# ── Table ── #}
+    <div class="table-responsive cx-table-wrap">
+        <table id="customersTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>العميل</th>
+                    <th>الكود</th>
+                    <th>المدينة</th>
+                    <th>الرصيد الافتتاحي</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="cx-table-footer">
+        <span id="customersCountText" class="cx-count-text"></span>
+    </div>
+</div>
+
+<!-- ══════════════════════════ ADD / EDIT MODAL ══════════════════════════ -->
+<div class="modal fade" id="customerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="customerForm" novalidate>
+                {% csrf_token %}
+                <input type="hidden" id="customerId" value="">
+
+                {# ── Modal Sidebar ── #}
+                <div class="cx-modal-sidebar" id="customerModalIcon"></div>
+
+                {# ── Modal Main ── #}
+                <div class="cx-modal-main">
+                    <div class="cx-modal-header">
+                        <div>
+                            <h5 class="cx-modal-title" id="customerModalTitle">إضافة عميل جديد</h5>
+                            <p class="cx-modal-subtitle" id="customerModalSubtitle">أدخل بيانات العميل أدناه</p>
+                        </div>
+                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="cx-modal-body">
+                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
+
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-num">١</span> البيانات الشخصية
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_name">{{ form.name.label }} <sup class="cx-required">*</sup></label>
+                                {{ form.name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_phone">{{ form.phone.label }}</label>
+                                {{ form.phone }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_email">{{ form.email.label }}</label>
+                                {{ form.email }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_city">{{ form.city.label }}</label>
+                                {{ form.city }}
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-label" for="id_address">{{ form.address.label }}</label>
+                                {{ form.address }}
+                            </div>
+                        </div>
+
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-num">٢</span> البيانات المالية
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_opening_balance">{{ form.opening_balance.label }}</label>
+                                {{ form.opening_balance }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_credit_limit">{{ form.credit_limit.label }}</label>
+                                {{ form.credit_limit }}
+                            </div>
+                        </div>
+
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-num">٣</span> ملاحظات وحالة
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="cx-label" for="id_notes">{{ form.notes.label }}</label>
+                                {{ form.notes }}
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-toggle-card" for="id_is_active">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ form.is_active.label }}</span>
+                                        <span class="cx-toggle-desc">تفعيل العميل يسمح باستخدامه في الفواتير والتقارير</span>
+                                    </div>
+                                    {{ form.is_active }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cx-modal-footer">
+                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="cx-btn-primary" id="customerSubmitBtn">
+                            <i class="fas fa-check me-1"></i> حفظ
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ DELETE CONFIRM MODAL ══════════════════════════ -->
+<div class="modal fade" id="deleteCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <h5 class="cx-delete-title">حذف العميل؟</h5>
+                <p class="cx-delete-desc">
+                    ستقوم بحذف <strong id="deleteCustomerName"></strong> بشكل نهائي.
+                    <br>لا يمكن التراجع عن هذا الإجراء.
+                </p>
+                <input type="hidden" id="deleteCustomerId" value="">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteCustomerBtn">
+                    نعم، احذف
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const urlTable  = "{% url 'customers:table_api' %}";
+    const urlCreate = "{% url 'customers:create_api' %}";
+    const urlDetail = "{% url 'customers:detail_api' 0 %}";
+    const urlUpdate = "{% url 'customers:update_api' 0 %}";
+    const urlDelete = "{% url 'customers:delete_api' 0 %}";
+    function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+
+    const customerModal = new bootstrap.Modal(document.getElementById('customerModal'));
+    const deleteModal   = new bootstrap.Modal(document.getElementById('deleteCustomerModal'));
+
+    const $form      = $('#customerForm');
+    const $submitBtn = $('#customerSubmitBtn');
+    const $idInput   = $('#customerId');
+    let   activeStatus = '';
+
+    /* ── DataTable ─────────────────────────────────────────── */
+    const dt = $('#customersTable').DataTable({
+        processing : true,
+        serverSide : true,
+        searching  : true,
+        ordering   : true,
+        pageLength : 25,
+        dom        : '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        language   : { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json' },
+        ajax: {
+            url : urlTable,
+            data: function (d) { d.status = activeStatus; }
+        },
+        columns: [
+            {
+                data: null,
+                render: function (_, __, r) {
+                    const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
+                    const color  = colors[r.name.charCodeAt(0) % colors.length];
+                    const initial = r.name.trim().charAt(0).toUpperCase();
+                    const phone = r.phone && r.phone !== '-'
+                        ? `<span class="cxr-phone"><i class="fas fa-phone-alt"></i>${r.phone}</span>` : '';
+                    return `<div class="cxr-identity">
+                                <div class="cxr-avatar" style="background:${color}">${initial}</div>
+                                <div>
+                                    <div class="cxr-name">${r.name}</div>
+                                    ${phone}
+                                </div>
+                            </div>`;
+                }
+            },
+            {
+                data: 'code',
+                render: c => `<code class="cxr-code">${c}</code>`
+            },
+            {
+                data: 'city',
+                render: c => (!c || c==='-')
+                    ? `<span class="cxr-empty">—</span>`
+                    : `<span class="cxr-city">${c}</span>`
+            },
+            {
+                data: 'opening_balance',
+                render: function (v) {
+                    const n = parseFloat(v);
+                    const cls = n > 0 ? 'cxr-bal--pos' : n < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
+                    return `<span class="cxr-bal ${cls}">${v}</span>`;
+                }
+            },
+            {
+                data: 'is_active',
+                render: a => a
+                    ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
+                    : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>`
+            },
+            {
+                data: null,
+                orderable : false,
+                searchable: false,
+                render: function (_, __, r) {
+                    return `<div class="cxr-actions">
+                                <button class="cxr-act js-edit-customer" data-id="${r.id}" aria-label="تعديل">
+                                    <i class="fas fa-pen-to-square"></i>
+                                </button>
+                                <button class="cxr-act cxr-act--del js-delete-customer" data-id="${r.id}" data-name="${r.name}" aria-label="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>`;
+                }
+            }
+        ],
+        drawCallback: function (s) {
+            const c = (s.json || {}).recordsFiltered || 0;
+            $('#customersCountText').text(`${c} عميل`);
+        }
+    });
+
+    /* ── Search ─────────────────────────────────────────────── */
+    let searchTimer;
+    $('#customerSearchInput').on('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+
+    /* ── Status filter tabs ──────────────────────────────────── */
+    $('.cx-filter-tab').on('click', function () {
+        $('.cx-filter-tab').removeClass('active');
+        $(this).addClass('active');
+        activeStatus = $(this).data('status');
+        dt.ajax.reload();
+    });
+
+    /* ── Form helpers ────────────────────────────────────────── */
+    function resetForm() {
+        $form[0].reset();
+        $idInput.val('');
+        $('#id_is_active').prop('checked', true);
+        EnjazIMS.clearFormErrors($form);
+    }
+
+    function setModalSidebar(name, letter, color) {
+        $('#customerModalIcon').html(`
+            <div class="cx-modal-sidebar-inner">
+                <div class="cx-ms-avatar" style="background:${color}">${letter}</div>
+                <div class="cx-ms-name">${name}</div>
+            </div>`);
+    }
+
+    function openCreate() {
+        resetForm();
+        setModalSidebar('عميل جديد', '+', 'var(--primary)');
+        $('#customerModalTitle').text('إضافة عميل جديد');
+        $('#customerModalSubtitle').text('أكمل النموذج لإضافة عميل');
+        $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
+        customerModal.show();
+    }
+
+    function openEdit(id) {
+        resetForm();
+        $.ajax({
+            url: apiUrl(urlDetail, id), method: 'GET',
+            success: function (resp) {
+                if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                const d = resp.data;
+                $idInput.val(d.id);
+                $('#id_name').val(d.name || '');
+                $('#id_phone').val(d.phone || '');
+                $('#id_email').val(d.email || '');
+                $('#id_city').val(d.city || '');
+                $('#id_address').val(d.address || '');
+                $('#id_opening_balance').val(d.opening_balance || '0');
+                $('#id_credit_limit').val(d.credit_limit || '0');
+                $('#id_notes').val(d.notes || '');
+                $('#id_is_active').prop('checked', !!d.is_active);
+
+                const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
+                const color  = colors[d.name.charCodeAt(0) % colors.length];
+                setModalSidebar(d.name, d.name.trim().charAt(0).toUpperCase(), color);
+                $('#customerModalTitle').text('تعديل بيانات العميل');
+                $('#customerModalSubtitle').text(d.name);
+                $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
+                customerModal.show();
+            },
+            error: function () { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+        });
+    }
+
+    /* ── Save ───────────────────────────────────────────────── */
+    $form.on('submit', function (e) {
+        e.preventDefault();
+        EnjazIMS.clearFormErrors($form);
+        const id = $idInput.val();
+        const url = id ? apiUrl(urlUpdate, id) : urlCreate;
+        const orig = $submitBtn.html();
+        EnjazIMS.showLoading($submitBtn);
+        $.ajax({
+            url, method: 'POST', data: $form.serialize(),
+            success: function (resp) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                if (resp.success) { customerModal.hide(); dt.ajax.reload(null, false); EnjazIMS.toast(resp.message || 'تم الحفظ', 'success'); return; }
+                EnjazIMS.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
+            },
+            error: function (xhr) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                const r = xhr.responseJSON || {};
+                if (r.errors) EnjazIMS.renderFieldErrors($form, r.errors);
+                EnjazIMS.showFormError($form, r.message || 'حدث خطأ');
+            }
+        });
+    });
+
+    /* ── Delete ─────────────────────────────────────────────── */
+    $('#customersTable').on('click', '.js-delete-customer', function () {
+        $('#deleteCustomerId').val($(this).data('id'));
+        $('#deleteCustomerName').text($(this).data('name'));
+        deleteModal.show();
+    });
+
+    $('#confirmDeleteCustomerBtn').on('click', function () {
+        const id = $('#deleteCustomerId').val();
+        if (!id) return;
+        $.ajax({
+            url: apiUrl(urlDelete, id), method: 'POST',
+            success: function (resp) {
+                if (resp.success) { deleteModal.hide(); dt.ajax.reload(null, false); EnjazIMS.toast(resp.message || 'تم الحذف', 'success'); return; }
+                EnjazIMS.toast(resp.message || 'تعذر الحذف', 'error');
+            },
+            error: function () { EnjazIMS.toast('تعذر الحذف', 'error'); }
+        });
+    });
+
+    /* ── Bindings ─────────────────────────────────────────────── */
+    $('#btnOpenCreateCustomer').on('click', openCreate);
+    $('#customersTable').on('click', '.js-edit-customer', function () { openEdit($(this).data('id')); });
+    setModalSidebar('عميل جديد', '+', 'var(--primary)');
+
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block page_title %}تفاصيل العميل{% endblock %}
+{% block page_description %}عرض معلومات العميل{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'customers:list' %}">العملاء</a></li>
+<li class="breadcrumb-item active">{{ customer.name }}</li>
+{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'customers:edit' customer.pk %}" class="btn btn-primary">
+    <i class="fas fa-pen me-1"></i>
+    تعديل
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card customer-detail-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{{ customer.name }}</strong>
+        {% if customer.is_active %}
+        <span class="badge badge-success">نشط</span>
+        {% else %}
+        <span class="badge badge-danger">غير نشط</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <div class="info-grid">
+            <div class="info-item">
+                <small class="info-label">الكود</small>
+                <strong class="info-value">{{ customer.code }}</strong>
+            </div>
+            <div class="info-item">
+                <small class="info-label">الاسم</small>
+                <strong class="info-value">{{ customer.name }}</strong>
+            </div>
+            <div class="info-item">
+                <small class="info-label">الهاتف</small>
+                <strong class="info-value">{{ customer.phone|default:"-" }}</strong>
+            </div>
+            <div class="info-item">
+                <small class="info-label">البريد</small>
+                <strong class="info-value">{{ customer.email|default:"-" }}</strong>
+            </div>
+            <div class="info-item">
+                <small class="info-label">المدينة</small>
+                <strong class="info-value">{{ customer.city|default:"-" }}</strong>
+            </div>
+            <div class="info-item">
+                <small class="info-label">العنوان</small>
+                <strong class="info-value">{{ customer.address|default:"-" }}</strong>
+            </div>
+            <div class="info-item">
+                <small class="info-label">الرصيد الافتتاحي</small>
+                <strong class="info-value">{{ customer.opening_balance }}</strong>
+            </div>
+            <div class="info-item">
+                <small class="info-label">الحد الائتماني</small>
+                <strong class="info-value">{{ customer.credit_limit }}</strong>
+            </div>
+            <div class="info-item info-item-full">
+                <small class="info-label">ملاحظات</small>
+                <strong class="info-value">{{ customer.notes|default:"-" }}</strong>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4 customers-form-actions">
+            <a href="{% url 'customers:list' %}" class="btn btn-outline-secondary">رجوع</a>
+            <a href="{% url 'customers:edit' customer.pk %}" class="btn btn-primary">تعديل</a>
+            <form method="post" action="{% url 'customers:delete' customer.pk %}" onsubmit="return confirm('متأكد من حذف العميل؟');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">حذف</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
