@@ -1,0 +1,90 @@
+{% extends "layouts/auth.html" %}
+
+{% block auth_content %}
+<div class="text-center mb-4">
+    <h1 class="auth-title">معلومات النشاط التجاري</h1>
+    <p class="auth-subtitle">الخطوة الثانية: عرف نشاطك وبيانات المتجر</p>
+</div>
+
+<!-- Progress Steps -->
+<div class="progress-steps mb-4">
+    <div class="progress-step completed">
+        <div class="progress-step-circle">
+            <i class="fas fa-check"></i>
+        </div>
+        <span class="progress-step-label">معلومات المستخدم</span>
+    </div>
+    <div class="progress-step active">
+        <div class="progress-step-circle">
+            <i class="fas fa-store"></i>
+        </div>
+        <span class="progress-step-label">النشاط التجاري</span>
+    </div>
+    <div class="progress-step">
+        <div class="progress-step-circle">
+            <i class="fas fa-cog"></i>
+        </div>
+        <span class="progress-step-label">الإعدادات</span>
+    </div>
+</div>
+
+<!-- Form -->
+<form method="post" class="animate-fade-in">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+        {{ form.business_type.label_tag }}
+        {{ form.business_type }}
+        {% if form.business_type.errors %}
+        <div class="text-danger small mt-1">{{ form.business_type.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        {{ form.business_name.label_tag }}
+        {{ form.business_name }}
+        {% if form.business_name.errors %}
+        <div class="text-danger small mt-1">{{ form.business_name.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        {{ form.phone.label_tag }}
+        {{ form.phone }}
+        {% if form.phone.errors %}
+        <div class="text-danger small mt-1">{{ form.phone.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        {{ form.address.label_tag }}
+        {{ form.address }}
+        {% if form.address.errors %}
+        <div class="text-danger small mt-1">{{ form.address.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        {{ form.city.label_tag }}
+        {{ form.city }}
+        {% if form.city.errors %}
+        <div class="text-danger small mt-1">{{ form.city.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="d-flex gap-2">
+        <a href="{% url 'accounts:register_step1' %}" class="btn btn-outline-primary flex-fill">
+            <i class="fas fa-arrow-right me-2"></i> السابق
+        </a>
+        <button type="submit" class="btn btn-primary flex-fill">
+            التالي <i class="fas fa-arrow-left me-2"></i>
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block auth_links %}
+<p class="text-muted">
+    لديك حساب بالفعل؟ <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>
+</p>
+{% endblock %}

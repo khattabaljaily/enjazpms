@@ -1,0 +1,39 @@
+{% extends "layouts/auth.html" %}
+
+{% block auth_content %}
+<div class="text-center">
+    <div class="mb-4">
+        <i class="fas fa-user-circle fa-5x text-muted"></i>
+    </div>
+    <h3 class="mb-3">الملف الشخصي</h3>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="mb-3">
+                <strong>الاسم:</strong> {{ user.get_full_name }}
+            </div>
+            <div class="mb-3">
+                <strong>اسم المستخدم:</strong> {{ user.username }}
+            </div>
+            <div class="mb-3">
+                <strong>البريد:</strong> {{ user.email }}
+            </div>
+            <div class="mb-3">
+                <strong>الدور:</strong> {{ user.get_role_display }}
+            </div>
+            {% if user.tenant %}
+            <div class="mb-3">
+                <strong>النشاط التجاري:</strong> {{ user.tenant.name }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <a href="{% url 'core:dashboard' %}" class="btn btn-primary">
+            <i class="fas fa-home me-2"></i>
+            العودة للرئيسية
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% load static %}
+<nav class="navbar">
+    <div class="container-fluid d-flex align-items-center gap-3">
+        <!-- Brand with Logo -->
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'core:dashboard' %}">
+            <!-- Logo changes based on theme -->
+            <img src="{% static 'img/logo/logo-161616.png' %}" 
+                 alt="إنجاز" 
+                 height="32" 
+                 class="navbar-logo logo-light">
+            <img src="{% static 'img/logo/logo-ffffff.png' %}" 
+                 alt="إنجاز" 
+                 height="32" 
+                 class="navbar-logo logo-dark">
+        </a>
+        
+        <div class="d-flex align-items-center gap-3 me-auto">
+            <!-- Theme Toggle -->
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="تبديل الوضع">
+                <i class="fas fa-moon" id="theme-icon"></i>
+            </button>
+            
+            <!-- Tenant Info -->
+            {% if current_tenant %}
+            <div class="dropdown">
+                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                    <i class="fas fa-store me-1"></i>
+                    {{ current_tenant.name }}
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'core:tenant_settings' %}">
+                        <i class="fas fa-cog me-2"></i>إعدادات النشاط
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'core:subscription' %}">
+                        <i class="fas fa-credit-card me-2"></i>الاشتراك
+                    </a></li>
+                </ul>
+            </div>
+            {% endif %}
+            
+            <!-- User Menu -->
+            <div class="dropdown">
+                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                    <i class="fas fa-user-circle me-1"></i>
+                    {{ user.get_full_name }}
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                        <i class="fas fa-user me-2"></i>الملف الشخصي
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
+                        <i class="fas fa-sign-out-alt me-2"></i>تسجيل الخروج
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<script>
+// Theme Toggle Functionality
+function toggleTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    const icon = document.getElementById('theme-icon');
+    
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    // Update icon
+    if (newTheme === 'dark') {
+        icon.classList.remove('fa-moon');
+        icon.classList.add('fa-sun');
+    } else {
+        icon.classList.remove('fa-sun');
+        icon.classList.add('fa-moon');
+    }
+}
+
+// Load saved theme on page load
+(function() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    const icon = document.getElementById('theme-icon');
+    
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    if (savedTheme === 'dark') {
+        icon.classList.remove('fa-moon');
+        icon.classList.add('fa-sun');
+    }
+})();
+</script>

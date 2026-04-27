@@ -1,0 +1,65 @@
+{% extends "layouts/auth.html" %}
+
+{% block auth_content %}
+<!-- Header -->
+<div class="text-center mb-4">
+    <h1 class="auth-title">تسجيل الدخول</h1>
+    <p class="auth-subtitle">أدخل بياناتك للمتابعة</p>
+</div>
+
+<!-- Form -->
+<form method="post">
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger d-flex align-items-center gap-2 mb-4" style="border-radius: 10px; border: none; font-size: 0.875rem;">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ form.non_field_errors }}</span>
+    </div>
+    {% endif %}
+    
+    <!-- Username -->
+    <div class="input-group-modern">
+        <label>{{ form.username.label }}</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+        <div class="text-danger small mt-1">
+            {{ form.username.errors }}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Password -->
+    <div class="input-group-modern">
+        <label>{{ form.password.label }}</label>
+        {{ form.password }}
+        {% if form.password.errors %}
+        <div class="text-danger small mt-1">
+            {{ form.password.errors }}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Remember & Forgot -->
+    <div class="auth-options">
+        <div class="form-check">
+            {{ form.remember_me }}
+            <label class="form-check-label" for="{{ form.remember_me.id_for_label }}">
+                {{ form.remember_me.label }}
+            </label>
+        </div>
+        <a href="#">نسيت كلمة المرور؟</a>
+    </div>
+    
+    <!-- Submit Button -->
+    <button type="submit" class="btn-auth">
+        تسجيل الدخول
+    </button>
+</form>
+
+{% endblock %}
+
+{% block auth_links %}
+ليس لديك حساب؟
+<a href="{% url 'accounts:register_step1' %}">إنشاء حساب</a>
+{% endblock %}

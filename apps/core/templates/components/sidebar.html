@@ -1,0 +1,84 @@
+<aside class="sidebar">
+    <ul class="nav flex-column">
+        <!-- Dashboard -->
+        <li class="nav-item">
+            <a class="nav-link active" href="{% url 'core:dashboard' %}">
+                <i class="fas fa-home me-2"></i> الرئيسية
+            </a>
+        </li>
+        
+        <hr class="sidebar-divider">
+        
+        <!-- Sales (TODO: Create app) -->
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <i class="fas fa-shopping-cart me-2"></i> المبيعات
+                <small>(قريباً)</small>
+            </a>
+        </li>
+        
+        <!-- Purchases (TODO: Create app) -->
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <i class="fas fa-shopping-bag me-2"></i> المشتريات
+                <small>(قريباً)</small>
+            </a>
+        </li>
+        
+        <hr class="sidebar-divider">
+        
+        <!-- Products (TODO: Create app) -->
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <i class="fas fa-box me-2"></i> المنتجات
+                <small>(قريباً)</small>
+            </a>
+        </li>
+        
+        <!-- Customers (TODO: Create app) -->
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <i class="fas fa-users me-2"></i> العملاء
+                <small>(قريباً)</small>
+            </a>
+        </li>
+        
+        <!-- Suppliers (TODO: Create app) -->
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <i class="fas fa-truck me-2"></i> الموردين
+                <small>(قريباً)</small>
+            </a>
+        </li>
+        
+        <hr class="sidebar-divider">
+        
+        <!-- Stock (TODO: Create app) -->
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <i class="fas fa-warehouse me-2"></i> المخازن
+                <small>(قريباً)</small>
+            </a>
+        </li>
+        
+        <hr class="sidebar-divider">
+        
+        <!-- Reports (TODO: Create app) -->
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <i class="fas fa-chart-bar me-2"></i> التقارير
+                <small>(قريباً)</small>
+            </a>
+        </li>
+        
+        <!-- Settings (Tenant Admin only) -->
+        {% if user.is_tenant_admin or user.is_superuser %}
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <i class="fas fa-cog me-2"></i> الإعدادات
+                <small>(قريباً)</small>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</aside>

@@ -1,0 +1,83 @@
+{% extends "layouts/auth.html" %}
+
+{% block auth_content %}
+<div class="text-center mb-4">
+    <h1 class="auth-title">إنشاء حساب جديد</h1>
+    <p class="auth-subtitle">الخطوة الأولى: أدخل بيانات المستخدم الأساسية</p>
+</div>
+
+<!-- Progress Steps -->
+<div class="progress-steps mb-4">
+    <div class="progress-step active">
+        <div class="progress-step-circle">
+            <i class="fas fa-user"></i>
+        </div>
+        <span class="progress-step-label">معلومات المستخدم</span>
+    </div>
+    <div class="progress-step">
+        <div class="progress-step-circle">
+            <i class="fas fa-store"></i>
+        </div>
+        <span class="progress-step-label">النشاط التجاري</span>
+    </div>
+    <div class="progress-step">
+        <div class="progress-step-circle">
+            <i class="fas fa-cog"></i>
+        </div>
+        <span class="progress-step-label">الإعدادات</span>
+    </div>
+</div>
+
+<!-- Form -->
+<form method="post" class="animate-fade-in">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+        {{ form.username.label_tag }}
+        {{ form.username }}
+        {% if form.username.errors %}
+        <div class="text-danger small mt-1">{{ form.username.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        {{ form.email.label_tag }}
+        {{ form.email }}
+        {% if form.email.errors %}
+        <div class="text-danger small mt-1">{{ form.email.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        {{ form.password.label_tag }}
+        {{ form.password }}
+        {% if form.password.errors %}
+        <div class="text-danger small mt-1">{{ form.password.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-3">
+        {{ form.password_confirm.label_tag }}
+        {{ form.password_confirm }}
+        {% if form.password_confirm.errors %}
+        <div class="text-danger small mt-1">{{ form.password_confirm.errors }}</div>
+        {% endif %}
+    </div>
+    
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    
+    <button type="submit" class="btn btn-primary w-100">
+        التالي <i class="fas fa-arrow-left me-2"></i>
+    </button>
+</form>
+{% endblock %}
+
+{% block auth_links %}
+<p class="text-muted">
+    لديك حساب بالفعل؟ <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>
+</p>
+{% endblock %}
