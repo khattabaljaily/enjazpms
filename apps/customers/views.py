@@ -1,7 +1,9 @@
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import HttpResponseNotAllowed, JsonResponse
+from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+import csv
+import io
 
 from .forms import CustomerForm
 from .models import Customer
@@ -215,3 +217,166 @@ def customer_delete_api(request, pk):
 @login_required
 def customer_create(request):
     return redirect('customers:list')
+
+
+@login_required
+def customer_import_api(request):
+    """Import customers from Excel/CSV file"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    if 'file' not in request.FILES:
+        return JsonResponse({'success': False, 'message': 'لم يتم رفع أي ملف'}, status=400)
+
+    file = request.FILES['file']
+    
+    # Validate file extension
+    if not file.name.endswith(('.csv', '.xlsx', '.xls')):
+        return JsonResponse({'success': False, 'message': 'نوع الملف غير مدعوم'}, status=400)
+
+    try:
+        imported_count = 0
+        errors = []
+
+        if file.name.endswith('.csv'):
+            # Handle CSV
+            decoded_file = file.read().decode('utf-8-sig')
+            csv_reader = csv.DictReader(io.StringIO(decoded_file))
+            
+            for row_num, row in enumerate(csv_reader, start=2):
+                try:
+                    Customer.objects.create(
+                        tenant=tenant,
+                        name=row.get('name', '').strip() or row.get('الاسم', '').strip(),
+                        phone=row.get('phone', '').strip() or row.get('الهاتف', '').strip() or None,
+                        email=row.get('email', '').strip() or row.get('البريد', '').strip() or None,
+                        city=row.get('city', '').strip() or row.get('المدينة', '').strip() or None,
+                        address=row.get('address', '').strip() or row.get('العنوان', '').strip() or None,
+                        opening_balance=float(row.get('opening_balance', 0) or row.get('الرصيد', 0) or 0),
+                        credit_limit=float(row.get('credit_limit', 0) or row.get('حد_الائتمان', 0) or 0),
+                        is_active=True
+                    )
+                    imported_count += 1
+                except Exception as e:
+                    errors.append(f'الصف {row_num}: {str(e)}')
+        else:
+            # Handle Excel - requires openpyxl
+            try:
+                import openpyxl
+            except ImportError:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'مكتبة openpyxl غير مثبتة. الرجاء تثبيتها أولاً'
+                }, status=500)
+
+            wb = openpyxl.load_workbook(file)
+            ws = wb.active
+            
+            # Get headers from first row
+            headers = [cell.value for cell in ws[1]]
+            
+            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                try:
+                    data = dict(zip(headers, row))
+                    Customer.objects.create(
+                        tenant=tenant,
+                        name=str(data.get('name', '') or data.get('الاسم', '')).strip(),
+                        phone=str(data.get('phone', '') or data.get('الهاتف', '')).strip() or None,
+                        email=str(data.get('email', '') or data.get('البريد', '')).strip() or None,
+                        city=str(data.get('city', '') or data.get('المدينة', '')).strip() or None,
+                        address=str(data.get('address', '') or data.get('العنوان', '')).strip() or None,
+                        opening_balance=float(data.get('opening_balance', 0) or data.get('الرصيد', 0) or 0),
+                        credit_limit=float(data.get('credit_limit', 0) or data.get('حد_الائتمان', 0) or 0),
+                        is_active=True
+                    )
+                    imported_count += 1
+                except Exception as e:
+                    errors.append(f'الصف {row_num}: {str(e)}')
+
+        message = f'تم استيراد {imported_count} عميل بنجاح'
+        if errors:
+            message += f'. حدثت {len(errors)} أخطاء'
+
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'imported': imported_count,
+            'errors': errors[:10]  # Return first 10 errors only
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'حدث خطأ أثناء الاستيراد: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def customer_export_api(request):
+    """Export customers to CSV file"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    response['Content-Disposition'] = 'attachment; filename="customers.csv"'
+    
+    # Add BOM for Excel UTF-8 support
+    response.write('\ufeff')
+    
+    writer = csv.writer(response)
+    
+    # Write headers
+    writer.writerow([
+        'الاسم', 'الكود', 'الهاتف', 'البريد', 'المدينة', 'العنوان',
+        'الرصيد الافتتاحي', 'حد الائتمان', 'الملاحظات', 'نشط'
+    ])
+    
+    # Write data
+    customers = Customer.objects.for_tenant(tenant).order_by('name')
+    for customer in customers:
+        writer.writerow([
+            customer.name,
+            customer.code,
+            customer.phone or '',
+            customer.email or '',
+            customer.city or '',
+            customer.address or '',
+            customer.opening_balance,
+            customer.credit_limit,
+            customer.notes or '',
+            'نعم' if customer.is_active else 'لا'
+        ])
+    
+    return response
+
+
+@login_required
+def download_template(request):
+    """Download CSV template for import"""
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    response['Content-Disposition'] = 'attachment; filename="customers_template.csv"'
+    
+    # Add BOM for Excel UTF-8 support
+    response.write('\ufeff')
+    
+    writer = csv.writer(response)
+    
+    # Write headers
+    writer.writerow([
+        'الاسم', 'الهاتف', 'البريد', 'المدينة', 'العنوان',
+        'الرصيد الافتتاحي', 'حد الائتمان'
+    ])
+    
+    # Write example row
+    writer.writerow([
+        'أحمد محمد', '0512345678', 'ahmad@example.com', 'الرياض', 'شارع الملك فهد',
+        '0', '5000'
+    ])
+    
+    return response

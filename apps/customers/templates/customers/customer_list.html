@@ -17,36 +17,44 @@
             </div>
             <div>
                 <h1 class="cx-hero-title">العملاء</h1>
-                <p class="cx-hero-desc">إدارة وتتبع سجلات زبائن النشاط التجاري</p>
+                <p class="cx-hero-desc">إدارة وتتبع سجلات الزبائن</p>
             </div>
         </div>
         <div class="cx-hero-right">
-            <button type="button" class="cx-btn-add" id="btnOpenCreateCustomer">
-                <i class="fas fa-plus"></i>
-                <span>إضافة عميل</span>
-            </button>
+            <div class="cx-hero-actions">
+                <button type="button" class="cx-btn-secondary" id="btnImportCustomers">
+                    <i class="fas fa-arrow-down"></i>
+                    <span>استيراد</span>
+                </button>
+                <button type="button" class="cx-btn-secondary" id="btnExportCustomers">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>تصدير</span>
+                </button>
+                <button type="button" class="cx-btn-add" id="btnOpenCreateCustomer">
+                    <i class="fas fa-plus"></i>
+                    <span>إضافة عميل</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    {# KPI row #}
-    <div class="cx-kpi-row">
-        <div class="cx-kpi-item">
-            <span class="cx-kpi-num" id="kpiTotal">{{ stats.total }}</span>
-            <span class="cx-kpi-label">إجمالي العملاء</span>
-            <div class="cx-kpi-dot cx-kpi-dot--primary"></div>
-        </div>
-        <div class="cx-kpi-divider"></div>
-        <div class="cx-kpi-item">
-            <span class="cx-kpi-num cx-kpi-num--green" id="kpiActive">{{ stats.active }}</span>
-            <span class="cx-kpi-label">نشطون</span>
-            <div class="cx-kpi-dot cx-kpi-dot--green"></div>
-        </div>
-        <div class="cx-kpi-divider"></div>
-        <div class="cx-kpi-item">
-            <span class="cx-kpi-num cx-kpi-num--muted" id="kpiInactive">{{ stats.inactive }}</span>
-            <span class="cx-kpi-label">غير نشطين</span>
-            <div class="cx-kpi-dot cx-kpi-dot--muted"></div>
-        </div>
+    {# KPI Stats - Compact inline badges #}
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-users"></i>
+            <strong id="kpiTotal">{{ stats.total }}</strong>
+            <span>عميل</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-check-circle"></i>
+            <strong id="kpiActive">{{ stats.active }}</strong>
+            <span>نشط</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-pause-circle"></i>
+            <strong id="kpiInactive">{{ stats.inactive }}</strong>
+            <span>موقوف</span>
+        </span>
     </div>
 </div>
 
@@ -87,9 +95,6 @@
         </table>
     </div>
 
-    <div class="cx-table-footer">
-        <span id="customersCountText" class="cx-count-text"></span>
-    </div>
 </div>
 
 </div>
@@ -190,6 +195,96 @@
     </div>
 </div>
 
+<!-- ══════════════════════════ VIEW CUSTOMER MODAL ══════════════════════════ -->
+<div class="modal fade" id="viewCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar" id="viewCustomerAvatar"></div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewCustomerName"></h5>
+                        <p class="cx-view-subtitle" id="viewCustomerCode"></p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="cx-view-body">
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-user"></i>
+                        المعلومات الشخصية
+                    </div>
+                    <div class="cx-view-grid">
+                        <div class="cx-view-item">
+                            <span class="cx-view-label">الاسم</span>
+                            <span class="cx-view-value" id="viewName"></span>
+                        </div>
+                        <div class="cx-view-item">
+                            <span class="cx-view-label">رقم الهاتف</span>
+                            <span class="cx-view-value" id="viewPhone"></span>
+                        </div>
+                        <div class="cx-view-item">
+                            <span class="cx-view-label">البريد الإلكتروني</span>
+                            <span class="cx-view-value" id="viewEmail"></span>
+                        </div>
+                        <div class="cx-view-item">
+                            <span class="cx-view-label">المدينة</span>
+                            <span class="cx-view-value" id="viewCity"></span>
+                        </div>
+                    </div>
+                    <div class="cx-view-item cx-view-item--full">
+                        <span class="cx-view-label">العنوان</span>
+                        <span class="cx-view-value" id="viewAddress"></span>
+                    </div>
+                </div>
+
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-money-bill-wave"></i>
+                        المعلومات المالية
+                    </div>
+                    <div class="cx-view-grid">
+                        <div class="cx-view-item">
+                            <span class="cx-view-label">الرصيد الافتتاحي</span>
+                            <span class="cx-view-value cx-view-value--money" id="viewBalance"></span>
+                        </div>
+                        <div class="cx-view-item">
+                            <span class="cx-view-label">حد الائتمان</span>
+                            <span class="cx-view-value cx-view-value--money" id="viewCreditLimit"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-info-circle"></i>
+                        معلومات إضافية
+                    </div>
+                    <div class="cx-view-item cx-view-item--full">
+                        <span class="cx-view-label">الملاحظات</span>
+                        <span class="cx-view-value" id="viewNotes"></span>
+                    </div>
+                    <div class="cx-view-item">
+                        <span class="cx-view-label">الحالة</span>
+                        <span class="cx-view-value" id="viewStatus"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="cx-btn-primary" id="viewEditCustomerBtn">
+                    <i class="fas fa-pen-to-square me-1"></i> تعديل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ══════════════════════════ DELETE CONFIRM MODAL ══════════════════════════ -->
 <div class="modal fade" id="deleteCustomerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
@@ -215,6 +310,75 @@
     </div>
 </div>
 
+<!-- ══════════════════════════ IMPORT MODAL ══════════════════════════ -->
+<div class="modal fade" id="importCustomersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-import-dialog">
+        <div class="modal-content cx-import-modal">
+            <div class="cx-import-header">
+                <div>
+                    <h5 class="cx-import-title">
+                        <i class="fas fa-upload"></i>
+                        استيراد العملاء
+                    </h5>
+                    <p class="cx-import-subtitle">قم برفع ملف Excel أو CSV يحتوي على بيانات العملاء</p>
+                </div>
+                <button type="button" class="cx-import-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="cx-import-body">
+                <div class="cx-upload-area" id="uploadArea">
+                    <div class="cx-upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h6 class="cx-upload-title">اسحب وأفلت الملق هنا</h6>
+                    <p class="cx-upload-text">أو اضغط لاختيار ملف</p>
+                    <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" hidden>
+                    <button type="button" class="cx-btn-upload" id="btnChooseFile">
+                        <i class="fas fa-folder-open me-1"></i> اختر ملف
+                    </button>
+                    <p class="cx-upload-hint">الصيغ المدعومة: Excel (.xlsx, .xls) أو CSV (.csv)</p>
+                </div>
+                
+                <div class="cx-file-selected" id="fileSelected" style="display: none;">
+                    <div class="cx-file-info">
+                        <div class="cx-file-icon">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <div class="cx-file-details">
+                            <div class="cx-file-name" id="fileName"></div>
+                            <div class="cx-file-size" id="fileSize"></div>
+                        </div>
+                    </div>
+                    <button type="button" class="cx-file-remove" id="btnRemoveFile">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="cx-import-instructions">
+                    <h6 class="cx-instructions-title">
+                        <i class="fas fa-info-circle"></i>
+                        تعليمات هامة
+                    </h6>
+                    <ul class="cx-instructions-list">
+                        <li>يجب أن يحتوي الملف على الأعمدة التالية: الاسم، الهاتف، البريد، المدينة</li>
+                        <li>يمكنك تحميل نموذج ملف من هنا: <a href="#" class="cx-template-link" id="btnDownloadTemplate">نموذج Excel</a></li>
+                        <li>الحد الأقصى لحجم الملف: 5 MB</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="cx-import-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-primary" id="btnStartImport" disabled>
+                    <i class="fas fa-check me-1"></i> بدء الاستيراد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -231,6 +395,7 @@
 
     const customerModalEl = document.getElementById('customerModal');
     const deleteModalEl   = document.getElementById('deleteCustomerModal');
+    const viewModalEl     = document.getElementById('viewCustomerModal');
 
     // Keep modals at <body> level so they are not trapped by dashboard stacking contexts.
     if (customerModalEl && customerModalEl.parentElement !== document.body) {
@@ -239,9 +404,13 @@
     if (deleteModalEl && deleteModalEl.parentElement !== document.body) {
         document.body.appendChild(deleteModalEl);
     }
+    if (viewModalEl && viewModalEl.parentElement !== document.body) {
+        document.body.appendChild(viewModalEl);
+    }
 
     const customerModal = new bootstrap.Modal(customerModalEl);
     const deleteModal   = new bootstrap.Modal(deleteModalEl);
+    const viewModal     = new bootstrap.Modal(viewModalEl);
 
     const $form      = $('#customerForm');
     const $submitBtn = $('#customerSubmitBtn');
@@ -256,27 +425,32 @@
         ordering   : true,
         pageLength : 25,
         dom        : '<"d-none"f>rt<"cx-dt-bottom"ip>',
-        language   : { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json' },
+        language   : {
+            emptyTable: 'لا توجد بيانات متاحة',
+            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_ عميل',
+            infoEmpty: 'عرض 0 إلى 0 من أصل 0 عميل',
+            infoFiltered: '(تمت التصفية من إجمالي _MAX_ عميل)',
+            lengthMenu: 'عرض _MENU_ عميل',
+            loadingRecords: 'جاري التحميل...',
+            processing: 'جاري المعالجة...',
+            search: 'بحث:',
+            zeroRecords: 'لم يتم العثور على نتائج مطابقة',
+            paginate: {
+                first: 'الأول',
+                last: 'الأخير',
+                next: 'التالي',
+                previous: 'السابق'
+            }
+        },
         ajax: {
             url : urlTable,
             data: function (d) { d.status = activeStatus; }
         },
         columns: [
             {
-                data: null,
-                render: function (_, __, r) {
-                    const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
-                    const color  = colors[r.name.charCodeAt(0) % colors.length];
-                    const initial = r.name.trim().charAt(0).toUpperCase();
-                    const phone = r.phone && r.phone !== '-'
-                        ? `<span class="cxr-phone"><i class="fas fa-phone-alt"></i>${r.phone}</span>` : '';
-                    return `<div class="cxr-identity">
-                                <div class="cxr-avatar" style="background:${color}">${initial}</div>
-                                <div>
-                                    <div class="cxr-name">${r.name}</div>
-                                    ${phone}
-                                </div>
-                            </div>`;
+                data: 'name',
+                render: function (name) {
+                    return `<span class="cxr-name">${name}</span>`;
                 }
             },
             {
@@ -309,6 +483,9 @@
                 searchable: false,
                 render: function (_, __, r) {
                     return `<div class="cxr-actions">
+                                <button class="cxr-act cxr-act--view js-view-customer" data-id="${r.id}" aria-label="عرض">
+                                    <i class="fas fa-eye"></i>
+                                </button>
                                 <button class="cxr-act js-edit-customer" data-id="${r.id}" aria-label="تعديل">
                                     <i class="fas fa-pen-to-square"></i>
                                 </button>
@@ -318,11 +495,7 @@
                             </div>`;
                 }
             }
-        ],
-        drawCallback: function (s) {
-            const c = (s.json || {}).recordsFiltered || 0;
-            $('#customersCountText').text(`${c} عميل`);
-        }
+        ]
     });
 
     /* ── Search ─────────────────────────────────────────────── */
@@ -438,10 +611,220 @@
         });
     });
 
+    /* ── View Customer ──────────────────────────────────────────── */
+    function openView(id) {
+        $.ajax({
+            url: apiUrl(urlDetail, id), method: 'GET',
+            success: function (resp) {
+                if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                const d = resp.data;
+                
+                // Set avatar
+                const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
+                const color  = colors[d.name.charCodeAt(0) % colors.length];
+                const initial = d.name.trim().charAt(0).toUpperCase();
+                $('#viewCustomerAvatar').html(initial).css('background', color);
+                
+                // Set header info
+                $('#viewCustomerName').text(d.name);
+                $('#viewCustomerCode').html(`<code class="cxr-code">${d.code}</code>`);
+                
+                // Personal info
+                $('#viewName').text(d.name || '—');
+                $('#viewPhone').text(d.phone || '—');
+                $('#viewEmail').text(d.email || '—');
+                $('#viewCity').text(d.city || '—');
+                $('#viewAddress').text(d.address || '—');
+                
+                // Financial info
+                const bal = parseFloat(d.opening_balance);
+                const balCls = bal > 0 ? 'text-success' : bal < 0 ? 'text-danger' : '';
+                $('#viewBalance').html(`<strong class="${balCls}">${d.opening_balance}</strong>`);
+                $('#viewCreditLimit').html(`<strong>${d.credit_limit}</strong>`);
+                
+                // Additional info
+                $('#viewNotes').text(d.notes || '—');
+                const statusHtml = d.is_active 
+                    ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+                    : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>';
+                $('#viewStatus').html(statusHtml);
+                
+                // Store ID for edit button
+                $('#viewEditCustomerBtn').data('id', d.id);
+                
+                viewModal.show();
+            },
+            error: function () { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+        });
+    }
+
     /* ── Bindings ─────────────────────────────────────────────── */
     $('#btnOpenCreateCustomer').on('click', openCreate);
+    $('#customersTable').on('click', '.js-view-customer', function () { openView($(this).data('id')); });
     $('#customersTable').on('click', '.js-edit-customer', function () { openEdit($(this).data('id')); });
+    $('#viewEditCustomerBtn').on('click', function() { 
+        viewModal.hide(); 
+        openEdit($(this).data('id')); 
+    });
     setModalSidebar('عميل جديد', '+', 'var(--primary)');
+
+    /* ══════════════════════════ IMPORT / EXPORT ══════════════════════════ */
+    const importModalEl = document.getElementById('importCustomersModal');
+    if (importModalEl && importModalEl.parentElement !== document.body) {
+        document.body.appendChild(importModalEl);
+    }
+    const importModal = new bootstrap.Modal(importModalEl);
+    let selectedFile = null;
+
+    // Open import modal
+    $('#btnImportCustomers').on('click', function() {
+        selectedFile = null;
+        $('#importFileInput').val('');
+        $('#fileSelected').hide();
+        $('#uploadArea').show();
+        $('#btnStartImport').prop('disabled', true);
+        importModal.show();
+    });
+
+    // Choose file button
+    $('#btnChooseFile').on('click', function(e) {
+        e.stopPropagation();
+        $('#importFileInput').click();
+    });
+
+    // Upload area click
+    $('#uploadArea').on('click', function(e) {
+        if (e.target === this || $(e.target).closest('.cx-upload-icon, .cx-upload-title, .cx-upload-text, .cx-upload-hint').length) {
+            $('#importFileInput').click();
+        }
+    });
+
+    // File input change
+    $('#importFileInput').on('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    });
+
+    // Drag and drop
+    const uploadArea = document.getElementById('uploadArea');
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.add('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.remove('drag-over');
+        }, false);
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        const dt = e.dataTransfer;
+        const file = dt.files[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    }, false);
+
+    // Handle file selection
+    function handleFileSelect(file) {
+        // Validate file type
+        const validTypes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+            'text/csv'
+        ];
+        if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+            EnjazIMS.toast('نوع الملف غير مدعوم. الرجاء اختيار ملف Excel أو CSV', 'error');
+            return;
+        }
+
+        // Validate file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            EnjazIMS.toast('حجم الملف كبير جداً. الحد الأقصى 5 MB', 'error');
+            return;
+        }
+
+        selectedFile = file;
+        
+        // Show file info
+        $('#fileName').text(file.name);
+        $('#fileSize').text(formatFileSize(file.size));
+        $('#uploadArea').hide();
+        $('#fileSelected').show();
+        $('#btnStartImport').prop('disabled', false);
+    }
+
+    // Remove file
+    $('#btnRemoveFile').on('click', function() {
+        selectedFile = null;
+        $('#importFileInput').val('');
+        $('#fileSelected').hide();
+        $('#uploadArea').show();
+        $('#btnStartImport').prop('disabled', true);
+    });
+
+    // Format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    // Start import
+    $('#btnStartImport').on('click', function() {
+        if (!selectedFile) return;
+        
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        $.ajax({
+            url: '{% url "customers:import_api" %}',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(resp) {
+                if (resp.success) {
+                    importModal.hide();
+                    dt.ajax.reload();
+                    EnjazIMS.toast(resp.message || 'تم استيراد العملاء بنجاح', 'success');
+                } else {
+                    EnjazIMS.toast(resp.message || 'فشل الاستيراد', 'error');
+                }
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON?.message || 'حدث خطأ أثناء الاستيراد';
+                EnjazIMS.toast(msg, 'error');
+            }
+        });
+    });
+
+    // Download template
+    $('#btnDownloadTemplate').on('click', function(e) {
+        e.preventDefault();
+        window.location.href = '{% url "customers:download_template" %}';
+    });
+
+    // Export customers
+    $('#btnExportCustomers').on('click', function() {
+        window.location.href = '{% url "customers:export_api" %}';
+        EnjazIMS.toast('جاري تصدير البيانات...', 'info');
+    });
 
 })();
 </script>
