@@ -1,9 +1,8 @@
 {% load static %}
 <nav class="navbar">
-    <div class="container-fluid d-flex align-items-center gap-3 navbar-shell">
+    <div class="navbar-shell">
         <!-- Brand with Logo -->
-        <a class="navbar-brand d-flex align-items-center gap-2 navbar-brand-wrap" href="{% url 'core:dashboard' %}">
-            <!-- Logo changes based on theme -->
+        <a class="navbar-brand-wrap d-flex align-items-center gap-2" href="{% url 'core:dashboard' %}">
             <img src="{% static 'img/logo/logo-161616.png' %}" 
                  alt="إنجاز" 
                  height="32" 
@@ -12,9 +11,10 @@
                  alt="إنجاز" 
                  height="32" 
                  class="navbar-logo logo-dark">
+            <span class="navbar-brand-text">إنجاز</span>
         </a>
         
-        <div class="d-flex align-items-center gap-3 me-auto navbar-actions">
+        <div class="navbar-actions">
             <!-- Theme Toggle -->
             <button class="theme-toggle" onclick="toggleTheme()" aria-label="تبديل الوضع">
                 <i class="fas fa-moon" id="theme-icon"></i>

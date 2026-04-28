@@ -1,0 +1,330 @@
+/* ============================================
+   Layout Components - Core Structure
+   Used by all dashboard pages
+   ============================================ */
+
+/* Dashboard Shell & Layout */
+.dashboard-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    margin-top: 70px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    gap: 1rem;
+}
+
+.dashboard-main {
+    flex: 1;
+    background: var(--bg-secondary);
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 12px;
+}
+
+/* Page Header */
+.page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    margin-bottom: 0.95rem;
+    padding: 0.85rem 0.95rem;
+    border-radius: 14px;
+    border: 1px solid rgba(99, 102, 241, 0.14);
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.08), rgba(16, 185, 129, 0.08));
+}
+
+[data-theme="dark"] .page-head {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.14), rgba(16, 185, 129, 0.12));
+    border-color: rgba(99, 102, 241, 0.26);
+}
+
+.page-head-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.page-head-subtitle {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.page-head-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Mobile Page Menu */
+.mobile-page-menu {
+    display: none;
+}
+
+@media (max-width: 992px) {
+    .mobile-page-menu {
+        display: block;
+    }
+}
+
+/* ============================================
+   Navbar Styles
+   ============================================ */
+
+.navbar {
+    background: var(--navbar-bg);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--navbar-border);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    z-index: 1000;
+}
+
+.navbar-shell {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.navbar-brand-wrap {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-brand-text {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.navbar-logo {
+    height: 32px;
+    width: auto;
+    display: block;
+}
+
+.navbar-logo.logo-dark {
+    display: none;
+}
+
+.navbar-logo.logo-light {
+    display: block;
+}
+
+[data-theme="dark"] .navbar-logo.logo-light {
+    display: none;
+}
+
+[data-theme="dark"] .navbar-logo.logo-dark {
+    display: block;
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.navbar-menu-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    transition: background var(--transition);
+}
+
+.navbar-menu-link:hover {
+    background: var(--surface-hover);
+    color: var(--primary);
+}
+
+.navbar-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.theme-toggle:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* ============================================
+   Sidebar Styles
+   ============================================ */
+
+.sidebar {
+    width: 260px;
+    height: calc(100vh - 70px - 2rem);
+    background: var(--sidebar-bg);
+    border: 1px solid var(--sidebar-border);
+    border-radius: 12px;
+    padding: 1rem;
+    position: relative;
+    flex-shrink: 0;
+    overflow-y: auto;
+    z-index: 40;
+    transition: background var(--transition), border-color var(--transition);
+}
+
+.sidebar .nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 10px;
+    margin-bottom: 0.35rem;
+    transition: all var(--transition);
+    font-size: 0.9rem;
+}
+
+.sidebar .nav-link:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+.sidebar .nav-link.active {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(59, 130, 246, 0.1));
+    color: var(--primary);
+    font-weight: 600;
+}
+
+[data-theme="dark"] .sidebar .nav-link.active {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(59, 130, 246, 0.14));
+}
+
+.sidebar .nav-link i {
+    width: 20px;
+}
+
+.sidebar-link-muted {
+    opacity: 0.5;
+}
+
+.sidebar-link-muted small {
+    font-size: 0.7rem;
+    margin-right: auto;
+}
+
+.sidebar-divider {
+    border: none;
+    border-top: 1px solid var(--border-light);
+    margin: 0.75rem 0;
+}
+
+/* Main content already has margin-left in .dashboard-main above */
+
+/* ============================================
+   Footer Styles
+   ============================================ */
+
+.app-footer {
+    background: transparent;
+    border-top: 0;
+    color: var(--text-primary);
+    padding: 0.5rem 1.5rem;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.footer-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+/* ============================================
+   Content Area
+   ============================================ */
+
+.content {
+    max-width: 100%;
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+
+@media (max-width: 992px) {
+    .sidebar {
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .dashboard-main {
+        margin-right: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0.5rem 1rem;
+    }
+    
+    .navbar-label {
+        display: none;
+    }
+    
+    .dashboard-main {
+        padding: 1rem;
+    }
+    
+    .page-head {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 0.75rem;
+    }
+    
+    .page-head-title {
+        font-size: 1.25rem;
+    }
+}
