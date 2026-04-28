@@ -19,7 +19,7 @@ class CustomerForm(forms.ModelForm):
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: أحمد محمد'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 0912345678'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'type': 'tel', 'placeholder': 'مثال: 0912345678'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'example@email.com'}),
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'الخرطوم'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),

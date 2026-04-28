@@ -33,17 +33,7 @@
                 </ul>
             </div>
 
-            <!-- Breadcrumb -->
-            {% block breadcrumb %}
-            <nav aria-label="breadcrumb" class="mb-2">
-                <div class="breadcrumb-wrap">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="{% url 'core:dashboard' %}">الرئيسية</a></li>
-                        {% block breadcrumb_items %}{% endblock %}
-                    </ol>
-                </div>
-            </nav>
-            {% endblock %}
+            {% block breadcrumb %}{% endblock %}
             
             <!-- Page Header -->
             {% block page_header %}

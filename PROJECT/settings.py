@@ -154,7 +154,12 @@ USE_TZ = True
 
 if DEBUG:
     STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'static/')
+        os.path.join(BASE_DIR, 'static/'),
+        *[
+            str(path)
+            for path in (BASE_DIR / 'apps').glob('*/css')
+            if path.is_dir()
+        ],
     ]
 else:
     STATIC_ROOT = os.path.join(BASE_DIR, 'static/')

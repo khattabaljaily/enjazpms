@@ -70,7 +70,6 @@
     --border-color: #e5e7eb;
     --border-light: #f3f4f6;
     
-    /* Text */
     --text-primary: #111827;
     --text-secondary: #6b7280;
     --text-tertiary: #9ca3af;
@@ -85,7 +84,6 @@
     /* Sidebar */
     --sidebar-bg: #ffffff;
     --sidebar-border: #e5e7eb;
-    
     /* Navbar */
     --navbar-bg: rgba(255, 255, 255, 0.8);
     --navbar-border: #e5e7eb;
@@ -107,7 +105,6 @@
     --radius-2xl: 1.5rem;
     --radius-full: 9999px;
     
-    /* Transitions */
     --transition: 150ms ease-in-out;
 }
 
@@ -169,6 +166,7 @@ html {
     font-size: 15px;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
 }
 
 body {
@@ -183,6 +181,7 @@ body {
     transition: background var(--transition), color var(--transition);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
 }
 
 /* ==========================================
@@ -470,6 +469,25 @@ textarea.form-control:focus {
 
 .form-control::placeholder {
     color: var(--text-tertiary);
+}
+
+input[type="email"],
+input[type="tel"],
+input[type="number"],
+input[inputmode="numeric"],
+input[inputmode="decimal"] {
+    direction: ltr;
+    text-align: right;
+    unicode-bidi: plaintext;
+}
+
+input[type="email"]::placeholder,
+input[type="tel"]::placeholder,
+input[type="number"]::placeholder,
+input[inputmode="numeric"]::placeholder,
+input[inputmode="decimal"]::placeholder {
+    direction: ltr;
+    text-align: right;
 }
 
 .form-label {
@@ -1261,13 +1279,14 @@ textarea.form-control:focus {
         radial-gradient(1100px 420px at 100% -12%, rgba(59, 130, 246, 0.14), transparent 60%),
         radial-gradient(900px 380px at -10% -15%, rgba(16, 185, 129, 0.14), transparent 58%),
         var(--bg-secondary);
-    overflow-x: visible;
+    overflow-x: hidden;
 }
 
 .dashboard-body {
     align-items: flex-start;
     gap: 0.85rem;
     padding: 0.75rem;
+    overflow-x: hidden;
 }
 
 .dashboard-shell .sidebar {
@@ -1324,6 +1343,8 @@ textarea.form-control:focus {
 .dashboard-main {
     flex: 1 1 auto;
     min-width: 0;
+    width: 100%;
+    max-width: 100%;
     background: rgba(255, 255, 255, 0.88);
     border: 1px solid rgba(99, 102, 241, 0.14);
     border-radius: 20px;
@@ -1332,6 +1353,7 @@ textarea.form-control:focus {
     min-height: calc(100vh - 90px);
     backdrop-filter: blur(7px);
     -webkit-backdrop-filter: blur(7px);
+    overflow-x: hidden;
 }
 
 [data-theme="dark"] .dashboard-main {
@@ -1433,6 +1455,13 @@ textarea.form-control:focus {
 .dashboard-main .row.g-3 {
     --bs-gutter-x: 0.75rem;
     --bs-gutter-y: 0.75rem;
+}
+
+.dashboard-main .content,
+.main-content,
+.content {
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .dashboard-shell .navbar {
@@ -3383,14 +3412,50 @@ textarea.form-control:focus {
    CUSTOMERS MODULE — Modern CX Design
    ========================================== */
 
+.cx-scene {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+}
+
+.cx-scene::before,
+.cx-scene::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: 50%;
+    filter: blur(34px);
+    opacity: .42;
+}
+
+.cx-scene::before {
+    width: 280px;
+    height: 280px;
+    top: -60px;
+    right: -50px;
+    background: radial-gradient(circle at center, rgba(59,130,246,.33), rgba(59,130,246,0));
+}
+
+.cx-scene::after {
+    width: 230px;
+    height: 230px;
+    left: -40px;
+    top: 180px;
+    background: radial-gradient(circle at center, rgba(16,185,129,.28), rgba(16,185,129,0));
+}
+
 /* ── Hero Header ─────────────────────────────────────────────── */
 .cx-hero {
-    background: var(--surface);
+    background:
+        radial-gradient(120% 160% at 100% 0, rgba(99,102,241,.11) 0, rgba(99,102,241,0) 58%),
+        radial-gradient(100% 140% at 0 0, rgba(16,185,129,.12) 0, rgba(16,185,129,0) 62%),
+        var(--surface);
     border: 1px solid var(--border-color);
     border-radius: 20px;
     padding: 2rem 2rem 0;
     margin-bottom: 1.25rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.04);
+    box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 14px 32px rgba(15,23,42,.07);
     overflow: hidden;
     position: relative;
 }
@@ -3404,12 +3469,25 @@ textarea.form-control:focus {
     border-radius: 20px 20px 0 0;
 }
 
+.cx-hero::after {
+    content: '';
+    position: absolute;
+    width: 165px;
+    height: 165px;
+    left: -38px;
+    bottom: -70px;
+    border-radius: 50%;
+    background: radial-gradient(circle at center, rgba(99,102,241,.22), rgba(99,102,241,0));
+}
+
 .cx-hero-inner {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1.75rem;
+    position: relative;
+    z-index: 1;
 }
 
 .cx-hero-left {
@@ -3460,13 +3538,12 @@ textarea.form-control:focus {
     font-weight: 600;
     font-family: 'Cairo', sans-serif;
     cursor: pointer;
-    transition: all .18s ease;
+    transition: all .2s ease;
     box-shadow: 0 2px 8px rgba(99,102,241,.3);
     white-space: nowrap;
 }
 .cx-btn-add:hover {
     background: var(--primary-hover);
-    transform: translateY(-1px);
     box-shadow: 0 6px 18px rgba(99,102,241,.4);
 }
 .cx-btn-add i {
@@ -3483,6 +3560,8 @@ textarea.form-control:focus {
     align-items: stretch;
     border-top: 1px solid var(--border-light);
     margin: 0 -2rem;
+    position: relative;
+    z-index: 1;
 }
 
 .cx-kpi-item {
@@ -3492,10 +3571,10 @@ textarea.form-control:focus {
     flex-direction: column;
     gap: .25rem;
     position: relative;
-    transition: background .15s;
+    transition: background .18s;
 }
 .cx-kpi-item:hover {
-    background: var(--surface-hover);
+    background: rgba(255,255,255,.56);
 }
 
 .cx-kpi-divider {
@@ -3536,7 +3615,7 @@ textarea.form-control:focus {
     border: 1px solid var(--border-color);
     border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.04);
+    box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 12px 28px rgba(15,23,42,.07);
 }
 
 /* ── Toolbar ─────────────────────────────────────────────────── */
@@ -3547,7 +3626,8 @@ textarea.form-control:focus {
     gap: 1rem;
     padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--border-light);
-    background: var(--bg-secondary);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-secondary) 90%, #fff) 0%, var(--bg-secondary) 100%);
     flex-wrap: wrap;
 }
 
@@ -3595,10 +3675,11 @@ textarea.form-control:focus {
 /* Filter tabs (pill segment) */
 .cx-filter-tabs {
     display: flex;
-    background: var(--bg-tertiary);
+    background: color-mix(in srgb, var(--bg-tertiary) 82%, #fff);
     border-radius: 10px;
     padding: 3px;
     gap: 2px;
+    border: 1px solid var(--border-light);
 }
 
 .cx-filter-tab {
@@ -3622,7 +3703,9 @@ textarea.form-control:focus {
 }
 
 /* ── Table ───────────────────────────────────────────────────── */
-.cx-table-wrap { overflow-x: auto; }
+.cx-table-wrap {
+    overflow-x: hidden;
+}
 
 .cx-table {
     width: 100%;
@@ -3636,10 +3719,13 @@ textarea.form-control:focus {
     text-transform: uppercase;
     letter-spacing: .06em;
     color: var(--text-tertiary);
-    background: var(--bg-secondary);
+    background: color-mix(in srgb, var(--bg-secondary) 84%, #fff);
     border-bottom: 1px solid var(--border-light);
     white-space: nowrap;
     text-align: right;
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 .cx-table tbody td {
@@ -3652,9 +3738,14 @@ textarea.form-control:focus {
 .cx-table tbody tr:last-child td { border-bottom: none; }
 
 .cx-table tbody tr {
-    transition: background .12s;
+    transition: background .14s;
 }
-.cx-table tbody tr:hover { background: var(--surface-hover); }
+.cx-table tbody tr:nth-child(2n) {
+    background: color-mix(in srgb, var(--bg-secondary) 28%, transparent);
+}
+.cx-table tbody tr:hover {
+    background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+}
 
 /* ── Row cells ───────────────────────────────────────────────── */
 .cxr-identity {
@@ -3665,13 +3756,14 @@ textarea.form-control:focus {
 
 .cxr-avatar {
     width: 36px; height: 36px;
-    border-radius: 10px;
+    border-radius: 11px;
     display: flex; align-items: center; justify-content: center;
     font-size: .95rem;
     font-weight: 800;
     color: #fff;
     flex-shrink: 0;
     letter-spacing: 0;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,.38), 0 8px 14px rgba(30,41,59,.18);
 }
 
 .cxr-name {
@@ -3743,10 +3835,12 @@ textarea.form-control:focus {
     align-items: center;
     justify-content: flex-end;
     gap: .4rem;
-    opacity: 0;
+    opacity: .22;
     transition: opacity .15s;
 }
-.cx-table tbody tr:hover .cxr-actions { opacity: 1; }
+.cx-table tbody tr:hover .cxr-actions {
+    opacity: 1;
+}
 
 .cxr-act {
     width: 30px; height: 30px;
@@ -3758,12 +3852,12 @@ textarea.form-control:focus {
     font-size: .75rem;
     cursor: pointer;
     transition: all .15s;
+    backdrop-filter: saturate(130%);
 }
 .cxr-act:hover {
     background: var(--primary);
     border-color: var(--primary);
     color: #fff;
-    transform: translateY(-1px);
     box-shadow: 0 3px 10px rgba(99,102,241,.35);
 }
 .cxr-act--del:hover {
@@ -3776,27 +3870,30 @@ textarea.form-control:focus {
 .cx-table-footer { display: none; }
 
 /* ── Add/Edit Modal ──────────────────────────────────────────── */
-.cx-modal-dialog { max-width: 820px; }
+.cx-modal-dialog { max-width: 920px; }
 
 .cx-modal {
-    border: none;
-    border-radius: 20px;
+    border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
+    border-radius: 22px;
     overflow: hidden;
     box-shadow: 0 24px 64px rgba(0,0,0,.2);
     display: flex;
     flex-direction: row;
     min-height: 560px;
+    max-height: calc(100vh - 3rem);
 }
 
 /* Sidebar panel */
 .cx-modal-sidebar {
-    width: 200px;
+    width: 220px;
     flex-shrink: 0;
-    background: linear-gradient(160deg, var(--primary) 0%, var(--secondary) 100%);
+    background:
+        radial-gradient(140% 120% at 100% 0, rgba(255,255,255,.2), rgba(255,255,255,0) 62%),
+        linear-gradient(160deg, var(--primary) 0%, var(--secondary) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem 1.25rem;
+    padding: 2.1rem 1.35rem;
 }
 
 .cx-modal-sidebar-inner {
@@ -3808,7 +3905,7 @@ textarea.form-control:focus {
 }
 
 .cx-ms-avatar {
-    width: 72px; height: 72px;
+    width: 78px; height: 78px;
     border-radius: 20px;
     background: rgba(255,255,255,.25);
     backdrop-filter: blur(6px);
@@ -3817,6 +3914,7 @@ textarea.form-control:focus {
     font-weight: 800;
     color: #fff;
     box-shadow: 0 4px 16px rgba(0,0,0,.15);
+    border: 1px solid rgba(255,255,255,.2);
 }
 
 .cx-ms-name {
@@ -3835,18 +3933,23 @@ textarea.form-control:focus {
     flex-direction: column;
     overflow: hidden;
     background: var(--surface);
+    min-height: 0;
 }
 
 .cx-modal-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    padding: 1.5rem 1.75rem 1rem;
+    padding: 1.25rem 1.5rem .9rem;
     border-bottom: 1px solid var(--border-light);
+    background: color-mix(in srgb, var(--bg-secondary) 72%, #fff);
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 .cx-modal-title {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 800;
     color: var(--text-primary);
     margin: 0 0 .2rem;
@@ -3859,23 +3962,51 @@ textarea.form-control:focus {
 }
 
 .cx-modal-close {
-    width: 32px; height: 32px;
-    border-radius: 8px;
-    border: 1.5px solid var(--border-color);
+    width: 28px; height: 28px;
+    border-radius: 999px;
+    border: 1px solid transparent;
     background: transparent;
-    color: var(--text-secondary);
+    color: color-mix(in srgb, var(--text-secondary) 90%, #000);
     display: flex; align-items: center; justify-content: center;
-    font-size: .85rem;
+    font-size: .78rem;
     cursor: pointer;
     transition: all .15s;
     flex-shrink: 0;
 }
-.cx-modal-close:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
+.cx-modal-close:hover {
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+    color: var(--danger);
+}
 
 .cx-modal-body {
-    flex: 1;
+    flex: 1 1 auto;
     overflow-y: auto;
-    padding: 1.5rem 1.75rem;
+    padding: 1.2rem 1.5rem;
+    max-height: none;
+    min-height: 0;
+}
+
+#customerModal .form-control,
+#customerModal .form-select,
+#customerModal textarea {
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    padding: 0.58rem 0.75rem;
+    background: var(--surface);
+    color: var(--text-primary);
+}
+
+#customerModal textarea {
+    min-height: 96px;
+    resize: vertical;
+}
+
+#customerModal .form-control:focus,
+#customerModal .form-select:focus,
+#customerModal textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, .14);
 }
 
 /* Form group heading */
@@ -3972,13 +4103,16 @@ textarea.form-control:focus {
 
 /* Modal footer */
 .cx-modal-footer {
-    padding: 1rem 1.75rem;
+    padding: .9rem 1.5rem;
     border-top: 1px solid var(--border-light);
     background: var(--bg-secondary);
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: .75rem;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
 }
 
 /* Shared buttons */
@@ -3995,7 +4129,7 @@ textarea.form-control:focus {
     cursor: pointer;
     transition: all .15s;
 }
-.cx-btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+.cx-btn-primary:hover { background: var(--primary-hover); }
 
 .cx-btn-ghost {
     display: inline-flex; align-items: center;
@@ -4025,7 +4159,7 @@ textarea.form-control:focus {
     cursor: pointer;
     transition: all .15s;
 }
-.cx-btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
+.cx-btn-danger:hover { background: #dc2626; }
 
 /* ── Delete Modal ────────────────────────────────────────────── */
 .cx-delete-dialog { max-width: 420px; }
@@ -4079,6 +4213,13 @@ textarea.form-control:focus {
 [data-theme="dark"] .cx-hero,
 [data-theme="dark"] .cx-panel { background: var(--surface); }
 
+[data-theme="dark"] .cx-hero {
+    background:
+        radial-gradient(120% 160% at 100% 0, rgba(129,140,248,.16) 0, rgba(129,140,248,0) 58%),
+        radial-gradient(100% 140% at 0 0, rgba(52,211,153,.14) 0, rgba(52,211,153,0) 62%),
+        var(--surface);
+}
+
 [data-theme="dark"] .cx-toolbar,
 [data-theme="dark"] .cx-table-footer,
 [data-theme="dark"] .cx-modal-footer,
@@ -4095,7 +4236,12 @@ textarea.form-control:focus {
 }
 
 [data-theme="dark"] .cx-table thead th { background: var(--bg-secondary); }
-[data-theme="dark"] .cx-table tbody tr:hover { background: var(--surface-hover); }
+[data-theme="dark"] .cx-table tbody tr:nth-child(2n) {
+    background: color-mix(in srgb, var(--bg-secondary) 45%, transparent);
+}
+[data-theme="dark"] .cx-table tbody tr:hover {
+    background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
 
 [data-theme="dark"] .cx-modal-main { background: var(--surface); }
 [data-theme="dark"] .cx-modal-header { border-bottom-color: var(--border-color); }
@@ -4106,8 +4252,14 @@ textarea.form-control:focus {
 
 [data-theme="dark"] .cx-delete-modal { background: var(--surface); }
 
+[data-theme="dark"] .cx-scene::before { opacity: .34; }
+[data-theme="dark"] .cx-scene::after { opacity: .26; }
+
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
+    .cx-scene::before,
+    .cx-scene::after { display: none; }
+
     .cx-hero { padding: 1.25rem 1.25rem 0; }
     .cx-hero-inner { flex-wrap: wrap; }
     .cx-kpi-row { margin: 0 -1.25rem; }
@@ -4143,9 +4295,56 @@ textarea.form-control:focus {
 #customerModal .modal-content.cx-modal {
     flex-direction: row;
 }
+
+/* Ensure customer modal is always centered and above backdrop */
+#customerModal {
+    z-index: 1000 !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#customerModal .modal-dialog.cx-modal-dialog {
+    margin: 1.5rem auto !important;
+    width: min(920px, calc(100vw - 1.5rem));
+}
+
+#customerModal.modal.show {
+    display: block !important;
+}
+
+#customerModal .modal-content.cx-modal {
+    max-height: calc(100vh - 3rem);
+}
+
+#deleteCustomerModal {
+    z-index: 1000 !important;
+}
+
+.modal-backdrop.show {
+    z-index: 990 !important;
+}
+
+body.modal-open {
+    overflow: hidden !important;
+    padding-right: 0 !important;
+}
+
 @media (max-width: 768px) {
+    .cx-table-wrap {
+        overflow-x: auto;
+    }
+
     #customerModal .modal-content.cx-modal {
         flex-direction: column;
+    }
+
+    #customerModal .modal-dialog.cx-modal-dialog {
+        margin: 0.85rem auto !important;
+        width: calc(100vw - 1rem);
+    }
+
+    #customerModal .modal-content.cx-modal {
+        max-height: calc(100vh - 1.7rem);
     }
 }
 
@@ -4203,7 +4402,6 @@ textarea.form-control:focus {
     background: var(--primary) !important;
     border-color: var(--primary) !important;
     color: #fff !important;
-    transform: translateY(-1px) !important;
     box-shadow: 0 3px 10px rgba(99,102,241,.3) !important;
     z-index: 1;
 }

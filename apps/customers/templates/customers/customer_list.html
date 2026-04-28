@@ -1,8 +1,15 @@
 {% extends "layouts/dashboard.html" %}
+{% load static %}
 
 {% block page_header %}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'customers/customer_list.css' %}?v=1.0">
+{% endblock %}
+
 {% block content %}
+
+<div class="cx-scene">
 
 <!-- ══════════════════════════ PAGE HERO HEADER ══════════════════════════ -->
 <div class="cx-hero">
@@ -88,23 +95,21 @@
     </div>
 </div>
 
+</div>
+
 <!-- ══════════════════════════ ADD / EDIT MODAL ══════════════════════════ -->
 <div class="modal fade" id="customerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable cx-modal-dialog">
+    <div class="modal-dialog modal-xl modal-dialog-centered cx-modal-dialog">
         <div class="modal-content cx-modal">
             <form id="customerForm" novalidate>
                 {% csrf_token %}
                 <input type="hidden" id="customerId" value="">
-
-                {# ── Modal Sidebar ── #}
-                <div class="cx-modal-sidebar" id="customerModalIcon"></div>
 
                 {# ── Modal Main ── #}
                 <div class="cx-modal-main">
                     <div class="cx-modal-header">
                         <div>
                             <h5 class="cx-modal-title" id="customerModalTitle">إضافة عميل جديد</h5>
-                            <p class="cx-modal-subtitle" id="customerModalSubtitle">أدخل بيانات العميل أدناه</p>
                         </div>
                         <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
                             <i class="fas fa-times"></i>
@@ -228,8 +233,19 @@
     const urlDelete = "{% url 'customers:delete_api' 0 %}";
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
-    const customerModal = new bootstrap.Modal(document.getElementById('customerModal'));
-    const deleteModal   = new bootstrap.Modal(document.getElementById('deleteCustomerModal'));
+    const customerModalEl = document.getElementById('customerModal');
+    const deleteModalEl   = document.getElementById('deleteCustomerModal');
+
+    // Keep modals at <body> level so they are not trapped by dashboard stacking contexts.
+    if (customerModalEl && customerModalEl.parentElement !== document.body) {
+        document.body.appendChild(customerModalEl);
+    }
+    if (deleteModalEl && deleteModalEl.parentElement !== document.body) {
+        document.body.appendChild(deleteModalEl);
+    }
+
+    const customerModal = new bootstrap.Modal(customerModalEl);
+    const deleteModal   = new bootstrap.Modal(deleteModalEl);
 
     const $form      = $('#customerForm');
     const $submitBtn = $('#customerSubmitBtn');
@@ -348,7 +364,6 @@
         resetForm();
         setModalSidebar('عميل جديد', '+', 'var(--primary)');
         $('#customerModalTitle').text('إضافة عميل جديد');
-        $('#customerModalSubtitle').text('أكمل النموذج لإضافة عميل');
         $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
         customerModal.show();
     }

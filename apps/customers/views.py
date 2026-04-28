@@ -215,18 +215,3 @@ def customer_delete_api(request, pk):
 @login_required
 def customer_create(request):
     return redirect('customers:list')
-
-
-@login_required
-def customer_update(request, pk):
-    return redirect('customers:list')
-
-
-@login_required
-def customer_detail(request, pk):
-    return redirect('customers:list')
-
-
-@login_required
-def customer_delete(request, pk):
-    return redirect('customers:list')
