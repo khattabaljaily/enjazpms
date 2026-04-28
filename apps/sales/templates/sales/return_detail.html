@@ -1,0 +1,159 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-rotate-left"></i></div>
+            <div>
+                <h1 class="cx-hero-title">{{ sale_return.return_number }}</h1>
+                <p class="cx-hero-desc">
+                    مرتجع على فاتورة {{ sale_return.original_invoice.invoice_number }}
+                    — {{ sale_return.return_date }}
+                </p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'sales:invoice_detail' sale_return.original_invoice.pk %}" class="cx-btn-secondary">
+                    <i class="fas fa-file-invoice"></i><span>الفاتورة الأصلية</span>
+                </a>
+                <a href="{% url 'sales:return_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-list"></i><span>قائمة المرتجعات</span>
+                </a>
+                {% if can_confirm %}
+                <button class="cx-btn-add" onclick="doConfirm()">
+                    <i class="fas fa-check"></i><span>تأكيد</span>
+                </button>
+                {% endif %}
+                {% if can_cancel %}
+                <button class="cx-btn-danger" onclick="doCancel()">
+                    <i class="fas fa-ban"></i><span>إلغاء</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        {% if sale_return.status == 'draft' %}
+        <span class="cx-stat-badge cx-stat-badge--muted">مسودة</span>
+        {% elif sale_return.status == 'confirmed' %}
+        <span class="cx-stat-badge cx-stat-badge--success">مؤكد</span>
+        {% else %}
+        <span class="cx-stat-badge cx-stat-badge--danger">ملغي</span>
+        {% endif %}
+        <span class="cx-stat-badge cx-stat-badge--primary">{{ sale_return.get_refund_method_display }}</span>
+    </div>
+</div>
+
+<div class="row g-3">
+<div class="col-lg-8">
+    <div class="cx-panel mb-3">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات المرتجع</h3></div>
+        <div class="cx-panel-body">
+            <div class="cx-info-grid">
+                <div class="cx-info-item">
+                    <span class="cx-info-label">رقم المرتجع</span>
+                    <span class="cx-info-value">{{ sale_return.return_number }}</span>
+                </div>
+                <div class="cx-info-item">
+                    <span class="cx-info-label">تاريخ المرتجع</span>
+                    <span class="cx-info-value">{{ sale_return.return_date }}</span>
+                </div>
+                <div class="cx-info-item">
+                    <span class="cx-info-label">الفاتورة الأصلية</span>
+                    <span class="cx-info-value">
+                        <a href="{% url 'sales:invoice_detail' sale_return.original_invoice.pk %}">
+                            {{ sale_return.original_invoice.invoice_number }}
+                        </a>
+                    </span>
+                </div>
+                <div class="cx-info-item">
+                    <span class="cx-info-label">العميل</span>
+                    <span class="cx-info-value">{{ sale_return.original_invoice.customer.name|default:"زبون عابر" }}</span>
+                </div>
+                <div class="cx-info-item">
+                    <span class="cx-info-label">طريقة الاسترداد</span>
+                    <span class="cx-info-value">{{ sale_return.get_refund_method_display }}</span>
+                </div>
+                {% if sale_return.reason %}
+                <div class="cx-info-item cx-info-item--full">
+                    <span class="cx-info-label">سبب الإرجاع</span>
+                    <span class="cx-info-value">{{ sale_return.reason }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-panel">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">بنود المرتجع</h3></div>
+        <div class="cx-panel-body p-0">
+            <table class="cx-table">
+                <thead>
+                    <tr><th>المنتج</th><th>الكمية المُرتجَعة</th><th>السعر</th><th>الإجمالي</th></tr>
+                </thead>
+                <tbody>
+                {% for line in return_lines %}
+                <tr>
+                    <td>{{ line.item.name }}</td>
+                    <td>{{ line.returned_quantity }}</td>
+                    <td>{{ line.unit_price|floatformat:2 }}</td>
+                    <td><strong>{{ line.line_total|floatformat:2 }}</strong></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="col-lg-4">
+    <div class="cx-panel">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">الإجمالي</h3></div>
+        <div class="cx-panel-body">
+            <div class="cx-totals-block">
+                <div class="cx-totals-row cx-totals-row--grand">
+                    <span>إجمالي المرتجع</span>
+                    <strong>{{ sale_return.total_returned|floatformat:2 }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const RET_ID = {{ sale_return.id }};
+const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2];
+
+{% if can_confirm %}
+function doConfirm() {
+    if (!confirm('تأكيد المرتجع؟')) return;
+    fetch(`/sales/returns/${RET_ID}/confirm/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+    .then(r => r.json()).then(data => { if (data.success) location.reload(); else alert(data.message); });
+}
+{% endif %}
+
+{% if can_cancel %}
+function doCancel() {
+    if (!confirm('إلغاء المرتجع؟')) return;
+    fetch(`/sales/returns/${RET_ID}/cancel/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+    .then(r => r.json()).then(data => { if (data.success) location.reload(); else alert(data.message); });
+}
+{% endif %}
+</script>
+{% endblock %}

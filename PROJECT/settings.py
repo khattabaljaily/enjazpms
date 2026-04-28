@@ -54,7 +54,7 @@ INSTALLED_APPS = [
     # Local apps (will be added as we create them)
     # 'apps.branches',
     'apps.items',
-    # 'apps.sales',
+    'apps.sales',
     # 'apps.purchases',
     'apps.stocks',
 ]

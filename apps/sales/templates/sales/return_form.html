@@ -1,0 +1,192 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-rotate-left"></i></div>
+            <div>
+                <h1 class="cx-hero-title">مرتجع جديد</h1>
+                <p class="cx-hero-desc">الفاتورة: {{ invoice.invoice_number }}
+                    — {{ invoice.customer.name|default:"زبون عابر" }}</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'sales:invoice_detail' invoice.pk %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i><span>عودة للفاتورة</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="returnForm">
+{% csrf_token %}
+
+<div class="row g-3">
+<div class="col-lg-8">
+
+    <!-- بيانات المرتجع -->
+    <div class="cx-panel mb-3">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات المرتجع</h3></div>
+        <div class="cx-panel-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="cx-label">تاريخ المرتجع</label>
+                    <input type="date" id="returnDate" class="cx-input"
+                           value="{{ today }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="cx-label">طريقة الاسترداد</label>
+                    <select id="refundMethod" class="cx-input">
+                        <option value="cash">نقداً</option>
+                        <option value="bank">تحويل بنكي</option>
+                        {% if invoice.customer %}
+                        <option value="balance">رصيد دائن للعميل</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="cx-label">سبب الإرجاع</label>
+                    <textarea id="returnReason" class="cx-input" rows="2"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الكميات المُرتجَعة -->
+    <div class="cx-panel mb-3">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">الكميات المُرتجَعة</h3></div>
+        <div class="cx-panel-body p-0">
+            <table class="cx-table">
+                <thead>
+                    <tr>
+                        <th>المنتج</th>
+                        <th>الكمية المباعة</th>
+                        <th>المُرتجَع سابقاً</th>
+                        <th>القابل للإرجاع</th>
+                        <th>الكمية المُرتجَعة الآن</th>
+                        <th>السعر</th>
+                        <th>الإجمالي</th>
+                    </tr>
+                </thead>
+                <tbody id="returnLinesBody">
+                {% for line in returnable_lines %}
+                <tr>
+                    <td>
+                        {{ line.item.name }}
+                        {% if line.variant %}<br><small>{{ line.variant }}</small>{% endif %}
+                        <input type="hidden" class="inv-line-id" value="{{ line.id }}">
+                    </td>
+                    <td>{{ line.quantity }}</td>
+                    <td>{{ line.returned_quantity }}</td>
+                    <td><strong class="text-success">{{ line.returnable_quantity }}</strong></td>
+                    <td>
+                        <input type="number" class="cx-input cx-input--sm ret-qty"
+                               min="0" max="{{ line.returnable_quantity }}" step="0.001"
+                               value="0" data-price="{{ line.unit_price }}"
+                               oninput="updateReturnTotal(this)"
+                               style="width:80px">
+                    </td>
+                    <td>{{ line.unit_price|floatformat:2 }}</td>
+                    <td class="ret-line-total text-end">0.00</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-3">لا توجد كميات قابلة للإرجاع</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="col-lg-4">
+    <div class="cx-panel sticky-top" style="top:80px">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">إجمالي المرتجع</h3></div>
+        <div class="cx-panel-body">
+            <div class="cx-totals-block">
+                <div class="cx-totals-row cx-totals-row--grand">
+                    <span>الإجمالي</span>
+                    <strong id="returnGrandTotal">0.00</strong>
+                </div>
+            </div>
+            <div class="d-grid gap-2 mt-3">
+                <button type="button" class="cx-btn-secondary" onclick="submitReturn('save_draft')">
+                    <i class="fas fa-save me-1"></i>حفظ كمسودة
+                </button>
+                <button type="button" class="cx-btn-add" onclick="submitReturn('confirm')">
+                    <i class="fas fa-check me-1"></i>تأكيد المرتجع
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+</form>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const INVOICE_PK = {{ invoice.pk }};
+const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2];
+
+function updateReturnTotal(input) {
+    const qty = parseFloat(input.value) || 0;
+    const price = parseFloat(input.dataset.price) || 0;
+    const total = (qty * price).toFixed(2);
+    input.closest('tr').querySelector('.ret-line-total').textContent = total;
+    recalcReturnTotal();
+}
+
+function recalcReturnTotal() {
+    let total = 0;
+    document.querySelectorAll('.ret-line-total').forEach(td => {
+        total += parseFloat(td.textContent) || 0;
+    });
+    document.getElementById('returnGrandTotal').textContent = total.toFixed(2);
+}
+
+function submitReturn(action) {
+    const lines = [];
+    document.querySelectorAll('#returnLinesBody tr').forEach(row => {
+        const lineId = row.querySelector('.inv-line-id')?.value;
+        const qty = parseFloat(row.querySelector('.ret-qty')?.value) || 0;
+        if (lineId && qty > 0) {
+            lines.push({ invoice_line_id: lineId, returned_quantity: qty });
+        }
+    });
+
+    if (!lines.length) { alert('أضف كمية واحدة على الأقل للإرجاع'); return; }
+
+    const header = {
+        return_date: document.getElementById('returnDate').value,
+        refund_method: document.getElementById('refundMethod').value,
+        reason: document.getElementById('returnReason').value,
+    };
+
+    fetch(`/sales/${INVOICE_PK}/return/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ header, lines, action }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) window.location.href = data.redirect;
+        else alert(data.message);
+    });
+}
+</script>
+{% endblock %}

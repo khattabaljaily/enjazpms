@@ -1,0 +1,669 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════════════════ HERO ══════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">
+                    {% if action == 'edit' %}تعديل فاتورة{% else %}فاتورة مبيعات جديدة{% endif %}
+                </h1>
+                {% if invoice %}
+                <p class="cx-hero-desc">{{ invoice.invoice_number }} — {{ invoice.get_status_display }}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'sales:invoice_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>العودة للقائمة</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════ FORM BODY ══════════════════════ -->
+<form id="invoiceForm">
+{% csrf_token %}
+
+<div class="row g-3">
+
+    <!-- ── الجانب الأيمن: رأس الفاتورة ── -->
+    <div class="col-lg-8">
+
+        <!-- بطاقة رأس الفاتورة -->
+        <div class="cx-panel mb-3">
+            <div class="cx-panel-header">
+                <h3 class="cx-panel-title"><i class="fas fa-info-circle me-2"></i>بيانات الفاتورة</h3>
+            </div>
+            <div class="cx-panel-body">
+                <div class="row g-3">
+                    <!-- العميل -->
+                    <div class="col-md-6">
+                        <label class="cx-label">العميل</label>
+                        <select id="customerId" name="customer_id" class="cx-input">
+                            <option value="">— زبون عابر —</option>
+                            {% for c in customers %}
+                            <option value="{{ c.id }}"
+                                {% if invoice and invoice.customer_id == c.id %}selected{% endif %}>
+                                {{ c.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- المخزن -->
+                    <div class="col-md-6">
+                        <label class="cx-label">المخزن <span class="text-danger">*</span></label>
+                        <select id="stockId" name="stock_id" class="cx-input" required>
+                            {% for s in stocks %}
+                            <option value="{{ s.id }}"
+                                {% if invoice and invoice.stock_id == s.id %}selected
+                                {% elif default_stock and default_stock.id == s.id %}selected{% endif %}>
+                                {{ s.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- تاريخ الفاتورة -->
+                    <div class="col-md-4">
+                        <label class="cx-label">تاريخ الفاتورة <span class="text-danger">*</span></label>
+                        <input type="date" id="invoiceDate" name="invoice_date" class="cx-input" required
+                               value="{{ invoice.invoice_date|date:'Y-m-d'|default:today }}">
+                    </div>
+
+                    <!-- طريقة الدفع -->
+                    <div class="col-md-4">
+                        <label class="cx-label">طريقة الدفع</label>
+                        <select id="paymentMethod" name="payment_method" class="cx-input" onchange="handlePaymentMethodChange()">
+                            <option value="cash" {% if invoice and invoice.payment_method == 'cash' %}selected{% endif %}>نقداً</option>
+                            <option value="bank" {% if invoice and invoice.payment_method == 'bank' %}selected{% endif %}>تحويل بنكي</option>
+                            <option value="credit" {% if invoice and invoice.payment_method == 'credit' %}selected{% endif %}>آجل</option>
+                            <option value="mixed" {% if invoice and invoice.payment_method == 'mixed' %}selected{% endif %}>مختلط</option>
+                        </select>
+                    </div>
+
+                    <!-- تاريخ الاستحقاق (للآجل) -->
+                    <div class="col-md-4" id="dueDateWrap" style="display:none">
+                        <label class="cx-label">تاريخ الاستحقاق</label>
+                        <input type="date" id="dueDate" name="due_date" class="cx-input"
+                               value="{{ invoice.due_date|date:'Y-m-d'|default:'' }}">
+                    </div>
+
+                    <!-- المبالغ المختلطة -->
+                    <div id="mixedPaymentWrap" style="display:none" class="col-12">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="cx-label">المبلغ نقداً</label>
+                                <input type="number" id="cashAmount" name="cash_amount" class="cx-input" min="0" step="0.01"
+                                       value="{{ invoice.cash_amount|default:'0' }}" oninput="recalcTotals()">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label">المبلغ بنكياً</label>
+                                <input type="number" id="bankAmount" name="bank_amount" class="cx-input" min="0" step="0.01"
+                                       value="{{ invoice.bank_amount|default:'0' }}" oninput="recalcTotals()">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label">الآجل (محسوب)</label>
+                                <input type="text" id="creditAmount" class="cx-input" readonly style="background:#f0f4ff">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- مرجع التحويل البنكي -->
+                    <div class="col-md-6" id="bankRefWrap" style="display:none">
+                        <label class="cx-label">مرجع التحويل البنكي</label>
+                        <input type="text" id="bankReference" name="bank_reference" class="cx-input"
+                               value="{{ invoice.bank_reference|default:'' }}">
+                    </div>
+
+                    <!-- ملاحظات -->
+                    <div class="col-12">
+                        <label class="cx-label">ملاحظات</label>
+                        <textarea id="notes" name="notes" class="cx-input" rows="2">{{ invoice.notes|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة البنود -->
+        <div class="cx-panel mb-3">
+            <div class="cx-panel-header">
+                <h3 class="cx-panel-title"><i class="fas fa-list me-2"></i>بنود الفاتورة</h3>
+                <button type="button" class="cx-btn-secondary" onclick="openItemSearch()">
+                    <i class="fas fa-plus"></i> إضافة منتج
+                </button>
+            </div>
+            <div class="cx-panel-body p-0">
+                <div class="table-responsive" style="min-height:200px">
+                    <table class="cx-table" id="linesTable">
+                        <thead>
+                            <tr>
+                                <th style="min-width:180px">المنتج</th>
+                                <th style="width:80px">الكمية</th>
+                                <th style="width:110px">سعر الوحدة</th>
+                                <th style="width:80px">خصم %</th>
+                                <th style="width:80px">ضريبة %</th>
+                                <th style="width:110px">الإجمالي</th>
+                                <th style="width:40px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="linesBody">
+                        <!-- البنود تُضاف ديناميكياً -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyLinesMsg" class="text-center text-muted py-4">
+                    <i class="fas fa-box-open fa-2x mb-2"></i>
+                    <p>لم تتم إضافة منتجات بعد. اضغط «إضافة منتج».</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── الجانب الأيسر: الإجماليات والإجراءات ── -->
+    <div class="col-lg-4">
+
+        <!-- بطاقة الإجماليات -->
+        <div class="cx-panel mb-3 sticky-top" style="top:80px">
+            <div class="cx-panel-header">
+                <h3 class="cx-panel-title"><i class="fas fa-calculator me-2"></i>الإجماليات</h3>
+            </div>
+            <div class="cx-panel-body">
+
+                <!-- خصم الفاتورة -->
+                <div class="row g-2 mb-3">
+                    <div class="col-5">
+                        <label class="cx-label">خصم الفاتورة</label>
+                        <select id="discountType" name="invoice_discount_type" class="cx-input" onchange="recalcTotals()">
+                            <option value="percent">نسبة %</option>
+                            <option value="amount">مبلغ ثابت</option>
+                        </select>
+                    </div>
+                    <div class="col-7">
+                        <label class="cx-label">&nbsp;</label>
+                        <input type="number" id="discountValue" name="invoice_discount_value"
+                               class="cx-input" min="0" step="0.01" value="0" oninput="recalcTotals()">
+                    </div>
+                </div>
+
+                <!-- الأرقام -->
+                <div class="cx-totals-block">
+                    <div class="cx-totals-row">
+                        <span>المجموع الفرعي</span>
+                        <strong id="displaySubtotal">0.00</strong>
+                    </div>
+                    <div class="cx-totals-row">
+                        <span>الخصم</span>
+                        <strong id="displayDiscount" class="text-danger">0.00</strong>
+                    </div>
+                    <div class="cx-totals-row">
+                        <span>الضريبة</span>
+                        <strong id="displayTax">0.00</strong>
+                    </div>
+                    <div class="cx-totals-row cx-totals-row--grand">
+                        <span>الإجمالي النهائي</span>
+                        <strong id="displayGrandTotal">0.00</strong>
+                    </div>
+                    <div class="cx-totals-row text-muted" id="creditRow" style="display:none">
+                        <span>الجزء الآجل</span>
+                        <span id="displayCredit">0.00</span>
+                    </div>
+                </div>
+
+                <!-- أزرار الحفظ -->
+                <div class="d-grid gap-2 mt-3">
+                    <button type="button" class="cx-btn-secondary" onclick="submitForm('save_draft')">
+                        <i class="fas fa-save me-1"></i>
+                        حفظ كمسودة
+                    </button>
+                    <button type="button" class="cx-btn-add" onclick="submitForm('confirm')">
+                        <i class="fas fa-check me-1"></i>
+                        حفظ وتأكيد
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- معلومات العميل (تظهر عند الاختيار) -->
+        <div class="cx-panel" id="customerInfoCard" style="display:none">
+            <div class="cx-panel-header">
+                <h3 class="cx-panel-title"><i class="fas fa-user me-2"></i>معلومات العميل</h3>
+            </div>
+            <div class="cx-panel-body">
+                <div class="cx-info-grid">
+                    <div class="cx-info-item">
+                        <span class="cx-info-label">الرصيد الحالي</span>
+                        <span class="cx-info-value" id="custBalance">—</span>
+                    </div>
+                    <div class="cx-info-item">
+                        <span class="cx-info-label">حد الائتمان</span>
+                        <span class="cx-info-value" id="custCreditLimit">—</span>
+                    </div>
+                    <div class="cx-info-item">
+                        <span class="cx-info-label">الهاتف</span>
+                        <span class="cx-info-value" id="custPhone">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</form>
+
+<!-- ══════════════════════ ITEM SEARCH MODAL ══════════════════════ -->
+<div class="cx-modal-backdrop" id="itemSearchBackdrop" style="display:none">
+    <div class="cx-modal" style="max-width:600px">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title">بحث وإضافة منتج</h3>
+            <button type="button" class="cx-modal-close" onclick="closeItemSearch()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <div style="position:relative;margin-bottom:1rem">
+                <i class="fas fa-search" style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);color:#888"></i>
+                <input type="text" id="itemSearchQuery" class="cx-input" style="padding-right:2.5rem"
+                       placeholder="اسم المنتج، SKU، باركود..." oninput="searchItems()">
+            </div>
+            <div id="itemSearchResults" style="max-height:350px;overflow-y:auto">
+                <div class="text-muted text-center py-3">ابدأ الكتابة للبحث...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div><!-- cx-scene -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── بيانات مُسبقة من Django ───────────────────────────────
+const ITEM_INFO_URL = "{% url 'sales:item_info_api' %}";
+const STOCK_ITEMS_URL = "{% url 'sales:stock_items_api' %}";
+const CUSTOMER_INFO_URL = "{% url 'sales:customer_info_api' %}";
+const FORM_ACTION = "{{ action }}";
+const INVOICE_ID = "{{ invoice.id|default:'' }}";
+
+{% if existing_lines %}
+const EXISTING_LINES = {{ existing_lines }};
+{% else %}
+const EXISTING_LINES = [];
+{% endif %}
+
+// ────────────────────────────────────────────────────────────────
+// State
+// ────────────────────────────────────────────────────────────────
+let lineCounter = 0;  // للمعرفات الفريدة
+
+// ────────────────────────────────────────────────────────────────
+// Init
+// ────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    handlePaymentMethodChange();
+
+    // تحميل البنود الموجودة (تعديل)
+    EXISTING_LINES.forEach(line => addLineToTable(line));
+
+    // عند تغيير العميل
+    document.getElementById('customerId').addEventListener('change', fetchCustomerInfo);
+
+    // جلب بيانات العميل إذا محدد مسبقاً
+    if (document.getElementById('customerId').value) {
+        fetchCustomerInfo();
+    }
+
+    recalcTotals();
+});
+
+// ────────────────────────────────────────────────────────────────
+// Payment Method UI
+// ────────────────────────────────────────────────────────────────
+function handlePaymentMethodChange() {
+    const pm = document.getElementById('paymentMethod').value;
+    document.getElementById('dueDateWrap').style.display = (pm === 'credit' || pm === 'mixed') ? '' : 'none';
+    document.getElementById('mixedPaymentWrap').style.display = pm === 'mixed' ? '' : 'none';
+    document.getElementById('bankRefWrap').style.display = (pm === 'bank' || pm === 'mixed') ? '' : 'none';
+    document.getElementById('creditRow').style.display = (pm === 'mixed') ? '' : 'none';
+    recalcTotals();
+}
+
+// ────────────────────────────────────────────────────────────────
+// Item Search Modal
+// ────────────────────────────────────────────────────────────────
+function openItemSearch() {
+    document.getElementById('itemSearchBackdrop').style.display = 'flex';
+    document.getElementById('itemSearchQuery').focus();
+    document.getElementById('itemSearchResults').innerHTML =
+        '<div class="text-muted text-center py-3">ابدأ الكتابة للبحث...</div>';
+}
+
+function closeItemSearch() {
+    document.getElementById('itemSearchBackdrop').style.display = 'none';
+    document.getElementById('itemSearchQuery').value = '';
+}
+
+let searchTimeout;
+function searchItems() {
+    clearTimeout(searchTimeout);
+    const q = document.getElementById('itemSearchQuery').value.trim();
+    if (!q) {
+        document.getElementById('itemSearchResults').innerHTML =
+            '<div class="text-muted text-center py-3">ابدأ الكتابة للبحث...</div>';
+        return;
+    }
+    searchTimeout = setTimeout(() => {
+        const stockId = document.getElementById('stockId').value;
+        fetch(`${STOCK_ITEMS_URL}?stock_id=${stockId}&q=${encodeURIComponent(q)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            renderSearchResults(data.items);
+        });
+    }, 300);
+}
+
+function renderSearchResults(items) {
+    const container = document.getElementById('itemSearchResults');
+    if (!items.length) {
+        container.innerHTML = '<div class="text-muted text-center py-3">لا توجد نتائج</div>';
+        return;
+    }
+    container.innerHTML = items.map(item => `
+        <div class="sale-item-result" onclick="selectItem(${item.id})" style="
+            display:flex;justify-content:space-between;align-items:center;
+            padding:.65rem 1rem;border-bottom:1px solid var(--cx-border);
+            cursor:pointer;transition:background .15s">
+            <div>
+                <div style="font-weight:600">${item.name}</div>
+                <div style="font-size:.8rem;color:#888">${item.sku}</div>
+            </div>
+            <div style="text-align:left">
+                <div style="font-weight:600;color:var(--cx-primary)">${parseFloat(item.selling_price).toFixed(2)}</div>
+                <div style="font-size:.8rem;color:${item.available_qty > 0 ? '#28a745' : '#dc3545'}">
+                    متاح: ${item.available_qty}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function selectItem(itemId) {
+    const stockId = document.getElementById('stockId').value;
+    fetch(`${ITEM_INFO_URL}?item_id=${itemId}&stock_id=${stockId}`)
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) return;
+        const item = data.item;
+        addLineToTable({
+            item_id: item.id,
+            item_name: item.name,
+            item_sku: item.sku,
+            variant_id: '',
+            quantity: '1',
+            unit_price: item.selling_price,
+            discount_percent: '0',
+            tax_rate: item.tax_rate,
+            cost_price_snapshot: item.cost_price,
+            batch_number: '',
+            serial_number: '',
+            expiry_date: '',
+            available_qty: item.available_qty,
+        });
+        closeItemSearch();
+    });
+}
+
+// ────────────────────────────────────────────────────────────────
+// Line Management
+// ────────────────────────────────────────────────────────────────
+function addLineToTable(lineData) {
+    const id = ++lineCounter;
+    const tbody = document.getElementById('linesBody');
+    document.getElementById('emptyLinesMsg').style.display = 'none';
+
+    const row = document.createElement('tr');
+    row.id = `line-${id}`;
+    row.dataset.itemId = lineData.item_id;
+    row.dataset.variantId = lineData.variant_id || '';
+    row.dataset.costPrice = lineData.cost_price_snapshot || 0;
+    row.dataset.batchNumber = lineData.batch_number || '';
+    row.dataset.serialNumber = lineData.serial_number || '';
+    row.dataset.expiryDate = lineData.expiry_date || '';
+
+    const qty = parseFloat(lineData.quantity) || 1;
+    const price = parseFloat(lineData.unit_price) || 0;
+    const disc = parseFloat(lineData.discount_percent) || 0;
+    const tax = parseFloat(lineData.tax_rate) || 0;
+    const lineTotal = calcLineTotal(qty, price, disc, tax);
+
+    row.innerHTML = `
+        <td>
+            <div style="font-weight:600;font-size:.9rem">${lineData.item_name}</div>
+            <div style="font-size:.75rem;color:#888">${lineData.item_sku || ''}</div>
+        </td>
+        <td>
+            <input type="number" class="cx-input cx-input--sm line-qty" id="qty-${id}"
+                   value="${qty}" min="0.0001" step="0.001"
+                   oninput="updateLine(${id})" style="width:70px">
+        </td>
+        <td>
+            <input type="number" class="cx-input cx-input--sm line-price" id="price-${id}"
+                   value="${price}" min="0" step="0.01"
+                   oninput="updateLine(${id})" style="width:100px">
+        </td>
+        <td>
+            <input type="number" class="cx-input cx-input--sm line-disc" id="disc-${id}"
+                   value="${disc}" min="0" max="100" step="0.01"
+                   oninput="updateLine(${id})" style="width:70px">
+        </td>
+        <td>
+            <input type="number" class="cx-input cx-input--sm line-tax" id="tax-${id}"
+                   value="${tax}" min="0" step="0.01"
+                   oninput="updateLine(${id})" style="width:70px">
+        </td>
+        <td class="text-end" id="total-${id}">
+            <strong>${lineTotal.toFixed(2)}</strong>
+        </td>
+        <td>
+            <button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(row);
+    recalcTotals();
+}
+
+function calcLineTotal(qty, price, discPct, taxRate) {
+    const gross = qty * price;
+    const discAmt = gross * (discPct / 100);
+    const sub = gross - discAmt;
+    const tax = sub * (taxRate / 100);
+    return sub + tax;
+}
+
+function updateLine(id) {
+    const qty = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
+    const price = parseFloat(document.getElementById(`price-${id}`).value) || 0;
+    const disc = parseFloat(document.getElementById(`disc-${id}`).value) || 0;
+    const tax = parseFloat(document.getElementById(`tax-${id}`).value) || 0;
+    const total = calcLineTotal(qty, price, disc, tax);
+    document.getElementById(`total-${id}`).innerHTML = `<strong>${total.toFixed(2)}</strong>`;
+    recalcTotals();
+}
+
+function removeLine(id) {
+    document.getElementById(`line-${id}`).remove();
+    const tbody = document.getElementById('linesBody');
+    if (!tbody.children.length) {
+        document.getElementById('emptyLinesMsg').style.display = '';
+    }
+    recalcTotals();
+}
+
+// ────────────────────────────────────────────────────────────────
+// Totals Recalculation
+// ────────────────────────────────────────────────────────────────
+function recalcTotals() {
+    let subtotal = 0, taxTotal = 0;
+
+    document.querySelectorAll('#linesBody tr').forEach(row => {
+        const id = row.id.replace('line-', '');
+        const qty = parseFloat(document.getElementById(`qty-${id}`)?.value) || 0;
+        const price = parseFloat(document.getElementById(`price-${id}`)?.value) || 0;
+        const disc = parseFloat(document.getElementById(`disc-${id}`)?.value) || 0;
+        const tax = parseFloat(document.getElementById(`tax-${id}`)?.value) || 0;
+
+        const gross = qty * price;
+        const discAmt = gross * (disc / 100);
+        const sub = gross - discAmt;
+        const taxAmt = sub * (tax / 100);
+        subtotal += sub;
+        taxTotal += taxAmt;
+    });
+
+    const discType = document.getElementById('discountType').value;
+    const discVal = parseFloat(document.getElementById('discountValue').value) || 0;
+    let discAmt = discType === 'percent' ? subtotal * (discVal / 100) : discVal;
+    discAmt = Math.min(discAmt, subtotal);
+
+    const grandTotal = subtotal - discAmt + taxTotal;
+
+    document.getElementById('displaySubtotal').textContent = subtotal.toFixed(2);
+    document.getElementById('displayDiscount').textContent = discAmt.toFixed(2);
+    document.getElementById('displayTax').textContent = taxTotal.toFixed(2);
+    document.getElementById('displayGrandTotal').textContent = grandTotal.toFixed(2);
+
+    // حساب الآجل في الدفع المختلط
+    const pm = document.getElementById('paymentMethod').value;
+    if (pm === 'mixed') {
+        const cash = parseFloat(document.getElementById('cashAmount').value) || 0;
+        const bank = parseFloat(document.getElementById('bankAmount').value) || 0;
+        const credit = Math.max(0, grandTotal - cash - bank);
+        document.getElementById('creditAmount').value = credit.toFixed(2);
+        document.getElementById('displayCredit').textContent = credit.toFixed(2);
+    }
+}
+
+// ────────────────────────────────────────────────────────────────
+// Customer Info
+// ────────────────────────────────────────────────────────────────
+function fetchCustomerInfo() {
+    const id = document.getElementById('customerId').value;
+    const card = document.getElementById('customerInfoCard');
+    if (!id) { card.style.display = 'none'; return; }
+
+    fetch(`${CUSTOMER_INFO_URL}?customer_id=${id}`)
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) return;
+        const c = data.customer;
+        document.getElementById('custBalance').textContent = parseFloat(c.current_balance).toFixed(2);
+        document.getElementById('custCreditLimit').textContent = parseFloat(c.credit_limit).toFixed(2);
+        document.getElementById('custPhone').textContent = c.phone || '—';
+        card.style.display = '';
+    });
+}
+
+// ────────────────────────────────────────────────────────────────
+// Form Submit
+// ────────────────────────────────────────────────────────────────
+function collectLines() {
+    const lines = [];
+    document.querySelectorAll('#linesBody tr').forEach(row => {
+        const id = row.id.replace('line-', '');
+        lines.push({
+            item_id: row.dataset.itemId,
+            variant_id: row.dataset.variantId || null,
+            quantity: document.getElementById(`qty-${id}`).value,
+            unit_price: document.getElementById(`price-${id}`).value,
+            discount_percent: document.getElementById(`disc-${id}`).value,
+            tax_rate: document.getElementById(`tax-${id}`).value,
+            cost_price_snapshot: row.dataset.costPrice || '0',
+            batch_number: row.dataset.batchNumber || '',
+            serial_number: row.dataset.serialNumber || '',
+            expiry_date: row.dataset.expiryDate || null,
+        });
+    });
+    return lines;
+}
+
+function submitForm(action) {
+    const lines = collectLines();
+    if (!lines.length) { alert('أضف منتجاً واحداً على الأقل'); return; }
+    if (!document.getElementById('stockId').value) { alert('الرجاء اختيار المخزن'); return; }
+
+    const header = {
+        customer_id: document.getElementById('customerId').value || null,
+        stock_id: document.getElementById('stockId').value,
+        invoice_date: document.getElementById('invoiceDate').value,
+        due_date: document.getElementById('dueDate').value || null,
+        payment_method: document.getElementById('paymentMethod').value,
+        invoice_discount_type: document.getElementById('discountType').value,
+        invoice_discount_value: document.getElementById('discountValue').value,
+        cash_amount: document.getElementById('cashAmount')?.value || '0',
+        bank_amount: document.getElementById('bankAmount')?.value || '0',
+        bank_reference: document.getElementById('bankReference')?.value || '',
+        notes: document.getElementById('notes').value,
+    };
+
+    const url = FORM_ACTION === 'edit' && INVOICE_ID
+        ? `/sales/${INVOICE_ID}/edit/`
+        : '/sales/create/';
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ header, lines, action }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.redirect;
+        } else {
+            showAlert(data.message);
+        }
+    })
+    .catch(err => showAlert('حدث خطأ في الاتصال'));
+}
+
+// ────────────────────────────────────────────────────────────────
+// Helpers
+// ────────────────────────────────────────────────────────────────
+function getCookie(name) {
+    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+}
+
+function showAlert(msg) {
+    // يمكن تحسينها لاحقاً بـ toast
+    alert(msg);
+}
+
+// Close modal on backdrop click
+document.getElementById('itemSearchBackdrop').addEventListener('click', function (e) {
+    if (e.target === this) closeItemSearch();
+});
+</script>
+{% endblock %}

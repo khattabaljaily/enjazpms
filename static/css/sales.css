@@ -1,0 +1,158 @@
+/* =========================================================
+   SALES MODULE STYLES
+   يعتمد على components.css
+   ========================================================= */
+
+/* KPI mini cards */
+.cx-kpi-card {
+    background: var(--cx-surface, #fff);
+    border: 1px solid var(--cx-border, #e5e7eb);
+    border-radius: 12px;
+    padding: .85rem 1rem;
+    min-width: 180px;
+    flex: 1 1 180px;
+}
+
+.cx-kpi-card--warning {
+    border-color: rgba(245, 158, 11, .35);
+    background: rgba(245, 158, 11, .05);
+}
+
+.cx-kpi-label {
+    font-size: .78rem;
+    color: var(--cx-text-muted, #6b7280);
+    margin-bottom: .25rem;
+}
+
+.cx-kpi-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+/* compact selects inside toolbar */
+.cx-select-sm {
+    min-height: 36px;
+    border: 1px solid var(--cx-border, #d9dee8);
+    border-radius: 10px;
+    background: var(--cx-surface, #fff);
+    padding: 0 .75rem;
+    font-size: .88rem;
+}
+
+/* totals card */
+.cx-totals-block {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.cx-totals-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: .92rem;
+    padding: .35rem 0;
+    border-bottom: 1px dashed var(--cx-border, #e5e7eb);
+}
+
+.cx-totals-row:last-child {
+    border-bottom: none;
+}
+
+.cx-totals-row--grand {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cx-text, #111827);
+}
+
+.cx-totals-row--warn {
+    color: #b45309;
+    font-weight: 700;
+}
+
+/* invoice form line inputs */
+.cx-input--sm {
+    min-height: 34px;
+    padding: .25rem .5rem;
+    font-size: .84rem;
+}
+
+/* item search list */
+.sale-item-result:hover {
+    background: rgba(59, 130, 246, .06);
+}
+
+/* badges fallback in case not defined globally */
+.cx-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .2rem .55rem;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.cx-badge--success { background: rgba(16, 185, 129, .12); color: #047857; }
+.cx-badge--danger { background: rgba(239, 68, 68, .12); color: #b91c1c; }
+.cx-badge--warning { background: rgba(245, 158, 11, .14); color: #b45309; }
+.cx-badge--secondary,
+.cx-badge--muted { background: rgba(107, 114, 128, .14); color: #4b5563; }
+.cx-badge--primary { background: rgba(59, 130, 246, .14); color: #1d4ed8; }
+
+/* info grid on details */
+.cx-info-grid {
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.cx-info-item {
+    padding: .6rem .75rem;
+    border: 1px solid var(--cx-border, #e5e7eb);
+    border-radius: 10px;
+    background: rgba(148, 163, 184, .05);
+}
+
+.cx-info-item--full {
+    grid-column: 1 / -1;
+}
+
+.cx-info-label {
+    display: block;
+    font-size: .76rem;
+    color: var(--cx-text-muted, #6b7280);
+    margin-bottom: .15rem;
+}
+
+.cx-info-value {
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--cx-text, #111827);
+}
+
+/* action buttons group */
+.cx-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+}
+
+/* responsive tweaks */
+@media (max-width: 991.98px) {
+    .cx-kpi-card { min-width: 140px; }
+}
+
+@media (max-width: 767.98px) {
+    .cx-select-sm {
+        width: 100%;
+    }
+    .cx-panel.sticky-top {
+        position: static !important;
+        top: auto !important;
+    }
+    #linesTable th,
+    #linesTable td {
+        white-space: nowrap;
+    }
+}

@@ -1,0 +1,277 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════════════════════ HERO ══════════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-receipt"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">فواتير المبيعات</h1>
+                <p class="cx-hero-desc">إنشاء وإدارة جميع فواتير البيع</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'sales:return_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-rotate-left"></i>
+                    <span>المرتجعات</span>
+                </a>
+                <a href="{% url 'sales:invoice_create' %}" class="cx-btn-add">
+                    <i class="fas fa-plus"></i>
+                    <span>فاتورة جديدة</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-file-invoice"></i>
+            <strong>{{ stats.total }}</strong>
+            <span>إجمالي</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-check-circle"></i>
+            <strong>{{ stats.confirmed }}</strong>
+            <span>مؤكدة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-pencil"></i>
+            <strong>{{ stats.draft }}</strong>
+            <span>مسودة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--danger">
+            <i class="fas fa-ban"></i>
+            <strong>{{ stats.cancelled }}</strong>
+            <span>ملغاة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--warning">
+            <i class="fas fa-rotate-left"></i>
+            <strong>{{ stats.returned }}</strong>
+            <span>مرتجعة</span>
+        </span>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="cx-kpi-row" style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem;">
+        <div class="cx-kpi-card">
+            <div class="cx-kpi-label">إجمالي المبيعات المؤكدة</div>
+            <div class="cx-kpi-value text-success">{{ stats.grand_total_sum|floatformat:2 }}</div>
+        </div>
+        <div class="cx-kpi-card">
+            <div class="cx-kpi-label">إجمالي المحصَّل</div>
+            <div class="cx-kpi-value text-primary">{{ stats.paid_total|floatformat:2 }}</div>
+        </div>
+        <div class="cx-kpi-card cx-kpi-card--warning">
+            <div class="cx-kpi-label">المتبقي (ذمم)</div>
+            <div class="cx-kpi-value text-warning">{{ stats.unpaid_total|floatformat:2 }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ TABLE PANEL ══════════════════════════ -->
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="saleSearchInput" class="cx-search-input" placeholder="رقم الفاتورة، اسم العميل...">
+        </div>
+        <div class="cx-toolbar-end" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+
+            <select id="filterStatus" class="cx-select-sm">
+                <option value="">كل الحالات</option>
+                <option value="draft">مسودة</option>
+                <option value="confirmed">مؤكدة</option>
+                <option value="cancelled">ملغاة</option>
+                <option value="returned">مرتجعة</option>
+                <option value="partially_returned">مرتجعة جزئياً</option>
+            </select>
+
+            <select id="filterPayment" class="cx-select-sm">
+                <option value="">كل طرق الدفع</option>
+                <option value="cash">نقداً</option>
+                <option value="bank">بنكي</option>
+                <option value="credit">آجل</option>
+                <option value="mixed">مختلط</option>
+            </select>
+
+            <select id="filterCustomer" class="cx-select-sm">
+                <option value="">كل العملاء</option>
+                {% for c in customers %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="invoicesTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>رقم الفاتورة</th>
+                    <th>التاريخ</th>
+                    <th>العميل</th>
+                    <th>المخزن</th>
+                    <th>الدفع</th>
+                    <th>الإجمالي</th>
+                    <th>المدفوع</th>
+                    <th>المتبقي</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SALES_API_URL = "{% url 'sales:invoice_api' %}";
+const INVOICE_BASE_URL = "/sales/";
+
+let salesTable;
+
+document.addEventListener('DOMContentLoaded', function () {
+    initTable();
+    initFilters();
+});
+
+function initTable() {
+    salesTable = $('#invoicesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: SALES_API_URL,
+            data: function (d) {
+                d.status = document.getElementById('filterStatus').value;
+                d.payment_method = document.getElementById('filterPayment').value;
+                d.customer_id = document.getElementById('filterCustomer').value;
+            }
+        },
+        columns: [
+            { data: 'invoice_number' },
+            { data: 'invoice_date' },
+            { data: 'customer' },
+            { data: 'stock' },
+            { data: 'payment_method' },
+            { data: 'grand_total', className: 'text-end' },
+            { data: 'paid_amount', className: 'text-end' },
+            { data: 'remaining', className: 'text-end' },
+            {
+                data: 'status',
+                render: function (data, type, row) {
+                    return `<span class="cx-badge cx-badge--${row.status_color}">${row.status_label}</span>`;
+                }
+            },
+            {
+                data: null,
+                orderable: false,
+                render: function (data, type, row) {
+                    return `
+                    <div class="cx-actions">
+                        <a href="${INVOICE_BASE_URL}${row.id}/" class="cx-btn-icon" title="عرض">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        ${row.status === 'draft' ? `
+                        <a href="${INVOICE_BASE_URL}${row.id}/edit/" class="cx-btn-icon" title="تعديل">
+                            <i class="fas fa-pencil"></i>
+                        </a>
+                        <button class="cx-btn-icon cx-btn-icon--success" onclick="confirmInvoice(${row.id})" title="تأكيد">
+                            <i class="fas fa-check"></i>
+                        </button>` : ''}
+                        ${row.status === 'confirmed' ? `
+                        <button class="cx-btn-icon cx-btn-icon--danger" onclick="cancelInvoice(${row.id})" title="إلغاء">
+                            <i class="fas fa-ban"></i>
+                        </button>` : ''}
+                    </div>`;
+                }
+            }
+        ],
+        language: { url: '/static/js/datatables-ar.json' },
+        order: [[1, 'desc']],
+        pageLength: 25,
+    });
+}
+
+function initFilters() {
+    ['filterStatus', 'filterPayment', 'filterCustomer'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => salesTable.ajax.reload());
+    });
+    document.getElementById('saleSearchInput').addEventListener('input', function () {
+        salesTable.search(this.value).draw();
+    });
+}
+
+function confirmInvoice(id) {
+    if (!confirm('هل تريد تأكيد هذه الفاتورة؟')) return;
+    fetch(`/sales/${id}/confirm/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            salesTable.ajax.reload(null, false);
+        } else {
+            showToast(data.message, 'danger');
+        }
+    });
+}
+
+function cancelInvoice(id) {
+    const reason = prompt('سبب الإلغاء (اختياري):') ?? '';
+    if (reason === null) return;
+    fetch(`/sales/${id}/cancel/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            salesTable.ajax.reload(null, false);
+        } else {
+            showToast(data.message, 'danger');
+        }
+    });
+}
+
+function getCookie(name) {
+    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+}
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer')
+        || (() => { const d = document.createElement('div'); d.id = 'toastContainer';
+            d.style.cssText = 'position:fixed;bottom:1rem;left:1rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;';
+            document.body.appendChild(d); return d; })();
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} shadow mb-0`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+}
+</script>
+{% endblock %}

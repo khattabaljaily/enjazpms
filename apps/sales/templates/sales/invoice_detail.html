@@ -1,0 +1,373 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════════════ HERO ══════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">{{ invoice.invoice_number }}</h1>
+                <p class="cx-hero-desc">
+                    {{ invoice.invoice_date }} — {{ invoice.stock.name }}
+                    {% if invoice.customer %} — {{ invoice.customer.name }}{% endif %}
+                </p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'sales:invoice_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i><span>القائمة</span>
+                </a>
+                <button onclick="window.print()" class="cx-btn-secondary">
+                    <i class="fas fa-print"></i><span>طباعة</span>
+                </button>
+                {% if can_edit %}
+                <a href="{% url 'sales:invoice_edit' invoice.pk %}" class="cx-btn-secondary">
+                    <i class="fas fa-pencil"></i><span>تعديل</span>
+                </a>
+                {% endif %}
+                {% if can_confirm %}
+                <button class="cx-btn-add" onclick="doConfirm()">
+                    <i class="fas fa-check"></i><span>تأكيد الفاتورة</span>
+                </button>
+                {% endif %}
+                {% if can_cancel %}
+                <button class="cx-btn-danger" onclick="doCancel()">
+                    <i class="fas fa-ban"></i><span>إلغاء</span>
+                </button>
+                {% endif %}
+                {% if can_return %}
+                <a href="{% url 'sales:return_create' invoice.pk %}" class="cx-btn-warning">
+                    <i class="fas fa-rotate-left"></i><span>إرجاع</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        {% if invoice.status == 'draft' %}
+        <span class="cx-stat-badge cx-stat-badge--muted"><i class="fas fa-pencil"></i> مسودة</span>
+        {% elif invoice.status == 'confirmed' %}
+        <span class="cx-stat-badge cx-stat-badge--success"><i class="fas fa-check"></i> مؤكدة</span>
+        {% elif invoice.status == 'cancelled' %}
+        <span class="cx-stat-badge cx-stat-badge--danger"><i class="fas fa-ban"></i> ملغاة</span>
+        {% elif invoice.status == 'returned' %}
+        <span class="cx-stat-badge cx-stat-badge--warning"><i class="fas fa-rotate-left"></i> مرتجعة كلياً</span>
+        {% elif invoice.status == 'partially_returned' %}
+        <span class="cx-stat-badge cx-stat-badge--warning"><i class="fas fa-rotate-left"></i> مرتجعة جزئياً</span>
+        {% endif %}
+        <span class="cx-stat-badge cx-stat-badge--primary">{{ invoice.get_payment_method_display }}</span>
+    </div>
+</div>
+
+<div class="row g-3">
+
+<!-- ── تفاصيل الفاتورة ── -->
+<div class="col-lg-8">
+
+    <!-- رأس الفاتورة -->
+    <div class="cx-panel mb-3">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات الفاتورة</h3></div>
+        <div class="cx-panel-body">
+            <div class="cx-info-grid">
+                <div class="cx-info-item">
+                    <span class="cx-info-label">رقم الفاتورة</span>
+                    <span class="cx-info-value">{{ invoice.invoice_number }}</span>
+                </div>
+                <div class="cx-info-item">
+                    <span class="cx-info-label">التاريخ</span>
+                    <span class="cx-info-value">{{ invoice.invoice_date }}</span>
+                </div>
+                {% if invoice.due_date %}
+                <div class="cx-info-item">
+                    <span class="cx-info-label">تاريخ الاستحقاق</span>
+                    <span class="cx-info-value">{{ invoice.due_date }}</span>
+                </div>
+                {% endif %}
+                <div class="cx-info-item">
+                    <span class="cx-info-label">العميل</span>
+                    <span class="cx-info-value">{{ invoice.customer.name|default:"زبون عابر" }}</span>
+                </div>
+                <div class="cx-info-item">
+                    <span class="cx-info-label">المخزن</span>
+                    <span class="cx-info-value">{{ invoice.stock.name }}</span>
+                </div>
+                <div class="cx-info-item">
+                    <span class="cx-info-label">طريقة الدفع</span>
+                    <span class="cx-info-value">{{ invoice.get_payment_method_display }}</span>
+                </div>
+                {% if invoice.reference_number %}
+                <div class="cx-info-item">
+                    <span class="cx-info-label">الرقم المرجعي</span>
+                    <span class="cx-info-value">{{ invoice.reference_number }}</span>
+                </div>
+                {% endif %}
+                {% if invoice.notes %}
+                <div class="cx-info-item cx-info-item--full">
+                    <span class="cx-info-label">ملاحظات</span>
+                    <span class="cx-info-value">{{ invoice.notes }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- بنود الفاتورة -->
+    <div class="cx-panel mb-3">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">بنود الفاتورة</h3></div>
+        <div class="cx-panel-body p-0">
+            <div class="table-responsive">
+                <table class="cx-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المنتج</th>
+                            <th>الكمية</th>
+                            <th>سعر الوحدة</th>
+                            <th>الخصم %</th>
+                            <th>الضريبة %</th>
+                            <th>الإجمالي</th>
+                            {% if invoice.status != 'draft' %}
+                            <th>المُرتجَع</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in lines %}
+                        <tr {% if line.returned_quantity >= line.quantity %}style="opacity:.6;text-decoration:line-through"{% endif %}>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <div>{{ line.item.name }}</div>
+                                {% if line.variant %}<small class="text-muted">{{ line.variant }}</small>{% endif %}
+                                <div><small class="text-muted">{{ line.item.sku }}</small></div>
+                            </td>
+                            <td>{{ line.quantity }}</td>
+                            <td>{{ line.unit_price|floatformat:2 }}</td>
+                            <td>{{ line.discount_percent|floatformat:2 }}%</td>
+                            <td>{{ line.tax_rate|floatformat:2 }}%</td>
+                            <td><strong>{{ line.line_total|floatformat:2 }}</strong></td>
+                            {% if invoice.status != 'draft' %}
+                            <td>
+                                {% if line.returned_quantity > 0 %}
+                                <span class="cx-badge cx-badge--warning">{{ line.returned_quantity }}</span>
+                                {% else %}—{% endif %}
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- الدفعات -->
+    {% if payments %}
+    <div class="cx-panel mb-3">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">سجل الدفعات</h3></div>
+        <div class="cx-panel-body p-0">
+            <table class="cx-table">
+                <thead>
+                    <tr><th>التاريخ</th><th>الطريقة</th><th>المبلغ</th><th>المرجع</th></tr>
+                </thead>
+                <tbody>
+                {% for p in payments %}
+                <tr {% if p.is_reversed %}style="opacity:.5;text-decoration:line-through"{% endif %}>
+                    <td>{{ p.payment_date }}</td>
+                    <td>{{ p.get_payment_method_display }}</td>
+                    <td class="{% if p.amount < 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ p.amount|floatformat:2 }}
+                    </td>
+                    <td>{{ p.reference_number|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- المرتجعات -->
+    {% if returns %}
+    <div class="cx-panel mb-3">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">المرتجعات</h3></div>
+        <div class="cx-panel-body p-0">
+            <table class="cx-table">
+                <thead>
+                    <tr><th>رقم المرتجع</th><th>التاريخ</th><th>الإجمالي</th><th>طريقة الاسترداد</th><th></th></tr>
+                </thead>
+                <tbody>
+                {% for r in returns %}
+                <tr>
+                    <td>{{ r.return_number }}</td>
+                    <td>{{ r.return_date }}</td>
+                    <td>{{ r.total_returned|floatformat:2 }}</td>
+                    <td>{{ r.get_refund_method_display }}</td>
+                    <td><a href="{% url 'sales:return_detail' r.pk %}" class="cx-btn-icon"><i class="fas fa-eye"></i></a></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- ── بطاقة الإجماليات ── -->
+<div class="col-lg-4">
+    <div class="cx-panel sticky-top" style="top:80px">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">الإجماليات</h3></div>
+        <div class="cx-panel-body">
+            <div class="cx-totals-block">
+                <div class="cx-totals-row">
+                    <span>المجموع الفرعي</span>
+                    <strong>{{ invoice.subtotal|floatformat:2 }}</strong>
+                </div>
+                <div class="cx-totals-row">
+                    <span>الخصم</span>
+                    <strong class="text-danger">- {{ invoice.invoice_discount_amount|floatformat:2 }}</strong>
+                </div>
+                <div class="cx-totals-row">
+                    <span>الضريبة</span>
+                    <strong>{{ invoice.tax_amount|floatformat:2 }}</strong>
+                </div>
+                <div class="cx-totals-row cx-totals-row--grand">
+                    <span>الإجمالي النهائي</span>
+                    <strong>{{ invoice.grand_total|floatformat:2 }}</strong>
+                </div>
+                <div class="cx-totals-row">
+                    <span>المدفوع</span>
+                    <strong class="text-success">{{ invoice.paid_amount|floatformat:2 }}</strong>
+                </div>
+                <div class="cx-totals-row {% if invoice.remaining_amount > 0 %}cx-totals-row--warn{% endif %}">
+                    <span>المتبقي</span>
+                    <strong class="{% if invoice.remaining_amount > 0 %}text-danger{% endif %}">
+                        {{ invoice.remaining_amount|floatformat:2 }}
+                    </strong>
+                </div>
+            </div>
+
+            {% if can_pay %}
+            <hr>
+            <div>
+                <h6 class="mb-2">تسجيل دفعة جديدة</h6>
+                <div class="mb-2">
+                    <label class="cx-label">المبلغ</label>
+                    <input type="number" id="payAmount" class="cx-input" min="0.01" step="0.01"
+                           max="{{ invoice.remaining_amount }}">
+                </div>
+                <div class="mb-2">
+                    <label class="cx-label">الطريقة</label>
+                    <select id="payMethod" class="cx-input">
+                        <option value="cash">نقداً</option>
+                        <option value="bank">تحويل بنكي</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="cx-label">المرجع</label>
+                    <input type="text" id="payRef" class="cx-input">
+                </div>
+                <button class="cx-btn-add w-100" onclick="doPayment()">
+                    <i class="fas fa-money-bill-wave me-1"></i>تسجيل الدفعة
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+</div><!-- row -->
+
+</div><!-- cx-scene -->
+
+<!-- Cancel Modal -->
+<div class="cx-modal-backdrop" id="cancelModalBackdrop" style="display:none">
+    <div class="cx-modal" style="max-width:460px">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title text-danger"><i class="fas fa-ban me-2"></i>إلغاء الفاتورة</h3>
+            <button type="button" class="cx-modal-close" onclick="closeCancelModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <p class="text-muted mb-3">سيتم عكس كل تأثيرات هذه الفاتورة على المخزون وحسابات العملاء.</p>
+            <label class="cx-label">سبب الإلغاء (اختياري)</label>
+            <textarea id="cancelReason" class="cx-input" rows="3"></textarea>
+        </div>
+        <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-secondary" onclick="closeCancelModal()">إلغاء</button>
+            <button type="button" class="cx-btn-danger" onclick="submitCancel()">
+                <i class="fas fa-ban me-1"></i>تأكيد الإلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const INVOICE_ID = {{ invoice.id }};
+const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2];
+
+{% if can_confirm %}
+function doConfirm() {
+    if (!confirm('هل تريد تأكيد الفاتورة؟')) return;
+    fetch(`/sales/${INVOICE_ID}/confirm/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF }
+    }).then(r => r.json()).then(data => {
+        if (data.success) location.reload();
+        else alert(data.message);
+    });
+}
+{% endif %}
+
+{% if can_cancel %}
+function doCancel() { document.getElementById('cancelModalBackdrop').style.display = 'flex'; }
+function closeCancelModal() { document.getElementById('cancelModalBackdrop').style.display = 'none'; }
+function submitCancel() {
+    const reason = document.getElementById('cancelReason').value;
+    fetch(`/sales/${INVOICE_ID}/cancel/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+    }).then(r => r.json()).then(data => {
+        if (data.success) location.reload();
+        else alert(data.message);
+    });
+}
+{% endif %}
+
+{% if can_pay %}
+function doPayment() {
+    const amount = document.getElementById('payAmount').value;
+    const method = document.getElementById('payMethod').value;
+    const reference = document.getElementById('payRef').value;
+    if (!amount || parseFloat(amount) <= 0) { alert('أدخل مبلغاً صحيحاً'); return; }
+
+    fetch(`/sales/${INVOICE_ID}/pay/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, method, reference })
+    }).then(r => r.json()).then(data => {
+        if (data.success) location.reload();
+        else alert(data.message);
+    });
+}
+{% endif %}
+</script>
+{% endblock %}

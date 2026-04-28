@@ -30,9 +30,9 @@
             </a>
             <ul class="nav-submenu">
                 <li><a href="#" class="nav-sublink"><i class="fas fa-file-invoice me-2"></i>عرض سعر</a></li>
-                <li><a href="#" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>فاتورة مبيعات</a></li>
-                <li><a href="#" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الفواتير</a></li>
-                <li><a href="#" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
+                <li><a href="{% url 'sales:invoice_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>فاتورة مبيعات</a></li>
+                <li><a href="{% url 'sales:invoice_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الفواتير</a></li>
+                <li><a href="{% url 'sales:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
             </ul>
         </li>
         <li class="nav-item has-submenu">
