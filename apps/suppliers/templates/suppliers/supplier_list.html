@@ -16,23 +16,23 @@
                 <i class="fas fa-users"></i>
             </div>
             <div>
-                <h1 class="cx-hero-title">العملاء</h1>
-                <p class="cx-hero-desc">إدارة وتتبع سجلات الزبائن</p>
+                <h1 class="cx-hero-title">الموردين</h1>
+                <p class="cx-hero-desc">إدارة وتتبع سجلات الموردين</p>
             </div>
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
-                <button type="button" class="cx-btn-secondary" id="btnImportCustomers">
+                <button type="button" class="cx-btn-secondary" id="btnImportSuppliers">
                     <i class="fas fa-arrow-down"></i>
                     <span>استيراد</span>
                 </button>
-                <button type="button" class="cx-btn-secondary" id="btnExportCustomers">
+                <button type="button" class="cx-btn-secondary" id="btnExportSuppliers">
                     <i class="fas fa-arrow-up"></i>
                     <span>تصدير</span>
                 </button>
-                <button type="button" class="cx-btn-add" id="btnOpenCreateCustomer">
+                <button type="button" class="cx-btn-add" id="btnOpenCreateSupplier">
                     <i class="fas fa-plus"></i>
-                    <span>إضافة عميل</span>
+                    <span>إضافة مورد</span>
                 </button>
             </div>
         </div>
@@ -43,7 +43,7 @@
         <span class="cx-stat-badge cx-stat-badge--primary">
             <i class="fas fa-users"></i>
             <strong id="kpiTotal">{{ stats.total }}</strong>
-            <span>عميل</span>
+            <span>مورد</span>
         </span>
         <span class="cx-stat-badge cx-stat-badge--success">
             <i class="fas fa-check-circle"></i>
@@ -65,7 +65,7 @@
     <div class="cx-toolbar">
         <div class="cx-toolbar-search">
             <i class="fas fa-search cx-toolbar-search-icon"></i>
-            <input type="text" id="customerSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو الكود أو الهاتف...">
+            <input type="text" id="supplierSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو الكود أو الهاتف...">
         </div>
 
         <div class="cx-toolbar-end">
@@ -80,10 +80,10 @@
 
     {# ── Table ── #}
     <div class="table-responsive cx-table-wrap">
-        <table id="customersTable" class="cx-table">
+        <table id="suppliersTable" class="cx-table">
             <thead>
                 <tr>
-                    <th>العميل</th>
+                    <th>المورد</th>
                     <th>الكود</th>
                     <th>المدينة</th>
                     <th>الرصيد الافتتاحي</th>
@@ -111,7 +111,7 @@
                 <div class="cx-modal-main">
                     <div class="cx-modal-header">
                         <div>
-                            <h5 class="cx-modal-title" id="customerModalTitle">إضافة عميل جديد</h5>
+                            <h5 class="cx-modal-title" id="customerModalTitle">إضافة مورد جديد</h5>
                         </div>
                         <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
                             <i class="fas fa-times"></i>
@@ -173,7 +173,7 @@
                                 <label class="cx-toggle-card" for="id_is_active">
                                     <div class="cx-toggle-info">
                                         <span class="cx-toggle-title">{{ form.is_active.label }}</span>
-                                        <span class="cx-toggle-desc">تفعيل العميل يسمح باستخدامه في الفواتير والتقارير</span>
+                                        <span class="cx-toggle-desc">تفعيل المورد يسمح باستخدامه في الفواتير والتقارير</span>
                                     </div>
                                     {{ form.is_active }}
                                     <div class="cx-toggle-switch"></div>
@@ -196,7 +196,7 @@
 </div>
 
 <!-- ══════════════════════════ VIEW CUSTOMER MODAL ══════════════════════════ -->
-<div class="modal fade" id="viewCustomerModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="viewSupplierModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog">
         <div class="modal-content cx-view-modal">
             <div class="cx-view-header">
@@ -311,7 +311,7 @@
 
             <div class="cx-view-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
-                <button type="button" class="cx-btn-primary" id="viewEditCustomerBtn">
+                <button type="button" class="cx-btn-primary" id="viewEditSupplierBtn">
                     <i class="fas fa-pen-to-square me-1"></i> تعديل
                 </button>
             </div>
@@ -320,23 +320,23 @@
 </div>
 
 <!-- ══════════════════════════ DELETE CONFIRM MODAL ══════════════════════════ -->
-<div class="modal fade" id="deleteCustomerModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="deleteSupplierModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
         <div class="modal-content cx-delete-modal">
             <div class="cx-delete-body">
                 <div class="cx-delete-icon">
                     <i class="fas fa-trash-alt"></i>
                 </div>
-                <h5 class="cx-delete-title">حذف العميل؟</h5>
+                <h5 class="cx-delete-title">حذف المورد؟</h5>
                 <p class="cx-delete-desc">
-                    ستقوم بحذف <strong id="deleteCustomerName"></strong> بشكل نهائي.
+                    ستقوم بحذف <strong id="deleteSupplierName"></strong> بشكل نهائي.
                     <br>لا يمكن التراجع عن هذا الإجراء.
                 </p>
-                <input type="hidden" id="deleteCustomerId" value="">
+                <input type="hidden" id="deleteSupplierId" value="">
             </div>
             <div class="cx-delete-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="cx-btn-danger" id="confirmDeleteCustomerBtn">
+                <button type="button" class="cx-btn-danger" id="confirmDeleteSupplierBtn">
                     نعم، احذف
                 </button>
             </div>
@@ -345,16 +345,16 @@
 </div>
 
 <!-- ══════════════════════════ IMPORT MODAL ══════════════════════════ -->
-<div class="modal fade" id="importCustomersModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="importSuppliersModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered cx-import-dialog">
         <div class="modal-content cx-import-modal">
             <div class="cx-import-header">
                 <div>
                     <h5 class="cx-import-title">
                         <i class="fas fa-upload"></i>
-                        استيراد العملاء
+                        استيراد الموردين
                     </h5>
-                    <p class="cx-import-subtitle">قم برفع ملف Excel أو CSV يحتوي على بيانات العملاء</p>
+                    <p class="cx-import-subtitle">قم برفع ملف Excel أو CSV يحتوي على بيانات الموردين</p>
                 </div>
                 <button type="button" class="cx-import-close" data-bs-dismiss="modal" aria-label="Close">
                     <i class="fas fa-times"></i>
@@ -420,16 +420,16 @@
 (function () {
     'use strict';
 
-    const urlTable  = "{% url 'customers:table_api' %}";
-    const urlCreate = "{% url 'customers:create_api' %}";
-    const urlDetail = "{% url 'customers:detail_api' 0 %}";
-    const urlUpdate = "{% url 'customers:update_api' 0 %}";
-    const urlDelete = "{% url 'customers:delete_api' 0 %}";
+    const urlTable  = "{% url 'suppliers:table_api' %}";
+    const urlCreate = "{% url 'suppliers:create_api' %}";
+    const urlDetail = "{% url 'suppliers:detail_api' 0 %}";
+    const urlUpdate = "{% url 'suppliers:update_api' 0 %}";
+    const urlDelete = "{% url 'suppliers:delete_api' 0 %}";
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
     const customerModalEl = document.getElementById('customerModal');
-    const deleteModalEl   = document.getElementById('deleteCustomerModal');
-    const viewModalEl     = document.getElementById('viewCustomerModal');
+    const deleteModalEl   = document.getElementById('deleteSupplierModal');
+    const viewModalEl     = document.getElementById('viewSupplierModal');
 
     // Keep modals at <body> level so they are not trapped by dashboard stacking contexts.
     if (customerModalEl && customerModalEl.parentElement !== document.body) {
@@ -472,7 +472,7 @@
     }
 
     /* ── DataTable ─────────────────────────────────────────── */
-    const dt = $('#customersTable').DataTable({
+    const dt = $('#suppliersTable').DataTable({
         processing : true,
         serverSide : true,
         searching  : true,
@@ -481,10 +481,10 @@
         dom        : '<"d-none"f>rt<"cx-dt-bottom"ip>',
         language   : {
             emptyTable: 'لا توجد بيانات متاحة',
-            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_ عميل',
-            infoEmpty: 'عرض 0 إلى 0 من أصل 0 عميل',
-            infoFiltered: '(تمت التصفية من إجمالي _MAX_ عميل)',
-            lengthMenu: 'عرض _MENU_ عميل',
+            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_ مورد',
+            infoEmpty: 'عرض 0 إلى 0 من أصل 0 مورد',
+            infoFiltered: '(تمت التصفية من إجمالي _MAX_ مورد)',
+            lengthMenu: 'عرض _MENU_ مورد',
             loadingRecords: 'جاري التحميل...',
             processing: 'جاري المعالجة...',
             search: 'بحث:',
@@ -501,7 +501,7 @@
             data: function (d) { d.status = activeStatus; }
         },
         drawCallback: function () {
-            applyMobileTableCards('#customersTable');
+            applyMobileTableCards('#suppliersTable');
         },
         columns: [
             {
@@ -540,13 +540,13 @@
                 searchable: false,
                 render: function (_, __, r) {
                     return `<div class="cxr-actions">
-                                <button class="cxr-act cxr-act--view js-view-customer" data-id="${r.id}" aria-label="عرض">
+                                <button class="cxr-act cxr-act--view js-view-supplier" data-id="${r.id}" aria-label="عرض">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button class="cxr-act js-edit-customer" data-id="${r.id}" aria-label="تعديل">
+                                <button class="cxr-act js-edit-supplier" data-id="${r.id}" aria-label="تعديل">
                                     <i class="fas fa-pen-to-square"></i>
                                 </button>
-                                <button class="cxr-act cxr-act--del js-delete-customer" data-id="${r.id}" data-name="${r.name}" aria-label="حذف">
+                                <button class="cxr-act cxr-act--del js-delete-supplier" data-id="${r.id}" data-name="${r.name}" aria-label="حذف">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>`;
@@ -555,11 +555,11 @@
         ]
     });
 
-    applyMobileTableCards('#customersTable');
+    applyMobileTableCards('#suppliersTable');
 
     /* ── Search ─────────────────────────────────────────────── */
     let searchTimer;
-    $('#customerSearchInput').on('input', function () {
+    $('#supplierSearchInput').on('input', function () {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
     });
@@ -590,8 +590,8 @@
 
     function openCreate() {
         resetForm();
-        setModalSidebar('عميل جديد', '+', 'var(--primary)');
-        $('#customerModalTitle').text('إضافة عميل جديد');
+        setModalSidebar('مورد جديد', '+', 'var(--primary)');
+        $('#customerModalTitle').text('إضافة مورد جديد');
         $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
         customerModal.show();
     }
@@ -617,7 +617,7 @@
                 const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
                 const color  = colors[d.name.charCodeAt(0) % colors.length];
                 setModalSidebar(d.name, d.name.trim().charAt(0).toUpperCase(), color);
-                $('#customerModalTitle').text('تعديل بيانات العميل');
+                $('#customerModalTitle').text('تعديل بيانات المورد');
                 $('#customerModalSubtitle').text(d.name);
                 $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
                 customerModal.show();
@@ -651,14 +651,14 @@
     });
 
     /* ── Delete ─────────────────────────────────────────────── */
-    $('#customersTable').on('click', '.js-delete-customer', function () {
-        $('#deleteCustomerId').val($(this).data('id'));
-        $('#deleteCustomerName').text($(this).data('name'));
+    $('#suppliersTable').on('click', '.js-delete-supplier', function () {
+        $('#deleteSupplierId').val($(this).data('id'));
+        $('#deleteSupplierName').text($(this).data('name'));
         deleteModal.show();
     });
 
-    $('#confirmDeleteCustomerBtn').on('click', function () {
-        const id = $('#deleteCustomerId').val();
+    $('#confirmDeleteSupplierBtn').on('click', function () {
+        const id = $('#deleteSupplierId').val();
         if (!id) return;
         $.ajax({
             url: apiUrl(urlDelete, id), method: 'POST',
@@ -670,7 +670,7 @@
         });
     });
 
-    /* ── View Customer ──────────────────────────────────────────── */
+    /* ── View Supplier ──────────────────────────────────────────── */
     function openView(id) {
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
@@ -709,7 +709,7 @@
                 $('#viewStatus').html(statusHtml);
                 
                 // Store ID for edit button
-                $('#viewEditCustomerBtn').data('id', d.id);
+                $('#viewEditSupplierBtn').data('id', d.id);
                 
                 viewModal.show();
             },
@@ -718,17 +718,17 @@
     }
 
     /* ── Bindings ─────────────────────────────────────────────── */
-    $('#btnOpenCreateCustomer').on('click', openCreate);
-    $('#customersTable').on('click', '.js-view-customer', function () { openView($(this).data('id')); });
-    $('#customersTable').on('click', '.js-edit-customer', function () { openEdit($(this).data('id')); });
-    $('#viewEditCustomerBtn').on('click', function() { 
+    $('#btnOpenCreateSupplier').on('click', openCreate);
+    $('#suppliersTable').on('click', '.js-view-supplier', function () { openView($(this).data('id')); });
+    $('#suppliersTable').on('click', '.js-edit-supplier', function () { openEdit($(this).data('id')); });
+    $('#viewEditSupplierBtn').on('click', function() { 
         viewModal.hide(); 
         openEdit($(this).data('id')); 
     });
-    setModalSidebar('عميل جديد', '+', 'var(--primary)');
+    setModalSidebar('مورد جديد', '+', 'var(--primary)');
 
     /* ══════════════════════════ IMPORT / EXPORT ══════════════════════════ */
-    const importModalEl = document.getElementById('importCustomersModal');
+    const importModalEl = document.getElementById('importSuppliersModal');
     if (importModalEl && importModalEl.parentElement !== document.body) {
         document.body.appendChild(importModalEl);
     }
@@ -736,7 +736,7 @@
     let selectedFile = null;
 
     // Open import modal
-    $('#btnImportCustomers').on('click', function() {
+    $('#btnImportSuppliers').on('click', function() {
         selectedFile = null;
         $('#importFileInput').val('');
         $('#fileSelected').hide();
@@ -852,7 +852,7 @@
         formData.append('file', selectedFile);
 
         $.ajax({
-            url: '{% url "customers:import_api" %}',
+            url: '{% url "suppliers:import_api" %}',
             method: 'POST',
             data: formData,
             processData: false,
@@ -861,7 +861,7 @@
                 if (resp.success) {
                     importModal.hide();
                     dt.ajax.reload();
-                    EnjazIMS.toast(resp.message || 'تم استيراد العملاء بنجاح', 'success');
+                    EnjazIMS.toast(resp.message || 'تم استيراد الموردين بنجاح', 'success');
                 } else {
                     EnjazIMS.toast(resp.message || 'فشل الاستيراد', 'error');
                 }
@@ -876,12 +876,12 @@
     // Download template
     $('#btnDownloadTemplate').on('click', function(e) {
         e.preventDefault();
-        window.location.href = '{% url "customers:download_template" %}';
+        window.location.href = '{% url "suppliers:download_template" %}';
     });
 
     // Export customers
-    $('#btnExportCustomers').on('click', function() {
-        window.location.href = '{% url "customers:export_api" %}';
+    $('#btnExportSuppliers').on('click', function() {
+        window.location.href = '{% url "suppliers:export_api" %}';
         EnjazIMS.toast('جاري تصدير البيانات...', 'info');
     });
 

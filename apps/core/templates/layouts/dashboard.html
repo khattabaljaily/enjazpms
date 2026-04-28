@@ -11,10 +11,12 @@
         
         <!-- Main Content -->
         <main class="dashboard-main flex-grow-1">
-            <div class="dropdown mobile-page-menu my-2">
-                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-bars me-1"></i>
-                    القائمة
+            <div class="dropdown mobile-page-menu mb-3">
+                <button class="btn btn-outline-primary dropdown-toggle mobile-page-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="mobile-page-menu-label">
+                        <i class="fas fa-bars"></i>
+                        القائمة
+                    </span>
                 </button>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="{% url 'core:dashboard' %}"><i class="fas fa-home me-2"></i>الرئيسية</a></li>
@@ -22,7 +24,7 @@
                     <li><a class="dropdown-item" href="#"><i class="fas fa-shopping-bag me-2"></i>المشتريات</a></li>
                     <li><a class="dropdown-item" href="#"><i class="fas fa-box me-2"></i>المنتجات</a></li>
                     <li><a class="dropdown-item" href="{% url 'customers:list' %}"><i class="fas fa-users me-2"></i>العملاء</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-truck me-2"></i>الموردين</a></li>
+                    <li><a class="dropdown-item" href="{% url 'suppliers:list' %}"><i class="fas fa-truck me-2"></i>الموردين</a></li>
                     <li><a class="dropdown-item" href="#"><i class="fas fa-warehouse me-2"></i>المخازن</a></li>
                     <li><a class="dropdown-item" href="#"><i class="fas fa-chart-bar me-2"></i>التقارير</a></li>
                     {% if user.is_tenant_admin or user.is_superuser %}

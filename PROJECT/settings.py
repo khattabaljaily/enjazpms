@@ -49,11 +49,11 @@ INSTALLED_APPS = [
     'apps.core',
     'apps.accounts',
     'apps.customers',
+    'apps.suppliers',
     
     # Local apps (will be added as we create them)
     # 'apps.branches',
     # 'apps.items',
-    # 'apps.suppliers',
     # 'apps.sales',
     # 'apps.purchases',
     # 'apps.stocks',

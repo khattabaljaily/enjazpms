@@ -199,3 +199,88 @@ input[inputmode="decimal"]::placeholder {
     direction: ltr;
     text-align: right;
 }
+
+/* ==========================================
+   5. Dark Mode — Bootstrap Variable Overrides
+   Bootstrap 5.3 uses its own --bs-* variables
+   which are unaware of the custom [data-theme]
+   toggle. We remap them here so all Bootstrap
+   components (modals, dropdowns, cards, etc.)
+   inherit the correct dark surface colors.
+   ========================================== */
+[data-theme="dark"] {
+    /* Bootstrap core */
+    --bs-body-bg:             var(--bg-primary);
+    --bs-body-color:          var(--text-primary);
+    --bs-border-color:        var(--border-color);
+    --bs-border-color-translucent: rgba(255,255,255,0.1);
+    --bs-secondary-bg:        var(--bg-secondary);
+    --bs-tertiary-bg:         var(--bg-tertiary);
+
+    /* Modal */
+    --bs-modal-bg:            var(--surface);
+    --bs-modal-color:         var(--text-primary);
+    --bs-modal-border-color:  var(--border-color);
+    --bs-modal-header-bg:     var(--surface);
+    --bs-modal-header-border-color: var(--border-light);
+    --bs-modal-footer-bg:     var(--bg-secondary);
+    --bs-modal-footer-border-color: var(--border-light);
+
+    /* Dropdown */
+    --bs-dropdown-bg:         var(--surface);
+    --bs-dropdown-color:      var(--text-primary);
+    --bs-dropdown-border-color: var(--border-color);
+    --bs-dropdown-link-color: var(--text-primary);
+    --bs-dropdown-link-hover-bg: var(--surface-hover);
+    --bs-dropdown-link-active-bg: var(--primary);
+
+    /* List group & misc */
+    --bs-list-group-bg:       var(--surface);
+    --bs-list-group-border-color: var(--border-color);
+    --bs-card-bg:             var(--surface);
+    --bs-card-border-color:   var(--border-color);
+}
+
+/* Hard overrides — some Bootstrap components use
+   background-color directly instead of the CSS var */
+[data-theme="dark"] .modal-content {
+    background-color: var(--surface) !important;
+    color:            var(--text-primary) !important;
+    border-color:     var(--border-color) !important;
+}
+
+[data-theme="dark"] .modal-header {
+    background-color: var(--surface) !important;
+    border-bottom-color: var(--border-light) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-footer {
+    background-color: var(--bg-secondary) !important;
+    border-top-color: var(--border-light) !important;
+}
+
+[data-theme="dark"] .modal-body {
+    background-color: var(--surface) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-backdrop {
+    --bs-backdrop-opacity: 0.65;
+}
+
+[data-theme="dark"] .dropdown-menu {
+    background-color: var(--surface) !important;
+    border-color:     var(--border-color) !important;
+    color:            var(--text-primary) !important;
+}
+
+[data-theme="dark"] .dropdown-item {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .dropdown-item:hover,
+[data-theme="dark"] .dropdown-item:focus {
+    background-color: var(--surface-hover) !important;
+    color: var(--text-primary) !important;
+}

@@ -324,6 +324,81 @@
     
     .mobile-page-menu {
         display: block;
+        width: 100%;
+    }
+
+    .mobile-page-menu .dropdown-toggle.mobile-page-menu-toggle {
+        width: 100%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.5rem;
+        padding: 0.72rem 2.75rem 0.72rem 1rem;
+        border-radius: 14px;
+        border: 1px solid var(--border-color);
+        background: var(--surface);
+        color: var(--text-primary);
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+
+    .mobile-page-menu .dropdown-toggle.mobile-page-menu-toggle:hover,
+    .mobile-page-menu .dropdown-toggle.mobile-page-menu-toggle:focus,
+    .mobile-page-menu .dropdown-toggle.mobile-page-menu-toggle.show {
+        background: var(--surface-hover);
+        border-color: var(--primary);
+        color: var(--text-primary);
+    }
+
+    .mobile-page-menu .dropdown-toggle.mobile-page-menu-toggle::after {
+        content: "\f078";
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        border: 0;
+        width: auto;
+        height: auto;
+        margin: 0;
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        transition: transform 0.2s ease;
+        color: var(--text-secondary);
+    }
+
+    .mobile-page-menu .dropdown-toggle.mobile-page-menu-toggle.show::after {
+        transform: translateY(-50%) rotate(180deg);
+    }
+
+    .mobile-page-menu-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .mobile-page-menu .dropdown-menu {
+        width: 100%;
+        min-width: 100%;
+        margin-top: 0.5rem;
+        padding: 0.45rem;
+        border-radius: 14px;
+        border: 1px solid var(--border-color);
+        background: var(--surface);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .mobile-page-menu .dropdown-item {
+        border-radius: 10px;
+        padding: 0.65rem 0.75rem;
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+
+    .mobile-page-menu .dropdown-item:hover,
+    .mobile-page-menu .dropdown-item:focus {
+        background: var(--surface-hover);
+        color: var(--primary);
     }
     
     .dashboard-body {
