@@ -1,0 +1,103 @@
+/* ============================================================
+   EnjazIMS - Stocks (Warehouses) Page Specific Styles
+   خاص بصفحة المخازن فقط
+   ============================================================ */
+
+/* ══════════════════════════ MOBILE CARD LAYOUT — STOCKS TABLE ══════════════════════════ */
+/*
+  Stocks columns:
+  1: اسم المخزن | 2: الرمز | 3: النوع | 4: الموقع | 5: الحالة | 6: الإجراءات
+*/
+@media (max-width: 768px) {
+    .cx-table tbody tr,
+    .dataTables_wrapper .dataTable tbody tr {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto auto auto;
+    }
+
+    /* اسم المخزن — شريط كامل */
+    .cx-table tbody td:nth-child(1) {
+        grid-column: 1 / -1; grid-row: 1;
+        padding: 1.1rem 1.1rem 0.65rem !important;
+        margin-top: 4px;
+        border-bottom: 1px solid var(--border-light) !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 0.65rem;
+    }
+
+    .cx-table tbody td:nth-child(1) .cxr-name {
+        font-size: 1.05rem;
+        font-weight: 700;
+        flex: 1;
+    }
+
+    /* الرمز */
+    .cx-table tbody td:nth-child(2) {
+        grid-column: 1; grid-row: 2;
+        padding: 0.75rem 1.1rem 0 !important;
+    }
+
+    /* النوع */
+    .cx-table tbody td:nth-child(3) {
+        grid-column: 2; grid-row: 2;
+        padding: 0.75rem 1.1rem 0 !important;
+        align-items: flex-end !important;
+    }
+
+    /* الموقع — كامل العرض */
+    .cx-table tbody td:nth-child(4) {
+        grid-column: 1 / -1; grid-row: 3;
+        padding: 0.45rem 1.1rem 0.85rem !important;
+    }
+
+    /* الحالة */
+    .cx-table tbody td:nth-child(5) {
+        grid-column: 1; grid-row: 4;
+        padding: 0.2rem 1.1rem 0.65rem !important;
+    }
+
+    /* فراغ لتوازن الشبكة */
+    .cx-table tbody td:nth-child(5) + * {
+        grid-column: 2; grid-row: 4;
+    }
+
+    /* الإجراءات */
+    .cx-table tbody td:nth-child(6) {
+        grid-column: 1 / -1; grid-row: 5;
+        border-top: 1px solid var(--border-light) !important;
+        padding: 0.65rem 1.1rem !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 0.5rem;
+        background: var(--bg-tertiary) !important;
+        border-radius: 0 0 18px 18px !important;
+    }
+
+    /* تسميات */
+    .cx-table tbody td:nth-child(2)::before,
+    .cx-table tbody td:nth-child(3)::before,
+    .cx-table tbody td:nth-child(4)::before,
+    .cx-table tbody td:nth-child(5)::before {
+        content: attr(data-label);
+        font-size: 0.67rem;
+        font-weight: 600;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .cx-table tbody td:nth-child(1)::before,
+    .cx-table tbody td:nth-child(6)::before { display: none; }
+}
+
+@media (max-width: 576px) {
+    .cx-table tbody td:nth-child(1) { padding: 1rem !important; }
+    .cx-table tbody td:nth-child(2),
+    .cx-table tbody td:nth-child(3),
+    .cx-table tbody td:nth-child(4),
+    .cx-table tbody td:nth-child(5) { padding-left: 1rem !important; padding-right: 1rem !important; }
+    .cx-table tbody td:nth-child(6) { padding: 0.6rem 1rem !important; }
+}
