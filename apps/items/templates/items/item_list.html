@@ -308,6 +308,150 @@
     </div>
 </div>
 
+<!-- ══════════════════════════ VIEW ITEM MODAL ══════════════════════════ -->
+<div class="modal fade" id="viewItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar" id="viewItemAvatar" style="background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;"><i class="fas fa-box-open"></i></div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewItemName"></h5>
+                        <p class="cx-view-subtitle" id="viewItemSku"></p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="cx-view-body">
+                {# ── المعلومات الأساسية ── #}
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-info-circle"></i> المعلومات الأساسية</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--name"><i class="fas fa-tag"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الاسم</span>
+                                <span class="cx-info-card-value" id="viewItemNameVal"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--phone"><i class="fas fa-barcode"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الباركود</span>
+                                <span class="cx-info-card-value" id="viewItemBarcode"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--city"><i class="fas fa-tags"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">التصنيف</span>
+                                <span class="cx-info-card-value" id="viewItemCategory"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--email"><i class="fas fa-ruler"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">وحدة البيع</span>
+                                <span class="cx-info-card-value" id="viewItemUnit"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--status"><i class="fas fa-circle-check"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الحالة</span>
+                                <span class="cx-info-card-value" id="viewItemStatus"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--notes"><i class="fas fa-boxes-stacked"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">نوع المنتج</span>
+                                <span class="cx-info-card-value" id="viewItemType"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# ── التسعير ── #}
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-money-bill-wave"></i> التسعير</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card cx-info-card--money">
+                            <div class="cx-info-card-icon cx-info-icon--balance"><i class="fas fa-arrow-down"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">سعر التكلفة</span>
+                                <span class="cx-info-card-value cx-info-card-value--money" id="viewItemCostPrice"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--money">
+                            <div class="cx-info-card-icon cx-info-icon--credit"><i class="fas fa-arrow-up"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">سعر البيع</span>
+                                <span class="cx-info-card-value cx-info-card-value--money" id="viewItemSellingPrice"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--money">
+                            <div class="cx-info-card-icon cx-info-icon--balance"><i class="fas fa-percent"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">نسبة الضريبة</span>
+                                <span class="cx-info-card-value" id="viewItemTaxRate"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--money">
+                            <div class="cx-info-card-icon cx-info-icon--credit"><i class="fas fa-hand-holding-dollar"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">أدنى سعر بيع</span>
+                                <span class="cx-info-card-value cx-info-card-value--money" id="viewItemMinSelling"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# ── خيارات إضافية ── #}
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-sliders"></i> خيارات إضافية</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card cx-info-card--full">
+                            <div class="cx-info-card-icon cx-info-icon--notes"><i class="fas fa-file-alt"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الوصف</span>
+                                <span class="cx-info-card-value" id="viewItemDescription"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon" style="background:#fef3c7"><i class="fas fa-store" style="color:#f59e0b"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">قابل للبيع</span>
+                                <span class="cx-info-card-value" id="viewItemSellable"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon" style="background:#e0f2fe"><i class="fas fa-cart-shopping" style="color:#0ea5e9"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">قابل للشراء</span>
+                                <span class="cx-info-card-value" id="viewItemPurchasable"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card" id="viewTrackRow">
+                            <div class="cx-info-card-icon" style="background:#f0fdf4"><i class="fas fa-list-check" style="color:#10b981"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">خيارات التتبع</span>
+                                <span class="cx-info-card-value" id="viewItemTracking"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="cx-btn-primary" id="viewEditItemBtn">
+                    <i class="fas fa-pen-to-square me-1"></i> تعديل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ══════════════════════════ DELETE MODAL ══════════════════════════ -->
 <div class="modal fade" id="deleteItemModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
@@ -343,12 +487,13 @@
     const urlDelete = "{% url 'items:delete_api' 0 %}";
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
-    ['itemModal','deleteItemModal'].forEach(function(id) {
+    ['itemModal','viewItemModal','deleteItemModal'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el && el.parentElement !== document.body) document.body.appendChild(el);
     });
 
     const itemModal   = new bootstrap.Modal(document.getElementById('itemModal'));
+    const viewModal   = new bootstrap.Modal(document.getElementById('viewItemModal'));
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteItemModal'));
 
     const $form      = $('#itemForm');
@@ -420,6 +565,7 @@
                 data: null, orderable: false, searchable: false,
                 render: function(_, __, r) {
                     return `<div class="cxr-actions">
+                        <button class="cxr-act cxr-act--view js-view-item" data-id="${r.id}" aria-label="عرض"><i class="fas fa-eye"></i></button>
                         <button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>
                         <button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>
                     </div>`;
@@ -555,6 +701,60 @@
     $('#itemsTable').on('click', '.js-edit-item', function () {
         openEdit($(this).data('id'));
     });
+
+    /* ── View ──────────────────────────────────────────────── */
+    function openView(id) {
+        $.ajax({
+            url: apiUrl(urlDetail, id), method: 'GET',
+            success: function(resp) {
+                if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
+                const d = resp.data;
+
+                // بناء أيقونة Avatar بالحرف الأول
+                const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
+                const color  = colors[(d.name || 'أ').charCodeAt(0) % colors.length];
+                $('#viewItemAvatar').css('background', color).html(d.name.trim().charAt(0).toUpperCase());
+
+                $('#viewItemName').text(d.name);
+                $('#viewItemSku').html(`<code class="cxr-code">${d.sku}</code>`);
+                $('#viewItemNameVal').text(d.name || '—');
+                $('#viewItemBarcode').text(d.barcode || '—');
+                $('#viewItemCategory').text(d.category || '—');
+                $('#viewItemUnit').text(d.unit || '—');
+                $('#viewItemType').text(d.item_type || '—');
+                $('#viewItemCostPrice').text(parseFloat(d.cost_price || 0).toLocaleString());
+                $('#viewItemSellingPrice').text(parseFloat(d.selling_price || 0).toLocaleString());
+                $('#viewItemTaxRate').text((d.tax_rate || '0') + '%');
+                $('#viewItemMinSelling').text(parseFloat(d.min_selling_price || 0).toLocaleString());
+                $('#viewItemDescription').text(d.description || '—');
+
+                const yesHtml = '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نعم</span>';
+                const noHtml  = '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>لا</span>';
+                $('#viewItemSellable').html(d.is_sellable ? yesHtml : noHtml);
+                $('#viewItemPurchasable').html(d.is_purchasable ? yesHtml : noHtml);
+
+                const statusHtml = d.is_active
+                    ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+                    : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>';
+                $('#viewItemStatus').html(statusHtml);
+
+                // خيارات التتبع
+                let tracking = [];
+                if (d.track_expiry)  tracking.push('تتبع الانتهاء');
+                if (d.track_batch)   tracking.push('تتبع الدفعات');
+                if (d.track_serial)  tracking.push('رقم تسلسلي');
+                if (d.has_variants)  tracking.push('متغيرات');
+                $('#viewItemTracking').text(tracking.length ? tracking.join(' ، ') : 'لا يوجد');
+
+                $('#viewEditItemBtn').data('id', d.id);
+                viewModal.show();
+            },
+            error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+        });
+    }
+
+    $('#itemsTable').on('click', '.js-view-item', function () { openView($(this).data('id')); });
+    $('#viewEditItemBtn').on('click', function () { viewModal.hide(); openEdit($(this).data('id')); });
 
 })();
 </script>

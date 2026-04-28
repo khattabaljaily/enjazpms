@@ -192,6 +192,79 @@
     </div>
 </div>
 
+<!-- ══════════════════════════ VIEW STOCK MODAL ══════════════════════════ -->
+<div class="modal fade" id="viewStockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar" id="viewStockAvatar" style="background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;"><i class="fas fa-warehouse"></i></div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewStockName"></h5>
+                        <p class="cx-view-subtitle" id="viewStockCode"></p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="cx-view-body">
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-warehouse"></i> معلومات المخزن</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--name"><i class="fas fa-tag"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الاسم</span>
+                                <span class="cx-info-card-value" id="viewStockNameVal"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--phone"><i class="fas fa-hashtag"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الرمز</span>
+                                <span class="cx-info-card-value" id="viewStockCodeVal"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--city"><i class="fas fa-layer-group"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">نوع المخزن</span>
+                                <span class="cx-info-card-value" id="viewStockType"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--status"><i class="fas fa-circle-check"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الحالة</span>
+                                <span class="cx-info-card-value" id="viewStockStatus"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--full">
+                            <div class="cx-info-card-icon cx-info-icon--address"><i class="fas fa-location-dot"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الموقع / العنوان</span>
+                                <span class="cx-info-card-value" id="viewStockAddress"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--full">
+                            <div class="cx-info-card-icon cx-info-icon--notes"><i class="fas fa-note-sticky"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الملاحظات</span>
+                                <span class="cx-info-card-value" id="viewStockNotes"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="cx-btn-primary" id="viewEditStockBtn">
+                    <i class="fas fa-pen-to-square me-1"></i> تعديل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ══════════════════════════ DELETE MODAL ══════════════════════════ -->
 <div class="modal fade" id="deleteStockModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
@@ -229,12 +302,13 @@
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
     // Move modals to <body>
-    ['stockModal','deleteStockModal'].forEach(function(id) {
+    ['stockModal','viewStockModal','deleteStockModal'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el && el.parentElement !== document.body) document.body.appendChild(el);
     });
 
     const stockModal  = new bootstrap.Modal(document.getElementById('stockModal'));
+    const viewModal   = new bootstrap.Modal(document.getElementById('viewStockModal'));
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteStockModal'));
 
     const $form      = $('#stockForm');
@@ -304,6 +378,7 @@
                         : `<button class="cxr-act" disabled title="المخزن الافتراضي"><i class="fas fa-star text-warning"></i></button>`;
                     return `<div class="cxr-actions">
                         ${defBtn}
+                        <button class="cxr-act cxr-act--view js-view-stock" data-id="${r.id}" aria-label="عرض"><i class="fas fa-eye"></i></button>
                         <button class="cxr-act js-edit-stock" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>
                         <button class="cxr-act cxr-act--del js-delete-stock" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>
                     </div>`;
@@ -415,10 +490,41 @@
         });
     });
 
+    /* ── View ──────────────────────────────────────────────── */
+    function openView(id) {
+        $.ajax({
+            url: apiUrl(urlDetail, id), method: 'GET',
+            success: function(resp) {
+                if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
+                const d = resp.data;
+                $('#viewStockName').text(d.name);
+                $('#viewStockCode').html(`<code class="cxr-code">${d.code}</code>`);
+                $('#viewStockNameVal').text(d.name || '—');
+                $('#viewStockCodeVal').html(`<code class="cxr-code">${d.code}</code>`);
+                $('#viewStockType').text(d.stock_type || '—');
+                $('#viewStockAddress').text(d.address || '—');
+                $('#viewStockNotes').text(d.notes || '—');
+                const statusHtml = d.is_active
+                    ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+                    : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>';
+                if (d.is_default) {
+                    $('#viewStockName').append(' <span class="badge bg-primary" style="font-size:0.65rem">افتراضي</span>');
+                }
+                $('#viewStockStatus').html(statusHtml);
+                $('#viewEditStockBtn').data('id', d.id);
+                viewModal.show();
+            },
+            error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+        });
+    }
+
     /* ── Edit binding ──────────────────────────────────────── */
     $('#stocksTable').on('click', '.js-edit-stock', function () {
         openEdit($(this).data('id'));
     });
+
+    $('#stocksTable').on('click', '.js-view-stock', function () { openView($(this).data('id')); });
+    $('#viewEditStockBtn').on('click', function () { viewModal.hide(); openEdit($(this).data('id')); });
 
     /* ── Set default ───────────────────────────────────────── */
     $('#stocksTable').on('click', '.js-set-default-stock', function () {
