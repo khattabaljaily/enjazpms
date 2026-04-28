@@ -43,7 +43,7 @@
 .messages-container        { margin-bottom: 1rem; }
 .messages-container .alert { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
 
-/* ── Shell ──────────────────────────────────── */
+/* ── Shell ─────────────────────────── */
 .dashboard-shell {
     min-height: 100vh;
     display: flex;

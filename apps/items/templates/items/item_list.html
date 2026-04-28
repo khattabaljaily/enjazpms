@@ -1,0 +1,561 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════════════════════ PAGE HERO HEADER ══════════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-box-open"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">المنتجات</h1>
+                <p class="cx-hero-desc">إدارة المنتجات والأصناف</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'items:category_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-tags"></i>
+                    <span>التصنيفات</span>
+                </a>
+                <a href="{% url 'items:unit_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-ruler"></i>
+                    <span>وحدات القياس</span>
+                </a>
+                <button type="button" class="cx-btn-add" id="btnOpenCreateItem">
+                    <i class="fas fa-plus"></i>
+                    <span>إضافة منتج</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-box-open"></i>
+            <strong>{{ stats.total }}</strong>
+            <span>منتج</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-check-circle"></i>
+            <strong>{{ stats.active }}</strong>
+            <span>نشط</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-pause-circle"></i>
+            <strong>{{ stats.inactive }}</strong>
+            <span>موقوف</span>
+        </span>
+    </div>
+</div>
+
+<!-- ══════════════════════════ MAIN TABLE PANEL ══════════════════════════ -->
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="itemSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو الـ SKU أو الباركود...">
+        </div>
+        <div class="cx-toolbar-end">
+            <div class="cx-filter-tabs" role="group">
+                <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
+                <button type="button" class="cx-filter-tab" data-status="active">نشط</button>
+                <button type="button" class="cx-filter-tab" data-status="inactive">موقوف</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="itemsTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>المنتج</th>
+                    <th>الـ SKU</th>
+                    <th>التصنيف</th>
+                    <th>وحدة البيع</th>
+                    <th>سعر التكلفة</th>
+                    <th>سعر البيع</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════ ADD / EDIT MODAL (Full Screen) ══════════════════════════ -->
+<div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="itemForm" novalidate enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" id="itemId" value="">
+
+                <div class="cx-modal-main">
+                    <div class="cx-modal-header">
+                        <div>
+                            <h5 class="cx-modal-title" id="itemModalTitle">إضافة منتج جديد</h5>
+                        </div>
+                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="cx-modal-body">
+                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
+
+                        {# ── ١: معلومات أساسية ── #}
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-num">١</span> المعلومات الأساسية
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_name">{{ item_form.name.label }} <sup class="cx-required">*</sup></label>
+                                {{ item_form.name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_name_en">{{ item_form.name_en.label }}</label>
+                                {{ item_form.name_en }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="id_item_type">{{ item_form.item_type.label }}</label>
+                                {{ item_form.item_type }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="id_category">{{ item_form.category.label }}</label>
+                                {{ item_form.category }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="id_barcode">{{ item_form.barcode.label }}</label>
+                                {{ item_form.barcode }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="cx-label" for="id_sku">{{ item_form.sku.label }}</label>
+                                {{ item_form.sku }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="cx-label" for="id_unit">{{ item_form.unit.label }}</label>
+                                {{ item_form.unit }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="cx-label" for="id_purchase_unit">{{ item_form.purchase_unit.label }}</label>
+                                {{ item_form.purchase_unit }}
+                            </div>
+                            <div class="col-md-3">
+                                <label class="cx-label" for="id_tax_rate">{{ item_form.tax_rate.label }}</label>
+                                {{ item_form.tax_rate }}
+                            </div>
+                        </div>
+
+                        {# ── ٢: التسعير ── #}
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-num">٢</span> التسعير
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="cx-label" for="id_cost_price">{{ item_form.cost_price.label }}</label>
+                                {{ item_form.cost_price }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="id_selling_price">{{ item_form.selling_price.label }} <sup class="cx-required">*</sup></label>
+                                {{ item_form.selling_price }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="id_min_selling_price">{{ item_form.min_selling_price.label }}</label>
+                                {{ item_form.min_selling_price }}
+                            </div>
+                        </div>
+
+                        {# ── ٣: المخزون ── #}
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-num">٣</span> إعدادات المخزون
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_min_quantity">{{ item_form.min_quantity.label }}</label>
+                                {{ item_form.min_quantity }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_max_quantity">{{ item_form.max_quantity.label }}</label>
+                                {{ item_form.max_quantity }}
+                            </div>
+                        </div>
+
+                        {# ── ٤: خيارات التتبع (تظهر حسب نوع النشاط) ── #}
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-num">٤</span> خيارات التتبع
+                            <small class="text-muted me-2">(فعّل ما يناسب نوع منتجك)</small>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            {# تتبع الانتهاء - مهم للصيدليات والأغذية #}
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_track_expiry">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">
+                                            <i class="fas fa-calendar-xmark text-danger me-1"></i>
+                                            {{ item_form.track_expiry.label }}
+                                        </span>
+                                        <span class="cx-toggle-desc">للأدوية والأغذية والمواد الكيميائية</span>
+                                    </div>
+                                    {{ item_form.track_expiry }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                            {# تتبع الدفعة - للصناعات والأدوية #}
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_track_batch">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">
+                                            <i class="fas fa-layer-group text-warning me-1"></i>
+                                            {{ item_form.track_batch.label }}
+                                        </span>
+                                        <span class="cx-toggle-desc">لتتبع دفعات الإنتاج أو الاستيراد</span>
+                                    </div>
+                                    {{ item_form.track_batch }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                            {# تتبع الرقم التسلسلي - للإلكترونيات #}
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_track_serial">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">
+                                            <i class="fas fa-barcode text-info me-1"></i>
+                                            {{ item_form.track_serial.label }}
+                                        </span>
+                                        <span class="cx-toggle-desc">للإلكترونيات والأجهزة الطبية</span>
+                                    </div>
+                                    {{ item_form.track_serial }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                            {# المتغيرات - للملابس والأحذية #}
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_has_variants">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">
+                                            <i class="fas fa-palette text-primary me-1"></i>
+                                            {{ item_form.has_variants.label }}
+                                        </span>
+                                        <span class="cx-toggle-desc">للملابس والأحذية (ألوان × مقاسات)</span>
+                                    </div>
+                                    {{ item_form.has_variants }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        {# ── ٥: تفاصيل وحالة ── #}
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-num">٥</span> تفاصيل وحالة
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="cx-label" for="id_description">{{ item_form.description.label }}</label>
+                                {{ item_form.description }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-toggle-card" for="id_is_active">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ item_form.is_active.label }}</span>
+                                        <span class="cx-toggle-desc">يظهر في التقارير والبحث</span>
+                                    </div>
+                                    {{ item_form.is_active }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-toggle-card" for="id_is_sellable">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ item_form.is_sellable.label }}</span>
+                                        <span class="cx-toggle-desc">يظهر في فواتير البيع</span>
+                                    </div>
+                                    {{ item_form.is_sellable }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-toggle-card" for="id_is_purchasable">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ item_form.is_purchasable.label }}</span>
+                                        <span class="cx-toggle-desc">يظهر في أوامر الشراء</span>
+                                    </div>
+                                    {{ item_form.is_purchasable }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cx-modal-footer">
+                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="cx-btn-primary" id="itemSubmitBtn">
+                            <i class="fas fa-check me-1"></i> حفظ
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ DELETE MODAL ══════════════════════════ -->
+<div class="modal fade" id="deleteItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+                <h5 class="cx-delete-title">حذف المنتج؟</h5>
+                <p class="cx-delete-desc">
+                    ستقوم بحذف <strong id="deleteItemName"></strong> بشكل نهائي.
+                    <br>لا يمكن التراجع عن هذا الإجراء.
+                </p>
+                <input type="hidden" id="deleteItemId" value="">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteItemBtn">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const urlTable  = "{% url 'items:table_api' %}";
+    const urlCreate = "{% url 'items:create_api' %}";
+    const urlDetail = "{% url 'items:detail_api' 0 %}";
+    const urlUpdate = "{% url 'items:update_api' 0 %}";
+    const urlDelete = "{% url 'items:delete_api' 0 %}";
+    function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+
+    ['itemModal','deleteItemModal'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== document.body) document.body.appendChild(el);
+    });
+
+    const itemModal   = new bootstrap.Modal(document.getElementById('itemModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteItemModal'));
+
+    const $form      = $('#itemForm');
+    const $submitBtn = $('#itemSubmitBtn');
+    const $idInput   = $('#itemId');
+    let activeStatus = '';
+
+    /* ── DataTable ─────────────────────────────────────────── */
+    const dt = $('#itemsTable').DataTable({
+        processing : true,
+        serverSide : true,
+        dom        : '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        pageLength : 25,
+        language   : {
+            emptyTable  : 'لا توجد منتجات',
+            info        : 'عرض _START_ إلى _END_ من _TOTAL_',
+            infoEmpty   : 'لا توجد بيانات',
+            zeroRecords : 'لا توجد نتائج مطابقة',
+            paginate    : { next: 'التالي', previous: 'السابق' },
+            processing  : 'جاري التحميل...',
+        },
+        ajax: {
+            url : urlTable,
+            data: function (d) { d.status = activeStatus; }
+        },
+        columns: [
+            {
+                data: null,
+                render: function(_, __, r) {
+                    // أيقونات التتبع حسب النوع
+                    let badges = '';
+                    if (r.track_expiry) badges += `<span class="badge bg-danger ms-1" style="font-size:0.6rem" title="تتبع الانتهاء"><i class="fas fa-calendar-xmark"></i></span>`;
+                    if (r.track_serial) badges += `<span class="badge bg-info ms-1" style="font-size:0.6rem" title="رقم تسلسلي"><i class="fas fa-barcode"></i></span>`;
+                    if (r.has_variants) badges += `<span class="badge bg-primary ms-1" style="font-size:0.6rem" title="متغيرات"><i class="fas fa-palette"></i></span>`;
+                    return `<span class="cxr-name">${r.name}</span>${badges}`;
+                }
+            },
+            {
+                data: 'sku',
+                render: s => `<code class="cxr-code">${s}</code>`
+            },
+            {
+                data: 'category',
+                render: c => (!c || c==='-')
+                    ? `<span class="cxr-empty">—</span>`
+                    : `<span>${c}</span>`
+            },
+            {
+                data: 'unit',
+                render: u => (!u || u==='-')
+                    ? `<span class="cxr-empty">—</span>`
+                    : `<span>${u}</span>`
+            },
+            {
+                data: 'cost_price',
+                render: v => `<span class="cxr-bal">${parseFloat(v).toLocaleString()}</span>`
+            },
+            {
+                data: 'selling_price',
+                render: v => `<span class="cxr-bal cxr-bal--pos">${parseFloat(v).toLocaleString()}</span>`
+            },
+            {
+                data: 'is_active',
+                render: a => a
+                    ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
+                    : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>`
+            },
+            {
+                data: null, orderable: false, searchable: false,
+                render: function(_, __, r) {
+                    return `<div class="cxr-actions">
+                        <button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                        <button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>
+                    </div>`;
+                }
+            }
+        ]
+    });
+
+    /* ── Search & filter ───────────────────────────────────── */
+    let searchTimer;
+    $('#itemSearchInput').on('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+    $('.cx-filter-tab').on('click', function () {
+        $('.cx-filter-tab').removeClass('active');
+        $(this).addClass('active');
+        activeStatus = $(this).data('status');
+        dt.ajax.reload();
+    });
+
+    /* ── Reset form ────────────────────────────────────────── */
+    function resetForm() {
+        $form[0].reset();
+        $idInput.val('');
+        $('#id_is_active').prop('checked', true);
+        $('#id_is_sellable').prop('checked', true);
+        $('#id_is_purchasable').prop('checked', true);
+        EnjazIMS.clearFormErrors($form);
+    }
+
+    /* ── Open create ───────────────────────────────────────── */
+    $('#btnOpenCreateItem').on('click', function () {
+        resetForm();
+        $('#itemModalTitle').text('إضافة منتج جديد');
+        $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
+        itemModal.show();
+    });
+
+    /* ── Open edit ─────────────────────────────────────────── */
+    function openEdit(id) {
+        resetForm();
+        $.ajax({
+            url: apiUrl(urlDetail, id), method: 'GET',
+            success: function(resp) {
+                if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
+                const d = resp.data;
+                $idInput.val(d.id);
+                $('#id_name').val(d.name || '');
+                $('#id_name_en').val(d.name_en || '');
+                $('#id_sku').val(d.sku || '');
+                $('#id_barcode').val(d.barcode || '');
+                $('#id_item_type').val(d.item_type || '');
+                $('#id_category').val(d.category || '');
+                $('#id_unit').val(d.unit || '');
+                $('#id_purchase_unit').val(d.purchase_unit || '');
+                $('#id_cost_price').val(d.cost_price || '0');
+                $('#id_selling_price').val(d.selling_price || '0');
+                $('#id_min_selling_price').val(d.min_selling_price || '0');
+                $('#id_tax_rate').val(d.tax_rate || '0');
+                $('#id_min_quantity').val(d.min_quantity || '0');
+                $('#id_max_quantity').val(d.max_quantity || '0');
+                $('#id_track_expiry').prop('checked', !!d.track_expiry);
+                $('#id_track_batch').prop('checked', !!d.track_batch);
+                $('#id_track_serial').prop('checked', !!d.track_serial);
+                $('#id_has_variants').prop('checked', !!d.has_variants);
+                $('#id_description').val(d.description || '');
+                $('#id_is_active').prop('checked', !!d.is_active);
+                $('#id_is_sellable').prop('checked', !!d.is_sellable);
+                $('#id_is_purchasable').prop('checked', !!d.is_purchasable);
+
+                $('#itemModalTitle').text('تعديل المنتج');
+                $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
+                itemModal.show();
+            },
+            error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+        });
+    }
+
+    /* ── Save ──────────────────────────────────────────────── */
+    $form.on('submit', function (e) {
+        e.preventDefault();
+        EnjazIMS.clearFormErrors($form);
+        const id  = $idInput.val();
+        const url = id ? apiUrl(urlUpdate, id) : urlCreate;
+        const orig = $submitBtn.html();
+        EnjazIMS.showLoading($submitBtn);
+
+        // استخدام FormData للدعم المستقبلي لرفع الصور
+        const formData = new FormData($form[0]);
+        $.ajax({
+            url, method: 'POST', data: formData,
+            processData: false, contentType: false,
+            success: function(resp) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                if (resp.success) {
+                    itemModal.hide();
+                    dt.ajax.reload(null, false);
+                    EnjazIMS.toast(resp.message, 'success');
+                    return;
+                }
+                EnjazIMS.showFormError($form, resp.message);
+            },
+            error: function(xhr) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                const r = xhr.responseJSON || {};
+                if (r.errors) EnjazIMS.renderFieldErrors($form, r.errors);
+                EnjazIMS.showFormError($form, r.message || 'حدث خطأ');
+            }
+        });
+    });
+
+    /* ── Delete ────────────────────────────────────────────── */
+    $('#itemsTable').on('click', '.js-delete-item', function () {
+        $('#deleteItemId').val($(this).data('id'));
+        $('#deleteItemName').text($(this).data('name'));
+        deleteModal.show();
+    });
+    $('#confirmDeleteItemBtn').on('click', function () {
+        const id = $('#deleteItemId').val();
+        if (!id) return;
+        $.ajax({
+            url: apiUrl(urlDelete, id), method: 'POST',
+            success: function(resp) {
+                deleteModal.hide();
+                if (resp.success) { dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); }
+                else EnjazIMS.toast(resp.message, 'error');
+            },
+            error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }
+        });
+    });
+
+    $('#itemsTable').on('click', '.js-edit-item', function () {
+        openEdit($(this).data('id'));
+    });
+
+})();
+</script>
+{% endblock %}

@@ -59,16 +59,15 @@
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
-                <li><a href="#" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>إضافة منتج</a></li>
-                <li><a href="#" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة المنتجات</a></li>
-                <li><a href="#" class="nav-sublink"><i class="fas fa-tags me-2"></i>التصنيفات</a></li>
+                <li><a href="{% url 'items:list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة المنتجات</a></li>
+                <li><a href="{% url 'items:category_list' %}" class="nav-sublink"><i class="fas fa-tags me-2"></i>التصنيفات</a></li>
+                <li><a href="{% url 'items:unit_list' %}" class="nav-sublink"><i class="fas fa-ruler me-2"></i>وحدات القياس</a></li>
             </ul>
         </li>
         <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="#">
+            <a class="nav-link" href="{% url 'stocks:list' %}">
                 <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
                 المخازن
-                <small class="nav-coming-soon">قريباً</small>
             </a>
         </li>
     </ul>

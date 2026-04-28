@@ -53,10 +53,10 @@ INSTALLED_APPS = [
     
     # Local apps (will be added as we create them)
     # 'apps.branches',
-    # 'apps.items',
+    'apps.items',
     # 'apps.sales',
     # 'apps.purchases',
-    # 'apps.stocks',
+    'apps.stocks',
 ]
 
 MIDDLEWARE = [

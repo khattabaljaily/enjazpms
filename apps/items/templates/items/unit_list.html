@@ -1,0 +1,263 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-ruler"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">وحدات القياس</h1>
+                <p class="cx-hero-desc">تعريف وحدات البيع والشراء</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'items:list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>المنتجات</span>
+                </a>
+                <button type="button" class="cx-btn-add" id="btnOpenCreateUnit">
+                    <i class="fas fa-plus"></i>
+                    <span>إضافة وحدة</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-ruler"></i>
+            <strong>{{ stats.total }}</strong>
+            <span>وحدة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-check-circle"></i>
+            <strong>{{ stats.active }}</strong>
+            <span>نشط</span>
+        </span>
+    </div>
+</div>
+
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="unitSearchInput" class="cx-search-input" placeholder="ابحث باسم الوحدة...">
+        </div>
+    </div>
+    <div class="table-responsive cx-table-wrap">
+        <table id="unitsTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>الوحدة</th>
+                    <th>الاختصار</th>
+                    <th>الوحدة الأساسية</th>
+                    <th>عامل التحويل</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal fade" id="unitModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="unitForm" novalidate>
+                {% csrf_token %}
+                <input type="hidden" id="unitId" value="">
+                <div class="cx-modal-main">
+                    <div class="cx-modal-header">
+                        <h5 class="cx-modal-title" id="unitModalTitle">إضافة وحدة قياس</h5>
+                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="cx-modal-body">
+                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_name">{{ form.name.label }} <sup class="cx-required">*</sup></label>
+                                {{ form.name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_abbreviation">{{ form.abbreviation.label }}</label>
+                                {{ form.abbreviation }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_base_unit">{{ form.base_unit.label }}</label>
+                                {{ form.base_unit }}
+                                <small class="text-muted">اتركه فارغاً إذا كانت وحدة أساسية</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_conversion_factor">{{ form.conversion_factor.label }}</label>
+                                {{ form.conversion_factor }}
+                                <small class="text-muted">مثال: كرتون = 12 قطعة → أدخل 12</small>
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-toggle-card" for="id_is_active">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ form.is_active.label }}</span>
+                                    </div>
+                                    {{ form.is_active }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cx-modal-footer">
+                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="cx-btn-primary" id="unitSubmitBtn">
+                            <i class="fas fa-check me-1"></i> حفظ
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal fade" id="deleteUnitModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+                <h5 class="cx-delete-title">حذف وحدة القياس؟</h5>
+                <p class="cx-delete-desc">ستقوم بحذف وحدة <strong id="deleteUnitName"></strong>.<br>لا يمكن التراجع.</p>
+                <input type="hidden" id="deleteUnitId" value="">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteUnitBtn">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+    const urlTable  = "{% url 'items:unit_table_api' %}";
+    const urlCreate = "{% url 'items:unit_create_api' %}";
+    const urlDetail = "{% url 'items:unit_detail_api' 0 %}";
+    const urlUpdate = "{% url 'items:unit_update_api' 0 %}";
+    const urlDelete = "{% url 'items:unit_delete_api' 0 %}";
+    function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+
+    ['unitModal','deleteUnitModal'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== document.body) document.body.appendChild(el);
+    });
+
+    const unitModal   = new bootstrap.Modal(document.getElementById('unitModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteUnitModal'));
+    const $form = $('#unitForm');
+    const $submitBtn = $('#unitSubmitBtn');
+    const $idInput = $('#unitId');
+
+    const dt = $('#unitsTable').DataTable({
+        processing: true, serverSide: true,
+        dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        pageLength: 50,
+        language: { emptyTable:'لا توجد وحدات', zeroRecords:'لا توجد نتائج', paginate:{next:'التالي',previous:'السابق'}, processing:'جاري التحميل...' },
+        ajax: { url: urlTable },
+        columns: [
+            { data: 'name', render: n => `<strong>${n}</strong>` },
+            { data: 'abbreviation', render: a => a==='-' ? `<span class="cxr-empty">—</span>` : `<code class="cxr-code">${a}</code>` },
+            { data: 'base_unit', render: b => b==='-' ? `<span class="badge bg-secondary">أساسية</span>` : `<span>${b}</span>` },
+            { data: 'conversion_factor' },
+            { data: 'is_active', render: a => a
+                ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
+                : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>` },
+            { data: null, orderable: false, searchable: false, render: function(_, __, r) {
+                return `<div class="cxr-actions">
+                    <button class="cxr-act js-edit-unit" data-id="${r.id}"><i class="fas fa-pen-to-square"></i></button>
+                    <button class="cxr-act cxr-act--del js-delete-unit" data-id="${r.id}" data-name="${r.name}"><i class="fas fa-trash"></i></button>
+                </div>`;
+            }}
+        ]
+    });
+
+    let searchTimer;
+    $('#unitSearchInput').on('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+
+    function resetForm() { $form[0].reset(); $idInput.val(''); $('#id_is_active').prop('checked', true); EnjazIMS.clearFormErrors($form); }
+
+    $('#btnOpenCreateUnit').on('click', function() {
+        resetForm();
+        $('#unitModalTitle').text('إضافة وحدة قياس');
+        $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
+        unitModal.show();
+    });
+
+    function openEdit(id) {
+        resetForm();
+        $.ajax({ url: apiUrl(urlDetail, id), method: 'GET', success: function(resp) {
+            if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
+            const d = resp.data;
+            $idInput.val(d.id);
+            $('#id_name').val(d.name || '');
+            $('#id_abbreviation').val(d.abbreviation || '');
+            $('#id_base_unit').val(d.base_unit || '');
+            $('#id_conversion_factor').val(d.conversion_factor || '1');
+            $('#id_is_active').prop('checked', !!d.is_active);
+            $('#unitModalTitle').text('تعديل وحدة القياس');
+            $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
+            unitModal.show();
+        }, error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }});
+    }
+
+    $form.on('submit', function(e) {
+        e.preventDefault();
+        EnjazIMS.clearFormErrors($form);
+        const id = $idInput.val();
+        const url = id ? apiUrl(urlUpdate, id) : urlCreate;
+        const orig = $submitBtn.html();
+        EnjazIMS.showLoading($submitBtn);
+        $.ajax({ url, method: 'POST', data: $form.serialize(),
+            success: function(resp) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                if (resp.success) { unitModal.hide(); dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); return; }
+                EnjazIMS.showFormError($form, resp.message);
+            },
+            error: function(xhr) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                const r = xhr.responseJSON || {};
+                if (r.errors) EnjazIMS.renderFieldErrors($form, r.errors);
+                EnjazIMS.showFormError($form, r.message || 'حدث خطأ');
+            }
+        });
+    });
+
+    $('#unitsTable').on('click', '.js-delete-unit', function() {
+        $('#deleteUnitId').val($(this).data('id'));
+        $('#deleteUnitName').text($(this).data('name'));
+        deleteModal.show();
+    });
+    $('#confirmDeleteUnitBtn').on('click', function() {
+        const id = $('#deleteUnitId').val();
+        if (!id) return;
+        $.ajax({ url: apiUrl(urlDelete, id), method: 'POST', success: function(resp) {
+            deleteModal.hide();
+            if (resp.success) { dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); }
+            else EnjazIMS.toast(resp.message, 'error');
+        }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
+    });
+    $('#unitsTable').on('click', '.js-edit-unit', function() { openEdit($(this).data('id')); });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,268 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-tags"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">التصنيفات</h1>
+                <p class="cx-hero-desc">تصنيفات المنتجات الهرمية</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'items:list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>المنتجات</span>
+                </a>
+                <button type="button" class="cx-btn-add" id="btnOpenCreateCategory">
+                    <i class="fas fa-plus"></i>
+                    <span>إضافة تصنيف</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-tags"></i>
+            <strong>{{ stats.total }}</strong>
+            <span>تصنيف</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-sitemap"></i>
+            <strong>{{ stats.root_count }}</strong>
+            <span>رئيسي</span>
+        </span>
+    </div>
+</div>
+
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="categorySearchInput" class="cx-search-input" placeholder="ابحث باسم التصنيف...">
+        </div>
+    </div>
+    <div class="table-responsive cx-table-wrap">
+        <table id="categoriesTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>التصنيف</th>
+                    <th>المسار الكامل</th>
+                    <th>التصنيف الرئيسي</th>
+                    <th>الترتيب</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="categoryForm" novalidate>
+                {% csrf_token %}
+                <input type="hidden" id="categoryId" value="">
+                <div class="cx-modal-main">
+                    <div class="cx-modal-header">
+                        <h5 class="cx-modal-title" id="categoryModalTitle">إضافة تصنيف جديد</h5>
+                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="cx-modal-body">
+                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_name">{{ form.name.label }} <sup class="cx-required">*</sup></label>
+                                {{ form.name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_parent">{{ form.parent.label }}</label>
+                                {{ form.parent }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="id_icon">{{ form.icon.label }}</label>
+                                {{ form.icon }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="id_display_order">{{ form.display_order.label }}</label>
+                                {{ form.display_order }}
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <label class="cx-toggle-card w-100" for="id_is_active">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ form.is_active.label }}</span>
+                                    </div>
+                                    {{ form.is_active }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-label" for="id_description">{{ form.description.label }}</label>
+                                {{ form.description }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cx-modal-footer">
+                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="cx-btn-primary" id="categorySubmitBtn">
+                            <i class="fas fa-check me-1"></i> حفظ
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+                <h5 class="cx-delete-title">حذف التصنيف؟</h5>
+                <p class="cx-delete-desc">ستقوم بحذف تصنيف <strong id="deleteCategoryName"></strong>.<br>لا يمكن التراجع.</p>
+                <input type="hidden" id="deleteCategoryId" value="">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteCategoryBtn">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+    const urlTable  = "{% url 'items:category_table_api' %}";
+    const urlCreate = "{% url 'items:category_create_api' %}";
+    const urlDetail = "{% url 'items:category_detail_api' 0 %}";
+    const urlUpdate = "{% url 'items:category_update_api' 0 %}";
+    const urlDelete = "{% url 'items:category_delete_api' 0 %}";
+    function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+
+    ['categoryModal','deleteCategoryModal'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== document.body) document.body.appendChild(el);
+    });
+
+    const categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+    const deleteModal   = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+    const $form = $('#categoryForm');
+    const $submitBtn = $('#categorySubmitBtn');
+    const $idInput = $('#categoryId');
+
+    const dt = $('#categoriesTable').DataTable({
+        processing: true, serverSide: true,
+        dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        pageLength: 50,
+        language: { emptyTable:'لا توجد تصنيفات', zeroRecords:'لا توجد نتائج', paginate:{next:'التالي',previous:'السابق'}, processing:'جاري التحميل...' },
+        ajax: { url: urlTable },
+        columns: [
+            { data: null, render: function(_, __, r) {
+                return `<span><i class="fas ${r.icon} me-2 text-muted"></i><strong>${r.name}</strong></span>`;
+            }},
+            { data: 'full_path', render: p => `<span class="text-muted" style="font-size:0.875rem">${p}</span>` },
+            { data: 'parent', render: p => p === '-' ? `<span class="cxr-empty">جذر</span>` : `<span>${p}</span>` },
+            { data: 'display_order' },
+            { data: 'is_active', render: a => a
+                ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
+                : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>` },
+            { data: null, orderable: false, searchable: false, render: function(_, __, r) {
+                return `<div class="cxr-actions">
+                    <button class="cxr-act js-edit-category" data-id="${r.id}"><i class="fas fa-pen-to-square"></i></button>
+                    <button class="cxr-act cxr-act--del js-delete-category" data-id="${r.id}" data-name="${r.name}"><i class="fas fa-trash"></i></button>
+                </div>`;
+            }}
+        ]
+    });
+
+    let searchTimer;
+    $('#categorySearchInput').on('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+
+    function resetForm() { $form[0].reset(); $idInput.val(''); $('#id_is_active').prop('checked', true); EnjazIMS.clearFormErrors($form); }
+
+    $('#btnOpenCreateCategory').on('click', function() {
+        resetForm();
+        $('#categoryModalTitle').text('إضافة تصنيف جديد');
+        $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
+        categoryModal.show();
+    });
+
+    function openEdit(id) {
+        resetForm();
+        $.ajax({ url: apiUrl(urlDetail, id), method: 'GET', success: function(resp) {
+            if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
+            const d = resp.data;
+            $idInput.val(d.id);
+            $('#id_name').val(d.name || '');
+            $('#id_parent').val(d.parent || '');
+            $('#id_icon').val(d.icon || 'fa-tag');
+            $('#id_description').val(d.description || '');
+            $('#id_display_order').val(d.display_order || 0);
+            $('#id_is_active').prop('checked', !!d.is_active);
+            $('#categoryModalTitle').text('تعديل التصنيف');
+            $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
+            categoryModal.show();
+        }, error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }});
+    }
+
+    $form.on('submit', function(e) {
+        e.preventDefault();
+        EnjazIMS.clearFormErrors($form);
+        const id = $idInput.val();
+        const url = id ? apiUrl(urlUpdate, id) : urlCreate;
+        const orig = $submitBtn.html();
+        EnjazIMS.showLoading($submitBtn);
+        $.ajax({ url, method: 'POST', data: $form.serialize(),
+            success: function(resp) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                if (resp.success) { categoryModal.hide(); dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); return; }
+                EnjazIMS.showFormError($form, resp.message);
+            },
+            error: function(xhr) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                const r = xhr.responseJSON || {};
+                if (r.errors) EnjazIMS.renderFieldErrors($form, r.errors);
+                EnjazIMS.showFormError($form, r.message || 'حدث خطأ');
+            }
+        });
+    });
+
+    $('#categoriesTable').on('click', '.js-delete-category', function() {
+        $('#deleteCategoryId').val($(this).data('id'));
+        $('#deleteCategoryName').text($(this).data('name'));
+        deleteModal.show();
+    });
+    $('#confirmDeleteCategoryBtn').on('click', function() {
+        const id = $('#deleteCategoryId').val();
+        if (!id) return;
+        $.ajax({ url: apiUrl(urlDelete, id), method: 'POST', success: function(resp) {
+            deleteModal.hide();
+            if (resp.success) { dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); }
+            else EnjazIMS.toast(resp.message, 'error');
+        }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
+    });
+    $('#categoriesTable').on('click', '.js-edit-category', function() { openEdit($(this).data('id')); });
+})();
+</script>
+{% endblock %}
