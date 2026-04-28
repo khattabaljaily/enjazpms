@@ -1,6 +1,38 @@
 // EnjazIMS - Main JavaScript
 // ================================
 
+// Sidebar toggle (mobile)
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    const sidebar   = document.querySelector('.sidebar');
+    if (!toggleBtn || !sidebar) return;
+
+    // Create overlay
+    let overlay = document.getElementById('sidebarOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'sidebarOverlay';
+        overlay.className = 'sidebar-overlay';
+        document.body.appendChild(overlay);
+    }
+
+    function openSidebar() {
+        sidebar.classList.add('show');
+        overlay.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar() {
+        sidebar.classList.remove('show');
+        overlay.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    toggleBtn.addEventListener('click', function () {
+        sidebar.classList.contains('show') ? closeSidebar() : openSidebar();
+    });
+    overlay.addEventListener('click', closeSidebar);
+});
+
 // Utility functions
 const EnjazIMS = {
     // Show loading spinner

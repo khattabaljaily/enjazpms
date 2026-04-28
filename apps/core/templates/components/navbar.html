@@ -1,26 +1,27 @@
 {% load static %}
 <nav class="navbar">
     <div class="navbar-shell">
-        <!-- Brand with Logo -->
-        <a class="navbar-brand-wrap d-flex align-items-center gap-2" href="{% url 'core:dashboard' %}">
-            <img src="{% static 'img/logo/logo-161616.png' %}" 
-                 alt="إنجاز" 
-                 height="32" 
-                 class="navbar-logo logo-light">
-            <img src="{% static 'img/logo/logo-ffffff.png' %}" 
-                 alt="إنجاز" 
-                 height="32" 
-                 class="navbar-logo logo-dark">
-            <span class="navbar-brand-text">إنجاز</span>
-        </a>
-        
+
+        <!-- RIGHT: Hamburger (mobile) + Brand (mobile) -->
+        <div class="navbar-start">
+            <button class="navbar-icon-btn sidebar-toggle d-lg-none" id="sidebarToggleBtn" aria-label="القائمة">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a class="navbar-brand-wrap" href="{% url 'core:dashboard' %}">
+                <img src="{% static 'img/logo/logo-161616.png' %}" alt="إنجاز" class="navbar-logo logo-light">
+                <img src="{% static 'img/logo/logo-ffffff.png' %}" alt="إنجاز" class="navbar-logo logo-dark">
+                <span class="navbar-brand-text">إنجاز</span>
+            </a>
+        </div>
+
+        <!-- LEFT: Actions -->
         <div class="navbar-actions">
             <!-- Theme Toggle -->
             <button class="navbar-icon-btn theme-toggle" onclick="toggleTheme()" aria-label="تبديل الوضع">
-                <i class="fas fa-moon" id="theme-icon"></i>
+                <i class="fas fa-moon theme-icon-ref" id="theme-icon"></i>
             </button>
 
-            <!-- Notifications (placeholder) -->
+            <!-- Notifications -->
             <button class="navbar-icon-btn" aria-label="الإشعارات">
                 <i class="fas fa-bell"></i>
                 <span class="navbar-badge">3</span>
@@ -63,6 +64,7 @@
                 </ul>
             </div>
         </div>
+
     </div>
 </nav>
 
@@ -72,31 +74,28 @@ function toggleTheme() {
     const html = document.documentElement;
     const currentTheme = html.getAttribute('data-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    const icon = document.getElementById('theme-icon');
-    
+
     html.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
-    
-    // Update icon
-    if (newTheme === 'dark') {
-        icon.classList.remove('fa-moon');
-        icon.classList.add('fa-sun');
-    } else {
-        icon.classList.remove('fa-sun');
-        icon.classList.add('fa-moon');
-    }
+
+    // Update all theme icons on page
+    document.querySelectorAll('.theme-icon-ref').forEach(function(icon) {
+        if (newTheme === 'dark') {
+            icon.classList.replace('fa-moon', 'fa-sun');
+        } else {
+            icon.classList.replace('fa-sun', 'fa-moon');
+        }
+    });
 }
 
 // Load saved theme on page load
 (function() {
     const savedTheme = localStorage.getItem('theme') || 'light';
-    const icon = document.getElementById('theme-icon');
-    
     document.documentElement.setAttribute('data-theme', savedTheme);
-    
     if (savedTheme === 'dark') {
-        icon.classList.remove('fa-moon');
-        icon.classList.add('fa-sun');
+        document.querySelectorAll('.theme-icon-ref').forEach(function(icon) {
+            icon.classList.replace('fa-moon', 'fa-sun');
+        });
     }
 })();
 </script>
