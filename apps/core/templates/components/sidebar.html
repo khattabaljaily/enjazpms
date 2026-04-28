@@ -1,86 +1,109 @@
 <aside class="sidebar">
+
+    <!-- ── Main ── -->
+    <span class="sidebar-section-label">الرئيسية</span>
     <ul class="nav flex-column">
-        <!-- Dashboard -->
         <li class="nav-item">
             <a class="nav-link active" href="{% url 'core:dashboard' %}">
-                <i class="fas fa-home me-2"></i> الرئيسية
+                <span class="nav-icon"><i class="fas fa-grid-2"></i></span>
+                لوحة التحكم
             </a>
         </li>
-        
-        <hr class="sidebar-divider">
-        
-        <!-- Sales (TODO: Create app) -->
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="#">
-                <i class="fas fa-shopping-cart me-2"></i> المبيعات
-                <small>(قريباً)</small>
-            </a>
-        </li>
-        
-        <!-- Purchases (TODO: Create app) -->
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="#">
-                <i class="fas fa-shopping-bag me-2"></i> المشتريات
-                <small>(قريباً)</small>
-            </a>
-        </li>
-        
-        <hr class="sidebar-divider">
-        
-        <!-- Products (TODO: Create app) -->
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="#">
-                <i class="fas fa-box me-2"></i> المنتجات
-                <small>(قريباً)</small>
-            </a>
-        </li>
-        
-        <!-- Customers (TODO: Create app) -->
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="{% url 'customers:list' %}">
-                <i class="fas fa-users me-2"></i> العملاء
-            </a>
-        </li>
-        
-        <!-- Suppliers -->
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="{% url 'suppliers:list' %}">
-                <i class="fas fa-truck me-2"></i> الموردين
-            </a>
-        </li>
-        
-        <hr class="sidebar-divider">
-        
-        <!-- Stock (TODO: Create app) -->
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="#">
-                <i class="fas fa-warehouse me-2"></i> المخازن
-                <small>(قريباً)</small>
-            </a>
-        </li>
-        
-        <hr class="sidebar-divider">
-        
-        <!-- Reports (TODO: Create app) -->
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="#">
-                <i class="fas fa-chart-bar me-2"></i> التقارير
-                <small>(قريباً)</small>
-            </a>
-        </li>
-        
-        <!-- Settings (Tenant Admin only) -->
-        {% if user.is_tenant_admin or user.is_superuser %}
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="{% url 'core:tenant_settings' %}">
-                <i class="fas fa-cog me-2"></i> الإعدادات
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="{% url 'core:subscription' %}">
-                <i class="fas fa-credit-card me-2"></i> الاشتراك
-            </a>
-        </li>
-        {% endif %}
     </ul>
+
+    <!-- ── Transactions ── -->
+    <span class="sidebar-section-label">المعاملات</span>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <span class="nav-icon"><i class="fas fa-receipt"></i></span>
+                المبيعات
+                <small class="nav-coming-soon">قريباً</small>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <span class="nav-icon"><i class="fas fa-cart-arrow-down"></i></span>
+                المشتريات
+                <small class="nav-coming-soon">قريباً</small>
+            </a>
+        </li>
+    </ul>
+
+    <!-- ── Inventory ── -->
+    <span class="sidebar-section-label">المخزون</span>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <span class="nav-icon"><i class="fas fa-box-open"></i></span>
+                المنتجات
+                <small class="nav-coming-soon">قريباً</small>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
+                المخازن
+                <small class="nav-coming-soon">قريباً</small>
+            </a>
+        </li>
+    </ul>
+
+    <!-- ── Contacts ── -->
+    <span class="sidebar-section-label">جهات الاتصال</span>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'customers:list' %}">
+                <span class="nav-icon"><i class="fas fa-users"></i></span>
+                العملاء
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'suppliers:list' %}">
+                <span class="nav-icon"><i class="fas fa-truck"></i></span>
+                الموردين
+            </a>
+        </li>
+    </ul>
+
+    <!-- ── Reports ── -->
+    <span class="sidebar-section-label">التحليل</span>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+                التقارير
+                <small class="nav-coming-soon">قريباً</small>
+            </a>
+        </li>
+    </ul>
+
+    {% if user.is_tenant_admin or user.is_superuser %}
+    <!-- ── Admin ── -->
+    <span class="sidebar-section-label">الإدارة</span>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:tenant_settings' %}">
+                <span class="nav-icon"><i class="fas fa-sliders"></i></span>
+                الإعدادات
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:subscription' %}">
+                <span class="nav-icon"><i class="fas fa-credit-card"></i></span>
+                الاشتراك
+            </a>
+        </li>
+    </ul>
+    {% endif %}
+
+    <!-- ── Footer ── -->
+    <div class="sidebar-footer">
+        <div class="sidebar-footer-avatar">{{ user.get_full_name|slice:':1'|default:user.username|slice:':1'|upper }}</div>
+        <div>
+            <div class="sidebar-footer-name">{{ user.get_full_name|default:user.username }}</div>
+            <div class="sidebar-footer-role">{% if user.is_superuser %}مشرف{% elif user.is_tenant_admin %}مدير{% else %}مستخدم{% endif %}</div>
+        </div>
+    </div>
+
 </aside>

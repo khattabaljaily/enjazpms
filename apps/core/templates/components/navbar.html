@@ -16,41 +16,49 @@
         
         <div class="navbar-actions">
             <!-- Theme Toggle -->
-            <button class="theme-toggle" onclick="toggleTheme()" aria-label="تبديل الوضع">
+            <button class="navbar-icon-btn theme-toggle" onclick="toggleTheme()" aria-label="تبديل الوضع">
                 <i class="fas fa-moon" id="theme-icon"></i>
             </button>
-            
+
+            <!-- Notifications (placeholder) -->
+            <button class="navbar-icon-btn" aria-label="الإشعارات">
+                <i class="fas fa-bell"></i>
+                <span class="navbar-badge">3</span>
+            </button>
+
+            <div class="navbar-sep"></div>
+
             <!-- Tenant Info -->
             {% if current_tenant %}
             <div class="dropdown">
-                <a class="nav-link dropdown-toggle navbar-menu-link" href="#" data-bs-toggle="dropdown" data-bs-display="static">
-                    <i class="fas fa-store me-1"></i>
+                <a class="navbar-menu-link dropdown-toggle" href="#" data-bs-toggle="dropdown" data-bs-display="static">
+                    <i class="fas fa-store" style="font-size:0.8rem;color:var(--primary)"></i>
                     <span class="navbar-label">{{ current_tenant.name }}</span>
                 </a>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="{% url 'core:tenant_settings' %}">
-                        <i class="fas fa-cog me-2"></i>إعدادات النشاط
+                        <i class="fas fa-sliders me-2 text-primary"></i>إعدادات النشاط
                     </a></li>
                     <li><a class="dropdown-item" href="{% url 'core:subscription' %}">
-                        <i class="fas fa-credit-card me-2"></i>الاشتراك
+                        <i class="fas fa-credit-card me-2 text-info"></i>الاشتراك
                     </a></li>
                 </ul>
             </div>
             {% endif %}
-            
+
             <!-- User Menu -->
             <div class="dropdown">
-                <a class="nav-link dropdown-toggle navbar-menu-link" href="#" data-bs-toggle="dropdown" data-bs-display="static">
-                    <i class="fas fa-user-circle me-1"></i>
-                    <span class="navbar-label">{{ user.get_full_name }}</span>
+                <a class="navbar-menu-link dropdown-toggle" href="#" data-bs-toggle="dropdown" data-bs-display="static">
+                    <span class="navbar-avatar">{{ user.get_full_name|slice:':1'|default:user.username|slice:':1'|upper }}</span>
+                    <span class="navbar-label">{{ user.get_full_name|default:user.username }}</span>
                 </a>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
-                        <i class="fas fa-user me-2"></i>الملف الشخصي
+                        <i class="fas fa-user me-2 text-secondary"></i>الملف الشخصي
                     </a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
-                        <i class="fas fa-sign-out-alt me-2"></i>تسجيل الخروج
+                    <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}">
+                        <i class="fas fa-arrow-right-from-bracket me-2"></i>تسجيل الخروج
                     </a></li>
                 </ul>
             </div>

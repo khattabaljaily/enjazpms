@@ -1,0 +1,572 @@
+/* ============================================
+   Auth Pages – Login & Registration
+   EnjazIMS · v2.0  (modern redesign)
+   ============================================ */
+
+/* ─────────────────────────────────────────────
+   Page wrapper
+   ───────────────────────────────────────────── */
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 0;
+    position: relative;
+    overflow: hidden;
+
+    /* Rich mesh background */
+    background-color: var(--bg-secondary);
+    background-image:
+        radial-gradient(ellipse 80% 60% at 20% 10%,  rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 85%,  rgba(139, 92, 246, 0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 60% 30%,  rgba(16, 185, 129, 0.06) 0%, transparent 50%);
+}
+
+/* Floating grid dots overlay */
+.auth-page::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(99,102,241,0.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Large blurred glow orb */
+.auth-page::after {
+    content: '';
+    position: fixed;
+    width: 700px;
+    height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(99,102,241,0.16), transparent 70%);
+    top: -200px;
+    left: -200px;
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(40px);
+}
+
+.auth-container {
+    position: relative;
+    z-index: 1;
+}
+
+/* ─────────────────────────────────────────────
+   Card  (glassmorphism)
+   ───────────────────────────────────────────── */
+.auth-card {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 28px;
+    box-shadow:
+        0 8px 32px rgba(99, 102, 241, 0.10),
+        0 2px  6px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255,255,255,0.8);
+    padding: 2.25rem 2rem;
+    width: 100%;
+    animation: authFadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (min-width: 576px) {
+    .auth-card { padding: 3rem 3rem; }
+}
+
+[data-theme="dark"] .auth-card {
+    background: rgba(30, 41, 59, 0.82);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 16px 48px rgba(0, 0, 0, 0.55),
+        0 2px  6px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* ─────────────────────────────────────────────
+   Logo
+   ───────────────────────────────────────────── */
+.auth-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+}
+
+.auth-logo img {
+    height: 72px;
+    width: auto;
+    filter: drop-shadow(0 4px 12px rgba(99,102,241,0.25));
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+.auth-logo img:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 6px 18px rgba(99,102,241,0.38));
+}
+
+.auth-logo .logo-dark  { display: none;  }
+.auth-logo .logo-light { display: block; }
+[data-theme="dark"] .auth-logo .logo-light { display: none;  }
+[data-theme="dark"] .auth-logo .logo-dark  { display: block; }
+[data-theme="dark"] .auth-logo img         { filter: drop-shadow(0 4px 12px rgba(129,140,248,0.35)); }
+
+/* ─────────────────────────────────────────────
+   Typography
+   ───────────────────────────────────────────── */
+.auth-title {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.3rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+}
+
+.auth-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0;
+}
+
+/* ─────────────────────────────────────────────
+   Alert banner
+   ───────────────────────────────────────────── */
+.auth-alert {
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem;
+    border: none;
+}
+
+/* ─────────────────────────────────────────────
+   Input group  (login page)
+   ───────────────────────────────────────────── */
+.input-group-modern {
+    margin-bottom: 1.25rem;
+    position: relative;
+}
+
+.input-group-modern label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.45rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.input-group-modern .form-control,
+.input-group-modern input {
+    width: 100%;
+    padding: 0.72rem 1.1rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+}
+
+.input-group-modern .form-control:focus,
+.input-group-modern input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.14);
+    background: var(--surface);
+}
+
+[data-theme="dark"] .input-group-modern .form-control,
+[data-theme="dark"] .input-group-modern input {
+    background: rgba(255,255,255,0.04);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .input-group-modern .form-control:focus,
+[data-theme="dark"] .input-group-modern input:focus {
+    background: rgba(255,255,255,0.07);
+}
+
+/* ─────────────────────────────────────────────
+   Remember-me / forgot row
+   ───────────────────────────────────────────── */
+.auth-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.75rem;
+    font-size: 0.875rem;
+}
+
+.auth-options .form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+}
+
+.auth-options .form-check-input  { margin: 0; cursor: pointer; }
+.auth-options .form-check-label  { cursor: pointer; color: var(--text-secondary); font-weight: 500; }
+
+.auth-options a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 150ms ease;
+}
+.auth-options a:hover { color: var(--primary-hover); text-decoration: underline; }
+
+/* ─────────────────────────────────────────────
+   Primary submit button  (login)
+   ───────────────────────────────────────────── */
+.btn-auth {
+    display: block;
+    width: 100%;
+    padding: 0.82rem 1.5rem;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    border: none;
+    border-radius: var(--radius-xl);
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    position: relative;
+    overflow: hidden;
+    transition: transform 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
+    box-shadow: 0 6px 22px rgba(99, 102, 241, 0.40);
+}
+
+/* Sheen sweep */
+.btn-auth::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%);
+    transform: translateX(-100%);
+    transition: transform 0.45s ease;
+}
+.btn-auth:hover::after  { transform: translateX(100%); }
+.btn-auth:hover         { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(99,102,241,0.48); }
+.btn-auth:active        { transform: translateY(0); opacity: 0.95; }
+
+/* ─────────────────────────────────────────────
+   Card footer / links
+   ───────────────────────────────────────────── */
+.auth-footer {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-light);
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.auth-footer a {
+    color: var(--primary);
+    font-weight: 700;
+    text-decoration: none;
+    margin-right: 0.25rem;
+    transition: color 150ms ease;
+}
+.auth-footer a:hover { color: var(--primary-hover); text-decoration: underline; }
+.auth-footer p       { margin: 0; }
+
+/* ─────────────────────────────────────────────
+   Multi-step progress indicator
+   ───────────────────────────────────────────── */
+.progress-steps {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    position: relative;
+    padding: 0 0.5rem;
+    margin-bottom: 2rem !important;
+}
+
+/* Connector track */
+.progress-steps::before {
+    content: '';
+    position: absolute;
+    top: 19px;
+    right: calc(100% / 6);
+    left:  calc(100% / 6);
+    height: 2px;
+    background: var(--border-color);
+    z-index: 0;
+    border-radius: 999px;
+}
+
+[data-theme="dark"] .progress-steps::before { background: var(--border-color); }
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+
+.progress-step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    position: relative;
+    z-index: 1;
+    border: 2px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-tertiary);
+    transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.progress-step.active .progress-step-circle {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 0 0 5px rgba(99,102,241,0.18), 0 4px 14px rgba(99,102,241,0.35);
+    transform: scale(1.12);
+}
+
+.progress-step.completed .progress-step-circle {
+    background: linear-gradient(135deg, var(--success), #059669);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(16,185,129,0.30);
+}
+
+.progress-step-label {
+    margin-top: 0.5rem;
+    font-size: 0.76rem;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    line-height: 1.3;
+    max-width: 72px;
+}
+.progress-step.active    .progress-step-label { color: var(--primary);  font-weight: 700; }
+.progress-step.completed .progress-step-label { color: var(--success);  font-weight: 600; }
+
+/* ─────────────────────────────────────────────
+   Registration two-column grid + vertical separator
+   ───────────────────────────────────────────── */
+.auth-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    column-gap: 0;
+    row-gap: 0;
+    position: relative;
+    align-items: start;
+}
+
+/* The separator column */
+.auth-form-grid::before {
+    content: '';
+    grid-column: 2;
+    grid-row: 1 / -1;
+    width: 1px;
+    justify-self: center;
+    border-radius: 999px;
+    margin: 0.5rem 0;
+    background: linear-gradient(
+        to bottom,
+        transparent                0%,
+        rgba(99, 102, 241, 0.18)  10%,
+        var(--primary)            50%,
+        rgba(99, 102, 241, 0.18)  90%,
+        transparent               100%
+    );
+    opacity: 0.55;
+}
+
+[data-theme="dark"] .auth-form-grid::before {
+    background: linear-gradient(
+        to bottom,
+        transparent                0%,
+        rgba(129, 140, 248, 0.25) 10%,
+        rgba(129, 140, 248, 0.65) 50%,
+        rgba(129, 140, 248, 0.25) 90%,
+        transparent               100%
+    );
+    opacity: 0.7;
+}
+
+/* Odd children → left column (col 1); even → right column (col 3) */
+.auth-form-grid > *:nth-child(odd):not(.field-span-2)  { grid-column: 1; padding-left: 1.5rem;  }
+.auth-form-grid > *:nth-child(even):not(.field-span-2) { grid-column: 3; padding-right: 1.5rem; }
+
+.field-span-2 {
+    grid-column: 1 / -1;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Single column on small screens */
+@media (max-width: 575px) {
+    .auth-form-grid { grid-template-columns: 1fr; }
+    .auth-form-grid::before { display: none; }
+    .auth-form-grid > *:nth-child(odd):not(.field-span-2),
+    .auth-form-grid > *:nth-child(even):not(.field-span-2) {
+        grid-column: 1;
+        padding-left: 0;
+        padding-right: 0;
+    }
+    .field-span-2 { grid-column: 1; }
+}
+
+/* ─────────────────────────────────────────────
+   Form controls  (registration pages)
+   ───────────────────────────────────────────── */
+.auth-card .form-control,
+.auth-card .form-select,
+.auth-card select,
+.auth-card textarea {
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 0.62rem 0.95rem;
+    transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+    width: 100%;
+}
+
+.auth-card .form-control:focus,
+.auth-card .form-select:focus,
+.auth-card select:focus,
+.auth-card textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.13);
+    background: var(--surface);
+    outline: none;
+}
+
+.auth-card label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+    display: block;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+[data-theme="dark"] .auth-card .form-control,
+[data-theme="dark"] .auth-card .form-select,
+[data-theme="dark"] .auth-card select,
+[data-theme="dark"] .auth-card textarea {
+    background: rgba(255,255,255,0.04);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .auth-card .form-control:focus,
+[data-theme="dark"] .auth-card .form-select:focus {
+    background: rgba(255,255,255,0.07);
+}
+
+/* ─────────────────────────────────────────────
+   Buttons inside auth card
+   ───────────────────────────────────────────── */
+.auth-card .btn {
+    border-radius: var(--radius-lg);
+    font-weight: 700;
+    font-family: inherit;
+    padding: 0.68rem 1.3rem;
+    transition: all 200ms ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-card .btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border: none;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(99,102,241,0.32);
+}
+.auth-card .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(99,102,241,0.42);
+    color: #fff;
+}
+
+.auth-card .btn-outline-primary {
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+}
+.auth-card .btn-outline-primary:hover {
+    background: var(--primary);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(99,102,241,0.3);
+}
+
+.auth-card .btn-outline-secondary {
+    border: 1.5px solid var(--border-color);
+    color: var(--text-secondary);
+    background: transparent;
+}
+.auth-card .btn-outline-secondary:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+
+.auth-card .btn-success {
+    background: linear-gradient(135deg, var(--success), #059669);
+    border: none;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(16,185,129,0.32);
+}
+.auth-card .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(16,185,129,0.42);
+    color: #fff;
+}
+
+.auth-form-actions { margin-top: 1.25rem; }
+
+/* ─────────────────────────────────────────────
+   Checkbox / radio
+   ───────────────────────────────────────────── */
+.auth-card .form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+    margin: 0;
+}
+.auth-card .form-check-input { cursor: pointer; flex-shrink: 0; }
+.auth-card .form-check-label {
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+/* ─────────────────────────────────────────────
+   Animations
+   ───────────────────────────────────────────── */
+@keyframes authFadeUp {
+    from { opacity: 0; transform: translateY(22px) scale(0.99); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.animate-fade-in {
+    animation: authFadeUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
