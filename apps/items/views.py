@@ -3,6 +3,7 @@ Items Views - عمليات CRUD للمنتجات والتصنيفات والوح
 كل العمليات عبر JSON API (AJAX) + صفحة واحدة لكل قسم
 """
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect, render
@@ -183,6 +184,7 @@ def item_table_api(request):
 # ============================================================
 
 @login_required
+@transaction.atomic
 def item_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -197,6 +199,7 @@ def item_create_api(request):
         item.created_by = request.user
         item.updated_by = request.user
         item.save()
+        # بعد الـ save يُطلق الـ signal الذي يُنشئ StockQuantity تلقائياً
         return JsonResponse({'success': True, 'message': 'تم إضافة المنتج بنجاح', 'id': item.id})
 
     return JsonResponse({
@@ -256,6 +259,7 @@ def item_detail_api(request, pk):
 # ============================================================
 
 @login_required
+@transaction.atomic
 def item_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -389,6 +393,7 @@ def category_table_api(request):
 
 
 @login_required
+@transaction.atomic
 def category_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -427,6 +432,7 @@ def category_detail_api(request, pk):
 
 
 @login_required
+@transaction.atomic
 def category_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -516,6 +522,7 @@ def unit_table_api(request):
 
 
 @login_required
+@transaction.atomic
 def unit_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -554,6 +561,7 @@ def unit_detail_api(request, pk):
 
 
 @login_required
+@transaction.atomic
 def unit_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:

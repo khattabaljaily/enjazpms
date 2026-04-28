@@ -3,12 +3,13 @@ Stocks Views - عمليات CRUD للمخازن
 كل العمليات عبر JSON API (AJAX) + صفحة واحدة للعرض
 """
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect, render
 
 from .forms import StockForm
-from .models import Stock
+from .models import Stock, StockQuantity
 
 
 def _ensure_tenant(request):
@@ -121,6 +122,7 @@ def stock_table_api(request):
 # ============================================================
 
 @login_required
+@transaction.atomic
 def stock_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -144,10 +146,12 @@ def stock_create_api(request):
         stock.updated_by = request.user
 
         # إذا تم تعيينه كافتراضي، احذف القديم
+        # كلتا العمليتين في نفس الـ transaction
         if stock.is_default:
             Stock.objects.for_tenant(tenant).filter(is_default=True).update(is_default=False)
 
         stock.save()
+        # بعد الـ save يُطلق الـ signal الذي يُنشئ StockQuantity تلقائياً
         return JsonResponse({
             'success': True,
             'message': 'تم إضافة المخزن بنجاح',
@@ -196,6 +200,7 @@ def stock_detail_api(request, pk):
 # ============================================================
 
 @login_required
+@transaction.atomic
 def stock_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -213,6 +218,7 @@ def stock_update_api(request, pk):
         updated = form.save(commit=False)
         updated.updated_by = request.user
 
+        # تغيير الافتراضي + حفظ المخزن في transaction واحدة
         if updated.is_default:
             Stock.objects.for_tenant(tenant).exclude(pk=pk).filter(is_default=True).update(is_default=False)
 
@@ -267,6 +273,7 @@ def stock_delete_api(request, pk):
 # ============================================================
 
 @login_required
+@transaction.atomic
 def stock_set_default_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -279,6 +286,7 @@ def stock_set_default_api(request, pk):
     except Stock.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=404)
 
+    # عمليتان في transaction واحدة: إلغاء الافتراضي القديم + تعيين الجديد
     Stock.objects.for_tenant(tenant).filter(is_default=True).update(is_default=False)
     stock.is_default = True
     stock.save(update_fields=['is_default'])
