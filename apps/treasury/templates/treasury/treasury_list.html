@@ -1,0 +1,407 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/treasury.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-vault"></i></div>
+            <div>
+                <h1 class="cx-hero-title">الخزائن</h1>
+                <p class="cx-hero-desc">إدارة الخزائن وأرصدتها وحالتها التشغيلية</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <button type="button" class="cx-btn-add" id="btnOpenCreateTreasury">
+                    <i class="fas fa-plus"></i><span>إضافة خزينة</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary"><i class="fas fa-vault"></i><strong id="kpiTotal">{{ stats.total }}</strong><span>خزينة</span></span>
+        <span class="cx-stat-badge cx-stat-badge--success"><i class="fas fa-check-circle"></i><strong id="kpiActive">{{ stats.active }}</strong><span>نشطة</span></span>
+        <span class="cx-stat-badge cx-stat-badge--muted"><i class="fas fa-pause-circle"></i><strong id="kpiInactive">{{ stats.inactive }}</strong><span>موقوفة</span></span>
+        <span class="cx-stat-badge cx-stat-badge--info"><i class="fas fa-star"></i><strong id="kpiDefault">{{ stats.default }}</strong><span>افتراضية</span></span>
+    </div>
+</div>
+
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="treasurySearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو الرمز...">
+        </div>
+        <div class="cx-toolbar-end">
+            <div class="cx-filter-tabs" role="group">
+                <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
+                <button type="button" class="cx-filter-tab" data-status="active">نشطة</button>
+                <button type="button" class="cx-filter-tab" data-status="inactive">موقوفة</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="treasuryTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>الخزينة</th>
+                    <th>الرمز</th>
+                    <th>الرصيد الحالي</th>
+                    <th>الحالة</th>
+                    <th>الافتراضية</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<div class="modal fade" id="treasuryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="treasuryForm" novalidate>
+                {% csrf_token %}
+                <input type="hidden" id="treasuryId" value="">
+                <div class="cx-modal-main">
+                    <div class="cx-modal-header">
+                        <div><h5 class="cx-modal-title" id="treasuryModalTitle">إضافة خزينة</h5></div>
+                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="cx-modal-body">
+                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_name">{{ form.name.label }} <sup class="cx-required">*</sup></label>
+                                {{ form.name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_code">{{ form.code.label }}</label>
+                                {{ form.code }}
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-label" for="id_notes">{{ form.notes.label }}</label>
+                                {{ form.notes }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_is_default">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ form.is_default.label }}</span>
+                                        <span class="cx-toggle-desc">تُستخدم افتراضياً في الحركات النقدية</span>
+                                    </div>
+                                    {{ form.is_default }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_is_active">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ form.is_active.label }}</span>
+                                        <span class="cx-toggle-desc">الخزينة النشطة متاحة في العمليات اليومية</span>
+                                    </div>
+                                    {{ form.is_active }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cx-modal-footer">
+                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="cx-btn-primary" id="treasurySubmitBtn"><i class="fas fa-check me-1"></i>حفظ</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteTreasuryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+                <h5 class="cx-delete-title">حذف الخزينة؟</h5>
+                <p class="cx-delete-desc">ستقوم بحذف <strong id="deleteTreasuryName"></strong> نهائياً.</p>
+                <input type="hidden" id="deleteTreasuryId" value="">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteTreasuryBtn">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="treasuryLedgerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered cx-view-dialog cx-ledger-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div>
+                        <h5 class="cx-view-title">سجل حركات الخزينة</h5>
+                        <p class="cx-view-subtitle" id="treasuryLedgerSubtitle">—</p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="cx-view-body">
+                <div class="table-responsive cx-table-wrap">
+                    <table class="cx-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>النوع</th>
+                                <th>المرجع</th>
+                                <th>المبلغ</th>
+                                <th>الرصيد</th>
+                                <th>الوصف</th>
+                            </tr>
+                        </thead>
+                        <tbody id="treasuryLedgerBody">
+                            <tr><td colspan="6" class="text-center text-muted">لا توجد حركات</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TREASURY_TABLE_API = "{% url 'treasury:table_api' %}";
+const TREASURY_CREATE_API = "{% url 'treasury:create_api' %}";
+const TREASURY_DETAIL_API_BASE = "/treasury/api/";
+const TREASURY_TX_API_BASE = "/treasury/api/";
+
+let treasuryTable;
+let currentStatus = '';
+const getCookie = (name) => {
+    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+};
+
+
+
+function initTable() {
+    treasuryTable = $('#treasuryTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ordering: true,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
+        language: {
+            processing: 'جاري التحميل...',
+            zeroRecords: 'لا توجد نتائج',
+            emptyTable: 'لا توجد خزائن مضافة',
+            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_',
+            infoEmpty: 'لا توجد بيانات',
+            infoFiltered: '(مصفّى من _MAX_)',
+            paginate: { first: 'الأول', last: 'الأخير', next: 'التالي', previous: 'السابق' },
+        },
+        ajax: {
+            url: TREASURY_TABLE_API,
+            data: function (d) {
+                d.status = currentStatus;
+            }
+        },
+        columns: [
+            { data: 'name' },
+            { data: 'code' },
+            { data: 'current_balance', className: 'text-end treasury-money-col', render: v => EnjazIMS.formatMoney(v) },
+            { data: 'is_active', render: v => v ? '<span class="cx-badge cx-badge--success">نشطة</span>' : '<span class="cx-badge cx-badge--muted">موقوفة</span>' },
+            { data: 'is_default', render: (v, _, row) => row.is_system_default ? '<span class="cx-badge cx-badge--info">افتراضية نظامية</span>' : (v ? '<span class="cx-badge cx-badge--primary">افتراضية</span>' : '—') },
+            {
+                data: null,
+                orderable: false,
+                searchable: false,
+                className: 'text-center',
+                render: function(_, __, row) {
+                    return `<div class="cx-actions">
+                        <button class="cx-btn-icon" onclick="openTreasuryLedger(${row.id})" title="السجل"><i class="fas fa-list"></i></button>
+                        <button class="cx-btn-icon" onclick="openEdit(${row.id})" title="تعديل"><i class="fas fa-pencil"></i></button>
+                        ${row.is_system_default ? '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>' : `<button class="cx-btn-icon cx-btn-icon--danger" onclick="openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>`}
+                    </div>`;
+                }
+            }
+        ],
+        order: [[0, 'asc']],
+        pageLength: 25,
+    });
+}
+
+function resetForm() {
+    document.getElementById('treasuryForm').reset();
+    document.getElementById('treasuryId').value = '';
+    document.querySelector('.js-form-errors').classList.add('d-none');
+    document.getElementById('id_is_active').checked = true;
+    document.getElementById('id_is_default').checked = false;
+    document.getElementById('id_is_default').disabled = false;
+    document.getElementById('id_is_active').disabled = false;
+}
+
+function openCreate() {
+    resetForm();
+    document.getElementById('treasuryModalTitle').textContent = 'إضافة خزينة';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('treasuryModal')).show();
+}
+
+function openEdit(id) {
+    fetch(`${TREASURY_DETAIL_API_BASE}${id}/detail/`)
+    .then(r => r.json())
+    .then(resp => {
+        if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر تحميل البيانات', 'error'); return; }
+        const d = resp.data;
+        resetForm();
+        document.getElementById('treasuryModalTitle').textContent = 'تعديل خزينة';
+        document.getElementById('treasuryId').value = d.id;
+        document.getElementById('id_name').value = d.name || '';
+        document.getElementById('id_code').value = d.code || '';
+        document.getElementById('id_notes').value = d.notes || '';
+        document.getElementById('id_is_default').checked = !!d.is_default;
+        document.getElementById('id_is_active').checked = !!d.is_active;
+
+        if (d.is_system_default) {
+            document.getElementById('id_is_default').checked = true;
+            document.getElementById('id_is_active').checked = true;
+            document.getElementById('id_is_default').disabled = true;
+            document.getElementById('id_is_active').disabled = true;
+        }
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('treasuryModal')).show();
+    });
+}
+
+function openDelete(id, name) {
+    document.getElementById('deleteTreasuryId').value = id;
+    document.getElementById('deleteTreasuryName').textContent = name;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteTreasuryModal')).show();
+}
+
+function loadTreasuryTransactions(id) {
+    const tbody = document.getElementById('treasuryLedgerBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">جاري التحميل...</td></tr>';
+
+    fetch(`${TREASURY_TX_API_BASE}${id}/transactions/`)
+    .then(r => r.json())
+    .then(resp => {
+        if (!resp.success || !Array.isArray(resp.data) || !resp.data.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد حركات</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = resp.data.map(row => {
+            const amount = EnjazIMS.parseNumber(row.amount || 0);
+            const amountClass = amount >= 0 ? 'text-success' : 'text-danger';
+            return `<tr>
+                <td>${row.movement_date || '—'}</td>
+                <td>${row.movement_type || '—'}</td>
+                <td>${row.reference_type || '—'}</td>
+                <td class="${amountClass}">${EnjazIMS.formatMoney(row.amount || 0)}</td>
+                <td>${EnjazIMS.formatMoney(row.running_balance || 0)}</td>
+                <td>${row.description || '—'}</td>
+            </tr>`;
+        }).join('');
+    })
+    .catch(() => {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">تعذر تحميل الحركات</td></tr>';
+    });
+}
+
+function openTreasuryLedger(id) {
+    fetch(`${TREASURY_DETAIL_API_BASE}${id}/detail/`)
+    .then(r => r.json())
+    .then(resp => {
+        if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر تحميل البيانات', 'error'); return; }
+        const d = resp.data;
+        document.getElementById('treasuryLedgerSubtitle').textContent = `${d.name || '—'} (${d.code || '—'}) — الرصيد الحالي: ${EnjazIMS.formatMoney(d.current_balance || 0)}`;
+        loadTreasuryTransactions(id);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('treasuryLedgerModal')).show();
+    })
+    .catch(() => EnjazIMS.toast('تعذر تحميل البيانات', 'error'));
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    initTable();
+
+    document.getElementById('btnOpenCreateTreasury').addEventListener('click', openCreate);
+
+    document.querySelectorAll('.cx-filter-tab').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.cx-filter-tab').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentStatus = this.dataset.status || '';
+            treasuryTable.ajax.reload();
+        });
+    });
+
+    document.getElementById('treasurySearchInput').addEventListener('input', function () {
+        treasuryTable.search(this.value).draw();
+    });
+
+    document.getElementById('treasuryForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const id = document.getElementById('treasuryId').value;
+        const url = id ? `${TREASURY_DETAIL_API_BASE}${id}/update/` : TREASURY_CREATE_API;
+        const formData = new FormData(this);
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body: formData,
+        })
+        .then(r => r.json())
+        .then(resp => {
+            if (resp.success) {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('treasuryModal')).hide();
+                EnjazIMS.toast(resp.message || 'تم الحفظ بنجاح', 'success');
+                treasuryTable.ajax.reload(null, false);
+                return;
+            }
+            const box = document.querySelector('.js-form-errors');
+            box.classList.remove('d-none');
+            box.textContent = resp.message || 'تعذر الحفظ';
+        })
+        .catch(() => EnjazIMS.toast('حدث خطأ في الاتصال', 'error'));
+    });
+
+    document.getElementById('confirmDeleteTreasuryBtn').addEventListener('click', function () {
+        const id = document.getElementById('deleteTreasuryId').value;
+        fetch(`${TREASURY_DETAIL_API_BASE}${id}/delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        })
+        .then(r => r.json())
+        .then(resp => {
+            if (resp.success) {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteTreasuryModal')).hide();
+                EnjazIMS.toast(resp.message || 'تم الحذف', 'success');
+                treasuryTable.ajax.reload(null, false);
+            } else {
+                EnjazIMS.toast(resp.message || 'تعذر الحذف', 'error');
+            }
+        })
+        .catch(() => EnjazIMS.toast('حدث خطأ في الاتصال', 'error'));
+    });
+});
+</script>
+{% endblock %}

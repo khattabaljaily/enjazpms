@@ -1,0 +1,170 @@
+/* ============================================================
+   EnjazIMS - Opening Stock Quantities Page
+   ============================================================ */
+
+#openingTable thead th,
+#openingTable tbody td {
+    text-align: right !important;
+}
+
+/* ── Stock Selector ────────────────────────────────────────── */
+.opening-stock-label {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.opening-stock-label i {
+    color: var(--primary);
+}
+
+.cx-select-sm {
+    height: 42px;
+    padding: 0 0.9rem 0 2.2rem;
+    border: 1.5px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 600;
+    background-color: var(--bg-primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 0.6rem center;
+    background-size: 1rem;
+    -webkit-appearance: none;
+    appearance: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    min-width: 200px;
+}
+
+.cx-select-sm:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.14);
+}
+
+.cx-select-sm:hover {
+    border-color: var(--primary);
+}
+
+#openingTable tbody td:nth-child(4),
+#openingTable tbody td:nth-child(5) {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+#openingTable tbody td:nth-child(6) {
+    min-width: 220px;
+}
+
+.opening-help {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.9rem;
+    padding: 0.7rem 0.9rem;
+    background: rgba(59, 130, 246, 0.08);
+    color: #1e3a8a;
+    font-size: 0.82rem;
+}
+
+.opening-help i {
+    color: #3b82f6;
+}
+
+.opening-input-wrap {
+    position: relative;
+    max-width: 190px;
+    margin-inline-start: auto;
+}
+
+.opening-qty-input {
+    max-width: 100%;
+    text-align: left;
+    direction: ltr;
+    padding-left: 3.1rem;
+    border: 2px solid #d7dfed !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    font-weight: 700;
+}
+
+.opening-qty-input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16) !important;
+}
+
+.opening-input-unit {
+    position: absolute;
+    left: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    pointer-events: none;
+}
+
+.opening-qty-input--changed {
+    border-color: var(--warning) !important;
+    background: rgba(245, 158, 11, 0.12) !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+}
+
+.opening-savebar {
+    position: sticky;
+    bottom: 0.75rem;
+    z-index: 20;
+    margin-top: 1rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.opening-savebar__text {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.opening-savebar__text strong {
+    color: var(--primary);
+}
+
+.opening-savebar {
+    opacity: 0.85;
+    transition: all 150ms ease;
+}
+
+.opening-savebar--active {
+    opacity: 1;
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+@media (max-width: 768px) {
+    .opening-qty-input {
+        max-width: 100%;
+    }
+
+    .opening-input-wrap {
+        max-width: 100%;
+    }
+
+    .opening-savebar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

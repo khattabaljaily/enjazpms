@@ -36,6 +36,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.stocks.models import StockQuantity
+from apps.treasury.services import post_treasury_disbursement, post_treasury_receipt
 
 from .models import (
     CustomerLedger,
@@ -64,16 +65,37 @@ def _get_stock_qty(tenant, stock, item):
     )
 
 
+def _fmt_decimal(value):
+    """Return Decimal as compact string without trailing zeros."""
+    if value is None:
+        return '0'
+    try:
+        text = format(Decimal(value), 'f')
+    except Exception:
+        text = str(value)
+    if '.' in text:
+        text = text.rstrip('0').rstrip('.')
+    return text or '0'
+
+
+def _is_stock_tracked_item(item):
+    """الخدمة لا تُتبع كمخزون ولا تُنشأ لها حركات صنف."""
+    return getattr(item, 'item_type', None) != 'service'
+
+
 def _deduct_stock(tenant, stock, item, qty, unit_cost, invoice, variant=None):
     """
     يخصم qty من المخزون ويُسجِّل حركة sale_out.
     يُفرز ValueError إذا كانت الكمية غير كافية.
     """
+    if not _is_stock_tracked_item(item):
+        return
+
     sq = _get_stock_qty(tenant, stock, item)
     if sq.available_quantity < qty:
         raise ValueError(
             f"الكمية المتاحة لـ «{item.name}» في «{stock.name}» "
-            f"هي {sq.available_quantity} فقط، والمطلوب {qty}."
+            f"هي {_fmt_decimal(sq.available_quantity)} فقط، والمطلوب {_fmt_decimal(qty)}."
         )
     sq.quantity -= qty
     sq.save(update_fields=['quantity', 'updated_at'])
@@ -99,6 +121,9 @@ def _restore_stock(tenant, stock, item, qty, unit_cost, reference_type, referenc
     """
     يُعيد qty إلى المخزون ويُسجِّل حركة دخول.
     """
+    if not _is_stock_tracked_item(item):
+        return
+
     sq = _get_stock_qty(tenant, stock, item)
     sq.quantity += qty
     sq.save(update_fields=['quantity', 'updated_at'])
@@ -123,9 +148,10 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
     """
     يُنشئ SalePayment ويُحدِّث paid_amount في الفاتورة.
     """
-    if amount <= 0:
+    amount = Decimal(str(amount or 0))
+    if amount == 0:
         return
-    SalePayment.objects.create(
+    payment = SalePayment.objects.create(
         tenant=tenant,
         invoice=invoice,
         payment_method=method,
@@ -136,6 +162,31 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
     )
     invoice.paid_amount = (invoice.paid_amount or Decimal('0')) + amount
     invoice.save(update_fields=['paid_amount', 'updated_at'])
+
+    if method == 'cash':
+        treasury_notes = notes or f'فاتورة {invoice.invoice_number}'
+        if amount > 0:
+            post_treasury_receipt(
+                tenant=tenant,
+                amount=amount,
+                date=date,
+                reference_type='sale_payment',
+                reference_id=payment.id,
+                description=treasury_notes,
+                user=getattr(invoice, 'confirmed_by', None) or getattr(invoice, 'updated_by', None) or getattr(invoice, 'created_by', None),
+            )
+        else:
+            post_treasury_disbursement(
+                tenant=tenant,
+                amount=abs(amount),
+                date=date,
+                reference_type='sale_payment',
+                reference_id=payment.id,
+                description=treasury_notes,
+                user=getattr(invoice, 'confirmed_by', None) or getattr(invoice, 'updated_by', None) or getattr(invoice, 'created_by', None),
+            )
+
+    return payment
 
 
 def _apply_customer_ledger(tenant, customer, amount, entry_type,
@@ -191,7 +242,30 @@ def _reverse_stock_movements(tenant, invoice):
 
 def _reverse_payments(tenant, invoice):
     """يحذف SalePayments المرتبطة ويُعيد paid_amount إلى صفر."""
-    invoice.payments.filter(is_reversed=False).update(is_reversed=True)
+    active_payments = list(invoice.payments.filter(is_reversed=False))
+    for payment in active_payments:
+        if payment.payment_method == 'cash':
+            reverse_notes = f"عكس حركة دفعة {invoice.invoice_number}"
+            if payment.amount > 0:
+                post_treasury_disbursement(
+                    tenant=tenant,
+                    amount=abs(payment.amount),
+                    date=timezone.now().date(),
+                    reference_type='sale_payment',
+                    reference_id=payment.id,
+                    description=reverse_notes,
+                )
+            elif payment.amount < 0:
+                post_treasury_receipt(
+                    tenant=tenant,
+                    amount=abs(payment.amount),
+                    date=timezone.now().date(),
+                    reference_type='sale_payment',
+                    reference_id=payment.id,
+                    description=reverse_notes,
+                )
+        payment.is_reversed = True
+        payment.save(update_fields=['is_reversed', 'updated_at'])
     invoice.paid_amount = Decimal('0')
     invoice.save(update_fields=['paid_amount', 'updated_at'])
 
@@ -252,6 +326,9 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
     pm = invoice.payment_method
     total = invoice.grand_total
 
+    if pm == 'credit' and not invoice.customer:
+        raise ValueError('الفاتورة الآجلة تتطلب اختيار عميل قبل التأكيد.')
+
     if pm == 'cash':
         _apply_payment(tenant, invoice, 'cash', total, invoice.invoice_date)
 
@@ -275,6 +352,9 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
         cash_amt = invoice.cash_amount or Decimal('0')
         bank_amt = invoice.bank_amount or Decimal('0')
         credit_amt = total - cash_amt - bank_amt
+
+        if credit_amt > Decimal('0.005') and not invoice.customer:
+            raise ValueError('الفاتورة المختلطة التي تحتوي على جزء آجل تتطلب اختيار عميل قبل التأكيد.')
 
         if cash_amt > 0:
             _apply_payment(tenant, invoice, 'cash', cash_amt, invoice.invoice_date)
@@ -539,14 +619,12 @@ def confirm_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
     refund = sale_return.refund_method
 
     if refund in ('cash', 'bank'):
-        # يُعيد المبلغ للعميل (قيمة سالبة في المدفوع)
-        # نُسجِّل كدفعة عكسية — amount سالب
-        SalePayment.objects.create(
+        _apply_payment(
             tenant=tenant,
             invoice=invoice,
-            payment_method=refund,
+            method=refund,
             amount=-total_returned,
-            payment_date=sale_return.return_date,
+            date=sale_return.return_date,
             notes=f"استرداد مرتجع {sale_return.return_number}",
         )
         invoice.sync_paid_amount()
@@ -636,12 +714,35 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
     # ── عكس التأثيرات المالية ─────────────────────────────
     refund = sale_return.refund_method
     if refund in ('cash', 'bank'):
-        # حذف دفعة الاسترداد العكسية
-        SalePayment.objects.filter(
+        refund_payments = SalePayment.objects.filter(
             tenant=tenant,
             invoice=invoice,
             notes__contains=sale_return.return_number,
-        ).delete()
+            is_reversed=False,
+        )
+        for payment in refund_payments:
+            if payment.payment_method == 'cash':
+                reverse_notes = f"عكس استرداد مرتجع {sale_return.return_number}"
+                if payment.amount < 0:
+                    post_treasury_receipt(
+                        tenant=tenant,
+                        amount=abs(payment.amount),
+                        date=timezone.now().date(),
+                        reference_type='sale_payment',
+                        reference_id=payment.id,
+                        description=reverse_notes,
+                    )
+                elif payment.amount > 0:
+                    post_treasury_disbursement(
+                        tenant=tenant,
+                        amount=abs(payment.amount),
+                        date=timezone.now().date(),
+                        reference_type='sale_payment',
+                        reference_id=payment.id,
+                        description=reverse_notes,
+                    )
+            payment.is_reversed = True
+            payment.save(update_fields=['is_reversed', 'updated_at'])
         invoice.sync_paid_amount()
         invoice.save(update_fields=['paid_amount', 'updated_at'])
     elif refund == 'balance':
@@ -674,6 +775,9 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
     if invoice.status not in ('confirmed', 'partially_returned'):
         raise ValueError("يمكن تسجيل الدفعات على الفواتير المؤكدة فقط.")
 
+    if not invoice.customer:
+        raise ValueError("لا يمكن تسجيل دفعة لفاتورة غير مرتبطة بعميل.")
+
     remaining = invoice.remaining_amount
     if amount > remaining + Decimal('0.01'):
         raise ValueError(
@@ -681,19 +785,15 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
         )
 
     # إنشاء الدفعة
-    payment = SalePayment.objects.create(
+    payment = _apply_payment(
         tenant=tenant,
         invoice=invoice,
-        payment_method=method,
+        method=method,
         amount=amount,
-        payment_date=date,
-        reference_number=reference,
-        notes=notes,
+        date=date,
+        reference=reference,
+        notes=notes or f"دفعة على فاتورة {invoice.invoice_number}",
     )
-
-    # تحديث paid_amount
-    invoice.paid_amount = (invoice.paid_amount or Decimal('0')) + amount
-    invoice.save(update_fields=['paid_amount', 'updated_at'])
 
     # تقليل المطالبة في حساب العميل
     if invoice.customer:

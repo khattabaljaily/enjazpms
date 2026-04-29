@@ -181,22 +181,17 @@ html, body {
    4. Global Input Direction Rules
    ========================================== */
 
-input[type="email"],
-input[type="tel"],
-input[type="number"],
-input[inputmode="numeric"],
-input[inputmode="decimal"] {
-    direction: ltr;
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="hidden"]),
+select,
+textarea {
+    direction: rtl;
     text-align: right;
     unicode-bidi: plaintext;
 }
 
-input[type="email"]::placeholder,
-input[type="tel"]::placeholder,
-input[type="number"]::placeholder,
-input[inputmode="numeric"]::placeholder,
-input[inputmode="decimal"]::placeholder {
-    direction: ltr;
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="hidden"])::placeholder,
+textarea::placeholder {
+    direction: rtl;
     text-align: right;
 }
 

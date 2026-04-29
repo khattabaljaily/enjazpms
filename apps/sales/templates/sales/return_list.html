@@ -2,7 +2,8 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.1">
+<link rel="stylesheet" href="{% static 'css/sales_return_list.css' %}?v=1.1">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -59,9 +60,8 @@
                     <th>رقم الفاتورة</th>
                     <th>العميل</th>
                     <th>إجمالي المرتجع</th>
-                    <th>طريقة الاسترداد</th>
                     <th>الحالة</th>
-                    <th></th>
+                    <th>الإجراءات</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -70,53 +70,272 @@
 </div>
 
 </div>
+
+<!-- ══════════════════════════ RETURN VIEW MODAL ══════════════════════════ -->
+<div class="modal fade" id="viewReturnModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog sales-return-view-dialog">
+        <div class="modal-content cx-view-modal sales-return-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar sales-return-view-avatar">
+                        <i class="fas fa-rotate-left"></i>
+                    </div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewReturnNumber">—</h5>
+                        <p class="cx-view-subtitle" id="viewReturnStatus">—</p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="cx-view-body">
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-circle-info"></i>
+                        بيانات المرتجع
+                    </div>
+                    <div class="cx-info-grid sales-return-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">التاريخ</span>
+                                <span class="cx-info-card-value" id="viewReturnDate">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">رقم الفاتورة</span>
+                                <span class="cx-info-card-value" id="viewReturnInvoice">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">العميل</span>
+                                <span class="cx-info-card-value" id="viewReturnCustomer">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">طريقة الاسترداد</span>
+                                <span class="cx-info-card-value" id="viewReturnRefundMethod">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">إجمالي المرتجع</span>
+                                <span class="cx-info-card-value" id="viewReturnTotal">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <a href="#" class="cx-btn-primary" id="viewReturnOpenPageBtn">
+                    <i class="fas fa-arrow-up-right-from-square me-1"></i>
+                    فتح صفحة المرتجع
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-modal-backdrop sales-field-hidden" id="returnListActionModalBackdrop">
+    <div class="cx-modal sales-modal-sm">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title" id="returnListActionModalTitle">تأكيد الإجراء</h3>
+            <button type="button" class="cx-modal-close" onclick="closeReturnListActionModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <p class="text-muted mb-0" id="returnListActionModalMessage">هل تريد المتابعة؟</p>
+        </div>
+        <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-secondary" onclick="closeReturnListActionModal()">إلغاء</button>
+            <button type="button" class="cx-btn-add" id="returnListActionSubmitBtn" onclick="submitReturnListAction()">
+                <i class="fas fa-check me-1"></i>تأكيد
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let returnsTable;
+const returnRows = new Map();
+let pendingReturnListAction = null;
 document.addEventListener('DOMContentLoaded', function () {
+    const statusBadgeMap = {
+        draft: 'muted',
+        confirmed: 'success',
+        cancelled: 'danger'
+    };
+
+    const refundMethodMap = {
+        cash: 'نقدي',
+        bank: 'بنكي',
+        wallet: 'محفظة',
+        credit_note: 'إشعار دائن',
+        exchange: 'استبدال'
+    };
+
     returnsTable = $('#returnsTable').DataTable({
         processing: true,
         serverSide: true,
+        searching: true,
+        ordering: true,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
         ajax: {
             url: "{% url 'sales:return_api' %}",
             data: function(d) { d.status = document.getElementById('filterStatus').value; }
         },
         columns: [
-            { data: 'return_number' },
-            { data: 'return_date' },
-            { data: 'invoice_number' },
-            { data: 'customer' },
-            { data: 'total_returned', className: 'text-end' },
-            { data: 'refund_method' },
+            {
+                data: 'return_number',
+                render: function (data) {
+                    return `<strong>${data || '—'}</strong>`;
+                }
+            },
+            {
+                data: 'return_date',
+                render: function (data) {
+                    return data || '—';
+                }
+            },
+            { data: 'invoice_number', defaultContent: '—' },
+            { data: 'customer', defaultContent: '—' },
+            { data: 'total_returned', className: 'text-end sales-return-money-col' },
             { data: 'status', render: function(d, t, row) {
-                return `<span class="cx-badge cx-badge--${row.status_color}">${row.status_label}</span>`;
+                const badge = statusBadgeMap[d] || row.status_color || 'muted';
+                return `<span class="cx-badge cx-badge--${badge}">${row.status_label || '—'}</span>`;
             }},
-            { data: null, orderable: false, render: function(d,t,row) {
+            { data: null, orderable: false, searchable: false, className: 'text-center', render: function(d,t,row) {
+                returnRows.set(String(row.id), row);
                 return `
                 <div class="cx-actions">
-                    <a href="/sales/returns/${row.id}/" class="cx-btn-icon" title="عرض"><i class="fas fa-eye"></i></a>
-                    ${row.status === 'draft' ? `<button class="cx-btn-icon cx-btn-icon--success" onclick="confirmReturn(${row.id})" title="تأكيد"><i class="fas fa-check"></i></button>` : ''}
+                    <button type="button" class="cx-btn-icon js-view-return" data-id="${row.id}" title="عرض"><i class="fas fa-eye"></i></button>
+                    ${row.status === 'draft' ? `<button class="cx-btn-icon cx-btn-icon--success" onclick="confirmReturn(${row.id})" title="تأكيد"><i class="fas fa-check"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
                 </div>`;
             }}
         ],
-        language: { url: '/static/js/datatables-ar.json' },
+        language: {
+            processing: 'جاري المعالجة...',
+            search: 'بحث:',
+            lengthMenu: 'عرض _MENU_ سجل',
+            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_ سجل',
+            infoEmpty: 'عرض 0 إلى 0 من أصل 0 سجل',
+            infoFiltered: '(تمت التصفية من _MAX_ سجل)',
+            infoPostFix: '',
+            loadingRecords: 'جاري التحميل...',
+            zeroRecords: 'لا توجد مرتجعات مطابقة',
+            emptyTable: 'لا توجد بيانات متاحة في الجدول',
+            paginate: {
+                first: 'الأول',
+                previous: 'السابق',
+                next: 'التالي',
+                last: 'الأخير'
+            }
+        },
         order: [[1, 'desc']],
         pageLength: 25,
     });
     document.getElementById('filterStatus').addEventListener('change', () => returnsTable.ajax.reload());
     document.getElementById('returnSearch').addEventListener('input', function() { returnsTable.search(this.value).draw(); });
+
+    document.getElementById('returnsTable').addEventListener('click', function (event) {
+        const btn = event.target.closest('.js-view-return');
+        if (!btn) return;
+        const row = returnRows.get(String(btn.dataset.id));
+        if (!row) return;
+        openReturnModal(row, refundMethodMap);
+    });
 });
 
+function openReturnModal(row, refundMethodMap) {
+    const num = (v) => {
+        return EnjazIMS.formatMoney(v);
+    };
+
+    const date = (v) => {
+        return v || '—';
+    };
+
+    document.getElementById('viewReturnNumber').textContent = row.return_number || '—';
+    document.getElementById('viewReturnStatus').textContent = row.status_label || '—';
+    document.getElementById('viewReturnDate').textContent = date(row.return_date);
+    document.getElementById('viewReturnInvoice').textContent = row.invoice_number || '—';
+    document.getElementById('viewReturnCustomer').textContent = row.customer || '—';
+    document.getElementById('viewReturnRefundMethod').textContent = refundMethodMap[row.refund_method] || row.refund_method || '—';
+    document.getElementById('viewReturnTotal').textContent = num(row.total_returned);
+    document.getElementById('viewReturnOpenPageBtn').href = `/sales/returns/${row.id}/`;
+
+    const el = document.getElementById('viewReturnModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(el);
+    modal.show();
+}
+
 function confirmReturn(id) {
-    if (!confirm('هل تريد تأكيد هذا المرتجع؟')) return;
     const csrf = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2];
-    fetch(`/sales/returns/${id}/confirm/`, { method: 'POST', headers: { 'X-CSRFToken': csrf } })
-    .then(r => r.json()).then(data => {
-        if (data.success) returnsTable.ajax.reload(null, false);
-        else alert(data.message);
+    openReturnListActionModal({
+        title: 'تأكيد المرتجع',
+        message: 'سيتم اعتماد المرتجع وتطبيق تأثيره على المخزون والحسابات. هل تريد المتابعة؟',
+        confirmLabel: 'تأكيد المرتجع',
+        confirmClass: 'cx-btn-add',
+        run: () => fetch(`/sales/returns/${id}/confirm/`, { method: 'POST', headers: { 'X-CSRFToken': csrf } })
     });
+}
+
+function openReturnListActionModal(config) {
+    pendingReturnListAction = config;
+    document.getElementById('returnListActionModalTitle').textContent = config.title;
+    document.getElementById('returnListActionModalMessage').textContent = config.message;
+    const submitBtn = document.getElementById('returnListActionSubmitBtn');
+    submitBtn.className = config.confirmClass;
+    submitBtn.innerHTML = `<i class="fas fa-check me-1"></i>${config.confirmLabel}`;
+    document.getElementById('returnListActionModalBackdrop').classList.remove('sales-field-hidden');
+}
+
+function closeReturnListActionModal() {
+    pendingReturnListAction = null;
+    document.getElementById('returnListActionModalBackdrop').classList.add('sales-field-hidden');
+}
+
+function submitReturnListAction() {
+    if (!pendingReturnListAction) return;
+    const submitBtn = document.getElementById('returnListActionSubmitBtn');
+    const originalHtml = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري التنفيذ...';
+
+    Promise.resolve(pendingReturnListAction.run())
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeReturnListActionModal();
+            returnsTable.ajax.reload(null, false);
+            showAlert(data.message || 'تم تنفيذ العملية بنجاح', 'success');
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    })
+    .catch(() => showAlert('حدث خطأ في الاتصال', 'danger'))
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalHtml;
+    });
+}
+
+function showAlert(msg, type = 'danger') {
+    const mapped = type === 'danger' ? 'error' : type;
+    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
+        EnjazIMS.toast(msg, mapped);
+        return;
+    }
+    console.warn(msg);
 }
 </script>
 {% endblock %}

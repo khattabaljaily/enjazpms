@@ -4,12 +4,14 @@ Items Views - عمليات CRUD للمنتجات والتصنيفات والوح
 """
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect, render
 
 from .forms import CategoryForm, ItemForm, ItemVariantForm, UnitForm
 from .models import Category, Item, ItemVariant, Unit
+from apps.sales.models import StockMovement
+from apps.stocks.models import StockQuantity
 
 
 def _ensure_tenant(request):
@@ -158,6 +160,7 @@ def item_table_api(request):
             'id': item.id,
             'sku': item.sku,
             'name': item.name,
+            'item_type': item.item_type,
             'barcode': item.barcode or '-',
             'category': item.category.name if item.category else '-',
             'unit': str(item.unit) if item.unit else '-',
@@ -251,6 +254,65 @@ def item_detail_api(request, pk):
             'is_sellable': item.is_sellable,
             'is_purchasable': item.is_purchasable,
         },
+    })
+
+
+@login_required
+def item_transactions_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    try:
+        item = Item.objects.for_tenant(tenant).get(pk=pk)
+    except Item.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'المنتج غير موجود'}, status=404)
+
+    is_service = item.item_type == 'service'
+    if is_service:
+        current_qty = 0
+        movements = []
+    else:
+        current_qty = (
+            StockQuantity.objects.for_tenant(tenant)
+            .filter(item=item)
+            .aggregate(total=Sum('quantity'))['total']
+            or 0
+        )
+
+        movements = (
+            StockMovement.objects.for_tenant(tenant)
+            .filter(item=item)
+            .select_related('stock')
+            .order_by('-movement_date', '-created_at')[:200]
+        )
+
+    data = [
+        {
+            'movement_date': m.movement_date.strftime('%Y-%m-%d'),
+            'stock': m.stock.name,
+            'movement_type': m.movement_type,
+            'movement_type_label': m.get_movement_type_display(),
+            'direction': m.direction,
+            'quantity': str(m.quantity),
+            'balance_after': str(m.balance_after),
+            'reference_type': m.reference_type or '—',
+            'notes': m.notes or '—',
+        }
+        for m in movements
+    ]
+
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'item_id': item.id,
+            'item_name': item.name,
+            'item_sku': item.sku,
+            'item_type': item.item_type,
+            'is_service': is_service,
+            'current_qty': str(current_qty),
+            'movements': data,
+        }
     })
 
 

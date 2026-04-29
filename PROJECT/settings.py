@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     # 'apps.branches',
     'apps.items',
     'apps.sales',
+    'apps.treasury',
     # 'apps.purchases',
     'apps.stocks',
 ]
@@ -145,6 +146,12 @@ LANGUAGE_CODE = 'ar'
 TIME_ZONE = 'Africa/Cairo'
 
 USE_I18N = True
+
+# Keep Arabic UI language while forcing numeric display format to 1,000.00
+USE_THOUSAND_SEPARATOR = True
+THOUSAND_SEPARATOR = ','
+DECIMAL_SEPARATOR = '.'
+NUMBER_GROUPING = 3
 
 USE_TZ = True
 

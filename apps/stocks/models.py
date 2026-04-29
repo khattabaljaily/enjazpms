@@ -61,6 +61,11 @@ class Stock(TenantMixin):
         'المخزن الافتراضي', default=False,
         help_text='المخزن الذي تُضاف إليه البضاعة تلقائياً عند الشراء'
     )
+    is_system_default = models.BooleanField(
+        'افتراضي نظامي',
+        default=False,
+        help_text='مخزن نظامي يُنشأ تلقائياً مع الاشتراك ولا يمكن حذفه.',
+    )
 
     class Meta:
         db_table = 'stocks'
@@ -72,6 +77,7 @@ class Stock(TenantMixin):
         indexes = [
             models.Index(fields=['tenant', 'is_active']),
             models.Index(fields=['tenant', 'is_default']),
+            models.Index(fields=['tenant', 'is_system_default']),
         ]
 
     def __str__(self):

@@ -38,6 +38,34 @@
     margin-bottom: 0.5rem;
     border: none;
     border-radius: 12px;
+    opacity: 1 !important;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Ensure global toast alerts are clearly visible (override generic alert styles) */
+#global-alerts .alert-success {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid #86efac !important;
+}
+
+#global-alerts .alert-danger {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fca5a5 !important;
+}
+
+#global-alerts .alert-warning {
+    background: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1px solid #fcd34d !important;
+}
+
+#global-alerts .alert-info {
+    background: #dbeafe !important;
+    color: #1e3a8a !important;
+    border: 1px solid #93c5fd !important;
 }
 
 .messages-container        { margin-bottom: 1rem; }
@@ -55,7 +83,7 @@
     flex: 1;
     overflow: hidden;
     margin-top: 50px;
-    margin-right: 260px;
+    margin-right: 280px;
     padding: 0.875rem 1.25rem 1.25rem;
     gap: 0;
 }
@@ -94,7 +122,7 @@
     background: var(--surface);
     border-bottom: 1px solid var(--border-color);
     position: fixed;
-    top: 0; left: 0; right: 260px;
+    top: 0; left: 0; right: 280px;
     z-index: 1000;
     /* glass effect */
     backdrop-filter: blur(12px) saturate(1.4);
@@ -284,11 +312,11 @@
    Sidebar
    ============================================ */
 .sidebar {
-    width: 260px;
+    width: 280px;
     height: 100vh;
     background: var(--surface);
     border-left: 1px solid var(--border-color);
-    padding: 0 0.6rem 1rem;
+    padding: 0 0.75rem 1rem;
     position: fixed;
     right: 0;
     top: 0;
@@ -334,8 +362,8 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #6b7280;
-    padding: 0.6rem 0.7rem 0.25rem;
-    margin-top: 0.25rem;
+    padding: 0.45rem 0.7rem 0.15rem;
+    margin-top: 0.15rem;
     display: block;
 }
 
@@ -349,7 +377,7 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 0;
 }
 
 /* Nav link */
@@ -357,7 +385,7 @@
     display: flex;
     align-items: center;
     gap: 0.65rem;
-    padding: 0.52rem 0.7rem;
+    padding: 0.34rem 0.7rem;
     color: #1f2937;
     text-decoration: none;
     border-radius: 10px;
@@ -378,13 +406,32 @@
 
 /* Active state */
 .sidebar .nav-link.active {
-    background: rgba(99,102,241,0.1);
+    background: transparent;
     color: var(--primary);
+    font-weight: 600;
+    border-radius: 0;
+}
+
+.sidebar .nav-link.submenu-active {
+    background: transparent;
+    color: #4b5563;
     font-weight: 600;
 }
 
+[data-theme="dark"] .sidebar .nav-link.submenu-active {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .sidebar .nav-link.active {
+    background: transparent;
+}
+
+[data-theme="dark"] .sidebar .nav-link.submenu-active {
+    background: transparent;
+}
+
 .sidebar .nav-link.active::before {
-    content: '';
+    content: none;
     position: absolute;
     right: 0;
     top: 25%;
@@ -416,6 +463,7 @@
 
 .sidebar .nav-link:hover .nav-icon { background: rgba(99,102,241,0.08); color: var(--primary); }
 .sidebar .nav-link.active .nav-icon { background: rgba(99,102,241,0.14); color: var(--primary); }
+.sidebar .nav-link.submenu-active .nav-icon { background: rgba(99,102,241,0.09); color: #6366f1; }
 
 /* Muted / coming-soon links */
 .sidebar-link-muted {
@@ -461,7 +509,7 @@
 
 .nav-submenu {
     list-style: none;
-    padding: 0.2rem 0 0.2rem 0.6rem;
+    padding: 0.12rem 0.35rem 0.12rem 0.9rem;
     margin: 0;
     overflow: hidden;
     max-height: 0;
@@ -477,7 +525,7 @@
 .nav-sublink {
     display: flex;
     align-items: center;
-    padding: 0.38rem 0.7rem 0.38rem 0.5rem;
+    padding: 0.2rem 0.62rem 0.2rem 0.45rem;
     border-radius: 8px;
     font-size: 0.825rem;
     font-weight: 500;
@@ -486,6 +534,7 @@
     transition: background 150ms ease, color 150ms ease;
     border-right: 2px solid var(--border-light);
     margin-bottom: 1px;
+    margin-right: 0.25rem;
 }
 
 [data-theme="dark"] .nav-sublink {
@@ -497,6 +546,32 @@
     background: var(--surface-hover);
     color: var(--primary);
     border-right-color: var(--primary);
+}
+
+.nav-sublink.active {
+    background: transparent;
+    color: var(--primary);
+    border-right-color: var(--border-light);
+    font-weight: 700;
+    position: relative;
+    border-radius: 0;
+}
+
+.nav-sublink.active::before {
+    content: none;
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+    transform: translateY(-50%);
+}
+
+[data-theme="dark"] .nav-sublink.active {
+    background: transparent;
+    border-right-color: var(--border-color);
 }
 
 /* ── Sidebar footer (user info) ── */

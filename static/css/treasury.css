@@ -1,0 +1,83 @@
+/* Treasury Module */
+.treasury-money-col {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+#treasuryTable td,
+#treasuryTable th,
+#movementsTable td,
+#movementsTable th {
+  vertical-align: middle;
+}
+
+/* ── Action Buttons ───────────────────────── */
+.cx-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: center;
+}
+
+.cx-btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-light, #e5e7eb);
+  cursor: pointer;
+  color: #6b7280;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.cx-btn-icon:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.cx-btn-icon--danger {
+  color: #ef4444;
+}
+
+.cx-btn-icon--danger:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+/* ── Treasury Filter Select ───────────────── */
+#movementTreasuryFilter {
+  height: 42px;
+  padding: 0 0.9rem 0 2.2rem;
+  border: 1.5px solid var(--border-color, #e5e7eb);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-family: 'Cairo', sans-serif;
+  font-weight: 600;
+  background-color: var(--bg-primary, #fff);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 0.6rem center;
+  background-size: 1rem;
+  -webkit-appearance: none;
+  appearance: none;
+  color: var(--text-primary, #111827);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-width: 200px;
+}
+
+#movementTreasuryFilter:focus {
+  outline: none;
+  border-color: var(--primary, #6366f1);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.14);
+}
+
+#movementTreasuryFilter:hover {
+  border-color: var(--primary, #6366f1);
+}

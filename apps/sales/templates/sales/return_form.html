@@ -1,8 +1,9 @@
 {% extends "layouts/dashboard.html" %}
-{% load static %}
+{% load static l10n %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.0">
+<link rel="stylesheet" href="{% static 'css/sales_return_form.css' %}?v=1.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -37,7 +38,7 @@
 <div class="col-lg-8">
 
     <!-- بيانات المرتجع -->
-    <div class="cx-panel mb-3">
+    <div class="cx-panel mb-3 p-4">
         <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات المرتجع</h3></div>
         <div class="cx-panel-body">
             <div class="row g-3">
@@ -65,7 +66,7 @@
     </div>
 
     <!-- الكميات المُرتجَعة -->
-    <div class="cx-panel mb-3">
+    <div class="cx-panel mb-3 p-4">
         <div class="cx-panel-header"><h3 class="cx-panel-title">الكميات المُرتجَعة</h3></div>
         <div class="cx-panel-body p-0">
             <table class="cx-table">
@@ -88,18 +89,17 @@
                         {% if line.variant %}<br><small>{{ line.variant }}</small>{% endif %}
                         <input type="hidden" class="inv-line-id" value="{{ line.id }}">
                     </td>
-                    <td>{{ line.quantity }}</td>
-                    <td>{{ line.returned_quantity }}</td>
-                    <td><strong class="text-success">{{ line.returnable_quantity }}</strong></td>
+                    <td class="ret-sold-qty" data-value="{{ line.quantity|unlocalize }}">{{ line.quantity }}</td>
+                    <td class="ret-returned-qty" data-value="{{ line.returned_quantity|unlocalize }}">{{ line.returned_quantity }}</td>
+                    <td><strong class="text-success ret-returnable-qty" data-value="{{ line.returnable_quantity|unlocalize }}">{{ line.returnable_quantity }}</strong></td>
                     <td>
                         <input type="number" class="cx-input cx-input--sm ret-qty"
-                               min="0" max="{{ line.returnable_quantity }}" step="0.001"
-                               value="0" data-price="{{ line.unit_price }}"
-                               oninput="updateReturnTotal(this)"
-                               style="width:80px">
+                               min="0" max="{{ line.returnable_quantity|unlocalize }}" step="0.001"
+                               value="0" data-price="{{ line.unit_price|unlocalize }}"
+                               oninput="updateReturnTotal(this)">
                     </td>
-                    <td>{{ line.unit_price|floatformat:2 }}</td>
-                    <td class="ret-line-total text-end">0.00</td>
+                    <td class="ret-unit-price text-end" data-value="{{ line.unit_price|unlocalize }}">{{ line.unit_price|floatformat:2 }}</td>
+                    <td class="ret-line-total text-end" data-total="0">0.00</td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="7" class="text-center text-muted py-3">لا توجد كميات قابلة للإرجاع</td></tr>
@@ -111,7 +111,7 @@
 </div>
 
 <div class="col-lg-4">
-    <div class="cx-panel sticky-top" style="top:80px">
+    <div class="cx-panel sticky-top sales-sticky-panel p-4">
         <div class="cx-panel-header"><h3 class="cx-panel-title">إجمالي المرتجع</h3></div>
         <div class="cx-panel-body">
             <div class="cx-totals-block">
@@ -143,33 +143,53 @@
 const INVOICE_PK = {{ invoice.pk }};
 const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2];
 
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.ret-sold-qty, .ret-returned-qty, .ret-returnable-qty, .ret-unit-price').forEach(el => {
+        const raw = el.dataset.value ?? el.textContent;
+        el.textContent = EnjazIMS.formatMoney(raw);
+    });
+
+    document.querySelectorAll('.ret-line-total').forEach(el => {
+        el.dataset.total = '0';
+        el.textContent = EnjazIMS.formatMoney(0);
+    });
+
+    document.querySelectorAll('.ret-qty').forEach(input => {
+        input.classList.add('sales-qty-input');
+    });
+
+    recalcReturnTotal();
+});
+
 function updateReturnTotal(input) {
-    const qty = parseFloat(input.value) || 0;
-    const price = parseFloat(input.dataset.price) || 0;
-    const total = (qty * price).toFixed(2);
-    input.closest('tr').querySelector('.ret-line-total').textContent = total;
+    const qty = EnjazIMS.parseNumber(input.value);
+    const price = EnjazIMS.parseNumber(input.dataset.price);
+    const total = qty * price;
+    const lineCell = input.closest('tr').querySelector('.ret-line-total');
+    lineCell.dataset.total = String(total);
+    lineCell.textContent = EnjazIMS.formatMoney(total);
     recalcReturnTotal();
 }
 
 function recalcReturnTotal() {
     let total = 0;
     document.querySelectorAll('.ret-line-total').forEach(td => {
-        total += parseFloat(td.textContent) || 0;
+        total += EnjazIMS.parseNumber(td.dataset.total || 0);
     });
-    document.getElementById('returnGrandTotal').textContent = total.toFixed(2);
+    document.getElementById('returnGrandTotal').textContent = EnjazIMS.formatMoney(total);
 }
 
 function submitReturn(action) {
     const lines = [];
     document.querySelectorAll('#returnLinesBody tr').forEach(row => {
         const lineId = row.querySelector('.inv-line-id')?.value;
-        const qty = parseFloat(row.querySelector('.ret-qty')?.value) || 0;
+        const qty = EnjazIMS.parseNumber(row.querySelector('.ret-qty')?.value);
         if (lineId && qty > 0) {
             lines.push({ invoice_line_id: lineId, returned_quantity: qty });
         }
     });
 
-    if (!lines.length) { alert('أضف كمية واحدة على الأقل للإرجاع'); return; }
+    if (!lines.length) { showAlert('أضف كمية واحدة على الأقل للإرجاع', 'warning'); return; }
 
     const header = {
         return_date: document.getElementById('returnDate').value,
@@ -185,8 +205,17 @@ function submitReturn(action) {
     .then(r => r.json())
     .then(data => {
         if (data.success) window.location.href = data.redirect;
-        else alert(data.message);
+        else showAlert(data.message, 'danger');
     });
+}
+
+function showAlert(msg, type = 'danger') {
+    const mapped = type === 'danger' ? 'error' : type;
+    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
+        EnjazIMS.toast(msg, mapped);
+        return;
+    }
+    console.warn(msg);
 }
 </script>
 {% endblock %}

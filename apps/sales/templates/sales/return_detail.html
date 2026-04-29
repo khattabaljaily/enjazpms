@@ -2,7 +2,8 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/sales_return_detail.css' %}?v=1.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -57,7 +58,7 @@
 
 <div class="row g-3">
 <div class="col-lg-8">
-    <div class="cx-panel mb-3">
+    <div class="cx-panel mb-3 p-4">
         <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات المرتجع</h3></div>
         <div class="cx-panel-body">
             <div class="cx-info-grid">
@@ -95,7 +96,7 @@
         </div>
     </div>
 
-    <div class="cx-panel">
+    <div class="cx-panel p-4">
         <div class="cx-panel-header"><h3 class="cx-panel-title">بنود المرتجع</h3></div>
         <div class="cx-panel-body p-0">
             <table class="cx-table">
@@ -118,7 +119,7 @@
 </div>
 
 <div class="col-lg-4">
-    <div class="cx-panel">
+    <div class="cx-panel p-4">
         <div class="cx-panel-header"><h3 class="cx-panel-title">الإجمالي</h3></div>
         <div class="cx-panel-body">
             <div class="cx-totals-block">
@@ -133,27 +134,104 @@
 </div>
 
 </div>
+
+<div class="cx-modal-backdrop sales-field-hidden" id="returnActionModalBackdrop">
+    <div class="cx-modal sales-modal-sm">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title" id="returnActionModalTitle">تأكيد الإجراء</h3>
+            <button type="button" class="cx-modal-close" onclick="closeReturnActionModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <p class="text-muted mb-0" id="returnActionModalMessage">هل تريد المتابعة؟</p>
+        </div>
+        <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-secondary" onclick="closeReturnActionModal()">إلغاء</button>
+            <button type="button" class="cx-btn-danger" id="returnActionSubmitBtn" onclick="submitReturnAction()">
+                <i class="fas fa-check me-1"></i>تأكيد
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 const RET_ID = {{ sale_return.id }};
 const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2];
+let pendingReturnAction = null;
 
 {% if can_confirm %}
 function doConfirm() {
-    if (!confirm('تأكيد المرتجع؟')) return;
-    fetch(`/sales/returns/${RET_ID}/confirm/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
-    .then(r => r.json()).then(data => { if (data.success) location.reload(); else alert(data.message); });
+    openReturnActionModal({
+        title: 'تأكيد المرتجع',
+        message: 'سيتم اعتماد المرتجع وتطبيق تأثيره على المخزون والحسابات. هل تريد المتابعة؟',
+        confirmLabel: 'تأكيد المرتجع',
+        confirmClass: 'cx-btn-add',
+        run: () => fetch(`/sales/returns/${RET_ID}/confirm/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+    });
 }
 {% endif %}
 
 {% if can_cancel %}
 function doCancel() {
-    if (!confirm('إلغاء المرتجع؟')) return;
-    fetch(`/sales/returns/${RET_ID}/cancel/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
-    .then(r => r.json()).then(data => { if (data.success) location.reload(); else alert(data.message); });
+    openReturnActionModal({
+        title: 'إلغاء المرتجع',
+        message: 'سيتم إلغاء هذا المرتجع. هل تريد المتابعة؟',
+        confirmLabel: 'تأكيد الإلغاء',
+        confirmClass: 'cx-btn-danger',
+        run: () => fetch(`/sales/returns/${RET_ID}/cancel/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+    });
 }
 {% endif %}
+
+function openReturnActionModal(config) {
+    pendingReturnAction = config;
+    document.getElementById('returnActionModalTitle').textContent = config.title;
+    document.getElementById('returnActionModalMessage').textContent = config.message;
+    const submitBtn = document.getElementById('returnActionSubmitBtn');
+    submitBtn.className = config.confirmClass;
+    submitBtn.innerHTML = `<i class="fas fa-check me-1"></i>${config.confirmLabel}`;
+    document.getElementById('returnActionModalBackdrop').classList.remove('sales-field-hidden');
+}
+
+function closeReturnActionModal() {
+    pendingReturnAction = null;
+    document.getElementById('returnActionModalBackdrop').classList.add('sales-field-hidden');
+}
+
+function submitReturnAction() {
+    if (!pendingReturnAction) return;
+    const submitBtn = document.getElementById('returnActionSubmitBtn');
+    const originalHtml = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري التنفيذ...';
+
+    Promise.resolve(pendingReturnAction.run())
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeReturnActionModal();
+            location.reload();
+        } else {
+            showAlert(data.message, 'danger');
+        }
+    })
+    .catch(() => showAlert('حدث خطأ في الاتصال', 'danger'))
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalHtml;
+    });
+}
+
+function showAlert(msg, type = 'danger') {
+    const mapped = type === 'danger' ? 'error' : type;
+    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
+        EnjazIMS.toast(msg, mapped);
+        return;
+    }
+    console.warn(msg);
+}
 </script>
 {% endblock %}

@@ -141,15 +141,66 @@ const EnjazIMS = {
     confirmDelete: function(message = 'هل أنت متأكد من الحذف؟') {
         return confirm(message);
     },
+
+    // Parse localized number strings into a JS number.
+    // Accepts values like: 1,000.00 | 1000,00 | ١٬٠٠٠٫٠٠ | 1000
+    parseNumber: function(value) {
+        if (typeof value === 'number') {
+            return Number.isFinite(value) ? value : 0;
+        }
+        if (value === null || value === undefined) {
+            return 0;
+        }
+
+        let str = String(value).trim();
+        if (!str) {
+            return 0;
+        }
+
+        const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+        const easternArabicDigits = '۰۱۲۳۴۵۶۷۸۹';
+
+        str = str
+            .replace(/[٠-٩]/g, (d) => String(arabicDigits.indexOf(d)))
+            .replace(/[۰-۹]/g, (d) => String(easternArabicDigits.indexOf(d)))
+            .replace(/\u066C/g, ',')
+            .replace(/\u066B/g, '.')
+            .replace(/\s+/g, '');
+
+        const lastComma = str.lastIndexOf(',');
+        const lastDot = str.lastIndexOf('.');
+
+        if (lastComma > -1 && lastDot > -1) {
+            if (lastComma > lastDot) {
+                str = str.replace(/\./g, '').replace(',', '.');
+            } else {
+                str = str.replace(/,/g, '');
+            }
+        } else if (lastComma > -1) {
+            str = str.replace(',', '.');
+        }
+
+        const n = Number(str);
+        return Number.isFinite(n) ? n : 0;
+    },
     
     // Format number
     formatNumber: function(num, decimals = 2) {
-        return parseFloat(num).toFixed(decimals);
+        const n = this.parseNumber(num);
+        return n.toLocaleString('en-US', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+        });
+    },
+
+    // Standard money format: 1,000.00
+    formatMoney: function(amount) {
+        return this.formatNumber(amount, 2);
     },
     
     // Format currency
     formatCurrency: function(amount, currency = 'EGP') {
-        const formatted = this.formatNumber(amount, 2);
+        const formatted = this.formatMoney(amount);
         return `${formatted} ${currency}`;
     }
 };

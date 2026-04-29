@@ -1,0 +1,176 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.2">
+<link rel="stylesheet" href="{% static 'css/stocks_quantities.css' %}?v=1.1">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- HERO -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-cubes"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">أرصدة المخزون</h1>
+                <p class="cx-hero-desc">عرض الكميات الحالية والمتاحة لكل منتج في كل مخزن</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'stocks:opening_balance_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-pen-to-square"></i>
+                    <span>تعديل الكميات الافتتاحية</span>
+                </a>
+                <a href="{% url 'stocks:list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>العودة للمخازن</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-boxes-stacked"></i>
+            <strong id="kpiTotal">—</strong>
+            <span>صنف</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--danger">
+            <i class="fas fa-triangle-exclamation"></i>
+            <strong id="kpiLow">—</strong>
+            <span>تحت الحد الأدنى</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-circle-xmark"></i>
+            <strong id="kpiZero">—</strong>
+            <span>نفدت</span>
+        </span>
+    </div>
+</div>
+
+<!-- PANEL -->
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="qtySearchInput" class="cx-search-input" placeholder="ابحث باسم المنتج أو SKU أو الباركود...">
+        </div>
+        <div class="cx-toolbar-end">
+            <label class="opening-stock-label">
+                <i class="fas fa-warehouse"></i>
+                <span>المخزن:</span>
+            </label>
+            <select id="qtyStockSelect" class="cx-select-sm">
+                <option value="">كل المخازن</option>
+                {% for s in stocks %}
+                <option value="{{ s.id }}" {% if default_stock and default_stock.id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="qtyTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>المنتج</th>
+                    <th>SKU</th>
+                    <th>الباركود</th>
+                    <th>المخزن</th>
+                    <th class="text-end">الكمية الإجمالية</th>
+                    <th class="text-end">المحجوزة</th>
+                    <th class="text-end">المتاحة</th>
+                    <th class="text-center">الحالة</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const TABLE_API = "{% url 'stocks:quantities_table_api' %}";
+    const stockSelect = document.getElementById('qtyStockSelect');
+
+    let totalRows = 0, lowRows = 0, zeroRows = 0;
+
+    const dt = $('#qtyTable').DataTable({
+        processing: true,
+        serverSide: true,
+        pageLength: 25,
+        dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        language: {
+            emptyTable: 'لا توجد أصناف',
+            info: 'عرض _START_ إلى _END_ من _TOTAL_',
+            infoEmpty: 'لا توجد بيانات',
+            zeroRecords: 'لا توجد نتائج مطابقة',
+            paginate: { next: 'التالي', previous: 'السابق' },
+            processing: 'جاري التحميل...'
+        },
+        ajax: {
+            url: TABLE_API,
+            data: function (d) {
+                d.stock_id = stockSelect.value;
+            },
+            dataSrc: function (json) {
+                // count stats from current page (approx using recordsFiltered)
+                document.getElementById('kpiTotal').textContent = json.recordsFiltered ?? '—';
+                return json.data;
+            }
+        },
+        columns: [
+            { data: 'item_name' },
+            { data: 'sku',      render: v => `<code class="cxr-code">${v}</code>` },
+            { data: 'barcode',  render: v => `<code class="cxr-code">${v}</code>` },
+            { data: 'stock_name' },
+            { data: 'quantity',  className: 'text-end qty-num', render: v => EnjazIMS.formatMoney(v) },
+            { data: 'reserved',  className: 'text-end qty-num qty-reserved', render: v => EnjazIMS.formatMoney(v) },
+            { data: 'available', className: 'text-end qty-num', render: function(v, _, row) {
+                const amount = EnjazIMS.formatMoney(v);
+                if (row.is_zero)  return `<span class="qty-badge qty-badge--zero">${amount}</span>`;
+                if (row.is_low)   return `<span class="qty-badge qty-badge--low">${amount}</span>`;
+                return `<span class="qty-badge qty-badge--ok">${amount}</span>`;
+            }},
+            { data: null, className: 'text-center', orderable: false, render: function(_, __, row) {
+                if (row.is_zero) return `<span class="cx-badge cx-badge--danger"><i class="fas fa-circle-xmark"></i> نفدت</span>`;
+                if (row.is_low)  return `<span class="cx-badge cx-badge--warning"><i class="fas fa-triangle-exclamation"></i> منخفضة</span>`;
+                return `<span class="cx-badge cx-badge--success"><i class="fas fa-circle-check"></i> متوفرة</span>`;
+            }}
+        ],
+        drawCallback: function () {
+            // update low/zero KPIs from rendered rows
+            let low = 0, zero = 0;
+            dt.rows({ page: 'current' }).data().each(function (row) {
+                if (row.is_zero) zero++;
+                else if (row.is_low) low++;
+            });
+            document.getElementById('kpiLow').textContent  = low;
+            document.getElementById('kpiZero').textContent = zero;
+        }
+    });
+
+    $('#qtySearchInput').on('input', function () {
+        dt.search($(this).val()).draw();
+    });
+
+    stockSelect.addEventListener('change', function () {
+        dt.ajax.reload();
+    });
+})();
+</script>
+{% endblock %}

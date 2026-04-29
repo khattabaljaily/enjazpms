@@ -1,0 +1,15 @@
+/* =========================================================
+   SALES MODULE — تفاصيل الفاتورة
+   ========================================================= */
+
+/* Small confirm/cancel modal */
+.sales-modal-sm {
+  max-width: 440px;
+}
+
+/* Disabled / returned line rows */
+.sales-row-disabled {
+  opacity: 0.45;
+  text-decoration: line-through;
+  pointer-events: none;
+}

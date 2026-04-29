@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from decimal import Decimal
 import csv
 import io
 
@@ -100,6 +101,7 @@ def supplier_table_api(request):
             'phone': supplier.phone or '-',
             'city': supplier.city or '-',
             'opening_balance': str(supplier.opening_balance),
+            'current_balance': str(supplier.opening_balance),
             'is_active': supplier.is_active,
         }
         for supplier in queryset
@@ -162,11 +164,38 @@ def supplier_detail_api(request, pk):
             'city': supplier.city,
             'address': supplier.address,
             'opening_balance': str(supplier.opening_balance),
+            'current_balance': str(supplier.opening_balance),
             'credit_limit': str(supplier.credit_limit),
             'notes': supplier.notes,
             'is_active': supplier.is_active,
         }
     })
+
+
+@login_required
+def supplier_transactions_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
+    opening = supplier.opening_balance or Decimal('0')
+
+    data = []
+    if opening != Decimal('0'):
+        entry_date = supplier.created_at.date().strftime('%Y-%m-%d') if supplier.created_at else ''
+        data.append({
+            'entry_date': entry_date,
+            'entry_type': 'opening',
+            'entry_type_label': 'رصيد افتتاحي',
+            'amount': str(opening),
+            'running_balance': str(opening),
+            'notes': 'رصيد افتتاحي للمورد',
+            'reference_type': 'supplier_opening',
+            'reference_id': supplier.id,
+        })
+
+    return JsonResponse({'success': True, 'data': data})
 
 
 @login_required

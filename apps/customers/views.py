@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import DecimalField, Q, Sum, Value
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 import csv
@@ -7,6 +8,7 @@ import io
 
 from .forms import CustomerForm
 from .models import Customer
+from apps.sales.models import CustomerLedger
 
 
 def _ensure_tenant(request):
@@ -54,7 +56,13 @@ def customer_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status = request.GET.get('status', '').strip()
 
-    queryset = Customer.objects.for_tenant(tenant)
+    queryset = Customer.objects.for_tenant(tenant).annotate(
+        ledger_total=Coalesce(
+            Sum('ledger_entries__amount'),
+            Value(0),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        )
+    )
     records_total = queryset.count()
 
     if status == 'active':
@@ -83,6 +91,7 @@ def customer_table_api(request):
         'phone': 'phone',
         'city': 'city',
         'opening_balance': 'opening_balance',
+        'current_balance': 'opening_balance',
         'is_active': 'is_active',
         'created_at': 'created_at',
     }
@@ -100,6 +109,7 @@ def customer_table_api(request):
             'phone': customer.phone or '-',
             'city': customer.city or '-',
             'opening_balance': str(customer.opening_balance),
+            'current_balance': str((customer.opening_balance or 0) + (customer.ledger_total or 0)),
             'is_active': customer.is_active,
         }
         for customer in queryset
@@ -151,6 +161,14 @@ def customer_detail_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
+    ledger_total = (
+        CustomerLedger.objects
+        .for_tenant(tenant)
+        .filter(customer=customer)
+        .aggregate(s=Sum('amount'))['s']
+        or 0
+    )
+    current_balance = (customer.opening_balance or 0) + ledger_total
 
     return JsonResponse({
         'success': True,
@@ -162,11 +180,51 @@ def customer_detail_api(request, pk):
             'city': customer.city,
             'address': customer.address,
             'opening_balance': str(customer.opening_balance),
+            'current_balance': str(current_balance),
             'credit_limit': str(customer.credit_limit),
             'notes': customer.notes,
             'is_active': customer.is_active,
         }
     })
+
+
+@login_required
+def customer_transactions_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
+    entries = (
+        CustomerLedger.objects
+        .for_tenant(tenant)
+        .filter(customer=customer)
+        .order_by('-entry_date', '-created_at')[:100]
+    )
+
+    type_labels = {
+        'opening': 'رصيد افتتاحي',
+        'invoice': 'فاتورة آجل',
+        'payment': 'سداد عميل',
+        'return': 'مرتجع',
+        'adjustment': 'تعديل',
+    }
+
+    data = [
+        {
+            'entry_date': e.entry_date.strftime('%Y-%m-%d'),
+            'entry_type': e.entry_type,
+            'entry_type_label': type_labels.get(e.entry_type, e.entry_type),
+            'amount': str(e.amount),
+            'running_balance': str(e.running_balance),
+            'notes': e.notes or '—',
+            'reference_type': e.reference_type or '',
+            'reference_id': e.reference_id,
+        }
+        for e in entries
+    ]
+
+    return JsonResponse({'success': True, 'data': data})
 
 
 @login_required

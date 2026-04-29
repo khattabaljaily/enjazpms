@@ -24,6 +24,14 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
+                <a href="{% url 'stocks:quantities_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-cubes"></i>
+                    <span>أرصدة المخزون</span>
+                </a>
+                <a href="{% url 'stocks:opening_balance_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-boxes-stacked"></i>
+                    <span>الكميات الافتتاحية</span>
+                </a>
                 {% if can_add %}
                     <button type="button" class="cx-btn-add" id="btnOpenCreateStock">
                         <i class="fas fa-plus"></i>

@@ -351,8 +351,32 @@ def _process_invoice_post(request, tenant, invoice):
                 inv = build_invoice_from_post(tenant, stock, header, lines_data, request.user)
             else:
                 if invoice.status == 'confirmed':
+                    confirmed_header = {
+                        'invoice_date': header.get('invoice_date') or invoice.invoice_date,
+                        'due_date': header.get('due_date') or None,
+                        'payment_method': header.get('payment_method') or invoice.payment_method,
+                        'invoice_discount_type': header.get('invoice_discount_type') or invoice.invoice_discount_type,
+                        'invoice_discount_value': Decimal(str(header.get('invoice_discount_value') or 0)),
+                        'cash_amount': Decimal(str(header.get('cash_amount') or 0)),
+                        'bank_amount': Decimal(str(header.get('bank_amount') or 0)),
+                        'bank_reference': header.get('bank_reference', ''),
+                        'notes': header.get('notes', ''),
+                        'reference_number': header.get('reference_number', ''),
+                    }
+
+                    # FK mapping for service layer (expects objects, not *_id keys)
+                    customer_raw = header.get('customer_id')
+                    if customer_raw:
+                        confirmed_header['customer'] = Customer.objects.get(id=customer_raw, tenant=tenant)
+                    else:
+                        confirmed_header['customer'] = None
+
+                    stock_raw = header.get('stock_id')
+                    if stock_raw:
+                        confirmed_header['stock'] = Stock.objects.get(id=stock_raw, tenant=tenant)
+
                     inv = edit_confirmed_invoice(
-                        invoice, header, lines_data, request.user
+                        invoice, confirmed_header, lines_data, request.user
                     )
                     # إعادة التأكيد تتم داخل edit_confirmed_invoice
                     return JsonResponse({'success': True, 'redirect': f'/sales/{inv.id}/'})
@@ -371,15 +395,37 @@ def _process_invoice_post(request, tenant, invoice):
                         )
                         line.calculate()
                         line.save()
-                    # تحديث هيدر
-                    for field in ['customer_id', 'invoice_date', 'due_date',
-                                  'payment_method', 'invoice_discount_type',
-                                  'invoice_discount_value', 'cash_amount',
-                                  'bank_amount', 'bank_reference', 'notes']:
-                        if field in header:
-                            setattr(invoice, field.replace('_id', ''),
-                                    header[field] if not field.endswith('_id')
-                                    else header[field])
+                    # تحديث هيدر (تعيين صريح لتجنب أخطاء FK مثل customer)
+                    if 'customer_id' in header:
+                        customer_raw = header.get('customer_id')
+                        invoice.customer_id = int(customer_raw) if customer_raw else None
+
+                    if 'invoice_date' in header:
+                        invoice.invoice_date = header.get('invoice_date') or invoice.invoice_date
+                    if 'due_date' in header:
+                        invoice.due_date = header.get('due_date') or None
+                    if 'payment_method' in header:
+                        invoice.payment_method = header.get('payment_method') or invoice.payment_method
+                    if 'invoice_discount_type' in header:
+                        invoice.invoice_discount_type = header.get('invoice_discount_type') or invoice.invoice_discount_type
+                    if 'invoice_discount_value' in header:
+                        invoice.invoice_discount_value = Decimal(str(header.get('invoice_discount_value') or 0))
+                    if 'cash_amount' in header:
+                        invoice.cash_amount = Decimal(str(header.get('cash_amount') or 0))
+                    if 'bank_amount' in header:
+                        invoice.bank_amount = Decimal(str(header.get('bank_amount') or 0))
+                    if 'bank_reference' in header:
+                        invoice.bank_reference = header.get('bank_reference', '')
+                    if 'notes' in header:
+                        invoice.notes = header.get('notes', '')
+
+                    # المخزن يظل مطلوباً في التعديل
+                    if 'stock_id' in header and header.get('stock_id'):
+                        try:
+                            invoice.stock = Stock.objects.get(id=header.get('stock_id'), tenant=tenant)
+                        except Stock.DoesNotExist:
+                            return _json_error('المخزن المحدد غير موجود')
+
                     invoice.recalculate_totals()
                     invoice.save()
                     inv = invoice
@@ -419,6 +465,7 @@ def invoice_detail(request, pk):
         'payments': payments,
         'returns': returns,
         'can_confirm': invoice.status == 'draft',
+        'can_delete_draft': invoice.status == 'draft',
         'can_edit': invoice.status in ('draft', 'confirmed'),
         'can_cancel': invoice.status == 'confirmed',
         'can_return': invoice.status in ('confirmed', 'partially_returned'),
@@ -434,6 +481,30 @@ def invoice_detail(request, pk):
 # ─────────────────────────────────────────────
 #   INVOICE ACTIONS (AJAX)
 # ─────────────────────────────────────────────
+
+@login_required
+@require_POST
+def invoice_delete_draft_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
+
+    if invoice.status != 'draft':
+        return _json_error('يمكن حذف الفاتورة إذا كانت مسودة فقط')
+
+    if invoice.payments.exists():
+        return _json_error('لا يمكن حذف المسودة لوجود دفعات مرتبطة بها')
+
+    if invoice.sale_returns.exists():
+        return _json_error('لا يمكن حذف المسودة لوجود مرتجعات مرتبطة بها')
+
+    with transaction.atomic():
+        invoice.delete()
+
+    return _json_ok(msg='تم حذف مسودة الفاتورة')
+
 
 @login_required
 @require_POST
@@ -762,8 +833,9 @@ def item_info_api(request):
     except Item.DoesNotExist:
         return _json_error('المنتج غير موجود', status=404)
 
-    available_qty = 0
-    if stock_id:
+    is_service = item.item_type == 'service'
+    available_qty = None if is_service else 0
+    if stock_id and not is_service:
         try:
             sq = StockQuantity.objects.get(tenant=tenant, stock_id=stock_id, item=item)
             available_qty = float(sq.available_quantity)
@@ -793,6 +865,8 @@ def item_info_api(request):
             'track_batch': item.track_batch,
             'track_serial': item.track_serial,
             'track_expiry': item.track_expiry,
+            'item_type': item.item_type,
+            'is_service': is_service,
             'available_qty': available_qty,
             'variants': variants,
         }
@@ -858,18 +932,31 @@ def stock_items_api(request):
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(sku__icontains=search) | Q(barcode__icontains=search))
 
-    qs = qs[:50]
+    # Important for MySQL compatibility:
+    # avoid using a sliced queryset directly inside __in (LIMIT in subquery).
+    item_ids = list(qs.values_list('id', flat=True)[:50])
+    if not item_ids:
+        return JsonResponse({'success': True, 'items': []})
+
+    items = list(
+        Item.objects
+        .filter(id__in=item_ids)
+        .select_related('category', 'unit')
+    )
+    items_map = {it.id: it for it in items}
+    ordered_items = [items_map[iid] for iid in item_ids if iid in items_map]
 
     sq_map = {
         sq.item_id: sq.available_quantity
         for sq in StockQuantity.objects.filter(
             tenant=tenant, stock_id=stock_id,
-            item__in=qs
+            item_id__in=item_ids
         )
     }
 
     data = []
-    for item in qs:
+    for item in ordered_items:
+        is_service = item.item_type == 'service'
         data.append({
             'id': item.id,
             'name': item.name,
@@ -877,7 +964,9 @@ def stock_items_api(request):
             'selling_price': str(item.selling_price),
             'cost_price': str(item.cost_price),
             'tax_rate': str(item.tax_rate),
-            'available_qty': float(sq_map.get(item.id, 0)),
+            'item_type': item.item_type,
+            'is_service': is_service,
+            'available_qty': None if is_service else float(sq_map.get(item.id, 0)),
             'has_variants': item.has_variants,
         })
 

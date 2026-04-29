@@ -2,7 +2,8 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/sales_invoice_list.css' %}?v=1.1">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -65,7 +66,7 @@
     </div>
 
     <!-- KPI Cards -->
-    <div class="cx-kpi-row" style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem;">
+    <div class="cx-kpi-row">
         <div class="cx-kpi-card">
             <div class="cx-kpi-label">إجمالي المبيعات المؤكدة</div>
             <div class="cx-kpi-value text-success">{{ stats.grand_total_sum|floatformat:2 }}</div>
@@ -88,7 +89,7 @@
             <i class="fas fa-search cx-toolbar-search-icon"></i>
             <input type="text" id="saleSearchInput" class="cx-search-input" placeholder="رقم الفاتورة، اسم العميل...">
         </div>
-        <div class="cx-toolbar-end" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+        <div class="cx-toolbar-end sales-toolbar-end">
 
             <select id="filterStatus" class="cx-select-sm">
                 <option value="">كل الحالات</option>
@@ -123,13 +124,9 @@
                     <th>رقم الفاتورة</th>
                     <th>التاريخ</th>
                     <th>العميل</th>
-                    <th>المخزن</th>
-                    <th>الدفع</th>
                     <th>الإجمالي</th>
-                    <th>المدفوع</th>
-                    <th>المتبقي</th>
                     <th>الحالة</th>
-                    <th></th>
+                    <th>الإجراءات</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -137,6 +134,113 @@
     </div>
 </div>
 
+</div>
+
+<!-- ══════════════════════════ INVOICE VIEW MODAL ══════════════════════════ -->
+<div class="modal fade" id="viewInvoiceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog sales-view-dialog">
+        <div class="modal-content cx-view-modal sales-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar sales-view-avatar" id="viewInvoiceAvatar">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewInvoiceNumber">—</h5>
+                        <p class="cx-view-subtitle" id="viewInvoiceStatus">—</p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="cx-view-body">
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-circle-info"></i>
+                        بيانات الفاتورة
+                    </div>
+                    <div class="cx-info-grid sales-invoice-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">التاريخ</span>
+                                <span class="cx-info-card-value" id="viewInvoiceDate">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">العميل</span>
+                                <span class="cx-info-card-value" id="viewInvoiceCustomer">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المخزن</span>
+                                <span class="cx-info-card-value" id="viewInvoiceStock">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">طريقة الدفع</span>
+                                <span class="cx-info-card-value" id="viewInvoicePayment">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الإجمالي</span>
+                                <span class="cx-info-card-value" id="viewInvoiceTotal">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المدفوع</span>
+                                <span class="cx-info-card-value" id="viewInvoicePaid">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المتبقي</span>
+                                <span class="cx-info-card-value" id="viewInvoiceRemaining">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <a href="#" class="cx-btn-primary" id="viewInvoiceOpenPageBtn">
+                    <i class="fas fa-arrow-up-right-from-square me-1"></i>
+                    فتح صفحة الفاتورة
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-modal-backdrop sales-field-hidden" id="invoiceActionModalBackdrop">
+    <div class="cx-modal sales-modal-sm">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title" id="invoiceActionModalTitle">تأكيد الإجراء</h3>
+            <button type="button" class="cx-modal-close" onclick="closeInvoiceActionModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <p class="text-muted mb-3" id="invoiceActionModalMessage">هل تريد المتابعة؟</p>
+            <div id="invoiceActionReasonWrap" class="sales-field-hidden">
+                <label class="cx-label">السبب (اختياري)</label>
+                <textarea id="invoiceActionReason" class="cx-input" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-secondary" onclick="closeInvoiceActionModal()">إلغاء</button>
+            <button type="button" class="cx-btn-danger" id="invoiceActionSubmitBtn" onclick="submitInvoiceAction()">
+                <i class="fas fa-check me-1"></i>تأكيد
+            </button>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -146,6 +250,8 @@ const SALES_API_URL = "{% url 'sales:invoice_api' %}";
 const INVOICE_BASE_URL = "/sales/";
 
 let salesTable;
+const invoiceRows = new Map();
+let pendingInvoiceAction = null;
 
 document.addEventListener('DOMContentLoaded', function () {
     initTable();
@@ -153,9 +259,27 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function initTable() {
+    const paymentMethodMap = {
+        cash: 'نقداً',
+        bank: 'بنكي',
+        credit: 'آجل',
+        mixed: 'مختلط'
+    };
+
+    const statusBadgeMap = {
+        draft: 'muted',
+        confirmed: 'success',
+        cancelled: 'danger',
+        returned: 'warning',
+        partially_returned: 'warning'
+    };
+
     salesTable = $('#invoicesTable').DataTable({
         processing: true,
         serverSide: true,
+        searching: true,
+        ordering: true,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
         ajax: {
             url: SALES_API_URL,
             data: function (d) {
@@ -165,45 +289,79 @@ function initTable() {
             }
         },
         columns: [
-            { data: 'invoice_number' },
-            { data: 'invoice_date' },
-            { data: 'customer' },
-            { data: 'stock' },
-            { data: 'payment_method' },
-            { data: 'grand_total', className: 'text-end' },
-            { data: 'paid_amount', className: 'text-end' },
-            { data: 'remaining', className: 'text-end' },
+            {
+                data: 'invoice_number',
+                render: function (data) {
+                    return `<strong>${data || '—'}</strong>`;
+                }
+            },
+            {
+                data: 'invoice_date',
+                render: function (data) {
+                    return data || '—';
+                }
+            },
+            { data: 'customer', defaultContent: '—' },
+            { data: 'grand_total', className: 'text-end sales-money-col' },
             {
                 data: 'status',
                 render: function (data, type, row) {
-                    return `<span class="cx-badge cx-badge--${row.status_color}">${row.status_label}</span>`;
+                    const badge = statusBadgeMap[data] || row.status_color || 'muted';
+                    return `<span class="cx-badge cx-badge--${badge}">${row.status_label || '—'}</span>`;
                 }
             },
             {
                 data: null,
                 orderable: false,
+                searchable: false,
+                className: 'text-center',
                 render: function (data, type, row) {
+                    invoiceRows.set(String(row.id), row);
                     return `
                     <div class="cx-actions">
-                        <a href="${INVOICE_BASE_URL}${row.id}/" class="cx-btn-icon" title="عرض">
+                        <button type="button" class="cx-btn-icon js-view-invoice" data-id="${row.id}" title="عرض">
                             <i class="fas fa-eye"></i>
-                        </a>
+                        </button>
                         ${row.status === 'draft' ? `
                         <a href="${INVOICE_BASE_URL}${row.id}/edit/" class="cx-btn-icon" title="تعديل">
                             <i class="fas fa-pencil"></i>
                         </a>
-                        <button class="cx-btn-icon cx-btn-icon--success" onclick="confirmInvoice(${row.id})" title="تأكيد">
-                            <i class="fas fa-check"></i>
-                        </button>` : ''}
+                        ` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
+                        ${row.status === 'draft' ? `
+                        <button class="cx-btn-icon cx-btn-icon--danger" onclick="deleteDraftInvoice(${row.id})" title="حذف المسودة">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        ` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
                         ${row.status === 'confirmed' ? `
                         <button class="cx-btn-icon cx-btn-icon--danger" onclick="cancelInvoice(${row.id})" title="إلغاء">
                             <i class="fas fa-ban"></i>
-                        </button>` : ''}
+                        </button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
                     </div>`;
                 }
             }
         ],
-        language: { url: '/static/js/datatables-ar.json' },
+        language: {
+            processing: 'جاري المعالجة...',
+            search: 'بحث:',
+            lengthMenu: 'عرض _MENU_ سجل',
+            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_ سجل',
+            infoEmpty: 'عرض 0 إلى 0 من أصل 0 سجل',
+            infoFiltered: '(تمت التصفية من _MAX_ سجل)',
+            infoPostFix: '',
+            loadingRecords: 'جاري التحميل...',
+            zeroRecords: 'لا توجد فواتير مطابقة',
+            emptyTable: 'لا توجد بيانات متاحة في الجدول',
+            paginate: {
+                first: 'الأول',
+                previous: 'السابق',
+                next: 'التالي',
+                last: 'الأخير'
+            },
+            aria: {
+                sortAscending: ': تفعيل للترتيب التصاعدي',
+                sortDescending: ': تفعيل للترتيب التنازلي'
+            }
+        },
         order: [[1, 'desc']],
         pageLength: 25,
     });
@@ -216,44 +374,136 @@ function initFilters() {
     document.getElementById('saleSearchInput').addEventListener('input', function () {
         salesTable.search(this.value).draw();
     });
+
+    document.getElementById('invoicesTable').addEventListener('click', function (event) {
+        const btn = event.target.closest('.js-view-invoice');
+        if (!btn) return;
+        const row = invoiceRows.get(String(btn.dataset.id));
+        if (!row) return;
+        openInvoiceModal(row);
+    });
+}
+
+function openInvoiceModal(row) {
+    const paymentMethodMap = {
+        cash: 'نقداً',
+        bank: 'بنكي',
+        credit: 'آجل',
+        mixed: 'مختلط'
+    };
+
+    const num = (v) => {
+        return EnjazIMS.formatMoney(v);
+    };
+
+    const date = (v) => {
+        return v || '—';
+    };
+
+    document.getElementById('viewInvoiceNumber').textContent = row.invoice_number || '—';
+    document.getElementById('viewInvoiceStatus').textContent = row.status_label || '—';
+    document.getElementById('viewInvoiceDate').textContent = date(row.invoice_date);
+    document.getElementById('viewInvoiceCustomer').textContent = row.customer || '—';
+    document.getElementById('viewInvoiceStock').textContent = row.stock || '—';
+    document.getElementById('viewInvoicePayment').textContent = paymentMethodMap[row.payment_method] || row.payment_method || '—';
+    document.getElementById('viewInvoiceTotal').textContent = num(row.grand_total);
+    document.getElementById('viewInvoicePaid').textContent = num(row.paid_amount);
+    document.getElementById('viewInvoiceRemaining').textContent = num(row.remaining);
+    document.getElementById('viewInvoiceOpenPageBtn').href = `${INVOICE_BASE_URL}${row.id}/`;
+
+    const el = document.getElementById('viewInvoiceModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(el);
+    modal.show();
 }
 
 function confirmInvoice(id) {
-    if (!confirm('هل تريد تأكيد هذه الفاتورة؟')) return;
-    fetch(`/sales/${id}/confirm/`, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': getCookie('csrftoken') }
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message, 'success');
-            salesTable.ajax.reload(null, false);
-        } else {
-            showToast(data.message, 'danger');
-        }
+    openInvoiceActionModal({
+        title: 'تأكيد الفاتورة',
+        message: 'سيتم اعتماد الفاتورة وتطبيق تأثيرها على المخزون والحسابات. هل تريد المتابعة؟',
+        confirmLabel: 'تأكيد الفاتورة',
+        confirmClass: 'cx-btn-add',
+        useReason: false,
+        run: () => fetch(`/sales/${id}/confirm/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
     });
 }
 
 function cancelInvoice(id) {
-    const reason = prompt('سبب الإلغاء (اختياري):') ?? '';
-    if (reason === null) return;
-    fetch(`/sales/${id}/cancel/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ reason })
-    })
+    openInvoiceActionModal({
+        title: 'إلغاء الفاتورة',
+        message: 'سيتم إلغاء الفاتورة وعكس تأثيراتها. يمكنك إدخال سبب الإلغاء إذا أردت.',
+        confirmLabel: 'تأكيد الإلغاء',
+        confirmClass: 'cx-btn-danger',
+        useReason: true,
+        run: (reason) => fetch(`/sales/${id}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ reason })
+        })
+    });
+}
+
+function deleteDraftInvoice(id) {
+    openInvoiceActionModal({
+        title: 'حذف مسودة الفاتورة',
+        message: 'سيتم حذف مسودة الفاتورة نهائياً. لا يمكن التراجع عن هذا الإجراء.',
+        confirmLabel: 'حذف المسودة',
+        confirmClass: 'cx-btn-danger',
+        useReason: false,
+        run: () => fetch(`/sales/${id}/delete-draft/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+    });
+}
+
+function openInvoiceActionModal(config) {
+    pendingInvoiceAction = config;
+    document.getElementById('invoiceActionModalTitle').textContent = config.title;
+    document.getElementById('invoiceActionModalMessage').textContent = config.message;
+    const reasonWrap = document.getElementById('invoiceActionReasonWrap');
+    const reasonInput = document.getElementById('invoiceActionReason');
+    const submitBtn = document.getElementById('invoiceActionSubmitBtn');
+    reasonInput.value = '';
+    reasonWrap.classList.toggle('sales-field-hidden', !config.useReason);
+    submitBtn.className = config.confirmClass;
+    submitBtn.innerHTML = `<i class="fas fa-check me-1"></i>${config.confirmLabel}`;
+    document.getElementById('invoiceActionModalBackdrop').classList.remove('sales-field-hidden');
+}
+
+function closeInvoiceActionModal() {
+    pendingInvoiceAction = null;
+    document.getElementById('invoiceActionModalBackdrop').classList.add('sales-field-hidden');
+}
+
+function submitInvoiceAction() {
+    if (!pendingInvoiceAction) return;
+    const submitBtn = document.getElementById('invoiceActionSubmitBtn');
+    const reason = document.getElementById('invoiceActionReason').value;
+    const originalHtml = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري التنفيذ...';
+
+    Promise.resolve(pendingInvoiceAction.run(reason))
     .then(r => r.json())
     .then(data => {
         if (data.success) {
+            closeInvoiceActionModal();
             showToast(data.message, 'success');
             salesTable.ajax.reload(null, false);
         } else {
             showToast(data.message, 'danger');
         }
+    })
+    .catch(() => showToast('حدث خطأ في الاتصال', 'danger'))
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalHtml;
     });
 }
 
@@ -263,15 +513,12 @@ function getCookie(name) {
 }
 
 function showToast(message, type = 'success') {
-    const container = document.getElementById('toastContainer')
-        || (() => { const d = document.createElement('div'); d.id = 'toastContainer';
-            d.style.cssText = 'position:fixed;bottom:1rem;left:1rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;';
-            document.body.appendChild(d); return d; })();
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type} shadow mb-0`;
-    toast.textContent = message;
-    container.appendChild(toast);
-    setTimeout(() => toast.remove(), 4000);
+    const mapped = type === 'danger' ? 'error' : type;
+    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
+        EnjazIMS.toast(message, mapped);
+        return;
+    }
+    console.warn(message);
 }
 </script>
 {% endblock %}

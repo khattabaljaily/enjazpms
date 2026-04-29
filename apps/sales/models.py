@@ -232,7 +232,7 @@ class SaleInvoice(TenantMixin):
 
     def sync_paid_amount(self):
         """يُحدِّث paid_amount من مجموع SalePayments المرتبطة."""
-        total = self.payments.aggregate(s=Sum('amount'))['s'] or Decimal('0')
+        total = self.payments.filter(is_reversed=False).aggregate(s=Sum('amount'))['s'] or Decimal('0')
         self.paid_amount = total
 
 

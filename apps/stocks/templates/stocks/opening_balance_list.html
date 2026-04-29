@@ -1,0 +1,297 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.2">
+<link rel="stylesheet" href="{% static 'css/stocks_opening.css' %}?v=1.2">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-boxes-stacked"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">الكميات الافتتاحية للمخازن</h1>
+                <p class="cx-hero-desc">إدخال وتعديل أرصدة المنتجات لكل مخزن عبر شاشة واحدة</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'stocks:list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>العودة للمخازن</span>
+                </a>
+                <button type="button" class="cx-btn-add" id="btnSaveOpening">
+                    <i class="fas fa-save"></i>
+                    <span>حفظ التعديلات</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-list-check"></i>
+            <strong id="openingChangedCount">0</strong>
+            <span>بنود معدلة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--info">
+            <i class="fas fa-warehouse"></i>
+            <span>اختر المخزن ثم عدل الكميات مباشرة</span>
+        </span>
+    </div>
+</div>
+
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="openingSearchInput" class="cx-search-input" placeholder="ابحث باسم المنتج أو SKU أو الباركود...">
+        </div>
+        <div class="cx-toolbar-end">
+            <label class="opening-stock-label">
+                <i class="fas fa-warehouse"></i>
+                <span>المخزن:</span>
+            </label>
+            <select id="openingStockSelect" class="cx-select-sm">
+                {% for s in stocks %}
+                <option value="{{ s.id }}" {% if default_stock and default_stock.id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="opening-help">
+        <i class="fas fa-circle-info"></i>
+        <span>عدّل حقل <strong>الكمية الافتتاحية الجديدة</strong> ثم اضغط <strong>حفظ التعديلات</strong> (الزر العلوي أو السفلي).</span>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="openingTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>المنتج</th>
+                    <th>SKU</th>
+                    <th>الباركود</th>
+                    <th>الكمية الحالية</th>
+                    <th>الكمية المتاحة</th>
+                    <th>الكمية الافتتاحية الجديدة</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="opening-savebar" id="openingSavebar">
+    <div class="opening-savebar__text">
+        <i class="fas fa-floppy-disk"></i>
+        <span>بنود غير محفوظة: <strong id="openingChangedCountBottom">0</strong></span>
+    </div>
+    <button type="button" class="cx-btn-add" id="btnSaveOpeningBottom">
+        <i class="fas fa-save"></i>
+        <span>حفظ التعديلات</span>
+    </button>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const TABLE_API = "{% url 'stocks:opening_table_api' %}";
+    const SAVE_API = "{% url 'stocks:opening_save_api' %}";
+    const changedMap = new Map();
+
+    const stockSelect = document.getElementById('openingStockSelect');
+    const saveBtns = [
+        document.getElementById('btnSaveOpening'),
+        document.getElementById('btnSaveOpeningBottom')
+    ].filter(Boolean);
+
+    const dt = $('#openingTable').DataTable({
+        processing: true,
+        serverSide: true,
+        pageLength: 25,
+        dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        language: {
+            emptyTable: 'لا توجد منتجات',
+            info: 'عرض _START_ إلى _END_ من _TOTAL_',
+            infoEmpty: 'لا توجد بيانات',
+            zeroRecords: 'لا توجد نتائج مطابقة',
+            paginate: { next: 'التالي', previous: 'السابق' },
+            processing: 'جاري التحميل...'
+        },
+        ajax: {
+            url: TABLE_API,
+            data: function (d) {
+                d.stock_id = stockSelect.value;
+            }
+        },
+        columns: [
+            { data: 'item_name' },
+            { data: 'sku', render: v => `<code class="cxr-code">${v || '—'}</code>` },
+            { data: 'barcode', render: v => `<code class="cxr-code">${v || '—'}</code>` },
+            { data: 'current_qty', className: 'text-end', render: v => EnjazIMS.formatMoney(v) },
+            { data: 'available_qty', className: 'text-end', render: v => EnjazIMS.formatMoney(v) },
+            {
+                data: null,
+                orderable: false,
+                searchable: false,
+                render: function (_, __, row) {
+                    const changed = changedMap.get(String(row.item_id));
+                    const value = changed ? EnjazIMS.parseNumber(changed.quantity).toFixed(2) : EnjazIMS.parseNumber(row.current_qty).toFixed(2);
+                    return `<div class="opening-input-wrap">
+                        <input type="number" class="cx-input cx-input--sm opening-qty-input" data-item-id="${row.item_id}" data-original="${EnjazIMS.parseNumber(row.current_qty).toFixed(2)}" value="${value}" min="0" step="0.01">
+                        <span class="opening-input-unit">وحدة</span>
+                    </div>`;
+                }
+            }
+        ]
+    });
+
+    function refreshChangedCount() {
+        const count = String(changedMap.size);
+        document.getElementById('openingChangedCount').textContent = count;
+        const bottom = document.getElementById('openingChangedCountBottom');
+        if (bottom) bottom.textContent = count;
+
+        const bar = document.getElementById('openingSavebar');
+        if (bar) bar.classList.toggle('opening-savebar--active', changedMap.size > 0);
+    }
+
+    function showToast(message, type = 'success') {
+        // Try centralized EnjazIMS.toast first
+        if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
+            EnjazIMS.toast(message, type);
+            return;
+        }
+        // Fallback: inject a self-contained floating alert
+        const colorMap = {
+            success: { bg: '#dcfce7', color: '#166534', border: '#86efac', icon: 'fa-check-circle' },
+            error:   { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5', icon: 'fa-exclamation-circle' },
+            warning: { bg: '#fef3c7', color: '#92400e', border: '#fcd34d', icon: 'fa-exclamation-triangle' },
+            info:    { bg: '#dbeafe', color: '#1e3a8a', border: '#93c5fd', icon: 'fa-info-circle' },
+        };
+        const c = colorMap[type] || colorMap.info;
+        const div = document.createElement('div');
+        div.style.cssText = `
+            position:fixed; top:80px; left:50%; transform:translateX(-50%);
+            z-index:99999; min-width:300px; max-width:520px;
+            background:${c.bg}; color:${c.color}; border:1px solid ${c.border};
+            border-radius:12px; padding:0.85rem 1.1rem;
+            font-family:'Cairo',sans-serif; font-size:0.9rem; font-weight:600;
+            box-shadow:0 6px 24px rgba(0,0,0,0.14); display:flex; align-items:center; gap:0.6rem;
+        `;
+        div.innerHTML = `<i class="fas ${c.icon}"></i><span>${message}</span>`;
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 4500);
+    }
+
+    $('#openingSearchInput').on('input', function () {
+        dt.search($(this).val()).draw();
+    });
+
+    stockSelect.addEventListener('change', function () {
+        changedMap.clear();
+        refreshChangedCount();
+        dt.ajax.reload();
+    });
+
+    $('#openingTable').on('input', '.opening-qty-input', function () {
+        const itemId = String(this.dataset.itemId);
+        const originalNum = Number(this.dataset.original || 0);
+        const rawVal = this.value;
+        const nextNum = Number(rawVal === '' ? 0 : rawVal);
+
+        if (!Number.isFinite(nextNum)) {
+            return;
+        }
+
+        if (nextNum < 0) {
+            this.value = this.dataset.original;
+            showToast('لا يمكن إدخال كمية سالبة', 'error');
+            return;
+        }
+
+        const normalized = nextNum.toFixed(2);
+        const normalizedOriginal = originalNum.toFixed(2);
+
+        if (normalized === normalizedOriginal) {
+            changedMap.delete(itemId);
+            this.classList.remove('opening-qty-input--changed');
+        } else {
+            changedMap.set(itemId, { item_id: Number(itemId), quantity: normalized });
+            this.classList.add('opening-qty-input--changed');
+        }
+        refreshChangedCount();
+    });
+
+    function setSavingState(isSaving) {
+        saveBtns.forEach((btn) => {
+            if (!btn) return;
+            if (isSaving) {
+                btn.dataset.originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>جاري الحفظ...</span>';
+            } else {
+                btn.disabled = false;
+                if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
+            }
+        });
+    }
+
+    function saveChanges() {
+        if (!stockSelect.value) {
+            showToast('يرجى اختيار المخزن أولاً', 'warning');
+            return;
+        }
+        if (!changedMap.size) {
+            showToast('لا توجد تعديلات للحفظ', 'info');
+            return;
+        }
+
+        setSavingState(true);
+
+        fetch(SAVE_API, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2] || ''
+            },
+            body: JSON.stringify({
+                stock_id: stockSelect.value,
+                rows: Array.from(changedMap.values())
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                showToast(data.message || 'تعذر الحفظ', 'error');
+                return;
+            }
+            changedMap.clear();
+            refreshChangedCount();
+            dt.ajax.reload(null, false);
+            showToast(data.message || 'تم حفظ التعديلات', 'success');
+        })
+        .catch(() => showToast('حدث خطأ في الاتصال', 'error'))
+        .finally(() => {
+            setSavingState(false);
+        });
+    }
+
+    saveBtns.forEach(btn => btn.addEventListener('click', saveChanges));
+})();
+</script>
+{% endblock %}

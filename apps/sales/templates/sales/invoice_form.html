@@ -2,7 +2,8 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.0">
+<link rel="stylesheet" href="{% static 'css/sales_invoice_form.css' %}?v=1.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -35,6 +36,26 @@
             </div>
         </div>
     </div>
+
+    <div class="cx-stats-inline sales-form-stats">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-layer-group"></i>
+            <strong id="invoiceLineCount">0</strong>
+            <span>بند</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--info" id="paymentMethodBadge">
+            <i class="fas fa-money-check-dollar"></i>
+            <strong>نقداً</strong>
+            <span>طريقة الدفع</span>
+        </span>
+        {% if invoice %}
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-hashtag"></i>
+            <strong>{{ invoice.invoice_number }}</strong>
+            <span>{{ invoice.get_status_display }}</span>
+        </span>
+        {% endif %}
+    </div>
 </div>
 
 <!-- ══════════════════════ FORM BODY ══════════════════════ -->
@@ -47,11 +68,12 @@
     <div class="col-lg-8">
 
         <!-- بطاقة رأس الفاتورة -->
-        <div class="cx-panel mb-3">
+        <div class="cx-panel mb-3 p-4">
             <div class="cx-panel-header">
                 <h3 class="cx-panel-title"><i class="fas fa-info-circle me-2"></i>بيانات الفاتورة</h3>
             </div>
             <div class="cx-panel-body">
+                <p class="sales-panel-note">حدد بيانات العميل والدفع قبل إضافة البنود لتجنب أخطاء التسعير.</p>
                 <div class="row g-3">
                     <!-- العميل -->
                     <div class="col-md-6">
@@ -100,14 +122,14 @@
                     </div>
 
                     <!-- تاريخ الاستحقاق (للآجل) -->
-                    <div class="col-md-4" id="dueDateWrap" style="display:none">
+                    <div class="col-md-4 sales-field-hidden" id="dueDateWrap">
                         <label class="cx-label">تاريخ الاستحقاق</label>
                         <input type="date" id="dueDate" name="due_date" class="cx-input"
                                value="{{ invoice.due_date|date:'Y-m-d'|default:'' }}">
                     </div>
 
                     <!-- المبالغ المختلطة -->
-                    <div id="mixedPaymentWrap" style="display:none" class="col-12">
+                    <div id="mixedPaymentWrap" class="col-12 sales-field-hidden">
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="cx-label">المبلغ نقداً</label>
@@ -121,13 +143,13 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="cx-label">الآجل (محسوب)</label>
-                                <input type="text" id="creditAmount" class="cx-input" readonly style="background:#f0f4ff">
+                                <input type="text" id="creditAmount" class="cx-input sales-readonly-input" readonly>
                             </div>
                         </div>
                     </div>
 
                     <!-- مرجع التحويل البنكي -->
-                    <div class="col-md-6" id="bankRefWrap" style="display:none">
+                    <div class="col-md-6 sales-field-hidden" id="bankRefWrap">
                         <label class="cx-label">مرجع التحويل البنكي</label>
                         <input type="text" id="bankReference" name="bank_reference" class="cx-input"
                                value="{{ invoice.bank_reference|default:'' }}">
@@ -143,7 +165,7 @@
         </div>
 
         <!-- بطاقة البنود -->
-        <div class="cx-panel mb-3">
+        <div class="cx-panel mb-3 p-4">
             <div class="cx-panel-header">
                 <h3 class="cx-panel-title"><i class="fas fa-list me-2"></i>بنود الفاتورة</h3>
                 <button type="button" class="cx-btn-secondary" onclick="openItemSearch()">
@@ -151,17 +173,17 @@
                 </button>
             </div>
             <div class="cx-panel-body p-0">
-                <div class="table-responsive" style="min-height:200px">
-                    <table class="cx-table" id="linesTable">
+                <div class="table-responsive sales-lines-table-wrap">
+                    <table class="cx-table sales-lines-table" id="linesTable">
                         <thead>
                             <tr>
-                                <th style="min-width:180px">المنتج</th>
-                                <th style="width:80px">الكمية</th>
-                                <th style="width:110px">سعر الوحدة</th>
-                                <th style="width:80px">خصم %</th>
-                                <th style="width:80px">ضريبة %</th>
-                                <th style="width:110px">الإجمالي</th>
-                                <th style="width:40px"></th>
+                                <th class="sales-th-product">المنتج</th>
+                                <th class="sales-th-qty">الكمية</th>
+                                <th class="sales-th-price">سعر الوحدة</th>
+                                <th class="sales-th-discount">خصم %</th>
+                                <th class="sales-th-tax">ضريبة %</th>
+                                <th class="sales-th-total">الإجمالي</th>
+                                <th class="sales-th-actions"></th>
                             </tr>
                         </thead>
                         <tbody id="linesBody">
@@ -169,8 +191,8 @@
                         </tbody>
                     </table>
                 </div>
-                <div id="emptyLinesMsg" class="text-center text-muted py-4">
-                    <i class="fas fa-box-open fa-2x mb-2"></i>
+                <div id="emptyLinesMsg" class="sales-empty-lines">
+                    <i class="fas fa-box-open"></i>
                     <p>لم تتم إضافة منتجات بعد. اضغط «إضافة منتج».</p>
                 </div>
             </div>
@@ -181,7 +203,7 @@
     <div class="col-lg-4">
 
         <!-- بطاقة الإجماليات -->
-        <div class="cx-panel mb-3 sticky-top" style="top:80px">
+        <div class="cx-panel mb-3 sticky-top sales-sticky-panel sales-summary-panel p-4">
             <div class="cx-panel-header">
                 <h3 class="cx-panel-title"><i class="fas fa-calculator me-2"></i>الإجماليات</h3>
             </div>
@@ -221,7 +243,7 @@
                         <span>الإجمالي النهائي</span>
                         <strong id="displayGrandTotal">0.00</strong>
                     </div>
-                    <div class="cx-totals-row text-muted" id="creditRow" style="display:none">
+                    <div class="cx-totals-row text-muted sales-field-hidden" id="creditRow">
                         <span>الجزء الآجل</span>
                         <span id="displayCredit">0.00</span>
                     </div>
@@ -242,7 +264,7 @@
         </div>
 
         <!-- معلومات العميل (تظهر عند الاختيار) -->
-        <div class="cx-panel" id="customerInfoCard" style="display:none">
+        <div class="cx-panel sales-field-hidden p-4" id="customerInfoCard">
             <div class="cx-panel-header">
                 <h3 class="cx-panel-title"><i class="fas fa-user me-2"></i>معلومات العميل</h3>
             </div>
@@ -269,8 +291,8 @@
 </form>
 
 <!-- ══════════════════════ ITEM SEARCH MODAL ══════════════════════ -->
-<div class="cx-modal-backdrop" id="itemSearchBackdrop" style="display:none">
-    <div class="cx-modal" style="max-width:600px">
+<div class="cx-modal-backdrop sales-field-hidden" id="itemSearchBackdrop">
+    <div class="cx-modal sales-modal-md">
         <div class="cx-modal-header">
             <h3 class="cx-modal-title">بحث وإضافة منتج</h3>
             <button type="button" class="cx-modal-close" onclick="closeItemSearch()">
@@ -278,12 +300,12 @@
             </button>
         </div>
         <div class="cx-modal-body">
-            <div style="position:relative;margin-bottom:1rem">
-                <i class="fas fa-search" style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);color:#888"></i>
-                <input type="text" id="itemSearchQuery" class="cx-input" style="padding-right:2.5rem"
+            <div class="sales-search-wrap">
+                <i class="fas fa-search sales-search-icon"></i>
+                <input type="text" id="itemSearchQuery" class="cx-input"
                        placeholder="اسم المنتج، SKU، باركود..." oninput="searchItems()">
             </div>
-            <div id="itemSearchResults" style="max-height:350px;overflow-y:auto">
+            <div id="itemSearchResults" class="sales-search-results">
                 <div class="text-muted text-center py-3">ابدأ الكتابة للبحث...</div>
             </div>
         </div>
@@ -303,7 +325,7 @@ const FORM_ACTION = "{{ action }}";
 const INVOICE_ID = "{{ invoice.id|default:'' }}";
 
 {% if existing_lines %}
-const EXISTING_LINES = {{ existing_lines }};
+const EXISTING_LINES = {{ existing_lines|safe }};
 {% else %}
 const EXISTING_LINES = [];
 {% endif %}
@@ -311,7 +333,7 @@ const EXISTING_LINES = [];
 // ────────────────────────────────────────────────────────────────
 // State
 // ────────────────────────────────────────────────────────────────
-let lineCounter = 0;  // للمعرفات الفريدة
+let lineCounter = 0;
 
 // ────────────────────────────────────────────────────────────────
 // Init
@@ -319,13 +341,10 @@ let lineCounter = 0;  // للمعرفات الفريدة
 document.addEventListener('DOMContentLoaded', function () {
     handlePaymentMethodChange();
 
-    // تحميل البنود الموجودة (تعديل)
     EXISTING_LINES.forEach(line => addLineToTable(line));
 
-    // عند تغيير العميل
     document.getElementById('customerId').addEventListener('change', fetchCustomerInfo);
 
-    // جلب بيانات العميل إذا محدد مسبقاً
     if (document.getElementById('customerId').value) {
         fetchCustomerInfo();
     }
@@ -338,10 +357,11 @@ document.addEventListener('DOMContentLoaded', function () {
 // ────────────────────────────────────────────────────────────────
 function handlePaymentMethodChange() {
     const pm = document.getElementById('paymentMethod').value;
-    document.getElementById('dueDateWrap').style.display = (pm === 'credit' || pm === 'mixed') ? '' : 'none';
-    document.getElementById('mixedPaymentWrap').style.display = pm === 'mixed' ? '' : 'none';
-    document.getElementById('bankRefWrap').style.display = (pm === 'bank' || pm === 'mixed') ? '' : 'none';
-    document.getElementById('creditRow').style.display = (pm === 'mixed') ? '' : 'none';
+    toggleHidden('dueDateWrap', !(pm === 'credit' || pm === 'mixed'));
+    toggleHidden('mixedPaymentWrap', pm !== 'mixed');
+    toggleHidden('bankRefWrap', !(pm === 'bank' || pm === 'mixed'));
+    toggleHidden('creditRow', pm !== 'mixed');
+    updatePaymentMethodBadge(pm);
     recalcTotals();
 }
 
@@ -349,14 +369,14 @@ function handlePaymentMethodChange() {
 // Item Search Modal
 // ────────────────────────────────────────────────────────────────
 function openItemSearch() {
-    document.getElementById('itemSearchBackdrop').style.display = 'flex';
+    document.getElementById('itemSearchBackdrop').classList.remove('sales-field-hidden');
     document.getElementById('itemSearchQuery').focus();
     document.getElementById('itemSearchResults').innerHTML =
         '<div class="text-muted text-center py-3">ابدأ الكتابة للبحث...</div>';
 }
 
 function closeItemSearch() {
-    document.getElementById('itemSearchBackdrop').style.display = 'none';
+    document.getElementById('itemSearchBackdrop').classList.add('sales-field-hidden');
     document.getElementById('itemSearchQuery').value = '';
 }
 
@@ -386,23 +406,28 @@ function renderSearchResults(items) {
         container.innerHTML = '<div class="text-muted text-center py-3">لا توجد نتائج</div>';
         return;
     }
-    container.innerHTML = items.map(item => `
-        <div class="sale-item-result" onclick="selectItem(${item.id})" style="
-            display:flex;justify-content:space-between;align-items:center;
-            padding:.65rem 1rem;border-bottom:1px solid var(--cx-border);
-            cursor:pointer;transition:background .15s">
+    container.innerHTML = items.map(item => {
+        const isService = !!item.is_service;
+        const qtyClass = isService
+            ? 'sale-item-result__qty--ok'
+            : (item.available_qty > 0 ? 'sale-item-result__qty--ok' : 'sale-item-result__qty--empty');
+        const qtyLabel = isService ? 'خدمة (بدون مخزون)' : `متاح: ${item.available_qty}`;
+
+        return `
+        <div class="sale-item-result" onclick="selectItem(${item.id})">
             <div>
-                <div style="font-weight:600">${item.name}</div>
-                <div style="font-size:.8rem;color:#888">${item.sku}</div>
+                <div class="sale-item-result__name">${item.name}</div>
+                <div class="sale-item-result__sku">${item.sku}</div>
             </div>
-            <div style="text-align:left">
-                <div style="font-weight:600;color:var(--cx-primary)">${parseFloat(item.selling_price).toFixed(2)}</div>
-                <div style="font-size:.8rem;color:${item.available_qty > 0 ? '#28a745' : '#dc3545'}">
-                    متاح: ${item.available_qty}
+            <div class="sale-item-result__meta">
+                <div class="sale-item-result__price">${parseFloat(item.selling_price).toFixed(2)}</div>
+                <div class="sale-item-result__qty ${qtyClass}">
+                    ${qtyLabel}
                 </div>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function selectItem(itemId) {
@@ -425,6 +450,8 @@ function selectItem(itemId) {
             batch_number: '',
             serial_number: '',
             expiry_date: '',
+            item_type: item.item_type,
+            is_service: !!item.is_service,
             available_qty: item.available_qty,
         });
         closeItemSearch();
@@ -456,28 +483,28 @@ function addLineToTable(lineData) {
 
     row.innerHTML = `
         <td>
-            <div style="font-weight:600;font-size:.9rem">${lineData.item_name}</div>
-            <div style="font-size:.75rem;color:#888">${lineData.item_sku || ''}</div>
+            <div class="sales-line-item-name">${lineData.item_name}</div>
+            <div class="sales-line-item-sku">${lineData.item_sku || ''}</div>
         </td>
         <td>
             <input type="number" class="cx-input cx-input--sm line-qty" id="qty-${id}"
                    value="${qty}" min="0.0001" step="0.001"
-                   oninput="updateLine(${id})" style="width:70px">
+                   oninput="updateLine(${id})">
         </td>
         <td>
             <input type="number" class="cx-input cx-input--sm line-price" id="price-${id}"
                    value="${price}" min="0" step="0.01"
-                   oninput="updateLine(${id})" style="width:100px">
+                   oninput="updateLine(${id})">
         </td>
         <td>
             <input type="number" class="cx-input cx-input--sm line-disc" id="disc-${id}"
                    value="${disc}" min="0" max="100" step="0.01"
-                   oninput="updateLine(${id})" style="width:70px">
+                   oninput="updateLine(${id})">
         </td>
         <td>
             <input type="number" class="cx-input cx-input--sm line-tax" id="tax-${id}"
                    value="${tax}" min="0" step="0.01"
-                   oninput="updateLine(${id})" style="width:70px">
+                   oninput="updateLine(${id})">
         </td>
         <td class="text-end" id="total-${id}">
             <strong>${lineTotal.toFixed(2)}</strong>
@@ -489,6 +516,13 @@ function addLineToTable(lineData) {
         </td>
     `;
     tbody.appendChild(row);
+
+    row.querySelector('.line-qty').classList.add('sales-input-qty');
+    row.querySelector('.line-price').classList.add('sales-input-price');
+    row.querySelector('.line-disc').classList.add('sales-input-pct');
+    row.querySelector('.line-tax').classList.add('sales-input-pct');
+
+    updateLineCount();
     recalcTotals();
 }
 
@@ -516,6 +550,7 @@ function removeLine(id) {
     if (!tbody.children.length) {
         document.getElementById('emptyLinesMsg').style.display = '';
     }
+    updateLineCount();
     recalcTotals();
 }
 
@@ -552,7 +587,6 @@ function recalcTotals() {
     document.getElementById('displayTax').textContent = taxTotal.toFixed(2);
     document.getElementById('displayGrandTotal').textContent = grandTotal.toFixed(2);
 
-    // حساب الآجل في الدفع المختلط
     const pm = document.getElementById('paymentMethod').value;
     if (pm === 'mixed') {
         const cash = parseFloat(document.getElementById('cashAmount').value) || 0;
@@ -569,7 +603,7 @@ function recalcTotals() {
 function fetchCustomerInfo() {
     const id = document.getElementById('customerId').value;
     const card = document.getElementById('customerInfoCard');
-    if (!id) { card.style.display = 'none'; return; }
+    if (!id) { card.classList.add('sales-field-hidden'); return; }
 
     fetch(`${CUSTOMER_INFO_URL}?customer_id=${id}`)
     .then(r => r.json())
@@ -579,7 +613,7 @@ function fetchCustomerInfo() {
         document.getElementById('custBalance').textContent = parseFloat(c.current_balance).toFixed(2);
         document.getElementById('custCreditLimit').textContent = parseFloat(c.credit_limit).toFixed(2);
         document.getElementById('custPhone').textContent = c.phone || '—';
-        card.style.display = '';
+        card.classList.remove('sales-field-hidden');
     });
 }
 
@@ -608,8 +642,15 @@ function collectLines() {
 
 function submitForm(action) {
     const lines = collectLines();
-    if (!lines.length) { alert('أضف منتجاً واحداً على الأقل'); return; }
-    if (!document.getElementById('stockId').value) { alert('الرجاء اختيار المخزن'); return; }
+    if (!lines.length) { showAlert('أضف منتجاً واحداً على الأقل', 'warning'); return; }
+    if (!document.getElementById('stockId').value) { showAlert('الرجاء اختيار المخزن', 'warning'); return; }
+
+    const submitButtons = Array.from(document.querySelectorAll('button[onclick^="submitForm("]'));
+    const originalLabels = submitButtons.map(btn => btn.innerHTML);
+    submitButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري الحفظ...';
+    });
 
     const header = {
         customer_id: document.getElementById('customerId').value || null,
@@ -637,15 +678,37 @@ function submitForm(action) {
         },
         body: JSON.stringify({ header, lines, action }),
     })
-    .then(r => r.json())
-    .then(data => {
+    .then(async (r) => {
+        const contentType = r.headers.get('content-type') || '';
+        const data = contentType.includes('application/json') ? await r.json() : { success: false, message: 'استجابة غير متوقعة من الخادم' };
+        return { ok: r.ok, data };
+    })
+    .then(({ ok, data }) => {
+        if (!ok) {
+            showAlert(data.message || 'تعذر حفظ الفاتورة', 'danger');
+            submitButtons.forEach((btn, idx) => {
+                btn.disabled = false;
+                btn.innerHTML = originalLabels[idx];
+            });
+            return;
+        }
         if (data.success) {
             window.location.href = data.redirect;
         } else {
             showAlert(data.message);
+            submitButtons.forEach((btn, idx) => {
+                btn.disabled = false;
+                btn.innerHTML = originalLabels[idx];
+            });
         }
     })
-    .catch(err => showAlert('حدث خطأ في الاتصال'));
+    .catch(err => {
+        showAlert('حدث خطأ في الاتصال', 'danger');
+        submitButtons.forEach((btn, idx) => {
+            btn.disabled = false;
+            btn.innerHTML = originalLabels[idx];
+        });
+    });
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -656,12 +719,49 @@ function getCookie(name) {
     return v ? v[2] : null;
 }
 
-function showAlert(msg) {
-    // يمكن تحسينها لاحقاً بـ toast
-    alert(msg);
+function showAlert(msg, type = 'danger') {
+    const mapped = type === 'danger' ? 'error' : type;
+    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
+        EnjazIMS.toast(msg, mapped);
+        return;
+    }
+
+    // Fallback: render inside the same container used globally in customers pages.
+    const host = document.getElementById('global-alerts') || document.body;
+    const cls = mapped === 'error' ? 'danger' : mapped;
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${cls} alert-dismissible fade show`;
+    alert.setAttribute('role', 'alert');
+    alert.innerHTML = `${msg}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+    host.prepend(alert);
+    setTimeout(() => alert.remove(), 4000);
 }
 
-// Close modal on backdrop click
+function updateLineCount() {
+    const count = document.querySelectorAll('#linesBody tr').length;
+    const badge = document.getElementById('invoiceLineCount');
+    if (badge) badge.textContent = String(count);
+}
+
+function updatePaymentMethodBadge(method) {
+    const badge = document.getElementById('paymentMethodBadge');
+    if (!badge) return;
+    const strong = badge.querySelector('strong');
+    const labels = {
+        cash: 'نقداً',
+        bank: 'تحويل بنكي',
+        credit: 'آجل',
+        mixed: 'مختلط'
+    };
+    strong.textContent = labels[method] || 'نقداً';
+}
+
+function toggleHidden(elementId, shouldHide) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    element.classList.toggle('sales-field-hidden', shouldHide);
+}
+
 document.getElementById('itemSearchBackdrop').addEventListener('click', function (e) {
     if (e.target === this) closeItemSearch();
 });

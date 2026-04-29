@@ -12,7 +12,7 @@
     <span class="sidebar-section-label">الرئيسية</span>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link active" href="{% url 'core:dashboard' %}">
+            <a class="nav-link" href="{% url 'core:dashboard' %}">
                 <span class="nav-icon"><i class="fas fa-gauge"></i></span>
                 لوحة التحكم
             </a>
@@ -159,10 +159,9 @@
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
-                <li><a href="#" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>إضافة خزينة</a></li>
+                <li><a href="{% url 'treasury:list' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>إدارة الخزائن</a></li>
                 <li><a href="#" class="nav-sublink"><i class="fas fa-arrow-down me-2"></i>إيداع</a></li>
                 <li><a href="#" class="nav-sublink"><i class="fas fa-arrow-up me-2"></i>سحب</a></li>
-                <li><a href="#" class="nav-sublink"><i class="fas fa-file-lines me-2"></i>حركات الخزينة</a></li>
             </ul>
         </li>
     </ul>
@@ -229,11 +228,41 @@ document.querySelectorAll('.nav-link-toggle').forEach(function(link) {
         e.preventDefault();
         const parent = this.closest('.has-submenu');
         const isOpen = parent.classList.contains('open');
-        // close others
         document.querySelectorAll('.has-submenu.open').forEach(function(el) {
             el.classList.remove('open');
         });
         if (!isOpen) parent.classList.add('open');
     });
 });
+
+(function markActiveSidebarLink() {
+    const currentPath = (window.location.pathname || '').replace(/\/+$/, '') || '/';
+    let activeLink = null;
+
+    document.querySelectorAll('.sidebar a.nav-link, .sidebar a.nav-sublink').forEach(function(link) {
+        const href = link.getAttribute('href');
+        if (!href || href === '#' || href.startsWith('javascript:')) return;
+
+        const linkPath = href.replace(/\/+$/, '') || '/';
+        if (linkPath === currentPath) {
+            activeLink = link;
+        }
+    });
+
+    if (!activeLink) return;
+
+    document.querySelectorAll('.sidebar .nav-link.active, .sidebar .nav-link.submenu-active, .sidebar .nav-sublink.active').forEach(function(el) {
+        el.classList.remove('active');
+        el.classList.remove('submenu-active');
+    });
+
+    activeLink.classList.add('active');
+
+    const parentSubmenu = activeLink.closest('.has-submenu');
+    if (parentSubmenu) {
+        parentSubmenu.classList.add('open');
+        const parentToggle = parentSubmenu.querySelector('.nav-link-toggle');
+        if (parentToggle) parentToggle.classList.add('submenu-active');
+    }
+})();
 </script>

@@ -1,0 +1,130 @@
+/* =========================================================
+   SALES MODULE — فواتير المبيعات (قائمة الفواتير)
+   ========================================================= */
+
+/* KPI Cards Row */
+.cx-kpi-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.cx-kpi-card {
+  flex: 1;
+  min-width: 160px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 18px;
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.cx-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.cx-kpi-card--warning {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.cx-kpi-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.cx-kpi-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.sales-toolbar-end {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+#invoicesTable thead th {
+  white-space: nowrap;
+}
+
+#invoicesTable thead th:last-child,
+#invoicesTable tbody td:last-child {
+  width: 150px;
+  text-align: center;
+}
+
+#invoicesTable tbody tr:nth-child(even) {
+  background: rgba(99, 102, 241, 0.015);
+}
+
+#invoicesTable tbody td {
+  white-space: nowrap;
+}
+
+#invoicesTable tbody td:nth-child(3) {
+  min-width: 140px;
+}
+
+.sales-money-col {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sales-btn-placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.sales-view-dialog {
+  max-width: 760px;
+}
+
+.sales-view-avatar {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.14), rgba(59, 130, 246, 0.1));
+  color: var(--primary);
+}
+
+.sales-invoice-info-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sales-view-modal .cx-info-card-label {
+  font-size: 0.72rem;
+}
+
+.sales-view-modal .cx-info-card-value {
+  font-weight: 700;
+}
+
+/* Keep DataTables top controls hidden; we use custom toolbar */
+.cx-panel .dataTables_wrapper .dataTables_filter,
+.cx-panel .dataTables_wrapper .dataTables_length {
+  display: none !important;
+}
+
+@media (max-width: 767.98px) {
+  .sales-toolbar-end {
+    width: 100%;
+  }
+
+  .sales-toolbar-end .cx-select-sm {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 140px;
+  }
+
+  #invoicesTable tbody td {
+    white-space: normal;
+  }
+
+  .sales-invoice-info-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -17,8 +17,9 @@ Signal ٢: بعد إنشاء Item جديد
 import logging
 
 from django.db import transaction
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
+from django.core.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,8 @@ def create_quantities_for_new_stock(sender, instance, created, **kwargs):
             items = Item.objects.filter(
                 tenant=instance.tenant,
                 is_active=True
+            ).exclude(
+                item_type='service'
             ).only('id', 'tenant_id')
 
             if not items.exists():
@@ -92,6 +95,9 @@ def create_quantities_for_new_item(sender, instance, created, **kwargs):
     if not created:
         return  # تعديل منتج موجود - لا نفعل شيئاً
 
+    if instance.item_type == 'service':
+        return  # الخدمة ليست صنفاً مخزنياً
+
     from apps.stocks.models import Stock, StockQuantity
 
     try:
@@ -132,3 +138,9 @@ def create_quantities_for_new_item(sender, instance, created, **kwargs):
             f"[Items Signal] Failed to create StockQuantity for item "
             f"'{instance.name}': {e}"
         )
+
+
+@receiver(pre_delete, sender='stocks.Stock')
+def prevent_deleting_system_default_stock(sender, instance, **kwargs):
+    if getattr(instance, 'is_system_default', False):
+        raise ValidationError('لا يمكن حذف المخزن الافتراضي النظامي.')

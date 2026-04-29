@@ -90,7 +90,7 @@
                     <th>العميل</th>
                     <th>الكود</th>
                     <th>المدينة</th>
-                    <th>الرصيد الافتتاحي</th>
+                    <th>الرصيد الحالي</th>
                     <th>الحالة</th>
                     <th></th>
                 </tr>
@@ -273,7 +273,7 @@
                         <div class="cx-info-card cx-info-card--money">
                             <div class="cx-info-card-icon cx-info-icon--balance"><i class="fas fa-wallet"></i></div>
                             <div class="cx-info-card-content">
-                                <span class="cx-info-card-label">الرصيد الافتتاحي</span>
+                                <span class="cx-info-card-label">الرصيد الحالي</span>
                                 <span class="cx-info-card-value cx-info-card-value--money" id="viewBalance"></span>
                             </div>
                         </div>
@@ -318,6 +318,45 @@
                 <button type="button" class="cx-btn-primary" id="viewEditCustomerBtn">
                     <i class="fas fa-pen-to-square me-1"></i> تعديل
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="customerLedgerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered cx-view-dialog cx-ledger-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div>
+                        <h5 class="cx-view-title">سجل تعاملات العميل</h5>
+                        <p class="cx-view-subtitle" id="customerLedgerSubtitle">—</p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="cx-view-body">
+                <div class="table-responsive cx-table-wrap">
+                    <table class="cx-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>النوع</th>
+                                <th>المبلغ</th>
+                                <th>الرصيد</th>
+                                <th>ملاحظة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerLedgerBody">
+                            <tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
             </div>
         </div>
     </div>
@@ -427,6 +466,7 @@
     const urlTable  = "{% url 'customers:table_api' %}";
     const urlCreate = "{% url 'customers:create_api' %}";
     const urlDetail = "{% url 'customers:detail_api' 0 %}";
+    const urlTransactions = "{% url 'customers:transactions_api' 0 %}";
     const urlUpdate = "{% url 'customers:update_api' 0 %}";
     const urlDelete = "{% url 'customers:delete_api' 0 %}";
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
@@ -434,6 +474,7 @@
     const customerModalEl = document.getElementById('customerModal');
     const deleteModalEl   = document.getElementById('deleteCustomerModal');
     const viewModalEl     = document.getElementById('viewCustomerModal');
+    const ledgerModalEl   = document.getElementById('customerLedgerModal');
 
     // Keep modals at <body> level so they are not trapped by dashboard stacking contexts.
     if (customerModalEl && customerModalEl.parentElement !== document.body) {
@@ -445,10 +486,14 @@
     if (viewModalEl && viewModalEl.parentElement !== document.body) {
         document.body.appendChild(viewModalEl);
     }
+    if (ledgerModalEl && ledgerModalEl.parentElement !== document.body) {
+        document.body.appendChild(ledgerModalEl);
+    }
 
     const customerModal = new bootstrap.Modal(customerModalEl);
     const deleteModal   = new bootstrap.Modal(deleteModalEl);
     const viewModal     = new bootstrap.Modal(viewModalEl);
+    const ledgerModal   = new bootstrap.Modal(ledgerModalEl);
 
     const $form      = $('#customerForm');
     const $submitBtn = $('#customerSubmitBtn');
@@ -525,11 +570,11 @@
                     : `<span class="cxr-city">${c}</span>`
             },
             {
-                data: 'opening_balance',
+                data: 'current_balance',
                 render: function (v) {
-                    const n = parseFloat(v);
+                    const n = EnjazIMS.parseNumber(v);
                     const cls = n > 0 ? 'cxr-bal--pos' : n < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
-                    return `<span class="cxr-bal ${cls}">${v}</span>`;
+                    return `<span class="cxr-bal ${cls}">${EnjazIMS.formatMoney(v)}</span>`;
                 }
             },
             {
@@ -544,6 +589,9 @@
                 searchable: false,
                 render: function (_, __, r) {
                     return `<div class="cxr-actions">
+                                <button class="cxr-act js-ledger-customer" data-id="${r.id}" aria-label="السجل" title="السجل">
+                                    <i class="fas fa-list"></i>
+                                </button>
                                 <button class="cxr-act cxr-act--view js-view-customer" data-id="${r.id}" aria-label="عرض">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -613,8 +661,8 @@
                 $('#id_email').val(d.email || '');
                 $('#id_city').val(d.city || '');
                 $('#id_address').val(d.address || '');
-                $('#id_opening_balance').val(d.opening_balance || '0');
-                $('#id_credit_limit').val(d.credit_limit || '0');
+                $('#id_opening_balance').val(EnjazIMS.parseNumber(d.opening_balance).toFixed(2));
+                $('#id_credit_limit').val(EnjazIMS.parseNumber(d.credit_limit).toFixed(2));
                 $('#id_notes').val(d.notes || '');
                 $('#id_is_active').prop('checked', !!d.is_active);
 
@@ -700,10 +748,10 @@
                 $('#viewAddress').text(d.address || '—');
                 
                 // Financial info
-                const bal = parseFloat(d.opening_balance);
+                const bal = EnjazIMS.parseNumber(d.current_balance);
                 const balCls = bal > 0 ? 'text-success' : bal < 0 ? 'text-danger' : '';
-                $('#viewBalance').html(`<strong class="${balCls}">${d.opening_balance}</strong>`);
-                $('#viewCreditLimit').html(`<strong>${d.credit_limit}</strong>`);
+                $('#viewBalance').html(`<strong class="${balCls}">${EnjazIMS.formatMoney(d.current_balance)}</strong>`);
+                $('#viewCreditLimit').html(`<strong>${EnjazIMS.formatMoney(d.credit_limit)}</strong>`);
                 
                 // Additional info
                 $('#viewNotes').text(d.notes || '—');
@@ -721,9 +769,58 @@
         });
     }
 
+    function loadCustomerTransactions(id) {
+        const $body = $('#customerLedgerBody');
+        $body.html('<tr><td colspan="5" class="text-center text-muted">جاري التحميل...</td></tr>');
+
+        $.ajax({
+            url: apiUrl(urlTransactions, id),
+            method: 'GET',
+            success: function(resp) {
+                if (!resp.success || !Array.isArray(resp.data) || !resp.data.length) {
+                    $body.html('<tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>');
+                    return;
+                }
+
+                const rows = resp.data.map(function(tx) {
+                    const amount = EnjazIMS.parseNumber(tx.amount || 0);
+                    const amountClass = amount > 0 ? 'text-danger' : amount < 0 ? 'text-success' : 'text-muted';
+                    return `<tr>
+                        <td>${tx.entry_date || '—'}</td>
+                        <td>${tx.entry_type_label || tx.entry_type || '—'}</td>
+                        <td class="${amountClass}">${EnjazIMS.formatMoney(tx.amount || 0)}</td>
+                        <td>${EnjazIMS.formatMoney(tx.running_balance || 0)}</td>
+                        <td>${tx.notes || '—'}</td>
+                    </tr>`;
+                }).join('');
+
+                $body.html(rows);
+            },
+            error: function() {
+                $body.html('<tr><td colspan="5" class="text-center text-danger">تعذر تحميل الحركات</td></tr>');
+            }
+        });
+    }
+
+    function openCustomerLedger(id) {
+        $.ajax({
+            url: apiUrl(urlDetail, id),
+            method: 'GET',
+            success: function(resp) {
+                if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                const d = resp.data;
+                $('#customerLedgerSubtitle').text(`${d.name || '—'} (${d.code || '—'}) — الرصيد الحالي: ${EnjazIMS.formatMoney(d.current_balance || 0)}`);
+                loadCustomerTransactions(id);
+                ledgerModal.show();
+            },
+            error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+        });
+    }
+
     /* ── Bindings ─────────────────────────────────────────────── */
     $('#btnOpenCreateCustomer').on('click', openCreate);
     $('#customersTable').on('click', '.js-view-customer', function () { openView($(this).data('id')); });
+    $('#customersTable').on('click', '.js-ledger-customer', function () { openCustomerLedger($(this).data('id')); });
     $('#customersTable').on('click', '.js-edit-customer', function () { openEdit($(this).data('id')); });
     $('#viewEditCustomerBtn').on('click', function() { 
         viewModal.hide(); 

@@ -1,0 +1,96 @@
+/* ============================================================
+   EnjazIMS - Stock Quantities Page
+   ============================================================ */
+
+#qtyTable {
+    direction: rtl;
+}
+
+#qtyTable thead th,
+#qtyTable tbody td {
+    text-align: right !important;
+    direction: rtl;
+}
+
+#qtyTable thead th *,
+#qtyTable tbody td * {
+    text-align: inherit;
+}
+
+#qtyTable .cxr-code {
+    direction: ltr;
+    display: block;
+    width: 100%;
+    text-align: right !important;
+    unicode-bidi: plaintext;
+}
+
+#qtyTable .qty-badge,
+#qtyTable .cx-badge {
+    display: inline-flex;
+    justify-content: flex-start;
+    text-align: right !important;
+}
+
+/* Reuse select style from opening balance page */
+.opening-stock-label {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+.opening-stock-label i { color: var(--primary); }
+
+.cx-select-sm {
+    height: 42px;
+    padding: 0 0.9rem 0 2.2rem;
+    border: 1.5px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 600;
+    background-color: var(--bg-primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 0.6rem center;
+    background-size: 1rem;
+    -webkit-appearance: none;
+    appearance: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    min-width: 200px;
+}
+.cx-select-sm:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.14);
+}
+.cx-select-sm:hover { border-color: var(--primary); }
+
+/* ── Quantity Numbers ───────────────────────── */
+.qty-num {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+.qty-reserved {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* ── Available qty badges ────────────────────── */
+.qty-badge {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+}
+.qty-badge--ok   { background: rgba(16,185,129,0.1);  color: #065f46; }
+.qty-badge--low  { background: rgba(245,158,11,0.12); color: #92400e; }
+.qty-badge--zero { background: rgba(239,68,68,0.1);   color: #991b1b; }
