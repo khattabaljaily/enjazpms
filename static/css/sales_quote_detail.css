@@ -1,0 +1,4 @@
+/* Quote detail specific adjustments */
+#convertMixedFields .cx-input {
+    text-align: end;
+}

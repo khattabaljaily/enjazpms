@@ -23,6 +23,19 @@ urlpatterns = [
     path('returns/<int:pk>/confirm/', views.return_confirm_ajax, name='return_confirm'),
     path('returns/<int:pk>/cancel/', views.return_cancel_ajax, name='return_cancel'),
 
+    # ── Quotes (عروض الأسعار) ─────────────────────────────
+    path('quotes/', views.quote_list, name='quote_list'),
+    path('quotes/api/', views.quote_table_api, name='quote_api'),
+    path('quotes/create/', views.quote_create, name='quote_create'),
+    path('quotes/<int:pk>/', views.quote_detail, name='quote_detail'),
+    path('quotes/<int:pk>/edit/', views.quote_edit, name='quote_edit'),
+    path('quotes/<int:pk>/delete-draft/', views.quote_delete_draft_ajax, name='quote_delete_draft'),
+    path('quotes/<int:pk>/send/', views.quote_send_ajax, name='quote_send'),
+    path('quotes/<int:pk>/accept/', views.quote_accept_ajax, name='quote_accept'),
+    path('quotes/<int:pk>/reject/', views.quote_reject_ajax, name='quote_reject'),
+    path('quotes/<int:pk>/cancel/', views.quote_cancel_ajax, name='quote_cancel'),
+    path('quotes/<int:pk>/convert/', views.quote_convert_ajax, name='quote_convert'),
+
     # ── AJAX Helpers ─────────────────────────────────────────
     path('api/item-info/', views.item_info_api, name='item_info_api'),
     path('api/customer-info/', views.customer_info_api, name='customer_info_api'),

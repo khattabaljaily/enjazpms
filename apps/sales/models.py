@@ -689,3 +689,246 @@ class CustomerLedger(TenantMixin):
     def __str__(self):
         sign = '+' if self.amount >= 0 else ''
         return f"{self.customer.name} — {sign}{self.amount} ({self.get_entry_type_display()})"
+
+
+# ============================================================
+# SALE QUOTE  (عرض السعر)
+# ============================================================
+
+class SaleQuote(TenantMixin):
+    """
+    عرض سعر (Quotation).
+
+    دورة الحياة:
+      draft → sent → accepted → converted (تحوّل لفاتورة)
+                  ↘ rejected
+                  ↘ expired
+             ↘ cancelled
+
+    بعد التحويل يُحفَظ المعرّف invoice_id للربط.
+    """
+
+    STATUS_CHOICES = (
+        ('draft',     'مسودة'),
+        ('sent',      'مُرسَل'),
+        ('accepted',  'مقبول'),
+        ('rejected',  'مرفوض'),
+        ('converted', 'مُحوَّل لفاتورة'),
+        ('expired',   'منتهي الصلاحية'),
+        ('cancelled', 'ملغى'),
+    )
+
+    DISCOUNT_TYPE_CHOICES = (
+        ('percent', 'نسبة مئوية'),
+        ('amount',  'مبلغ ثابت'),
+    )
+
+    # ── المعرّفات ──────────────────────────────────────────
+    quote_number = models.CharField(
+        'رقم العرض', max_length=20, blank=True,
+        help_text='يُولَّد تلقائياً بصيغة QUO-000001'
+    )
+    reference_number = models.CharField(
+        'رقم مرجعي خارجي', max_length=50, blank=True
+    )
+
+    # ── الأطراف ───────────────────────────────────────────
+    customer = models.ForeignKey(
+        'customers.Customer',
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='sale_quotes',
+        verbose_name='العميل'
+    )
+    stock = models.ForeignKey(
+        'stocks.Stock',
+        on_delete=models.PROTECT,
+        related_name='sale_quotes',
+        verbose_name='المخزن'
+    )
+
+    # ── التواريخ ───────────────────────────────────────────
+    quote_date = models.DateField('تاريخ العرض')
+    expiry_date = models.DateField(
+        'تاريخ الانتهاء', null=True, blank=True
+    )
+
+    # ── الحالة ────────────────────────────────────────────
+    status = models.CharField(
+        'الحالة', max_length=15,
+        choices=STATUS_CHOICES, default='draft'
+    )
+
+    # ── المبالغ ───────────────────────────────────────────
+    subtotal = models.DecimalField(
+        'المجموع قبل الخصم', max_digits=14, decimal_places=2, default=0
+    )
+    quote_discount_type = models.CharField(
+        'نوع الخصم الإجمالي', max_length=10,
+        choices=DISCOUNT_TYPE_CHOICES, default='percent'
+    )
+    quote_discount_value = models.DecimalField(
+        'قيمة الخصم الإجمالي', max_digits=10, decimal_places=2, default=0
+    )
+    quote_discount_amount = models.DecimalField(
+        'مبلغ الخصم الإجمالي', max_digits=14, decimal_places=2, default=0
+    )
+    tax_amount = models.DecimalField(
+        'إجمالي الضريبة', max_digits=14, decimal_places=2, default=0
+    )
+    grand_total = models.DecimalField(
+        'الإجمالي النهائي', max_digits=14, decimal_places=2, default=0
+    )
+
+    notes = models.TextField('ملاحظات', blank=True)
+    terms = models.TextField('الشروط والأحكام', blank=True)
+
+    # ── الربط بالفاتورة بعد التحويل ───────────────────────
+    converted_invoice = models.OneToOneField(
+        SaleInvoice,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='source_quote',
+        verbose_name='الفاتورة المُحوَّلة'
+    )
+    converted_at = models.DateTimeField('وقت التحويل', null=True, blank=True)
+    converted_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='converted_quotes',
+        verbose_name='حُوِّل بواسطة'
+    )
+
+    class Meta:
+        db_table = 'sale_quotes'
+        verbose_name = 'عرض سعر'
+        verbose_name_plural = 'عروض الأسعار'
+        ordering = ['-quote_date', '-created_at']
+        indexes = [
+            models.Index(fields=['tenant', 'status']),
+            models.Index(fields=['tenant', 'customer']),
+            models.Index(fields=['tenant', 'quote_date']),
+            models.Index(fields=['tenant', 'quote_number']),
+        ]
+
+    def __str__(self):
+        return f"{self.quote_number} — {self.customer or 'زبون عابر'}"
+
+    def save(self, *args, **kwargs):
+        if not self.quote_number:
+            self.quote_number = self._generate_number()
+        super().save(*args, **kwargs)
+
+    def _generate_number(self):
+        last = (
+            SaleQuote.objects
+            .filter(tenant=self.tenant)
+            .exclude(quote_number='')
+            .order_by('-id')
+            .first()
+        )
+        if last and last.quote_number.startswith('QUO-'):
+            try:
+                seq = int(last.quote_number.split('-')[1]) + 1
+            except (IndexError, ValueError):
+                seq = 1
+        else:
+            seq = 1
+        return f"QUO-{seq:06d}"
+
+    def recalculate_totals(self):
+        lines = self.quote_lines.all()
+        subtotal = sum(l.line_subtotal for l in lines)
+        tax = sum(l.tax_amount for l in lines)
+
+        if self.quote_discount_type == 'percent':
+            disc = subtotal * (self.quote_discount_value / Decimal('100'))
+        else:
+            disc = self.quote_discount_value
+
+        disc = min(disc, subtotal)
+        self.subtotal = subtotal
+        self.quote_discount_amount = disc
+        self.tax_amount = tax
+        self.grand_total = subtotal - disc + tax
+
+    @property
+    def is_editable(self):
+        return self.status in ('draft',)
+
+    @property
+    def can_send(self):
+        return self.status == 'draft'
+
+    @property
+    def can_convert(self):
+        return self.status in ('draft', 'sent', 'accepted')
+
+    @property
+    def can_cancel(self):
+        return self.status not in ('converted', 'cancelled')
+
+
+# ============================================================
+# SALE QUOTE LINE  (بنود عرض السعر)
+# ============================================================
+
+class SaleQuoteLine(TenantMixin):
+    """
+    سطر واحد في عرض السعر.
+    نفس منطق SaleInvoiceLine لكن بدون تأثير على مخزون.
+    """
+
+    quote = models.ForeignKey(
+        SaleQuote,
+        on_delete=models.CASCADE,
+        related_name='quote_lines',
+        verbose_name='عرض السعر'
+    )
+    item = models.ForeignKey(
+        'items.Item',
+        on_delete=models.PROTECT,
+        related_name='quote_lines',
+        verbose_name='المنتج'
+    )
+    variant = models.ForeignKey(
+        'items.ItemVariant',
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='quote_lines',
+        verbose_name='المتغير'
+    )
+
+    quantity = models.DecimalField(
+        'الكمية', max_digits=12, decimal_places=4
+    )
+    unit_price = models.DecimalField(
+        'سعر الوحدة', max_digits=14, decimal_places=2
+    )
+    discount_percent = models.DecimalField(
+        'خصم السطر %', max_digits=5, decimal_places=2, default=0
+    )
+    discount_amount = models.DecimalField(
+        'مبلغ خصم السطر', max_digits=14, decimal_places=2, default=0
+    )
+    tax_rate = models.DecimalField(
+        'نسبة الضريبة %', max_digits=5, decimal_places=2, default=0
+    )
+    tax_amount = models.DecimalField(
+        'مبلغ الضريبة', max_digits=14, decimal_places=2, default=0
+    )
+    line_subtotal = models.DecimalField(
+        'مجموع السطر قبل الضريبة', max_digits=14, decimal_places=2, default=0
+    )
+    line_total = models.DecimalField(
+        'مجموع السطر (شامل الضريبة)', max_digits=14, decimal_places=2, default=0
+    )
+
+    class Meta:
+        db_table = 'sale_quote_lines'
+        verbose_name = 'بند عرض سعر'
+        verbose_name_plural = 'بنود عروض الأسعار'
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.quote.quote_number} – {self.item.name} × {self.quantity}"

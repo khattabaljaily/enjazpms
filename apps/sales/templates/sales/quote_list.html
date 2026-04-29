@@ -1,0 +1,391 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/sales_quote_list.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════════════════════ HERO ══════════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-file-contract"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">عروض الأسعار</h1>
+                <p class="cx-hero-desc">إنشاء وإدارة عروض الأسعار وتحويلها لفواتير</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'sales:invoice_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-receipt"></i>
+                    <span>الفواتير</span>
+                </a>
+                <a href="{% url 'sales:quote_create' %}" class="cx-btn-add">
+                    <i class="fas fa-plus"></i>
+                    <span>عرض جديد</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-file-contract"></i>
+            <strong>{{ stats.total }}</strong>
+            <span>إجمالي</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-pencil"></i>
+            <strong>{{ stats.draft }}</strong>
+            <span>مسودة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-paper-plane"></i>
+            <strong>{{ stats.sent }}</strong>
+            <span>مُرسَل</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-check-circle"></i>
+            <strong>{{ stats.accepted }}</strong>
+            <span>مقبول</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--info">
+            <i class="fas fa-file-invoice"></i>
+            <strong>{{ stats.converted }}</strong>
+            <span>مُحوَّل</span>
+        </span>
+    </div>
+
+    <!-- KPI -->
+    <div class="cx-kpi-row">
+        <div class="cx-kpi-card">
+            <div class="cx-kpi-label">إجمالي قيمة العروض</div>
+            <div class="cx-kpi-value text-primary">{{ stats.grand_total_sum|floatformat:2 }}</div>
+        </div>
+        <div class="cx-kpi-card">
+            <div class="cx-kpi-label">العروض المقبولة</div>
+            <div class="cx-kpi-value text-success">{{ stats.accepted }}</div>
+        </div>
+        <div class="cx-kpi-card cx-kpi-card--warning">
+            <div class="cx-kpi-label">العروض المرفوضة</div>
+            <div class="cx-kpi-value text-warning">{{ stats.rejected }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ TABLE PANEL ══════════════════════════ -->
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="quoteSearchInput" class="cx-search-input" placeholder="رقم العرض، اسم العميل...">
+        </div>
+        <div class="cx-toolbar-end sales-toolbar-end">
+            <select id="filterStatus" class="cx-select-sm">
+                <option value="">كل الحالات</option>
+                <option value="draft">مسودة</option>
+                <option value="sent">مُرسَل</option>
+                <option value="accepted">مقبول</option>
+                <option value="rejected">مرفوض</option>
+                <option value="converted">مُحوَّل</option>
+                <option value="expired">منتهي</option>
+                <option value="cancelled">ملغى</option>
+            </select>
+            <select id="filterCustomer" class="cx-select-sm">
+                <option value="">كل العملاء</option>
+                {% for c in customers %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="quotesTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>رقم العرض</th>
+                    <th>التاريخ</th>
+                    <th>العميل</th>
+                    <th>الإجمالي</th>
+                    <th>الحالة</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- ══════════ QUICK VIEW MODAL ══════════ -->
+<div class="modal fade" id="viewQuoteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog sales-view-dialog">
+        <div class="modal-content cx-view-modal sales-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar sales-view-avatar">
+                        <i class="fas fa-file-contract"></i>
+                    </div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewQuoteNumber">—</h5>
+                        <p class="cx-view-subtitle" id="viewQuoteStatus">—</p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="cx-view-body">
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-circle-info"></i>
+                        بيانات العرض
+                    </div>
+                    <div class="cx-info-grid sales-invoice-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">التاريخ</span>
+                                <span class="cx-info-card-value" id="viewQuoteDate">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">تاريخ الانتهاء</span>
+                                <span class="cx-info-card-value" id="viewQuoteExpiry">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">العميل</span>
+                                <span class="cx-info-card-value" id="viewQuoteCustomer">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المخزن</span>
+                                <span class="cx-info-card-value" id="viewQuoteStock">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الإجمالي</span>
+                                <span class="cx-info-card-value" id="viewQuoteTotal">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <a href="#" class="cx-btn-primary" id="viewQuoteOpenPageBtn">
+                    <i class="fas fa-arrow-up-right-from-square me-1"></i>
+                    فتح صفحة العرض
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ ACTION MODAL ══════════ -->
+<div class="cx-modal-backdrop sales-field-hidden" id="quoteActionModalBackdrop">
+    <div class="cx-modal sales-modal-sm">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title" id="quoteActionModalTitle">تأكيد الإجراء</h3>
+            <button type="button" class="cx-modal-close" onclick="closeQuoteActionModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <p class="text-muted mb-0" id="quoteActionModalMessage">هل تريد المتابعة؟</p>
+        </div>
+        <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-secondary" onclick="closeQuoteActionModal()">إلغاء</button>
+            <button type="button" class="cx-btn-danger" id="quoteActionSubmitBtn" onclick="submitQuoteAction()">
+                <i class="fas fa-check me-1"></i>تأكيد
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const QUOTES_API_URL = "{% url 'sales:quote_api' %}";
+const QUOTE_BASE_URL = "/sales/quotes/";
+
+let quotesTable;
+const quoteRows = new Map();
+let pendingQuoteAction = null;
+
+document.addEventListener('DOMContentLoaded', function () {
+    initTable();
+    initFilters();
+});
+
+function initTable() {
+    const statusBadgeMap = {
+        draft: 'muted', sent: 'primary', accepted: 'success',
+        rejected: 'danger', converted: 'info', expired: 'warning', cancelled: 'danger',
+    };
+
+    quotesTable = $('#quotesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ordering: true,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
+        ajax: {
+            url: QUOTES_API_URL,
+            data: function (d) {
+                d.status = document.getElementById('filterStatus').value;
+                d.customer_id = document.getElementById('filterCustomer').value;
+            }
+        },
+        columns: [
+            { data: 'quote_number', render: d => `<strong>${d || '—'}</strong>` },
+            { data: 'quote_date', render: d => d || '—' },
+            { data: 'customer', defaultContent: '—' },
+            {
+                data: 'grand_total',
+                className: 'text-end sales-money-col',
+                render: function (data, type) {
+                    const numericValue = EnjazIMS.parseNumber(data);
+                    if (type === 'sort' || type === 'type') {
+                        return numericValue;
+                    }
+                    return EnjazIMS.formatMoney(numericValue);
+                }
+            },
+            {
+                data: 'status',
+                render: function (data, type, row) {
+                    const badge = statusBadgeMap[data] || 'muted';
+                    return `<span class="cx-badge cx-badge--${badge}">${row.status_label || '—'}</span>`;
+                }
+            },
+            {
+                data: null, orderable: false, searchable: false, className: 'text-center',
+                render: function (data, type, row) {
+                    quoteRows.set(String(row.id), row);
+                    const editBtn = row.status === 'draft'
+                        ? `<a href="${QUOTE_BASE_URL}${row.id}/edit/" class="cx-btn-icon" title="تعديل"><i class="fas fa-pencil"></i></a>`
+                        : `<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>`;
+                    const deleteBtn = row.status === 'draft'
+                        ? `<button class="cx-btn-icon cx-btn-icon--danger" onclick="deleteDraftQuote(${row.id})" title="حذف"><i class="fas fa-trash"></i></button>`
+                        : `<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>`;
+                    const convertBtn = ['draft','sent','accepted'].includes(row.status)
+                        ? `<a href="${QUOTE_BASE_URL}${row.id}/" class="cx-btn-icon cx-btn-icon--success" title="تحويل لفاتورة"><i class="fas fa-file-invoice"></i></a>`
+                        : `<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>`;
+                    return `
+                    <div class="cx-actions">
+                        <button type="button" class="cx-btn-icon js-view-quote" data-id="${row.id}" title="عرض"><i class="fas fa-eye"></i></button>
+                        <a href="${QUOTE_BASE_URL}${row.id}/?print=1" target="_blank" rel="noopener" class="cx-btn-icon" title="طباعة"><i class="fas fa-print"></i></a>
+                        ${editBtn}${deleteBtn}${convertBtn}
+                    </div>`;
+                }
+            }
+        ],
+        language: {
+            processing: 'جاري المعالجة...', zeroRecords: 'لا توجد عروض مطابقة',
+            emptyTable: 'لا توجد بيانات', info: 'عرض _START_ إلى _END_ من _TOTAL_',
+            infoEmpty: 'لا توجد سجلات', paginate: { previous: 'السابق', next: 'التالي' }
+        },
+        order: [[1, 'desc']],
+        pageLength: 25,
+    });
+}
+
+function initFilters() {
+    ['filterStatus', 'filterCustomer'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => quotesTable.ajax.reload());
+    });
+    document.getElementById('quoteSearchInput').addEventListener('input', function () {
+        quotesTable.search(this.value).draw();
+    });
+    document.getElementById('quotesTable').addEventListener('click', function (e) {
+        const btn = e.target.closest('.js-view-quote');
+        if (!btn) return;
+        const row = quoteRows.get(String(btn.dataset.id));
+        if (row) openQuoteModal(row);
+    });
+}
+
+function openQuoteModal(row) {
+    document.getElementById('viewQuoteNumber').textContent = row.quote_number || '—';
+    document.getElementById('viewQuoteStatus').textContent = row.status_label || '—';
+    document.getElementById('viewQuoteDate').textContent = row.quote_date || '—';
+    document.getElementById('viewQuoteExpiry').textContent = row.expiry_date || '—';
+    document.getElementById('viewQuoteCustomer').textContent = row.customer || '—';
+    document.getElementById('viewQuoteStock').textContent = row.stock || '—';
+    document.getElementById('viewQuoteTotal').textContent = EnjazIMS.formatMoney(row.grand_total);
+    document.getElementById('viewQuoteOpenPageBtn').href = `${QUOTE_BASE_URL}${row.id}/`;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('viewQuoteModal')).show();
+}
+
+function deleteDraftQuote(id) {
+    openQuoteActionModal({
+        title: 'حذف مسودة العرض',
+        message: 'سيتم حذف مسودة عرض السعر نهائياً. لا يمكن التراجع.',
+        confirmLabel: 'حذف المسودة',
+        confirmClass: 'cx-btn-danger',
+        run: () => fetch(`${QUOTE_BASE_URL}${id}/delete-draft/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+    });
+}
+
+function openQuoteActionModal(config) {
+    pendingQuoteAction = config;
+    document.getElementById('quoteActionModalTitle').textContent = config.title;
+    document.getElementById('quoteActionModalMessage').textContent = config.message;
+    const btn = document.getElementById('quoteActionSubmitBtn');
+    btn.className = config.confirmClass;
+    btn.innerHTML = `<i class="fas fa-check me-1"></i>${config.confirmLabel}`;
+    document.getElementById('quoteActionModalBackdrop').classList.remove('sales-field-hidden');
+}
+
+function closeQuoteActionModal() {
+    pendingQuoteAction = null;
+    document.getElementById('quoteActionModalBackdrop').classList.add('sales-field-hidden');
+}
+
+function submitQuoteAction() {
+    if (!pendingQuoteAction) return;
+    const btn = document.getElementById('quoteActionSubmitBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري التنفيذ...';
+    Promise.resolve(pendingQuoteAction.run())
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                closeQuoteActionModal();
+                EnjazIMS.toast(data.message, 'success');
+                quotesTable.ajax.reload(null, false);
+            } else {
+                EnjazIMS.toast(data.message, 'error');
+            }
+        })
+        .catch(() => EnjazIMS.toast('حدث خطأ في الاتصال', 'error'))
+        .finally(() => { btn.disabled = false; btn.innerHTML = orig; });
+}
+
+function getCookie(name) {
+    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+}
+</script>
+{% endblock %}

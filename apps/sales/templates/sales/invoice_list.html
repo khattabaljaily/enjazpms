@@ -302,7 +302,17 @@ function initTable() {
                 }
             },
             { data: 'customer', defaultContent: '—' },
-            { data: 'grand_total', className: 'text-end sales-money-col' },
+            {
+                data: 'grand_total',
+                className: 'text-end sales-money-col',
+                render: function (data, type) {
+                    const numericValue = EnjazIMS.parseNumber(data);
+                    if (type === 'sort' || type === 'type') {
+                        return numericValue;
+                    }
+                    return EnjazIMS.formatMoney(numericValue);
+                }
+            },
             {
                 data: 'status',
                 render: function (data, type, row) {
@@ -322,6 +332,9 @@ function initTable() {
                         <button type="button" class="cx-btn-icon js-view-invoice" data-id="${row.id}" title="عرض">
                             <i class="fas fa-eye"></i>
                         </button>
+                        <a href="${INVOICE_BASE_URL}${row.id}/?print=1" target="_blank" rel="noopener" class="cx-btn-icon" title="طباعة">
+                            <i class="fas fa-print"></i>
+                        </a>
                         ${row.status === 'draft' ? `
                         <a href="${INVOICE_BASE_URL}${row.id}/edit/" class="cx-btn-icon" title="تعديل">
                             <i class="fas fa-pencil"></i>

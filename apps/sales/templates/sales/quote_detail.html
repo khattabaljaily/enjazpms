@@ -1,0 +1,470 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/sales_quote_detail.css' %}?v=2.0">
+<link rel="stylesheet" href="{% static 'css/print_quote.css' %}?v=2.2">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════════════ HERO ══════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-file-contract"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">{{ quote.quote_number }}</h1>
+                <p class="cx-hero-desc">
+                    {{ quote.quote_date }} — {{ quote.stock.name }}
+                    {% if quote.customer %} — {{ quote.customer.name }}{% endif %}
+                </p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'sales:quote_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i><span>القائمة</span>
+                </a>
+                <button onclick="window.print()" class="cx-btn-secondary">
+                    <i class="fas fa-print"></i><span>طباعة</span>
+                </button>
+                {% if can_edit %}
+                <a href="{% url 'sales:quote_edit' quote.pk %}" class="cx-btn-secondary">
+                    <i class="fas fa-pencil"></i><span>تعديل</span>
+                </a>
+                {% endif %}
+                {% if can_edit %}
+                <button class="cx-btn-danger" onclick="doDeleteDraft()">
+                    <i class="fas fa-trash"></i><span>حذف المسودة</span>
+                </button>
+                {% endif %}
+                {% if can_send %}
+                <button class="cx-btn-secondary" onclick="doAction('send','إرسال العرض','سيتم تغيير حالة العرض إلى مُرسَل.')">
+                    <i class="fas fa-paper-plane"></i><span>إرسال</span>
+                </button>
+                {% endif %}
+                {% if can_accept %}
+                <button class="cx-btn-add" onclick="doAction('accept','قبول العرض','سيتم تغيير حالة العرض إلى مقبول.')">
+                    <i class="fas fa-check"></i><span>قبول</span>
+                </button>
+                {% endif %}
+                {% if can_reject %}
+                <button class="cx-btn-danger" onclick="doAction('reject','رفض العرض','سيتم تغيير حالة العرض إلى مرفوض.')">
+                    <i class="fas fa-times"></i><span>رفض</span>
+                </button>
+                {% endif %}
+                {% if can_convert %}
+                <button class="cx-btn-add" onclick="openConvertModal()">
+                    <i class="fas fa-file-invoice"></i><span>تحويل لفاتورة</span>
+                </button>
+                {% endif %}
+                {% if can_cancel %}
+                <button class="cx-btn-danger" onclick="doAction('cancel','إلغاء العرض','سيتم إلغاء عرض السعر نهائياً.')">
+                    <i class="fas fa-ban"></i><span>إلغاء</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        {% if quote.status == 'draft' %}
+        <span class="cx-stat-badge cx-stat-badge--muted"><i class="fas fa-pencil"></i> مسودة</span>
+        {% elif quote.status == 'sent' %}
+        <span class="cx-stat-badge cx-stat-badge--primary"><i class="fas fa-paper-plane"></i> مُرسَل</span>
+        {% elif quote.status == 'accepted' %}
+        <span class="cx-stat-badge cx-stat-badge--success"><i class="fas fa-check"></i> مقبول</span>
+        {% elif quote.status == 'rejected' %}
+        <span class="cx-stat-badge cx-stat-badge--danger"><i class="fas fa-times"></i> مرفوض</span>
+        {% elif quote.status == 'converted' %}
+        <span class="cx-stat-badge cx-stat-badge--info"><i class="fas fa-file-invoice"></i> مُحوَّل لفاتورة</span>
+        {% elif quote.status == 'expired' %}
+        <span class="cx-stat-badge cx-stat-badge--warning"><i class="fas fa-clock"></i> منتهي الصلاحية</span>
+        {% elif quote.status == 'cancelled' %}
+        <span class="cx-stat-badge cx-stat-badge--danger"><i class="fas fa-ban"></i> ملغى</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3">
+
+<!-- ── تفاصيل العرض ── -->
+<div class="col-lg-8">
+
+    <!-- بيانات الرأس -->
+    <div class="cx-panel mb-3 p-4">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات العرض</h3></div>
+        <div class="cx-panel-body">
+            <div class="cx-info-grid">
+                <div class="cx-info-item">
+                    <span class="cx-info-label">رقم العرض</span>
+                    <span class="cx-info-value">{{ quote.quote_number }}</span>
+                </div>
+                <div class="cx-info-item">
+                    <span class="cx-info-label">تاريخ العرض</span>
+                    <span class="cx-info-value">{{ quote.quote_date }}</span>
+                </div>
+                {% if quote.expiry_date %}
+                <div class="cx-info-item">
+                    <span class="cx-info-label">صالح حتى</span>
+                    <span class="cx-info-value">{{ quote.expiry_date }}</span>
+                </div>
+                {% endif %}
+                <div class="cx-info-item">
+                    <span class="cx-info-label">العميل</span>
+                    <span class="cx-info-value">{{ quote.customer.name|default:"زبون عابر" }}</span>
+                </div>
+                <div class="cx-info-item">
+                    <span class="cx-info-label">المخزن</span>
+                    <span class="cx-info-value">{{ quote.stock.name }}</span>
+                </div>
+                {% if quote.reference_number %}
+                <div class="cx-info-item">
+                    <span class="cx-info-label">الرقم المرجعي</span>
+                    <span class="cx-info-value">{{ quote.reference_number }}</span>
+                </div>
+                {% endif %}
+                {% if quote.notes %}
+                <div class="cx-info-item cx-info-item--full">
+                    <span class="cx-info-label">ملاحظات</span>
+                    <span class="cx-info-value">{{ quote.notes }}</span>
+                </div>
+                {% endif %}
+                {% if quote.terms %}
+                <div class="cx-info-item cx-info-item--full">
+                    <span class="cx-info-label">الشروط والأحكام</span>
+                    <span class="cx-info-value">{{ quote.terms }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- بنود العرض -->
+    <div class="cx-panel mb-3 p-4">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">بنود العرض</h3></div>
+        <div class="cx-panel-body p-0">
+            <div class="table-responsive">
+                <table class="cx-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المنتج</th>
+                            <th>الكمية</th>
+                            <th>سعر الوحدة</th>
+                            <th>الخصم %</th>
+                            <th>الضريبة %</th>
+                            <th>الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in lines %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <div>{{ line.item.name }}</div>
+                                {% if line.variant %}<small class="text-muted">{{ line.variant }}</small>{% endif %}
+                                <div><small class="text-muted">{{ line.item.sku }}</small></div>
+                            </td>
+                            <td>{{ line.quantity }}</td>
+                            <td>{{ line.unit_price|floatformat:2 }}</td>
+                            <td>{{ line.discount_percent|floatformat:2 }}%</td>
+                            <td>{{ line.tax_rate|floatformat:2 }}%</td>
+                            <td><strong>{{ line.line_total|floatformat:2 }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- الفاتورة المنشأة (إن وُجدت) -->
+    {% if quote.converted_invoice %}
+    <div class="cx-panel mb-3 p-4">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">الفاتورة المُنشأة</h3></div>
+        <div class="cx-panel-body">
+            <p class="mb-1">
+                تم تحويل هذا العرض إلى
+                <a href="{% url 'sales:invoice_detail' quote.converted_invoice.pk %}" class="cx-link">
+                    {{ quote.converted_invoice.invoice_number }}
+                </a>
+                {% if quote.converted_at %}— {{ quote.converted_at|date:"Y-m-d" }}{% endif %}
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- ── الإجماليات ── -->
+<div class="col-lg-4">
+    <div class="cx-panel sticky-top sales-sticky-panel p-4">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">الإجماليات</h3></div>
+        <div class="cx-panel-body">
+            <div class="cx-totals-block">
+                <div class="cx-totals-row">
+                    <span>المجموع الفرعي</span>
+                    <strong>{{ quote.subtotal|floatformat:2 }}</strong>
+                </div>
+                <div class="cx-totals-row">
+                    <span>الخصم</span>
+                    <strong class="text-danger">- {{ quote.quote_discount_amount|floatformat:2 }}</strong>
+                </div>
+                <div class="cx-totals-row">
+                    <span>الضريبة</span>
+                    <strong>{{ quote.tax_amount|floatformat:2 }}</strong>
+                </div>
+                <div class="cx-totals-row cx-totals-row--grand">
+                    <span>الإجمالي النهائي</span>
+                    <strong>{{ quote.grand_total|floatformat:2 }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div><!-- row -->
+</div><!-- cx-scene -->
+
+{% include "sales/partials/print_quote.html" %}
+
+<!-- ══════════ ACTION MODAL ══════════ -->
+<div class="cx-modal-backdrop sales-field-hidden" id="quoteDecisionModalBackdrop">
+    <div class="cx-modal sales-modal-sm">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title" id="quoteDecisionModalTitle">تأكيد الإجراء</h3>
+            <button type="button" class="cx-modal-close" onclick="closeQuoteDecisionModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <p class="text-muted mb-0" id="quoteDecisionModalMessage">هل تريد المتابعة؟</p>
+        </div>
+        <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-secondary" onclick="closeQuoteDecisionModal()">إلغاء</button>
+            <button type="button" class="cx-btn-add" id="quoteDecisionSubmitBtn" onclick="submitQuoteDecision()">
+                <i class="fas fa-check me-1"></i>تأكيد
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ CONVERT MODAL ══════════ -->
+<div class="cx-modal-backdrop sales-field-hidden" id="convertModalBackdrop">
+    <div class="cx-modal sales-modal-sm">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title"><i class="fas fa-file-invoice me-2 text-success"></i>تحويل لفاتورة بيع</h3>
+            <button type="button" class="cx-modal-close" onclick="closeConvertModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <p class="text-muted mb-3">سيتم إنشاء فاتورة بيع مسودة من هذا العرض. يمكنك تعديلها وتأكيدها لاحقاً.</p>
+            <div class="mb-3">
+                <label class="cx-label">طريقة الدفع</label>
+                <select id="convertPaymentMethod" class="cx-input" onchange="toggleConvertMixed()">
+                    <option value="cash">نقداً</option>
+                    <option value="bank">تحويل بنكي</option>
+                    <option value="credit">آجل (على حساب العميل)</option>
+                    <option value="mixed">مختلط</option>
+                </select>
+            </div>
+            <div id="convertMixedFields" class="sales-field-hidden">
+                <div class="mb-2">
+                    <label class="cx-label">المبلغ نقداً</label>
+                    <input type="number" id="convertCashAmount" class="cx-input" min="0" step="0.01" value="0">
+                </div>
+                <div class="mb-2">
+                    <label class="cx-label">المبلغ بنكياً</label>
+                    <input type="number" id="convertBankAmount" class="cx-input" min="0" step="0.01" value="0">
+                </div>
+                <div class="mb-2">
+                    <label class="cx-label">مرجع التحويل</label>
+                    <input type="text" id="convertBankRef" class="cx-input">
+                </div>
+            </div>
+        </div>
+        <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-secondary" onclick="closeConvertModal()">إلغاء</button>
+            <button type="button" class="cx-btn-add" onclick="submitConvert()">
+                <i class="fas fa-file-invoice me-1"></i>تحويل لفاتورة
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const QUOTE_ID = {{ quote.id }};
+const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2] || '{{ csrf_token }}';
+const QUOTE_CONVERT_URL = "{% url 'sales:quote_convert' quote.pk %}";
+let pendingQuoteDecision = null;
+
+const autoPrint = new URLSearchParams(window.location.search).get('print') === '1';
+if (autoPrint) {
+    window.addEventListener('load', function () {
+        setTimeout(() => window.print(), 250);
+    }, { once: true });
+}
+
+function doAction(action, title, message) {
+    const urlMap = {
+        send:   `/sales/quotes/${QUOTE_ID}/send/`,
+        accept: `/sales/quotes/${QUOTE_ID}/accept/`,
+        reject: `/sales/quotes/${QUOTE_ID}/reject/`,
+        cancel: `/sales/quotes/${QUOTE_ID}/cancel/`,
+    };
+    openQuoteDecisionModal({
+        title, message,
+        confirmLabel: title,
+        confirmClass: ['reject','cancel'].includes(action) ? 'cx-btn-danger' : 'cx-btn-add',
+        run: () => fetch(urlMap[action], { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+    });
+}
+
+function doDeleteDraft() {
+    openQuoteDecisionModal({
+        title: 'حذف مسودة العرض',
+        message: 'سيتم حذف مسودة عرض السعر نهائياً. هل تريد المتابعة؟',
+        confirmLabel: 'حذف المسودة',
+        confirmClass: 'cx-btn-danger',
+        run: () => fetch(`/sales/quotes/${QUOTE_ID}/delete-draft/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }),
+        onSuccess: () => { window.location.href = '{% url "sales:quote_list" %}'; }
+    });
+}
+
+function openQuoteDecisionModal(config) {
+    pendingQuoteDecision = config;
+    document.getElementById('quoteDecisionModalTitle').textContent = config.title;
+    document.getElementById('quoteDecisionModalMessage').textContent = config.message;
+    const btn = document.getElementById('quoteDecisionSubmitBtn');
+    btn.className = config.confirmClass;
+    btn.innerHTML = `<i class="fas fa-check me-1"></i>${config.confirmLabel}`;
+    document.getElementById('quoteDecisionModalBackdrop').classList.remove('sales-field-hidden');
+}
+
+function closeQuoteDecisionModal() {
+    pendingQuoteDecision = null;
+    document.getElementById('quoteDecisionModalBackdrop').classList.add('sales-field-hidden');
+}
+
+function submitQuoteDecision() {
+    if (!pendingQuoteDecision) return;
+    const actionConfig = pendingQuoteDecision;
+    const btn = document.getElementById('quoteDecisionSubmitBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري التنفيذ...';
+    Promise.resolve(actionConfig.run())
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                closeQuoteDecisionModal();
+                sessionStorage.setItem('__enjazFlash', JSON.stringify({
+                    message: data.message || 'تمت العملية بنجاح',
+                    type: 'success'
+                }));
+                if (typeof actionConfig?.onSuccess === 'function') {
+                    actionConfig.onSuccess(data);
+                    return;
+                }
+                location.reload();
+            } else {
+                showAlert(data.message, 'danger');
+            }
+        })
+        .catch(() => showAlert('حدث خطأ في الاتصال', 'danger'))
+        .finally(() => { btn.disabled = false; btn.innerHTML = orig; });
+}
+
+function openConvertModal() {
+    document.getElementById('convertModalBackdrop').classList.remove('sales-field-hidden');
+}
+function closeConvertModal() {
+    document.getElementById('convertModalBackdrop').classList.add('sales-field-hidden');
+}
+function toggleConvertMixed() {
+    const isMixed = document.getElementById('convertPaymentMethod').value === 'mixed';
+    document.getElementById('convertMixedFields').classList.toggle('sales-field-hidden', !isMixed);
+}
+function submitConvert() {
+    const submitBtn = document.querySelector('#convertModalBackdrop .cx-btn-add[onclick="submitConvert()"]');
+    const originalHtml = submitBtn ? submitBtn.innerHTML : null;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري التحويل...';
+    }
+
+    const method = document.getElementById('convertPaymentMethod').value;
+    const body = { payment_method: method };
+    if (method === 'mixed') {
+        body.cash_amount = document.getElementById('convertCashAmount').value;
+        body.bank_amount = document.getElementById('convertBankAmount').value;
+        body.bank_reference = document.getElementById('convertBankRef').value;
+    }
+
+    fetch(QUOTE_CONVERT_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+    .then(async (response) => {
+        const contentType = response.headers.get('content-type') || '';
+        let data = null;
+
+        if (contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            throw new Error(text || `HTTP ${response.status}`);
+        }
+
+        if (!response.ok || !data?.success) {
+            throw new Error(data?.message || 'تعذر تحويل عرض السعر إلى فاتورة');
+        }
+
+        const redirectUrl = data.invoice_url || data.redirect;
+        if (!redirectUrl) {
+            throw new Error('تم التحويل لكن لم يتم استلام رابط الفاتورة');
+        }
+
+        sessionStorage.setItem('__enjazFlash', JSON.stringify({
+            message: data.message || 'تم تحويل العرض إلى فاتورة',
+            type: 'success'
+        }));
+
+        setTimeout(() => {
+            window.location.href = redirectUrl;
+        }, 150);
+    })
+    .catch((error) => {
+        showAlert(error?.message || 'حدث خطأ في الاتصال', 'danger');
+    })
+    .finally(() => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHtml;
+        }
+    });
+}
+
+function showAlert(msg, type = 'danger') {
+    const mapped = type === 'danger' ? 'error' : type;
+    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
+        EnjazIMS.toast(msg, mapped); return;
+    }
+    console.warn(msg);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,578 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/sales_quote_form.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════════════════ HERO ══════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-file-contract"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">
+                    {% if quote %}تعديل عرض السعر{% else %}عرض سعر جديد{% endif %}
+                </h1>
+                {% if quote %}
+                <p class="cx-hero-desc">{{ quote.quote_number }}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'sales:quote_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>العودة للقائمة</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline sales-form-stats">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-layer-group"></i>
+            <strong id="quoteLineCount">0</strong>
+            <span>بند</span>
+        </span>
+    </div>
+</div>
+
+<!-- ══════════════════════ FORM BODY ══════════════════════ -->
+<form id="quoteForm">
+{% csrf_token %}
+
+<div class="row g-3">
+
+    <!-- ── الجانب الأيمن: رأس العرض ── -->
+    <div class="col-lg-8">
+
+        <!-- بطاقة بيانات العرض -->
+        <div class="cx-panel mb-3 p-4">
+            <div class="cx-panel-header">
+                <h3 class="cx-panel-title"><i class="fas fa-info-circle me-2"></i>بيانات العرض</h3>
+            </div>
+            <div class="cx-panel-body">
+                <div class="row g-3">
+                    <!-- العميل -->
+                    <div class="col-md-6">
+                        <label class="cx-label">العميل</label>
+                        <select id="customerId" name="customer_id" class="cx-input">
+                            <option value="">— زبون عابر —</option>
+                            {% for c in customers %}
+                            <option value="{{ c.id }}"
+                                {% if quote and quote.customer_id == c.id %}selected{% endif %}>
+                                {{ c.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- المخزن -->
+                    <div class="col-md-6">
+                        <label class="cx-label">المخزن <span class="text-danger">*</span></label>
+                        <select id="stockId" name="stock_id" class="cx-input" required>
+                            {% for s in stocks %}
+                            <option value="{{ s.id }}"
+                                {% if quote and quote.stock_id == s.id %}selected{% endif %}>
+                                {{ s.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- تاريخ العرض -->
+                    <div class="col-md-4">
+                        <label class="cx-label">تاريخ العرض <span class="text-danger">*</span></label>
+                        <input type="date" id="quoteDate" name="quote_date" class="cx-input" required
+                               value="{{ quote.quote_date|date:'Y-m-d'|default:today }}">
+                    </div>
+
+                    <!-- تاريخ الانتهاء -->
+                    <div class="col-md-4">
+                        <label class="cx-label">العرض صالح حتى</label>
+                        <input type="date" id="expiryDate" name="expiry_date" class="cx-input"
+                               value="{{ quote.expiry_date|date:'Y-m-d'|default:'' }}">
+                    </div>
+
+                    <!-- الرقم المرجعي -->
+                    <div class="col-md-4">
+                        <label class="cx-label">الرقم المرجعي</label>
+                        <input type="text" id="referenceNumber" name="reference_number" class="cx-input"
+                               value="{{ quote.reference_number|default:'' }}">
+                    </div>
+
+                    <!-- ملاحظات -->
+                    <div class="col-12">
+                        <label class="cx-label">ملاحظات</label>
+                        <textarea id="notes" name="notes" class="cx-input" rows="2">{{ quote.notes|default:'' }}</textarea>
+                    </div>
+
+                    <!-- الشروط والأحكام -->
+                    <div class="col-12">
+                        <label class="cx-label">الشروط والأحكام</label>
+                        <textarea id="terms" name="terms" class="cx-input" rows="2">{{ quote.terms|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة البنود -->
+        <div class="cx-panel mb-3 p-4">
+            <div class="cx-panel-header">
+                <h3 class="cx-panel-title"><i class="fas fa-list me-2"></i>بنود العرض</h3>
+                <button type="button" class="cx-btn-secondary" onclick="openItemSearch()">
+                    <i class="fas fa-plus"></i> إضافة منتج
+                </button>
+            </div>
+            <div class="cx-panel-body p-0">
+                <div class="table-responsive sales-lines-table-wrap">
+                    <table class="cx-table sales-lines-table" id="linesTable">
+                        <thead>
+                            <tr>
+                                <th class="sales-th-product">المنتج</th>
+                                <th class="sales-th-qty">الكمية</th>
+                                <th class="sales-th-price">سعر الوحدة</th>
+                                <th class="sales-th-discount">خصم %</th>
+                                <th class="sales-th-tax">ضريبة %</th>
+                                <th class="sales-th-total">الإجمالي</th>
+                                <th class="sales-th-actions"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="linesBody"></tbody>
+                    </table>
+                </div>
+                <div id="emptyLinesMsg" class="sales-empty-lines">
+                    <i class="fas fa-box-open"></i>
+                    <p>لم تتم إضافة منتجات بعد. اضغط «إضافة منتج».</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── الجانب الأيسر: الإجماليات والحفظ ── -->
+    <div class="col-lg-4">
+
+        <!-- بطاقة الإجماليات -->
+        <div class="cx-panel mb-3 sticky-top sales-sticky-panel sales-summary-panel p-4">
+            <div class="cx-panel-header">
+                <h3 class="cx-panel-title"><i class="fas fa-calculator me-2"></i>الإجماليات</h3>
+            </div>
+            <div class="cx-panel-body">
+
+                <!-- خصم العرض -->
+                <div class="row g-2 mb-3">
+                    <div class="col-5">
+                        <label class="cx-label">خصم العرض</label>
+                        <select id="discountType" name="quote_discount_type" class="cx-input" onchange="recalcTotals()">
+                            <option value="percent" {% if quote and quote.quote_discount_type == 'percent' %}selected{% endif %}>نسبة %</option>
+                            <option value="amount" {% if quote and quote.quote_discount_type == 'amount' %}selected{% endif %}>مبلغ ثابت</option>
+                        </select>
+                    </div>
+                    <div class="col-7">
+                        <label class="cx-label">&nbsp;</label>
+                        <input type="number" id="discountValue" name="quote_discount_value"
+                               class="cx-input" min="0" step="0.01"
+                               value="{{ quote.quote_discount_value|default:'0' }}"
+                               oninput="recalcTotals()">
+                    </div>
+                </div>
+
+                <!-- الأرقام -->
+                <div class="cx-totals-block">
+                    <div class="cx-totals-row">
+                        <span>المجموع الفرعي</span>
+                        <strong id="displaySubtotal">0.00</strong>
+                    </div>
+                    <div class="cx-totals-row">
+                        <span>الخصم</span>
+                        <strong id="displayDiscount" class="text-danger">0.00</strong>
+                    </div>
+                    <div class="cx-totals-row">
+                        <span>الضريبة</span>
+                        <strong id="displayTax">0.00</strong>
+                    </div>
+                    <div class="cx-totals-row cx-totals-row--grand">
+                        <span>الإجمالي النهائي</span>
+                        <strong id="displayGrandTotal">0.00</strong>
+                    </div>
+                </div>
+
+                <!-- أزرار الحفظ -->
+                <div class="d-grid gap-2 mt-3">
+                    <button type="button" class="cx-btn-add" onclick="submitQuoteForm()">
+                        <i class="fas fa-save me-1"></i>
+                        {% if quote %}تحديث عرض السعر{% else %}حفظ عرض السعر{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- معلومات العميل -->
+        <div class="cx-panel sales-field-hidden p-4" id="customerInfoCard">
+            <div class="cx-panel-header">
+                <h3 class="cx-panel-title"><i class="fas fa-user me-2"></i>معلومات العميل</h3>
+            </div>
+            <div class="cx-panel-body">
+                <div class="cx-info-grid">
+                    <div class="cx-info-item">
+                        <span class="cx-info-label">الرصيد الحالي</span>
+                        <span class="cx-info-value" id="custBalance">—</span>
+                    </div>
+                    <div class="cx-info-item">
+                        <span class="cx-info-label">حد الائتمان</span>
+                        <span class="cx-info-value" id="custCreditLimit">—</span>
+                    </div>
+                    <div class="cx-info-item">
+                        <span class="cx-info-label">الهاتف</span>
+                        <span class="cx-info-value" id="custPhone">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</form>
+
+<!-- ══════════════════════ ITEM SEARCH MODAL ══════════════════════ -->
+<div class="cx-modal-backdrop sales-field-hidden" id="itemSearchBackdrop">
+    <div class="cx-modal sales-modal-md">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title">بحث وإضافة منتج</h3>
+            <button type="button" class="cx-modal-close" onclick="closeItemSearch()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <div class="sales-search-wrap">
+                <i class="fas fa-search sales-search-icon"></i>
+                <input type="text" id="itemSearchQuery" class="cx-input"
+                       placeholder="اسم المنتج، SKU، باركود..." oninput="searchItems()">
+            </div>
+            <div id="itemSearchResults" class="sales-search-results">
+                <div class="text-muted text-center py-3">ابدأ الكتابة للبحث...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div><!-- cx-scene -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ITEM_INFO_URL = "{% url 'sales:item_info_api' %}";
+const STOCK_ITEMS_URL = "{% url 'sales:stock_items_api' %}";
+const CUSTOMER_INFO_URL = "{% url 'sales:customer_info_api' %}";
+const IS_EDIT = {% if quote %}true{% else %}false{% endif %};
+const QUOTE_ID = "{{ quote.id|default:'' }}";
+const QUOTE_CREATE_URL = "{% url 'sales:quote_create' %}";
+const QUOTE_EDIT_URL = "{% if quote %}{% url 'sales:quote_edit' quote.pk %}{% endif %}";
+const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2] || '{{ csrf_token }}';
+
+{% if lines_json %}
+const EXISTING_LINES = {{ lines_json|safe }};
+{% else %}
+const EXISTING_LINES = [];
+{% endif %}
+
+let lineCounter = 0;
+
+document.addEventListener('DOMContentLoaded', function () {
+    EXISTING_LINES.forEach(line => addLineToTable(line));
+    document.getElementById('customerId').addEventListener('change', fetchCustomerInfo);
+    if (document.getElementById('customerId').value) fetchCustomerInfo();
+    recalcTotals();
+    document.getElementById('itemSearchBackdrop').addEventListener('click', function (e) {
+        if (e.target === this) closeItemSearch();
+    });
+});
+
+// ── Item Search ──────────────────────────────────────────
+function openItemSearch() {
+    document.getElementById('itemSearchBackdrop').classList.remove('sales-field-hidden');
+    document.getElementById('itemSearchQuery').focus();
+    document.getElementById('itemSearchResults').innerHTML =
+        '<div class="text-muted text-center py-3">ابدأ الكتابة للبحث...</div>';
+}
+
+function closeItemSearch() {
+    document.getElementById('itemSearchBackdrop').classList.add('sales-field-hidden');
+    document.getElementById('itemSearchQuery').value = '';
+}
+
+let searchTimeout;
+function searchItems() {
+    clearTimeout(searchTimeout);
+    const q = document.getElementById('itemSearchQuery').value.trim();
+    if (!q) {
+        document.getElementById('itemSearchResults').innerHTML =
+            '<div class="text-muted text-center py-3">ابدأ الكتابة للبحث...</div>';
+        return;
+    }
+    searchTimeout = setTimeout(() => {
+        const stockId = document.getElementById('stockId').value;
+        fetch(`${STOCK_ITEMS_URL}?stock_id=${stockId}&q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(data => { if (data.success) renderSearchResults(data.items); });
+    }, 300);
+}
+
+function renderSearchResults(items) {
+    const container = document.getElementById('itemSearchResults');
+    if (!items.length) { container.innerHTML = '<div class="text-muted text-center py-3">لا توجد نتائج</div>'; return; }
+    container.innerHTML = items.map(item => {
+        const qtyLabel = item.is_service ? 'خدمة' : `متاح: ${item.available_qty}`;
+        const qtyClass = item.is_service || item.available_qty > 0 ? 'sale-item-result__qty--ok' : 'sale-item-result__qty--empty';
+        return `
+        <div class="sale-item-result" onclick="selectItem(${item.id})">
+            <div>
+                <div class="sale-item-result__name">${item.name}</div>
+                <div class="sale-item-result__sku">${item.sku}</div>
+            </div>
+            <div class="sale-item-result__meta">
+                <div class="sale-item-result__price">${parseFloat(item.selling_price).toFixed(2)}</div>
+                <div class="sale-item-result__qty ${qtyClass}">${qtyLabel}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function selectItem(itemId) {
+    const stockId = document.getElementById('stockId').value;
+    fetch(`${ITEM_INFO_URL}?item_id=${itemId}&stock_id=${stockId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            const item = data.item;
+            addLineToTable({
+                item_id: item.id,
+                item_name: item.name,
+                item_sku: item.sku,
+                variant_id: '',
+                quantity: '1',
+                unit_price: item.selling_price,
+                discount_percent: '0',
+                tax_rate: item.tax_rate,
+            });
+            closeItemSearch();
+        });
+}
+
+// ── Lines ──────────────────────────────────────────
+function addLineToTable(lineData) {
+    const id = ++lineCounter;
+    const tbody = document.getElementById('linesBody');
+    document.getElementById('emptyLinesMsg').style.display = 'none';
+
+    const qty = parseFloat(lineData.quantity) || 1;
+    const price = parseFloat(lineData.unit_price) || 0;
+    const disc = parseFloat(lineData.discount_percent) || 0;
+    const tax = parseFloat(lineData.tax_rate) || 0;
+    const lineTotal = calcLineTotal(qty, price, disc, tax);
+
+    const row = document.createElement('tr');
+    row.id = `line-${id}`;
+    row.dataset.itemId = lineData.item_id;
+    row.dataset.variantId = lineData.variant_id || '';
+    row.innerHTML = `
+        <td>
+            <div class="sales-line-item-name">${lineData.item_name}</div>
+            <div class="sales-line-item-sku">${lineData.item_sku || ''}</div>
+        </td>
+        <td><input type="number" class="cx-input cx-input--sm sales-input-qty" id="qty-${id}"
+               value="${qty}" min="0.0001" step="0.001" oninput="updateLine(${id})"></td>
+        <td><input type="number" class="cx-input cx-input--sm sales-input-price" id="price-${id}"
+               value="${price}" min="0" step="0.01" oninput="updateLine(${id})"></td>
+        <td><input type="number" class="cx-input cx-input--sm sales-input-pct" id="disc-${id}"
+               value="${disc}" min="0" max="100" step="0.01" oninput="updateLine(${id})"></td>
+        <td><input type="number" class="cx-input cx-input--sm sales-input-pct" id="tax-${id}"
+               value="${tax}" min="0" step="0.01" oninput="updateLine(${id})"></td>
+        <td class="text-end" id="total-${id}"><strong>${lineTotal.toFixed(2)}</strong></td>
+        <td>
+            <button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>`;
+    tbody.appendChild(row);
+    updateLineCount();
+    recalcTotals();
+}
+
+function calcLineTotal(qty, price, discPct, taxRate) {
+    const gross = qty * price;
+    const discAmt = gross * (discPct / 100);
+    const sub = gross - discAmt;
+    return sub + sub * (taxRate / 100);
+}
+
+function updateLine(id) {
+    const qty = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
+    const price = parseFloat(document.getElementById(`price-${id}`).value) || 0;
+    const disc = parseFloat(document.getElementById(`disc-${id}`).value) || 0;
+    const tax = parseFloat(document.getElementById(`tax-${id}`).value) || 0;
+    document.getElementById(`total-${id}`).innerHTML = `<strong>${calcLineTotal(qty, price, disc, tax).toFixed(2)}</strong>`;
+    recalcTotals();
+}
+
+function removeLine(id) {
+    document.getElementById(`line-${id}`).remove();
+    if (!document.getElementById('linesBody').children.length)
+        document.getElementById('emptyLinesMsg').style.display = '';
+    updateLineCount();
+    recalcTotals();
+}
+
+// ── Totals ──────────────────────────────────────────
+function recalcTotals() {
+    let subtotal = 0, taxTotal = 0;
+    document.querySelectorAll('#linesBody tr').forEach(row => {
+        const id = row.id.replace('line-', '');
+        const qty = parseFloat(document.getElementById(`qty-${id}`)?.value) || 0;
+        const price = parseFloat(document.getElementById(`price-${id}`)?.value) || 0;
+        const disc = parseFloat(document.getElementById(`disc-${id}`)?.value) || 0;
+        const tax = parseFloat(document.getElementById(`tax-${id}`)?.value) || 0;
+        const gross = qty * price;
+        const sub = gross - gross * (disc / 100);
+        subtotal += sub;
+        taxTotal += sub * (tax / 100);
+    });
+
+    const discType = document.getElementById('discountType').value;
+    const discVal = parseFloat(document.getElementById('discountValue').value) || 0;
+    let discAmt = discType === 'percent' ? subtotal * (discVal / 100) : discVal;
+    discAmt = Math.min(discAmt, subtotal);
+    const grand = subtotal - discAmt + taxTotal;
+
+    document.getElementById('displaySubtotal').textContent = subtotal.toFixed(2);
+    document.getElementById('displayDiscount').textContent = discAmt.toFixed(2);
+    document.getElementById('displayTax').textContent = taxTotal.toFixed(2);
+    document.getElementById('displayGrandTotal').textContent = grand.toFixed(2);
+}
+
+// ── Customer Info ──────────────────────────────────────────
+function fetchCustomerInfo() {
+    const id = document.getElementById('customerId').value;
+    const card = document.getElementById('customerInfoCard');
+    if (!id) { card.classList.add('sales-field-hidden'); return; }
+    fetch(`${CUSTOMER_INFO_URL}?customer_id=${id}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            const c = data.customer;
+            document.getElementById('custBalance').textContent = parseFloat(c.current_balance).toFixed(2);
+            document.getElementById('custCreditLimit').textContent = parseFloat(c.credit_limit).toFixed(2);
+            document.getElementById('custPhone').textContent = c.phone || '—';
+            card.classList.remove('sales-field-hidden');
+        });
+}
+
+// ── Submit ──────────────────────────────────────────
+function collectLines() {
+    const lines = [];
+    document.querySelectorAll('#linesBody tr').forEach(row => {
+        const id = row.id.replace('line-', '');
+        lines.push({
+            item_id: row.dataset.itemId,
+            variant_id: row.dataset.variantId || null,
+            quantity: document.getElementById(`qty-${id}`).value,
+            unit_price: document.getElementById(`price-${id}`).value,
+            discount_percent: document.getElementById(`disc-${id}`).value,
+            tax_rate: document.getElementById(`tax-${id}`).value,
+        });
+    });
+    return lines;
+}
+
+function submitQuoteForm() {
+    const lines = collectLines();
+    if (!lines.length) { showAlert('أضف منتجاً واحداً على الأقل', 'warning'); return; }
+    if (!document.getElementById('stockId').value) { showAlert('الرجاء اختيار المخزن', 'warning'); return; }
+
+    const btn = document.querySelector('[onclick="submitQuoteForm()"]');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري الحفظ...';
+
+    const body = {
+        customer_id: document.getElementById('customerId').value || null,
+        stock_id: document.getElementById('stockId').value,
+        quote_date: document.getElementById('quoteDate').value,
+        expiry_date: document.getElementById('expiryDate').value || null,
+        reference_number: document.getElementById('referenceNumber').value || '',
+        notes: document.getElementById('notes').value,
+        terms: document.getElementById('terms').value,
+        quote_discount_type: document.getElementById('discountType').value,
+        quote_discount_value: document.getElementById('discountValue').value,
+        lines,
+    };
+
+    const url = IS_EDIT ? QUOTE_EDIT_URL : QUOTE_CREATE_URL;
+
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(body),
+    })
+    .then(async (response) => {
+        const contentType = response.headers.get('content-type') || '';
+        let data = null;
+
+        if (contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            throw new Error(text || `HTTP ${response.status}`);
+        }
+
+        if (!response.ok || !data?.success) {
+            throw new Error(data?.message || 'تعذر حفظ عرض السعر');
+        }
+
+        if (!data.redirect) {
+            throw new Error('تم الحفظ لكن لم يتم استلام رابط التحويل');
+        }
+
+        sessionStorage.setItem('__enjazFlash', JSON.stringify({
+            message: data.message || 'تم حفظ عرض السعر بنجاح',
+            type: 'success'
+        }));
+
+        window.location.href = data.redirect;
+    })
+    .catch((error) => {
+        showAlert(error?.message || 'حدث خطأ في الاتصال', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    });
+}
+
+// ── Helpers ──────────────────────────────────────────
+function updateLineCount() {
+    const c = document.querySelectorAll('#linesBody tr').length;
+    document.getElementById('quoteLineCount').textContent = String(c);
+}
+
+function getCookie(name) {
+    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+}
+
+function showAlert(msg, type = 'danger') {
+    const mapped = type === 'danger' ? 'error' : type;
+    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
+        EnjazIMS.toast(msg, mapped); return;
+    }
+    console.warn(msg);
+}
+</script>
+{% endblock %}

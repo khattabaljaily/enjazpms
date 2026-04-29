@@ -3,7 +3,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
-<link rel="stylesheet" href="{% static 'css/sales_invoice_detail.css' %}?v=1.0">
+    <link rel="stylesheet" href="{% static 'css/sales_invoice_detail.css' %}?v=2.0">
+    <link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -299,6 +300,8 @@
 
 </div><!-- cx-scene -->
 
+{% include "sales/partials/print_invoice.html" %}
+
 <!-- Cancel Modal -->
 <div class="cx-modal-backdrop sales-field-hidden" id="cancelModalBackdrop">
     <div class="cx-modal sales-modal-sm">
@@ -350,6 +353,13 @@ const INVOICE_ID = {{ invoice.id }};
 const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2];
 let pendingInvoiceDecision = null;
 
+const autoPrint = new URLSearchParams(window.location.search).get('print') === '1';
+if (autoPrint) {
+    window.addEventListener('load', function () {
+        setTimeout(() => window.print(), 250);
+    }, { once: true });
+}
+
 {% if can_confirm %}
 function doConfirm() {
     openInvoiceDecisionModal({
@@ -400,18 +410,23 @@ function closeInvoiceDecisionModal() {
 
 function submitInvoiceDecision() {
     if (!pendingInvoiceDecision) return;
+    const actionConfig = pendingInvoiceDecision;
     const submitBtn = document.getElementById('invoiceDecisionSubmitBtn');
     const originalHtml = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري التنفيذ...';
 
-    Promise.resolve(pendingInvoiceDecision.run())
+    Promise.resolve(actionConfig.run())
     .then(r => r.json())
     .then(data => {
         if (data.success) {
             closeInvoiceDecisionModal();
-            if (typeof pendingInvoiceDecision?.onSuccess === 'function') {
-                pendingInvoiceDecision.onSuccess();
+            sessionStorage.setItem('__enjazFlash', JSON.stringify({
+                message: data.message || 'تمت العملية بنجاح',
+                type: 'success'
+            }));
+            if (typeof actionConfig?.onSuccess === 'function') {
+                actionConfig.onSuccess(data);
                 return;
             }
             location.reload();
@@ -436,7 +451,13 @@ function submitCancel() {
         headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason })
     }).then(r => r.json()).then(data => {
-        if (data.success) location.reload();
+        if (data.success) {
+            sessionStorage.setItem('__enjazFlash', JSON.stringify({
+                message: data.message || 'تم إلغاء الفاتورة بنجاح',
+                type: 'success'
+            }));
+            location.reload();
+        }
         else showAlert(data.message, 'danger');
     });
 }
@@ -454,7 +475,13 @@ function doPayment() {
         headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, method, reference })
     }).then(r => r.json()).then(data => {
-        if (data.success) location.reload();
+        if (data.success) {
+            sessionStorage.setItem('__enjazFlash', JSON.stringify({
+                message: data.message || 'تم تسجيل الدفعة بنجاح',
+                type: 'success'
+            }));
+            location.reload();
+        }
         else showAlert(data.message, 'danger');
     });
 }

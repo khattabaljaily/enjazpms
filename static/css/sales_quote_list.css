@@ -1,0 +1,10 @@
+@import url('sales_invoice_list.css');
+
+/* Quote list specific adjustments */
+#quotesTable .cx-btn-icon--success {
+    color: var(--bs-success, #198754);
+}
+
+#quotesTable .cx-btn-icon--success:hover {
+    background: rgba(25, 135, 84, 0.12);
+}

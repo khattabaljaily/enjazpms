@@ -873,3 +873,187 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
     invoice.recalculate_totals()
     invoice.save()
     return invoice
+
+
+# ═══════════════════════════════════════════════════════════
+#   SALE QUOTE SERVICES  — عروض الأسعار
+# ═══════════════════════════════════════════════════════════
+
+from .models import SaleQuote, SaleQuoteLine  # noqa: E402 (circular-safe after model def)
+from apps.items.models import Item, ItemVariant  # already imported above; safe double
+
+
+def build_quote_from_post(tenant, user, post_data, lines_data, instance=None):
+    """
+    ينشئ أو يُحدِّث SaleQuote (مسودة فقط) من بيانات POST.
+
+    post_data: dict يحتوي على حقول الرأس
+    lines_data: list of dicts (item_id, quantity, unit_price, …)
+    instance: SaleQuote موجود للتعديل (None لإنشاء جديد)
+    """
+    from apps.stocks.models import Stock
+    from apps.customers.models import Customer
+
+    stock = Stock.objects.get(id=post_data['stock_id'], tenant=tenant)
+    customer = None
+    if post_data.get('customer_id'):
+        customer = Customer.objects.get(id=post_data['customer_id'], tenant=tenant)
+
+    if instance is None:
+        quote = SaleQuote(tenant=tenant, created_by=user)
+    else:
+        if instance.status != 'draft':
+            raise ValueError("لا يمكن تعديل عرض سعر غير مسودة.")
+        quote = instance
+        quote.updated_by = user
+        quote.quote_lines.all().delete()
+
+    quote.customer = customer
+    quote.stock = stock
+    quote.quote_date = post_data['quote_date']
+    quote.expiry_date = post_data.get('expiry_date') or None
+    quote.reference_number = post_data.get('reference_number', '')
+    quote.notes = post_data.get('notes', '')
+    quote.terms = post_data.get('terms', '')
+    quote.quote_discount_type = post_data.get('quote_discount_type', 'percent')
+    quote.quote_discount_value = Decimal(str(post_data.get('quote_discount_value', 0)))
+    quote.save()
+
+    for ld in lines_data:
+        item = Item.objects.get(id=ld['item_id'], tenant=tenant)
+        variant = None
+        if ld.get('variant_id'):
+            variant = ItemVariant.objects.get(id=ld['variant_id'], tenant=tenant)
+
+        line = SaleQuoteLine(
+            tenant=tenant,
+            quote=quote,
+            item=item,
+            variant=variant,
+            quantity=Decimal(str(ld['quantity'])),
+            unit_price=Decimal(str(ld['unit_price'])),
+            discount_percent=Decimal(str(ld.get('discount_percent', 0))),
+            tax_rate=Decimal(str(ld.get('tax_rate', item.tax_rate))),
+            created_by=user,
+        )
+        # حساب السطر
+        qty = line.quantity
+        price = line.unit_price
+        disc_pct = line.discount_percent
+        disc_amt = (qty * price * disc_pct / Decimal('100')).quantize(Decimal('0.01'))
+        line.discount_amount = disc_amt
+        sub = (qty * price - disc_amt).quantize(Decimal('0.01'))
+        line.line_subtotal = sub
+        tax_amt = (sub * line.tax_rate / Decimal('100')).quantize(Decimal('0.01'))
+        line.tax_amount = tax_amt
+        line.line_total = sub + tax_amt
+        line.save()
+
+    quote.recalculate_totals()
+    quote.save()
+    return quote
+
+
+@transaction.atomic
+def mark_quote_sent(quote, user):
+    """تغيير الحالة إلى مُرسَل."""
+    if not quote.can_send:
+        raise ValueError("لا يمكن إرسال هذا العرض في وضعه الحالي.")
+    quote.status = 'sent'
+    quote.updated_by = user
+    quote.save(update_fields=['status', 'updated_by', 'updated_at'])
+
+
+@transaction.atomic
+def mark_quote_accepted(quote, user):
+    """تغيير الحالة إلى مقبول."""
+    if quote.status not in ('sent',):
+        raise ValueError("لا يمكن قبول هذا العرض في وضعه الحالي.")
+    quote.status = 'accepted'
+    quote.updated_by = user
+    quote.save(update_fields=['status', 'updated_by', 'updated_at'])
+
+
+@transaction.atomic
+def mark_quote_rejected(quote, user):
+    """تغيير الحالة إلى مرفوض."""
+    if quote.status not in ('sent', 'accepted'):
+        raise ValueError("لا يمكن رفض هذا العرض في وضعه الحالي.")
+    quote.status = 'rejected'
+    quote.updated_by = user
+    quote.save(update_fields=['status', 'updated_by', 'updated_at'])
+
+
+@transaction.atomic
+def cancel_sale_quote(quote, user):
+    """إلغاء عرض السعر."""
+    if not quote.can_cancel:
+        raise ValueError("لا يمكن إلغاء هذا العرض في وضعه الحالي.")
+    quote.status = 'cancelled'
+    quote.updated_by = user
+    quote.save(update_fields=['status', 'updated_by', 'updated_at'])
+
+
+@transaction.atomic
+def convert_quote_to_invoice(quote, user, payment_method='cash',
+                              cash_amount=None, bank_amount=None, bank_reference=''):
+    """
+    يحوّل عرض السعر إلى فاتورة بيع مسودة.
+    ينسخ الرأس والبنود ويربط الفاتورة بالعرض.
+    الفاتورة تُنشأ كمسودة (draft) — يؤكدها المستخدم لاحقاً.
+    """
+    if not quote.can_convert:
+        raise ValueError(f"لا يمكن تحويل عرض بالحالة «{quote.get_status_display()}».")
+
+    # بناء بيانات الرأس
+    header = {
+        'stock_id': quote.stock_id,
+        'customer_id': quote.customer_id,
+        'invoice_date': str(quote.quote_date),
+        'due_date': str(quote.expiry_date) if quote.expiry_date else '',
+        'reference_number': quote.reference_number,
+        'payment_method': payment_method,
+        'invoice_discount_type': quote.quote_discount_type,
+        'invoice_discount_value': str(quote.quote_discount_value),
+        'notes': quote.notes,
+        'cash_amount': str(cash_amount or 0),
+        'bank_amount': str(bank_amount or 0),
+        'bank_reference': bank_reference or '',
+    }
+
+    # بناء بنود الفاتورة من بنود العرض
+    lines = []
+    for ql in quote.quote_lines.select_related('item', 'variant').all():
+        lines.append({
+            'item_id': ql.item_id,
+            'variant_id': ql.variant_id,
+            'quantity': str(ql.quantity),
+            'unit_price': str(ql.unit_price),
+            'discount_percent': str(ql.discount_percent),
+            'tax_rate': str(ql.tax_rate),
+            'cost_price_snapshot': str(getattr(ql.item, 'cost_price', 0)),
+            'batch_number': '',
+            'serial_number': '',
+            'expiry_date': None,
+        })
+
+    invoice = build_invoice_from_post(
+        tenant=quote.tenant,
+        stock=quote.stock,
+        data=header,
+        lines_data=lines,
+        user=user,
+    )
+
+    # ربط العرض بالفاتورة
+    quote.converted_invoice = invoice
+    quote.converted_at = timezone.now()
+    quote.converted_by = user
+    quote.status = 'converted'
+    quote.updated_by = user
+    quote.save(update_fields=[
+        'status', 'converted_invoice', 'converted_at', 'converted_by',
+        'updated_by', 'updated_at'
+    ])
+
+    return invoice

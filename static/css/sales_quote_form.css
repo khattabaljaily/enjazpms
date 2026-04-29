@@ -1,0 +1,8 @@
+@import url('sales_invoice_form.css');
+
+/* Quote form specific adjustments */
+#quoteLineCount {
+    min-width: 1.5rem;
+    display: inline-block;
+    text-align: center;
+}

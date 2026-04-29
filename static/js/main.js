@@ -45,10 +45,11 @@ const EnjazIMS = {
         $(element).prop('disabled', false).html(originalText);
     },
     
-    // Show bootstrap alert notification
+    // Show app toast notification (non-Bootstrap)
     toast: function(message, type = 'success') {
         const typeMap = {
-            error: 'danger',
+            error: 'error',
+            danger: 'error',
             success: 'success',
             warning: 'warning',
             info: 'info'
@@ -56,33 +57,62 @@ const EnjazIMS = {
 
         const iconMap = {
             success: 'fa-check-circle',
-            danger: 'fa-exclamation-circle',
+            error: 'fa-exclamation-circle',
             warning: 'fa-exclamation-triangle',
             info: 'fa-info-circle'
         };
 
-        const alertType = typeMap[type] || 'info';
-        const iconClass = iconMap[alertType] || 'fa-info-circle';
-        const alertId = `global-alert-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        const alertHtml = `
-            <div id="${alertId}" class="alert alert-${alertType} alert-dismissible fade show" role="alert">
-                <i class="fas ${iconClass} me-2"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
+        const toastType = typeMap[type] || 'info';
+        const iconClass = iconMap[toastType] || 'fa-info-circle';
+        const toastId = `global-toast-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const toastContainer = document.getElementById('global-alerts');
+
+        if (!toastContainer) return;
+
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `cx-toast cx-toast--${toastType}`;
+        toast.setAttribute('role', 'status');
+        toast.innerHTML = `
+            <div class="cx-toast__icon"><i class="fas ${iconClass}"></i></div>
+            <div class="cx-toast__message">${message}</div>
+            <button type="button" class="cx-toast__close" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
         `;
 
-        const alertContainer = $('#global-alerts');
-        if (alertContainer.length) {
-            alertContainer.prepend(alertHtml);
+        toastContainer.prepend(toast);
+        requestAnimationFrame(() => toast.classList.add('show'));
 
-            setTimeout(() => {
-                const element = document.getElementById(alertId);
-                if (element) {
-                    const alert = bootstrap.Alert.getOrCreateInstance(element);
-                    alert.close();
-                }
-            }, 4000);
+        const closeToast = () => {
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 220);
+        };
+
+        toast.querySelector('.cx-toast__close')?.addEventListener('click', closeToast);
+        setTimeout(closeToast, 4000);
+    },
+
+    rememberToast: function(message, type = 'success') {
+        try {
+            sessionStorage.setItem('__enjazFlash', JSON.stringify({ message, type }));
+        } catch (e) {
+            // ignore storage errors
+        }
+    },
+
+    consumeRememberedToast: function() {
+        try {
+            const flashRaw = sessionStorage.getItem('__enjazFlash');
+            if (!flashRaw) return;
+            const flash = JSON.parse(flashRaw);
+            if (flash?.message) {
+                this.toast(flash.message, flash.type || 'success');
+            }
+            sessionStorage.removeItem('__enjazFlash');
+        } catch (e) {
+            sessionStorage.removeItem('__enjazFlash');
         }
     },
 
@@ -238,6 +268,17 @@ $(document).ready(function() {
     
     // Current year in footer
     $('#current-year').text(new Date().getFullYear());
+
+    const pendingMessages = window.__enjazPendingMessages || [];
+    if (pendingMessages.length) {
+        pendingMessages.forEach((entry) => {
+            if (!entry || !entry.message) return;
+            EnjazIMS.toast(entry.message, entry.type || 'info');
+        });
+        window.__enjazPendingMessages = [];
+    }
+
+    EnjazIMS.consumeRememberedToast();
 
     // AJAX auth forms (login/register)
     $('.js-auth-ajax').on('submit', function(e) {

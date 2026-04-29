@@ -693,6 +693,10 @@ function submitForm(action) {
             return;
         }
         if (data.success) {
+            sessionStorage.setItem('__enjazFlash', JSON.stringify({
+                message: data.message || 'تم حفظ الفاتورة بنجاح',
+                type: 'success'
+            }));
             window.location.href = data.redirect;
         } else {
             showAlert(data.message);

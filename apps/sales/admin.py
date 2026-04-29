@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     SaleInvoice, SaleInvoiceLine, SalePayment,
-    SaleReturn, SaleReturnLine, StockMovement, CustomerLedger
+    SaleReturn, SaleReturnLine, StockMovement, CustomerLedger,
+    SaleQuote, SaleQuoteLine,
 )
 
 
@@ -57,3 +58,24 @@ class CustomerLedgerAdmin(admin.ModelAdmin):
     search_fields = ('customer__name',)
     date_hierarchy = 'entry_date'
     readonly_fields = ('running_balance',)
+
+
+class SaleQuoteLineInline(admin.TabularInline):
+    model = SaleQuoteLine
+    extra = 0
+    readonly_fields = ('line_subtotal', 'tax_amount', 'line_total')
+    fields = ('item', 'variant', 'quantity', 'unit_price',
+              'discount_percent', 'tax_rate', 'line_subtotal', 'line_total')
+
+
+@admin.register(SaleQuote)
+class SaleQuoteAdmin(admin.ModelAdmin):
+    list_display = ('quote_number', 'quote_date', 'customer', 'stock',
+                    'grand_total', 'status')
+    list_filter = ('status', 'tenant')
+    search_fields = ('quote_number', 'customer__name', 'reference_number')
+    readonly_fields = ('quote_number', 'subtotal', 'quote_discount_amount',
+                       'tax_amount', 'grand_total', 'converted_invoice',
+                       'converted_at', 'converted_by')
+    inlines = [SaleQuoteLineInline]
+    date_hierarchy = 'quote_date'

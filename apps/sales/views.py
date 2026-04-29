@@ -45,6 +45,8 @@ from .models import (
     SaleReturn,
     SaleReturnLine,
     StockMovement,
+    SaleQuote,
+    SaleQuoteLine,
 )
 from .services import (
     build_invoice_from_post,
@@ -54,6 +56,12 @@ from .services import (
     confirm_sale_return,
     edit_confirmed_invoice,
     record_customer_payment,
+    build_quote_from_post,
+    mark_quote_sent,
+    mark_quote_accepted,
+    mark_quote_rejected,
+    cancel_sale_quote,
+    convert_quote_to_invoice,
 )
 
 
@@ -971,3 +979,320 @@ def stock_items_api(request):
         })
 
     return JsonResponse({'success': True, 'items': data})
+
+
+# ═══════════════════════════════════════════════════════════
+#   SALE QUOTE VIEWS  — عروض الأسعار
+# ═══════════════════════════════════════════════════════════
+
+@login_required
+def quote_list(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    qs = SaleQuote.objects.for_tenant(tenant)
+    customers = Customer.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
+
+    stats = {
+        'total':     qs.count(),
+        'draft':     qs.filter(status='draft').count(),
+        'sent':      qs.filter(status='sent').count(),
+        'accepted':  qs.filter(status='accepted').count(),
+        'converted': qs.filter(status='converted').count(),
+        'rejected':  qs.filter(status='rejected').count(),
+        'cancelled': qs.filter(status='cancelled').count(),
+        'grand_total_sum': (
+            qs.exclude(status__in=['cancelled'])
+            .aggregate(s=Sum('grand_total'))['s'] or Decimal('0')
+        ),
+    }
+
+    return render(request, 'sales/quote_list.html', {
+        'stats': stats,
+        'customers': list(customers),
+        'stocks': list(stocks),
+    })
+
+
+@login_required
+def quote_table_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 25))
+    search_value = request.GET.get('search[value]', '').strip()
+    status_filter = request.GET.get('status', '')
+    customer_filter = request.GET.get('customer_id', '')
+
+    qs = SaleQuote.objects.for_tenant(tenant).select_related('customer', 'stock')
+    total = qs.count()
+
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    if customer_filter:
+        qs = qs.filter(customer_id=customer_filter)
+
+    if search_value:
+        qs = qs.filter(
+            Q(quote_number__icontains=search_value) |
+            Q(customer__name__icontains=search_value) |
+            Q(reference_number__icontains=search_value)
+        )
+
+    filtered = qs.count()
+    order_col_idx = int(request.GET.get('order[0][column]', 0))
+    order_dir = request.GET.get('order[0][dir]', 'desc')
+    col_map = {0: 'quote_number', 1: 'quote_date', 2: 'customer__name', 3: 'grand_total', 4: 'status'}
+    order_field = col_map.get(order_col_idx, 'quote_date')
+    if order_dir == 'desc':
+        order_field = f'-{order_field}'
+    qs = qs.order_by(order_field)[start:start + length]
+
+    STATUS_COLOR = {
+        'draft': 'muted', 'sent': 'primary', 'accepted': 'success',
+        'rejected': 'danger', 'converted': 'info', 'expired': 'warning', 'cancelled': 'danger',
+    }
+    STATUS_LABEL = dict(SaleQuote.STATUS_CHOICES)
+
+    rows = []
+    for q in qs:
+        rows.append({
+            'id': q.id,
+            'quote_number': q.quote_number,
+            'quote_date': str(q.quote_date),
+            'expiry_date': str(q.expiry_date) if q.expiry_date else None,
+            'customer': q.customer.name if q.customer else 'زبون عابر',
+            'customer_id': q.customer_id,
+            'stock': q.stock.name,
+            'grand_total': str(q.grand_total),
+            'status': q.status,
+            'status_label': STATUS_LABEL.get(q.status, q.status),
+            'status_color': STATUS_COLOR.get(q.status, 'muted'),
+            'converted_invoice_id': q.converted_invoice_id,
+        })
+
+    return JsonResponse({
+        'draw': draw,
+        'recordsTotal': total,
+        'recordsFiltered': filtered,
+        'data': rows,
+    })
+
+
+@login_required
+def quote_create(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    customers = Customer.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, TypeError):
+            body = {}
+
+        lines_data = body.pop('lines', [])
+        if not lines_data:
+            return _json_error('أضف بنداً واحداً على الأقل')
+
+        try:
+            quote = build_quote_from_post(
+                tenant=tenant,
+                user=request.user,
+                post_data=body,
+                lines_data=lines_data,
+            )
+        except Exception as e:
+            return _json_error(str(e))
+
+        return _json_ok({'redirect': f'/sales/quotes/{quote.pk}/'}, 'تم حفظ عرض السعر')
+
+    return render(request, 'sales/quote_form.html', {
+        'customers': customers,
+        'stocks': stocks,
+        'quote': None,
+        'today': timezone.now().date().isoformat(),
+        'lines_json': '[]',
+    })
+
+
+@login_required
+def quote_edit(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    if quote.status != 'draft':
+        return redirect('sales:quote_detail', pk=pk)
+
+    customers = Customer.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, TypeError):
+            body = {}
+
+        lines_data = body.pop('lines', [])
+        if not lines_data:
+            return _json_error('أضف بنداً واحداً على الأقل')
+
+        try:
+            quote = build_quote_from_post(
+                tenant=tenant,
+                user=request.user,
+                post_data=body,
+                lines_data=lines_data,
+                instance=quote,
+            )
+        except Exception as e:
+            return _json_error(str(e))
+
+        return _json_ok({'redirect': f'/sales/quotes/{quote.pk}/'}, 'تم تحديث عرض السعر')
+
+    lines_json = []
+    for ql in quote.quote_lines.select_related('item', 'variant').all():
+        lines_json.append({
+            'item_id': ql.item_id,
+            'item_name': ql.item.name,
+            'variant_id': ql.variant_id,
+            'variant_name': str(ql.variant) if ql.variant else '',
+            'quantity': str(ql.quantity),
+            'unit_price': str(ql.unit_price),
+            'discount_percent': str(ql.discount_percent),
+            'tax_rate': str(ql.tax_rate),
+            'line_total': str(ql.line_total),
+        })
+
+    return render(request, 'sales/quote_form.html', {
+        'customers': customers,
+        'stocks': stocks,
+        'quote': quote,
+        'lines_json': json.dumps(lines_json),
+        'today': timezone.now().date().isoformat(),
+    })
+
+
+@login_required
+def quote_detail(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    quote = get_object_or_404(
+        SaleQuote.objects.select_related('customer', 'stock', 'converted_invoice', 'converted_by'),
+        pk=pk, tenant=tenant
+    )
+    lines = quote.quote_lines.select_related('item', 'variant').all()
+
+    return render(request, 'sales/quote_detail.html', {
+        'quote': quote,
+        'lines': lines,
+        'can_edit': quote.status == 'draft',
+        'can_send': quote.can_send,
+        'can_accept': quote.status == 'sent',
+        'can_reject': quote.status in ('sent', 'accepted'),
+        'can_convert': quote.can_convert,
+        'can_cancel': quote.can_cancel,
+    })
+
+
+@login_required
+@require_POST
+def quote_send_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    try:
+        mark_quote_sent(quote, request.user)
+        return _json_ok(msg='تم تغيير حالة العرض إلى مُرسَل')
+    except Exception as e:
+        return _json_error(str(e))
+
+
+@login_required
+@require_POST
+def quote_accept_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    try:
+        mark_quote_accepted(quote, request.user)
+        return _json_ok(msg='تم قبول العرض')
+    except Exception as e:
+        return _json_error(str(e))
+
+
+@login_required
+@require_POST
+def quote_reject_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    try:
+        mark_quote_rejected(quote, request.user)
+        return _json_ok(msg='تم رفض العرض')
+    except Exception as e:
+        return _json_error(str(e))
+
+
+@login_required
+@require_POST
+def quote_cancel_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    try:
+        cancel_sale_quote(quote, request.user)
+        return _json_ok(msg='تم إلغاء عرض السعر')
+    except Exception as e:
+        return _json_error(str(e))
+
+
+@login_required
+@require_POST
+def quote_delete_draft_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    if quote.status != 'draft':
+        return _json_error('لا يمكن حذف إلا المسودات')
+    quote.delete()
+    return _json_ok(msg='تم حذف مسودة العرض')
+
+
+@login_required
+@require_POST
+def quote_convert_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except Exception:
+        body = {}
+
+    payment_method = body.get('payment_method', 'cash')
+    cash_amount = body.get('cash_amount')
+    bank_amount = body.get('bank_amount')
+    bank_reference = body.get('bank_reference', '')
+
+    try:
+        invoice = convert_quote_to_invoice(
+            quote=quote,
+            user=request.user,
+            payment_method=payment_method,
+            cash_amount=cash_amount,
+            bank_amount=bank_amount,
+            bank_reference=bank_reference,
+        )
+        return _json_ok(
+            {'invoice_url': f'/sales/{invoice.pk}/'},
+            msg=f'تم إنشاء الفاتورة {invoice.invoice_number} من عرض السعر'
+        )
+    except Exception as e:
+        return _json_error(str(e))
