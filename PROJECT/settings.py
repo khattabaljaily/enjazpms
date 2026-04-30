@@ -33,17 +33,20 @@ SECRET_KEY = get_secret('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = get_secret('DEBUG')
 
-ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS')
+# ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS')
 
-# CSRF & Security
-CSRF_TRUSTED_ORIGINS = [
-    "http://imspro.enjaztechnology.com",
-    "https://imspro.enjaztechnology.com",
-    "http://www.imspro.enjaztechnology.com",
-    "https://www.imspro.enjaztechnology.com",
-    "127.0.0.1",
-    "localhost"
-]
+# CSRF_TRUSTED_ORIGINS = [
+#     "http://imspro.enjaztechnology.com",
+#     "https://imspro.enjaztechnology.com",
+#     "http://www.imspro.enjaztechnology.com",
+#     "https://www.imspro.enjaztechnology.com",
+#     "127.0.0.1",
+#     "localhost"
+# ]
+
+ALLOWED_HOSTS = ["*"]
+CSRF_TRUSTED_ORIGINS = ["*"]
+
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
