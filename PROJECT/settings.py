@@ -41,7 +41,7 @@ def get_secret(key, default=None):
 # Core security settings
 # ─────────────────────────────────────────────
 SECRET_KEY = get_secret('SECRET_KEY')
-DEBUG = get_secret('DEBUG', False)
+DEBUG = get_secret('DEBUG')
 
 # ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS', [])
 ALLOWED_HOSTS = ["*"]
