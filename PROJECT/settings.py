@@ -43,7 +43,8 @@ def get_secret(key, default=None):
 SECRET_KEY = get_secret('SECRET_KEY')
 DEBUG = get_secret('DEBUG', False)
 
-ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS', [])
+# ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS', [])
+ALLOWED_HOSTS = ["*"]
 if isinstance(ALLOWED_HOSTS, str):
     ALLOWED_HOSTS = [ALLOWED_HOSTS]
 
