@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from decimal import Decimal
@@ -8,6 +8,11 @@ import io
 
 from .forms import SupplierForm
 from .models import Supplier
+
+try:
+    from apps.purchases.models import SupplierLedger
+except Exception:  # pragma: no cover
+    SupplierLedger = None
 
 
 def _ensure_tenant(request):
@@ -101,7 +106,12 @@ def supplier_table_api(request):
             'phone': supplier.phone or '-',
             'city': supplier.city or '-',
             'opening_balance': str(supplier.opening_balance),
-            'current_balance': str(supplier.opening_balance),
+            'current_balance': str(
+                (supplier.opening_balance or Decimal('0')) + (
+                    (SupplierLedger.objects.filter(tenant=tenant, supplier=supplier).aggregate(s=Sum('amount'))['s'] or Decimal('0'))
+                    if SupplierLedger else Decimal('0')
+                )
+            ),
             'is_active': supplier.is_active,
         }
         for supplier in queryset
@@ -164,7 +174,12 @@ def supplier_detail_api(request, pk):
             'city': supplier.city,
             'address': supplier.address,
             'opening_balance': str(supplier.opening_balance),
-            'current_balance': str(supplier.opening_balance),
+            'current_balance': str(
+                (supplier.opening_balance or Decimal('0')) + (
+                    (SupplierLedger.objects.filter(tenant=tenant, supplier=supplier).aggregate(s=Sum('amount'))['s'] or Decimal('0'))
+                    if SupplierLedger else Decimal('0')
+                )
+            ),
             'credit_limit': str(supplier.credit_limit),
             'notes': supplier.notes,
             'is_active': supplier.is_active,
@@ -182,6 +197,7 @@ def supplier_transactions_api(request, pk):
     opening = supplier.opening_balance or Decimal('0')
 
     data = []
+    running = opening
     if opening != Decimal('0'):
         entry_date = supplier.created_at.date().strftime('%Y-%m-%d') if supplier.created_at else ''
         data.append({
@@ -194,6 +210,28 @@ def supplier_transactions_api(request, pk):
             'reference_type': 'supplier_opening',
             'reference_id': supplier.id,
         })
+
+    if SupplierLedger:
+        entries = SupplierLedger.objects.filter(tenant=tenant, supplier=supplier).order_by('entry_date', 'id')
+        labels = {
+            'invoice': 'فاتورة/أمر شراء آجل',
+            'payment': 'سداد مورد',
+            'return': 'مرتجع شراء',
+            'adjustment': 'تعديل',
+            'opening': 'رصيد افتتاحي',
+        }
+        for e in entries:
+            running += (e.amount or Decimal('0'))
+            data.append({
+                'entry_date': e.entry_date.strftime('%Y-%m-%d') if e.entry_date else '',
+                'entry_type': e.entry_type,
+                'entry_type_label': labels.get(e.entry_type, e.entry_type),
+                'amount': str(e.amount),
+                'running_balance': str(running),
+                'notes': e.notes or '—',
+                'reference_type': e.reference_type or '—',
+                'reference_id': e.reference_id,
+            })
 
     return JsonResponse({'success': True, 'data': data})
 

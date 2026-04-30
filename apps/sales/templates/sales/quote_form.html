@@ -331,7 +331,7 @@ function renderSearchResults(items) {
     const container = document.getElementById('itemSearchResults');
     if (!items.length) { container.innerHTML = '<div class="text-muted text-center py-3">لا توجد نتائج</div>'; return; }
     container.innerHTML = items.map(item => {
-        const qtyLabel = item.is_service ? 'خدمة' : `متاح: ${item.available_qty}`;
+        const qtyLabel = item.is_service ? 'خدمة' : `متاح: ${EnjazIMS.formatQuantity(item.available_qty || 0)}`;
         const qtyClass = item.is_service || item.available_qty > 0 ? 'sale-item-result__qty--ok' : 'sale-item-result__qty--empty';
         return `
         <div class="sale-item-result" onclick="selectItem(${item.id})">
@@ -340,7 +340,7 @@ function renderSearchResults(items) {
                 <div class="sale-item-result__sku">${item.sku}</div>
             </div>
             <div class="sale-item-result__meta">
-                <div class="sale-item-result__price">${parseFloat(item.selling_price).toFixed(2)}</div>
+                <div class="sale-item-result__price">${EnjazIMS.formatMoney(item.selling_price || 0)}</div>
                 <div class="sale-item-result__qty ${qtyClass}">${qtyLabel}</div>
             </div>
         </div>`;
@@ -374,10 +374,10 @@ function addLineToTable(lineData) {
     const tbody = document.getElementById('linesBody');
     document.getElementById('emptyLinesMsg').style.display = 'none';
 
-    const qty = parseFloat(lineData.quantity) || 1;
-    const price = parseFloat(lineData.unit_price) || 0;
-    const disc = parseFloat(lineData.discount_percent) || 0;
-    const tax = parseFloat(lineData.tax_rate) || 0;
+    const qty = EnjazIMS.parseNumber(lineData.quantity) || 1;
+    const price = EnjazIMS.parseNumber(lineData.unit_price) || 0;
+    const disc = EnjazIMS.parseNumber(lineData.discount_percent) || 0;
+    const tax = EnjazIMS.parseNumber(lineData.tax_rate) || 0;
     const lineTotal = calcLineTotal(qty, price, disc, tax);
 
     const row = document.createElement('tr');
@@ -397,7 +397,7 @@ function addLineToTable(lineData) {
                value="${disc}" min="0" max="100" step="0.01" oninput="updateLine(${id})"></td>
         <td><input type="number" class="cx-input cx-input--sm sales-input-pct" id="tax-${id}"
                value="${tax}" min="0" step="0.01" oninput="updateLine(${id})"></td>
-        <td class="text-end" id="total-${id}"><strong>${lineTotal.toFixed(2)}</strong></td>
+        <td class="text-end" id="total-${id}"><strong>${EnjazIMS.formatMoney(lineTotal)}</strong></td>
         <td>
             <button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})">
                 <i class="fas fa-trash"></i>
@@ -416,11 +416,11 @@ function calcLineTotal(qty, price, discPct, taxRate) {
 }
 
 function updateLine(id) {
-    const qty = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
-    const price = parseFloat(document.getElementById(`price-${id}`).value) || 0;
-    const disc = parseFloat(document.getElementById(`disc-${id}`).value) || 0;
-    const tax = parseFloat(document.getElementById(`tax-${id}`).value) || 0;
-    document.getElementById(`total-${id}`).innerHTML = `<strong>${calcLineTotal(qty, price, disc, tax).toFixed(2)}</strong>`;
+    const qty = EnjazIMS.parseNumber(document.getElementById(`qty-${id}`).value) || 0;
+    const price = EnjazIMS.parseNumber(document.getElementById(`price-${id}`).value) || 0;
+    const disc = EnjazIMS.parseNumber(document.getElementById(`disc-${id}`).value) || 0;
+    const tax = EnjazIMS.parseNumber(document.getElementById(`tax-${id}`).value) || 0;
+    document.getElementById(`total-${id}`).innerHTML = `<strong>${EnjazIMS.formatMoney(calcLineTotal(qty, price, disc, tax))}</strong>`;
     recalcTotals();
 }
 
@@ -437,10 +437,10 @@ function recalcTotals() {
     let subtotal = 0, taxTotal = 0;
     document.querySelectorAll('#linesBody tr').forEach(row => {
         const id = row.id.replace('line-', '');
-        const qty = parseFloat(document.getElementById(`qty-${id}`)?.value) || 0;
-        const price = parseFloat(document.getElementById(`price-${id}`)?.value) || 0;
-        const disc = parseFloat(document.getElementById(`disc-${id}`)?.value) || 0;
-        const tax = parseFloat(document.getElementById(`tax-${id}`)?.value) || 0;
+        const qty = EnjazIMS.parseNumber(document.getElementById(`qty-${id}`)?.value) || 0;
+        const price = EnjazIMS.parseNumber(document.getElementById(`price-${id}`)?.value) || 0;
+        const disc = EnjazIMS.parseNumber(document.getElementById(`disc-${id}`)?.value) || 0;
+        const tax = EnjazIMS.parseNumber(document.getElementById(`tax-${id}`)?.value) || 0;
         const gross = qty * price;
         const sub = gross - gross * (disc / 100);
         subtotal += sub;
@@ -448,15 +448,15 @@ function recalcTotals() {
     });
 
     const discType = document.getElementById('discountType').value;
-    const discVal = parseFloat(document.getElementById('discountValue').value) || 0;
+    const discVal = EnjazIMS.parseNumber(document.getElementById('discountValue').value) || 0;
     let discAmt = discType === 'percent' ? subtotal * (discVal / 100) : discVal;
     discAmt = Math.min(discAmt, subtotal);
     const grand = subtotal - discAmt + taxTotal;
 
-    document.getElementById('displaySubtotal').textContent = subtotal.toFixed(2);
-    document.getElementById('displayDiscount').textContent = discAmt.toFixed(2);
-    document.getElementById('displayTax').textContent = taxTotal.toFixed(2);
-    document.getElementById('displayGrandTotal').textContent = grand.toFixed(2);
+    document.getElementById('displaySubtotal').textContent = EnjazIMS.formatMoney(subtotal);
+    document.getElementById('displayDiscount').textContent = EnjazIMS.formatMoney(discAmt);
+    document.getElementById('displayTax').textContent = EnjazIMS.formatMoney(taxTotal);
+    document.getElementById('displayGrandTotal').textContent = EnjazIMS.formatMoney(grand);
 }
 
 // ── Customer Info ──────────────────────────────────────────
@@ -469,8 +469,8 @@ function fetchCustomerInfo() {
         .then(data => {
             if (!data.success) return;
             const c = data.customer;
-            document.getElementById('custBalance').textContent = parseFloat(c.current_balance).toFixed(2);
-            document.getElementById('custCreditLimit').textContent = parseFloat(c.credit_limit).toFixed(2);
+            document.getElementById('custBalance').textContent = EnjazIMS.formatMoney(c.current_balance || 0);
+            document.getElementById('custCreditLimit').textContent = EnjazIMS.formatMoney(c.credit_limit || 0);
             document.getElementById('custPhone').textContent = c.phone || '—';
             card.classList.remove('sales-field-hidden');
         });
@@ -484,10 +484,10 @@ function collectLines() {
         lines.push({
             item_id: row.dataset.itemId,
             variant_id: row.dataset.variantId || null,
-            quantity: document.getElementById(`qty-${id}`).value,
-            unit_price: document.getElementById(`price-${id}`).value,
-            discount_percent: document.getElementById(`disc-${id}`).value,
-            tax_rate: document.getElementById(`tax-${id}`).value,
+            quantity: String(EnjazIMS.parseNumber(document.getElementById(`qty-${id}`).value || 0)),
+            unit_price: EnjazIMS.parseNumber(document.getElementById(`price-${id}`).value || 0).toFixed(2),
+            discount_percent: EnjazIMS.parseNumber(document.getElementById(`disc-${id}`).value || 0).toFixed(2),
+            tax_rate: EnjazIMS.parseNumber(document.getElementById(`tax-${id}`).value || 0).toFixed(2),
         });
     });
     return lines;
@@ -512,7 +512,7 @@ function submitQuoteForm() {
         notes: document.getElementById('notes').value,
         terms: document.getElementById('terms').value,
         quote_discount_type: document.getElementById('discountType').value,
-        quote_discount_value: document.getElementById('discountValue').value,
+        quote_discount_value: EnjazIMS.parseNumber(document.getElementById('discountValue').value || 0).toFixed(2),
         lines,
     };
 

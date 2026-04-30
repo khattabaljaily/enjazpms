@@ -1131,7 +1131,7 @@ def quote_edit(request, pk):
         return redirect('core:no_tenant')
 
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
-    if quote.status != 'draft':
+    if quote.status not in ('draft', 'sent', 'accepted'):
         return redirect('sales:quote_detail', pk=pk)
 
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True)

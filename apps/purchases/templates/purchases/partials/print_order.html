@@ -8,36 +8,33 @@
     </div>
 
     <div class="print-head-bottom">
-        <h1 class="print-doc-heading">فاتورة مبيعات</h1>
+        <h1 class="print-doc-heading">أمر شراء</h1>
         <div class="print-meta print-meta--inline">
-            <div class="print-meta-row"><span>رقم الفاتورة</span><strong>{{ invoice.invoice_number }}</strong></div>
+            <div class="print-meta-row"><span>رقم الأمر</span><strong>{{ invoice.invoice_number }}</strong></div>
             <div class="print-meta-row"><span>التاريخ</span><strong>{{ invoice.invoice_date }}</strong></div>
             <div class="print-meta-row"><span>الحالة</span><strong class="status-badge">{{ invoice.get_status_display }}</strong></div>
             <div class="print-meta-row"><span>طريقة الدفع</span><strong>{{ invoice.get_payment_method_display }}</strong></div>
         </div>
     </div>
 
-    <!-- بطاقة العميل بتصميم راقي -->
     <section class="print-box customer-box">
         <div class="print-box-header">
             <span class="print-box-icon"></span>
-            <h3 class="print-box-title">بيانات العميل</h3>
+            <h3 class="print-box-title">بيانات المورد</h3>
         </div>
         <div class="print-info-grid">
             <div class="print-info-item">
-                <span class="print-info-label">العميل</span>
-                <span class="print-info-value">{{ invoice.customer.name|default:"زبون عابر" }}</span>
+                <span class="print-info-label">المورد</span>
+                <span class="print-info-value">{{ invoice.supplier.name|default:"—" }}</span>
             </div>
             <div class="print-info-item">
-                <span class="print-info-label">الرقم المرجعي</span>
-                <span class="print-info-value">{{ invoice.reference_number|default:"—" }}</span>
+                <span class="print-info-label">المخزن</span>
+                <span class="print-info-value">{{ invoice.stock.name }}</span>
             </div>
-            {% if invoice.due_date %}
             <div class="print-info-item">
-                <span class="print-info-label">تاريخ الاستحقاق</span>
-                <span class="print-info-value">{{ invoice.due_date }}</span>
+                <span class="print-info-label">مرجع البنك</span>
+                <span class="print-info-value">{{ invoice.bank_reference|default:"—" }}</span>
             </div>
-            {% endif %}
             {% if invoice.notes %}
             <div class="print-info-item full-width">
                 <span class="print-info-label">ملاحظات</span>
@@ -49,20 +46,18 @@
 
     <div class="section-separator" aria-hidden="true"></div>
 
-    <!-- جدول البنود بتصميم حديث وأنيق -->
     <section class="print-box items-table">
         <div class="print-box-header">
             <span class="print-box-icon"></span>
-            <h3 class="print-box-title">تفاصيل الفاتورة</h3>
+            <h3 class="print-box-title">تفاصيل أمر الشراء</h3>
         </div>
         <table class="print-table">
             <thead>
                 <tr>
                     <th class="col-sn">#</th>
-                    <th class="col-product">المنتج / الخدمة</th>
+                    <th class="col-product">الصنف</th>
                     <th class="col-qty">الكمية</th>
                     <th class="col-price">سعر الوحدة</th>
-                    <th class="col-discount">الخصم</th>
                     <th class="col-tax">الضريبة</th>
                     <th class="col-total">الإجمالي</th>
                 </tr>
@@ -73,9 +68,8 @@
                     <td class="col-sn">{{ forloop.counter }}</td>
                     <td class="col-product">{{ line.item.name }}</td>
                     <td class="col-qty">{{ line.quantity|floatformat:"-3u" }}</td>
-                    <td class="col-price">{{ line.unit_price|floatformat:"2u" }}</td>
-                    <td class="col-discount">{{ line.discount_percent|floatformat:"2u" }}%</td>
-                    <td class="col-tax">{{ line.tax_rate|floatformat:"2u" }}%</td>
+                    <td class="col-price">{{ line.unit_cost|floatformat:"2u" }}</td>
+                    <td class="col-tax">{{ line.tax_amount|floatformat:"2u" }}</td>
                     <td class="col-total">{{ line.line_total|floatformat:"2u" }}</td>
                 </tr>
                 {% endfor %}
@@ -83,40 +77,36 @@
         </table>
     </section>
 
-    <!-- ملخص المبالغ بتصميم راقي جداً -->
     <div class="print-summary">
         <div class="print-totals">
             <div class="print-total-row">
                 <span>المجموع الفرعي</span>
                 <span>{{ invoice.subtotal|floatformat:"2u" }}</span>
             </div>
-            <div class="print-total-row discount-row">
-                <span>الخصم على الفاتورة</span>
-                <span>- {{ invoice.invoice_discount_amount|floatformat:"2u" }}</span>
-            </div>
             <div class="print-total-row tax-row">
-                <span>قيمة الضريبة المضافة</span>
+                <span>قيمة الضريبة</span>
                 <span>{{ invoice.tax_amount|floatformat:"2u" }}</span>
             </div>
             <div class="print-total-row print-total-row--grand">
                 <span>الإجمالي النهائي</span>
                 <span>{{ invoice.grand_total|floatformat:"2u" }}</span>
             </div>
-            <div class="print-total-row paid-row">
-                <span>المدفوع</span>
-                <span>{{ invoice.paid_amount|floatformat:"2u" }}</span>
+            {% if invoice.payment_method == 'mixed' %}
+            <div class="print-total-row">
+                <span>مدفوع نقداً</span>
+                <span>{{ invoice.cash_amount|floatformat:"2u" }}</span>
             </div>
-            <div class="print-total-row remaining-row">
-                <span>المتبقي</span>
-                <span>{{ invoice.remaining_amount|floatformat:"2u" }}</span>
+            <div class="print-total-row">
+                <span>مدفوع بنكياً</span>
+                <span>{{ invoice.bank_amount|floatformat:"2u" }}</span>
             </div>
+            {% endif %}
         </div>
     </div>
 
-    <!-- فوتر أنيق -->
     <div class="print-footer">
         <div class="footer-line"></div>
         <div class="footer-text">تمت الطباعة في {% now "Y-m-d H:i" %}</div>
-        <div class="footer-thanks">شكراً لثقتكم بنا</div>
+        <div class="footer-thanks">شكراً لتعاملكم معنا</div>
     </div>
 </div>

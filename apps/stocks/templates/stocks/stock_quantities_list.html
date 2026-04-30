@@ -138,10 +138,10 @@
             { data: 'sku',      render: v => `<code class="cxr-code">${v}</code>` },
             { data: 'barcode',  render: v => `<code class="cxr-code">${v}</code>` },
             { data: 'stock_name' },
-            { data: 'quantity',  className: 'text-end qty-num', render: v => EnjazIMS.formatMoney(v) },
-            { data: 'reserved',  className: 'text-end qty-num qty-reserved', render: v => EnjazIMS.formatMoney(v) },
+            { data: 'quantity',  className: 'text-end qty-num', render: v => EnjazIMS.formatQuantity(v) },
+            { data: 'reserved',  className: 'text-end qty-num qty-reserved', render: v => EnjazIMS.formatQuantity(v) },
             { data: 'available', className: 'text-end qty-num', render: function(v, _, row) {
-                const amount = EnjazIMS.formatMoney(v);
+                const amount = EnjazIMS.formatQuantity(v);
                 if (row.is_zero)  return `<span class="qty-badge qty-badge--zero">${amount}</span>`;
                 if (row.is_low)   return `<span class="qty-badge qty-badge--low">${amount}</span>`;
                 return `<span class="qty-badge qty-badge--ok">${amount}</span>`;

@@ -1,0 +1,141 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/sales_return_form.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+  <div class="cx-hero">
+    <div class="cx-hero-inner">
+      <div class="cx-hero-left">
+        <div class="cx-hero-icon-wrap"><i class="fas fa-rotate-left"></i></div>
+        <div>
+          <h1 class="cx-hero-title">مرتجع شراء جديد</h1>
+          <p class="cx-hero-desc">الأمر: {{ invoice.invoice_number }}</p>
+        </div>
+      </div>
+      <div class="cx-hero-right">
+        <a class="cx-btn-secondary" href="{% url 'purchases:order_detail' invoice.id %}"><i class="fas fa-arrow-right"></i><span>العودة</span></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="cx-panel p-4">
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <label class="cx-label">تاريخ المرتجع</label>
+        <input id="returnDate" class="cx-input" type="date" value="{{ today }}">
+      </div>
+      <div class="col-md-4">
+        <label class="cx-label">طريقة التسوية</label>
+        <select id="refundMethod" class="cx-input">
+          <option value="balance">رصيد مورد</option>
+          <option value="cash">نقدي</option>
+          <option value="bank">بنكي</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="cx-label">السبب</label>
+        <input id="reason" class="cx-input" type="text" placeholder="سبب المرتجع">
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="cx-table" id="returnLinesTable">
+        <thead>
+          <tr>
+            <th>المنتج</th>
+            <th>الكمية الأصلية</th>
+            <th>المرتجع السابق</th>
+            <th>القابل للإرجاع</th>
+            <th>كمية المرتجع</th>
+            <th>سعر الوحدة</th>
+            <th>الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in returnable_lines %}
+          <tr data-line-id="{{ line.id }}" data-unit-cost="{{ line.unit_cost }}">
+            <td>{{ line.item.name }}</td>
+            <td>{{ line.quantity|floatformat:"-3u" }}</td>
+            <td>{{ line.returned_quantity|floatformat:"-3u" }}</td>
+            <td>{{ line.returnable_quantity|floatformat:"-3u" }}</td>
+            <td><input type="number" min="0" step="0.001" class="cx-input js-ret-qty" value="0"></td>
+            <td>{{ line.unit_cost }}</td>
+            <td class="js-line-total">0.00</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted">لا توجد بنود قابلة للإرجاع</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <strong>الإجمالي: <span id="grandTotal">0.00</span></strong>
+      <div class="d-flex gap-2">
+        <button class="cx-btn-secondary" type="button" id="saveDraftBtn">حفظ كمسودة</button>
+        <button class="cx-btn-add" type="button" id="confirmBtn">حفظ وتأكيد</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  function getCookie(name){ const v=document.cookie.match('(^|;) ?'+name+'=([^;]*)(;|$)'); return v ? v[2] : null; }
+  function recalc(){
+    let g=0;
+    document.querySelectorAll('#returnLinesTable tbody tr[data-line-id]').forEach(function(row){
+      const qty = EnjazIMS.parseNumber(row.querySelector('.js-ret-qty')?.value || 0);
+      const unit = EnjazIMS.parseNumber(row.dataset.unitCost || 0);
+      const total = qty * unit;
+      g += total;
+      row.querySelector('.js-line-total').textContent = EnjazIMS.formatMoney(total);
+    });
+    document.getElementById('grandTotal').textContent = EnjazIMS.formatMoney(g);
+  }
+
+  document.querySelectorAll('.js-ret-qty').forEach(function(i){ i.addEventListener('input', recalc); });
+  recalc();
+
+  function submit(action){
+    const lines=[];
+    document.querySelectorAll('#returnLinesTable tbody tr[data-line-id]').forEach(function(row){
+      const qty = EnjazIMS.parseNumber(row.querySelector('.js-ret-qty')?.value || 0);
+      if(qty>0){ lines.push({ invoice_line_id: Number(row.dataset.lineId), returned_quantity: qty }); }
+    });
+    if(!lines.length){ EnjazIMS.toast('حدد بنداً واحداً على الأقل', 'warning'); return; }
+
+    const header = {
+      return_date: document.getElementById('returnDate').value,
+      refund_method: document.getElementById('refundMethod').value,
+      reason: document.getElementById('reason').value,
+      notes: ''
+    };
+
+    fetch("{% url 'purchases:return_create' invoice.id %}", {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ header, lines, action })
+    })
+    .then(async r => ({ ok:r.ok, data:await r.json() }))
+    .then(({ok,data}) => {
+      if(!ok || !data.success){ EnjazIMS.toast(data.message || 'تعذر حفظ المرتجع', 'error'); return; }
+      window.location.href = data.redirect;
+    })
+    .catch(()=> EnjazIMS.toast('تعذر الاتصال بالخادم', 'error'));
+  }
+
+  document.getElementById('saveDraftBtn').addEventListener('click', function(){ submit('save_draft'); });
+  document.getElementById('confirmBtn').addEventListener('click', function(){ submit('confirm'); });
+})();
+</script>
+{% endblock %}

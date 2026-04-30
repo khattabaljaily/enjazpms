@@ -1,0 +1,145 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.1">
+<link rel="stylesheet" href="{% static 'css/sales_invoice_detail.css' %}?v=1.1">
+<link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+    <div class="cx-hero">
+        <div class="cx-hero-inner">
+            <div class="cx-hero-left">
+                <div class="cx-hero-icon-wrap"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div>
+                    <h1 class="cx-hero-title">{{ invoice.invoice_number }}</h1>
+                    <p class="cx-hero-desc">{{ invoice.get_status_display }} — {{ invoice.invoice_date|date:'Y-m-d' }}</p>
+                </div>
+            </div>
+            <div class="cx-hero-right">
+                <div class="cx-hero-actions">
+                    <a href="{% url 'purchases:order_list' %}" class="cx-btn-secondary"><i class="fas fa-arrow-right"></i><span>العودة للقائمة</span></a>
+                    <a href="{% url 'purchases:order_detail' invoice.id %}?print=1" target="_blank" rel="noopener" class="cx-btn-secondary"><i class="fas fa-print"></i><span>طباعة</span></a>
+                    {% if can_edit %}
+                    <a href="{% url 'purchases:order_edit' invoice.id %}" class="cx-btn-secondary"><i class="fas fa-pen-to-square"></i><span>تعديل</span></a>
+                    {% endif %}
+                    {% if can_return %}
+                    <a href="{% url 'purchases:return_create' invoice.id %}" class="cx-btn-secondary"><i class="fas fa-rotate-left"></i><span>مرتجع</span></a>
+                    {% endif %}
+                    {% if can_confirm %}
+                    <button id="confirmBtn" class="cx-btn-add" type="button"><i class="fas fa-check"></i><span>تأكيد</span></button>
+                    {% endif %}
+                    {% if can_cancel %}
+                    <button id="cancelBtn" class="cx-btn-secondary" type="button"><i class="fas fa-ban"></i><span>إلغاء</span></button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="cx-panel p-4">
+                <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات الأمر</h3></div>
+                <div class="cx-info-grid">
+                    <div class="cx-info-item"><span class="cx-info-label">المورد</span><span class="cx-info-value">{{ invoice.supplier|default:'—' }}</span></div>
+                    <div class="cx-info-item"><span class="cx-info-label">المخزن</span><span class="cx-info-value">{{ invoice.stock.name }}</span></div>
+                    <div class="cx-info-item"><span class="cx-info-label">طريقة الدفع</span><span class="cx-info-value">{{ invoice.get_payment_method_display }}</span></div>
+                    <div class="cx-info-item"><span class="cx-info-label">الإجمالي</span><span class="cx-info-value">{{ invoice.grand_total }}</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="cx-panel p-4">
+                <div class="cx-panel-header"><h3 class="cx-panel-title">بنود أمر الشراء</h3></div>
+                <div class="table-responsive cx-table-wrap">
+                    <table class="cx-table">
+                        <thead>
+                            <tr>
+                                <th>المنتج</th>
+                                <th>الكمية</th>
+                                <th>سعر الشراء</th>
+                                <th>الضريبة</th>
+                                <th>الإجمالي</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line in lines %}
+                            <tr>
+                                <td>{{ line.item.name }}</td>
+                                <td>{{ line.quantity|floatformat:"-3u" }}</td>
+                                <td>{{ line.unit_cost }}</td>
+                                <td>{{ line.tax_amount }}</td>
+                                <td>{{ line.line_total }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted">لا توجد بنود</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "purchases/partials/print_order.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const autoPrint = new URLSearchParams(window.location.search).get('print') === '1';
+    if (autoPrint) {
+        window.addEventListener('load', function () {
+            setTimeout(() => window.print(), 250);
+        }, { once: true });
+    }
+
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    const confirmBtn = document.getElementById('confirmBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+
+    function postAction(url) {
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                EnjazIMS.toast(data.message || 'تعذر إتمام العملية', 'error');
+                return;
+            }
+            EnjazIMS.toast(data.message || 'تمت العملية', 'success');
+            window.location.reload();
+        })
+        .catch(() => EnjazIMS.toast('تعذر الاتصال بالخادم', 'error'));
+    }
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            if (!window.confirm('سيتم تأكيد أمر الشراء وتطبيق تأثيراته. هل تريد المتابعة؟')) return;
+            postAction("{% url 'purchases:order_confirm' invoice.id %}");
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            if (!window.confirm('سيتم إلغاء أمر الشراء وعكس تأثيراته. هل تريد المتابعة؟')) return;
+            postAction("{% url 'purchases:order_cancel' invoice.id %}");
+        });
+    }
+})();
+</script>
+{% endblock %}

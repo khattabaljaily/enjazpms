@@ -822,7 +822,7 @@
                     return;
                 }
 
-                $('#itemLedgerSubtitle').text(`${d.item_name || '—'} (${d.item_sku || '—'}) — الرصيد الحالي: ${EnjazIMS.formatMoney(d.current_qty || 0)}`);
+                $('#itemLedgerSubtitle').text(`${d.item_name || '—'} (${d.item_sku || '—'}) — الرصيد الحالي: ${EnjazIMS.formatQuantity(d.current_qty || 0)}`);
 
                 if (!d.movements.length) {
                     $body.html('<tr><td colspan="7" class="text-center text-muted">لا توجد حركات</td></tr>');
@@ -838,8 +838,8 @@
                         <td>${m.stock || '—'}</td>
                         <td>${m.movement_type_label || m.movement_type || '—'}</td>
                         <td>${m.reference_type || '—'}</td>
-                        <td class="${qtyClass}">${qtyPrefix}${EnjazIMS.formatMoney(qty)}</td>
-                        <td>${EnjazIMS.formatMoney(m.balance_after || 0)}</td>
+                        <td class="${qtyClass}">${qtyPrefix}${EnjazIMS.formatQuantity(qty)}</td>
+                        <td>${EnjazIMS.formatQuantity(m.balance_after || 0)}</td>
                         <td>${m.notes || '—'}</td>
                     </tr>`;
                 }).join('');

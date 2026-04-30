@@ -89,16 +89,16 @@
                         {% if line.variant %}<br><small>{{ line.variant }}</small>{% endif %}
                         <input type="hidden" class="inv-line-id" value="{{ line.id }}">
                     </td>
-                    <td class="ret-sold-qty" data-value="{{ line.quantity|unlocalize }}">{{ line.quantity }}</td>
-                    <td class="ret-returned-qty" data-value="{{ line.returned_quantity|unlocalize }}">{{ line.returned_quantity }}</td>
-                    <td><strong class="text-success ret-returnable-qty" data-value="{{ line.returnable_quantity|unlocalize }}">{{ line.returnable_quantity }}</strong></td>
+                    <td class="ret-sold-qty" data-value="{{ line.quantity|unlocalize }}">{{ line.quantity|floatformat:"-3u" }}</td>
+                    <td class="ret-returned-qty" data-value="{{ line.returned_quantity|unlocalize }}">{{ line.returned_quantity|floatformat:"-3u" }}</td>
+                    <td><strong class="text-success ret-returnable-qty" data-value="{{ line.returnable_quantity|unlocalize }}">{{ line.returnable_quantity|floatformat:"-3u" }}</strong></td>
                     <td>
                         <input type="number" class="cx-input cx-input--sm ret-qty"
                                min="0" max="{{ line.returnable_quantity|unlocalize }}" step="0.001"
                                value="0" data-price="{{ line.unit_price|unlocalize }}"
                                oninput="updateReturnTotal(this)">
                     </td>
-                    <td class="ret-unit-price text-end" data-value="{{ line.unit_price|unlocalize }}">{{ line.unit_price|floatformat:2 }}</td>
+                    <td class="ret-unit-price text-end" data-value="{{ line.unit_price|unlocalize }}">{{ line.unit_price|floatformat:"2u" }}</td>
                     <td class="ret-line-total text-end" data-total="0">0.00</td>
                 </tr>
                 {% empty %}
@@ -144,7 +144,12 @@ const INVOICE_PK = {{ invoice.pk }};
 const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2];
 
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.ret-sold-qty, .ret-returned-qty, .ret-returnable-qty, .ret-unit-price').forEach(el => {
+    document.querySelectorAll('.ret-sold-qty, .ret-returned-qty, .ret-returnable-qty').forEach(el => {
+        const raw = el.dataset.value ?? el.textContent;
+        el.textContent = EnjazIMS.formatQuantity(raw);
+    });
+
+    document.querySelectorAll('.ret-unit-price').forEach(el => {
         const raw = el.dataset.value ?? el.textContent;
         el.textContent = EnjazIMS.formatMoney(raw);
     });

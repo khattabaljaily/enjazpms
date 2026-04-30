@@ -1,0 +1,182 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.1">
+<link rel="stylesheet" href="{% static 'css/sales_invoice_list.css' %}?v=1.1">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+    <div class="cx-hero">
+        <div class="cx-hero-inner">
+            <div class="cx-hero-left">
+                <div class="cx-hero-icon-wrap"><i class="fas fa-cart-arrow-down"></i></div>
+                <div>
+                    <h1 class="cx-hero-title">أوامر الشراء</h1>
+                    <p class="cx-hero-desc">إدارة أوامر المشتريات بنفس تجربة المبيعات</p>
+                </div>
+            </div>
+            <div class="cx-hero-right">
+                <div class="cx-hero-actions">
+                    <a href="{% url 'purchases:order_create' %}" class="cx-btn-add">
+                        <i class="fas fa-plus"></i><span>أمر شراء جديد</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="cx-stats-inline">
+            <span class="cx-stat-badge cx-stat-badge--primary"><i class="fas fa-list"></i><strong>{{ stats.total }}</strong><span>إجمالي</span></span>
+            <span class="cx-stat-badge cx-stat-badge--success"><i class="fas fa-check-circle"></i><strong>{{ stats.confirmed }}</strong><span>مؤكد</span></span>
+            <span class="cx-stat-badge cx-stat-badge--muted"><i class="fas fa-pencil"></i><strong>{{ stats.draft }}</strong><span>مسودة</span></span>
+            <span class="cx-stat-badge cx-stat-badge--danger"><i class="fas fa-ban"></i><strong>{{ stats.cancelled }}</strong><span>ملغي</span></span>
+        </div>
+    </div>
+
+    <div class="cx-panel">
+        <div class="cx-toolbar">
+            <div class="cx-toolbar-search">
+                <i class="fas fa-search cx-toolbar-search-icon"></i>
+                <input type="text" id="orderSearch" class="cx-search-input" placeholder="رقم الأمر، المورد، المخزن...">
+            </div>
+            <div class="cx-toolbar-end">
+                <select id="orderStatusFilter" class="cx-select-sm">
+                    <option value="">كل الحالات</option>
+                    <option value="draft">مسودة</option>
+                    <option value="confirmed">مؤكد</option>
+                    <option value="cancelled">ملغي</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive cx-table-wrap">
+            <table id="ordersTable" class="cx-table">
+                <thead>
+                    <tr>
+                        <th>رقم الأمر</th>
+                        <th>التاريخ</th>
+                        <th>المورد</th>
+                        <th>المخزن</th>
+                        <th>الإجمالي</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    const statusMap = {
+        draft: 'secondary',
+        confirmed: 'success',
+        cancelled: 'danger'
+    };
+
+    const dt = $('#ordersTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ordering: false,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
+        ajax: {
+            url: "{% url 'purchases:order_api' %}",
+            data: function(d) {
+                d.status = $('#orderStatusFilter').val();
+            }
+        },
+        columns: [
+            { data: 'invoice_number' },
+            { data: 'invoice_date' },
+            { data: 'supplier', defaultContent: '—' },
+            { data: 'stock', defaultContent: '—' },
+            {
+                data: 'grand_total',
+                className: 'text-end',
+                render: function(v) { return EnjazIMS.formatMoney(v || 0); }
+            },
+            {
+                data: 'status',
+                render: function(d, t, row) {
+                    const cls = statusMap[d] || row.status_color || 'secondary';
+                    return `<span class="cx-badge cx-badge--${cls}">${row.status_label || '—'}</span>`;
+                }
+            },
+            {
+                data: null,
+                orderable: false,
+                searchable: false,
+                className: 'text-center',
+                render: function(_, __, row) {
+                    const confirmBtn = row.status === 'draft'
+                        ? `<button class="cx-btn-icon cx-btn-icon--success js-confirm" data-id="${row.id}" title="تأكيد"><i class="fas fa-check"></i></button>`
+                        : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>';
+                    const cancelBtn = row.status === 'confirmed'
+                        ? `<button class="cx-btn-icon cx-btn-icon--danger js-cancel" data-id="${row.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`
+                        : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>';
+                    const editBtn = ['draft', 'confirmed'].includes(row.status)
+                        ? `<a href="/purchases/${row.id}/edit/" class="cx-btn-icon" title="تعديل"><i class="fas fa-pen-to-square"></i></a>`
+                        : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>';
+
+                    return `
+                        <div class="cx-actions">
+                            <a href="/purchases/${row.id}/" class="cx-btn-icon" title="عرض"><i class="fas fa-eye"></i></a>
+                            <a href="/purchases/${row.id}/print/" target="_blank" rel="noopener" class="cx-btn-icon" title="طباعة"><i class="fas fa-print"></i></a>
+                            ${editBtn}
+                            ${confirmBtn}
+                            ${cancelBtn}
+                        </div>
+                    `;
+                }
+            }
+        ],
+        language: {
+            processing: 'جاري المعالجة...',
+            zeroRecords: 'لا توجد بيانات',
+            emptyTable: 'لا توجد أوامر شراء بعد',
+            paginate: { previous: 'السابق', next: 'التالي' }
+        },
+        pageLength: 25,
+    });
+
+    $('#orderStatusFilter').on('change', function() { dt.ajax.reload(); });
+    $('#orderSearch').on('input', function() { dt.search(this.value).draw(); });
+
+    $('#ordersTable').on('click', '.js-confirm, .js-cancel', function() {
+        const id = $(this).data('id');
+        const isConfirm = $(this).hasClass('js-confirm');
+        const url = isConfirm ? `/purchases/${id}/confirm/` : `/purchases/${id}/cancel/`;
+        const message = isConfirm
+            ? 'سيتم تأكيد أمر الشراء وتطبيق تأثيراته، هل تريد المتابعة؟'
+            : 'سيتم إلغاء أمر الشراء وعكس تأثيراته، هل تريد المتابعة؟';
+        if (!window.confirm(message)) return;
+
+        $.ajax({
+            url,
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            success: function(resp) {
+                EnjazIMS.toast(resp.message || 'تمت العملية بنجاح', 'success');
+                dt.ajax.reload(null, false);
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON?.message || 'تعذر إتمام العملية';
+                EnjazIMS.toast(msg, 'error');
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

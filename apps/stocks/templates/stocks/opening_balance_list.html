@@ -142,8 +142,8 @@
             { data: 'item_name' },
             { data: 'sku', render: v => `<code class="cxr-code">${v || '—'}</code>` },
             { data: 'barcode', render: v => `<code class="cxr-code">${v || '—'}</code>` },
-            { data: 'current_qty', className: 'text-end', render: v => EnjazIMS.formatMoney(v) },
-            { data: 'available_qty', className: 'text-end', render: v => EnjazIMS.formatMoney(v) },
+            { data: 'current_qty', className: 'text-end', render: v => EnjazIMS.formatQuantity(v) },
+            { data: 'available_qty', className: 'text-end', render: v => EnjazIMS.formatQuantity(v) },
             {
                 data: null,
                 orderable: false,

@@ -385,7 +385,13 @@ def item_search_api(request):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
 
     q = request.GET.get('q', '').strip()
-    if len(q) < 2:
+    try:
+        min_chars = int(request.GET.get('min_chars', 2))
+    except (TypeError, ValueError):
+        min_chars = 2
+    min_chars = max(1, min(min_chars, 5))
+
+    if len(q) < min_chars:
         return JsonResponse({'results': []})
 
     qs = Item.objects.for_tenant(tenant).filter(

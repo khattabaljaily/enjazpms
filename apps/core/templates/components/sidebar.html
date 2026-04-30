@@ -42,9 +42,9 @@
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
-                <li><a href="#" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>أمر شراء</a></li>
-                <li><a href="#" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الطلبات</a></li>
-                <li><a href="#" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
+                <li><a href="{% url 'purchases:order_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>أمر شراء</a></li>
+                <li><a href="{% url 'purchases:order_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الطلبات</a></li>
+                <li><a href="{% url 'purchases:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
             </ul>
         </li>
     </ul>

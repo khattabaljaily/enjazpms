@@ -69,15 +69,15 @@
     <div class="cx-kpi-row">
         <div class="cx-kpi-card">
             <div class="cx-kpi-label">إجمالي المبيعات المؤكدة</div>
-            <div class="cx-kpi-value text-success">{{ stats.grand_total_sum|floatformat:2 }}</div>
+            <div class="cx-kpi-value text-success">{{ stats.grand_total_sum|floatformat:"2u" }}</div>
         </div>
         <div class="cx-kpi-card">
             <div class="cx-kpi-label">إجمالي المحصَّل</div>
-            <div class="cx-kpi-value text-primary">{{ stats.paid_total|floatformat:2 }}</div>
+            <div class="cx-kpi-value text-primary">{{ stats.paid_total|floatformat:"2u" }}</div>
         </div>
         <div class="cx-kpi-card cx-kpi-card--warning">
             <div class="cx-kpi-label">المتبقي (ذمم)</div>
-            <div class="cx-kpi-value text-warning">{{ stats.unpaid_total|floatformat:2 }}</div>
+            <div class="cx-kpi-value text-warning">{{ stats.unpaid_total|floatformat:"2u" }}</div>
         </div>
     </div>
 </div>
@@ -335,7 +335,7 @@ function initTable() {
                         <a href="${INVOICE_BASE_URL}${row.id}/?print=1" target="_blank" rel="noopener" class="cx-btn-icon" title="طباعة">
                             <i class="fas fa-print"></i>
                         </a>
-                        ${row.status === 'draft' ? `
+                        ${['draft', 'confirmed'].includes(row.status) ? `
                         <a href="${INVOICE_BASE_URL}${row.id}/edit/" class="cx-btn-icon" title="تعديل">
                             <i class="fas fa-pencil"></i>
                         </a>

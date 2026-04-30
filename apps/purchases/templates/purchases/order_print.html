@@ -1,0 +1,97 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/sales_invoice_detail.css' %}?v=2.0">
+<link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+  <div class="cx-hero">
+    <div class="cx-hero-inner">
+      <div class="cx-hero-left">
+        <div class="cx-hero-icon-wrap"><i class="fas fa-file-invoice-dollar"></i></div>
+        <div>
+          <h1 class="cx-hero-title">{{ invoice.invoice_number }}</h1>
+          <p class="cx-hero-desc">{{ invoice.get_status_display }} — {{ invoice.invoice_date|date:'Y-m-d' }}</p>
+        </div>
+      </div>
+      <div class="cx-hero-right">
+        <div class="cx-hero-actions">
+          <a href="{% url 'purchases:order_detail' invoice.id %}" class="cx-btn-secondary"><i class="fas fa-arrow-right"></i><span>العودة</span></a>
+          <button onclick="window.print()" class="cx-btn-secondary"><i class="fas fa-print"></i><span>طباعة</span></button>
+          <a href="{% url 'purchases:order_edit' invoice.id %}" class="cx-btn-secondary"><i class="fas fa-pencil"></i><span>تعديل</span></a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="cx-panel mb-3 p-4">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات أمر الشراء</h3></div>
+        <div class="cx-info-grid">
+          <div class="cx-info-item"><span class="cx-info-label">رقم الأمر</span><span class="cx-info-value">{{ invoice.invoice_number }}</span></div>
+          <div class="cx-info-item"><span class="cx-info-label">التاريخ</span><span class="cx-info-value">{{ invoice.invoice_date }}</span></div>
+          <div class="cx-info-item"><span class="cx-info-label">المورد</span><span class="cx-info-value">{{ invoice.supplier.name|default:"—" }}</span></div>
+          <div class="cx-info-item"><span class="cx-info-label">المخزن</span><span class="cx-info-value">{{ invoice.stock.name }}</span></div>
+          <div class="cx-info-item"><span class="cx-info-label">طريقة الدفع</span><span class="cx-info-value">{{ invoice.get_payment_method_display }}</span></div>
+          <div class="cx-info-item"><span class="cx-info-label">مرجع البنك</span><span class="cx-info-value">{{ invoice.bank_reference|default:"—" }}</span></div>
+          {% if invoice.notes %}
+          <div class="cx-info-item cx-info-item--full"><span class="cx-info-label">ملاحظات</span><span class="cx-info-value">{{ invoice.notes }}</span></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="cx-panel mb-3 p-4">
+        <div class="cx-panel-header"><h3 class="cx-panel-title">بنود أمر الشراء</h3></div>
+        <div class="table-responsive">
+          <table class="cx-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>الصنف</th>
+                <th>الكمية</th>
+                <th>سعر الوحدة</th>
+                <th>الضريبة</th>
+                <th>الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for line in lines %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ line.item.name }}</td>
+                <td>{{ line.quantity|floatformat:"-3u" }}</td>
+                <td>{{ line.unit_cost|floatformat:"2u" }}</td>
+                <td>{{ line.tax_amount|floatformat:"2u" }}</td>
+                <td><strong>{{ line.line_total|floatformat:"2u" }}</strong></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "purchases/partials/print_order.html" %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const autoPrint = new URLSearchParams(window.location.search).get('print') === '1';
+if (autoPrint) {
+    window.addEventListener('load', function () {
+        setTimeout(() => window.print(), 250);
+    }, { once: true });
+}
+</script>
+{% endblock %}

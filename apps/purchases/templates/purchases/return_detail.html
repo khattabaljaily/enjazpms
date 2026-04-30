@@ -1,0 +1,70 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/sales_return_detail.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+  <div class="cx-hero">
+    <div class="cx-hero-inner">
+      <div class="cx-hero-left">
+        <div class="cx-hero-icon-wrap"><i class="fas fa-rotate-left"></i></div>
+        <div>
+          <h1 class="cx-hero-title">{{ purchase_return.return_number }}</h1>
+          <p class="cx-hero-desc">{{ purchase_return.get_status_display }} — {{ purchase_return.return_date|date:'Y-m-d' }}</p>
+        </div>
+      </div>
+      <div class="cx-hero-right">
+        <div class="cx-hero-actions">
+          <a href="{% url 'purchases:return_list' %}" class="cx-btn-secondary"><i class="fas fa-arrow-right"></i><span>العودة للقائمة</span></a>
+          {% if can_confirm %}<button id="confirmBtn" class="cx-btn-add" type="button"><i class="fas fa-check"></i><span>تأكيد</span></button>{% endif %}
+          {% if can_cancel %}<button id="cancelBtn" class="cx-btn-secondary" type="button"><i class="fas fa-ban"></i><span>إلغاء</span></button>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cx-panel p-4">
+    <div class="table-responsive cx-table-wrap">
+      <table class="cx-table">
+        <thead><tr><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+        <tbody>
+          {% for line in return_lines %}
+          <tr>
+            <td>{{ line.item.name }}</td>
+            <td>{{ line.returned_quantity|floatformat:"-3u" }}</td>
+            <td>{{ line.unit_cost }}</td>
+            <td>{{ line.line_total }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted">لا توجد بنود</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  function getCookie(name){ const v=document.cookie.match('(^|;) ?'+name+'=([^;]*)(;|$)'); return v ? v[2] : null; }
+  function postAction(url){
+    fetch(url, { method:'POST', headers:{ 'X-CSRFToken': getCookie('csrftoken') }})
+      .then(r=>r.json())
+      .then(data=>{ if(!data.success){ EnjazIMS.toast(data.message || 'تعذر التنفيذ', 'error'); return; } EnjazIMS.toast(data.message || 'تمت العملية', 'success'); window.location.reload(); })
+      .catch(()=>EnjazIMS.toast('تعذر الاتصال بالخادم', 'error'));
+  }
+  const c=document.getElementById('confirmBtn');
+  const x=document.getElementById('cancelBtn');
+  if(c){ c.addEventListener('click', function(){ if(!window.confirm('تأكيد المرتجع وتطبيق التأثيرات؟')) return; postAction("{% url 'purchases:return_confirm' purchase_return.id %}"); }); }
+  if(x){ x.addEventListener('click', function(){ if(!window.confirm('إلغاء المرتجع وعكس التأثيرات؟')) return; postAction("{% url 'purchases:return_cancel' purchase_return.id %}"); }); }
+})();
+</script>
+{% endblock %}

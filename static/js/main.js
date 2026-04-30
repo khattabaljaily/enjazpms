@@ -227,6 +227,15 @@ const EnjazIMS = {
     formatMoney: function(amount) {
         return this.formatNumber(amount, 2);
     },
+
+    // Quantity format: 3 | 3.5 | 3.125 (without forcing two money decimals)
+    formatQuantity: function(quantity, maxDecimals = 3) {
+        const n = this.parseNumber(quantity);
+        return n.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: maxDecimals,
+        });
+    },
     
     // Format currency
     formatCurrency: function(amount, currency = 'EGP') {

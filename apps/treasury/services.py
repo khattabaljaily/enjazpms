@@ -51,6 +51,11 @@ def post_treasury_movement(
     signed_amount = amount if movement_type in ('receipt', 'adjustment') else -amount
     next_balance = (treasury.current_balance or Decimal('0')) + signed_amount
 
+    if movement_type == 'disbursement' and next_balance < 0:
+        raise ValueError(
+            f"رصيد الخزينة غير كافٍ. الرصيد الحالي: {treasury.current_balance or Decimal('0')} والمطلوب صرفه: {amount}."
+        )
+
     movement = TreasuryMovement.objects.create(
         tenant=tenant,
         treasury=treasury,

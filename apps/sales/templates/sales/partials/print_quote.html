@@ -1,4 +1,4 @@
-{% load static %}
+{% load static number_format %}
 <div class="print-doc print-doc--quote" dir="rtl">
     <div class="print-head">
         <div class="print-brand">
@@ -58,11 +58,11 @@
                 <tr>
                     <td class="col-sn">{{ forloop.counter }}</td>
                     <td class="col-product">{{ line.item.name }}</td>
-                    <td class="col-qty">{{ line.quantity }}</td>
-                    <td class="col-price">{{ line.unit_price|floatformat:2 }}</td>
-                    <td class="col-discount">{{ line.discount_percent|floatformat:2 }}</td>
-                    <td class="col-tax">{{ line.tax_rate|floatformat:2 }}</td>
-                    <td class="col-total">{{ line.line_total|floatformat:2 }}</td>
+                    <td class="col-qty">{{ line.quantity|floatformat:"-3u" }}</td>
+                    <td class="col-price">{{ line.unit_price|money }}</td>
+                    <td class="col-discount">{{ line.discount_percent|floatformat:"2u" }}</td>
+                    <td class="col-tax">{{ line.tax_rate|floatformat:"2u" }}</td>
+                    <td class="col-total">{{ line.line_total|money }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -73,19 +73,19 @@
         <div class="print-totals">
             <div class="print-total-row">
                 <span>المجموع الفرعي</span>
-                <span>{{ quote.subtotal|floatformat:2 }}</span>
+                <span>{{ quote.subtotal|money }}</span>
             </div>
             <div class="print-total-row discount-row">
                 <span>الخصم على العرض</span>
-                <span>- {{ quote.quote_discount_amount|floatformat:2 }}</span>
+                <span>- {{ quote.quote_discount_amount|money }}</span>
             </div>
             <div class="print-total-row tax-row">
                 <span>قيمة الضريبة المضافة</span>
-                <span>{{ quote.tax_amount|floatformat:2 }}</span>
+                <span>{{ quote.tax_amount|money }}</span>
             </div>
             <div class="print-total-row print-total-row--grand">
                 <span>الإجمالي النهائي</span>
-                <span>{{ quote.grand_total|floatformat:2 }}</span>
+                <span>{{ quote.grand_total|money }}</span>
             </div>
         </div>
     </div>

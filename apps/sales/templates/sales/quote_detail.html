@@ -1,5 +1,5 @@
 {% extends "layouts/dashboard.html" %}
-{% load static %}
+{% load static l10n number_format %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
@@ -172,11 +172,11 @@
                                 {% if line.variant %}<small class="text-muted">{{ line.variant }}</small>{% endif %}
                                 <div><small class="text-muted">{{ line.item.sku }}</small></div>
                             </td>
-                            <td>{{ line.quantity }}</td>
-                            <td>{{ line.unit_price|floatformat:2 }}</td>
-                            <td>{{ line.discount_percent|floatformat:2 }}%</td>
-                            <td>{{ line.tax_rate|floatformat:2 }}%</td>
-                            <td><strong>{{ line.line_total|floatformat:2 }}</strong></td>
+                            <td class="js-quote-qty" data-value="{{ line.quantity|unlocalize }}">{{ line.quantity|floatformat:"-3u" }}</td>
+                                <td>{{ line.unit_price|money }}</td>
+                            <td class="js-quote-percent" data-value="{{ line.discount_percent|unlocalize }}">{{ line.discount_percent|floatformat:"2u" }}%</td>
+                            <td class="js-quote-percent" data-value="{{ line.tax_rate|unlocalize }}">{{ line.tax_rate|floatformat:"2u" }}%</td>
+                                <td><strong>{{ line.line_total|money }}</strong></td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -211,19 +211,19 @@
             <div class="cx-totals-block">
                 <div class="cx-totals-row">
                     <span>المجموع الفرعي</span>
-                    <strong>{{ quote.subtotal|floatformat:2 }}</strong>
+                    <strong>{{ quote.subtotal|money }}</strong>
                 </div>
                 <div class="cx-totals-row">
                     <span>الخصم</span>
-                    <strong class="text-danger">- {{ quote.quote_discount_amount|floatformat:2 }}</strong>
+                    <strong class="text-danger">- {{ quote.quote_discount_amount|money }}</strong>
                 </div>
                 <div class="cx-totals-row">
                     <span>الضريبة</span>
-                    <strong>{{ quote.tax_amount|floatformat:2 }}</strong>
+                    <strong>{{ quote.tax_amount|money }}</strong>
                 </div>
                 <div class="cx-totals-row cx-totals-row--grand">
                     <span>الإجمالي النهائي</span>
-                    <strong>{{ quote.grand_total|floatformat:2 }}</strong>
+                    <strong>{{ quote.grand_total|money }}</strong>
                 </div>
             </div>
         </div>
@@ -409,8 +409,10 @@ function submitConvert() {
     const method = document.getElementById('convertPaymentMethod').value;
     const body = { payment_method: method };
     if (method === 'mixed') {
-        body.cash_amount = document.getElementById('convertCashAmount').value;
-        body.bank_amount = document.getElementById('convertBankAmount').value;
+        const cashAmount = EnjazIMS.parseNumber(document.getElementById('convertCashAmount').value || 0);
+        const bankAmount = EnjazIMS.parseNumber(document.getElementById('convertBankAmount').value || 0);
+        body.cash_amount = cashAmount.toFixed(2);
+        body.bank_amount = bankAmount.toFixed(2);
         body.bank_reference = document.getElementById('convertBankRef').value;
     }
 
@@ -458,6 +460,22 @@ function submitConvert() {
         }
     });
 }
+
+function formatQuoteNumbers() {
+    if (!window.EnjazIMS) return false;
+    document.querySelectorAll('.js-quote-percent').forEach((el) => {
+        const value = EnjazIMS.parseNumber(el.dataset.value || 0);
+        el.textContent = `${value.toFixed(2)}%`;
+    });
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    if (!formatQuoteNumbers()) {
+        setTimeout(formatQuoteNumbers, 0);
+    }
+});
+window.addEventListener('load', formatQuoteNumbers);
 
 function showAlert(msg, type = 'danger') {
     const mapped = type === 'danger' ? 'error' : type;

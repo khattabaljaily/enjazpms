@@ -208,7 +208,15 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             { data: 'invoice_number', defaultContent: '—' },
             { data: 'customer', defaultContent: '—' },
-            { data: 'total_returned', className: 'text-end sales-return-money-col' },
+            {
+                data: 'total_returned',
+                className: 'text-end sales-return-money-col',
+                render: function (value, type) {
+                    const n = EnjazIMS.parseNumber(value);
+                    if (type === 'sort' || type === 'type') return n;
+                    return EnjazIMS.formatMoney(n);
+                }
+            },
             { data: 'status', render: function(d, t, row) {
                 const badge = statusBadgeMap[d] || row.status_color || 'muted';
                 return `<span class="cx-badge cx-badge--${badge}">${row.status_label || '—'}</span>`;
