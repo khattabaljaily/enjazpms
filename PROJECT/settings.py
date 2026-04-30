@@ -2,7 +2,6 @@
 Django settings for EnjazIMS project.
 """
 
-import os
 import json
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
@@ -38,55 +37,38 @@ def get_secret(key, default=None):
 
 
 # ─────────────────────────────────────────────
-# Core security settings
+# Core security
 # ─────────────────────────────────────────────
 SECRET_KEY = get_secret('SECRET_KEY')
-DEBUG = get_secret('DEBUG')
+DEBUG = get_secret('DEBUG', False)
 
-# ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS', [])
-ALLOWED_HOSTS = ["*"]
-if isinstance(ALLOWED_HOSTS, str):
-    ALLOWED_HOSTS = [ALLOWED_HOSTS]
+ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS', [])
 
-
-# ─────────────────────────────────────────────
-# CSRF safe origin builder (FIXED like your working project)
-# ─────────────────────────────────────────────
-def _build_default_csrf_trusted_origins(hosts):
-    trusted_origins = []
-    for host in hosts:
-        host = str(host).strip()
-        if not host or host == '*':
-            continue
-
-        if '://' in host:
-            trusted_origins.append(host)
-            continue
-
-        if host.startswith('.'):
-            host = f'*.{host[1:]}'
-
-        trusted_origins.append(f'https://{host}')
-        trusted_origins.append(f'http://{host}')
-
-    return list(dict.fromkeys(trusted_origins))
-
-
-CSRF_TRUSTED_ORIGINS = get_secret(
-    'CSRF_TRUSTED_ORIGINS',
-    _build_default_csrf_trusted_origins(ALLOWED_HOSTS),
-)
+# تنظيف أي port زي :443
+ALLOWED_HOSTS = [h.split(':')[0] for h in ALLOWED_HOSTS]
 
 
 # ─────────────────────────────────────────────
-# Proxy / SSL (only if enabled)
+# CSRF
+# ─────────────────────────────────────────────
+CSRF_TRUSTED_ORIGINS = [
+    "https://imspro.enjaztechnology.com",
+    "https://www.imspro.enjaztechnology.com",
+]
+
+
+# ─────────────────────────────────────────────
+# Proxy (IMPORTANT)
 # ─────────────────────────────────────────────
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
+# مهم جداً عشان Cloudflare
+SECURE_SSL_REDIRECT = False
+
 
 # ─────────────────────────────────────────────
-# Installed apps
+# Apps
 # ─────────────────────────────────────────────
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -96,11 +78,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Third-party
     'rest_framework',
     'corsheaders',
 
-    # Local apps
     'apps.core',
     'apps.accounts',
     'apps.customers',
@@ -123,13 +103,12 @@ MIDDLEWARE = [
 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
 
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    # Custom
     'apps.core.middleware.TenantMiddleware',
     'apps.core.middleware.ActiveTenantMiddleware',
 ]
@@ -144,17 +123,14 @@ ROOT_URLCONF = 'PROJECT.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
 
-                # custom
                 'apps.core.context_processors.tenant_context',
                 'apps.core.context_processors.app_context',
             ],
@@ -201,14 +177,9 @@ TIME_ZONE = 'Africa/Cairo'
 USE_I18N = True
 USE_TZ = True
 
-USE_THOUSAND_SEPARATOR = True
-THOUSAND_SEPARATOR = ','
-DECIMAL_SEPARATOR = '.'
-NUMBER_GROUPING = 3
-
 
 # ─────────────────────────────────────────────
-# Static / Media (FIXED safer version)
+# Static / Media
 # ─────────────────────────────────────────────
 STATIC_URL = '/static/'
 
@@ -230,18 +201,9 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
-        'rest_framework.parsers.FormParser',
-        'rest_framework.parsers.MultiPartParser',
-    ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-    ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 25,
 }
 
@@ -269,7 +231,6 @@ MESSAGE_TAGS = {
 # ─────────────────────────────────────────────
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400
-SESSION_SAVE_EVERY_REQUEST = False
 
 
 # ─────────────────────────────────────────────
