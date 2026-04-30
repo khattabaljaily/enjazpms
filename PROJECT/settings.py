@@ -44,16 +44,14 @@ DEBUG = get_secret('DEBUG', False)
 
 ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS', [])
 
-# تنظيف أي port زي :443
-ALLOWED_HOSTS = [h.split(':')[0] for h in ALLOWED_HOSTS]
+# Normalize host names and remove ports like :443
+ALLOWED_HOSTS = [host.split(':')[0].strip() for host in ALLOWED_HOSTS if host]
 
-
-# ─────────────────────────────────────────────
-# CSRF
-# ─────────────────────────────────────────────
+# Build CSRF trusted origins from allowed hosts for production
 CSRF_TRUSTED_ORIGINS = [
-    "https://imspro.enjaztechnology.com",
-    "https://www.imspro.enjaztechnology.com",
+    f'https://{host}'
+    for host in ALLOWED_HOSTS
+    if host and host not in ('127.0.0.1', 'localhost')
 ]
 
 
