@@ -36,7 +36,12 @@ DEBUG = get_secret('DEBUG')
 ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS')
 
 # CSRF & Security
-CSRF_TRUSTED_ORIGINS = ['https://' + i for i in ALLOWED_HOSTS if i not in ['127.0.0.1', 'localhost']]
+CSRF_TRUSTED_ORIGINS = [
+    "127.0.0.1",
+    "localhost",
+    "https://imspro.enjaztechnology.com",
+    "https://www.imspro.enjaztechnology.com"
+]
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
