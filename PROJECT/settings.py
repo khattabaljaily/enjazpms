@@ -37,10 +37,12 @@ ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS')
 
 # CSRF & Security
 CSRF_TRUSTED_ORIGINS = [
-    "127.0.0.1",
-    "localhost",
+    "http://imspro.enjaztechnology.com",
     "https://imspro.enjaztechnology.com",
-    "https://www.imspro.enjaztechnology.com"
+    "http://www.imspro.enjaztechnology.com",
+    "https://www.imspro.enjaztechnology.com",
+    "127.0.0.1",
+    "localhost"
 ]
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
