@@ -40,12 +40,14 @@ def post_treasury_movement(
     reference_id=None,
     description='',
     user=None,
+    treasury=None,
 ):
     amount = Decimal(str(amount or 0))
     if amount <= 0:
         return None
 
-    treasury = get_or_create_default_treasury(tenant, user=user)
+    if treasury is None:
+        treasury = get_or_create_default_treasury(tenant, user=user)
     treasury = Treasury.objects.select_for_update().get(pk=treasury.pk)
 
     signed_amount = amount if movement_type in ('receipt', 'adjustment') else -amount
@@ -76,7 +78,7 @@ def post_treasury_movement(
     return movement
 
 
-def post_treasury_receipt(tenant, amount, date, reference_type='', reference_id=None, description='', user=None):
+def post_treasury_receipt(tenant, amount, date, reference_type='', reference_id=None, description='', user=None, treasury=None):
     return post_treasury_movement(
         tenant=tenant,
         movement_type='receipt',
@@ -86,10 +88,11 @@ def post_treasury_receipt(tenant, amount, date, reference_type='', reference_id=
         reference_id=reference_id,
         description=description,
         user=user,
+        treasury=treasury,
     )
 
 
-def post_treasury_disbursement(tenant, amount, date, reference_type='', reference_id=None, description='', user=None):
+def post_treasury_disbursement(tenant, amount, date, reference_type='', reference_id=None, description='', user=None, treasury=None):
     return post_treasury_movement(
         tenant=tenant,
         movement_type='disbursement',
@@ -99,4 +102,5 @@ def post_treasury_disbursement(tenant, amount, date, reference_type='', referenc
         reference_id=reference_id,
         description=description,
         user=user,
+        treasury=treasury,
     )

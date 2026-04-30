@@ -172,6 +172,61 @@ const EnjazIMS = {
         return confirm(message);
     },
 
+    // Modal-based confirmation — returns a Promise that resolves true/false.
+    // Usage: EnjazIMS.confirmAction('رسالة').then(ok => { if (ok) ... });
+    confirmAction: function(message, title) {
+        return new Promise(function(resolve) {
+            // Reuse or create the shared confirm modal
+            let modal = document.getElementById('enjazConfirmModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'enjazConfirmModal';
+                modal.className = 'modal fade';
+                modal.tabIndex = -1;
+                modal.setAttribute('data-bs-backdrop', 'static');
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-dialog-centered modal-sm">
+                        <div class="modal-content">
+                            <div class="modal-header border-0 pb-0">
+                                <h6 class="modal-title" id="enjazConfirmTitle"></h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body pt-2 pb-3" id="enjazConfirmBody" style="font-size:0.9rem"></div>
+                            <div class="modal-footer border-0 pt-0">
+                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" id="enjazConfirmNo">إلغاء</button>
+                                <button type="button" class="btn btn-sm btn-primary" id="enjazConfirmYes">تأكيد</button>
+                            </div>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+            }
+
+            document.getElementById('enjazConfirmTitle').textContent = title || 'تأكيد العملية';
+            document.getElementById('enjazConfirmBody').textContent = message || 'هل تريد المتابعة؟';
+
+            const bsModal = bootstrap.Modal.getOrCreate(modal);
+
+            function cleanup() {
+                document.getElementById('enjazConfirmYes').removeEventListener('click', onYes);
+                modal.removeEventListener('hidden.bs.modal', onHide);
+            }
+            function onYes() {
+                cleanup();
+                bsModal.hide();
+                resolve(true);
+            }
+            function onHide() {
+                cleanup();
+                resolve(false);
+            }
+
+            document.getElementById('enjazConfirmYes').addEventListener('click', onYes);
+            modal.addEventListener('hidden.bs.modal', onHide, { once: true });
+
+            bsModal.show();
+        });
+    },
+
     // Parse localized number strings into a JS number.
     // Accepts values like: 1,000.00 | 1000,00 | ١٬٠٠٠٫٠٠ | 1000
     parseNumber: function(value) {

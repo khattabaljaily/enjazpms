@@ -1,0 +1,205 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_title %}المصروفات{% endblock %}
+{% block page_description %}إدارة مصروفات النشاط التجاري{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.1">
+{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+    <div class="cx-hero">
+        <div class="cx-hero-inner">
+            <div class="cx-hero-left">
+                <div class="cx-hero-icon-wrap"><i class="fas fa-receipt"></i></div>
+                <div>
+                    <h1 class="cx-hero-title">المصروفات</h1>
+                    <p class="cx-hero-desc">تتبع وإدارة مصروفات النشاط التجاري</p>
+                </div>
+            </div>
+            <div class="cx-hero-right">
+                <div class="cx-hero-actions">
+                    <a href="{% url 'expenses:create' %}" class="cx-btn-add">
+                        <i class="fas fa-plus"></i><span>مصروف جديد</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="cx-stats-inline">
+            <span class="cx-stat-badge cx-stat-badge--primary">
+                <i class="fas fa-list"></i><strong>{{ stats.total }}</strong><span>إجمالي</span>
+            </span>
+            <span class="cx-stat-badge cx-stat-badge--success">
+                <i class="fas fa-check-circle"></i><strong>{{ stats.confirmed }}</strong><span>مؤكد</span>
+            </span>
+            <span class="cx-stat-badge cx-stat-badge--muted">
+                <i class="fas fa-pencil"></i><strong>{{ stats.draft }}</strong><span>مسودة</span>
+            </span>
+            <span class="cx-stat-badge cx-stat-badge--danger">
+                <i class="fas fa-ban"></i><strong>{{ stats.cancelled }}</strong><span>ملغي</span>
+            </span>
+            <span class="cx-stat-badge cx-stat-badge--warning" title="إجمالي مصروفات هذا الشهر">
+                <i class="fas fa-calendar-month"></i>
+                <strong id="statThisMonth">—</strong>
+                <span>هذا الشهر</span>
+            </span>
+            <span class="cx-stat-badge cx-stat-badge--info" title="إجمالي المصروفات المؤكدة">
+                <i class="fas fa-coins"></i>
+                <strong id="statTotalConfirmed">—</strong>
+                <span>الإجمالي المؤكد</span>
+            </span>
+        </div>
+    </div>
+
+    <div class="cx-panel">
+        <div class="cx-toolbar">
+            <div class="cx-toolbar-search">
+                <i class="fas fa-search cx-toolbar-search-icon"></i>
+                <input type="text" id="expenseSearch" class="cx-search-input" placeholder="رقم المصروف، الوصف، التصنيف...">
+            </div>
+            <div class="cx-toolbar-end">
+                <select id="categoryFilter" class="cx-select-sm">
+                    <option value="">كل التصنيفات</option>
+                </select>
+                <select id="statusFilter" class="cx-select-sm">
+                    <option value="">كل الحالات</option>
+                    <option value="draft">مسودة</option>
+                    <option value="confirmed">مؤكد</option>
+                    <option value="cancelled">ملغي</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive cx-table-wrap">
+            <table id="expensesTable" class="cx-table">
+                <thead>
+                    <tr>
+                        <th>رقم المصروف</th>
+                        <th>التاريخ</th>
+                        <th>التصنيف</th>
+                        <th>الوصف</th>
+                        <th>المبلغ</th>
+                        <th>طريقة الدفع</th>
+                        <th>الخزينة</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    // Populate stats
+    document.getElementById('statThisMonth').textContent = EnjazIMS.formatMoney('{{ stats.this_month }}');
+    document.getElementById('statTotalConfirmed').textContent = EnjazIMS.formatMoney('{{ stats.total_confirmed }}');
+
+    // Load categories for filter
+    fetch("{% url 'expenses:category_list_api' %}")
+        .then(r => r.json())
+        .then(data => {
+            const sel = document.getElementById('categoryFilter');
+            (data.results || []).forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.name;
+                sel.appendChild(opt);
+            });
+        });
+
+    const dt = $('#expensesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ordering: false,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
+        ajax: {
+            url: "{% url 'expenses:table_api' %}",
+            data: function (d) {
+                d.status = $('#statusFilter').val();
+                d.category = $('#categoryFilter').val();
+            }
+        },
+        columns: [
+            { data: 'code' },
+            { data: 'expense_date' },
+            { data: 'category' },
+            { data: 'description' },
+            {
+                data: 'amount',
+                className: 'text-end',
+                render: v => EnjazIMS.formatMoney(v || 0)
+            },
+            { data: 'payment_method' },
+            { data: 'treasury' },
+            { data: 'status' },
+            {
+                data: null,
+                orderable: false,
+                searchable: false,
+                className: 'text-center',
+                render: function (_, __, row) {
+                    const viewBtn = `<a href="/expenses/${row.id}/" class="cx-btn-icon" title="عرض"><i class="fas fa-eye"></i></a>`;
+                    const editBtn = row.status_raw === 'draft'
+                        ? `<a href="/expenses/${row.id}/edit/" class="cx-btn-icon" title="تعديل"><i class="fas fa-pen-to-square"></i></a>`
+                        : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
+                    const confirmBtn = row.status_raw === 'draft'
+                        ? `<button class="cx-btn-icon cx-btn-icon--success js-confirm" data-id="${row.id}" title="تأكيد"><i class="fas fa-check"></i></button>`
+                        : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
+                    const cancelBtn = row.status_raw === 'confirmed'
+                        ? `<button class="cx-btn-icon cx-btn-icon--danger js-cancel" data-id="${row.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`
+                        : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
+                    return `<div class="cx-actions">${viewBtn}${editBtn}${confirmBtn}${cancelBtn}</div>`;
+                }
+            }
+        ],
+        language: {
+            processing: 'جاري المعالجة...',
+            zeroRecords: 'لا توجد مصروفات',
+            emptyTable: 'لا توجد مصروفات بعد',
+            paginate: { previous: 'السابق', next: 'التالي' }
+        },
+        pageLength: 25,
+    });
+
+    $('#statusFilter, #categoryFilter').on('change', function () { dt.ajax.reload(); });
+    $('#expenseSearch').on('input', function () { dt.search(this.value).draw(); });
+
+    $('#expensesTable').on('click', '.js-confirm, .js-cancel', function () {
+        const id = $(this).data('id');
+        const isConfirm = $(this).hasClass('js-confirm');
+        const url = isConfirm ? `/expenses/${id}/confirm/` : `/expenses/${id}/cancel/`;
+        const msg = isConfirm
+            ? 'سيتم تأكيد المصروف وخصمه من الخزينة. هل تريد المتابعة؟'
+            : 'سيتم إلغاء المصروف وعكس أثره على الخزينة. هل تريد المتابعة؟';
+        EnjazIMS.confirmAction(msg).then(function(ok) {
+            if (!ok) return;
+            $.ajax({
+                url,
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                success: function (resp) {
+                    EnjazIMS.toast(resp.message || 'تمت العملية', 'success');
+                    dt.ajax.reload(null, false);
+                },
+                error: function (xhr) {
+                    EnjazIMS.toast(xhr.responseJSON?.message || 'تعذر إتمام العملية', 'error');
+                }
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

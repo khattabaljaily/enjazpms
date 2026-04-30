@@ -1,0 +1,292 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_title %}{% if mode == 'edit' %}تعديل مصروف{% else %}مصروف جديد{% endif %}{% endblock %}
+{% block page_description %}تسجيل مصروف جديد وربطه بالخزينة{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.1">
+{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+    <div class="cx-hero">
+        <div class="cx-hero-inner">
+            <div class="cx-hero-left">
+                <div class="cx-hero-icon-wrap"><i class="fas fa-receipt"></i></div>
+                <div>
+                    <h1 class="cx-hero-title">{% if mode == 'edit' %}تعديل مصروف{% else %}مصروف جديد{% endif %}</h1>
+                    <p class="cx-hero-desc">تسجيل مصروف وربطه بالتصنيف والخزينة</p>
+                </div>
+            </div>
+            <div class="cx-hero-right">
+                <a href="{% url 'expenses:list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i><span>العودة</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form id="expenseForm" novalidate>
+        {% csrf_token %}
+        <div class="row g-3">
+
+            <!-- Main Fields -->
+            <div class="col-lg-8">
+                <div class="cx-panel p-4 mb-3">
+                    <div class="cx-panel-header mb-3">
+                        <h3 class="cx-panel-title"><i class="fas fa-info-circle me-2"></i>بيانات المصروف</h3>
+                    </div>
+                    <div class="row g-3">
+
+                        <!-- Category -->
+                        <div class="col-md-6">
+                            <label class="cx-label">التصنيف <span class="text-danger">*</span></label>
+                            <div class="d-flex gap-2">
+                                <select id="categoryId" class="cx-input" required>
+                                    <option value="">— اختر التصنيف —</option>
+                                    {% for c in categories %}
+                                    <option value="{{ c.id }}" {% if expense and expense.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="cx-btn-secondary px-2" id="btnAddCategory" title="إضافة تصنيف جديد">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Date -->
+                        <div class="col-md-6">
+                            <label class="cx-label">التاريخ <span class="text-danger">*</span></label>
+                            <input type="date" id="expenseDate" class="cx-input" value="{{ expense.expense_date.isoformat|default:today }}" required>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="col-12">
+                            <label class="cx-label">الوصف <span class="text-danger">*</span></label>
+                            <input type="text" id="description" class="cx-input" maxlength="500"
+                                   value="{{ expense.description|default:'' }}" placeholder="وصف المصروف..." required>
+                        </div>
+
+                        <!-- Amount -->
+                        <div class="col-md-6">
+                            <label class="cx-label">المبلغ <span class="text-danger">*</span></label>
+                            <input type="text" id="amount" class="cx-input text-end" inputmode="decimal"
+                                   value="{{ expense.amount|default:'' }}" placeholder="0.00" required>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="col-12">
+                            <label class="cx-label">ملاحظات</label>
+                            <textarea id="notes" class="cx-input" rows="2" placeholder="ملاحظات اختيارية...">{{ expense.notes|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment & Treasury -->
+            <div class="col-lg-4">
+                <div class="cx-panel p-4 mb-3">
+                    <div class="cx-panel-header mb-3">
+                        <h3 class="cx-panel-title"><i class="fas fa-vault me-2"></i>الدفع والخزينة</h3>
+                    </div>
+                    <div class="row g-3">
+
+                        <!-- Payment Method -->
+                        <div class="col-12">
+                            <label class="cx-label">طريقة الدفع</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="cx-btn-secondary flex-fill js-pm active" data-method="cash" id="btnCash">
+                                    <i class="fas fa-coins me-1"></i>نقدي
+                                </button>
+                                <button type="button" class="cx-btn-secondary flex-fill js-pm" data-method="bank" id="btnBank">
+                                    <i class="fas fa-building-columns me-1"></i>بنكي
+                                </button>
+                            </div>
+                            <input type="hidden" id="paymentMethod" value="{{ expense.payment_method|default:'cash' }}">
+                        </div>
+
+                        <!-- Reference Number (shown for bank) -->
+                        <div class="col-12" id="referenceRow" style="display:none">
+                            <label class="cx-label">رقم المرجع / الحوالة</label>
+                            <input type="text" id="referenceNumber" class="cx-input"
+                                   value="{{ expense.reference_number|default:'' }}"
+                                   placeholder="رقم الحوالة أو أمر الدفع...">
+                        </div>
+
+                        <!-- Treasury -->
+                        <div class="col-12">
+                            <label class="cx-label">الخزينة / الحساب</label>
+                            <select id="treasuryId" class="cx-input">
+                                <option value="">— الخزينة الافتراضية —</option>
+                                {% for t in treasuries %}
+                                <option value="{{ t.id }}"
+                                    data-balance="{{ t.current_balance }}"
+                                    {% if expense and expense.treasury_id == t.id %}selected{% endif %}>
+                                    {{ t.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div id="treasuryBalance" class="cx-hint mt-1" style="display:none"></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Save Button -->
+                <div class="d-grid">
+                    <button type="submit" id="btnSave" class="cx-btn-add w-100">
+                        <i class="fas fa-save me-2"></i>حفظ المصروف
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تصنيف جديد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="cx-label">اسم التصنيف</label>
+                <input type="text" id="newCategoryName" class="cx-input" placeholder="مثال: إيجار، صيانة...">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnSaveCategory">حفظ</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    // ── Payment method toggle ──
+    const pmInput = document.getElementById('paymentMethod');
+    const refRow  = document.getElementById('referenceRow');
+
+    function applyPaymentMethod(method) {
+        pmInput.value = method;
+        document.querySelectorAll('.js-pm').forEach(b => b.classList.toggle('active', b.dataset.method === method));
+        refRow.style.display = method === 'bank' ? '' : 'none';
+    }
+    applyPaymentMethod(pmInput.value || 'cash');
+
+    document.querySelectorAll('.js-pm').forEach(btn => {
+        btn.addEventListener('click', () => applyPaymentMethod(btn.dataset.method));
+    });
+
+    // ── Treasury balance hint ──
+    const treasurySel = document.getElementById('treasuryId');
+    const treasuryBalDiv = document.getElementById('treasuryBalance');
+    function updateTreasuryHint() {
+        const opt = treasurySel.options[treasurySel.selectedIndex];
+        const bal = opt?.dataset?.balance;
+        if (bal !== undefined && bal !== '') {
+            treasuryBalDiv.style.display = '';
+            treasuryBalDiv.textContent = 'الرصيد الحالي: ' + EnjazIMS.formatMoney(bal);
+        } else {
+            treasuryBalDiv.style.display = 'none';
+        }
+    }
+    treasurySel.addEventListener('change', updateTreasuryHint);
+    updateTreasuryHint();
+
+    // ── Add Category Modal ──
+    document.getElementById('btnAddCategory').addEventListener('click', () => {
+        document.getElementById('newCategoryName').value = '';
+        new bootstrap.Modal(document.getElementById('addCategoryModal')).show();
+    });
+
+    document.getElementById('btnSaveCategory').addEventListener('click', function () {
+        const name = document.getElementById('newCategoryName').value.trim();
+        if (!name) return EnjazIMS.toast('أدخل اسم التصنيف', 'error');
+
+        fetch("{% url 'expenses:category_create_api' %}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ name }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return EnjazIMS.toast(data.message, 'error');
+            const sel = document.getElementById('categoryId');
+            const opt = document.createElement('option');
+            opt.value = data.id;
+            opt.textContent = data.name;
+            opt.selected = true;
+            sel.appendChild(opt);
+            bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
+            EnjazIMS.toast('تم إضافة التصنيف', 'success');
+        })
+        .catch(() => EnjazIMS.toast('خطأ في الاتصال', 'error'));
+    });
+
+    // ── Form Submit ──
+    document.getElementById('expenseForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const categoryId = document.getElementById('categoryId').value;
+        const description = document.getElementById('description').value.trim();
+        const amount = EnjazIMS.parseNumber(document.getElementById('amount').value);
+        const expenseDate = document.getElementById('expenseDate').value;
+
+        if (!categoryId)    return EnjazIMS.toast('اختر التصنيف', 'error');
+        if (!description)   return EnjazIMS.toast('أدخل الوصف', 'error');
+        if (!amount || amount <= 0) return EnjazIMS.toast('أدخل مبلغاً صحيحاً', 'error');
+        if (!expenseDate)   return EnjazIMS.toast('أدخل التاريخ', 'error');
+
+        const payload = {
+            category_id: parseInt(categoryId),
+            description,
+            amount: amount.toFixed(2),
+            expense_date: expenseDate,
+            payment_method: pmInput.value,
+            treasury_id: document.getElementById('treasuryId').value || null,
+            reference_number: document.getElementById('referenceNumber').value.trim(),
+            notes: document.getElementById('notes').value.trim(),
+        };
+
+        const btn = document.getElementById('btnSave');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
+
+        const url = {% if mode == 'edit' %}"{% url 'expenses:edit' expense.pk %}"{% else %}"{% url 'expenses:create' %}"{% endif %};
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(payload),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                EnjazIMS.toast(data.message || 'تعذر الحفظ', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ المصروف';
+                return;
+            }
+            window.location.href = data.redirect;
+        })
+        .catch(() => {
+            EnjazIMS.toast('خطأ في الاتصال', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ المصروف';
+        });
+    });
+})();
+</script>
+{% endblock %}
