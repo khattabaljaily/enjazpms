@@ -28,12 +28,12 @@ def get_secret(key: str, default=None):
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = creds['SECRET_KEY']
+SECRET_KEY = get_secret('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = creds['DEBUG']
+DEBUG = get_secret('DEBUG')
 
-ALLOWED_HOSTS = creds['ALLOWED_HOSTS']
+ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS')
 
 # CSRF & Security
 CSRF_TRUSTED_ORIGINS = ['https://' + i for i in ALLOWED_HOSTS if i not in ['127.0.0.1', 'localhost']]
@@ -116,7 +116,7 @@ WSGI_APPLICATION = 'PROJECT.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': creds['DATABASE']
+    'default': get_secret('DATABASE')
 }
 
 
@@ -250,7 +250,7 @@ CORS_ALLOW_CREDENTIALS = True
 # Email Configuration
 # ==========================================
 
-email_settings = creds.get('EMAIL', {})
+email_settings = get_secret('EMAIL', {})
 default_email_account = email_settings.get('INFO', {})
 
 
@@ -262,15 +262,15 @@ def _as_bool(value, default=False):
     return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
-EMAIL_BACKEND = creds.get(
+EMAIL_BACKEND = get_secret(
     'EMAIL_BACKEND',
     email_settings.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 )
-EMAIL_HOST = creds.get('EMAIL_HOST', default_email_account.get('HOST', 'localhost'))
-EMAIL_PORT = int(creds.get('EMAIL_PORT', default_email_account.get('PORT', 25)))
-EMAIL_USE_SSL = _as_bool(creds.get('EMAIL_USE_SSL', email_settings.get('EMAIL_USE_SSL')), default=False)
-EMAIL_HOST_USER = creds.get('EMAIL_HOST_USER', default_email_account.get('USER', ''))
-EMAIL_HOST_PASSWORD = creds.get('EMAIL_HOST_PASSWORD', default_email_account.get('PASSWORD', ''))
+EMAIL_HOST = get_secret('EMAIL_HOST', default_email_account.get('HOST', 'localhost'))
+EMAIL_PORT = int(get_secret('EMAIL_PORT', default_email_account.get('PORT', 25)))
+EMAIL_USE_SSL = _as_bool(get_secret('EMAIL_USE_SSL', email_settings.get('EMAIL_USE_SSL')), default=False)
+EMAIL_HOST_USER = get_secret('EMAIL_HOST_USER', default_email_account.get('USER', ''))
+EMAIL_HOST_PASSWORD = get_secret('EMAIL_HOST_PASSWORD', default_email_account.get('PASSWORD', ''))
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # ==========================================
@@ -297,4 +297,4 @@ SESSION_SAVE_EVERY_REQUEST = False
 # Internal IPs (for Debug Toolbar)
 # ==========================================
 
-INTERNAL_IPS = creds.get('internal_ips', ['127.0.0.1'])
+INTERNAL_IPS = get_secret('internal_ips', ['127.0.0.1'])
