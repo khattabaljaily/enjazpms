@@ -1,22 +1,12 @@
-"""
-Django settings for EnjazIMS project.
-"""
-
 import json
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from django.contrib.messages import constants as messages
 
-# ─────────────────────────────────────────────
-# Base paths
-# ─────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRETS_FILE = BASE_DIR / 'secrets.json'
 
 
-# ─────────────────────────────────────────────
-# Load secrets safely
-# ─────────────────────────────────────────────
 def load_secrets():
     try:
         with SECRETS_FILE.open(encoding='utf-8') as f:
@@ -36,38 +26,37 @@ def get_secret(key, default=None):
     raise ImproperlyConfigured(f'Missing "{key}" in secrets.json')
 
 
-# ─────────────────────────────────────────────
-# Core security
-# ─────────────────────────────────────────────
 SECRET_KEY = get_secret('SECRET_KEY')
 DEBUG = get_secret('DEBUG', False)
-
 ALLOWED_HOSTS = get_secret('ALLOWED_HOSTS', [])
 
-# Normalize host names and remove ports like :443
-ALLOWED_HOSTS = [host.split(':')[0].strip() for host in ALLOWED_HOSTS if host]
 
-# Build CSRF trusted origins from allowed hosts for production
-CSRF_TRUSTED_ORIGINS = [
-    f'https://{host}'
-    for host in ALLOWED_HOSTS
-    if host and host not in ('127.0.0.1', 'localhost')
-]
-
-
-# ─────────────────────────────────────────────
-# Proxy (IMPORTANT)
-# ─────────────────────────────────────────────
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
-
-# مهم جداً عشان Cloudflare
-SECURE_SSL_REDIRECT = False
+def _build_default_csrf_trusted_origins(hosts):
+    trusted_origins = []
+    for host in hosts:
+        host = str(host).strip()
+        if not host or host == '*':
+            continue
+        if '://' in host:
+            trusted_origins.append(host)
+            continue
+        if host.startswith('.'):
+            host = f'*.{host[1:]}'
+        trusted_origins.append(f'https://{host}')
+        trusted_origins.append(f'http://{host}')
+    return list(dict.fromkeys(trusted_origins))
 
 
-# ─────────────────────────────────────────────
-# Apps
-# ─────────────────────────────────────────────
+CSRF_TRUSTED_ORIGINS = get_secret(
+    'CSRF_TRUSTED_ORIGINS',
+    _build_default_csrf_trusted_origins(ALLOWED_HOSTS),
+)
+
+if get_secret('USE_REVERSE_PROXY_SSL_HEADER', False):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_X_FORWARDED_HOST = True
+
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -75,10 +64,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'rest_framework',
     'corsheaders',
-
     'apps.core',
     'apps.accounts',
     'apps.customers',
@@ -91,33 +78,21 @@ INSTALLED_APPS = [
     'apps.stocks',
 ]
 
-
-# ─────────────────────────────────────────────
-# Middleware
-# ─────────────────────────────────────────────
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
     'apps.core.middleware.TenantMiddleware',
     'apps.core.middleware.ActiveTenantMiddleware',
 ]
 
-
 ROOT_URLCONF = 'PROJECT.urls'
 
-
-# ─────────────────────────────────────────────
-# Templates
-# ─────────────────────────────────────────────
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -139,24 +114,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'PROJECT.wsgi.application'
 
+DATABASE_CONFIG = get_secret('DATABASE')
 
-# ─────────────────────────────────────────────
-# Database
-# ─────────────────────────────────────────────
 DATABASES = {
     'default': get_secret('DATABASE')
 }
 
-
-# ─────────────────────────────────────────────
-# Auth
-# ─────────────────────────────────────────────
 AUTH_USER_MODEL = 'accounts.User'
-
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = 'core:dashboard'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
-
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -165,36 +129,40 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
-# ─────────────────────────────────────────────
-# Internationalization
-# ─────────────────────────────────────────────
 LANGUAGE_CODE = 'ar'
 TIME_ZONE = 'Africa/Cairo'
-
 USE_I18N = True
 USE_TZ = True
 
-
-# ─────────────────────────────────────────────
-# Static / Media
-# ─────────────────────────────────────────────
-STATIC_URL = '/static/'
-
-if DEBUG:
-    STATICFILES_DIRS = [BASE_DIR / 'static']
-else:
-    STATIC_ROOT = BASE_DIR / 'static'
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+STATIC_URL  = '/static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+MEDIA_URL   = 'media/'
+MEDIA_ROOT  = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ── Authentication ─────────────────────────────────────────────
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'core:home'
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30   # 30 days
+SESSION_SAVE_EVERY_REQUEST = True
 
-# ─────────────────────────────────────────────
-# REST Framework
-# ─────────────────────────────────────────────
+CSRF_FAILURE_VIEW = 'PROJECT.error_views.csrf_failure'
+
+# ── Email ──────────────────────────────────────────────────────
+_email_cfg     = get_secret('EMAIL', {})
+_email_noreply = _email_cfg.get('NOREPLY', {})
+EMAIL_BACKEND       = _email_cfg.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST          = _email_noreply.get('HOST', '')
+EMAIL_PORT          = int(_email_noreply.get('PORT', 465))
+EMAIL_HOST_USER     = _email_noreply.get('USER', '')
+EMAIL_HOST_PASSWORD = _email_noreply.get('PASSWORD', '')
+EMAIL_USE_SSL       = str(_email_cfg.get('EMAIL_USE_SSL', 'True')).lower() == 'true'
+EMAIL_USE_TLS       = False
+DEFAULT_FROM_EMAIL  = f'ENJAZPLATFORM <{EMAIL_HOST_USER}>'
+
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
@@ -204,13 +172,6 @@ REST_FRAMEWORK = {
     ],
     'PAGE_SIZE': 25,
 }
-
-
-# ─────────────────────────────────────────────
-# CORS
-# ─────────────────────────────────────────────
-CORS_ALLOW_CREDENTIALS = True
-
 
 # ─────────────────────────────────────────────
 # Messages
@@ -235,3 +196,8 @@ SESSION_COOKIE_AGE = 86400
 # Internal IPs
 # ─────────────────────────────────────────────
 INTERNAL_IPS = get_secret('internal_ips', ['127.0.0.1'])
+
+# ── AI / DeepSeek ──────────────────────────────────────────────
+DEEPSEEK_API_KEY = get_secret('DEEPSEEK_API_KEY', '')
+DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
+DEEPSEEK_MODEL   = 'deepseek-chat'
