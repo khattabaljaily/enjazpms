@@ -5,14 +5,24 @@ Django settings for EnjazIMS project.
 import os
 import json
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 from django.contrib.messages import constants as messages
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load secrets from JSON file
-with open(os.path.join(BASE_DIR, 'secrets.json')) as json_file:
+SECRETS_FILE = BASE_DIR / 'secrets.json'
+
+with open(SECRETS_FILE) as json_file:
     creds = json.load(json_file)
+
+def get_secret(key: str, default=None):
+    if key in creds:
+        return creds[key]
+    if default is not None:
+        return default
+    raise ImproperlyConfigured(f'Missing "{key}" in secrets.json')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -210,10 +220,29 @@ REST_FRAMEWORK = {
 # CORS Configuration
 # ==========================================
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+def _build_default_csrf_trusted_origins(hosts):
+    trusted_origins = []
+    for host in hosts:
+        host = str(host).strip()
+        if not host or host == '*':
+            continue
+        if '://' in host:
+            trusted_origins.append(host)
+            continue
+        if host.startswith('.'):
+            host = f'*.{host[1:]}'
+        trusted_origins.append(f'https://{host}')
+        trusted_origins.append(f'http://{host}')
+    return list(dict.fromkeys(trusted_origins))
+
+CSRF_TRUSTED_ORIGINS = get_secret(
+    'CSRF_TRUSTED_ORIGINS',
+    _build_default_csrf_trusted_origins(ALLOWED_HOSTS),
+)
+
+if get_secret('USE_REVERSE_PROXY_SSL_HEADER', False):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_X_FORWARDED_HOST = True
 
 CORS_ALLOW_CREDENTIALS = True
 

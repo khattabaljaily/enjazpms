@@ -1,21 +1,20 @@
-# Core
+asgiref==3.11.1
 Django==4.2.7
-python-decouple==3.8
-
-# API
-djangorestframework==3.14.0
 django-cors-headers==4.3.0
-djangorestframework-simplejwt==5.3.0
-
-# Database
-mysqlclient==2.2.0
-
-# Utils
-Pillow>=11.0.0
-python-dateutil==2.8.2
-openpyxl==3.1.2
-xlsxwriter==3.1.9
-reportlab==4.0.7
-
-# Development
 django-debug-toolbar==4.2.0
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.0
+et_xmlfile==2.0.0
+gunicorn==25.3.0
+mysqlclient==2.2.0
+openpyxl==3.1.2
+packaging==26.2
+pillow==12.2.0
+PyJWT==2.12.1
+python-dateutil==2.8.2
+python-decouple==3.8
+pytz==2026.1.post1
+reportlab==4.0.7
+six==1.17.0
+sqlparse==0.5.5
+XlsxWriter==3.1.9
