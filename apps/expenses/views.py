@@ -91,7 +91,22 @@ def expense_list(request):
             expense_date__month=today.month,
         ).aggregate(s=Sum('amount'))['s'] or Decimal('0'),
     }
-    return render(request, 'expenses/expense_list.html', {'stats': stats})
+    categories = list(ExpenseCategory.objects.filter(tenant=tenant, is_active=True).values('id', 'name'))
+    treasuries = [
+        {
+            'id': t.id,
+            'name': t.name,
+            'current_balance': str(t.current_balance or Decimal('0'))
+        }
+        for t in Treasury.objects.filter(tenant=tenant, is_active=True).only('id', 'name', 'current_balance')
+    ]
+    return render(request, 'expenses/expense_list.html', {
+        'stats': stats,
+        'categories': categories,
+        'treasuries': treasuries,
+        'categories_json': json.dumps(categories),
+        'treasuries_json': json.dumps(treasuries),
+    })
 
 
 @login_required
@@ -163,46 +178,27 @@ def expense_table_api(request):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_POST
 def expense_create(request):
     tenant = _tenant(request)
     if not tenant:
-        return redirect('core:no_tenant')
+        return _err('لا يوجد نشاط تجاري')
 
-    if request.method == 'POST':
-        return _process_expense_post(request, tenant, None)
-
-    categories = ExpenseCategory.objects.filter(tenant=tenant, is_active=True).values('id', 'name')
-    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).values('id', 'name', 'current_balance')
-    return render(request, 'expenses/expense_form.html', {
-        'categories': list(categories),
-        'treasuries': list(treasuries),
-        'today': timezone.localdate().isoformat(),
-        'mode': 'create',
-    })
+    return _process_expense_post(request, tenant, None)
 
 
 @login_required
+@require_POST
 def expense_edit(request, pk):
     tenant = _tenant(request)
     if not tenant:
-        return redirect('core:no_tenant')
+        return _err('لا يوجد نشاط تجاري')
 
     expense = get_object_or_404(Expense, pk=pk, tenant=tenant)
     if expense.status not in ('draft',):
-        return redirect('expenses:detail', pk=pk)
+        return _err('لا يمكن تعديل مصروف غير مسودة')
 
-    if request.method == 'POST':
-        return _process_expense_post(request, tenant, expense)
-
-    categories = ExpenseCategory.objects.filter(tenant=tenant, is_active=True).values('id', 'name')
-    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).values('id', 'name', 'current_balance')
-    return render(request, 'expenses/expense_form.html', {
-        'expense': expense,
-        'categories': list(categories),
-        'treasuries': list(treasuries),
-        'today': timezone.localdate().isoformat(),
-        'mode': 'edit',
-    })
+    return _process_expense_post(request, tenant, expense)
 
 
 def _process_expense_post(request, tenant, expense):
@@ -264,7 +260,7 @@ def _process_expense_post(request, tenant, expense):
 
     return JsonResponse({
         'success': True,
-        'redirect': f'/expenses/{expense.pk}/',
+        'redirect': '/expenses/',
     })
 
 
@@ -273,13 +269,25 @@ def _process_expense_post(request, tenant, expense):
 # ─────────────────────────────────────────────
 
 @login_required
-def expense_detail(request, pk):
+def expense_detail_api(request, pk):
     tenant = _tenant(request)
     if not tenant:
-        return redirect('core:no_tenant')
+        return _err('لا يوجد نشاط تجاري')
 
-    expense = get_object_or_404(Expense, pk=pk, tenant=tenant)
-    return render(request, 'expenses/expense_detail.html', {'expense': expense})
+    expense = get_object_or_404(Expense.objects.select_related('category', 'treasury'), pk=pk, tenant=tenant)
+    return JsonResponse({'success': True, 'data': {
+        'id': expense.pk,
+        'code': expense.code,
+        'expense_date': expense.expense_date.isoformat(),
+        'category_id': expense.category_id,
+        'description': expense.description,
+        'amount': str(expense.amount),
+        'payment_method': expense.payment_method,
+        'treasury_id': expense.treasury_id,
+        'reference_number': expense.reference_number or '',
+        'notes': expense.notes or '',
+        'status_raw': expense.status,
+    }})
 
 
 # ─────────────────────────────────────────────

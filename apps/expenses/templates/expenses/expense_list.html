@@ -21,9 +21,9 @@
             </div>
             <div class="cx-hero-right">
                 <div class="cx-hero-actions">
-                    <a href="{% url 'expenses:create' %}" class="cx-btn-add">
+                    <button id="btnOpenCreateExpense" type="button" class="cx-btn-add">
                         <i class="fas fa-plus"></i><span>مصروف جديد</span>
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -91,6 +91,199 @@
             </table>
         </div>
     </div>
+
+    <div class="modal fade" id="viewExpenseModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog">
+            <div class="modal-content cx-view-modal">
+                <div class="cx-view-header">
+                    <div class="cx-view-header-content">
+                        <div class="cx-view-avatar" id="viewExpenseAvatar">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div>
+                            <h5 class="cx-view-title" id="viewExpenseCode">—</h5>
+                            <p class="cx-view-subtitle" id="viewExpenseStatus">—</p>
+                        </div>
+                    </div>
+                    <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="cx-view-body">
+                    <div class="cx-view-section">
+                        <div class="cx-view-section-title">
+                            <i class="fas fa-circle-info"></i>
+                            تفاصيل المصروف
+                        </div>
+                        <div class="cx-info-grid">
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">رقم المصروف</span>
+                                <span class="cx-info-value" id="viewExpenseCodeValue">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">التاريخ</span>
+                                <span class="cx-info-value" id="viewExpenseDate">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">التصنيف</span>
+                                <span class="cx-info-value" id="viewExpenseCategory">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">الوصف</span>
+                                <span class="cx-info-value" id="viewExpenseDescription">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">المبلغ</span>
+                                <span class="cx-info-value fw-bold text-danger fs-5" id="viewExpenseAmount">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">طريقة الدفع</span>
+                                <span class="cx-info-value" id="viewExpensePayment">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">الخزينة</span>
+                                <span class="cx-info-value" id="viewExpenseTreasury">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cx-view-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="expenseModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content cx-view-modal">
+                <div class="cx-view-header">
+                    <div class="cx-view-header-content">
+                        <div class="cx-view-avatar" id="expenseModalAvatar"><i class="fas fa-receipt"></i></div>
+                        <div>
+                            <h5 class="cx-view-title" id="expenseModalTitle">مصروف جديد</h5>
+                            <p class="cx-view-subtitle" id="expenseModalSubtitle">سجل مصروفاً جديداً دون مغادرة الصفحة.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="cx-view-body">
+                    <form id="expenseModalForm" novalidate>
+                        <input type="hidden" id="expenseModalId" value="">
+                        <div class="row g-3">
+                            <div class="col-lg-8">
+                                <div class="cx-panel p-4 mb-3">
+                                    <div class="cx-panel-header mb-3">
+                                        <h3 class="cx-panel-title"><i class="fas fa-info-circle me-2"></i>بيانات المصروف</h3>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="cx-label">التصنيف <span class="text-danger">*</span></label>
+                                            <div class="d-flex gap-2">
+                                                <select id="expenseModalCategory" class="cx-input" required>
+                                                    <option value="">— اختر التصنيف —</option>
+                                                </select>
+                                                <button type="button" class="cx-btn-secondary px-2" id="expenseModalAddCategory" title="إضافة تصنيف جديد">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="cx-label">التاريخ <span class="text-danger">*</span></label>
+                                            <input type="date" id="expenseModalDate" class="cx-input" value="" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="cx-label">الوصف <span class="text-danger">*</span></label>
+                                            <input type="text" id="expenseModalDescription" class="cx-input" maxlength="500" placeholder="وصف المصروف..." required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="cx-label">المبلغ <span class="text-danger">*</span></label>
+                                            <input type="number" id="expenseModalAmount" class="cx-input text-end" min="0" step="0.01" placeholder="0.00" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="cx-label">ملاحظات</label>
+                                            <textarea id="expenseModalNotes" class="cx-input" rows="2" placeholder="ملاحظات اختيارية..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="cx-panel p-4 mb-3">
+                                    <div class="cx-panel-header mb-3">
+                                        <h3 class="cx-panel-title"><i class="fas fa-vault me-2"></i>الدفع والخزينة</h3>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="cx-label">طريقة الدفع</label>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" class="cx-btn-secondary flex-fill expense-modal-pm active" data-method="cash"> <i class="fas fa-coins me-1"></i>نقدي</button>
+                                                <button type="button" class="cx-btn-secondary flex-fill expense-modal-pm" data-method="bank"> <i class="fas fa-building-columns me-1"></i>بنكي</button>
+                                            </div>
+                                            <input type="hidden" id="expenseModalPaymentMethod" value="cash">
+                                        </div>
+                                        <div class="col-12" id="expenseModalReferenceRow" style="display:none">
+                                            <label class="cx-label">رقم المرجع / الحوالة</label>
+                                            <input type="text" id="expenseModalReference" class="cx-input" placeholder="رقم الحوالة أو أمر الدفع...">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="cx-label">الخزينة / الحساب</label>
+                                            <select id="expenseModalTreasury" class="cx-input">
+                                                <option value="">— الخزينة الافتراضية —</option>
+                                            </select>
+                                            <div id="expenseModalTreasuryBalance" class="cx-hint mt-1" style="display:none"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="button" class="cx-btn-add" id="expenseModalSaveBtn">
+                                        <i class="fas fa-save me-1"></i><span id="expenseModalSaveText">حفظ المصروف</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addCategoryModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تصنيف جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="cx-label">اسم التصنيف</label>
+                    <input type="text" id="newExpenseCategoryName" class="cx-input" placeholder="مثال: إيجار، صيانة...">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="saveExpenseCategoryBtn">حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="expenseActionConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تأكيد العملية</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="expenseActionConfirmMessage" style="font-size:0.95rem"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="expenseActionConfirmYes">تأكيد</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -106,18 +299,208 @@
     document.getElementById('statThisMonth').textContent = EnjazIMS.formatMoney('{{ stats.this_month }}');
     document.getElementById('statTotalConfirmed').textContent = EnjazIMS.formatMoney('{{ stats.total_confirmed }}');
 
-    // Load categories for filter
-    fetch("{% url 'expenses:category_list_api' %}")
+    const EXPENSE_CATEGORIES = JSON.parse('{{ categories_json|escapejs }}');
+    const EXPENSE_TREASURIES = JSON.parse('{{ treasuries_json|escapejs }}');
+    const expenseRows = new Map();
+    const expenseModalEl = document.getElementById('expenseModal');
+    const expenseModal = new bootstrap.Modal(expenseModalEl);
+    const addCategoryModal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+    const categoryFilterEl = document.getElementById('categoryFilter');
+    const expenseCategorySel = document.getElementById('expenseModalCategory');
+    const expenseTreasurySel = document.getElementById('expenseModalTreasury');
+    const expensePaymentMethodInput = document.getElementById('expenseModalPaymentMethod');
+    const expenseModalReferenceRow = document.getElementById('expenseModalReferenceRow');
+    const expenseModalReference = document.getElementById('expenseModalReference');
+    const expenseModalDate = document.getElementById('expenseModalDate');
+    const expenseModalDescription = document.getElementById('expenseModalDescription');
+    const expenseModalAmount = document.getElementById('expenseModalAmount');
+    const expenseModalNotes = document.getElementById('expenseModalNotes');
+    const expenseModalTitle = document.getElementById('expenseModalTitle');
+    const expenseModalSubtitle = document.getElementById('expenseModalSubtitle');
+    const expenseModalSaveBtn = document.getElementById('expenseModalSaveBtn');
+    const expenseModalSaveText = document.getElementById('expenseModalSaveText');
+    const expenseModalId = document.getElementById('expenseModalId');
+    const expenseModalPmButtons = Array.from(document.querySelectorAll('.expense-modal-pm'));
+    const expenseModalCategoryAddBtn = document.getElementById('expenseModalAddCategory');
+    const saveExpenseCategoryBtn = document.getElementById('saveExpenseCategoryBtn');
+    const newExpenseCategoryName = document.getElementById('newExpenseCategoryName');
+    const expenseModalTreasuryBalance = document.getElementById('expenseModalTreasuryBalance');
+
+    function buildCategoryOptions(select, selectedId) {
+        const defaultLabel = select === categoryFilterEl ? 'كل التصنيفات' : '— اختر التصنيف —';
+        select.innerHTML = `<option value="">${defaultLabel}</option>`;
+        EXPENSE_CATEGORIES.forEach(function (cat) {
+            const opt = document.createElement('option');
+            opt.value = cat.id;
+            opt.textContent = cat.name;
+            if (selectedId && String(cat.id) === String(selectedId)) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    function buildTreasuryOptions(select, selectedId) {
+        select.innerHTML = '<option value="">— الخزينة الافتراضية —</option>';
+        EXPENSE_TREASURIES.forEach(function (t) {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name;
+            opt.dataset.balance = t.current_balance;
+            if (selectedId && String(t.id) === String(selectedId)) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    function updateTreasuryHint() {
+        const opt = expenseTreasurySel.options[expenseTreasurySel.selectedIndex];
+        const balance = opt?.dataset?.balance;
+        if (balance !== undefined && balance !== '') {
+            expenseModalTreasuryBalance.style.display = '';
+            expenseModalTreasuryBalance.textContent = 'الرصيد الحالي: ' + EnjazIMS.formatMoney(balance);
+        } else {
+            expenseModalTreasuryBalance.style.display = 'none';
+        }
+    }
+
+    function setPaymentMethod(method) {
+        expensePaymentMethodInput.value = method;
+        expenseModalPmButtons.forEach(function (btn) {
+            btn.classList.toggle('active', btn.dataset.method === method);
+        });
+        expenseModalReferenceRow.style.display = method === 'bank' ? '' : 'none';
+    }
+
+    function resetExpenseForm() {
+        expenseModalId.value = '';
+        buildCategoryOptions(expenseCategorySel);
+        buildTreasuryOptions(expenseTreasurySel);
+        expenseModalDate.value = new Date().toISOString().slice(0, 10);
+        expenseModalDescription.value = '';
+        expenseModalAmount.value = '';
+        expenseModalNotes.value = '';
+        expenseModalReference.value = '';
+        setPaymentMethod('cash');
+        updateTreasuryHint();
+    }
+
+    buildCategoryOptions(categoryFilterEl);
+    buildCategoryOptions(expenseCategorySel);
+    buildTreasuryOptions(expenseTreasurySel);
+    updateTreasuryHint();
+
+    function openExpenseModal(mode, data) {
+        if (mode === 'create') {
+            expenseModalTitle.textContent = 'مصروف جديد';
+            expenseModalSubtitle.textContent = 'سجل مصروفاً جديداً دون مغادرة الصفحة.';
+            expenseModalSaveText.textContent = 'حفظ المصروف';
+            resetExpenseForm();
+        } else {
+            expenseModalTitle.textContent = 'تعديل المصروف';
+            expenseModalSubtitle.textContent = 'عدل بيانات المصروف ثم احفظ التغييرات.';
+            expenseModalSaveText.textContent = 'حفظ التعديلات';
+            expenseModalId.value = data.id;
+            buildCategoryOptions(expenseCategorySel, data.category_id);
+            buildTreasuryOptions(expenseTreasurySel, data.treasury_id);
+            expenseModalDate.value = data.expense_date || new Date().toISOString().slice(0, 10);
+            expenseModalDescription.value = data.description || '';
+            expenseModalAmount.value = data.amount || '';
+            expenseModalNotes.value = data.notes || '';
+            expenseModalReference.value = data.reference_number || '';
+            setPaymentMethod(data.payment_method || 'cash');
+            updateTreasuryHint();
+        }
+        expenseModal.show();
+    }
+
+    function loadExpenseForEdit(id) {
+        fetch(`/expenses/api/${id}/`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    EnjazIMS.toast(data.message || 'تعذر تحميل بيانات المصروف', 'error');
+                    return;
+                }
+                openExpenseModal('edit', data.data);
+            })
+            .catch(() => EnjazIMS.toast('تعذر تحميل بيانات المصروف', 'error'));
+    }
+
+    function addCategoryToLists(category) {
+        EXPENSE_CATEGORIES.push(category);
+        buildCategoryOptions(categoryFilterEl);
+        buildCategoryOptions(expenseCategorySel, category.id);
+    }
+
+    function saveExpense() {
+        const categoryId = expenseCategorySel.value;
+        const description = expenseModalDescription.value.trim();
+        const amount = EnjazIMS.parseNumber(expenseModalAmount.value);
+        const expenseDate = expenseModalDate.value;
+        const paymentMethod = expensePaymentMethodInput.value;
+        const treasuryId = expenseTreasurySel.value || null;
+        const referenceNumber = expenseModalReference.value.trim();
+        const notes = expenseModalNotes.value.trim();
+        const expenseId = expenseModalId.value;
+
+        if (!categoryId) return EnjazIMS.toast('اختر التصنيف', 'error');
+        if (!expenseDate) return EnjazIMS.toast('اختر التاريخ', 'error');
+        if (!description) return EnjazIMS.toast('أدخل الوصف', 'error');
+        if (!amount || amount <= 0) return EnjazIMS.toast('أدخل مبلغاً صحيحاً', 'error');
+
+        const payload = {
+            category_id: parseInt(categoryId, 10),
+            description,
+            amount: amount.toFixed(2),
+            expense_date: expenseDate,
+            payment_method: paymentMethod,
+            treasury_id: treasuryId ? parseInt(treasuryId, 10) : null,
+            reference_number: referenceNumber,
+            notes,
+        };
+
+        const url = expenseId ? `/expenses/api/${expenseId}/update/` : '/expenses/api/create/';
+        expenseModalSaveBtn.disabled = true;
+        expenseModalSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify(payload),
+        })
         .then(r => r.json())
         .then(data => {
-            const sel = document.getElementById('categoryFilter');
-            (data.results || []).forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = c.name;
-                sel.appendChild(opt);
-            });
+            expenseModalSaveBtn.disabled = false;
+            expenseModalSaveBtn.innerHTML = '<i class="fas fa-save me-1"></i>' + expenseModalSaveText.textContent;
+            if (!data.success) {
+                EnjazIMS.toast(data.message || 'تعذر حفظ المصروف', 'error');
+                return;
+            }
+            expenseModal.hide();
+            dt.ajax.reload(null, false);
+            EnjazIMS.toast('تم حفظ المصروف بنجاح', 'success');
+        })
+        .catch(() => {
+            expenseModalSaveBtn.disabled = false;
+            expenseModalSaveBtn.innerHTML = '<i class="fas fa-save me-1"></i>' + expenseModalSaveText.textContent;
+            EnjazIMS.toast('خطأ في الاتصال', 'error');
         });
+    }
+
+    function renderExpenseTableRowActions(row) {
+        const viewBtn = `<button type="button" class="cx-btn-icon js-view-expense" data-id="${row.id}" title="عرض"><i class="fas fa-eye"></i></button>`;
+        const editBtn = row.status_raw === 'draft'
+            ? `<button type="button" class="cx-btn-icon js-edit-expense" data-id="${row.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>`
+            : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
+        const confirmBtn = row.status_raw === 'draft'
+            ? `<button type="button" class="cx-btn-icon cx-btn-icon--success js-confirm" data-id="${row.id}" title="تأكيد"><i class="fas fa-check"></i></button>`
+            : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
+        const cancelBtn = (row.status_raw === 'draft' || row.status_raw === 'confirmed')
+            ? `<button type="button" class="cx-btn-icon cx-btn-icon--danger js-cancel" data-id="${row.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`
+            : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
+        return `<div class="cx-actions">${viewBtn}${editBtn}${confirmBtn}${cancelBtn}</div>`;
+    }
 
     const dt = $('#expensesTable').DataTable({
         processing: true,
@@ -151,17 +534,7 @@
                 searchable: false,
                 className: 'text-center',
                 render: function (_, __, row) {
-                    const viewBtn = `<a href="/expenses/${row.id}/" class="cx-btn-icon" title="عرض"><i class="fas fa-eye"></i></a>`;
-                    const editBtn = row.status_raw === 'draft'
-                        ? `<a href="/expenses/${row.id}/edit/" class="cx-btn-icon" title="تعديل"><i class="fas fa-pen-to-square"></i></a>`
-                        : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
-                    const confirmBtn = row.status_raw === 'draft'
-                        ? `<button class="cx-btn-icon cx-btn-icon--success js-confirm" data-id="${row.id}" title="تأكيد"><i class="fas fa-check"></i></button>`
-                        : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
-                    const cancelBtn = row.status_raw === 'confirmed'
-                        ? `<button class="cx-btn-icon cx-btn-icon--danger js-cancel" data-id="${row.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`
-                        : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
-                    return `<div class="cx-actions">${viewBtn}${editBtn}${confirmBtn}${cancelBtn}</div>`;
+                    return renderExpenseTableRowActions(row);
                 }
             }
         ],
@@ -174,32 +547,138 @@
         pageLength: 25,
     });
 
+    dt.on('xhr', function (_, __, json) {
+        expenseRows.clear();
+        (json.data || []).forEach(function (row) {
+            expenseRows.set(row.id, row);
+        });
+    });
+
+    function openExpenseView(id) {
+        const row = expenseRows.get(id);
+        if (!row) {
+            EnjazIMS.toast('تعذر تحميل تفاصيل المصروف', 'error');
+            return;
+        }
+
+        document.getElementById('viewExpenseCode').textContent = row.code || '—';
+        document.getElementById('viewExpenseCodeValue').textContent = row.code || '—';
+        document.getElementById('viewExpenseDate').textContent = row.expense_date || '—';
+        document.getElementById('viewExpenseCategory').textContent = row.category || '—';
+        document.getElementById('viewExpenseDescription').textContent = row.description || '—';
+        document.getElementById('viewExpenseAmount').textContent = EnjazIMS.formatMoney(row.amount || 0);
+        document.getElementById('viewExpensePayment').innerHTML = row.payment_method || '—';
+        document.getElementById('viewExpenseTreasury').textContent = row.treasury || '—';
+        document.getElementById('viewExpenseStatus').innerHTML = row.status || '—';
+        new bootstrap.Modal(document.getElementById('viewExpenseModal')).show();
+    }
+
+    $('#btnOpenCreateExpense').on('click', function () {
+        openExpenseModal('create');
+    });
+
+    expenseModalPmButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            setPaymentMethod(btn.dataset.method);
+        });
+    });
+
+    expenseTreasurySel.addEventListener('change', updateTreasuryHint);
+    expenseModalCategoryAddBtn.addEventListener('click', function () {
+        expenseModal.hide();
+        newExpenseCategoryName.value = '';
+        addCategoryModal.show();
+    });
+
+    saveExpenseCategoryBtn.addEventListener('click', function () {
+        const name = newExpenseCategoryName.value.trim();
+        if (!name) return EnjazIMS.toast('أدخل اسم التصنيف', 'error');
+
+        fetch("{% url 'expenses:category_create_api' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ name }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                EnjazIMS.toast(data.message || 'تعذر إضافة التصنيف', 'error');
+                return;
+            }
+            addCategoryToLists({ id: data.id, name: data.name });
+            addCategoryModal.hide();
+            expenseModal.show();
+            EnjazIMS.toast('تم إضافة التصنيف', 'success');
+        })
+        .catch(() => EnjazIMS.toast('خطأ في الاتصال', 'error'));
+    });
+
     $('#statusFilter, #categoryFilter').on('change', function () { dt.ajax.reload(); });
     $('#expenseSearch').on('input', function () { dt.search(this.value).draw(); });
+
+    const expenseActionConfirmModalEl = document.getElementById('expenseActionConfirmModal');
+    const expenseActionConfirmModal = new bootstrap.Modal(expenseActionConfirmModalEl);
+    const expenseActionConfirmMessage = document.getElementById('expenseActionConfirmMessage');
+    const expenseActionConfirmYes = document.getElementById('expenseActionConfirmYes');
+    let expenseActionPending = null;
+
+    function openExpenseActionConfirm(id, isConfirm) {
+        expenseActionPending = { id, isConfirm };
+        expenseActionConfirmMessage.textContent = isConfirm
+            ? 'سيتم تأكيد المصروف وخصمه من الخزينة. هل تريد المتابعة؟'
+            : 'سيتم إلغاء المصروف وعكس أثره على الخزينة. هل تريد المتابعة؟';
+        expenseActionConfirmModal.show();
+    }
+
+    expenseActionConfirmYes.addEventListener('click', function () {
+        if (!expenseActionPending) {
+            expenseActionConfirmModal.hide();
+            return;
+        }
+
+        const id = expenseActionPending.id;
+        const url = expenseActionPending.isConfirm ? `/expenses/${id}/confirm/` : `/expenses/${id}/cancel/`;
+        expenseActionConfirmModal.hide();
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        .then(response => response.json())
+        .then(function (resp) {
+            if (!resp.success) {
+                EnjazIMS.toast(resp.message || 'تعذر إتمام العملية', 'error');
+                return;
+            }
+            EnjazIMS.toast(resp.message || 'تمت العملية', 'success');
+            dt.ajax.reload(null, false);
+        })
+        .catch(function () {
+            EnjazIMS.toast('تعذر إتمام العملية', 'error');
+        });
+    });
 
     $('#expensesTable').on('click', '.js-confirm, .js-cancel', function () {
         const id = $(this).data('id');
         const isConfirm = $(this).hasClass('js-confirm');
-        const url = isConfirm ? `/expenses/${id}/confirm/` : `/expenses/${id}/cancel/`;
-        const msg = isConfirm
-            ? 'سيتم تأكيد المصروف وخصمه من الخزينة. هل تريد المتابعة؟'
-            : 'سيتم إلغاء المصروف وعكس أثره على الخزينة. هل تريد المتابعة؟';
-        EnjazIMS.confirmAction(msg).then(function(ok) {
-            if (!ok) return;
-            $.ajax({
-                url,
-                method: 'POST',
-                headers: { 'X-CSRFToken': getCookie('csrftoken') },
-                success: function (resp) {
-                    EnjazIMS.toast(resp.message || 'تمت العملية', 'success');
-                    dt.ajax.reload(null, false);
-                },
-                error: function (xhr) {
-                    EnjazIMS.toast(xhr.responseJSON?.message || 'تعذر إتمام العملية', 'error');
-                }
-            });
-        });
+        openExpenseActionConfirm(id, isConfirm);
     });
+
+    $('#expensesTable').on('click', '.js-edit-expense', function () {
+        loadExpenseForEdit($(this).data('id'));
+    });
+
+    $('#expensesTable').on('click', '.js-view-expense', function () {
+        openExpenseView($(this).data('id'));
+    });
+
+    expenseModalSaveBtn.addEventListener('click', saveExpense);
 })();
 </script>
 {% endblock %}
