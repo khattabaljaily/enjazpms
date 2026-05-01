@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
 
 from .models import Settings
+from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
 
 
 @login_required
@@ -67,7 +68,11 @@ def no_tenant(request):
 @login_required
 def tenant_settings(request):
     """إعدادات النشاط التجاري"""
-    return render(request, 'core/tenant_settings.html')
+    return render(request, 'core/tenant_settings.html', {
+        'country_choices': COUNTRY_CHOICES,
+        'country_timezone_map_json': json.dumps(COUNTRY_TIMEZONE_MAP, ensure_ascii=False),
+        'default_country': DEFAULT_COUNTRY,
+    })
 
 
 @login_required
@@ -95,7 +100,10 @@ def tenant_settings_update_api(request):
         tenant.city = str(data.get('city', tenant.city)).strip()
         tenant.country = str(data.get('country', tenant.country)).strip() or tenant.country
         tenant.address = str(data.get('address', tenant.address)).strip()
-        tenant.timezone = str(data.get('timezone', tenant.timezone)).strip() or tenant.timezone
+        timezone_value = str(data.get('timezone', tenant.timezone)).strip()
+        if not timezone_value:
+            timezone_value = get_timezone_for_country(tenant.country)
+        tenant.timezone = timezone_value
         tenant.currency = str(data.get('currency', tenant.currency)).strip() or tenant.currency
         tenant.save(update_fields=['name', 'email', 'phone', 'city', 'country', 'address', 'timezone', 'currency', 'updated_at'])
         return JsonResponse({'success': True, 'message': 'تم تحديث بيانات المتجر بنجاح'})

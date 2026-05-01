@@ -1,6 +1,8 @@
 """
 Views للحسابات - التسجيل وتسجيل الدخول
 """
+import json
+
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib.auth import login, logout, authenticate
@@ -11,6 +13,7 @@ from django.urls import reverse
 from datetime import datetime, timedelta
 
 from apps.core.models import Tenant, Settings
+from apps.core.constants import COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
 from .models import User
 from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginForm
 
@@ -87,9 +90,14 @@ def register_step2(request):
             }, status=400)
         return redirect('accounts:register_step1')
     
+    country_timezone_map_json = json.dumps(COUNTRY_TIMEZONE_MAP, ensure_ascii=False)
+    timezone_preview = get_timezone_for_country(DEFAULT_COUNTRY)
+
     if request.method == 'POST':
         form = Step2BusinessForm(request.POST)
         if form.is_valid():
+            country_value = form.cleaned_data['country']
+            timezone_value = get_timezone_for_country(country_value)
             # حفظ البيانات في Session
             request.session['reg_step2'] = {
                 'business_type_id': form.cleaned_data['business_type'].id,
@@ -97,6 +105,8 @@ def register_step2(request):
                 'phone': form.cleaned_data['phone'],
                 'address': form.cleaned_data['address'],
                 'city': form.cleaned_data['city'],
+                'country': country_value,
+                'timezone': timezone_value,
             }
 
             if _wants_json(request):
@@ -114,14 +124,18 @@ def register_step2(request):
                 'message': _first_error_message(errors),
                 'errors': errors,
             }, status=400)
+        timezone_preview = get_timezone_for_country(request.POST.get('country', DEFAULT_COUNTRY))
     else:
         initial = request.session.get('reg_step2', {})
         form = Step2BusinessForm(initial=initial)
-    
+        timezone_preview = get_timezone_for_country(initial.get('country', DEFAULT_COUNTRY))
+
     return render(request, 'accounts/register_step2.html', {
         'form': form,
         'step': 2,
         'total_steps': 3,
+        'country_timezone_map_json': country_timezone_map_json,
+        'timezone_preview': timezone_preview,
     })
 
 
@@ -214,7 +228,9 @@ def register_step3(request):
                 'errors': errors,
             }, status=400)
     else:
-        form = Step3SettingsForm()
+        session_data = request.session.get('reg_step2', {})
+        initial_timezone = session_data.get('timezone', get_timezone_for_country(session_data.get('country', DEFAULT_COUNTRY)))
+        form = Step3SettingsForm(initial={'timezone': initial_timezone})
     
     return render(request, 'accounts/register_step3.html', {
         'form': form,

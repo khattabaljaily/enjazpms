@@ -4,12 +4,9 @@ Forms للتسجيل وتسجيل الدخول
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
-from zoneinfo import available_timezones
+from apps.core.constants import COUNTRY_CHOICES, DEFAULT_COUNTRY
 from apps.core.models import BusinessType, Tenant, Settings
 from .models import User
-
-
-ALL_TIMEZONE_CHOICES = [(timezone, timezone) for timezone in sorted(available_timezones())]
 
 
 def apply_arabic_error_messages(form_instance):
@@ -158,6 +155,15 @@ class Step2BusinessForm(forms.Form):
         })
     )
 
+    country = forms.ChoiceField(
+        label='البلد',
+        choices=COUNTRY_CHOICES,
+        initial=DEFAULT_COUNTRY,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+
 
 class Step3SettingsForm(forms.Form):
     """الخطوة 3: إعدادات النظام"""
@@ -183,12 +189,12 @@ class Step3SettingsForm(forms.Form):
         })
     )
     
-    timezone = forms.ChoiceField(
+    timezone = forms.CharField(
         label='المنطقة الزمنية',
-        choices=ALL_TIMEZONE_CHOICES,
-        initial='UTC',
-        widget=forms.Select(attrs={
-            'class': 'form-select'
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'readonly': 'readonly',
+            'placeholder': 'ستُضبط تلقائياً حسب البلد'
         })
     )
     

@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.core.utils import convert_arabic_numerals
 from apps.treasury.models import Treasury
 
 from .models import Expense, ExpenseCategory
@@ -217,7 +218,8 @@ def _process_expense_post(request, tenant, expense):
         return _err('التصنيف غير صالح')
 
     try:
-        amount = Decimal(str(data.get('amount', '0')))
+        amount_str = convert_arabic_numerals(data.get('amount', '0'))
+        amount = Decimal(str(amount_str))
         if amount <= 0:
             raise ValueError
     except (InvalidOperation, ValueError):

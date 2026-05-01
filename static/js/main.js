@@ -33,6 +33,11 @@ document.addEventListener('DOMContentLoaded', function () {
     overlay.addEventListener('click', closeSidebar);
 });
 
+// Initialize numeric input conversion
+document.addEventListener('DOMContentLoaded', function () {
+    EnjazIMS.initNumericInputs();
+});
+
 // Utility functions
 const EnjazIMS = {
     // Show loading spinner
@@ -296,6 +301,36 @@ const EnjazIMS = {
     formatCurrency: function(amount, currency = 'EGP') {
         const formatted = this.formatMoney(amount);
         return `${formatted} ${currency}`;
+    },
+
+    // Convert Arabic numerals to English in a string
+    convertArabicNumerals: function(str) {
+        const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+        const englishDigits = '0123456789';
+        return str.replace(/[٠-٩]/g, (d) => englishDigits[arabicDigits.indexOf(d)]);
+    },
+
+    // Apply Arabic numeral conversion to numeric inputs
+    initNumericInputs: function() {
+        const numericInputs = document.querySelectorAll('input[type="number"], input[inputmode="decimal"], input.numeric-input');
+        
+        numericInputs.forEach(input => {
+            input.addEventListener('input', function(e) {
+                const converted = EnjazIMS.convertArabicNumerals(e.target.value);
+                if (converted !== e.target.value) {
+                    e.target.value = converted;
+                }
+            });
+            
+            input.addEventListener('paste', function(e) {
+                setTimeout(() => {
+                    const converted = EnjazIMS.convertArabicNumerals(e.target.value);
+                    if (converted !== e.target.value) {
+                        e.target.value = converted;
+                    }
+                }, 0);
+            });
+        });
     }
 };
 

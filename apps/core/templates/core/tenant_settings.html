@@ -49,11 +49,15 @@
                         </div>
                         <div class="col-md-6">
                             <label class="settings-label">البلد</label>
-                            <input class="form-control settings-input" name="country" value="{{ current_tenant.country|default:'مصر' }}">
+                            <select id="tenantCountrySelect" class="form-select settings-input" name="country">
+                                {% for value,label in country_choices %}
+                                <option value="{{ value }}" {% if current_tenant.country == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="settings-label">المنطقة الزمنية</label>
-                            <input class="form-control settings-input" name="timezone" value="{{ current_tenant.timezone|default:'Africa/Cairo' }}">
+                            <input class="form-control settings-input" name="timezone" value="{{ current_tenant.timezone|default:'Africa/Cairo' }}" readonly>
                         </div>
                         <div class="col-md-6">
                             <label class="settings-label">العملة</label>
@@ -226,6 +230,22 @@ function saveSection(section, formId, btn) {
         btn.disabled = false;
         btn.innerHTML = original;
     });
+}
+
+function updateTenantTimezone() {
+    const countrySelect = document.getElementById('tenantCountrySelect');
+    const timezoneInput = document.querySelector('input[name="timezone"]');
+    const countryValue = countrySelect ? countrySelect.value : '';
+    const mapped = COUNTRY_TIMEZONE_MAP[countryValue] || COUNTRY_TIMEZONE_MAP['السودان'];
+    if (timezoneInput) {
+        timezoneInput.value = mapped;
+    }
+}
+
+const COUNTRY_TIMEZONE_MAP = {{ country_timezone_map_json|safe }};
+if (document.getElementById('tenantCountrySelect')) {
+    document.getElementById('tenantCountrySelect').addEventListener('change', updateTenantTimezone);
+    updateTenantTimezone();
 }
 
 function saveTenantBusiness() {

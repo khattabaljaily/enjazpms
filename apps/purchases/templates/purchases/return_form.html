@@ -65,7 +65,7 @@
             <td>{{ line.quantity|floatformat:"-3u" }}</td>
             <td>{{ line.returned_quantity|floatformat:"-3u" }}</td>
             <td>{{ line.returnable_quantity|floatformat:"-3u" }}</td>
-            <td><input type="number" min="0" step="0.001" class="cx-input js-ret-qty" value="0"></td>
+            <td><input type="number" min="0" step="0.01" class="cx-input js-ret-qty" value="0"></td>
             <td>{{ line.unit_cost }}</td>
             <td class="js-line-total">0.00</td>
           </tr>

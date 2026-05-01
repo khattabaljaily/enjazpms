@@ -7,6 +7,8 @@ from django.conf import settings
 from django.utils.text import slugify
 from django.utils import timezone
 
+from .constants import DEFAULT_COUNTRY, DEFAULT_TIMEZONE
+
 
 # ============================================
 # MANAGERS & QUERYSETS
@@ -103,7 +105,7 @@ class Tenant(models.Model):
     phone = models.CharField('رقم الهاتف', max_length=20, blank=True)
     address = models.TextField('العنوان', blank=True)
     city = models.CharField('المدينة', max_length=100, blank=True)
-    country = models.CharField('البلد', max_length=100, default='مصر')
+    country = models.CharField('البلد', max_length=100, blank=True, default=DEFAULT_COUNTRY)
     
     # Subscription
     subscription_plan = models.CharField(
@@ -129,7 +131,7 @@ class Tenant(models.Model):
     max_users = models.IntegerField('عدد المستخدمين المسموح', default=5)
     
     # Settings
-    timezone = models.CharField('المنطقة الزمنية', max_length=50, default='Africa/Cairo')
+    timezone = models.CharField('المنطقة الزمنية', max_length=50, default=DEFAULT_TIMEZONE)
     language = models.CharField('اللغة', max_length=10, default='ar')
     currency = models.CharField('العملة', max_length=3, default='EGP')
     

@@ -94,7 +94,7 @@
                     <td><strong class="text-success ret-returnable-qty" data-value="{{ line.returnable_quantity|unlocalize }}">{{ line.returnable_quantity|floatformat:"-3u" }}</strong></td>
                     <td>
                         <input type="number" class="cx-input cx-input--sm ret-qty"
-                               min="0" max="{{ line.returnable_quantity|unlocalize }}" step="0.001"
+                               min="0" max="{{ line.returnable_quantity|unlocalize }}" step="0.01"
                                value="0" data-price="{{ line.unit_price|unlocalize }}"
                                oninput="updateReturnTotal(this)">
                     </td>

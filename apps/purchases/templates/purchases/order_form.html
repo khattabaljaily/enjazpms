@@ -251,7 +251,7 @@ function addLine(itemId, itemName, itemSku, suggestedCost) {
     row.dataset.itemId = itemId;
     row.innerHTML = `
         <td><div class="sales-line-item-name">${itemName}</div><div class="sales-line-item-sku">${itemSku || ''}</div></td>
-        <td><input type="number" min="0.001" step="0.001" value="1" class="cx-input cx-input--sm" id="qty-${id}" oninput="recalc()"></td>
+        <td><input type="number" min="0.001" step="0.01" value="1" class="cx-input cx-input--sm" id="qty-${id}" oninput="recalc()"></td>
         <td><input type="number" min="0" step="0.01" value="${(suggestedCost || 0).toFixed(2)}" class="cx-input cx-input--sm" id="cost-${id}" oninput="recalc()"></td>
         <td><input type="number" min="0" step="0.01" value="0" class="cx-input cx-input--sm" id="tax-${id}" oninput="recalc()"></td>
         <td class="text-end" id="total-${id}">${EnjazIMS.formatMoney(0)}</td>

@@ -1,0 +1,6 @@
+/* Expenses module styles
+   هذا الملف مخصص لأنماط صفحات المصروفات فقط.
+   أي قواعد عامة أو مشتركة يجب أن تظل في components.css أو ملف مشترك آخر.
+*/
+
+@import url('sales.css');

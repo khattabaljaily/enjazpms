@@ -65,7 +65,21 @@
             <div class="text-danger small mt-1 js-field-errors" data-field="city">{{ form.city.errors }}</div>
             {% endif %}
         </div>
-        
+
+        <div class="mb-3">
+            {{ form.country.label_tag }}
+            {{ form.country }}
+            {% if form.country.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="country">{{ form.country.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">المنطقة الزمنية</label>
+            <input id="countryTimezonePreview" class="form-control" readonly value="{{ timezone_preview }}">
+            <small class="text-muted">سيتم ضبط المنطقة الزمنية تلقائياً حسب البلد</small>
+        </div>
+
         <div class="mb-3 field-span-2">
             {{ form.address.label_tag }}
             {{ form.address }}
@@ -90,4 +104,24 @@
 <p class="text-muted">
     لديك حساب بالفعل؟ <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>
 </p>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const COUNTRY_TIMEZONE_MAP = {{ country_timezone_map_json|safe }};
+    const countrySelect = document.querySelector('select[name="country"]');
+    const timezonePreview = document.getElementById('countryTimezonePreview');
+
+    function updateTimezonePreview() {
+        if (!countrySelect || !timezonePreview) return;
+        const selected = countrySelect.value;
+        const timezone = COUNTRY_TIMEZONE_MAP[selected] || COUNTRY_TIMEZONE_MAP['السودان'];
+        timezonePreview.value = timezone;
+    }
+
+    if (countrySelect) {
+        countrySelect.addEventListener('change', updateTimezonePreview);
+        updateTimezonePreview();
+    }
+</script>
 {% endblock %}
