@@ -19,11 +19,7 @@ from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginFor
 
 
 def _wants_json(request):
-    return (
-        getattr(request, 'is_api', False)
-        or request.headers.get('x-requested-with') == 'XMLHttpRequest'
-        or 'application/json' in request.headers.get('Accept', '')
-    )
+    return getattr(request, 'is_api', False)
 
 
 def _serialize_form_errors(form):
