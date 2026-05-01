@@ -59,7 +59,7 @@ CSRF_TRUSTED_ORIGINS = get_secret(
 # 🔥 إجبار Django يفهم إنه خلف HTTPS proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_SSL_REDIRECT = False
 
 
 # ─────────────────────────────────────────────
