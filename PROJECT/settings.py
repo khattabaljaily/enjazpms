@@ -201,3 +201,6 @@ INTERNAL_IPS = get_secret('internal_ips', ['127.0.0.1'])
 DEEPSEEK_API_KEY = get_secret('DEEPSEEK_API_KEY', '')
 DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
 DEEPSEEK_MODEL   = 'deepseek-chat'
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
