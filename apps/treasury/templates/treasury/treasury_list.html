@@ -78,7 +78,9 @@
                 <input type="hidden" id="treasuryId" value="">
                 <div class="cx-modal-main">
                     <div class="cx-modal-header">
-                        <div><h5 class="cx-modal-title" id="treasuryModalTitle">إضافة خزينة</h5></div>
+                        <div>
+                            <h5 class="cx-modal-title" id="treasuryModalTitle">إضافة خزينة</h5>
+                        </div>
                         <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="cx-modal-body">
@@ -188,21 +190,144 @@
 
 {% block extra_js %}
 <script>
-const TREASURY_TABLE_API = "{% url 'treasury:table_api' %}";
-const TREASURY_CREATE_API = "{% url 'treasury:create_api' %}";
-const TREASURY_DETAIL_API_BASE = "/treasury/api/";
-const TREASURY_TX_API_BASE = "/treasury/api/";
+(function () {
+    'use strict';
 
-let treasuryTable;
-let currentStatus = '';
-const getCookie = (name) => {
-    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
-    return v ? v[2] : null;
-};
+    const TREASURY_TABLE_API = "{% url 'treasury:table_api' %}";
+    const TREASURY_CREATE_API = "{% url 'treasury:create_api' %}";
+    const TREASURY_DETAIL_API_BASE = "/treasury/api/";
 
+    const getCookie = (name) => {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    };
 
+    const treasuryModalEl = document.getElementById('treasuryModal');
+    const deleteModalEl = document.getElementById('deleteTreasuryModal');
+    const ledgerModalEl = document.getElementById('treasuryLedgerModal');
 
-function initTable() {
+    // Move modals to body level
+    if (treasuryModalEl && treasuryModalEl.parentElement !== document.body) {
+        document.body.appendChild(treasuryModalEl);
+    }
+    if (deleteModalEl && deleteModalEl.parentElement !== document.body) {
+        document.body.appendChild(deleteModalEl);
+    }
+    if (ledgerModalEl && ledgerModalEl.parentElement !== document.body) {
+        document.body.appendChild(ledgerModalEl);
+    }
+
+    const treasuryModal = new bootstrap.Modal(treasuryModalEl);
+    const deleteModal = new bootstrap.Modal(deleteModalEl);
+    const ledgerModal = new bootstrap.Modal(ledgerModalEl);
+
+    const $form = $('#treasuryForm');
+    const $submitBtn = $('#treasurySubmitBtn');
+    const $idInput = $('#treasuryId');
+    let currentStatus = '';
+    let treasuryTable;
+
+    function resetForm() {
+        $form[0].reset();
+        $idInput.val('');
+        document.getElementById('id_is_active').checked = true;
+        document.getElementById('id_is_default').checked = false;
+        document.getElementById('id_is_default').disabled = false;
+        document.getElementById('id_is_active').disabled = false;
+        EnjazIMS.clearFormErrors($form);
+    }
+
+    function openCreate() {
+        resetForm();
+        document.getElementById('treasuryModalTitle').textContent = 'إضافة خزينة';
+        $submitBtn.html('<i class="fas fa-check me-1"></i>حفظ');
+        treasuryModal.show();
+    }
+
+    function openEdit(id) {
+        resetForm();
+        fetch(`${TREASURY_DETAIL_API_BASE}${id}/detail/`)
+            .then(r => r.json())
+            .then(resp => {
+                if (!resp.success) {
+                    EnjazIMS.toast(resp.message || 'تعذر تحميل البيانات', 'error');
+                    return;
+                }
+                const d = resp.data;
+                $idInput.val(d.id);
+                document.getElementById('id_name').value = d.name || '';
+                document.getElementById('id_code').value = d.code || '';
+                document.getElementById('id_notes').value = d.notes || '';
+                document.getElementById('id_is_default').checked = !!d.is_default;
+                document.getElementById('id_is_active').checked = !!d.is_active;
+
+                if (d.is_system_default) {
+                    document.getElementById('id_is_default').checked = true;
+                    document.getElementById('id_is_active').checked = true;
+                    document.getElementById('id_is_default').disabled = true;
+                    document.getElementById('id_is_active').disabled = true;
+                }
+
+                document.getElementById('treasuryModalTitle').textContent = 'تعديل خزينة';
+                $submitBtn.html('<i class="fas fa-check me-1"></i>حفظ التعديلات');
+                treasuryModal.show();
+            })
+            .catch(() => EnjazIMS.toast('تعذر تحميل البيانات', 'error'));
+    }
+
+    function openDelete(id, name) {
+        document.getElementById('deleteTreasuryId').value = id;
+        document.getElementById('deleteTreasuryName').textContent = name;
+        deleteModal.show();
+    }
+
+    function loadTreasuryTransactions(id) {
+        const tbody = document.getElementById('treasuryLedgerBody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">جاري التحميل...</td></tr>';
+
+        fetch(`${TREASURY_DETAIL_API_BASE}${id}/transactions/`)
+            .then(r => r.json())
+            .then(resp => {
+                if (!resp.success || !Array.isArray(resp.data) || !resp.data.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد حركات</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = resp.data.map(row => {
+                    const amount = EnjazIMS.parseNumber(row.amount || 0);
+                    const amountClass = amount >= 0 ? 'text-success' : 'text-danger';
+                    return `<tr>
+                        <td>${row.movement_date || '—'}</td>
+                        <td>${row.movement_type || '—'}</td>
+                        <td>${row.reference_type || '—'}</td>
+                        <td class="${amountClass}">${EnjazIMS.formatMoney(row.amount || 0)}</td>
+                        <td>${EnjazIMS.formatMoney(row.running_balance || 0)}</td>
+                        <td>${row.description || '—'}</td>
+                    </tr>`;
+                }).join('');
+            })
+            .catch(() => {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">تعذر تحميل الحركات</td></tr>';
+            });
+    }
+
+    function openTreasuryLedger(id) {
+        fetch(`${TREASURY_DETAIL_API_BASE}${id}/detail/`)
+            .then(r => r.json())
+            .then(resp => {
+                if (!resp.success) {
+                    EnjazIMS.toast(resp.message || 'تعذر تحميل البيانات', 'error');
+                    return;
+                }
+                const d = resp.data;
+                document.getElementById('treasuryLedgerSubtitle').textContent = `${d.name || '—'} (${d.code || '—'}) — الرصيد الحالي: ${EnjazIMS.formatMoney(d.current_balance || 0)}`;
+                loadTreasuryTransactions(id);
+                ledgerModal.show();
+            })
+            .catch(() => EnjazIMS.toast('تعذر تحميل البيانات', 'error'));
+    }
+
+    /* ── DataTable ──────────────────────────────────────────── */
     treasuryTable = $('#treasuryTable').DataTable({
         processing: true,
         serverSide: true,
@@ -210,13 +335,10 @@ function initTable() {
         ordering: true,
         dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
         language: {
-            processing: 'جاري التحميل...',
-            zeroRecords: 'لا توجد نتائج',
-            emptyTable: 'لا توجد خزائن مضافة',
-            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_',
-            infoEmpty: 'لا توجد بيانات',
-            infoFiltered: '(مصفّى من _MAX_)',
-            paginate: { first: 'الأول', last: 'الأخير', next: 'التالي', previous: 'السابق' },
+            processing: 'جاري المعالجة...',
+            zeroRecords: 'لا توجد مصروفات',
+            emptyTable: 'لا توجد خزائن بعد',
+            paginate: { previous: 'السابق', next: 'التالي' }
         },
         ajax: {
             url: TREASURY_TABLE_API,
@@ -227,7 +349,7 @@ function initTable() {
         columns: [
             { data: 'name' },
             { data: 'code' },
-            { data: 'current_balance', className: 'text-end treasury-money-col', render: v => EnjazIMS.formatMoney(v) },
+            { data: 'current_balance', className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
             { data: 'is_active', render: v => v ? '<span class="cx-badge cx-badge--success">نشطة</span>' : '<span class="cx-badge cx-badge--muted">موقوفة</span>' },
             { data: 'is_default', render: (v, _, row) => row.is_system_default ? '<span class="cx-badge cx-badge--info">افتراضية نظامية</span>' : (v ? '<span class="cx-badge cx-badge--primary">افتراضية</span>' : '—') },
             {
@@ -237,9 +359,9 @@ function initTable() {
                 className: 'text-center',
                 render: function(_, __, row) {
                     return `<div class="cx-actions">
-                        <button class="cx-btn-icon" onclick="openTreasuryLedger(${row.id})" title="السجل"><i class="fas fa-list"></i></button>
-                        <button class="cx-btn-icon" onclick="openEdit(${row.id})" title="تعديل"><i class="fas fa-pencil"></i></button>
-                        ${row.is_system_default ? '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>' : `<button class="cx-btn-icon cx-btn-icon--danger" onclick="openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>`}
+                        <button class="cx-btn-icon" onclick="window.openTreasuryLedger(${row.id})" title="السجل"><i class="fas fa-list"></i></button>
+                        <button class="cx-btn-icon" onclick="window.openEdit(${row.id})" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                        ${row.is_system_default ? '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>' : `<button class="cx-btn-icon cx-btn-icon--danger" onclick="window.openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>`}
                     </div>`;
                 }
             }
@@ -247,102 +369,8 @@ function initTable() {
         order: [[0, 'asc']],
         pageLength: 25,
     });
-}
 
-function resetForm() {
-    document.getElementById('treasuryForm').reset();
-    document.getElementById('treasuryId').value = '';
-    document.querySelector('.js-form-errors').classList.add('d-none');
-    document.getElementById('id_is_active').checked = true;
-    document.getElementById('id_is_default').checked = false;
-    document.getElementById('id_is_default').disabled = false;
-    document.getElementById('id_is_active').disabled = false;
-}
-
-function openCreate() {
-    resetForm();
-    document.getElementById('treasuryModalTitle').textContent = 'إضافة خزينة';
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('treasuryModal')).show();
-}
-
-function openEdit(id) {
-    fetch(`${TREASURY_DETAIL_API_BASE}${id}/detail/`)
-    .then(r => r.json())
-    .then(resp => {
-        if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر تحميل البيانات', 'error'); return; }
-        const d = resp.data;
-        resetForm();
-        document.getElementById('treasuryModalTitle').textContent = 'تعديل خزينة';
-        document.getElementById('treasuryId').value = d.id;
-        document.getElementById('id_name').value = d.name || '';
-        document.getElementById('id_code').value = d.code || '';
-        document.getElementById('id_notes').value = d.notes || '';
-        document.getElementById('id_is_default').checked = !!d.is_default;
-        document.getElementById('id_is_active').checked = !!d.is_active;
-
-        if (d.is_system_default) {
-            document.getElementById('id_is_default').checked = true;
-            document.getElementById('id_is_active').checked = true;
-            document.getElementById('id_is_default').disabled = true;
-            document.getElementById('id_is_active').disabled = true;
-        }
-
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('treasuryModal')).show();
-    });
-}
-
-function openDelete(id, name) {
-    document.getElementById('deleteTreasuryId').value = id;
-    document.getElementById('deleteTreasuryName').textContent = name;
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteTreasuryModal')).show();
-}
-
-function loadTreasuryTransactions(id) {
-    const tbody = document.getElementById('treasuryLedgerBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">جاري التحميل...</td></tr>';
-
-    fetch(`${TREASURY_TX_API_BASE}${id}/transactions/`)
-    .then(r => r.json())
-    .then(resp => {
-        if (!resp.success || !Array.isArray(resp.data) || !resp.data.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد حركات</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = resp.data.map(row => {
-            const amount = EnjazIMS.parseNumber(row.amount || 0);
-            const amountClass = amount >= 0 ? 'text-success' : 'text-danger';
-            return `<tr>
-                <td>${row.movement_date || '—'}</td>
-                <td>${row.movement_type || '—'}</td>
-                <td>${row.reference_type || '—'}</td>
-                <td class="${amountClass}">${EnjazIMS.formatMoney(row.amount || 0)}</td>
-                <td>${EnjazIMS.formatMoney(row.running_balance || 0)}</td>
-                <td>${row.description || '—'}</td>
-            </tr>`;
-        }).join('');
-    })
-    .catch(() => {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">تعذر تحميل الحركات</td></tr>';
-    });
-}
-
-function openTreasuryLedger(id) {
-    fetch(`${TREASURY_DETAIL_API_BASE}${id}/detail/`)
-    .then(r => r.json())
-    .then(resp => {
-        if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر تحميل البيانات', 'error'); return; }
-        const d = resp.data;
-        document.getElementById('treasuryLedgerSubtitle').textContent = `${d.name || '—'} (${d.code || '—'}) — الرصيد الحالي: ${EnjazIMS.formatMoney(d.current_balance || 0)}`;
-        loadTreasuryTransactions(id);
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('treasuryLedgerModal')).show();
-    })
-    .catch(() => EnjazIMS.toast('تعذر تحميل البيانات', 'error'));
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    initTable();
-
+    /* ── Event Listeners ────────────────────────────────────── */
     document.getElementById('btnOpenCreateTreasury').addEventListener('click', openCreate);
 
     document.querySelectorAll('.cx-filter-tab').forEach(btn => {
@@ -358,21 +386,25 @@ document.addEventListener('DOMContentLoaded', function () {
         treasuryTable.search(this.value).draw();
     });
 
-    document.getElementById('treasuryForm').addEventListener('submit', function (e) {
+    $form.on('submit', function (e) {
         e.preventDefault();
-        const id = document.getElementById('treasuryId').value;
+        const id = $idInput.val();
         const url = id ? `${TREASURY_DETAIL_API_BASE}${id}/update/` : TREASURY_CREATE_API;
-        const formData = new FormData(this);
+
+        EnjazIMS.clearFormErrors($form);
+        const orig = $submitBtn.html();
+        EnjazIMS.showLoading($submitBtn);
 
         fetch(url, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCookie('csrftoken') },
-            body: formData,
+            body: new FormData($form[0]),
         })
         .then(r => r.json())
         .then(resp => {
+            EnjazIMS.hideLoading($submitBtn, orig);
             if (resp.success) {
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('treasuryModal')).hide();
+                treasuryModal.hide();
                 EnjazIMS.toast(resp.message || 'تم الحفظ بنجاح', 'success');
                 treasuryTable.ajax.reload(null, false);
                 return;
@@ -381,7 +413,10 @@ document.addEventListener('DOMContentLoaded', function () {
             box.classList.remove('d-none');
             box.textContent = resp.message || 'تعذر الحفظ';
         })
-        .catch(() => EnjazIMS.toast('حدث خطأ في الاتصال', 'error'));
+        .catch(() => {
+            EnjazIMS.hideLoading($submitBtn, orig);
+            EnjazIMS.toast('حدث خطأ في الاتصال', 'error');
+        });
     });
 
     document.getElementById('confirmDeleteTreasuryBtn').addEventListener('click', function () {
@@ -393,7 +428,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(r => r.json())
         .then(resp => {
             if (resp.success) {
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteTreasuryModal')).hide();
+                deleteModal.hide();
                 EnjazIMS.toast(resp.message || 'تم الحذف', 'success');
                 treasuryTable.ajax.reload(null, false);
             } else {
@@ -402,6 +437,12 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(() => EnjazIMS.toast('حدث خطأ في الاتصال', 'error'));
     });
-});
+
+    // Make functions global
+    window.openEdit = openEdit;
+    window.openDelete = openDelete;
+    window.openTreasuryLedger = openTreasuryLedger;
+})();
 </script>
 {% endblock %}
+

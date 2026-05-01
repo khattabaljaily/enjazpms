@@ -271,15 +271,33 @@
     </div>
     <div class="modal fade" id="expenseActionConfirmModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">تأكيد العملية</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-content cx-view-modal">
+                <div class="cx-view-header">
+                    <div class="cx-view-header-content">
+                        <div class="cx-view-avatar" id="expenseActionConfirmAvatar" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <h5 class="cx-view-title">تأكيد العملية</h5>
+                            <p class="cx-view-subtitle" id="expenseActionConfirmType">—</p>
+                        </div>
+                    </div>
+                    <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <div class="modal-body" id="expenseActionConfirmMessage" style="font-size:0.95rem"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="expenseActionConfirmYes">تأكيد</button>
+
+                <div class="cx-view-body">
+                    <div class="alert alert-info border-0" role="alert">
+                        <p id="expenseActionConfirmMessage" style="margin: 0; font-size:0.95rem; line-height: 1.6;"></p>
+                    </div>
+                </div>
+
+                <div class="cx-view-footer" style="gap: 0.75rem;">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="cx-btn-add" id="expenseActionConfirmYes">
+                        <i class="fas fa-check me-1"></i>تأكيد
+                    </button>
                 </div>
             </div>
         </div>
@@ -627,6 +645,14 @@
 
     function openExpenseActionConfirm(id, isConfirm) {
         expenseActionPending = { id, isConfirm };
+        const confirmType = isConfirm ? 'تأكيد المصروف' : 'إلغاء المصروف';
+        const confirmIcon = isConfirm ? 'fa-check-circle' : 'fa-ban';
+        const confirmColor = isConfirm ? 'linear-gradient(135deg, #28a745 0%, #20c997 100%)' : 'linear-gradient(135deg, #dc3545 0%, #fd7e14 100%)';
+        
+        document.getElementById('expenseActionConfirmType').textContent = confirmType;
+        document.getElementById('expenseActionConfirmAvatar').style.background = confirmColor;
+        document.getElementById('expenseActionConfirmAvatar').innerHTML = `<i class="fas ${confirmIcon}"></i>`;
+        
         expenseActionConfirmMessage.textContent = isConfirm
             ? 'سيتم تأكيد المصروف وخصمه من الخزينة. هل تريد المتابعة؟'
             : 'سيتم إلغاء المصروف وعكس أثره على الخزينة. هل تريد المتابعة؟';

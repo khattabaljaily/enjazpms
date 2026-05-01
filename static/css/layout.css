@@ -659,12 +659,12 @@
 
     .sidebar {
         top: 0;
-        right: -240px;
+        right: -275px;
         height: 100vh;
         border-radius: 0;
         z-index: 1100;
         transition: right 0.25s ease;
-        width: 240px;
+        width: 275px;
     }
 
     .sidebar.show { right: 0; }
