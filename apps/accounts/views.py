@@ -22,7 +22,6 @@ def _wants_json(request):
     return (
         getattr(request, 'is_api', False)
         or request.headers.get('x-requested-with') == 'XMLHttpRequest'
-        or 'application/json' in request.headers.get('Accept', '')
     )
 
 
@@ -31,6 +30,9 @@ def _serialize_form_errors(form):
 
 
 def _first_error_message(errors_dict, default='يرجى التحقق من الحقول المطلوبة'):
+    if '__all__' in errors_dict and errors_dict['__all__']:
+        return errors_dict['__all__'][0]
+
     for _, messages_list in errors_dict.items():
         if messages_list:
             return messages_list[0]
