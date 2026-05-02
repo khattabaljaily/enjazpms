@@ -71,7 +71,6 @@ def category_create_api(request):
 # Expense list
 # ─────────────────────────────────────────────
 
-@login_required
 def expense_list(request):
     tenant = _tenant(request)
     if not tenant:
@@ -100,6 +99,7 @@ def expense_list(request):
         }
         for t in Treasury.objects.filter(tenant=tenant, is_active=True).only('id', 'name', 'current_balance')
     ]
+    
     return render(request, 'expenses/expense_list.html', {
         'stats': stats,
         'categories': categories,
@@ -144,6 +144,7 @@ def expense_table_api(request):
         'confirmed': '<span class="badge bg-success">مؤكد</span>',
         'cancelled': '<span class="badge bg-danger">ملغي</span>',
     }
+    
     METHOD_LABELS = {
         'cash': '<i class="fas fa-coins text-warning me-1"></i>نقدي',
         'bank': '<i class="fas fa-building-columns text-info me-1"></i>بنكي',
