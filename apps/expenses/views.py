@@ -240,13 +240,14 @@ def _process_expense_post(request, tenant, expense):
     if payment_method not in ('cash', 'bank'):
         payment_method = 'cash'
 
-    treasury_id = data.get('treasury_id')
     treasury = None
-    if treasury_id:
-        try:
-            treasury = Treasury.objects.get(pk=int(treasury_id), tenant=tenant, is_active=True)
-        except (Treasury.DoesNotExist, ValueError):
-            return _err('الخزينة غير صالحة')
+    if payment_method == 'cash':
+        treasury_id = data.get('treasury_id')
+        if treasury_id:
+            try:
+                treasury = Treasury.objects.get(pk=int(treasury_id), tenant=tenant, is_active=True)
+            except (Treasury.DoesNotExist, ValueError):
+                return _err('الخزينة غير صالحة')
 
     reference_number = (data.get('reference_number') or '').strip()
     notes = (data.get('notes') or '').strip()

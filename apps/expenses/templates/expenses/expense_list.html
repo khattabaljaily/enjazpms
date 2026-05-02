@@ -229,7 +229,7 @@
                                             <label class="cx-label">رقم المرجع / الحوالة</label>
                                             <input type="text" id="expenseModalReference" class="cx-input" placeholder="رقم الحوالة أو أمر الدفع...">
                                         </div>
-                                        <div class="col-12">
+                                        <div class="col-12" id="expenseModalTreasuryRow">
                                             <label class="cx-label">الخزينة / الحساب</label>
                                             <select id="expenseModalTreasury" class="cx-input">
                                                 <option value="">— الخزينة الافتراضية —</option>
@@ -326,6 +326,7 @@
     const categoryFilterEl = document.getElementById('categoryFilter');
     const expenseCategorySel = document.getElementById('expenseModalCategory');
     const expenseTreasurySel = document.getElementById('expenseModalTreasury');
+    const expenseModalTreasuryRow = document.getElementById('expenseModalTreasuryRow');
     const expensePaymentMethodInput = document.getElementById('expenseModalPaymentMethod');
     const expenseModalReferenceRow = document.getElementById('expenseModalReferenceRow');
     const expenseModalReference = document.getElementById('expenseModalReference');
@@ -379,12 +380,21 @@
         }
     }
 
+    function toggleExpenseTreasuryField(visible) {
+        expenseModalTreasuryRow.style.display = visible ? '' : 'none';
+        if (!visible) {
+            expenseTreasurySel.value = '';
+            updateTreasuryHint();
+        }
+    }
+
     function setPaymentMethod(method) {
         expensePaymentMethodInput.value = method;
         expenseModalPmButtons.forEach(function (btn) {
             btn.classList.toggle('active', btn.dataset.method === method);
         });
         expenseModalReferenceRow.style.display = method === 'bank' ? '' : 'none';
+        toggleExpenseTreasuryField(method !== 'bank');
     }
 
     function resetExpenseForm() {
@@ -454,7 +464,7 @@
         const amount = EnjazIMS.parseNumber(expenseModalAmount.value);
         const expenseDate = expenseModalDate.value;
         const paymentMethod = expensePaymentMethodInput.value;
-        const treasuryId = expenseTreasurySel.value || null;
+        const treasuryId = paymentMethod === 'cash' ? (expenseTreasurySel.value || null) : null;
         const referenceNumber = expenseModalReference.value.trim();
         const notes = expenseModalNotes.value.trim();
         const expenseId = expenseModalId.value;
