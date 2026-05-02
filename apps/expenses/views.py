@@ -72,41 +72,47 @@ def category_create_api(request):
 # ─────────────────────────────────────────────
 
 def expense_list(request):
-    tenant = _tenant(request)
-    if not tenant:
-        return redirect('core:no_tenant')
+    try:
+        tenant = _tenant(request)
+        if not tenant:
+            return redirect('core:no_tenant')
 
-    qs = Expense.objects.filter(tenant=tenant)
-    today = timezone.localdate()
-    stats = {
-        'total': qs.count(),
-        'draft': qs.filter(status='draft').count(),
-        'confirmed': qs.filter(status='confirmed').count(),
-        'cancelled': qs.filter(status='cancelled').count(),
-        'total_confirmed': qs.filter(status='confirmed').aggregate(s=Sum('amount'))['s'] or Decimal('0'),
-        'this_month': qs.filter(
-            status='confirmed',
-            expense_date__year=today.year,
-            expense_date__month=today.month,
-        ).aggregate(s=Sum('amount'))['s'] or Decimal('0'),
-    }
-    categories = list(ExpenseCategory.objects.filter(tenant=tenant, is_active=True).values('id', 'name'))
-    treasuries = [
-        {
-            'id': t.id,
-            'name': t.name,
-            'current_balance': str(t.current_balance or Decimal('0'))
+        qs = Expense.objects.filter(tenant=tenant)
+        today = timezone.localdate()
+        stats = {
+            'total': qs.count(),
+            'draft': qs.filter(status='draft').count(),
+            'confirmed': qs.filter(status='confirmed').count(),
+            'cancelled': qs.filter(status='cancelled').count(),
+            'total_confirmed': qs.filter(status='confirmed').aggregate(s=Sum('amount'))['s'] or Decimal('0'),
+            'this_month': qs.filter(
+                status='confirmed',
+                expense_date__year=today.year,
+                expense_date__month=today.month,
+            ).aggregate(s=Sum('amount'))['s'] or Decimal('0'),
         }
-        for t in Treasury.objects.filter(tenant=tenant, is_active=True).only('id', 'name', 'current_balance')
-    ]
-    
-    return render(request, 'expenses/expense_list.html', {
-        'stats': stats,
-        'categories': categories,
-        'treasuries': treasuries,
-        'categories_json': json.dumps(categories),
-        'treasuries_json': json.dumps(treasuries),
-    })
+        categories = list(ExpenseCategory.objects.filter(tenant=tenant, is_active=True).values('id', 'name'))
+        treasuries = [
+            {
+                'id': t.id,
+                'name': t.name,
+                'current_balance': str(t.current_balance or Decimal('0'))
+            }
+            for t in Treasury.objects.filter(tenant=tenant, is_active=True).only('id', 'name', 'current_balance')
+        ]
+        
+        return render(request, 'expenses/expense_list.html', {
+            'stats': stats,
+            'categories': categories,
+            'treasuries': treasuries,
+            'categories_json': json.dumps(categories),
+            'treasuries_json': json.dumps(treasuries),
+        })
+    except Exception as e:
+        print(f"Error in expense_list: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 @login_required
