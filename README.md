@@ -4,30 +4,30 @@
 
 ---
 
-## 🎯 Overview
+## Overview
 
 EnjazIMS is a comprehensive inventory management and POS system designed to support multiple businesses (multi-tenant) across various industries:
-- 💊 Pharmacies
-- 🛒 Supermarkets
-- 🍕 Restaurants
-- 👔 Apparel Stores
-- 📱 Electronics Shops
+- Pharmacies
+- Supermarkets
+- Restaurants
+- Apparel Stores
+- Electronics Shops
 - And more...
 
 Built with Django 4.2, the system features complete tenant isolation, modern RTL-first UI, and a modular architecture for scalability.
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🏢 Multi-Tenant Architecture
+### Multi-Tenant Architecture
 - **Complete data isolation** between tenants using tenant-scoped models
 - **Custom settings** per business type with flexible configuration
 - **Multi-branch support** with separate warehouses and locations
 - **Tenant middleware** for automatic filtering and security
 - **Subscription management** with expiry tracking
 
-### 🎨 Modern UI Design System
+### Modern UI Design System
 - **Tailwind-inspired layout** with centered containers (max-width: 1600px)
 - **Dark/Light mode** with CSS variables and smooth transitions
 - **RTL-first design** with Cairo font family (4 weights)
@@ -39,14 +39,14 @@ Built with Django 4.2, the system features complete tenant isolation, modern RTL
 - **Responsive design** with mobile-first approach
 - **Modern components**: KPI cards, circular charts, pipeline visualization, quick actions
 
-### ⚡ High Performance
+### High Performance
 - **AJAX-powered** - No full page reloads (enforced pattern)
 - **REST API ready** with Django REST Framework
 - **DataTables** for advanced table features
 - **Optimized queries** with select_related/prefetch_related
 - **CDN assets** for Bootstrap, FontAwesome, jQuery
 
-### 🔐 Security & Access Control
+### Security & Access Control
 - **Tenant-scoped authentication** with custom User model
 - **Role-based permissions** per tenant
 - **Middleware protection** for all tenant operations
@@ -54,7 +54,7 @@ Built with Django 4.2, the system features complete tenant isolation, modern RTL
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Python 3.8+
@@ -87,7 +87,7 @@ Visit `http://localhost:8000` to access the system.
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - **[QUICK_START.md](docs/QUICK_START.md)** - Quick start guide
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Technical architecture
@@ -97,7 +97,7 @@ Visit `http://localhost:8000` to access the system.
 
 ---
 
-## 📦 Project Structure
+## Project Structure
 
 ```
 EnjazIMS/
@@ -140,7 +140,7 @@ EnjazIMS/
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### Backend
 - **Django 4.2.7** - Web framework
@@ -164,15 +164,15 @@ EnjazIMS/
 
 ---
 
-## 👥 Multi-Tenancy System
+## Multi-Tenancy System
 
 ### Tenant Isolation
 Each tenant (business) has completely isolated:
-- ✅ Users and administrators
-- ✅ Branches and warehouses
-- ✅ Products, customers, and suppliers
-- ✅ Invoices and transactions
-- ✅ Custom settings and permissions
+- Users and administrators
+- Branches and warehouses
+- Products, customers, and suppliers
+- Invoices and transactions
+- Custom settings and permissions
 
 ### Implementation
 
@@ -201,9 +201,9 @@ class Customer(TenantMixin):
 
 ---
 
-## 📊 Current Status
+## Current Status
 
-### ✅ Completed Features
+### Completed Features
 - [x] Multi-tenant infrastructure (Tenant, BusinessType models)
 - [x] Custom User model with tenant relationship
 - [x] Tenant middleware and context processors
@@ -228,7 +228,7 @@ class Customer(TenantMixin):
 
 ---
 
-## 🎨 UI Components
+## UI Components
 
 ### Dashboard Features
 - **KPI Cards**: 4-card grid showing key metrics (users, customers, products, suppliers)
@@ -247,7 +247,7 @@ class Customer(TenantMixin):
 
 ---
 
-## 📋 Development Rules
+## Development Rules
 
 ### ❌ Prohibited Patterns
 ```javascript
@@ -257,7 +257,7 @@ prompt('...')             // ❌ Never use native prompts
 location.reload()         // ❌ Never reload the full page
 ```
 
-### ✅ Required Patterns
+### Required Patterns
 ```javascript
 // Use toast notifications
 showToast('success', 'Saved successfully');
@@ -285,7 +285,7 @@ $.ajax({
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
 ### Production Checklist
 - [ ] Set `DEBUG = False` in settings
@@ -301,7 +301,7 @@ $.ajax({
 
 ---
 
-## 📝 Contributing
+## Contributing
 
 To contribute to EnjazIMS:
 1. Read the [ARCHITECTURE.md](docs/ARCHITECTURE.md) for technical overview
@@ -313,7 +313,7 @@ To contribute to EnjazIMS:
 
 ---
 
-## 📄 License
+## License
 
 Proprietary - All rights reserved
 
@@ -325,7 +325,7 @@ Proprietary - All rights reserved
 
 ---
 
-## 📚 الوثائق المرجعية
+## الوثائق المرجعية
 
 جميع الوثائق التحليلية والتصميمية متوفرة في:
 - `/Users/khattab/projects/ims/docs/`
@@ -341,7 +341,7 @@ Proprietary - All rights reserved
 
 ---
 
-## ✅ الخطة القادمة
+## الخطة القادمة
 
 ### المرحلة 1: Setup (يومان)
 - [x] إنشاء المشروع والبيئة
