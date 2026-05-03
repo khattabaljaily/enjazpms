@@ -206,7 +206,7 @@ def _apply_customer_ledger(tenant, customer, amount, entry_type,
         .filter(tenant=tenant, customer=customer)
         .aggregate(s=_Sum('amount'))['s'] or Decimal('0')
     )
-    CustomerLedger.objects.create(
+    entry = CustomerLedger.objects.create(
         tenant=tenant,
         customer=customer,
         entry_type=entry_type,
@@ -217,6 +217,7 @@ def _apply_customer_ledger(tenant, customer, amount, entry_type,
         running_balance=prev + amount,
         notes=notes,
     )
+    return entry
 
 
 def _reverse_stock_movements(tenant, invoice):

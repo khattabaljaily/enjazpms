@@ -222,6 +222,7 @@ def invoice_table_api(request):
     })
 
 
+@login_required
 # ─────────────────────────────────────────────
 #   INVOICE CREATE / EDIT
 # ─────────────────────────────────────────────

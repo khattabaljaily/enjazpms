@@ -90,7 +90,7 @@
                     <th>العميل</th>
                     <th>الكود</th>
                     <th>المدينة</th>
-                    <th>الرصيد الحالي</th>
+                    <th>المطالبات</th>
                     <th>الحالة</th>
                     <th></th>
                 </tr>
@@ -273,7 +273,7 @@
                         <div class="cx-info-card cx-info-card--money">
                             <div class="cx-info-card-icon cx-info-icon--balance"><i class="fas fa-wallet"></i></div>
                             <div class="cx-info-card-content">
-                                <span class="cx-info-card-label">الرصيد الحالي</span>
+                                <span class="cx-info-card-label">المطالبات</span>
                                 <span class="cx-info-card-value cx-info-card-value--money" id="viewBalance"></span>
                             </div>
                         </div>
@@ -345,7 +345,7 @@
                                 <th>التاريخ</th>
                                 <th>النوع</th>
                                 <th>المبلغ</th>
-                                <th>الرصيد</th>
+                                <th>المطالبات</th>
                                 <th>ملاحظة</th>
                             </tr>
                         </thead>
@@ -809,7 +809,7 @@
             success: function(resp) {
                 if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
-                $('#customerLedgerSubtitle').text(`${d.name || '—'} (${d.code || '—'}) — الرصيد الحالي: ${EnjazIMS.formatMoney(d.current_balance || 0)}`);
+                $('#customerLedgerSubtitle').text(`${d.name || '—'} (${d.code || '—'}) — المطالبات: ${EnjazIMS.formatMoney(d.current_balance || 0)}`);
                 loadCustomerTransactions(id);
                 ledgerModal.show();
             },
