@@ -1,0 +1,587 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_title %}مدفوعات الموردين{% endblock %}
+{% block page_description %}سجل دفعات الموردين وخصم المديونية مباشرة من قسم الموردين.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/expenses.css' %}?v=1.0">
+{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+    <div class="cx-hero">
+        <div class="cx-hero-inner">
+            <div class="cx-hero-left">
+                <div class="cx-hero-icon-wrap"><i class="fas fa-hand-holding-dollar"></i></div>
+                <div>
+                    <h1 class="cx-hero-title">مدفوعات الموردين</h1>
+                    <p class="cx-hero-desc">سجل دفعات الموردين مباشرة من قسم الموردين دون ربط مباشر بأوامر الشراء.</p>
+                </div>
+            </div>
+            <div class="cx-hero-right">
+                <div class="cx-hero-actions">
+                    <button id="btnOpenCreatePayment" type="button" class="cx-btn-add">
+                        <i class="fas fa-plus"></i><span>دفعة جديدة</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="cx-stats-inline">
+            <span class="cx-stat-badge cx-stat-badge--primary">
+                <i class="fas fa-list"></i><strong>{{ stats.total }}</strong><span>عدد الدفعات</span>
+            </span>
+            <span class="cx-stat-badge cx-stat-badge--success">
+                <i class="fas fa-coins"></i><strong>{{ stats.cash_amount|floatformat:"2u" }}</strong><span>نقداً</span>
+            </span>
+            <span class="cx-stat-badge cx-stat-badge--info">
+                <i class="fas fa-building-columns"></i><strong>{{ stats.bank_amount|floatformat:"2u" }}</strong><span>بنكي</span>
+            </span>
+            <span class="cx-stat-badge cx-stat-badge--warning">
+                <i class="fas fa-money-bill-wave"></i><strong>{{ stats.total_amount|floatformat:"2u" }}</strong><span>الإجمالي</span>
+            </span>
+        </div>
+    </div>
+
+    <div class="cx-panel">
+        <div class="cx-toolbar">
+            <div class="cx-toolbar-search">
+                <i class="fas fa-search cx-toolbar-search-icon"></i>
+                <input type="text" id="paymentSearch" class="cx-search-input" placeholder="بحث بالمورد أو الملاحظات...">
+            </div>
+            <div class="cx-toolbar-end">
+                <select id="paymentMethodFilter" class="cx-select-sm">
+                    <option value="">كل طرق الدفع</option>
+                    <option value="cash">نقداً</option>
+                    <option value="bank">بنكي</option>
+                </select>
+                <select id="paymentSupplierFilter" class="cx-select-sm">
+                    <option value="">كل الموردين</option>
+                    {% for supplier in suppliers %}
+                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive cx-table-wrap">
+            <table id="supplierPaymentsTable" class="cx-table">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>المورد</th>
+                        <th>المبلغ</th>
+                        <th>طريقة الدفع</th>
+                        <th>الملاحظات</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content cx-view-modal">
+                <div class="cx-view-header">
+                    <div class="cx-view-header-content">
+                        <div class="cx-view-avatar" id="paymentModalAvatar"><i class="fas fa-hand-holding-dollar"></i></div>
+                        <div>
+                            <h5 class="cx-view-title">دفعة جديدة</h5>
+                            <p class="cx-view-subtitle">سجل دفعة مورد مباشرة دون مغادرة الصفحة.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="cx-view-body">
+                    <form id="paymentModalForm" novalidate>
+                        <div class="row g-3">
+                            <div class="col-lg-8">
+                                <div class="cx-panel p-4 mb-3">
+                                    <div class="cx-panel-header mb-3">
+                                        <h3 class="cx-panel-title"><i class="fas fa-info-circle me-2"></i>بيانات الدفع</h3>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="cx-label">المورد <span class="text-danger">*</span></label>
+                                            <select id="paymentModalSupplier" class="cx-input" required>
+                                                <option value="">— اختر المورد —</option>
+                                                {% for supplier in suppliers %}
+                                                <option value="{{ supplier.id }}" data-balance="{{ supplier.opening_balance|default:'0'|add:supplier.ledger_total }}">{{ supplier.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="cx-label">التاريخ <span class="text-danger">*</span></label>
+                                            <input type="date" id="paymentModalDate" class="cx-input" value="{{ today }}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="cx-label">المبلغ <span class="text-danger">*</span></label>
+                                            <input type="number" id="paymentModalAmount" class="cx-input text-end" min="0" step="0.01" placeholder="0.00" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="cx-label">طريقة الدفع</label>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" class="cx-btn-secondary flex-fill payment-modal-pm active" data-method="cash"><i class="fas fa-coins me-1"></i>نقدي</button>
+                                                <button type="button" class="cx-btn-secondary flex-fill payment-modal-pm" data-method="bank"><i class="fas fa-building-columns me-1"></i>بنكي</button>
+                                            </div>
+                                            <input type="hidden" id="paymentModalMethod" value="cash">
+                                        </div>
+                                        <div class="col-md-6" id="paymentModalTreasuryRow">
+                                            <label class="cx-label">الخزينة <span class="text-danger">*</span></label>
+                                            <select id="paymentModalTreasury" class="cx-input">
+                                                <option value="">— اختر الخزينة —</option>
+                                                {% for treasury in treasuries %}
+                                                <option value="{{ treasury.id }}">{{ treasury.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-12" id="paymentModalReferenceRow" style="display:none">
+                                            <label class="cx-label">رقم المرجع / التحويل</label>
+                                            <input type="text" id="paymentModalReference" class="cx-input" placeholder="رقم المرجع أو التحويل...">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="cx-label">ملاحظات</label>
+                                            <textarea id="paymentModalNotes" class="cx-input" rows="2" placeholder="ملاحظات اختيارية..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="cx-panel p-4 mb-3">
+                                    <div class="cx-panel-header mb-3">
+                                        <h3 class="cx-panel-title"><i class="fas fa-user me-2"></i>تفاصيل المورد</h3>
+                                    </div>
+                                    <div class="cx-info-grid">
+                                        <div class="cx-info-item">
+                                            <span class="cx-info-label">اسم المورد</span>
+                                            <span class="cx-info-value" id="paymentModalSupplierName">—</span>
+                                        </div>
+                                        <div class="cx-info-item">
+                                            <span class="cx-info-label">المديونية</span>
+                                            <span class="cx-info-value" id="paymentModalSupplierBalance">—</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="button" class="cx-btn-add" id="paymentModalSaveBtn">
+                                        <i class="fas fa-save me-1"></i><span id="paymentModalSaveText">تسجيل الدفعة</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="paymentCancelConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تأكيد إلغاء الدفعة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">هل أنت متأكد أنك تريد إلغاء هذه الدفعة؟</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="cx-btn-danger" id="paymentCancelConfirmBtn">تأكيد الإلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="paymentDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog">
+            <div class="modal-content cx-view-modal">
+                <div class="cx-view-header">
+                    <div class="cx-view-header-content">
+                        <div class="cx-view-avatar" id="paymentDetailsAvatar"><i class="fas fa-eye"></i></div>
+                        <div>
+                            <h5 class="cx-view-title" id="paymentDetailsTitle">تفاصيل الدفعة</h5>
+                            <p class="cx-view-subtitle" id="paymentDetailsSubtitle">تفاصيل الدفع وحالته.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="cx-view-body">
+                    <div class="cx-view-section">
+                        <div class="cx-view-section-title">
+                            <i class="fas fa-circle-info"></i>
+                            تفاصيل الدفعة
+                        </div>
+                        <div class="cx-info-grid">
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">رقم الدفعة</span>
+                                <span class="cx-info-value" id="paymentDetailsId">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">التاريخ</span>
+                                <span class="cx-info-value" id="paymentDetailsDate">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">المورد</span>
+                                <span class="cx-info-value" id="paymentDetailsSupplier">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">طريقة الدفع</span>
+                                <span class="cx-info-value" id="paymentDetailsMethod">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">الخزينة</span>
+                                <span class="cx-info-value" id="paymentDetailsTreasury">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">الحالة</span>
+                                <span class="cx-info-value" id="paymentDetailsStatus">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">المبلغ</span>
+                                <span class="cx-info-value fw-bold text-danger fs-5" id="paymentDetailsAmount">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">ملاحظات الدفعة</span>
+                                <span class="cx-info-value" id="paymentDetailsNotes">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">تاريخ الإلغاء</span>
+                                <span class="cx-info-value" id="paymentDetailsCanceledAt">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">ملاحظات الإلغاء</span>
+                                <span class="cx-info-value" id="paymentDetailsCanceledNote">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="cx-view-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    const CSRF_TOKEN = getCookie('csrftoken') || '{{ csrf_token }}';
+
+    function fetchJson(url, options = {}) {
+        const opts = {
+            credentials: 'same-origin',
+            ...options,
+            headers: {
+                ...(options.headers || {}),
+                'X-CSRFToken': CSRF_TOKEN,
+            },
+        };
+
+        return fetch(url, opts).then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    let message = text.trim() || `HTTP ${response.status}`;
+                    throw new Error(message);
+                });
+            }
+            return response.json();
+        });
+    }
+
+    const paymentsTable = $('#supplierPaymentsTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ordering: false,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
+        language: {
+            emptyTable: 'لا توجد بيانات متاحة',
+            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_ دفعة',
+            infoEmpty: 'عرض 0 إلى 0 من أصل 0 دفعة',
+            infoFiltered: '(تمت التصفية من إجمالي _MAX_ دفعة)',
+            lengthMenu: 'عرض _MENU_ دفعة',
+            loadingRecords: 'جاري التحميل...',
+            processing: 'جاري المعالجة...',
+            search: 'بحث:',
+            zeroRecords: 'لم يتم العثور على نتائج مطابقة',
+            paginate: {
+                first: 'الأول',
+                last: 'الأخير',
+                next: 'التالي',
+                previous: 'السابق'
+            }
+        },
+        ajax: {
+            url: "{% url 'suppliers:payments_api' %}",
+            data: function (d) {
+                d.payment_method = document.getElementById('paymentMethodFilter').value;
+                d.supplier_id = document.getElementById('paymentSupplierFilter').value;
+            }
+        },
+        columns: [
+            { data: 'entry_date' },
+            { data: 'supplier' },
+            {
+                data: 'amount',
+                className: 'text-end',
+                render: v => EnjazIMS.formatMoney(v || 0)
+            },
+            { data: 'payment_method' },
+            { data: 'notes' },
+            {
+                data: null,
+                orderable: false,
+                render: row => {
+                    const viewButton = `
+                        <button type="button" class="cx-btn-icon cx-btn-icon--info js-view-payment" data-id="${row.id}" title="عرض التفاصيل">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    `;
+                    const cancelButton = row.is_canceled ? '<span class="cx-badge cx-badge--danger">ملغاة</span>' : `
+                        <button type="button" class="cx-btn-icon cx-btn-icon--danger js-cancel-payment" data-id="${row.id}" title="إلغاء الدفعة">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                    `;
+                    return `<div class="cx-actions">${viewButton}${cancelButton}</div>`;
+                }
+            },
+        ],
+    });
+
+    const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+    const paymentCancelConfirmModal = new bootstrap.Modal(document.getElementById('paymentCancelConfirmModal'));
+    const paymentDetailsModal = new bootstrap.Modal(document.getElementById('paymentDetailsModal'));
+    const paymentModalSupplier = document.getElementById('paymentModalSupplier');
+    const paymentModalDate = document.getElementById('paymentModalDate');
+    const paymentModalAmount = document.getElementById('paymentModalAmount');
+    const paymentModalReferenceRow = document.getElementById('paymentModalReferenceRow');
+    const paymentModalReference = document.getElementById('paymentModalReference');
+    const paymentModalNotes = document.getElementById('paymentModalNotes');
+    const paymentModalMethodInput = document.getElementById('paymentModalMethod');
+    const paymentModalPmButtons = Array.from(document.querySelectorAll('.payment-modal-pm'));
+    const paymentModalTreasuryRow = document.getElementById('paymentModalTreasuryRow');
+    const paymentModalTreasury = document.getElementById('paymentModalTreasury');
+    const paymentModalSupplierName = document.getElementById('paymentModalSupplierName');
+    const paymentModalSupplierBalance = document.getElementById('paymentModalSupplierBalance');
+    const paymentModalSaveBtn = document.getElementById('paymentModalSaveBtn');
+    const paymentModalSaveText = document.getElementById('paymentModalSaveText');
+    const paymentModalSaveLabel = paymentModalSaveText ? paymentModalSaveText.textContent.trim() : 'تسجيل الدفعة';
+    const paymentCancelConfirmBtn = document.getElementById('paymentCancelConfirmBtn');
+    let paymentCancelTargetId = null;
+    const paymentDetailsTitle = document.getElementById('paymentDetailsTitle');
+    const paymentDetailsSubtitle = document.getElementById('paymentDetailsSubtitle');
+    const paymentDetailsFields = {
+        id: document.getElementById('paymentDetailsId'),
+        date: document.getElementById('paymentDetailsDate'),
+        supplier: document.getElementById('paymentDetailsSupplier'),
+        amount: document.getElementById('paymentDetailsAmount'),
+        method: document.getElementById('paymentDetailsMethod'),
+        treasury: document.getElementById('paymentDetailsTreasury'),
+        notes: document.getElementById('paymentDetailsNotes'),
+        status: document.getElementById('paymentDetailsStatus'),
+        canceledAt: document.getElementById('paymentDetailsCanceledAt'),
+        canceledNote: document.getElementById('paymentDetailsCanceledNote'),
+    };
+
+    function setPaymentMethod(method) {
+        paymentModalMethodInput.value = method;
+        paymentModalPmButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.method === method));
+        paymentModalReferenceRow.style.display = method === 'bank' ? '' : 'none';
+        paymentModalTreasuryRow.style.display = method === 'cash' ? '' : 'none';
+        if (method !== 'bank') {
+            paymentModalReference.value = '';
+        }
+        if (method !== 'cash') {
+            paymentModalTreasury.value = '';
+        }
+    }
+
+    function resetPaymentForm() {
+        paymentModalSupplier.value = '';
+        paymentModalDate.value = '{{ today }}';
+        paymentModalAmount.value = '';
+        paymentModalReference.value = '';
+        paymentModalNotes.value = '';
+        paymentModalSupplierName.textContent = '—';
+        paymentModalSupplierBalance.textContent = '—';
+        setPaymentMethod('cash');
+    }
+
+    function updateSupplierInfo() {
+        const supplierId = paymentModalSupplier.value;
+        const selectedOption = paymentModalSupplier.options[paymentModalSupplier.selectedIndex];
+        const supplierName = selectedOption?.text || '—';
+        const balance = selectedOption ? selectedOption.dataset.balance : null;
+        paymentModalSupplierName.textContent = supplierId ? supplierName : '—';
+        paymentModalSupplierBalance.textContent = supplierId && balance !== undefined
+            ? EnjazIMS.formatMoney(parseFloat(balance))
+            : '—';
+    }
+
+    document.getElementById('btnOpenCreatePayment').addEventListener('click', function () {
+        resetPaymentForm();
+        paymentModal.show();
+    });
+
+    paymentModalSupplier.addEventListener('change', updateSupplierInfo);
+
+    paymentModalPmButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            setPaymentMethod(this.dataset.method);
+        });
+    });
+
+    document.getElementById('paymentMethodFilter').addEventListener('change', function () {
+        paymentsTable.ajax.reload();
+    });
+    document.getElementById('paymentSupplierFilter').addEventListener('change', function () {
+        paymentsTable.ajax.reload();
+    });
+    document.getElementById('paymentSearch').addEventListener('keyup', function () {
+        paymentsTable.search(this.value).draw();
+    });
+
+    function savePayment() {
+        const supplierId = paymentModalSupplier.value;
+        const amount = EnjazIMS.parseNumber(paymentModalAmount.value);
+        const paymentDate = paymentModalDate.value;
+        const method = paymentModalMethodInput.value;
+        const treasuryId = paymentModalTreasury.value;
+        const reference = paymentModalReference.value.trim();
+        const notes = paymentModalNotes.value.trim();
+
+        if (!supplierId) return EnjazIMS.toast('اختر المورد', 'error');
+        if (!paymentDate) return EnjazIMS.toast('اختر التاريخ', 'error');
+        if (!amount || amount <= 0) return EnjazIMS.toast('أدخل مبلغاً صحيحاً', 'error');
+
+        paymentModalSaveBtn.disabled = true;
+        paymentModalSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...';
+
+        fetchJson("{% url 'suppliers:payments_create' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                supplier_id: parseInt(supplierId, 10),
+                amount: amount.toFixed(2),
+                payment_date: paymentDate,
+                method,
+                treasury_id: method === 'cash' ? parseInt(treasuryId, 10) : null,
+                reference,
+                notes,
+            }),
+        })
+        .then(data => {
+            if (!data.success) {
+                EnjazIMS.toast(data.message || 'تعذر حفظ الدفعة', 'error');
+                return;
+            }
+            paymentModal.hide();
+            paymentsTable.ajax.reload(null, false);
+            EnjazIMS.toast(data.message || 'تم تسجيل الدفعة بنجاح', 'success');
+        })
+        .catch(error => {
+            EnjazIMS.toast(error.message || 'خطأ في الاتصال', 'error');
+        })
+        .finally(() => {
+            paymentModalSaveBtn.disabled = false;
+            paymentModalSaveBtn.innerHTML = `<i class="fas fa-save me-1"></i>${paymentModalSaveLabel}`;
+        });
+    }
+
+    paymentModalSaveBtn.addEventListener('click', savePayment);
+
+    document.querySelector('#supplierPaymentsTable tbody').addEventListener('click', function (event) {
+        const viewBtn = event.target.closest('.js-view-payment');
+        if (viewBtn) {
+            const paymentId = viewBtn.dataset.id;
+            if (!paymentId) return;
+
+            fetchJson(`/suppliers/payments/${paymentId}/detail/`, {
+                method: 'GET',
+            })
+            .then(data => {
+                if (!data.success) {
+                    EnjazIMS.toast(data.message || 'تعذر تحميل تفاصيل الدفعة', 'error');
+                    return;
+                }
+                const payment = data.data;
+                paymentDetailsTitle.textContent = `دفعة المورد #${payment.id}`;
+                paymentDetailsSubtitle.textContent = payment.is_canceled ? 'هذه الدفعة ملغاة' : 'الدفعة مفعلة';
+                paymentDetailsFields.id.textContent = payment.id;
+                paymentDetailsFields.date.textContent = payment.entry_date;
+                paymentDetailsFields.supplier.textContent = payment.supplier;
+                paymentDetailsFields.amount.textContent = EnjazIMS.formatMoney(payment.amount);
+                paymentDetailsFields.method.textContent = payment.payment_method;
+                paymentDetailsFields.treasury.textContent = payment.cash_treasury || '—';
+                paymentDetailsFields.notes.textContent = payment.notes;
+                paymentDetailsFields.status.textContent = payment.is_canceled ? 'ملغاة' : 'مفعلة';
+                paymentDetailsFields.canceledAt.textContent = payment.cancellation_date || '—';
+                paymentDetailsFields.canceledNote.textContent = payment.cancellation_note || '—';
+                paymentDetailsModal.show();
+            })
+            .catch(error => EnjazIMS.toast(error.message || 'خطأ في الاتصال', 'error'));
+            return;
+        }
+
+        const btn = event.target.closest('.js-cancel-payment');
+        if (!btn) return;
+        const paymentId = btn.dataset.id;
+        if (!paymentId) return;
+
+        paymentCancelTargetId = paymentId;
+        paymentCancelConfirmModal.show();
+    });
+
+    paymentCancelConfirmBtn.addEventListener('click', function () {
+        if (!paymentCancelTargetId) return;
+
+        paymentCancelConfirmBtn.disabled = true;
+        paymentCancelConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الإلغاء...';
+
+        fetchJson(`/suppliers/payments/${paymentCancelTargetId}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(data => {
+            if (!data.success) {
+                EnjazIMS.toast(data.message || 'تعذر إلغاء الدفعة', 'error');
+                return;
+            }
+            paymentCancelConfirmModal.hide();
+            paymentCancelTargetId = null;
+            paymentsTable.ajax.reload(null, false);
+            EnjazIMS.toast(data.message || 'تم إلغاء الدفعة بنجاح', 'success');
+        })
+        .catch(error => EnjazIMS.toast(error.message || 'خطأ في الاتصال', 'error'))
+        .finally(() => {
+            paymentCancelConfirmBtn.disabled = false;
+            paymentCancelConfirmBtn.innerHTML = 'تأكيد الإلغاء';
+        });
+    });
+
+    document.getElementById('paymentCancelConfirmModal').addEventListener('hidden.bs.modal', function () {
+        paymentCancelTargetId = null;
+        paymentCancelConfirmBtn.disabled = false;
+        paymentCancelConfirmBtn.innerHTML = 'تأكيد الإلغاء';
+    });
+})();
+</script>
+{% endblock %}
