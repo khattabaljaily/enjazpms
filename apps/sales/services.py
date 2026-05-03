@@ -798,12 +798,13 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
 
     # تقليل المطالبة في حساب العميل
     if invoice.customer:
+        ledger_reference_type = 'customer_payment_bank' if method == 'bank' else 'customer_payment_cash'
         _apply_customer_ledger(
             tenant=tenant,
             customer=invoice.customer,
             amount=-amount,  # سالب = تقليل المطالبة
             entry_type='payment',
-            reference_type='sale_payment',
+            reference_type=ledger_reference_type,
             reference_id=payment.id,
             date=date,
             notes=f"دفعة على فاتورة {invoice.invoice_number}",

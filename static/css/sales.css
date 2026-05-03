@@ -683,10 +683,6 @@ select.cx-input {
     justify-content: center;
   }
   
-  .cx-panel {
-    padding: 1rem !important;
-  }
-  
   .cx-input {
     padding: 0.6rem 0.85rem;
   }

@@ -354,10 +354,34 @@ def customer_payments_table_api(request):
     )
     qs = qs.annotate(is_canceled=Exists(cancel_qs))
 
-    page_qs = qs[start: start + length]
+    page_qs = list(qs[start: start + length])
+    sale_payment_ids = [entry.reference_id for entry in page_qs
+                        if entry.reference_type == 'sale_payment' and entry.reference_id]
+    sale_payment_methods = {}
+    if sale_payment_ids:
+        from apps.sales.models import SalePayment
+        sale_payment_methods = {
+            p.id: p.payment_method
+            for p in SalePayment.objects.for_tenant(tenant).filter(id__in=sale_payment_ids)
+        }
+
     data = []
     for entry in page_qs:
-        method_label = 'نقداً' if entry.reference_type == 'customer_payment_cash' else 'بنكي'
+        if entry.reference_type == 'customer_payment_cash':
+            method_label = 'نقداً'
+        elif entry.reference_type == 'customer_payment_bank':
+            method_label = 'بنكي'
+        elif entry.reference_type == 'sale_payment':
+            payment_method = sale_payment_methods.get(entry.reference_id)
+            if payment_method == 'cash':
+                method_label = 'نقداً'
+            elif payment_method == 'bank':
+                method_label = 'بنكي'
+            else:
+                method_label = '—'
+        else:
+            method_label = '—'
+
         if entry.is_canceled:
             method_label += ' — ملغاة'
         data.append({

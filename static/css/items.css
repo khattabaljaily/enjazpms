@@ -105,7 +105,6 @@
 }
 
 @media (max-width: 576px) {
-    .cx-table tbody td:nth-child(1) { padding: 1rem !important; }
     .cx-table tbody td:nth-child(2),
     .cx-table tbody td:nth-child(3),
     .cx-table tbody td:nth-child(4),
