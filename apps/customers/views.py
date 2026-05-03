@@ -326,7 +326,7 @@ def customer_payments_table_api(request):
 
     filtered_total = qs.count()
 
-    order_col = request.GET.get('order[0][column]', '0')
+    order_col = request.GET.get('order[0][column]', None)
     order_dir = request.GET.get('order[0][dir]', 'desc')
     col_map = {
         '0': 'entry_date',
@@ -334,9 +334,12 @@ def customer_payments_table_api(request):
         '2': 'amount',
         '3': 'reference_type',
     }
-    order_field = col_map.get(order_col, 'entry_date')
-    if order_dir == 'desc':
-        order_field = f'-{order_field}'
+    if order_col is None:
+        order_field = '-id'
+    else:
+        order_field = col_map.get(order_col, 'id')
+        if order_dir == 'desc':
+            order_field = f'-{order_field}'
     qs = qs.order_by(order_field)
 
     cancel_qs = CustomerLedger.objects.for_tenant(tenant).filter(
