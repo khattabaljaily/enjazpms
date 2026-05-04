@@ -484,6 +484,7 @@ def invoice_detail(request, pk):
             and invoice.remaining_amount > 0
         ),
     }
+    
     return render(request, 'sales/invoice_detail.html', context)
 
 

@@ -1,4 +1,74 @@
-/* Quote detail specific adjustments */
-#convertMixedFields .cx-input {
-    text-align: end;
+/* =========================================
+   MOBILE HERO - FORCE 2 BUTTONS PER ROW
+   (FINAL OVERRIDE - NO CONFLICTS)
+========================================= */
+
+@media (max-width: 768px) {
+
+    /* ===== FORCE GRID INSTEAD OF FLEX ===== */
+    .cx-hero-actions {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        width: 100% !important;
+
+        /* kill any flex behavior */
+        flex-direction: unset !important;
+        align-items: unset !important;
+    }
+
+    /* ===== FORCE BUTTON STYLE ===== */
+    .cx-hero-actions a,
+    .cx-hero-actions button {
+        display: flex !important;
+        width: 100% !important;
+        justify-content: center !important;
+        align-items: center !important;
+
+        padding: 12px !important;
+        font-size: 14px !important;
+        border-radius: 12px !important;
+
+        min-height: 44px !important;
+        font-weight: 600 !important;
+
+        box-sizing: border-box;
+    }
+
+    /* ===== VERY IMPORTANT: STOP FULL WIDTH BUTTONS ===== */
+    .cx-hero-actions > * {
+        grid-column: span 1 !important;
+        max-width: 100% !important;
+    }
+
+    /* ===== ICON SIZE ===== */
+    .cx-hero-actions i {
+        font-size: 15px !important;
+    }
+
+    /* ===== OPTIONAL: CENTER LAST BUTTON IF ODD ===== */
+    .cx-hero-actions > *:last-child:nth-child(odd) {
+        grid-column: span 2;
+        max-width: 60%;
+        margin: 0 auto;
+    }
+
+    /* ===== CLEAN SPACING ===== */
+    .cx-hero-right {
+        width: 100%;
+    }
+
+    /* ===== BADGES FIX ===== */
+    .cx-stats-inline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+    }
+
+    .cx-stat-badge {
+        font-size: 11px;
+        padding: 5px 8px;
+    }
+
 }
