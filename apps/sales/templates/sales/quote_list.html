@@ -25,10 +25,6 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
-                <a href="{% url 'sales:invoice_list' %}" class="cx-btn-secondary">
-                    <i class="fas fa-receipt"></i>
-                    <span>الفواتير</span>
-                </a>
                 <a href="{% url 'sales:quote_create' %}" class="cx-btn-add">
                     <i class="fas fa-plus"></i>
                     <span>عرض جديد</span>
@@ -388,6 +384,16 @@ function initFilters() {
         const row = quoteRows.get(String(btn.dataset.id));
         if (row) openQuoteModal(row);
     });
+
+    const mobileCards = document.getElementById('quotesMobileCards');
+    if (mobileCards) {
+        mobileCards.addEventListener('click', function (e) {
+            const btn = e.target.closest('.js-view-quote');
+            if (!btn) return;
+            const row = quoteRows.get(String(btn.dataset.id));
+            if (row) openQuoteModal(row);
+        });
+    }
 }
 
 function openQuoteModal(row) {

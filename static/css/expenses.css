@@ -112,6 +112,16 @@
     .cx-expense-card-actions .cxr-act--del {
         background: rgba(239, 68, 68, 0.08);
     }
+
+    .cx-hero .cx-stats-inline {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+        align-items: stretch;
+    }
+    .cx-hero .cx-stat-badge {
+        width: 100%;
+    }
 }
 
 @media (max-width: 576px) {

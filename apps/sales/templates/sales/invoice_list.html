@@ -25,10 +25,6 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
-                <a href="{% url 'sales:return_list' %}" class="cx-btn-secondary">
-                    <i class="fas fa-rotate-left"></i>
-                    <span>المرتجعات</span>
-                </a>
                 <a href="{% url 'sales:invoice_create' %}" class="cx-btn-add">
                     <i class="fas fa-plus"></i>
                     <span>فاتورة جديدة</span>
@@ -321,10 +317,6 @@ function renderMobileInvoiceCards(rows) {
                 <div>
                     <span class="cx-invoice-card-meta-label">المخزن</span>
                     <strong class="cx-invoice-card-meta-value">${r.stock || '—'}</strong>
-                </div>
-                <div>
-                    <span class="cx-invoice-card-meta-label">طريقة الدفع</span>
-                    <strong class="cx-invoice-card-meta-value">${paymentMethod}</strong>
                 </div>
                 <div>
                     <span class="cx-invoice-card-meta-label">الإجمالي</span>
