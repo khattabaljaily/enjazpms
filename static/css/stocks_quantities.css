@@ -94,3 +94,120 @@
 .qty-badge--ok   { background: rgba(16,185,129,0.1);  color: #065f46; }
 .qty-badge--low  { background: rgba(245,158,11,0.12); color: #92400e; }
 .qty-badge--zero { background: rgba(239,68,68,0.1);   color: #991b1b; }
+
+/* ══════════════════════════ MOBILE CARDS ══════════════════════════ */
+@media (max-width: 768px) {
+    #qtyTable { display: none !important; }
+    .stocks-quantities-mobile-card-list {
+        display: grid !important;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+
+    .cx-qty-card {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.9rem;
+        background: var(--bg-card, #ffffff);
+        border: 1px solid #ddd;
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .cx-qty-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(99, 102, 241, 0.24);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    }
+
+    .cx-qty-card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.65rem;
+        align-items: flex-start;
+    }
+
+    .cx-qty-card-title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.18rem;
+        min-width: 0;
+    }
+
+    .cx-qty-card-title {
+        margin: 0;
+        font-size: 0.99rem;
+        font-weight: 700;
+        color: var(--text-heading, #111827);
+        line-height: 1.2;
+    }
+
+    .cx-qty-card-codes {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .cx-qty-card-code {
+        background: rgba(99, 102, 241, 0.09);
+        padding: 0.2rem 0.4rem;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.7rem;
+        color: var(--text-secondary, #6b7280);
+    }
+
+    .cx-qty-card-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .cx-qty-card-meta div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.16rem;
+        padding: 0.65rem 0.75rem;
+        background: rgba(15, 23, 42, 0.03);
+        border-radius: 14px;
+    }
+
+    .cx-qty-card-meta-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-tertiary, #6b7280);
+        letter-spacing: 0.36px;
+        text-transform: uppercase;
+    }
+
+    .cx-qty-card-meta-value {
+        font-size: 0.92rem;
+        color: var(--text-heading, #111827);
+        font-weight: 700;
+    }
+
+    .cx-qty-card-badge {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        padding: 0.3rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+    }
+
+    .cx-qty-card-badge--ok {
+        background: rgba(16,185,129,0.1);
+        color: #065f46;
+    }
+
+    .cx-qty-card-badge--low {
+        background: rgba(245,158,11,0.12);
+        color: #92400e;
+    }
+
+    .cx-qty-card-badge--zero {
+        background: rgba(239,68,68,0.1);
+        color: #991b1b;
+    }
+}

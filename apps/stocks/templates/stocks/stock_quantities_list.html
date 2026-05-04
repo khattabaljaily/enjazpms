@@ -94,6 +94,7 @@
             <tbody></tbody>
         </table>
     </div>
+    <div id="qtyCardsMobile" class="stocks-quantities-mobile-card-list d-none p-3" aria-live="polite"></div>
 </div>
 
 </div>
@@ -108,6 +109,64 @@
     const stockSelect = document.getElementById('qtyStockSelect');
 
     let totalRows = 0, lowRows = 0, zeroRows = 0;
+
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileQtyCards(rows) {
+        const $cards = $('#qtyCardsMobile');
+        if (!$cards.length) return;
+
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد أصناف للعرض</div>');
+            return;
+        }
+
+        const cardsHtml = rows.map(function (r) {
+            const qty = EnjazIMS.formatQuantity(r.quantity);
+            const reserved = EnjazIMS.formatQuantity(r.reserved);
+            const available = EnjazIMS.formatQuantity(r.available);
+            const statusClass = r.is_zero ? 'danger' : r.is_low ? 'warning' : 'success';
+            const statusIcon = r.is_zero ? 'fa-circle-xmark' : r.is_low ? 'fa-triangle-exclamation' : 'fa-circle-check';
+            const statusText = r.is_zero ? 'نفدت' : r.is_low ? 'منخفضة' : 'متوفرة';
+            const availableBadge = r.is_zero
+                ? `<span class="cx-qty-card-badge cx-qty-card-badge--zero">${available}</span>`
+                : r.is_low
+                ? `<span class="cx-qty-card-badge cx-qty-card-badge--low">${available}</span>`
+                : `<span class="cx-qty-card-badge cx-qty-card-badge--ok">${available}</span>`;
+
+            return `<article class="cx-qty-card">
+                <div class="cx-qty-card-head">
+                    <div class="cx-qty-card-title-wrap">
+                        <h2 class="cx-qty-card-title">${r.item_name || '—'}</h2>
+                        <div class="cx-qty-card-codes">
+                            <code class="cx-qty-card-code">${r.sku || '—'}</code>
+                            ${r.barcode ? `<code class="cx-qty-card-code">${r.barcode}</code>` : ''}
+                        </div>
+                    </div>
+                    <span class="cx-badge cx-badge--${statusClass}"><i class="fas ${statusIcon}"></i> ${statusText}</span>
+                </div>
+                <div class="cx-qty-card-meta">
+                    <div>
+                        <span class="cx-qty-card-meta-label">المخزن</span>
+                        <strong class="cx-qty-card-meta-value">${r.stock_name || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-qty-card-meta-label">الكمية الإجمالية</span>
+                        <strong class="cx-qty-card-meta-value">${qty}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-qty-card-meta-label">المحجوزة</span>
+                        <strong class="cx-qty-card-meta-value">${reserved}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-qty-card-meta-label">المتاحة</span>
+                        <strong class="cx-qty-card-meta-value">${availableBadge}</strong>
+                    </div>
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
+    }
 
     const dt = $('#qtyTable').DataTable({
         processing: true,
@@ -161,6 +220,8 @@
             });
             document.getElementById('kpiLow').textContent  = low;
             document.getElementById('kpiZero').textContent = zero;
+
+            renderMobileQtyCards(dt.rows({ page: 'current' }).data().toArray());
         }
     });
 

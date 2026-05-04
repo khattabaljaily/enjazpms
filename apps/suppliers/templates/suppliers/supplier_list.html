@@ -98,6 +98,7 @@
             <tbody></tbody>
         </table>
     </div>
+    <div id="suppliersCardsMobile" class="suppliers-mobile-card-list d-none p-3" aria-live="polite"></div>
 
 </div>
 
@@ -500,24 +501,52 @@
     const $idInput   = $('#customerId');
     let   activeStatus = '';
 
-    function applyMobileTableCards(tableSelector) {
-        const $table = $(tableSelector);
-        if (!$table.length) return;
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileSupplierCards(rows) {
+        const $cards = $('#suppliersCardsMobile');
+        if (!$cards.length) return;
 
-        const headers = [];
-        $table.find('thead th').each(function () {
-            headers.push($(this).text().trim());
-        });
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد موردين للعرض</div>');
+            return;
+        }
 
-        $table.find('tbody tr').each(function () {
-            $(this).find('td').each(function (index) {
-                let label = headers[index] || '';
-                if (!label && index === headers.length - 1) {
-                    label = 'الإجراءات';
-                }
-                this.setAttribute('data-label', label);
-            });
-        });
+        const cardsHtml = rows.map(function (r) {
+            const city = r.city || '—';
+            const balance = EnjazIMS.formatMoney(r.current_balance);
+            const balanceClass = EnjazIMS.parseNumber(r.current_balance) > 0 ? 'cxr-bal--pos' : EnjazIMS.parseNumber(r.current_balance) < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
+            const status = r.is_active
+                ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
+                : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوف</span>';
+
+            return `<article class="cx-supplier-card">
+                <div class="cx-supplier-card-head">
+                    <div class="cx-supplier-card-title-wrap">
+                        <h2 class="cx-supplier-card-title">${r.name || '—'}</h2>
+                        <p class="cx-supplier-card-code"><code>${r.code || '—'}</code></p>
+                    </div>
+                    ${status}
+                </div>
+                <div class="cx-supplier-card-meta">
+                    <div>
+                        <span class="cx-supplier-card-meta-label">المدينة</span>
+                        <strong class="cx-supplier-card-meta-value">${city}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-supplier-card-meta-label">المديونية</span>
+                        <strong class="cx-supplier-card-meta-value ${balanceClass}">${balance}</strong>
+                    </div>
+                </div>
+                <div class="cx-supplier-card-actions">
+                    <button class="cxr-act js-ledger-supplier" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>
+                    <button class="cxr-act cxr-act--view js-view-supplier" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
+                    <button class="cxr-act js-edit-supplier" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                    <button class="cxr-act cxr-act--del js-delete-supplier" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
     }
 
     /* ── DataTable ─────────────────────────────────────────── */
@@ -550,7 +579,7 @@
             data: function (d) { d.status = activeStatus; }
         },
         drawCallback: function () {
-            applyMobileTableCards('#suppliersTable');
+            renderMobileSupplierCards(dt.rows({ page: 'current' }).data().toArray());
         },
         columns: [
             {
@@ -607,7 +636,7 @@
         ]
     });
 
-    applyMobileTableCards('#suppliersTable');
+    renderMobileSupplierCards(dt.rows({ page: 'current' }).data().toArray());
 
     /* ── Search ─────────────────────────────────────────────── */
     let searchTimer;
@@ -822,6 +851,19 @@
     $('#suppliersTable').on('click', '.js-view-supplier', function () { openView($(this).data('id')); });
     $('#suppliersTable').on('click', '.js-ledger-supplier', function () { openSupplierLedger($(this).data('id')); });
     $('#suppliersTable').on('click', '.js-edit-supplier', function () { openEdit($(this).data('id')); });
+    $('#suppliersTable').on('click', '.js-delete-supplier', function () {
+        $('#deleteSupplierId').val($(this).data('id'));
+        $('#deleteSupplierName').text($(this).data('name'));
+        deleteModal.show();
+    });
+    $('#suppliersCardsMobile').on('click', '.js-view-supplier', function () { openView($(this).data('id')); });
+    $('#suppliersCardsMobile').on('click', '.js-ledger-supplier', function () { openSupplierLedger($(this).data('id')); });
+    $('#suppliersCardsMobile').on('click', '.js-edit-supplier', function () { openEdit($(this).data('id')); });
+    $('#suppliersCardsMobile').on('click', '.js-delete-supplier', function () {
+        $('#deleteSupplierId').val($(this).data('id'));
+        $('#deleteSupplierName').text($(this).data('name'));
+        deleteModal.show();
+    });
     $('#viewEditSupplierBtn').on('click', function() { 
         viewModal.hide(); 
         openEdit($(this).data('id')); 

@@ -132,6 +132,7 @@
             <tbody></tbody>
         </table>
     </div>
+    <div id="invoicesCardsMobile" class="invoices-mobile-card-list d-none p-3" aria-live="polite"></div>
 </div>
 
 </div>
@@ -258,6 +259,91 @@ document.addEventListener('DOMContentLoaded', function () {
     initFilters();
 });
 
+/* ── Mobile card renderer ───────────────────────────────── */
+function renderMobileInvoiceCards(rows) {
+    const $cards = $('#invoicesCardsMobile');
+    if (!$cards.length) return;
+
+    if (!rows || !rows.length) {
+        $cards.html('<div class="cx-empty-state">لا توجد فواتير للعرض</div>');
+        return;
+    }
+
+    const statusBadgeMap = {
+        draft: 'muted',
+        confirmed: 'success',
+        cancelled: 'danger',
+        returned: 'warning',
+        partially_returned: 'warning'
+    };
+
+    const paymentMethodMap = {
+        cash: 'نقداً',
+        bank: 'بنكي',
+        credit: 'آجل',
+        mixed: 'مختلط'
+    };
+
+    const cardsHtml = rows.map(function (r) {
+        const total = EnjazIMS.formatMoney(r.grand_total || 0);
+        const statusClass = statusBadgeMap[r.status] || r.status_color || 'muted';
+        const statusLabel = r.status_label || '—';
+        const paymentMethod = paymentMethodMap[r.payment_method] || r.payment_method || '—';
+        const viewBtn = `<button class="cxr-act cxr-act--view js-view-invoice" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>`;
+        const printBtn = `<a href="${INVOICE_BASE_URL}${r.id}/?print=1" target="_blank" rel="noopener" class="cxr-act" aria-label="طباعة" title="طباعة"><i class="fas fa-print"></i></a>`;
+        const editBtn = ['draft', 'confirmed'].includes(r.status)
+            ? `<a href="${INVOICE_BASE_URL}${r.id}/edit/" class="cxr-act" aria-label="تعديل" title="تعديل"><i class="fas fa-pencil"></i></a>`
+            : '';
+        const deleteBtn = r.status === 'draft'
+            ? `<button class="cxr-act cxr-act--del" onclick="deleteDraftInvoice(${r.id})" aria-label="حذف المسودة" title="حذف المسودة"><i class="fas fa-trash"></i></button>`
+            : '';
+        const cancelBtn = r.status === 'confirmed'
+            ? `<button class="cxr-act cxr-act--del" onclick="cancelInvoice(${r.id})" aria-label="إلغاء" title="إلغاء"><i class="fas fa-ban"></i></button>`
+            : '';
+
+        return `<article class="cx-invoice-card">
+            <div class="cx-invoice-card-head">
+                <div class="cx-invoice-card-title-wrap">
+                    <h2 class="cx-invoice-card-title"><i class="fas fa-file-invoice-dollar me-2 text-muted"></i>فاتورة مبيعات</h2>
+                    <p class="cx-invoice-card-code"><code>${r.invoice_number || '—'}</code></p>
+                </div>
+                <span class="cx-badge cx-badge--${statusClass}">${statusLabel}</span>
+            </div>
+            <div class="cx-invoice-card-meta">
+                <div>
+                    <span class="cx-invoice-card-meta-label">التاريخ</span>
+                    <strong class="cx-invoice-card-meta-value">${r.invoice_date || '—'}</strong>
+                </div>
+                <div>
+                    <span class="cx-invoice-card-meta-label">العميل</span>
+                    <strong class="cx-invoice-card-meta-value">${r.customer || '—'}</strong>
+                </div>
+                <div>
+                    <span class="cx-invoice-card-meta-label">المخزن</span>
+                    <strong class="cx-invoice-card-meta-value">${r.stock || '—'}</strong>
+                </div>
+                <div>
+                    <span class="cx-invoice-card-meta-label">طريقة الدفع</span>
+                    <strong class="cx-invoice-card-meta-value">${paymentMethod}</strong>
+                </div>
+                <div>
+                    <span class="cx-invoice-card-meta-label">الإجمالي</span>
+                    <strong class="cx-invoice-card-meta-value">${total}</strong>
+                </div>
+            </div>
+            <div class="cx-invoice-card-actions">
+                ${viewBtn}
+                ${printBtn}
+                ${editBtn}
+                ${deleteBtn}
+                ${cancelBtn}
+            </div>
+        </article>`;
+    }).join('');
+
+    $cards.html(cardsHtml);
+}
+
 function initTable() {
     const paymentMethodMap = {
         cash: 'نقداً',
@@ -377,6 +463,9 @@ function initTable() {
         },
         order: [[1, 'desc']],
         pageLength: 25,
+        drawCallback: function () {
+            renderMobileInvoiceCards(salesTable.rows({ page: 'current' }).data().toArray());
+        }
     });
 }
 
@@ -395,6 +484,17 @@ function initFilters() {
         if (!row) return;
         openInvoiceModal(row);
     });
+
+    const mobileCards = document.getElementById('invoicesCardsMobile');
+    if (mobileCards) {
+        mobileCards.addEventListener('click', function (event) {
+            const btn = event.target.closest('.js-view-invoice');
+            if (!btn) return;
+            const row = invoiceRows.get(String(btn.dataset.id));
+            if (!row) return;
+            openInvoiceModal(row);
+        });
+    }
 }
 
 function openInvoiceModal(row) {

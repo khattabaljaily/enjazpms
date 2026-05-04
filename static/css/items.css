@@ -4,112 +4,316 @@
    ============================================================ */
 
 /* ══════════════════════════ MOBILE CARD LAYOUT — ITEMS TABLE ══════════════════════════ */
-/*
-  Items columns:
-  1: اسم المنتج | 2: SKU | 3: التصنيف | 4: الوحدة | 5: سعر التكلفة | 6: سعر البيع | 7: الحالة | 8: الإجراءات
-*/
 @media (max-width: 768px) {
-    .cx-table tbody tr,
-    .dataTables_wrapper .dataTable tbody tr {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto auto auto auto;
+    .cx-table-wrap { display: none !important; }
+    #itemCardsMobile {
+        display: grid !important;
+        gap: 0.9rem;
+        margin-top: 1rem;
     }
-
-    /* اسم المنتج — شريط كامل */
-    .cx-table tbody td:nth-child(1) {
-        grid-column: 1 / -1; grid-row: 1;
-        padding: 1.1rem 1.1rem 0.65rem !important;
-        margin-top: 4px;
-        border-bottom: 1px solid var(--border-light) !important;
-        flex-direction: row !important;
-        align-items: center !important;
+    .cx-item-card {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.9rem 0.9rem 0.9rem;
+        background: var(--bg-card, #ffffff);
+        border: 1px solid #ddd;
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .cx-item-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(99, 102, 241, 0.24);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    }
+    .cx-item-card-head {
+        display: flex;
+        justify-content: space-between;
         gap: 0.65rem;
+        align-items: flex-start;
     }
-
-    .cx-table tbody td:nth-child(1) .cxr-name {
-        font-size: 1.05rem;
+    .cx-item-card-title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.18rem;
+        min-width: 0;
+    }
+    .cx-item-card-title {
+        margin: 0;
+        font-size: 0.99rem;
         font-weight: 700;
-        flex: 1;
+        color: var(--text-heading, #111827);
+        line-height: 1.2;
     }
-
-    /* SKU */
-    .cx-table tbody td:nth-child(2) {
-        grid-column: 1; grid-row: 2;
-        padding: 0.75rem 1.1rem 0 !important;
+    .cx-item-card-badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.18rem;
     }
-
-    /* التصنيف */
-    .cx-table tbody td:nth-child(3) {
-        grid-column: 2; grid-row: 2;
-        padding: 0.75rem 1.1rem 0 !important;
-        align-items: flex-end !important;
+    .cx-item-card-badge {
+        padding: 0.24rem 0.5rem;
+        border-radius: 999px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-heading, #111827);
+        background: rgba(99, 102, 241, 0.09);
     }
-
-    /* الوحدة */
-    .cx-table tbody td:nth-child(4) {
-        grid-column: 1; grid-row: 3;
-        padding: 0.45rem 1.1rem 0 !important;
-    }
-
-    /* الحالة */
-    .cx-table tbody td:nth-child(7) {
-        grid-column: 2; grid-row: 3;
-        padding: 0.45rem 1.1rem 0 !important;
-        align-items: flex-end !important;
-    }
-
-    /* سعر التكلفة */
-    .cx-table tbody td:nth-child(5) {
-        grid-column: 1; grid-row: 4;
-        padding: 0.45rem 1.1rem 0.85rem !important;
-    }
-
-    /* سعر البيع */
-    .cx-table tbody td:nth-child(6) {
-        grid-column: 2; grid-row: 4;
-        padding: 0.45rem 1.1rem 0.85rem !important;
-        align-items: flex-end !important;
-    }
-
-    /* الإجراءات */
-    .cx-table tbody td:nth-child(8) {
-        grid-column: 1 / -1; grid-row: 5;
-        border-top: 1px solid var(--border-light) !important;
-        padding: 0.65rem 1.1rem !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: flex-end !important;
+    .cx-item-card-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.5rem;
-        background: var(--bg-tertiary) !important;
-        border-radius: 0 0 18px 18px !important;
     }
-
-    /* تسميات */
-    .cx-table tbody td:nth-child(2)::before,
-    .cx-table tbody td:nth-child(3)::before,
-    .cx-table tbody td:nth-child(4)::before,
-    .cx-table tbody td:nth-child(5)::before,
-    .cx-table tbody td:nth-child(6)::before,
-    .cx-table tbody td:nth-child(7)::before {
-        content: attr(data-label);
-        font-size: 0.67rem;
-        font-weight: 600;
-        color: var(--text-tertiary);
+    .cx-item-card-meta div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.16rem;
+        padding: 0.65rem 0.75rem;
+        background: rgba(15, 23, 42, 0.03);
+        border-radius: 14px;
+    }
+    .cx-item-card-meta-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-tertiary, #6b7280);
+        letter-spacing: 0.36px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.25rem;
     }
-
-    .cx-table tbody td:nth-child(1)::before,
-    .cx-table tbody td:nth-child(8)::before { display: none; }
+    .cx-item-card-meta-value {
+        font-size: 0.92rem;
+        color: var(--text-heading, #111827);
+        font-weight: 700;
+    }
+    .cx-item-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        justify-content: flex-end;
+    }
+    .cx-item-card-actions .cxr-act {
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+        border-radius: 14px;
+        padding: 0.62rem 0.75rem;
+        border: 1px solid transparent;
+        transition: background 160ms ease, border-color 160ms ease;
+    }
+    .cx-item-card-actions .cxr-act:hover {
+        border-color: rgba(15, 23, 42, 0.12);
+    }
+    .cx-item-card-actions .cxr-act--view {
+        background: rgba(99, 102, 241, 0.08);
+    }
+    .cx-item-card-actions .cxr-act--del {
+        background: rgba(239, 68, 68, 0.08);
+    }
+    .cx-item-card-actions .cxr-act--small {
+        padding: 0.7rem;
+    }
 }
 
 @media (max-width: 576px) {
-    .cx-table tbody td:nth-child(2),
-    .cx-table tbody td:nth-child(3),
-    .cx-table tbody td:nth-child(4),
-    .cx-table tbody td:nth-child(5),
-    .cx-table tbody td:nth-child(6),
-    .cx-table tbody td:nth-child(7) { padding-left: 1rem !important; padding-right: 1rem !important; }
-    .cx-table tbody td:nth-child(8) { padding: 0.6rem 1rem !important; }
+    #itemCardsMobile { gap: 0.75rem; }
+    .cx-item-card-meta { grid-template-columns: 1fr 1fr; }
+}
+
+/* ══════════════════════════ MOBILE CARD LAYOUT — CATEGORIES TABLE ══════════════════════════ */
+@media (max-width: 768px) {
+    #categoriesTable { display: none !important; }
+    .categories-mobile-card-list {
+        display: grid !important;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+    .cx-category-card {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.9rem;
+        background: var(--bg-card, #ffffff);
+        border: 1px solid #ddd;
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .cx-category-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(99, 102, 241, 0.24);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    }
+    .cx-category-card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.65rem;
+        align-items: flex-start;
+    }
+    .cx-category-card-title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.18rem;
+        min-width: 0;
+    }
+    .cx-category-card-title {
+        margin: 0;
+        font-size: 0.99rem;
+        font-weight: 700;
+        color: var(--text-heading, #111827);
+        line-height: 1.2;
+    }
+    .cx-category-card-path {
+        margin: 0;
+        font-size: 0.75rem;
+        color: var(--text-secondary, #6b7280);
+    }
+    .cx-category-card-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+    .cx-category-card-meta div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.16rem;
+        padding: 0.65rem 0.75rem;
+        background: rgba(15, 23, 42, 0.03);
+        border-radius: 14px;
+    }
+    .cx-category-card-meta-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-tertiary, #6b7280);
+        letter-spacing: 0.36px;
+        text-transform: uppercase;
+    }
+    .cx-category-card-meta-value {
+        font-size: 0.92rem;
+        color: var(--text-heading, #111827);
+        font-weight: 700;
+    }
+    .cx-category-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        justify-content: flex-end;
+    }
+    .cx-category-card-actions .cxr-act {
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+        border-radius: 14px;
+        padding: 0.62rem 0.75rem;
+        border: 1px solid transparent;
+        transition: background 160ms ease, border-color 160ms ease;
+    }
+    .cx-category-card-actions .cxr-act:hover {
+        border-color: rgba(15, 23, 42, 0.12);
+    }
+    .cx-category-card-actions .cxr-act--del {
+        background: rgba(239, 68, 68, 0.08);
+    }
+}
+
+@media (max-width: 576px) {
+    .categories-mobile-card-list { gap: 0.75rem; }
+    .cx-category-card-meta { grid-template-columns: 1fr 1fr; }
+}
+
+/* ══════════════════════════ MOBILE CARD LAYOUT — UNITS TABLE ══════════════════════════ */
+@media (max-width: 768px) {
+    #unitsTable { display: none !important; }
+    .units-mobile-card-list {
+        display: grid !important;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+    .cx-unit-card {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.9rem;
+        background: var(--bg-card, #ffffff);
+        border: 1px solid #ddd;
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .cx-unit-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(99, 102, 241, 0.24);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    }
+    .cx-unit-card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.65rem;
+        align-items: flex-start;
+    }
+    .cx-unit-card-title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.18rem;
+        min-width: 0;
+    }
+    .cx-unit-card-title {
+        margin: 0;
+        font-size: 0.99rem;
+        font-weight: 700;
+        color: var(--text-heading, #111827);
+        line-height: 1.2;
+    }
+    .cx-unit-card-code {
+        margin: 0;
+        font-size: 0.75rem;
+        color: var(--text-secondary, #6b7280);
+    }
+    .cx-unit-card-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+    .cx-unit-card-meta div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.16rem;
+        padding: 0.65rem 0.75rem;
+        background: rgba(15, 23, 42, 0.03);
+        border-radius: 14px;
+    }
+    .cx-unit-card-meta-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-tertiary, #6b7280);
+        letter-spacing: 0.36px;
+        text-transform: uppercase;
+    }
+    .cx-unit-card-meta-value {
+        font-size: 0.92rem;
+        color: var(--text-heading, #111827);
+        font-weight: 700;
+    }
+    .cx-unit-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        justify-content: flex-end;
+    }
+    .cx-unit-card-actions .cxr-act {
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+        border-radius: 14px;
+        padding: 0.62rem 0.75rem;
+        border: 1px solid transparent;
+        transition: background 160ms ease, border-color 160ms ease;
+    }
+    .cx-unit-card-actions .cxr-act:hover {
+        border-color: rgba(15, 23, 42, 0.12);
+    }
+    .cx-unit-card-actions .cxr-act--del {
+        background: rgba(239, 68, 68, 0.08);
+    }
+}
+
+@media (max-width: 576px) {
+    .units-mobile-card-list { gap: 0.75rem; }
+    .cx-unit-card-meta { grid-template-columns: 1fr 1fr; }
 }

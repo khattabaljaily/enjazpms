@@ -90,6 +90,7 @@
                 <tbody></tbody>
             </table>
         </div>
+        <div id="expensesCardsMobile" class="expenses-mobile-card-list d-none p-3" aria-live="polite"></div>
     </div>
 
     <div class="modal fade" id="viewExpenseModal" tabindex="-1" aria-hidden="true">
@@ -530,6 +531,63 @@
         return `<div class="cx-actions">${viewBtn}${editBtn}${confirmBtn}${cancelBtn}</div>`;
     }
 
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileExpenseCards(rows) {
+        const $cards = $('#expensesCardsMobile');
+        if (!$cards.length) return;
+
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد مصروفات للعرض</div>');
+            return;
+        }
+
+        const cardsHtml = rows.map(function (r) {
+            const amount = EnjazIMS.formatMoney(r.amount || 0);
+            const statusClass = r.status_raw === 'confirmed' ? 'cx-status--on' : r.status_raw === 'cancelled' ? 'cx-status--off' : 'cx-status--warning';
+            const statusLabel = r.status || '—';
+
+            return `<article class="cx-expense-card">
+                <div class="cx-expense-card-head">
+                    <div class="cx-expense-card-title-wrap">
+                        <h2 class="cx-expense-card-title">${r.code || '—'}</h2>
+                        <p class="cx-expense-card-desc">${r.description || '—'}</p>
+                    </div>
+                    <span class="cx-status ${statusClass}"><span class="cx-status-dot"></span>${statusLabel}</span>
+                </div>
+                <div class="cx-expense-card-meta">
+                    <div>
+                        <span class="cx-expense-card-meta-label">التصنيف</span>
+                        <strong class="cx-expense-card-meta-value">${r.category || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-expense-card-meta-label">التاريخ</span>
+                        <strong class="cx-expense-card-meta-value">${r.expense_date || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-expense-card-meta-label">طريقة الدفع</span>
+                        <strong class="cx-expense-card-meta-value">${r.payment_method || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-expense-card-meta-label">الخزينة</span>
+                        <strong class="cx-expense-card-meta-value">${r.treasury || '—'}</strong>
+                    </div>
+                    <div class="cx-expense-card-meta-full">
+                        <span class="cx-expense-card-meta-label">المبلغ</span>
+                        <strong class="cx-expense-card-meta-value cx-expense-card-amount">${amount}</strong>
+                    </div>
+                </div>
+                <div class="cx-expense-card-actions">
+                    <button type="button" class="cxr-act cxr-act--view js-view-expense" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
+                    ${r.status_raw === 'draft' ? `<button type="button" class="cxr-act js-edit-expense" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${r.status_raw === 'draft' ? `<button type="button" class="cxr-act cxr-act--success js-confirm" data-id="${r.id}" aria-label="تأكيد" title="تأكيد"><i class="fas fa-check"></i></button>` : ''}
+                    ${(r.status_raw === 'draft' || r.status_raw === 'confirmed') ? `<button type="button" class="cxr-act cxr-act--del js-cancel" data-id="${r.id}" aria-label="إلغاء" title="إلغاء"><i class="fas fa-ban"></i></button>` : ''}
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
+    }
+
     const dt = $('#expensesTable').DataTable({
         processing: true,
         serverSide: true,
@@ -573,6 +631,9 @@
             paginate: { previous: 'السابق', next: 'التالي' }
         },
         pageLength: 25,
+        drawCallback: function () {
+            renderMobileExpenseCards(dt.rows({ page: 'current' }).data().toArray());
+        }
     });
 
     dt.on('xhr', function (_, __, json) {

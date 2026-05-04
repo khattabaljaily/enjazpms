@@ -9,6 +9,13 @@
   1: اسم المخزن | 2: الرمز | 3: النوع | 4: الموقع | 5: الحالة | 6: الإجراءات
 */
 @media (max-width: 768px) {
+    #stocksTable { display: none !important; }
+    .stocks-mobile-card-list {
+        display: grid !important;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+
     .cx-table tbody tr,
     .dataTables_wrapper .dataTable tbody tr {
         grid-template-columns: 1fr 1fr;
@@ -99,4 +106,148 @@
     .cx-table tbody td:nth-child(4),
     .cx-table tbody td:nth-child(5) { padding-left: 1rem !important; padding-right: 1rem !important; }
     .cx-table tbody td:nth-child(6) { padding: 0.6rem 1rem !important; }
+}
+
+/* ══════════════════════════ MOBILE CARDS ══════════════════════════ */
+@media (max-width: 768px) {
+    .stocks-mobile-card-list {
+        display: grid;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+
+    .cx-stock-card {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.9rem;
+        background: var(--bg-card, #ffffff);
+        border: 1px solid #ddd;
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .cx-stock-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(99, 102, 241, 0.24);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    }
+
+    .cx-stock-card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.65rem;
+        align-items: flex-start;
+    }
+
+    .cx-stock-card-title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.18rem;
+        min-width: 0;
+    }
+
+    .cx-stock-card-title {
+        margin: 0;
+        font-size: 0.99rem;
+        font-weight: 700;
+        color: var(--text-heading, #111827);
+        line-height: 1.2;
+        display: flex;
+        align-items: center;
+    }
+
+    .cx-stock-card-code {
+        margin: 0;
+        font-size: 0.76rem;
+        color: var(--text-secondary, #6b7280);
+    }
+
+    .cx-stock-card-code code {
+        background: rgba(99, 102, 241, 0.09);
+        padding: 0.2rem 0.4rem;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.7rem;
+    }
+
+    .cx-stock-card-badge {
+        background: var(--primary);
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-top: 0.25rem;
+        display: inline-block;
+    }
+
+    .cx-stock-card-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .cx-stock-card-meta div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.16rem;
+        padding: 0.65rem 0.75rem;
+        background: rgba(15, 23, 42, 0.03);
+        border-radius: 14px;
+    }
+
+    .cx-stock-card-meta-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-tertiary, #6b7280);
+        letter-spacing: 0.36px;
+        text-transform: uppercase;
+    }
+
+    .cx-stock-card-meta-value {
+        font-size: 0.92rem;
+        color: var(--text-heading, #111827);
+        font-weight: 700;
+    }
+
+    .cx-stock-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        justify-content: flex-end;
+    }
+
+    .cx-stock-card-actions .cxr-act {
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+        border-radius: 14px;
+        padding: 0.62rem 0.75rem;
+        border: 1px solid transparent;
+        transition: background 160ms ease, border-color 160ms ease;
+        background: rgba(15, 23, 42, 0.05);
+        color: var(--text-secondary);
+    }
+
+    .cx-stock-card-actions .cxr-act:hover {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: rgba(15, 23, 42, 0.08);
+    }
+
+    .cx-stock-card-actions .cxr-act--view {
+        background: rgba(99, 102, 241, 0.08);
+    }
+
+    .cx-stock-card-actions .cxr-act--view:hover {
+        background: rgba(99, 102, 241, 0.12);
+    }
+
+    .cx-stock-card-actions .cxr-act--del {
+        background: rgba(239, 68, 68, 0.08);
+    }
+
+    .cx-stock-card-actions .cxr-act--del:hover {
+        background: rgba(239, 68, 68, 0.12);
+    }
 }

@@ -88,6 +88,7 @@
             <tbody></tbody>
         </table>
     </div>
+    <div id="openingCardsMobile" class="stocks-opening-mobile-card-list d-none p-3" aria-live="polite"></div>
 </div>
 
 <div class="opening-savebar" id="openingSavebar">
@@ -118,6 +119,57 @@
         document.getElementById('btnSaveOpening'),
         document.getElementById('btnSaveOpeningBottom')
     ].filter(Boolean);
+
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileOpeningCards(rows) {
+        const $cards = $('#openingCardsMobile');
+        if (!$cards.length) return;
+
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد منتجات للعرض</div>');
+            return;
+        }
+
+        const cardsHtml = rows.map(function (r) {
+            const changed = changedMap.get(String(r.item_id));
+            const currentQty = EnjazIMS.formatQuantity(r.current_qty);
+            const availableQty = EnjazIMS.formatQuantity(r.available_qty);
+            const inputValue = changed ? EnjazIMS.parseNumber(changed.quantity).toFixed(2) : EnjazIMS.parseNumber(r.current_qty).toFixed(2);
+            const isChanged = changed !== undefined;
+
+            return `<article class="cx-opening-card">
+                <div class="cx-opening-card-head">
+                    <div class="cx-opening-card-title-wrap">
+                        <h2 class="cx-opening-card-title">${r.item_name || '—'}</h2>
+                        <div class="cx-opening-card-codes">
+                            <code class="cx-opening-card-code">${r.sku || '—'}</code>
+                            ${r.barcode ? `<code class="cx-opening-card-code">${r.barcode}</code>` : ''}
+                        </div>
+                    </div>
+                    ${isChanged ? '<span class="cx-opening-card-changed">معدل</span>' : ''}
+                </div>
+                <div class="cx-opening-card-meta">
+                    <div>
+                        <span class="cx-opening-card-meta-label">الكمية الحالية</span>
+                        <strong class="cx-opening-card-meta-value">${currentQty}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-opening-card-meta-label">المتاحة</span>
+                        <strong class="cx-opening-card-meta-value">${availableQty}</strong>
+                    </div>
+                </div>
+                <div class="cx-opening-card-input">
+                    <label class="cx-opening-card-input-label">الكمية الافتتاحية</label>
+                    <div class="cx-opening-card-input-wrap">
+                        <input type="number" class="cx-input cx-input--sm opening-qty-input" data-item-id="${r.item_id}" data-original="${EnjazIMS.parseNumber(r.current_qty).toFixed(2)}" value="${inputValue}" min="0" step="0.01" ${isChanged ? 'class="cx-input cx-input--sm opening-qty-input opening-qty-input--changed"' : 'class="cx-input cx-input--sm opening-qty-input"'}>
+                        <span class="cx-opening-card-input-unit">وحدة</span>
+                    </div>
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
+    }
 
     const dt = $('#openingTable').DataTable({
         processing: true,
@@ -157,7 +209,10 @@
                     </div>`;
                 }
             }
-        ]
+        ],
+        drawCallback: function () {
+            renderMobileOpeningCards(dt.rows({ page: 'current' }).data().toArray());
+        }
     });
 
     function refreshChangedCount() {

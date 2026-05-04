@@ -124,6 +124,9 @@
             <tbody></tbody>
         </table>
     </div>
+
+    <!-- ══════════════════════════ MOBILE CARDS ══════════════════════════ -->
+    <div id="quotesMobileCards" class="quotes-mobile-card-list"></div>
 </div>
 
 </div>
@@ -229,6 +232,68 @@ let quotesTable;
 const quoteRows = new Map();
 let pendingQuoteAction = null;
 
+/* ── Mobile card renderer ───────────────────────────────── */
+function renderMobileQuoteCards(rows) {
+    const $cards = $('#quotesMobileCards');
+    if (!$cards.length) return;
+
+    if (!rows || !rows.length) {
+        $cards.html('<div class="cx-empty-state">لا توجد عروض أسعار للعرض</div>');
+        return;
+    }
+
+    const statusBadgeMap = {
+        draft: 'مسودة', sent: 'مرسل', accepted: 'مقبول',
+        rejected: 'مرفوض', converted: 'محول', expired: 'منتهي', cancelled: 'ملغى'
+    };
+
+    const cardsHtml = rows.map(function (r) {
+        const customer = r.customer || '—';
+        const total = EnjazIMS.formatMoney(r.grand_total);
+        const statusLabel = statusBadgeMap[r.status] || '—';
+        const statusClass = r.status ? `cx-badge cx-badge--${r.status === 'draft' ? 'muted' : r.status === 'sent' ? 'primary' : r.status === 'accepted' ? 'success' : r.status === 'rejected' ? 'danger' : r.status === 'converted' ? 'info' : r.status === 'expired' ? 'warning' : 'danger'}` : '';
+
+        const editBtn = ['draft', 'sent', 'accepted'].includes(r.status)
+            ? `<a href="${QUOTE_BASE_URL}${r.id}/edit/" class="cxr-act cxr-act--edit" title="تعديل" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></a>`
+            : '';
+        const deleteBtn = r.status === 'draft'
+            ? `<button class="cxr-act cxr-act--del" onclick="deleteDraftQuote(${r.id})" title="حذف" aria-label="حذف"><i class="fas fa-trash"></i></button>`
+            : '';
+        const convertBtn = ['draft','sent','accepted'].includes(r.status)
+            ? `<a href="${QUOTE_BASE_URL}${r.id}/" class="cxr-act cxr-act--convert" title="تحويل لفاتورة" aria-label="تحويل لفاتورة"><i class="fas fa-file-invoice"></i></a>`
+            : '';
+
+        return `<article class="cx-quote-card">
+            <div class="cx-quote-card-head">
+                <div class="cx-quote-card-title-wrap">
+                    <h2 class="cx-quote-card-title">${r.quote_number || '—'}</h2>
+                    <div class="cx-quote-card-code">
+                        <code>${r.quote_date || '—'}</code>
+                    </div>
+                </div>
+                <span class="${statusClass}">${statusLabel}</span>
+            </div>
+            <div class="cx-quote-card-meta">
+                <div>
+                    <span class="cx-quote-card-meta-label">العميل</span>
+                    <strong class="cx-quote-card-meta-value">${customer}</strong>
+                </div>
+                <div>
+                    <span class="cx-quote-card-meta-label">الإجمالي</span>
+                    <strong class="cx-quote-card-meta-value">${total}</strong>
+                </div>
+            </div>
+            <div class="cx-quote-card-actions">
+                <button class="cxr-act cxr-act--view js-view-quote" data-id="${r.id}" title="عرض" aria-label="عرض"><i class="fas fa-eye"></i></button>
+                <a href="${QUOTE_BASE_URL}${r.id}/?print=1" target="_blank" rel="noopener" class="cxr-act cxr-act--print" title="طباعة" aria-label="طباعة"><i class="fas fa-print"></i></a>
+                ${editBtn}${deleteBtn}${convertBtn}
+            </div>
+        </article>`;
+    }).join('');
+
+    $cards.html(cardsHtml);
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     initTable();
     initFilters();
@@ -304,6 +369,9 @@ function initTable() {
         },
         order: [[1, 'desc']],
         pageLength: 25,
+        drawCallback: function () {
+            renderMobileQuoteCards(quotesTable.rows({ page: 'current' }).data().toArray());
+        },
     });
 }
 

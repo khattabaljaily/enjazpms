@@ -114,6 +114,7 @@
             <tbody></tbody>
         </table>
     </div>
+    <div id="stocksCardsMobile" class="stocks-mobile-card-list d-none p-3" aria-live="polite"></div>
 
 </div>
 </div>
@@ -328,6 +329,59 @@
     const $idInput   = $('#stockId');
     let activeStatus = '';
 
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileStockCards(rows) {
+        const $cards = $('#stocksCardsMobile');
+        if (!$cards.length) return;
+
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد مخازن للعرض</div>');
+            return;
+        }
+
+        const cardsHtml = rows.map(function (r) {
+            const icons = {
+                'main':'fa-warehouse','branch':'fa-store','cold':'fa-snowflake',
+                'hazardous':'fa-triangle-exclamation','transit':'fa-truck-fast'
+            };
+            const icon = icons[r.stock_type_raw] || 'fa-warehouse';
+            const address = r.address || '—';
+            const status = r.is_active
+                ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
+                : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوف</span>';
+            const defaultBadge = r.is_default ? '<span class="cx-stock-card-badge">افتراضي</span>' : '';
+
+            return `<article class="cx-stock-card">
+                <div class="cx-stock-card-head">
+                    <div class="cx-stock-card-title-wrap">
+                        <h2 class="cx-stock-card-title"><i class="fas ${icon} me-2 text-muted"></i>${r.name || '—'}</h2>
+                        <p class="cx-stock-card-code"><code>${r.code || '—'}</code></p>
+                        ${defaultBadge}
+                    </div>
+                    ${status}
+                </div>
+                <div class="cx-stock-card-meta">
+                    <div>
+                        <span class="cx-stock-card-meta-label">النوع</span>
+                        <strong class="cx-stock-card-meta-value">${r.stock_type || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-stock-card-meta-label">الموقع</span>
+                        <strong class="cx-stock-card-meta-value">${address}</strong>
+                    </div>
+                </div>
+                <div class="cx-stock-card-actions">
+                    ${!r.is_default ? `<button class="cxr-act js-set-default-stock" data-id="${r.id}" aria-label="تعيين كافتراضي" title="تعيين كافتراضي"><i class="fas fa-star"></i></button>` : `<button class="cxr-act" disabled aria-label="المخزن الافتراضي" title="المخزن الافتراضي"><i class="fas fa-star text-warning"></i></button>`}
+                    <button class="cxr-act cxr-act--view js-view-stock" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
+                    <button class="cxr-act js-edit-stock" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                    <button class="cxr-act cxr-act--del js-delete-stock" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
+    }
+
     /* ── DataTable ─────────────────────────────────────────── */
     const dt = $('#stocksTable').DataTable({
         processing : true,
@@ -345,6 +399,9 @@
         ajax: {
             url : urlTable,
             data: function (d) { d.status = activeStatus; }
+        },
+        drawCallback: function () {
+            renderMobileStockCards(dt.rows({ page: 'current' }).data().toArray());
         },
         columns: [
             {

@@ -67,6 +67,7 @@
                 <tbody></tbody>
             </table>
         </div>
+        <div id="ordersCardsMobile" class="orders-mobile-card-list d-none p-3" aria-live="polite"></div>
     </div>
 </div>
 {% endblock %}
@@ -84,6 +85,69 @@
         confirmed: 'success',
         cancelled: 'danger'
     };
+
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileOrderCards(rows) {
+        const $cards = $('#ordersCardsMobile');
+        if (!$cards.length) return;
+
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد أوامر شراء للعرض</div>');
+            return;
+        }
+
+        const cardsHtml = rows.map(function (r) {
+            const total = EnjazIMS.formatMoney(r.grand_total || 0);
+            const statusClass = statusMap[r.status] || r.status_color || 'secondary';
+            const statusLabel = r.status_label || '—';
+            const confirmBtn = r.status === 'draft'
+                ? `<button class="cxr-act cxr-act--success js-confirm" data-id="${r.id}" aria-label="تأكيد" title="تأكيد"><i class="fas fa-check"></i></button>`
+                : '';
+            const cancelBtn = r.status === 'confirmed'
+                ? `<button class="cxr-act cxr-act--del js-cancel" data-id="${r.id}" aria-label="إلغاء" title="إلغاء"><i class="fas fa-ban"></i></button>`
+                : '';
+            const editBtn = ['draft', 'confirmed'].includes(r.status)
+                ? `<a href="/purchases/${r.id}/edit/" class="cxr-act" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></a>`
+                : '';
+
+            return `<article class="cx-order-card">
+                <div class="cx-order-card-head">
+                    <div class="cx-order-card-title-wrap">
+                        <h2 class="cx-order-card-title"><i class="fas fa-shopping-cart me-2 text-muted"></i>أمر شراء</h2>
+                        <p class="cx-order-card-code"><code>${r.invoice_number || '—'}</code></p>
+                    </div>
+                    <span class="cx-badge cx-badge--${statusClass}">${statusLabel}</span>
+                </div>
+                <div class="cx-order-card-meta">
+                    <div>
+                        <span class="cx-order-card-meta-label">التاريخ</span>
+                        <strong class="cx-order-card-meta-value">${r.invoice_date || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-order-card-meta-label">المورد</span>
+                        <strong class="cx-order-card-meta-value">${r.supplier || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-order-card-meta-label">المخزن</span>
+                        <strong class="cx-order-card-meta-value">${r.stock || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-order-card-meta-label">الإجمالي</span>
+                        <strong class="cx-order-card-meta-value">${total}</strong>
+                    </div>
+                </div>
+                <div class="cx-order-card-actions">
+                    <a href="/purchases/${r.id}/" class="cxr-act cxr-act--view" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></a>
+                    <a href="/purchases/${r.id}/print/" target="_blank" rel="noopener" class="cxr-act" aria-label="طباعة" title="طباعة"><i class="fas fa-print"></i></a>
+                    ${editBtn}
+                    ${confirmBtn}
+                    ${cancelBtn}
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
+    }
 
     const dt = $('#ordersTable').DataTable({
         processing: true,
@@ -149,6 +213,9 @@
             paginate: { previous: 'السابق', next: 'التالي' }
         },
         pageLength: 25,
+        drawCallback: function () {
+            renderMobileOrderCards(dt.rows({ page: 'current' }).data().toArray());
+        }
     });
 
     $('#orderStatusFilter').on('change', function() { dt.ajax.reload(); });

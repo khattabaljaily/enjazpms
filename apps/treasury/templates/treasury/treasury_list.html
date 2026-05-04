@@ -66,6 +66,7 @@
             <tbody></tbody>
         </table>
     </div>
+    <div id="treasuryCardsMobile" class="treasury-mobile-card-list d-none p-3" aria-live="polite"></div>
 </div>
 
 </div>
@@ -327,6 +328,54 @@
             .catch(() => EnjazIMS.toast('تعذر تحميل البيانات', 'error'));
     }
 
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileTreasuryCards(rows) {
+        const $cards = $('#treasuryCardsMobile');
+        if (!$cards.length) return;
+
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد خزائن للعرض</div>');
+            return;
+        }
+
+        const cardsHtml = rows.map(function (r) {
+            const balance = EnjazIMS.formatMoney(r.current_balance || 0);
+            const balanceClass = EnjazIMS.parseNumber(r.current_balance || 0) >= 0 ? 'cx-treasury-card-balance--positive' : 'cx-treasury-card-balance--negative';
+            const status = r.is_active
+                ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشطة</span>'
+                : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوفة</span>';
+            const defaultBadge = r.is_system_default
+                ? '<span class="cx-treasury-card-badge cx-treasury-card-badge--system">افتراضية نظامية</span>'
+                : r.is_default
+                ? '<span class="cx-treasury-card-badge cx-treasury-card-badge--default">افتراضية</span>'
+                : '';
+
+            return `<article class="cx-treasury-card">
+                <div class="cx-treasury-card-head">
+                    <div class="cx-treasury-card-title-wrap">
+                        <h2 class="cx-treasury-card-title"><i class="fas fa-piggy-bank me-2 text-muted"></i>${r.name || '—'}</h2>
+                        <p class="cx-treasury-card-code"><code>${r.code || '—'}</code></p>
+                        ${defaultBadge}
+                    </div>
+                    ${status}
+                </div>
+                <div class="cx-treasury-card-meta">
+                    <div class="cx-treasury-card-balance ${balanceClass}">
+                        <span class="cx-treasury-card-balance-label">الرصيد الحالي</span>
+                        <strong class="cx-treasury-card-balance-value">${balance}</strong>
+                    </div>
+                </div>
+                <div class="cx-treasury-card-actions">
+                    <button class="cxr-act cxr-act--view js-view-treasury" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>
+                    <button class="cxr-act js-edit-treasury" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                    ${r.is_system_default ? '<button class="cxr-act" disabled aria-label="لا يمكن الحذف" title="لا يمكن الحذف"><i class="fas fa-trash"></i></button>' : `<button class="cxr-act cxr-act--del js-delete-treasury" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>`}
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
+    }
+
     /* ── DataTable ──────────────────────────────────────────── */
     treasuryTable = $('#treasuryTable').DataTable({
         processing: true,
@@ -368,6 +417,9 @@
         ],
         order: [[0, 'asc']],
         pageLength: 25,
+        drawCallback: function () {
+            renderMobileTreasuryCards(treasuryTable.rows({ page: 'current' }).data().toArray());
+        }
     });
 
     /* ── Event Listeners ────────────────────────────────────── */

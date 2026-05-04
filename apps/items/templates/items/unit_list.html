@@ -70,6 +70,7 @@
             <tbody></tbody>
         </table>
     </div>
+    <div id="unitsCardsMobile" class="units-mobile-card-list d-none p-3" aria-live="polite"></div>
 </div>
 </div>
 
@@ -170,12 +171,60 @@
     const $submitBtn = $('#unitSubmitBtn');
     const $idInput = $('#unitId');
 
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileUnitCards(rows) {
+        const $cards = $('#unitsCardsMobile');
+        if (!$cards.length) return;
+
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد وحدات للعرض</div>');
+            return;
+        }
+
+        const cardsHtml = rows.map(function (r) {
+            const abbrev = r.abbreviation === '-' ? '—' : r.abbreviation;
+            const baseUnit = r.base_unit === '-' ? 'أساسية' : r.base_unit;
+            const status = r.is_active
+                ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
+                : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوف</span>';
+
+            return `<article class="cx-unit-card">
+                <div class="cx-unit-card-head">
+                    <div class="cx-unit-card-title-wrap">
+                        <h2 class="cx-unit-card-title">${r.name || '—'}</h2>
+                        <p class="cx-unit-card-code"><code>${abbrev}</code></p>
+                    </div>
+                    ${status}
+                </div>
+                <div class="cx-unit-card-meta">
+                    <div>
+                        <span class="cx-unit-card-meta-label">الأساسية</span>
+                        <strong class="cx-unit-card-meta-value">${baseUnit}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-unit-card-meta-label">عامل التحويل</span>
+                        <strong class="cx-unit-card-meta-value">${r.conversion_factor || '1'}</strong>
+                    </div>
+                </div>
+                <div class="cx-unit-card-actions">
+                    <button class="cxr-act js-edit-unit" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                    <button class="cxr-act cxr-act--del js-delete-unit" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
+    }
+
     const dt = $('#unitsTable').DataTable({
         processing: true, serverSide: true,
         dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
         pageLength: 50,
         language: { emptyTable:'لا توجد وحدات', zeroRecords:'لا توجد نتائج', paginate:{next:'التالي',previous:'السابق'}, processing:'جاري التحميل...' },
         ajax: { url: urlTable },
+        drawCallback: function () {
+            renderMobileUnitCards(dt.rows({ page: 'current' }).data().toArray());
+        },
         columns: [
             { data: 'name', render: n => `<strong>${n}</strong>` },
             { data: 'abbreviation', render: a => a==='-' ? `<span class="cxr-empty">—</span>` : `<code class="cxr-code">${a}</code>` },

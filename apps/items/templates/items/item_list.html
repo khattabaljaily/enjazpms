@@ -92,6 +92,7 @@
             <tbody></tbody>
         </table>
     </div>
+    <div id="itemCardsMobile" class="items-mobile-card-list d-none p-3" aria-live="polite"></div>
 </div>
 
 </div>
@@ -546,6 +547,69 @@
     const $idInput   = $('#itemId');
     let activeStatus = '';
 
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileItemCards(rows) {
+        const $cards = $('#itemCardsMobile');
+        if (!$cards.length) return;
+
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد منتجات للعرض</div>');
+            return;
+        }
+
+        const cardsHtml = rows.map(function (r) {
+            const category = r.category || '—';
+            const unit = r.unit || '—';
+            const selling = EnjazIMS.formatMoney(r.selling_price);
+            const status = r.is_active
+                ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
+                : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوف</span>';
+            const ledgerBtn = r.item_type === 'service'
+                ? ''
+                : `<button class="cxr-act cxr-act--small js-ledger-item" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>`;
+
+            return `<article class="cx-item-card">
+                <div class="cx-item-card-head">
+                    <div class="cx-item-card-title-wrap">
+                        <h2 class="cx-item-card-title">${r.name || '—'}</h2>
+                        <div class="cx-item-card-badge-row">
+                            ${r.track_expiry ? '<span class="cx-item-card-badge">تتبع الانتهاء</span>' : ''}
+                            ${r.track_serial ? '<span class="cx-item-card-badge">رقم تسلسلي</span>' : ''}
+                            ${r.has_variants ? '<span class="cx-item-card-badge">متغيرات</span>' : ''}
+                        </div>
+                    </div>
+                    ${status}
+                </div>
+                <div class="cx-item-card-meta">
+                    <div>
+                        <span class="cx-item-card-meta-label">SKU</span>
+                        <strong class="cx-item-card-meta-value">${r.sku || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-item-card-meta-label">التصنيف</span>
+                        <strong class="cx-item-card-meta-value">${category}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-item-card-meta-label">الوحدة</span>
+                        <strong class="cx-item-card-meta-value">${unit}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-item-card-meta-label">سعر البيع</span>
+                        <strong class="cx-item-card-meta-value">${selling}</strong>
+                    </div>
+                </div>
+                <div class="cx-item-card-actions">
+                    ${ledgerBtn}
+                    <button class="cxr-act cxr-act--view js-view-item" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
+                    <button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                    <button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
+    }
+
     /* ── DataTable ─────────────────────────────────────────── */
     const dt = $('#itemsTable').DataTable({
         processing : true,
@@ -563,6 +627,9 @@
         ajax: {
             url : urlTable,
             data: function (d) { d.status = activeStatus; }
+        },
+        drawCallback: function () {
+            renderMobileItemCards(dt.rows({ page: 'current' }).data().toArray());
         },
         columns: [
             {
@@ -858,7 +925,21 @@
     }
 
     $('#itemsTable').on('click', '.js-view-item', function () { openView($(this).data('id')); });
+    $('#itemCardsMobile').on('click', '.js-view-item', function () { openView($(this).data('id')); });
     $('#itemsTable').on('click', '.js-ledger-item', function () { openItemLedger($(this).data('id')); });
+    $('#itemCardsMobile').on('click', '.js-ledger-item', function () { openItemLedger($(this).data('id')); });
+    $('#itemsTable').on('click', '.js-edit-item', function () { openEdit($(this).data('id')); });
+    $('#itemCardsMobile').on('click', '.js-edit-item', function () { openEdit($(this).data('id')); });
+    $('#itemsTable').on('click', '.js-delete-item', function () {
+        $('#deleteItemId').val($(this).data('id'));
+        $('#deleteItemName').text($(this).data('name'));
+        deleteModal.show();
+    });
+    $('#itemCardsMobile').on('click', '.js-delete-item', function () {
+        $('#deleteItemId').val($(this).data('id'));
+        $('#deleteItemName').text($(this).data('name'));
+        deleteModal.show();
+    });
     $('#viewEditItemBtn').on('click', function () { viewModal.hide(); openEdit($(this).data('id')); });
 
 })();

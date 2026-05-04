@@ -168,3 +168,148 @@
         align-items: stretch;
     }
 }
+
+/* ══════════════════════════ MOBILE CARDS ══════════════════════════ */
+@media (max-width: 768px) {
+    #openingTable { display: none !important; }
+    .stocks-opening-mobile-card-list {
+        display: grid !important;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+
+    .cx-opening-card {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.9rem;
+        background: var(--bg-card, #ffffff);
+        border: 1px solid #ddd;
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .cx-opening-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(99, 102, 241, 0.24);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    }
+
+    .cx-opening-card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.65rem;
+        align-items: flex-start;
+    }
+
+    .cx-opening-card-title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.18rem;
+        min-width: 0;
+    }
+
+    .cx-opening-card-title {
+        margin: 0;
+        font-size: 0.99rem;
+        font-weight: 700;
+        color: var(--text-heading, #111827);
+        line-height: 1.2;
+    }
+
+    .cx-opening-card-codes {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .cx-opening-card-code {
+        background: rgba(99, 102, 241, 0.09);
+        padding: 0.2rem 0.4rem;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.7rem;
+        color: var(--text-secondary, #6b7280);
+        direction: ltr;
+        unicode-bidi: plaintext;
+    }
+
+    .cx-opening-card-changed {
+        background: var(--warning);
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .cx-opening-card-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .cx-opening-card-meta div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.16rem;
+        padding: 0.65rem 0.75rem;
+        background: rgba(15, 23, 42, 0.03);
+        border-radius: 14px;
+    }
+
+    .cx-opening-card-meta-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-tertiary, #6b7280);
+        letter-spacing: 0.36px;
+        text-transform: uppercase;
+    }
+
+    .cx-opening-card-meta-value {
+        font-size: 0.92rem;
+        color: var(--text-heading, #111827);
+        font-weight: 700;
+    }
+
+    .cx-opening-card-input {
+        border-top: 1px solid rgba(15, 23, 42, 0.08);
+        padding-top: 0.75rem;
+    }
+
+    .cx-opening-card-input-label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-secondary, #6b7280);
+        margin-bottom: 0.5rem;
+    }
+
+    .cx-opening-card-input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .cx-opening-card-input-wrap .cx-input {
+        flex: 1;
+        border-radius: 10px;
+        border: 1.5px solid var(--border-color);
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .cx-opening-card-input-wrap .cx-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.14);
+    }
+
+    .cx-opening-card-input-unit {
+        font-size: 0.8rem;
+        color: var(--text-tertiary, #6b7280);
+        font-weight: 500;
+    }
+}

@@ -59,6 +59,7 @@
                 <tbody></tbody>
             </table>
         </div>
+        <div id="returnsMobileCards" class="returns-mobile-card-list d-none p-3"></div>
     </div>
 </div>
 {% endblock %}
@@ -66,6 +67,57 @@
 {% block extra_js %}
 <script>
 (function() {
+    function renderMobileReturnCards(rows) {
+        const $cards = $('#returnsMobileCards');
+        if (!$cards.length) return;
+
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد مرتجعات للعرض</div>');
+            return;
+        }
+
+        const statusClassMap = {
+            draft: 'muted',
+            confirmed: 'success',
+            cancelled: 'danger'
+        };
+
+        const cardsHtml = rows.map(function (r) {
+            const statusClass = statusClassMap[r.status] || 'muted';
+            const statusLabel = r.status_label || '—';
+            const total = EnjazIMS.formatMoney(r.total_returned || 0);
+
+            return `<article class="cx-return-card">
+                <div class="cx-return-card-head">
+                    <div class="cx-return-card-title-wrap">
+                        <h2 class="cx-return-card-title">${r.return_number || '—'}</h2>
+                        <div class="cx-return-card-code"><code>${r.return_date || '—'}</code></div>
+                    </div>
+                    <span class="cx-badge cx-badge--${statusClass}">${statusLabel}</span>
+                </div>
+                <div class="cx-return-card-meta">
+                    <div>
+                        <span class="cx-return-card-meta-label">أمر الشراء</span>
+                        <strong class="cx-return-card-meta-value">${r.invoice_number || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-return-card-meta-label">المورد</span>
+                        <strong class="cx-return-card-meta-value">${r.supplier || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-return-card-meta-label">الإجمالي</span>
+                        <strong class="cx-return-card-meta-value">${total}</strong>
+                    </div>
+                </div>
+                <div class="cx-return-card-actions">
+                    <a href="/purchases/returns/${r.id}/" class="cxr-act cxr-act--view" title="عرض"><i class="fas fa-eye"></i></a>
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
+    }
+
     const dt = $('#returnsTable').DataTable({
         processing: true,
         serverSide: true,
@@ -92,6 +144,9 @@
             zeroRecords: 'لا توجد نتائج مطابقة',
             paginate: { previous: 'السابق', next: 'التالي' }
         },
+        drawCallback: function () {
+            renderMobileReturnCards(dt.rows({ page: 'current' }).data().toArray());
+        }
     });
 
     $('#searchReturns').on('input', function() {

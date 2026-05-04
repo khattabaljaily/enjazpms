@@ -81,3 +81,172 @@
 #movementTreasuryFilter:hover {
   border-color: var(--primary, #6366f1);
 }
+
+/* ══════════════════════════ MOBILE CARDS ══════════════════════════ */
+@media (max-width: 768px) {
+    .treasury-mobile-card-list {
+        display: grid;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+
+    .cx-treasury-card {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.9rem;
+        background: var(--bg-card, #ffffff);
+        border: 1px solid #ddd;
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .cx-treasury-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(99, 102, 241, 0.24);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    }
+
+    .cx-treasury-card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.65rem;
+        align-items: flex-start;
+    }
+
+    .cx-treasury-card-title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.18rem;
+        min-width: 0;
+    }
+
+    .cx-treasury-card-title {
+        margin: 0;
+        font-size: 0.99rem;
+        font-weight: 700;
+        color: var(--text-heading, #111827);
+        line-height: 1.2;
+        display: flex;
+        align-items: center;
+    }
+
+    .cx-treasury-card-code {
+        margin: 0;
+        font-size: 0.76rem;
+        color: var(--text-secondary, #6b7280);
+    }
+
+    .cx-treasury-card-code code {
+        background: rgba(99, 102, 241, 0.09);
+        padding: 0.2rem 0.4rem;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.7rem;
+    }
+
+    .cx-treasury-card-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        margin-top: 0.25rem;
+        display: inline-block;
+    }
+
+    .cx-treasury-card-badge--system {
+        background: var(--info);
+        color: white;
+    }
+
+    .cx-treasury-card-badge--default {
+        background: var(--primary);
+        color: white;
+    }
+
+    .cx-treasury-card-meta {
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .cx-treasury-card-balance {
+        display: flex;
+        flex-direction: column;
+        gap: 0.16rem;
+        padding: 0.65rem 0.75rem;
+        background: rgba(15, 23, 42, 0.03);
+        border-radius: 14px;
+        text-align: center;
+    }
+
+    .cx-treasury-card-balance--positive {
+        border: 2px solid rgba(16,185,129,0.2);
+    }
+
+    .cx-treasury-card-balance--negative {
+        border: 2px solid rgba(239,68,68,0.2);
+    }
+
+    .cx-treasury-card-balance-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-tertiary, #6b7280);
+        letter-spacing: 0.36px;
+        text-transform: uppercase;
+    }
+
+    .cx-treasury-card-balance-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .cx-treasury-card-balance--positive .cx-treasury-card-balance-value {
+        color: #10b981;
+    }
+
+    .cx-treasury-card-balance--negative .cx-treasury-card-balance-value {
+        color: #ef4444;
+    }
+
+    .cx-treasury-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        justify-content: flex-end;
+    }
+
+    .cx-treasury-card-actions .cxr-act {
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+        border-radius: 14px;
+        padding: 0.62rem 0.75rem;
+        border: 1px solid transparent;
+        transition: background 160ms ease, border-color 160ms ease;
+        background: rgba(15, 23, 42, 0.05);
+        color: var(--text-secondary);
+    }
+
+    .cx-treasury-card-actions .cxr-act:hover {
+        border-color: rgba(15, 23, 42, 0.12);
+        background: rgba(15, 23, 42, 0.08);
+    }
+
+    .cx-treasury-card-actions .cxr-act--view {
+        background: rgba(99, 102, 241, 0.08);
+    }
+
+    .cx-treasury-card-actions .cxr-act--view:hover {
+        background: rgba(99, 102, 241, 0.12);
+    }
+
+    .cx-treasury-card-actions .cxr-act--del {
+        background: rgba(239, 68, 68, 0.08);
+    }
+
+    .cx-treasury-card-actions .cxr-act--del:hover {
+        background: rgba(239, 68, 68, 0.12);
+    }
+}

@@ -67,6 +67,9 @@
             <tbody></tbody>
         </table>
     </div>
+
+    <!-- ══════════════════════════ MOBILE CARDS ══════════════════════════ -->
+    <div id="returnsMobileCards" class="returns-mobile-card-list d-none p-3"></div>
 </div>
 
 </div>
@@ -168,6 +171,73 @@
 let returnsTable;
 const returnRows = new Map();
 let pendingReturnListAction = null;
+
+/* ── Mobile card renderer ───────────────────────────────── */
+function renderMobileReturnCards(rows) {
+    const $cards = $('#returnsMobileCards');
+    if (!$cards.length) return;
+
+    if (!rows || !rows.length) {
+        $cards.html('<div class="cx-empty-state">لا توجد مرتجعات للعرض</div>');
+        return;
+    }
+
+    const statusBadgeMap = {
+        draft: 'مسودة', confirmed: 'مؤكد', cancelled: 'ملغى'
+    };
+
+    const cardsHtml = rows.map(function (r) {
+        const invoiceNumber = r.invoice_number || '—';
+        const customer = r.customer || '—';
+        const total = EnjazIMS.formatMoney(r.total_amount);
+        const statusLabel = statusBadgeMap[r.status] || '—';
+        const statusClass = r.status ? `cx-badge cx-badge--${r.status === 'draft' ? 'muted' : r.status === 'confirmed' ? 'success' : 'danger'}` : '';
+
+        const editBtn = r.status === 'draft'
+            ? `<a href="/sales/returns/${r.id}/edit/" class="cxr-act cxr-act--edit" title="تعديل" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></a>`
+            : '';
+        const deleteBtn = r.status === 'draft'
+            ? `<button class="cxr-act cxr-act--del" onclick="deleteReturn(${r.id})" title="حذف" aria-label="حذف"><i class="fas fa-trash"></i></button>`
+            : '';
+        const confirmBtn = r.status === 'draft'
+            ? `<button class="cxr-act cxr-act--confirm" onclick="confirmReturn(${r.id})" title="تأكيد" aria-label="تأكيد"><i class="fas fa-check"></i></button>`
+            : '';
+
+        return `<article class="cx-return-card">
+            <div class="cx-return-card-head">
+                <div class="cx-return-card-title-wrap">
+                    <h2 class="cx-return-card-title">${r.return_number || '—'}</h2>
+                    <div class="cx-return-card-code">
+                        <code>${r.return_date || '—'}</code>
+                    </div>
+                </div>
+                <span class="${statusClass}">${statusLabel}</span>
+            </div>
+            <div class="cx-return-card-meta">
+                <div>
+                    <span class="cx-return-card-meta-label">رقم الفاتورة</span>
+                    <strong class="cx-return-card-meta-value">${invoiceNumber}</strong>
+                </div>
+                <div>
+                    <span class="cx-return-card-meta-label">العميل</span>
+                    <strong class="cx-return-card-meta-value">${customer}</strong>
+                </div>
+                <div>
+                    <span class="cx-return-card-meta-label">الإجمالي</span>
+                    <strong class="cx-return-card-meta-value">${total}</strong>
+                </div>
+            </div>
+            <div class="cx-return-card-actions">
+                <button class="cxr-act cxr-act--view js-view-return" data-id="${r.id}" title="عرض" aria-label="عرض"><i class="fas fa-eye"></i></button>
+                <a href="/sales/returns/${r.id}/?print=1" target="_blank" rel="noopener" class="cxr-act cxr-act--print" title="طباعة" aria-label="طباعة"><i class="fas fa-print"></i></a>
+                ${editBtn}${confirmBtn}${deleteBtn}
+            </div>
+        </article>`;
+    }).join('');
+
+    $cards.html(cardsHtml);
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const statusBadgeMap = {
         draft: 'muted',
@@ -250,6 +320,9 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         order: [[1, 'desc']],
         pageLength: 25,
+        drawCallback: function () {
+            renderMobileReturnCards(returnsTable.rows({ page: 'current' }).data().toArray());
+        }
     });
     document.getElementById('filterStatus').addEventListener('change', () => returnsTable.ajax.reload());
     document.getElementById('returnSearch').addEventListener('input', function() { returnsTable.search(this.value).draw(); });
