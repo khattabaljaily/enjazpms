@@ -7,9 +7,10 @@ from decimal import Decimal, InvalidOperation
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, F
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
+import json
 
 from .models import Settings
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
@@ -33,19 +34,145 @@ def dashboard(request):
         'expired_items': 0,
     }
     
-    # Get users count for this tenant
-    from apps.accounts.models import User
     if tenant:
+        # Users
+        from apps.accounts.models import User
         stats['total_users'] = User.objects.filter(tenant=tenant).count()
-    
-    # Customers stats
-    from apps.customers.models import Customer
-    if tenant:
+        
+        # Customers
+        from apps.customers.models import Customer
         stats['total_customers'] = Customer.objects.filter(tenant=tenant).count()
-
-    # TODO: Add more stats when other apps are created
-    # stats['total_products'] = Item.objects.filter(tenant=tenant).count()
-    # etc...
+        
+        # Products
+        from apps.items.models import Item
+        stats['total_products'] = Item.objects.filter(tenant=tenant).count()
+        
+        # Suppliers
+        from apps.suppliers.models import Supplier
+        stats['total_suppliers'] = Supplier.objects.filter(tenant=tenant).count()
+        
+        # Low stock items
+        from apps.stocks.models import StockQuantity
+        low_stock_count = StockQuantity.objects.filter(
+            tenant=tenant,
+            quantity__lte=F('item__min_quantity'),
+            item__min_quantity__gt=0
+        ).values('item').distinct().count()
+        stats['low_stock_items'] = low_stock_count
+        
+        # Sales today
+        from apps.sales.models import SaleInvoice
+        today = datetime.today().date()
+        today_sales = SaleInvoice.objects.filter(
+            tenant=tenant,
+            invoice_date=today,
+            status='confirmed'
+        ).aggregate(total=Sum('grand_total'))['total'] or 0
+        stats['today_sales'] = float(today_sales)
+        
+        # Sales this month
+        first_day = today.replace(day=1)
+        month_sales = SaleInvoice.objects.filter(
+            tenant=tenant,
+            invoice_date__gte=first_day,
+            status='confirmed'
+        ).aggregate(total=Sum('grand_total'))['total'] or 0
+        stats['this_month_sales'] = float(month_sales)
+        
+        # Additional stats
+        # Number of invoices today
+        stats['today_invoices'] = SaleInvoice.objects.filter(
+            tenant=tenant,
+            invoice_date=today,
+            status='confirmed'
+        ).count()
+        
+        # Number of pending invoices (credit)
+        stats['pending_invoices'] = SaleInvoice.objects.filter(
+            tenant=tenant,
+            status='confirmed',
+            payment_method='credit'
+        ).exclude(paid_amount__gte=F('grand_total')).count()
+        
+        # Payment percentage
+        total_invoices = SaleInvoice.objects.filter(
+            tenant=tenant,
+            status='confirmed'
+        ).count()
+        paid_invoices = SaleInvoice.objects.filter(
+            tenant=tenant,
+            status='confirmed',
+            paid_amount__gte=F('grand_total')
+        ).count()
+        stats['payment_percentage'] = int((paid_invoices / total_invoices) * 100) if total_invoices > 0 else 0
+        
+        # Top categories by sales
+        from apps.items.models import Category
+        from apps.sales.models import SaleInvoiceLine
+        top_categories = SaleInvoiceLine.objects.filter(
+            tenant=tenant,
+            invoice__status='confirmed',
+            invoice__invoice_date__gte=first_day
+        ).values('item__category__name').annotate(
+            total_sales=Sum('line_total')
+        ).order_by('-total_sales')[:4]
+        
+        # Normalize to percentages
+        if top_categories:
+            max_sales = top_categories[0]['total_sales']
+            for cat in top_categories:
+                cat['percentage'] = int((cat['total_sales'] / max_sales) * 100) if max_sales > 0 else 0
+        
+        # Weekly sales data for chart
+        from datetime import timedelta
+        week_ago = today - timedelta(days=6)
+        weekly_sales = []
+        for i in range(7):
+            day = week_ago + timedelta(days=i)
+            day_sales = SaleInvoice.objects.filter(
+                tenant=tenant,
+                invoice_date=day,
+                status='confirmed'
+            ).aggregate(total=Sum('grand_total'))['total'] or 0
+            weekly_sales.append(float(day_sales))
+        
+        stats['weekly_sales'] = weekly_sales
+        # Arabic day names
+        arabic_days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+        stats['weekly_labels'] = [arabic_days[(week_ago + timedelta(days=i)).weekday()] for i in range(7)]
+        
+        # JSON for charts
+        stats['weekly_sales_json'] = json.dumps(weekly_sales)
+        stats['weekly_labels_json'] = json.dumps(stats['weekly_labels'])
+        
+        # Convert Decimal to float for JSON serialization
+        top_categories_list = []
+        for cat in top_categories:
+            top_categories_list.append({
+                'item__category__name': cat['item__category__name'],
+                'total_sales': float(cat['total_sales']),
+                'percentage': int((float(cat['total_sales']) / float(top_categories[0]['total_sales']) * 100)) if top_categories else 0
+            })
+        stats['top_categories_json'] = json.dumps(top_categories_list)
+        
+        # Top selling products
+        top_products = SaleInvoiceLine.objects.filter(
+            tenant=tenant,
+            invoice__status='confirmed',
+            invoice__invoice_date__gte=first_day
+        ).values('item__name').annotate(
+            total_qty=Sum('quantity'),
+            total_revenue=Sum('line_total')
+        ).order_by('-total_revenue')[:5]
+        
+        top_products_list = []
+        for prod in top_products:
+            top_products_list.append({
+                'item__name': prod['item__name'],
+                'total_qty': float(prod['total_qty']),
+                'total_revenue': float(prod['total_revenue'])
+            })
+        stats['top_products_json'] = json.dumps(top_products_list)
     
     context = {
         'stats': stats,
