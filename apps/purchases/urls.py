@@ -16,6 +16,7 @@ urlpatterns = [
 
     path('returns/', views.return_list, name='return_list'),
     path('returns/api/', views.return_table_api, name='return_api'),
+    path('returns/<int:return_pk>/lines/', views.return_lines_api, name='return_lines_api'),
     path('<int:invoice_pk>/return/', views.return_create, name='return_create'),
     path('returns/<int:pk>/', views.return_detail, name='return_detail'),
     path('returns/<int:pk>/confirm/', views.return_confirm_ajax, name='return_confirm'),

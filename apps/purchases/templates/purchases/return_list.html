@@ -62,11 +62,104 @@
         <div id="returnsMobileCards" class="returns-mobile-card-list d-none p-3"></div>
     </div>
 </div>
+
+<!-- ══════════════════════════ RETURN VIEW MODAL ══════════════════════════ -->
+<div class="modal fade" id="viewReturnModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog sales-return-view-dialog">
+        <div class="modal-content cx-view-modal sales-return-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar sales-return-view-avatar">
+                        <i class="fas fa-rotate-left"></i>
+                    </div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewReturnNumber">—</h5>
+                        <p class="cx-view-subtitle" id="viewReturnStatus">—</p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="cx-view-body">
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-circle-info"></i>
+                        بيانات المرتجع
+                    </div>
+                    <div class="cx-info-grid sales-return-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">التاريخ</span>
+                                <span class="cx-info-card-value" id="viewReturnDate">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">أمر الشراء</span>
+                                <span class="cx-info-card-value" id="viewReturnInvoice">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المورد</span>
+                                <span class="cx-info-card-value" id="viewReturnSupplier">—</span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">إجمالي المرتجع</span>
+                                <span class="cx-info-card-value" id="viewReturnTotal">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-list"></i>
+                        بنود المرتجع
+                    </div>
+                    <div id="viewReturnItemsContainer" class="table-responsive" style="display: none;">
+                        <table class="cx-table" id="viewReturnItemsTable" style="margin: 0;">
+                            <thead>
+                                <tr>
+                                    <th>المنتج</th>
+                                    <th>الكمية</th>
+                                    <th>السعر</th>
+                                    <th>الإجمالي</th>
+                                </tr>
+                            </thead>
+                            <tbody id="viewReturnItemsBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="viewReturnItemsLoading" class="text-center text-muted py-3">
+                        <i class="fas fa-spinner fa-spin me-2"></i>جاري التحميل...
+                    </div>
+                </div>
+            </div>
+
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <a href="#" class="cx-btn-primary" id="viewReturnOpenPageBtn">
+                    <i class="fas fa-arrow-up-right-from-square me-1"></i>
+                    فتح صفحة المرتجع
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
+
+<!-- ══════════════════════════ RETURN VIEW MODAL ══════════════════════════ -->
 
 {% block extra_js %}
 <script>
 (function() {
+    const returnRows = new Map();
+
     function renderMobileReturnCards(rows) {
         const $cards = $('#returnsMobileCards');
         if (!$cards.length) return;
@@ -83,6 +176,7 @@
         };
 
         const cardsHtml = rows.map(function (r) {
+            returnRows.set(String(r.id), r);
             const statusClass = statusClassMap[r.status] || 'muted';
             const statusLabel = r.status_label || '—';
             const total = EnjazIMS.formatMoney(r.total_returned || 0);
@@ -110,7 +204,7 @@
                     </div>
                 </div>
                 <div class="cx-return-card-actions">
-                    <a href="/purchases/returns/${r.id}/" class="cxr-act cxr-act--view" title="عرض"><i class="fas fa-eye"></i></a>
+                    <button class="cxr-act cxr-act--view js-view-return" data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
                 </div>
             </article>`;
         }).join('');
@@ -137,7 +231,10 @@
             { data: 'supplier', defaultContent: '—' },
             { data: 'total_returned', className: 'text-end', defaultContent: '0.00', render: function(v){ return EnjazIMS.formatMoney(v || 0);} },
             { data: 'status_label', defaultContent: '—', render: function(v, _t, row){ return `<span class="cx-badge cx-badge--${row?.status==='confirmed'?'success':(row?.status==='cancelled'?'danger':'muted')}">${v||'—'}</span>`; } },
-            { data: null, orderable:false, searchable:false, className:'text-center', render: function(_, __, row){ return `<a href="/purchases/returns/${row.id}/" class="cx-btn-icon" title="عرض"><i class="fas fa-eye"></i></a>`;} },
+            { data: null, orderable:false, searchable:false, className:'text-center', render: function(_, __, row){ 
+                returnRows.set(String(row.id), row);
+                return `<button type="button" class="cx-btn-icon js-view-return" data-id="${row.id}" title="عرض"><i class="fas fa-eye"></i></button>`;
+            } },
         ],
         language: {
             emptyTable: 'لا توجد مرتجعات مشتريات بعد',
@@ -148,6 +245,71 @@
             renderMobileReturnCards(dt.rows({ page: 'current' }).data().toArray());
         }
     });
+
+    // Desktop table view button
+    $('#returnsTable').on('click', '.js-view-return', function() {
+        const row = returnRows.get(String(this.dataset.id));
+        if (!row) return;
+        openReturnModal(row);
+    });
+
+    // Mobile cards view button
+    $('#returnsMobileCards').on('click', '.js-view-return', function() {
+        const row = returnRows.get(String(this.dataset.id));
+        if (!row) return;
+        openReturnModal(row);
+    });
+
+    function openReturnModal(row) {
+        const num = (v) => EnjazIMS.formatMoney(v);
+        const date = (v) => v || '—';
+
+        document.getElementById('viewReturnNumber').textContent = row.return_number || '—';
+        document.getElementById('viewReturnStatus').textContent = row.status_label || '—';
+        document.getElementById('viewReturnDate').textContent = date(row.return_date);
+        document.getElementById('viewReturnInvoice').textContent = row.invoice_number || '—';
+        document.getElementById('viewReturnSupplier').textContent = row.supplier || '—';
+        document.getElementById('viewReturnTotal').textContent = num(row.total_returned);
+        document.getElementById('viewReturnOpenPageBtn').href = `/purchases/returns/${row.id}/`;
+
+        // Reset items display
+        const itemsContainer = document.getElementById('viewReturnItemsContainer');
+        const itemsLoading = document.getElementById('viewReturnItemsLoading');
+        const itemsBody = document.getElementById('viewReturnItemsBody');
+        
+        itemsContainer.style.display = 'none';
+        itemsLoading.style.display = 'block';
+        itemsBody.innerHTML = '';
+
+        // Fetch items
+        fetch(`/purchases/returns/${row.id}/lines/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.lines && data.lines.length > 0) {
+                    data.lines.forEach(line => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${line.item_name}</td>
+                            <td>${line.returned_quantity}</td>
+                            <td>${num(line.unit_price)}</td>
+                            <td><strong>${num(line.line_total)}</strong></td>
+                        `;
+                        itemsBody.appendChild(tr);
+                    });
+                    itemsLoading.style.display = 'none';
+                    itemsContainer.style.display = 'block';
+                } else {
+                    itemsLoading.innerHTML = '<div class="text-center text-muted py-3">لا توجد بنود</div>';
+                }
+            })
+            .catch(() => {
+                itemsLoading.innerHTML = '<div class="text-center text-danger py-3">خطأ في تحميل البنود</div>';
+            });
+
+        const el = document.getElementById('viewReturnModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(el);
+        modal.show();
+    }
 
     $('#searchReturns').on('input', function() {
         dt.search(this.value).draw();

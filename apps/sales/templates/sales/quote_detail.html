@@ -148,7 +148,7 @@
         <div class="cx-panel-header"><h3 class="cx-panel-title">بنود العرض</h3></div>
         <div class="cx-panel-body p-0">
             <div class="table-responsive">
-                <table class="cx-table">
+                <table class="cx-table mobile-compact-items mobile-compact-items--hide-index">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -164,16 +164,16 @@
                         {% for line in lines %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td>
+                            <td class="line-product">
                                 <div>{{ line.item.name }}</div>
                                 {% if line.variant %}<small class="text-muted">{{ line.variant }}</small>{% endif %}
                                 <div><small class="text-muted">{{ line.item.sku }}</small></div>
                             </td>
-                            <td class="js-quote-qty" data-value="{{ line.quantity|unlocalize }}">{{ line.quantity|floatformat:"-3u" }}</td>
-                                <td>{{ line.unit_price|money }}</td>
+                            <td class="line-qty js-quote-qty" data-value="{{ line.quantity|unlocalize }}">{{ line.quantity|floatformat:"-3u" }}</td>
+                            <td>{{ line.unit_price|money }}</td>
                             <td class="js-quote-percent" data-value="{{ line.discount_percent|unlocalize }}">{{ line.discount_percent|floatformat:"2u" }}%</td>
                             <td class="js-quote-percent" data-value="{{ line.tax_rate|unlocalize }}">{{ line.tax_rate|floatformat:"2u" }}%</td>
-                                <td><strong>{{ line.line_total|money }}</strong></td>
+                            <td class="line-total"><strong>{{ line.line_total|money }}</strong></td>
                         </tr>
                         {% endfor %}
                     </tbody>

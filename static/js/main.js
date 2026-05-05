@@ -351,9 +351,6 @@ const EnjazIMS = {
 
 // DataTable default configuration (Arabic)
 $.extend(true, $.fn.dataTable.defaults, {
-    language: {
-        url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
-    },
     pageLength: 25,
     ordering: true,
     searching: true,

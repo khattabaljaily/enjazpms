@@ -133,7 +133,7 @@
         <div class="cx-panel-header"><h3 class="cx-panel-title">بنود الفاتورة</h3></div>
         <div class="cx-panel-body p-0">
             <div class="table-responsive">
-                <table class="cx-table">
+                <table class="cx-table mobile-compact-items mobile-compact-items--hide-index">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -152,16 +152,16 @@
                         {% for line in lines %}
                         <tr{% if line.returned_quantity >= line.quantity %} class="sales-row-disabled"{% endif %}>
                             <td>{{ forloop.counter }}</td>
-                            <td>
+                            <td class="line-product">
                                 <div>{{ line.item.name }}</div>
                                 {% if line.variant %}<small class="text-muted">{{ line.variant }}</small>{% endif %}
                                 <div><small class="text-muted">{{ line.item.sku }}</small></div>
                             </td>
-                            <td>{{ line.quantity|floatformat:"-3u" }}</td>
+                            <td class="line-qty">{{ line.quantity|floatformat:"-3u" }}</td>
                             <td>{{ line.unit_price|floatformat:"2u" }}</td>
                             <td>{{ line.discount_percent|floatformat:"2u" }}%</td>
                             <td>{{ line.tax_rate|floatformat:"2u" }}%</td>
-                            <td><strong>{{ line.line_total|floatformat:"2u" }}</strong></td>
+                            <td class="line-total"><strong>{{ line.line_total|floatformat:"2u" }}</strong></td>
                             {% if invoice.status != 'draft' %}
                             <td>
                                 {% if line.returned_quantity > 0 %}

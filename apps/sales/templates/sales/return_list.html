@@ -125,6 +125,29 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-list"></i>
+                        بنود المرتجع
+                    </div>
+                    <div id="viewReturnItemsContainer" class="table-responsive" style="display: none;">
+                        <table class="cx-table" id="viewReturnItemsTable" style="margin: 0;">
+                            <thead>
+                                <tr>
+                                    <th>المنتج</th>
+                                    <th>الكمية</th>
+                                    <th>السعر</th>
+                                    <th>الإجمالي</th>
+                                </tr>
+                            </thead>
+                            <tbody id="viewReturnItemsBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="viewReturnItemsLoading" class="text-center text-muted py-3">
+                        <i class="fas fa-spinner fa-spin me-2"></i>جاري التحميل...
+                    </div>
+                </div>
             </div>
 
             <div class="cx-view-footer">
@@ -182,7 +205,7 @@ function renderMobileReturnCards(rows) {
     const cardsHtml = rows.map(function (r) {
         const invoiceNumber = r.invoice_number || '—';
         const customer = r.customer || '—';
-        const total = EnjazIMS.formatMoney(r.total_amount);
+        const total = EnjazIMS.formatMoney(r.total_returned);
         const statusLabel = statusBadgeMap[r.status] || '—';
         const statusClass = r.status ? `cx-badge cx-badge--${r.status === 'draft' ? 'muted' : r.status === 'confirmed' ? 'success' : 'danger'}` : '';
 
@@ -222,7 +245,6 @@ function renderMobileReturnCards(rows) {
             </div>
             <div class="cx-return-card-actions">
                 <button class="cxr-act cxr-act--view js-view-return" data-id="${r.id}" title="عرض" aria-label="عرض"><i class="fas fa-eye"></i></button>
-                <a href="/sales/returns/${r.id}/?print=1" target="_blank" rel="noopener" class="cxr-act cxr-act--print" title="طباعة" aria-label="طباعة"><i class="fas fa-print"></i></a>
                 ${editBtn}${confirmBtn}${deleteBtn}
             </div>
         </article>`;
@@ -320,7 +342,17 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('filterStatus').addEventListener('change', () => returnsTable.ajax.reload());
     document.getElementById('returnSearch').addEventListener('input', function() { returnsTable.search(this.value).draw(); });
 
+    // Desktop table view button
     document.getElementById('returnsTable').addEventListener('click', function (event) {
+        const btn = event.target.closest('.js-view-return');
+        if (!btn) return;
+        const row = returnRows.get(String(btn.dataset.id));
+        if (!row) return;
+        openReturnModal(row, refundMethodMap);
+    });
+
+    // Mobile cards view button
+    document.getElementById('returnsMobileCards').addEventListener('click', function (event) {
         const btn = event.target.closest('.js-view-return');
         if (!btn) return;
         const row = returnRows.get(String(btn.dataset.id));
@@ -346,6 +378,40 @@ function openReturnModal(row, refundMethodMap) {
     document.getElementById('viewReturnRefundMethod').textContent = refundMethodMap[row.refund_method] || row.refund_method || '—';
     document.getElementById('viewReturnTotal').textContent = num(row.total_returned);
     document.getElementById('viewReturnOpenPageBtn').href = `/sales/returns/${row.id}/`;
+
+    // Reset items display
+    const itemsContainer = document.getElementById('viewReturnItemsContainer');
+    const itemsLoading = document.getElementById('viewReturnItemsLoading');
+    const itemsBody = document.getElementById('viewReturnItemsBody');
+    
+    itemsContainer.style.display = 'none';
+    itemsLoading.style.display = 'block';
+    itemsBody.innerHTML = '';
+
+    // Fetch items
+    fetch(`/sales/returns/${row.id}/lines/`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.lines && data.lines.length > 0) {
+                data.lines.forEach(line => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${line.item_name}</td>
+                        <td>${line.returned_quantity}</td>
+                        <td>${num(line.unit_price)}</td>
+                        <td><strong>${num(line.line_total)}</strong></td>
+                    `;
+                    itemsBody.appendChild(tr);
+                });
+                itemsLoading.style.display = 'none';
+                itemsContainer.style.display = 'block';
+            } else {
+                itemsLoading.innerHTML = '<div class="text-center text-muted py-3">لا توجد بنود</div>';
+            }
+        })
+        .catch(() => {
+            itemsLoading.innerHTML = '<div class="text-center text-danger py-3">خطأ في تحميل البنود</div>';
+        });
 
     const el = document.getElementById('viewReturnModal');
     const modal = bootstrap.Modal.getOrCreateInstance(el);

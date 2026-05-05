@@ -447,6 +447,28 @@ def return_table_api(request):
 
 
 @login_required
+def return_lines_api(request, return_pk):
+    """API: جلب بنود المرتجع (للمودال)"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    purchase_return = get_object_or_404(PurchaseReturn, pk=return_pk, tenant=tenant)
+    lines = purchase_return.lines.select_related('item').all()
+
+    data = []
+    for line in lines:
+        data.append({
+            'item_name': line.item.name,
+            'returned_quantity': str(line.returned_quantity),
+            'unit_price': str(line.unit_cost),
+            'line_total': str(line.line_total),
+        })
+
+    return JsonResponse({'success': True, 'lines': data})
+
+
+@login_required
 def return_create(request, invoice_pk):
     tenant = _ensure_tenant(request)
     if not tenant:

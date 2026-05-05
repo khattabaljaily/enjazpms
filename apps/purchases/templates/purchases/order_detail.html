@@ -57,7 +57,7 @@
             <div class="cx-panel p-4">
                 <div class="cx-panel-header"><h3 class="cx-panel-title">بنود أمر الشراء</h3></div>
                 <div class="table-responsive cx-table-wrap">
-                    <table class="cx-table">
+                    <table class="cx-table mobile-compact-items">
                         <thead>
                             <tr>
                                 <th>المنتج</th>
@@ -70,11 +70,11 @@
                         <tbody>
                             {% for line in lines %}
                             <tr>
-                                <td>{{ line.item.name }}</td>
-                                <td>{{ line.quantity|floatformat:"-3u" }}</td>
+                                <td class="line-product">{{ line.item.name }}</td>
+                                <td class="line-qty">{{ line.quantity|floatformat:"-3u" }}</td>
                                 <td>{{ line.unit_cost }}</td>
                                 <td>{{ line.tax_amount }}</td>
-                                <td>{{ line.line_total }}</td>
+                                <td class="line-total">{{ line.line_total }}</td>
                             </tr>
                             {% empty %}
                             <tr><td colspan="5" class="text-center text-muted">لا توجد بنود</td></tr>

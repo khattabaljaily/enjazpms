@@ -998,4 +998,96 @@ select.cx-input {
     .cx-invoice-card-actions .cxr-act--del:hover {
         background: rgba(239, 68, 68, 0.12);
     }
+
+    /* Compact mobile line items for sales and purchase details */
+    .mobile-compact-items {
+        min-width: 100%;
+    }
+
+    .mobile-compact-items thead {
+        display: none !important;
+    }
+
+    .mobile-compact-items tbody {
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    .mobile-compact-items tbody tr {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.85rem;
+        padding: 1rem;
+        background: var(--bg-card, #ffffff);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 18px;
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
+    }
+
+    .mobile-compact-items tbody td {
+        display: block;
+        padding: 0;
+        border: none;
+        background: transparent;
+    }
+
+    .mobile-compact-items tbody td.line-product {
+        grid-column: 1 / -1;
+        padding-bottom: 0.5rem;
+    }
+
+    .mobile-compact-items tbody td.line-product small {
+        display: block;
+        color: #64748b;
+        font-size: 0.82rem;
+        margin-top: 0.15rem;
+    }
+
+    .mobile-compact-items tbody td.line-qty,
+    .mobile-compact-items tbody td.line-total {
+        display: flex;
+        flex-direction: column;
+        text-align: right;
+        justify-content: center;
+        min-width: 96px;
+    }
+
+    .mobile-compact-items tbody td.line-qty::before,
+    .mobile-compact-items tbody td.line-total::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.72rem;
+        color: #64748b;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+
+    .mobile-compact-items tbody td.line-qty {
+        --label: 'الكمية';
+    }
+
+    .mobile-compact-items tbody td.line-total {
+        --label: 'الإجمالي';
+    }
+
+    .mobile-compact-items--hide-index tbody td:nth-child(1),
+    .mobile-compact-items--hide-index thead th:nth-child(1) {
+        display: none !important;
+    }
+
+    .mobile-compact-items tbody td.line-qty::before { content: 'الكمية'; }
+    .mobile-compact-items tbody td.line-total::before { content: 'الإجمالي'; }
+
+    .mobile-compact-items tbody td:nth-child(4),
+    .mobile-compact-items tbody td:nth-child(5),
+    .mobile-compact-items tbody td:nth-child(6),
+    .mobile-compact-items tbody td:nth-child(8),
+    .mobile-compact-items thead th:nth-child(4),
+    .mobile-compact-items thead th:nth-child(5),
+    .mobile-compact-items thead th:nth-child(6),
+    .mobile-compact-items thead th:nth-child(8) {
+        display: none !important;
+    }
 }
