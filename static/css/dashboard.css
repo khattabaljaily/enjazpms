@@ -200,6 +200,14 @@
     border: 1px solid var(--border-color);
     border-radius: 14px;
     overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.dash-chart:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    border-color: var(--border-light);
 }
 
 .dash-chart .card-header {
@@ -219,6 +227,27 @@
 }
 
 .dash-chart .card-body { padding: 1rem; }
+
+.dash-chart canvas {
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+/* Chart animations */
+@keyframes chartFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dash-chart {
+    animation: chartFadeIn 0.8s ease-out;
+}
 
 .chart-meta {
     font-size: 0.68rem;
@@ -662,13 +691,15 @@ canvas {
 
 .card-body canvas {
     display: block;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .dash-chart {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid var(--border-light);
-    background: linear-gradient(135deg, var(--surface) 0%, rgba(255,255,255,0.5) 100%);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    transition: all 0.35s ease;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: #ffffff;
     position: relative;
     overflow: hidden;
 }
@@ -680,15 +711,15 @@ canvas {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.08), transparent);
     transition: left 0.5s ease;
     pointer-events: none;
 }
 
 .dash-chart:hover {
-    box-shadow: 0 12px 32px rgba(99, 102, 241, 0.15);
-    transform: translateY(-6px);
-    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 25px 65px rgba(15, 23, 42, 0.12);
+    transform: translateY(-4px);
+    border-color: rgba(99, 102, 241, 0.22);
 }
 
 .dash-chart:hover::before {
@@ -696,9 +727,22 @@ canvas {
 }
 
 .dash-chart .card-header {
-    background: linear-gradient(90deg, rgba(99, 102, 241, 0.04) 0%, transparent 100%);
-    border-bottom: 2px solid var(--border-light);
+    background: transparent;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
     padding: 1rem;
+}
+
+.dash-chart .card-header h5 {
+    color: #0f172a;
+}
+
+.chart-meta {
+    background: rgba(148, 163, 184, 0.12);
+    color: #475569;
+    font-weight: 700;
+    text-transform: none;
+}
+
 }
 /* ── Stats Grid ─────────────────────────────── */
 .stats-grid {

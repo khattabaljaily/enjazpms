@@ -11,8 +11,8 @@
                 <h5 class="mb-0"><i class="fas fa-chart-area text-primary me-2"></i>مبيعات الأسبوع</h5>
                 <span class="chart-meta">أسبوعي</span>
             </div>
-            <div class="card-body" style="position: relative; height: 250px;">
-                <canvas id="weeklySalesChart"></canvas>
+            <div class="card-body" style="position: relative; height: 250px; min-height: 250px;">
+                <canvas id="weeklySalesChart" style="width: 100%; height: 100%;"></canvas>
             </div>
         </div>
     </div>
@@ -22,8 +22,8 @@
                 <h5 class="mb-0"><i class="fas fa-chart-pie text-success me-2"></i>توزيع الفئات</h5>
                 <span class="chart-meta">الفئات</span>
             </div>
-            <div class="card-body" style="position: relative; height: 250px;">
-                <canvas id="categoriesChart"></canvas>
+            <div class="card-body" style="position: relative; height: 250px; min-height: 250px;">
+                <canvas id="categoriesChart" style="width: 100%; height: 100%;"></canvas>
             </div>
         </div>
     </div>
@@ -33,67 +33,8 @@
                 <h5 class="mb-0"><i class="fas fa-star text-warning me-2"></i>أفضل المنتجات</h5>
                 <span class="chart-meta">الشهر</span>
             </div>
-            <div class="card-body" style="position: relative; height: 250px;">
-                <canvas id="topProductsChart"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Performance Summary -->
-<div class="row g-3 mb-4 animate-fade-in">
-    <div class="col-lg-6">
-        <div class="card dash-chart">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-list-check text-success me-2"></i>ملخص الأداء</h5>
-                <span class="chart-meta">معلومات سريعة</span>
-            </div>
-            <div class="card-body">
-                <div class="performance-summary">
-                    <div class="perf-item">
-                        <div class="perf-icon primary"><i class="fas fa-chart-line"></i></div>
-                        <div class="perf-content">
-                            <div class="perf-label">المبيعات الشهرية</div>
-                            <div class="perf-value">{{ stats.this_month_sales|floatformat:0 }}</div>
-                            <div class="perf-unit">ريال</div>
-                        </div>
-                    </div>
-                    <div class="perf-item">
-                        <div class="perf-icon success"><i class="fas fa-file-invoice"></i></div>
-                        <div class="perf-content">
-                            <div class="perf-label">الفواتير المؤكدة</div>
-                            <div class="perf-value">{{ stats.today_invoices }}</div>
-                            <div class="perf-unit">فاتورة</div>
-                        </div>
-                    </div>
-                    <div class="perf-item">
-                        <div class="perf-icon warning"><i class="fas fa-wallet"></i></div>
-                        <div class="perf-content">
-                            <div class="perf-label">متوسط اليومي</div>
-                            <div class="perf-value">{{ stats.today_sales|floatformat:0 }}</div>
-                            <div class="perf-unit">ريال</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-6">
-        <div class="card dash-chart h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-credit-card text-info me-2"></i>حالة المدفوعات</h5>
-                <span class="chart-meta">Status</span>
-            </div>
-            <div class="card-body d-flex align-items-center justify-content-center">
-                <div class="payment-status" style="width: 100%;">
-                    <div class="status-bar">
-                        <div class="status-fill" style="width: {{ stats.payment_percentage }}%"></div>
-                    </div>
-                    <div class="status-info">
-                        <span>المدفوع: {{ stats.payment_percentage }}%</span>
-                        <span>المعلق: {{ stats.pending_invoices }}</span>
-                    </div>
-                </div>
+            <div class="card-body" style="position: relative; height: 250px; min-height: 250px;">
+                <canvas id="topProductsChart" style="width: 100%; height: 100%;"></canvas>
             </div>
         </div>
     </div>
@@ -271,22 +212,25 @@ document.addEventListener('DOMContentLoaded', function() {
         gradient.addColorStop(1, 'rgba(99, 102, 241, 0.01)');
         
         new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: {{ stats.weekly_labels_json|safe }},
                 datasets: [{
-                    label: 'المبيعات (ريال)',
+                    label: 'المبيعات الأسبوعية',
                     data: {{ stats.weekly_sales_json|safe }},
+                    tension: 0.42,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: colors.primary,
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    fill: true,
                     backgroundColor: gradient,
                     borderColor: colors.primary,
-                    borderWidth: 2,
-                    borderRadius: 6,
-                    borderSkipped: false,
-                    fill: true,
-                    barPercentage: 0.7,
-                    categoryPercentage: 0.8,
-                    hoverBackgroundColor: colors.primary,
-                    hoverBorderWidth: 3
+                    borderWidth: 3,
+                    segment: {
+                        borderDash: ctx => [4, 4]
+                    }
                 }]
             },
             options: {
@@ -296,30 +240,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     mode: 'index',
                     intersect: false,
                 },
+                layout: {
+                    padding: { top: 10, right: 6, bottom: 0, left: 0 }
+                },
                 plugins: {
                     legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle',
-                            font: {
-                                weight: '600',
-                                size: 12
-                            }
-                        }
+                        display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
                         padding: 12,
-                        titleFont: { size: 14, weight: 'bold' },
+                        titleFont: { size: 14, weight: '700' },
                         bodyFont: { size: 13 },
-                        cornerRadius: 8,
-                        displayColors: true,
+                        cornerRadius: 12,
+                        displayColors: false,
                         callbacks: {
                             label: function(context) {
-                                return context.parsed.y.toLocaleString('ar-SA') + ' ريال';
+                                return context.parsed.y;
                             }
                         }
                     }
@@ -328,8 +265,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     y: {
                         beginAtZero: true,
                         grid: {
-                            color: 'rgba(0,0,0,0.05)',
-                            drawBorder: false
+                            color: 'rgba(148, 163, 184, 0.15)',
+                            drawBorder: false,
+                            borderDash: [4, 4]
                         },
                         ticks: {
                             callback: function(value) {
@@ -369,21 +307,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     datasets: [{
                         data: data,
                         backgroundColor: chartColors.slice(0, data.length),
-                        borderColor: '#fff',
-                        borderWidth: 2,
-                        hoverBorderWidth: 3,
-                        hoverOffset: 8
+                        borderColor: '#ffffff',
+                        borderWidth: 4,
+                        hoverOffset: 10,
+                        weight: 2
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: {
+                        duration: 1200,
+                        easing: 'easeOutCubic'
+                    },
                     plugins: {
                         legend: {
                             position: 'bottom',
                             labels: {
-                                padding: 15,
+                                padding: 14,
                                 usePointStyle: true,
+                                pointStyle: 'circle',
                                 font: {
                                     weight: '600',
                                     size: 11
@@ -391,19 +334,19 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
                             padding: 12,
-                            titleFont: { size: 14, weight: 'bold' },
-                            bodyFont: { size: 13 },
-                            cornerRadius: 8,
+                            titleFont: { size: 13, weight: '700' },
+                            bodyFont: { size: 12 },
+                            cornerRadius: 10,
                             callbacks: {
                                 label: function(context) {
-                                    return context.label + ': ' + context.parsed.toLocaleString('ar-SA') + ' ريال';
+                                    return context.label + ': ' + context.parsed;
                                 }
                             }
                         }
                     },
-                    cutout: '60%'
+                    cutout: '72%'
                 }
             });
         }
@@ -423,40 +366,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'الإيرادات (ريال)',
+                        label: 'إيرادات المنتج',
                         data: data,
                         backgroundColor: [
-                            colors.primary,
-                            colors.success,
-                            colors.warning,
-                            colors.danger,
-                            colors.info
+                            'rgba(99, 102, 241, 0.88)',
+                            'rgba(16, 185, 129, 0.88)',
+                            'rgba(245, 158, 11, 0.88)',
+                            'rgba(239, 68, 68, 0.88)',
+                            'rgba(59, 130, 246, 0.88)'
                         ].slice(0, data.length),
-                        borderRadius: 6,
+                        borderRadius: 10,
                         borderSkipped: false,
-                        hoverBackgroundColor: '#fff',
-                        hoverBorderWidth: 2,
-                        barPercentage: 0.8,
-                        categoryPercentage: 0.9
+                        barPercentage: 0.72,
+                        categoryPercentage: 0.82,
+                        hoverBackgroundColor: 'rgba(255,255,255,0.95)',
+                        hoverBorderColor: 'rgba(15, 23, 42, 0.12)',
+                        hoverBorderWidth: 2
                     }]
                 },
                 options: {
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: { top: 8, bottom: 8 }
+                    },
                     plugins: {
                         legend: {
                             display: false
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            padding: 10,
-                            titleFont: { size: 12, weight: 'bold' },
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            padding: 12,
+                            titleFont: { size: 12, weight: '700' },
                             bodyFont: { size: 11 },
-                            cornerRadius: 6,
+                            cornerRadius: 10,
                             callbacks: {
                                 label: function(context) {
-                                    return context.parsed.x.toLocaleString('ar-SA') + ' ريال';
+                                    return context.parsed.x;
                                 }
                             }
                         }
@@ -465,8 +412,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         x: {
                             beginAtZero: true,
                             grid: {
-                                color: 'rgba(0,0,0,0.05)',
-                                drawBorder: false
+                                color: 'rgba(148, 163, 184, 0.14)',
+                                drawBorder: false,
+                                borderDash: [4, 4]
                             },
                             ticks: {
                                 callback: function(value) {
