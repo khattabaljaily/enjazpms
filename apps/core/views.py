@@ -303,6 +303,11 @@ def no_tenant(request):
     return render(request, 'core/no_tenant.html')
 
 
+def no_permission(request):
+    """صفحة رفض الصلاحية"""
+    return render(request, 'core/no_permission.html', status=403)
+
+
 @login_required
 def tenant_settings(request):
     """إعدادات النشاط التجاري"""

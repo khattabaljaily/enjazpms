@@ -1,9 +1,13 @@
 """
 Accounts Models - نماذج الحسابات والمستخدمين
 """
+import json
+from pathlib import Path
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from apps.core.models import Tenant, TenantQuerySet
+from .permissions import get_permission_keys, load_permission_schema
 
 
 class UserQuerySet(TenantQuerySet):
@@ -51,15 +55,6 @@ class User(AbstractUser):
     يمتد من AbstractUser ويضيف حقول إضافية
     """
     
-    USER_ROLES = (
-        ('owner', 'مالك النشاط'),
-        ('admin', 'مدير'),
-        ('cashier', 'كاشير'),
-        ('stock_keeper', 'أمين مخزن'),
-        ('accountant', 'محاسب'),
-        ('viewer', 'مشاهد فقط'),
-    )
-    
     # Tenant Relationship
     tenant = models.ForeignKey(
         Tenant,
@@ -73,9 +68,6 @@ class User(AbstractUser):
     # Profile
     phone = models.CharField('رقم الهاتف', max_length=20, blank=True)
     avatar = models.ImageField('الصورة الشخصية', upload_to='users/avatars/', blank=True, null=True)
-    
-    # Role & Permissions
-    role = models.CharField('الدور الوظيفي', max_length=20, choices=USER_ROLES, default='cashier')
     is_tenant_admin = models.BooleanField('مدير النشاط', default=False)
     
     # Additional Info
@@ -111,6 +103,22 @@ class User(AbstractUser):
         if self.is_superuser:
             return True
         return self.tenant == tenant
+
+    def get_permission_keys(self):
+        if self.is_superuser or self.is_tenant_admin:
+            return set(get_permission_keys())
+        keys = set()
+        for group in self.permission_groups.filter(is_active=True):
+            keys.update(group.get_permission_keys())
+        return keys
+
+    def has_perm_key(self, permission_key):
+        if self.is_superuser or self.is_tenant_admin:
+            return True
+        for group in self.permission_groups.filter(is_active=True):
+            if group.has_permission(permission_key):
+                return True
+        return False
 
 
 class PermissionGroup(models.Model):
@@ -152,7 +160,30 @@ class PermissionGroup(models.Model):
     
     def __str__(self):
         return f"{self.tenant.name} - {self.name}"
-    
+
+    def get_permission_keys(self):
+        return [key for key, value in self.permissions.items() if value]
+
+    def set_permission_keys(self, permission_keys):
+        all_keys = set(get_permission_keys())
+        self.permissions = {key: True for key in permission_keys if key in all_keys}
+
     def has_permission(self, permission_key):
         """التحقق من وجود صلاحية معينة"""
         return self.permissions.get(permission_key, False)
+
+    @classmethod
+    def create_owner_group(cls, tenant, name='مدير النشاط'):
+        default_keys = get_permission_keys()
+        group = cls.objects.create(
+            tenant=tenant,
+            name=name,
+            permissions={ key: True for key in default_keys },
+            is_active=True,
+        )
+        return group
+
+    @classmethod
+    def permission_schema(cls):
+        return load_permission_schema()
+

@@ -6,6 +6,7 @@ import json
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.contrib.auth.decorators import login_required
+from apps.accounts.decorators import require_permission
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
@@ -31,6 +32,7 @@ def _serialize_errors(form):
 # ============================================================
 
 @login_required
+@require_permission('view_stocks')
 def stock_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -62,6 +64,7 @@ def stock_list(request):
 # ============================================================
 
 @login_required
+@require_permission('view_stocks')
 def stock_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -128,6 +131,7 @@ def stock_table_api(request):
 # ============================================================
 
 @login_required
+@require_permission('add_stocks')
 @transaction.atomic
 def stock_create_api(request):
     tenant = _ensure_tenant(request)
@@ -176,6 +180,7 @@ def stock_create_api(request):
 # ============================================================
 
 @login_required
+@require_permission('view_stocks')
 def stock_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -206,6 +211,7 @@ def stock_detail_api(request, pk):
 # ============================================================
 
 @login_required
+@require_permission('change_stocks')
 @transaction.atomic
 def stock_update_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -243,6 +249,7 @@ def stock_update_api(request, pk):
 # ============================================================
 
 @login_required
+@require_permission('delete_stocks')
 def stock_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -285,6 +292,7 @@ def stock_delete_api(request, pk):
 # ============================================================
 
 @login_required
+@require_permission('change_stocks')
 @transaction.atomic
 def stock_set_default_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -311,6 +319,7 @@ def stock_set_default_api(request, pk):
 # ============================================================
 
 @login_required
+@require_permission('view_stocks')
 def opening_balance_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -330,6 +339,7 @@ def opening_balance_list(request):
 # ============================================================
 
 @login_required
+@require_permission('view_stocks')
 def opening_balance_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -396,6 +406,7 @@ def opening_balance_table_api(request):
 # ============================================================
 
 @login_required
+@require_permission('change_stocks')
 @transaction.atomic
 def opening_balance_save_api(request):
     tenant = _ensure_tenant(request)
@@ -487,6 +498,7 @@ def opening_balance_save_api(request):
 # ============================================================
 
 @login_required
+@require_permission('view_stock_quantities')
 def stock_quantities_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -502,6 +514,7 @@ def stock_quantities_list(request):
 
 
 @login_required
+@require_permission('view_stock_quantities')
 def stock_quantities_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:

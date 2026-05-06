@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from apps.accounts.decorators import require_permission
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -16,6 +17,7 @@ def _serialize_form_errors(form):
 
 
 @login_required
+@require_permission('view_treasuries')
 def treasury_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -39,6 +41,7 @@ def treasury_list(request):
 
 
 @login_required
+@require_permission('view_treasuries')
 def treasury_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -109,6 +112,7 @@ def treasury_table_api(request):
 
 
 @login_required
+@require_permission('add_treasuries')
 def treasury_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -143,6 +147,7 @@ def treasury_create_api(request):
 
 
 @login_required
+@require_permission('view_treasuries')
 def treasury_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -166,6 +171,7 @@ def treasury_detail_api(request, pk):
 
 
 @login_required
+@require_permission('view_treasuries')
 def treasury_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -195,6 +201,7 @@ def treasury_transactions_api(request, pk):
 
 
 @login_required
+@require_permission('change_treasuries')
 def treasury_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -231,6 +238,7 @@ def treasury_update_api(request, pk):
 
 
 @login_required
+@require_permission('delete_treasuries')
 def treasury_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:

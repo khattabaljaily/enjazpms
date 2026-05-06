@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.accounts.decorators import require_permission, require_any_permission
 from .forms import CustomerForm
 from .models import Customer
 from apps.sales.models import CustomerLedger
@@ -28,6 +29,7 @@ def _ensure_tenant(request):
 
 
 @login_required
+@require_permission('view_customers')
 def customer_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -65,6 +67,7 @@ def _json_ok(data=None, msg='تمت العملية بنجاح'):
 
 
 @login_required
+@require_permission('view_customers')
 def customer_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -146,6 +149,7 @@ def customer_table_api(request):
 
 
 @login_required
+@require_permission('add_customers')
 def customer_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -175,6 +179,7 @@ def customer_create_api(request):
 
 
 @login_required
+@require_permission('view_customers')
 def customer_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -209,6 +214,7 @@ def customer_detail_api(request, pk):
 
 
 @login_required
+@require_permission('view_customers')
 def customer_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -248,6 +254,7 @@ def customer_transactions_api(request, pk):
 
 
 @login_required
+@require_permission('view_customer_payments')
 def customer_payments(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -297,6 +304,7 @@ def customer_payments(request):
 
 
 @login_required
+@require_permission('view_customer_payments')
 def customer_payments_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -565,6 +573,7 @@ def customer_payment_cancel_api(request, pk):
 
 
 @login_required
+@require_permission('change_customers')
 def customer_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -593,6 +602,7 @@ def customer_update_api(request, pk):
 
 
 @login_required
+@require_permission('delete_customers')
 def customer_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:

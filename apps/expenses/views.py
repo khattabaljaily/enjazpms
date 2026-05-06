@@ -2,6 +2,7 @@ import json
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
+from apps.accounts.decorators import require_permission
 from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -28,6 +29,7 @@ def _err(msg, status=400):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_permission('view_expense_categories')
 def category_list_api(request):
     tenant = _tenant(request)
     if not tenant:
@@ -41,6 +43,7 @@ def category_list_api(request):
 
 
 @login_required
+@require_permission('add_expense_categories')
 @require_POST
 def category_create_api(request):
     tenant = _tenant(request)
@@ -71,6 +74,7 @@ def category_create_api(request):
 # Expense list
 # ─────────────────────────────────────────────
 
+@require_permission('view_expenses')
 def expense_list(request):
     try:
         tenant = _tenant(request)
@@ -116,6 +120,7 @@ def expense_list(request):
 
 
 @login_required
+@require_permission('view_expenses')
 def expense_table_api(request):
     tenant = _tenant(request)
     if not tenant:
@@ -185,6 +190,7 @@ def expense_table_api(request):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_permission('add_expenses')
 @require_POST
 def expense_create(request):
     tenant = _tenant(request)
@@ -195,6 +201,7 @@ def expense_create(request):
 
 
 @login_required
+@require_permission('change_expenses')
 @require_POST
 def expense_edit(request, pk):
     tenant = _tenant(request)
@@ -277,6 +284,7 @@ def _process_expense_post(request, tenant, expense):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_permission('view_expenses')
 def expense_detail_api(request, pk):
     tenant = _tenant(request)
     if not tenant:
@@ -303,6 +311,7 @@ def expense_detail_api(request, pk):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_permission('change_expenses')
 @require_POST
 def expense_confirm_ajax(request, pk):
     tenant = _tenant(request)
@@ -319,6 +328,7 @@ def expense_confirm_ajax(request, pk):
 
 
 @login_required
+@require_permission('delete_expenses')
 @require_POST
 def expense_cancel_ajax(request, pk):
     tenant = _tenant(request)

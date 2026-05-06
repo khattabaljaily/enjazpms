@@ -16,8 +16,9 @@ from datetime import datetime, timedelta
 
 from apps.core.models import Tenant, Settings
 from apps.core.constants import COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
-from .models import User
+from .models import PermissionGroup, User
 from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginForm, UserManagementForm
+from .permissions import get_permission_keys, get_permission_schema
 
 
 def _wants_json(request):
@@ -107,7 +108,6 @@ def user_table_api(request):
             | Q(email__icontains=search_value)
             | Q(first_name__icontains=search_value)
             | Q(last_name__icontains=search_value)
-            | Q(role__icontains=search_value)
         )
 
     records_filtered = queryset.count()
@@ -120,7 +120,6 @@ def user_table_api(request):
         'username': 'username',
         'full_name': 'first_name',
         'email': 'email',
-        'role': 'role',
         'is_active': 'is_active',
         'date_joined': 'date_joined',
     }
@@ -136,7 +135,6 @@ def user_table_api(request):
             'username': user.username,
             'full_name': user.get_full_name(),
             'email': user.email or '-',
-            'role': getattr(user, 'role', '-'),
             'is_active': user.is_active,
             'date_joined': user.date_joined.strftime('%Y-%m-%d'),
         }
@@ -187,9 +185,12 @@ def user_detail_api(request, pk):
         'last_name': user.last_name,
         'email': user.email,
         'phone': getattr(user, 'phone', ''),
-        'role': getattr(user, 'role', ''),
         'is_tenant_admin': getattr(user, 'is_tenant_admin', False),
         'is_active': user.is_active,
+        'permission_groups': [
+            {'id': group.id, 'name': group.name}
+            for group in user.permission_groups.filter(is_active=True)
+        ],
     })
 
 
@@ -228,6 +229,175 @@ def user_delete_api(request, pk):
     user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
     user.delete()
     return _json_ok(None, 'تم حذف المستخدم بنجاح')
+
+
+@login_required
+def permission_group_list(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    return render(request, 'accounts/permission_group_list.html', {
+        'permission_schema': json.dumps(get_permission_schema(), ensure_ascii=False),
+    })
+
+
+@login_required
+def permission_group_table_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 25))
+    search_value = request.GET.get('search[value]', '').strip()
+
+    queryset = PermissionGroup.objects.filter(tenant=tenant)
+    total = queryset.count()
+
+    if search_value:
+        queryset = queryset.filter(name__icontains=search_value)
+
+    filtered = queryset.count()
+    groups = queryset.order_by('name')[start:start + length]
+
+    data = [
+        {
+            'id': group.id,
+            'name': group.name,
+            'description': group.description or '—',
+            'member_count': group.users.count(),
+            'permission_count': len(group.get_permission_keys()),
+            'is_active': group.is_active,
+        }
+        for group in groups
+    ]
+
+    return JsonResponse({
+        'draw': draw,
+        'recordsTotal': total,
+        'recordsFiltered': filtered,
+        'data': data,
+    })
+
+
+@login_required
+def permission_group_schema_api(request):
+    return _json_ok(get_permission_schema())
+
+
+@login_required
+def permission_group_detail_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    group = get_object_or_404(PermissionGroup.objects.filter(tenant=tenant), pk=pk)
+    return _json_ok({
+        'id': group.id,
+        'name': group.name,
+        'description': group.description,
+        'is_active': group.is_active,
+        'permissions': group.permissions,
+        'users': [user.id for user in group.users.filter(is_active=True)],
+    })
+
+
+@login_required
+def permission_group_create_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+    if request.method != 'POST':
+        return _json_error('الطريقة غير مسموحة', status=405)
+
+    name = request.POST.get('name', '').strip()
+    description = request.POST.get('description', '').strip()
+    permissions_json = request.POST.get('permissions', '{}')
+    user_ids = request.POST.getlist('users[]')
+
+    if not name:
+        return _json_error('يرجى إدخال اسم المجموعة')
+
+    try:
+        permissions = json.loads(permissions_json)
+    except ValueError:
+        permissions = {}
+
+    valid_keys = set(get_permission_keys())
+    sanitized_permissions = {
+        key: bool(value)
+        for key, value in permissions.items()
+        if key in valid_keys
+    }
+
+    group = PermissionGroup.objects.create(
+        tenant=tenant,
+        name=name,
+        description=description,
+        permissions=sanitized_permissions,
+        is_active=request.POST.get('is_active') == 'on',
+    )
+
+    if user_ids:
+        group.users.set(User.objects.filter(tenant=tenant, id__in=user_ids))
+
+    return _json_ok({'id': group.id}, 'تم إنشاء المجموعة بنجاح')
+
+
+@login_required
+def permission_group_update_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+    if request.method != 'POST':
+        return _json_error('الطريقة غير مسموحة', status=405)
+
+    group = get_object_or_404(PermissionGroup.objects.filter(tenant=tenant), pk=pk)
+    name = request.POST.get('name', '').strip()
+    description = request.POST.get('description', '').strip()
+    permissions_json = request.POST.get('permissions', '{}')
+    user_ids = request.POST.getlist('users[]')
+
+    if not name:
+        return _json_error('يرجى إدخال اسم المجموعة')
+
+    try:
+        permissions = json.loads(permissions_json)
+    except ValueError:
+        permissions = {}
+
+    valid_keys = set(get_permission_keys())
+    sanitized_permissions = {
+        key: bool(value)
+        for key, value in permissions.items()
+        if key in valid_keys
+    }
+
+    group.name = name
+    group.description = description
+    group.permissions = sanitized_permissions
+    group.is_active = request.POST.get('is_active') == 'on'
+    group.save()
+
+    if user_ids is not None:
+        group.users.set(User.objects.filter(tenant=tenant, id__in=user_ids))
+
+    return _json_ok(None, 'تم تحديث المجموعة بنجاح')
+
+
+@login_required
+def permission_group_delete_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+    if request.method != 'POST':
+        return _json_error('الطريقة غير مسموحة', status=405)
+
+    group = get_object_or_404(PermissionGroup.objects.filter(tenant=tenant), pk=pk)
+    group.delete()
+    return _json_ok(None, 'تم حذف المجموعة بنجاح')
 
 
 def register_step1(request):
@@ -383,9 +553,12 @@ def register_step3(request):
                         email=step1_data['email'],
                         password=step1_data['password'],
                         tenant=tenant,
-                        role='owner',
                         is_tenant_admin=True,
                     )
+
+                    # 2.1 إنشاء مجموعة مدير النشاط الافتراضية وتعيين جميع الصلاحيات لها
+                    owner_group = PermissionGroup.create_owner_group(tenant, name='مدير النشاط')
+                    owner_group.users.add(user)
                     
                     # 3. إنشاء Settings
                     settings = Settings.objects.create(

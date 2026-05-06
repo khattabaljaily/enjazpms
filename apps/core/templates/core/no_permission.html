@@ -1,0 +1,27 @@
+{% extends "layouts/auth.html" %}
+
+{% block auth_content %}
+<div class="text-center">
+    <div class="mb-4">
+        <i class="fas fa-ban fa-5x text-danger"></i>
+    </div>
+
+    <h3 class="mb-3">غير مصرح لك</h3>
+
+    <p class="text-muted mb-4">
+        عذراً، ليس لديك الصلاحية المطلوبة للوصول إلى هذه الصفحة.<br>
+        إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع مدير النظام.
+    </p>
+
+    <div class="d-grid gap-2">
+        <a href="{% url 'core:dashboard' %}" class="btn btn-primary">
+            <i class="fas fa-home me-2"></i>
+            العودة للوحة التحكم
+        </a>
+        <a href="{% url 'accounts:logout' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-sign-out-alt me-2"></i>
+            تسجيل الخروج
+        </a>
+    </div>
+</div>
+{% endblock %}

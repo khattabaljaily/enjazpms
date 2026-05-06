@@ -1,0 +1,121 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/users.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+    <div class="cx-hero">
+        <div class="cx-hero-inner">
+            <div class="cx-hero-left">
+                <div class="cx-hero-icon-wrap"><i class="fas fa-users-cog"></i></div>
+                <div>
+                    <h1 class="cx-hero-title">المجموعات والصلاحيات</h1>
+                    <p class="cx-hero-desc">إدارة مجموعات الصلاحيات وتحديدها حسب الأقسام</p>
+                </div>
+            </div>
+            <div class="cx-hero-right">
+                <div class="cx-hero-actions">
+                    <button type="button" class="cx-btn-add" id="btnOpenCreateGroup">
+                        <i class="fas fa-plus"></i>
+                        <span>إضافة مجموعة</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-panel">
+        <div class="cx-toolbar">
+            <div class="cx-toolbar-search">
+                <i class="fas fa-search cx-toolbar-search-icon"></i>
+                <input type="text" id="groupSearchInput" class="cx-search-input" placeholder="ابحث باسم المجموعة...">
+            </div>
+        </div>
+
+        <div class="table-responsive cx-table-wrap">
+            <table id="groupsTable" class="cx-table">
+                <thead>
+                    <tr>
+                        <th>اسم المجموعة</th>
+                        <th>عدد الأعضاء</th>
+                        <th>عدد الصلاحيات</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div id="groupsCardsMobile" class="users-mobile-card-list d-none p-3" aria-live="polite"></div>
+    </div>
+</div>
+
+<div class="modal fade" id="groupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="groupForm" novalidate>
+                {% csrf_token %}
+                <input type="hidden" id="groupId" value="">
+
+                <div class="cx-modal-main">
+                    <div class="cx-modal-header">
+                        <div>
+                            <h5 class="cx-modal-title" id="groupModalTitle">إضافة مجموعة جديدة</h5>
+                        </div>
+                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="cx-modal-body">
+                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="groupName">اسم المجموعة <sup class="cx-required">*</sup></label>
+                                <input type="text" id="groupName" name="name" class="form-control" placeholder="اسم المجموعة">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="groupIsActive">نشط</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="groupIsActive" name="is_active" checked>
+                                    <label class="form-check-label" for="groupIsActive">تفعيل المجموعة</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="cx-label" for="groupDescription">الوصف</label>
+                            <textarea id="groupDescription" name="description" class="form-control" rows="2" placeholder="وصف المجموعة"></textarea>
+                        </div>
+
+                        <div class="cx-form-group-label mb-3">
+                            <span class="cx-form-group-num">١</span> صلاحيات المجموعة
+                        </div>
+                        <div id="permissionSchemaAccordion" class="accordion"></div>
+                    </div>
+
+                    <div class="cx-modal-footer">
+                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="cx-btn-primary" id="groupSubmitBtn">
+                            <i class="fas fa-check me-1"></i> حفظ المجموعة
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    window.PERMISSION_SCHEMA = {{ permission_schema|safe }};
+</script>
+<script src="{% static 'js/permission_groups.js' %}?v=1.0"></script>
+{% endblock %}

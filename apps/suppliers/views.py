@@ -11,6 +11,7 @@ import csv
 import io
 import json
 
+from apps.accounts.decorators import require_permission
 from .forms import SupplierForm
 from .models import Supplier
 from apps.purchases.models import SupplierLedger
@@ -27,6 +28,7 @@ def _ensure_tenant(request):
 
 
 @login_required
+@require_permission('view_suppliers')
 def supplier_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -64,6 +66,7 @@ def _json_ok(data=None, msg='تمت العملية بنجاح'):
 
 
 @login_required
+@require_permission('view_suppliers')
 def supplier_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -143,6 +146,7 @@ def supplier_table_api(request):
 
 
 @login_required
+@require_permission('add_suppliers')
 def supplier_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -172,6 +176,7 @@ def supplier_create_api(request):
 
 
 @login_required
+@require_permission('view_suppliers')
 def supplier_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -203,6 +208,7 @@ def supplier_detail_api(request, pk):
 
 
 @login_required
+@require_permission('view_suppliers')
 def supplier_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -252,6 +258,7 @@ def supplier_transactions_api(request, pk):
 
 
 @login_required
+@require_permission('view_supplier_payments')
 def supplier_payments(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -301,6 +308,7 @@ def supplier_payments(request):
 
 
 @login_required
+@require_permission('view_supplier_payments')
 def supplier_payments_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -378,6 +386,7 @@ def supplier_payments_table_api(request):
 
 
 @login_required
+@require_permission('view_supplier_payments')
 def supplier_payment_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -418,6 +427,7 @@ def supplier_payment_detail_api(request, pk):
 
 
 @login_required
+@require_permission('add_supplier_payments')
 @require_POST
 def supplier_payment_create_api(request):
     tenant = _ensure_tenant(request)
@@ -495,6 +505,7 @@ def supplier_payment_create_api(request):
 
 
 @login_required
+@require_permission('cancel_supplier_payments')
 @require_POST
 def supplier_payment_cancel_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -539,6 +550,7 @@ def supplier_payment_cancel_api(request, pk):
 
 
 @login_required
+@require_permission('change_suppliers')
 def supplier_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -567,6 +579,7 @@ def supplier_update_api(request, pk):
 
 
 @login_required
+@require_permission('delete_suppliers')
 def supplier_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -584,11 +597,13 @@ def supplier_delete_api(request, pk):
 
 
 @login_required
+@require_permission('add_suppliers')
 def supplier_create(request):
     return redirect('suppliers:list')
 
 
 @login_required
+@require_permission('import_suppliers')
 def supplier_import_api(request):
     """Import suppliers from Excel/CSV file"""
     tenant = _ensure_tenant(request)
@@ -685,6 +700,7 @@ def supplier_import_api(request):
 
 
 @login_required
+@require_permission('export_suppliers')
 def supplier_export_api(request):
     """Export suppliers to CSV file"""
     tenant = _ensure_tenant(request)
@@ -726,6 +742,7 @@ def supplier_export_api(request):
 
 
 @login_required
+@require_permission('import_suppliers')
 def download_template(request):
     """Download CSV template for import"""
     response = HttpResponse(content_type='text/csv; charset=utf-8-sig')

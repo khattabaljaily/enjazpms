@@ -58,9 +58,8 @@
         <div class="cx-toolbar">
             <div class="cx-toolbar-search">
                 <i class="fas fa-search cx-toolbar-search-icon"></i>
-                <input type="text" id="userSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو البريد أو الدور...">
+                <input type="text" id="userSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو البريد...">
             </div>
-
             <div class="cx-toolbar-end">
                 <div class="cx-filter-tabs" role="group">
                     <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
@@ -75,7 +74,6 @@
                 <thead>
                     <tr>
                         <th>المستخدم</th>
-                        <th>الدور</th>
                         <th>البريد الإلكتروني</th>
                         <th>تاريخ الانضمام</th>
                         <th>الحالة</th>
@@ -138,9 +136,9 @@
                                 <label class="cx-label" for="id_phone">{{ form.phone.label }}</label>
                                 {{ form.phone }}
                             </div>
-                            <div class="col-md-4">
-                                <label class="cx-label" for="id_role">{{ form.role.label }}</label>
-                                {{ form.role }}
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_permission_groups">{{ form.permission_groups.label }}</label>
+                                {{ form.permission_groups }}
                             </div>
                         </div>
 
@@ -270,13 +268,6 @@
                         الصلاحيات والحالة
                     </div>
                     <div class="cx-info-grid">
-                        <div class="cx-info-card">
-                            <div class="cx-info-card-icon cx-info-icon--role"><i class="fas fa-user-tag"></i></div>
-                            <div class="cx-info-card-content">
-                                <span class="cx-info-card-label">الدور</span>
-                                <span class="cx-info-card-value" id="viewUserRole"></span>
-                            </div>
-                        </div>
                         <div class="cx-info-card">
                             <div class="cx-info-card-icon cx-info-icon--status"><i class="fas fa-circle-check"></i></div>
                             <div class="cx-info-card-content">

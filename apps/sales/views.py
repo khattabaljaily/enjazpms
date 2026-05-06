@@ -26,6 +26,7 @@ import json
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
+from apps.accounts.decorators import require_permission
 from django.db import transaction
 from django.db.models import Q, Sum, Count
 from django.http import JsonResponse
@@ -89,6 +90,7 @@ def _json_ok(data=None, msg='تمت العملية بنجاح'):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_permission('view_sales')
 def invoice_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -133,6 +135,7 @@ def invoice_list(request):
 
 
 @login_required
+@require_permission('view_sales')
 def invoice_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -228,6 +231,7 @@ def invoice_table_api(request):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_permission('add_sales')
 def invoice_create(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -262,6 +266,7 @@ def invoice_create(request):
 
 
 @login_required
+@require_permission('change_sales')
 def invoice_edit(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -455,6 +460,7 @@ def _process_invoice_post(request, tenant, invoice):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_permission('view_sales')
 def invoice_detail(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -493,6 +499,7 @@ def invoice_detail(request, pk):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_permission('delete_sales')
 @require_POST
 def invoice_delete_draft_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -517,6 +524,7 @@ def invoice_delete_draft_ajax(request, pk):
 
 
 @login_required
+@require_permission('change_sales')
 @require_POST
 def invoice_confirm_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -534,6 +542,7 @@ def invoice_confirm_ajax(request, pk):
 
 
 @login_required
+@require_permission('delete_sales')
 @require_POST
 def invoice_cancel_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -555,6 +564,7 @@ def invoice_cancel_ajax(request, pk):
 
 
 @login_required
+@require_permission('change_sales')
 @require_POST
 def record_payment_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -590,6 +600,7 @@ def record_payment_ajax(request, pk):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_permission('view_sales_returns')
 def return_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -618,6 +629,7 @@ def return_list(request):
 
 
 @login_required
+@require_permission('view_sales_returns')
 def return_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -678,6 +690,7 @@ def return_table_api(request):
 
 
 @login_required
+@require_permission('view_sales_returns')
 def return_lines_api(request, return_pk):
     """API: جلب بنود المرتجع (للمودال)"""
     tenant = _ensure_tenant(request)
@@ -700,6 +713,7 @@ def return_lines_api(request, return_pk):
 
 
 @login_required
+@require_permission('add_sales_returns')
 def return_create(request, invoice_pk):
     """إنشاء مرتجع لفاتورة محددة."""
     tenant = _ensure_tenant(request)
@@ -792,6 +806,7 @@ def _process_return_post(request, tenant, invoice):
 
 
 @login_required
+@require_permission('view_sales_returns')
 def return_detail(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -813,6 +828,7 @@ def return_detail(request, pk):
 
 
 @login_required
+@require_permission('add_sales_returns')
 @require_POST
 def return_confirm_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -827,6 +843,7 @@ def return_confirm_ajax(request, pk):
 
 
 @login_required
+@require_permission('add_sales_returns')
 @require_POST
 def return_cancel_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -845,6 +862,7 @@ def return_cancel_ajax(request, pk):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_permission('view_items')
 def item_info_api(request):
     """
     يُعيد بيانات المنتج لنموذج إنشاء الفاتورة:
@@ -906,6 +924,7 @@ def item_info_api(request):
 
 
 @login_required
+@require_permission('view_customers')
 def customer_info_api(request):
     """يُعيد رصيد العميل وحد الائتمان."""
     tenant = _ensure_tenant(request)
@@ -944,6 +963,7 @@ def customer_info_api(request):
 
 
 @login_required
+@require_permission('view_items')
 def stock_items_api(request):
     """يُعيد كميات المنتجات المتاحة في مخزن معين (لتلميح الكميات)."""
     tenant = _ensure_tenant(request)
@@ -1010,6 +1030,7 @@ def stock_items_api(request):
 # ═══════════════════════════════════════════════════════════
 
 @login_required
+@require_permission('view_quotes')
 def quote_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1041,6 +1062,7 @@ def quote_list(request):
 
 
 @login_required
+@require_permission('view_quotes')
 def quote_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1109,6 +1131,7 @@ def quote_table_api(request):
 
 
 @login_required
+@require_permission('add_quotes')
 def quote_create(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1149,6 +1172,7 @@ def quote_create(request):
 
 
 @login_required
+@require_permission('change_quotes')
 def quote_edit(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1208,6 +1232,7 @@ def quote_edit(request, pk):
 
 
 @login_required
+@require_permission('view_quotes')
 def quote_detail(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1232,6 +1257,7 @@ def quote_detail(request, pk):
 
 
 @login_required
+@require_permission('change_quotes')
 @require_POST
 def quote_send_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -1244,6 +1270,7 @@ def quote_send_ajax(request, pk):
 
 
 @login_required
+@require_permission('change_quotes')
 @require_POST
 def quote_accept_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -1256,6 +1283,7 @@ def quote_accept_ajax(request, pk):
 
 
 @login_required
+@require_permission('change_quotes')
 @require_POST
 def quote_reject_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -1268,6 +1296,7 @@ def quote_reject_ajax(request, pk):
 
 
 @login_required
+@require_permission('change_quotes')
 @require_POST
 def quote_cancel_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -1280,6 +1309,7 @@ def quote_cancel_ajax(request, pk):
 
 
 @login_required
+@require_permission('delete_quotes')
 @require_POST
 def quote_delete_draft_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -1291,6 +1321,7 @@ def quote_delete_draft_ajax(request, pk):
 
 
 @login_required
+@require_permission('change_quotes')
 @require_POST
 def quote_convert_ajax(request, pk):
     tenant = _ensure_tenant(request)

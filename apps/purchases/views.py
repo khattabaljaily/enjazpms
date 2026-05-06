@@ -2,6 +2,7 @@ import json
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
+from apps.accounts.decorators import require_permission
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import JsonResponse
@@ -34,6 +35,7 @@ def _json_error(message, status=400):
 
 
 @login_required
+@require_permission('view_purchases')
 def order_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -53,6 +55,7 @@ def order_list(request):
 
 
 @login_required
+@require_permission('view_purchases')
 def order_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -128,6 +131,7 @@ def order_table_api(request):
 
 
 @login_required
+@require_permission('add_purchases')
 def order_create(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -148,6 +152,7 @@ def order_create(request):
 
 
 @login_required
+@require_permission('change_purchases')
 def order_edit(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -300,6 +305,7 @@ def _process_order_post(request, tenant, invoice):
 
 
 @login_required
+@require_permission('view_purchases')
 def order_detail(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -326,6 +332,7 @@ def order_detail(request, pk):
 
 
 @login_required
+@require_permission('view_purchases')
 def order_print(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -336,6 +343,7 @@ def order_print(request, pk):
 
 
 @login_required
+@require_permission('change_purchases')
 @require_POST
 def order_confirm_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -351,6 +359,7 @@ def order_confirm_ajax(request, pk):
 
 
 @login_required
+@require_permission('delete_purchases')
 @require_POST
 def order_cancel_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -372,6 +381,7 @@ def order_cancel_ajax(request, pk):
 
 
 @login_required
+@require_permission('view_purchase_returns')
 def return_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -390,6 +400,7 @@ def return_list(request):
 
 
 @login_required
+@require_permission('view_purchase_returns')
 def return_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -447,6 +458,7 @@ def return_table_api(request):
 
 
 @login_required
+@require_permission('view_purchase_returns')
 def return_lines_api(request, return_pk):
     """API: جلب بنود المرتجع (للمودال)"""
     tenant = _ensure_tenant(request)
@@ -469,6 +481,7 @@ def return_lines_api(request, return_pk):
 
 
 @login_required
+@require_permission('add_purchase_returns')
 def return_create(request, invoice_pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -556,6 +569,7 @@ def _process_return_post(request, tenant, invoice):
 
 
 @login_required
+@require_permission('view_purchase_returns')
 def return_detail(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -575,6 +589,7 @@ def return_detail(request, pk):
 
 
 @login_required
+@require_permission('add_purchase_returns')
 @require_POST
 def return_confirm_ajax(request, pk):
     tenant = _ensure_tenant(request)
@@ -590,6 +605,7 @@ def return_confirm_ajax(request, pk):
 
 
 @login_required
+@require_permission('add_purchase_returns')
 @require_POST
 def return_cancel_ajax(request, pk):
     tenant = _ensure_tenant(request)

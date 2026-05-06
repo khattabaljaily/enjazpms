@@ -1,0 +1,107 @@
+{
+    "إعدادات النشاط التجاري": {
+        "view_tenant_settings": "عرض إعدادات النشاط التجاري",
+        "change_tenant_settings": "تعديل إعدادات النشاط التجاري"
+    },
+    "المستخدمين": {
+        "add_users": "إضافة مستخدم جديد",
+        "change_users": "تعديل بيانات المستخدم",
+        "delete_users": "حذف مستخدم",
+        "view_users": "عرض بيانات المستخدمين"
+    },
+    "المجموعات والصلاحيات": {
+        "add_permissiongroups": "إضافة مجموعة جديدة",
+        "change_permissiongroups": "تعديل بيانات المجموعة / الصلاحيات",
+        "delete_permissiongroups": "حذف مجموعة",
+        "view_permissiongroups": "عرض بيانات المجموعات / الصلاحيات"
+    },
+    "العملاء": {
+        "add_customers": "إضافة عميل جديد",
+        "change_customers": "تعديل بيانات العميل",
+        "delete_customers": "حذف عميل",
+        "view_customers": "عرض بيانات العملاء",
+        "import_customers": "استيراد عملاء",
+        "export_customers": "تصدير عملاء",
+        "view_customer_payments": "عرض مدفوعات العملاء",
+        "add_customer_payments": "تسجيل دفعية عميل",
+        "cancel_customer_payments": "إلغاء دفعية عميل",
+        "view_customer_transactions": "عرض حركات العميل"
+    },
+    "الموردين": {
+        "add_suppliers": "إضافة مورد جديد",
+        "change_suppliers": "تعديل بيانات المورد",
+        "delete_suppliers": "حذف مورد",
+        "view_suppliers": "عرض بيانات الموردين",
+        "import_suppliers": "استيراد موردين",
+        "export_suppliers": "تصدير موردين",
+        "view_supplier_payments": "عرض مدفوعات الموردين",
+        "add_supplier_payments": "تسجيل دفعية مورد",
+        "cancel_supplier_payments": "إلغاء دفعية مورد",
+        "view_supplier_transactions": "عرض حركات المورد"
+    },
+    "المنتجات والخدمات": {
+        "add_items": "إضافة منتج / خدمة جديدة",
+        "change_items": "تعديل بيانات المنتج / الخدمة",
+        "delete_items": "حذف منتج / خدمة",
+        "view_items": "عرض بيانات المنتجات / الخدمات"
+    },
+    "التصنيفات": {
+        "add_categories": "إضافة تصنيف جديد",
+        "change_categories": "تعديل بيانات التصنيف",
+        "delete_categories": "حذف تصنيف",
+        "view_categories": "عرض بيانات التصنيفات"
+    },
+    "وحدات القياس": {
+        "add_units": "إضافة وحدة قياس جديدة",
+        "change_units": "تعديل بيانات وحدة القياس",
+        "delete_units": "حذف وحدة قياس",
+        "view_units": "عرض بيانات وحدات القياس"
+    },
+    "المخازن": {
+        "add_stocks": "إضافة مخزن جديد",
+        "change_stocks": "تعديل بيانات المخزن",
+        "delete_stocks": "حذف مخزن",
+        "view_stocks": "عرض قائمة المخازن",
+        "change_stock_quantities": "تعديل الكميات في المخزن",
+        "view_stock_quantities": "عرض الكميات في المخزن"
+    },
+    "المبيعات": {
+        "add_sales": "إنشاء فاتورة مبيعات جديدة",
+        "change_sales": "تعديل فاتورة مبيعات",
+        "delete_sales": "إلغاء فاتورة مبيعات",
+        "view_sales": "عرض فواتير المبيعات",
+        "add_sales_returns": "تسجيل مرتجع مبيعات",
+        "view_sales_returns": "عرض مرتجعات المبيعات",
+        "add_quotes": "إنشاء عرض سعر جديد",
+        "change_quotes": "تعديل عرض السعر",
+        "delete_quotes": "حذف عرض السعر",
+        "view_quotes": "عرض عروض الأسعار"
+    },
+    "المشتريات": {
+        "add_purchases": "إنشاء فاتورة مشتريات جديدة",
+        "change_purchases": "تعديل فاتورة مشتريات",
+        "delete_purchases": "إلغاء فاتورة مشتريات",
+        "view_purchases": "عرض فواتير المشتريات",
+        "add_purchase_returns": "تسجيل مرتجع مشتريات",
+        "view_purchase_returns": "عرض مرتجعات المشتريات"
+    },
+    "المصروفات": {
+        "add_expenses": "تسجيل مصروف جديد",
+        "change_expenses": "تعديل مصروف",
+        "delete_expenses": "إلغاء مصروف",
+        "view_expenses": "عرض بيانات المصروفات",
+        "add_expense_categories": "إضافة تصنيف مصروفات",
+        "change_expense_categories": "تعديل تصنيف مصروفات",
+        "view_expense_categories": "عرض تصنيفات المصروفات"
+    },
+    "الخزائن": {
+        "add_treasuries": "إضافة خزينة جديدة",
+        "change_treasuries": "تعديل بيانات الخزينة",
+        "delete_treasuries": "حذف خزينة",
+        "view_treasuries": "عرض بيانات الخزائن",
+        "view_treasury_transactions": "عرض حركات الخزينة"
+    },
+    "التقارير": {
+        "view_reports": "عرض صفحة التقارير"
+    }
+}

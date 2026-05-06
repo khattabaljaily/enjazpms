@@ -6,7 +6,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from apps.core.constants import COUNTRY_CHOICES, DEFAULT_COUNTRY
 from apps.core.models import BusinessType, Tenant, Settings
-from .models import User
+from .models import PermissionGroup, User
 
 
 def apply_arabic_error_messages(form_instance):
@@ -116,6 +116,16 @@ class UserManagementForm(forms.ModelForm):
         })
     )
 
+    permission_groups = forms.ModelMultipleChoiceField(
+        queryset=PermissionGroup.objects.none(),
+        required=False,
+        label='مجموعة الصلاحيات',
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-select',
+            'size': 6,
+        })
+    )
+
     class Meta:
         model = User
         fields = [
@@ -124,9 +134,9 @@ class UserManagementForm(forms.ModelForm):
             'last_name',
             'email',
             'phone',
-            'role',
             'is_tenant_admin',
             'is_active',
+            'permission_groups',
         ]
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم المستخدم'}),
@@ -134,7 +144,6 @@ class UserManagementForm(forms.ModelForm):
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم العائلة'}),
             'email': forms.EmailInput(attrs={'class': 'form-control text-start', 'placeholder': 'example@email.com', 'dir': 'ltr'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+000 000 000000'}),
-            'role': forms.Select(attrs={'class': 'form-select'}),
             'is_tenant_admin': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -143,6 +152,11 @@ class UserManagementForm(forms.ModelForm):
         self.tenant = kwargs.pop('tenant', None)
         super().__init__(*args, **kwargs)
         apply_arabic_error_messages(self)
+        if self.tenant is not None:
+            self.fields['permission_groups'].queryset = PermissionGroup.objects.filter(
+                tenant=self.tenant,
+                is_active=True
+            ).order_by('name')
         for field_name, field in self.fields.items():
             if field_name in ['password', 'password_confirm']:
                 field.widget.attrs['autocomplete'] = 'new-password'

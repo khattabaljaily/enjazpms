@@ -32,4 +32,13 @@ urlpatterns = [
     path('users/api/<int:pk>/detail/', views.user_detail_api, name='user_detail_api'),
     path('users/api/<int:pk>/update/', views.user_update_api, name='user_update_api'),
     path('users/api/<int:pk>/delete/', views.user_delete_api, name='user_delete_api'),
+
+    # Permission groups
+    path('groups/', views.permission_group_list, name='permission_group_list'),
+    path('groups/api/table/', views.permission_group_table_api, name='permission_group_table_api'),
+    path('groups/api/schema/', views.permission_group_schema_api, name='permission_group_schema_api'),
+    path('groups/api/create/', views.permission_group_create_api, name='permission_group_create_api'),
+    path('groups/api/<int:pk>/detail/', views.permission_group_detail_api, name='permission_group_detail_api'),
+    path('groups/api/<int:pk>/update/', views.permission_group_update_api, name='permission_group_update_api'),
+    path('groups/api/<int:pk>/delete/', views.permission_group_delete_api, name='permission_group_delete_api'),
 ]

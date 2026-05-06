@@ -35,7 +35,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     `;
                 }
             },
-            { data: 'role' },
             { data: 'email' },
             { data: 'date_joined' },
             {
@@ -68,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         ],
-        order: [[3, 'desc']],
+        order: [[2, 'desc']],
         pageLength: 25,
         responsive: true,
         dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
@@ -95,7 +94,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const cardsHtml = rows.map(function (user) {
             const name = user.full_name || user.username || '—';
             const email = user.email || '—';
-            const role = user.role || '—';
             const statusHtml = user.is_active
                 ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
                 : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>غير نشط</span>';
@@ -109,15 +107,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     ${statusHtml}
                 </div>
                 <div class="cx-customer-card-meta">
-                    <div>
-                        <span class="cx-customer-card-meta-label">الدور</span>
-                        <strong class="cx-customer-card-meta-value">${role}</strong>
-                    </div>
-                    <div>
                         <span class="cx-customer-card-meta-label">انضم منذ</span>
                         <strong class="cx-customer-card-meta-value">${user.date_joined || '—'}</strong>
                     </div>
-                </div>
                 <div class="cx-customer-card-actions">
                     <button type="button" class="cxr-act cxr-act--view btn-view-user" data-id="${user.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
                     <button type="button" class="cxr-act btn-edit-user" data-id="${user.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-edit"></i></button>
@@ -171,7 +163,6 @@ document.addEventListener('DOMContentLoaded', function () {
             $('#id_last_name').val(user.last_name);
             $('#id_email').val(user.email);
             $('#id_phone').val(user.phone);
-            $('#id_role').val(user.role);
             $('#id_is_tenant_admin').prop('checked', user.is_tenant_admin);
             $('#id_is_active').prop('checked', user.is_active);
             $('#id_password').val('');
@@ -198,7 +189,6 @@ document.addEventListener('DOMContentLoaded', function () {
             $('#viewUserAvatar').text(initials).css('background', color);
             $('#viewUserName').text(name);
             $('#viewUserSubtitle').html(`<code class="cxr-code">${user.username || '—'}</code>`);
-            $('#viewUserRole').text(user.role || '—');
             $('#viewUserEmail').text(user.email || '—');
             $('#viewUserPhone').text(user.phone || '—');
             $('#viewUserStatus').html(user.is_active
