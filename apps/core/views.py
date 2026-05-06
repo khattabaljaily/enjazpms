@@ -7,13 +7,15 @@ from decimal import Decimal, InvalidOperation
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.db.models import Sum, Count, Q, F
+from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
 import json
 
 from .models import Settings
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
+from apps.treasury.models import TreasuryMovement
+from apps.expenses.models import Expense
 
 
 @login_required
@@ -106,54 +108,106 @@ def dashboard(request):
         ).count()
         stats['payment_percentage'] = int((paid_invoices / total_invoices) * 100) if total_invoices > 0 else 0
         
-        # Top categories by sales
+        # Top categories by sales (products only, not services)
         from apps.items.models import Category
         from apps.sales.models import SaleInvoiceLine
-        top_categories = SaleInvoiceLine.objects.filter(
+        
+        # Get ALL categories (not just top 4) to calculate total for percentage
+        all_categories = SaleInvoiceLine.objects.filter(
             tenant=tenant,
             invoice__status='confirmed',
-            invoice__invoice_date__gte=first_day
-        ).values('item__category__name').annotate(
+            invoice__invoice_date__gte=first_day,
+            item__item_type='product'  # Only products, not services
+        ).annotate(
+            category_name=Case(
+                When(item__category__name__isnull=True, then=Value('غير مصنف')),
+                default='item__category__name',
+                output_field=CharField()
+            )
+        ).values('category_name').annotate(
             total_sales=Sum('line_total')
-        ).order_by('-total_sales')[:4]
+        ).order_by('-total_sales')
         
-        # Normalize to percentages
-        if top_categories:
-            max_sales = top_categories[0]['total_sales']
-            for cat in top_categories:
-                cat['percentage'] = int((cat['total_sales'] / max_sales) * 100) if max_sales > 0 else 0
+        # Calculate total from ALL categories
+        total_sales_all = sum(cat['total_sales'] for cat in all_categories)
+        
+        # Get top 4 only for display
+        top_categories = list(all_categories)[:4]
+        
+        # Calculate percentages based on total from ALL categories
+        for cat in top_categories:
+            cat['percentage'] = round((cat['total_sales'] / total_sales_all) * 100) if total_sales_all > 0 else 0
         
         # Weekly sales data for chart
         from datetime import timedelta
         week_ago = today - timedelta(days=6)
         weekly_sales = []
+        weekly_revenues = []
+        weekly_expenses = []
         for i in range(7):
             day = week_ago + timedelta(days=i)
+            
+            # Sales for the day
             day_sales = SaleInvoice.objects.filter(
                 tenant=tenant,
                 invoice_date=day,
                 status='confirmed'
             ).aggregate(total=Sum('grand_total'))['total'] or 0
+            
+            # Customer payments (receipts) for the day
+            day_receipts = TreasuryMovement.objects.filter(
+                tenant=tenant,
+                movement_date=day,
+                movement_type='receipt'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            # Total revenues = sales + customer payments
+            day_revenues = float(day_sales) + float(day_receipts)
+            
+            # Expenses for the day
+            day_expenses = Expense.objects.filter(
+                tenant=tenant,
+                expense_date=day,
+                status='confirmed'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            # Supplier payments (disbursements) for the day
+            day_disbursements = TreasuryMovement.objects.filter(
+                tenant=tenant,
+                movement_date=day,
+                movement_type='disbursement'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            # Total expenses = regular expenses + supplier payments
+            day_expenses_total = float(day_expenses) + float(day_disbursements)
+            
             weekly_sales.append(float(day_sales))
+            weekly_revenues.append(day_revenues)
+            weekly_expenses.append(day_expenses_total)
         
         stats['weekly_sales'] = weekly_sales
+        stats['weekly_revenues'] = weekly_revenues
+        stats['weekly_expenses'] = weekly_expenses
         # Arabic day names
         arabic_days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
         stats['weekly_labels'] = [arabic_days[(week_ago + timedelta(days=i)).weekday()] for i in range(7)]
         
         # JSON for charts
         stats['weekly_sales_json'] = json.dumps(weekly_sales)
+        stats['weekly_revenues_json'] = json.dumps(weekly_revenues)
+        stats['weekly_expenses_json'] = json.dumps(weekly_expenses)
         stats['weekly_labels_json'] = json.dumps(stats['weekly_labels'])
         
         # Convert Decimal to float for JSON serialization
         top_categories_list = []
         for cat in top_categories:
             top_categories_list.append({
-                'item__category__name': cat['item__category__name'],
+                'item__category__name': cat['category_name'],
                 'total_sales': float(cat['total_sales']),
-                'percentage': int((float(cat['total_sales']) / float(top_categories[0]['total_sales']) * 100)) if top_categories else 0
+                'percentage': cat['percentage']
             })
         stats['top_categories_json'] = json.dumps(top_categories_list)
+        stats['top_categories'] = top_categories_list
         
         # Top selling products
         top_products = SaleInvoiceLine.objects.filter(
@@ -173,6 +227,63 @@ def dashboard(request):
                 'total_revenue': float(prod['total_revenue'])
             })
         stats['top_products_json'] = json.dumps(top_products_list)
+        
+        # Low stock items (available but low quantity)
+        from apps.stocks.models import StockQuantity
+        low_stock_items = StockQuantity.objects.filter(
+            tenant=tenant,
+            quantity__gt=0,  # Available items only
+            item__item_type='product'  # Only products, not services
+        ).annotate(
+            effective_min_quantity=Case(
+                When(min_quantity__gt=0, then='min_quantity'),
+                default='item__min_quantity',
+                output_field=DecimalField()
+            )
+        ).filter(
+            quantity__lte=F('effective_min_quantity'),
+            effective_min_quantity__gt=0  # Only items with defined min quantity
+        ).select_related('item').order_by('quantity')[:5]  # Lowest quantity first
+        
+        low_stock_list = []
+        for stock_item in low_stock_items:
+            low_stock_list.append({
+                'item__name': stock_item.item.name,
+                'quantity': float(stock_item.quantity),
+                'min_quantity': float(stock_item.effective_min_quantity)
+            })
+        stats['low_stock_items_json'] = json.dumps(low_stock_list)
+        
+        # Stock status summary for pie chart
+        # Get all available products (quantity > 0 and item_type='product')
+        available_items = StockQuantity.objects.filter(
+            tenant=tenant,
+            quantity__gt=0,
+            item__item_type='product'  # Only products, not services
+        ).annotate(
+            effective_min_quantity=Case(
+                When(min_quantity__gt=0, then='min_quantity'),
+                default='item__min_quantity',
+                output_field=DecimalField()
+            )
+        )
+        
+        # Available items: those with no min_quantity threshold or quantity > threshold
+        available_count = available_items.filter(
+            Q(effective_min_quantity=0) | Q(quantity__gt=F('effective_min_quantity'))
+        ).count()
+        
+        # Low stock items: those with quantity <= threshold and threshold > 0
+        low_stock_count = available_items.filter(
+            quantity__lte=F('effective_min_quantity'),
+            effective_min_quantity__gt=0
+        ).count()
+        
+        stats['stock_status_data'] = {
+            'available': available_count,
+            'low_stock': low_stock_count
+        }
+        stats['stock_status_json'] = json.dumps([available_count, low_stock_count])
     
     context = {
         'stats': stats,

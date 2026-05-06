@@ -1,66 +1,234 @@
 {% extends "layouts/dashboard.html" %}
+{% load static %}
 
 {% block page_title %}الملف الشخصي{% endblock %}
-{% block page_description %}مراجعة معلومات الحساب الحالي{% endblock %}
 
-{% block breadcrumb_items %}
-<li class="breadcrumb-item active">الملف الشخصي</li>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}?v=1.0">
 {% endblock %}
 
 {% block content %}
-<div class="profile-shell">
-    <div class="profile-hero">
-        <div class="d-flex align-items-center gap-3">
-            <div class="profile-avatar">
-                <i class="fas fa-user"></i>
-            </div>
-            <div>
-                <h3>{{ user.get_full_name|default:user.username }}</h3>
-                <p>{{ user.email|default:"لا يوجد بريد إلكتروني" }}</p>
-            </div>
-        </div>
-        <div class="profile-actions">
-            <span class="badge badge-success">{{ user.get_role_display }}</span>
-            <a href="{% url 'core:dashboard' %}" class="btn btn-primary">
-                <i class="fas fa-home me-2"></i>
-                العودة للرئيسية
-            </a>
+<div class="subscription-shell">
+    <!-- Profile Hero -->
+    <div class="subscription-hero">
+        <div class="subscription-hero__main">
+            <div class="subscription-kicker">معلومات المستخدم</div>
+            <h2 class="subscription-title">{{ user.get_full_name|default:user.username }}</h2>
+            <p class="subscription-desc">مراجعة معلومات الحساب الشخصي، النشاط التجاري، والإعدادات الحالية.</p>
         </div>
     </div>
 
-    <div class="card profile-card">
-        <div class="card-header">
-            <i class="fas fa-id-card text-primary"></i>
-            بيانات الحساب
+    <!-- Profile Content -->
+    <div class="profile-content">
+        <!-- Account Information Panel -->
+        <section class="subscription-panel">
+            <div class="subscription-panel__header">
+                <h3 class="subscription-panel__title">
+                    <i class="fas fa-user-circle me-2 text-primary"></i>
+                    بيانات الحساب والنشاط
+                </h3>
+                <span class="subscription-plan-badge">{{ user.username }}</span>
+            </div>
+            <div class="subscription-panel__body">
+                <div class="profile-info-grid">
+                    <div class="profile-info-row">
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">الاسم الكامل</span>
+                            <span class="profile-info-value">{{ user.get_full_name|default:"-" }}</span>
+                        </div>
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">اسم المستخدم</span>
+                            <span class="profile-info-value">{{ user.username }}</span>
+                        </div>
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">البريد الإلكتروني</span>
+                            <span class="profile-info-value">{{ user.email|default:"-" }}</span>
+                        </div>
+                    </div>
+                    <div class="profile-info-row">
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">الدور</span>
+                            <span class="profile-info-value">{{ user.get_role_display }}</span>
+                        </div>
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">تاريخ الانضمام</span>
+                            <span class="profile-info-value">{{ user.date_joined|date:"d/m/Y" }}</span>
+                        </div>
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">حالة الحساب</span>
+                            <span class="profile-info-value">
+                                <span class="badge bg-success">نشط</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="profile-info-row">
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">آخر دخول</span>
+                            <span class="profile-info-value">
+                                {% if user.last_login %}
+                                    {{ user.last_login|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">آخر نشاط</span>
+                            <span class="profile-info-value">
+                                {% if user.last_login %}
+                                    {{ user.last_login|timesince }}
+                                {% else %}
+                                    غير محدد
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="profile-info-item">
+                            <span class="profile-info-label">سنة الانضمام</span>
+                            <span class="profile-info-value">{{ user.date_joined|date:"Y" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Actions Panel -->
+        <section class="subscription-panel">
+            <div class="subscription-panel__header">
+                <h3 class="subscription-panel__title">
+                    <i class="fas fa-bolt me-2 text-warning"></i>
+                    إجراءات سريعة
+                </h3>
+            </div>
+            <div class="subscription-panel__body">
+                <div class="profile-actions-grid">
+                    <button type="button" class="profile-action-btn profile-action-btn--warning" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                        <i class="fas fa-key"></i>
+                        <span>تغيير كلمة المرور</span>
+                    </button>
+                    <button type="button" class="profile-action-btn profile-action-btn--primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                        <i class="fas fa-edit"></i>
+                        <span>تعديل الملف الشخصي</span>
+                    </button>
+                    <a href="{% url 'core:dashboard' %}" class="profile-action-btn profile-action-btn--success">
+                        <i class="fas fa-chart-line"></i>
+                        <span>الإحصائيات والتقارير</span>
+                    </a>
+                    <button type="button" class="profile-action-btn profile-action-btn--danger" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>تسجيل الخروج</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Important Notes Panel -->
+        <section class="subscription-panel">
+            <div class="subscription-panel__header">
+                <h3 class="subscription-panel__title">
+                    <i class="fas fa-lightbulb me-2 text-info"></i>
+                    ملاحظات مهمة
+                </h3>
+            </div>
+            <div class="subscription-panel__body">
+                <ul class="profile-notes-list">
+                    <li class="profile-note-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>تأكد من تحديث كلمة المرور بانتظام للحفاظ على أمان حسابك.</span>
+                    </li>
+                    <li class="profile-note-item">
+                        <i class="fas fa-bell"></i>
+                        <span>يمكنك مراجعة معلومات الحساب والتأكد من صحة البيانات.</span>
+                    </li>
+                    <li class="profile-note-item">
+                        <i class="fas fa-users"></i>
+                        <span>في حالة وجود مشاكل في الوصول، تواصل مع مدير النظام.</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal cx-modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog cx-modal-dialog">
+        <div class="modal-content cx-modal-main">
+            <div class="modal-header cx-modal-header">
+                <div>
+                    <h5 class="cx-modal-title">تغيير كلمة المرور</h5>
+                    <p class="cx-modal-subtitle">تحديث كلمة المرور للحفاظ على أمان الحساب</p>
+                </div>
+                <button type="button" class="cx-modal-close" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body cx-modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    ميزة تغيير كلمة المرور ستكون متاحة قريباً. يرجى التواصل مع مدير النظام للمساعدة.
+                </div>
+                <div class="text-center mt-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="info-grid">
-                <div class="info-item">
-                    <small class="info-label">الاسم</small>
-                    <strong class="info-value">{{ user.get_full_name|default:"-" }}</strong>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal cx-modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog cx-modal-dialog">
+        <div class="modal-content cx-modal-main">
+            <div class="modal-header cx-modal-header">
+                <div>
+                    <h5 class="cx-modal-title">تعديل الملف الشخصي</h5>
+                    <p class="cx-modal-subtitle">تحديث معلومات الحساب الشخصي</p>
                 </div>
-                <div class="info-item">
-                    <small class="info-label">اسم المستخدم</small>
-                    <strong class="info-value">{{ user.username }}</strong>
+                <button type="button" class="cx-modal-close" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body cx-modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    ميزة تعديل الملف الشخصي ستكون متاحة قريباً. يرجى التواصل مع مدير النظام للمساعدة.
                 </div>
-                <div class="info-item">
-                    <small class="info-label">البريد الإلكتروني</small>
-                    <strong class="info-value">{{ user.email|default:"-" }}</strong>
+                <div class="text-center mt-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
                 </div>
-                <div class="info-item">
-                    <small class="info-label">الدور</small>
-                    <strong class="info-value">{{ user.get_role_display }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Logout Confirmation Modal -->
+<div class="modal cx-modal fade" id="logoutModal" tabindex="-1">
+    <div class="modal-dialog cx-modal-dialog">
+        <div class="modal-content cx-modal-main">
+            <div class="modal-header cx-modal-header">
+                <div>
+                    <h5 class="cx-modal-title">تأكيد تسجيل الخروج</h5>
+                    <p class="cx-modal-subtitle">هل أنت متأكد من رغبتك في تسجيل الخروج؟</p>
                 </div>
-                {% if user.tenant %}
-                <div class="info-item">
-                    <small class="info-label">النشاط التجاري</small>
-                    <strong class="info-value">{{ user.tenant.name }}</strong>
+                <button type="button" class="cx-modal-close" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body cx-modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    سيتم تسجيل خروجك من النظام وستحتاج لإعادة تسجيل الدخول مرة أخرى.
                 </div>
-                <div class="info-item">
-                    <small class="info-label">نوع النسخة</small>
-                    <strong class="info-value">{{ user.tenant.get_version_type_display|default:"-" }}</strong>
-                </div>
-                {% endif %}
+            </div>
+            <div class="modal-footer cx-modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    إلغاء
+                </button>
+                <a href="{% url 'accounts:logout' %}" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt me-2"></i>
+                    تسجيل الخروج
+                </a>
             </div>
         </div>
     </div>

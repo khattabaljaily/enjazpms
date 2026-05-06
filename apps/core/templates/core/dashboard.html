@@ -1,6 +1,6 @@
 {% extends "layouts/dashboard.html" %}
 
-{% block page_title %}لوحة التحكم{% endblock %}
+{% block page_title %}نظرة عامة{% endblock %}
 
 {% block content %}
 <!-- Charts Section - 3 Charts Row -->
@@ -19,22 +19,22 @@
     <div class="col-lg-4">
         <div class="card dash-chart h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-chart-pie text-success me-2"></i>توزيع الفئات</h5>
-                <span class="chart-meta">الفئات</span>
+                <h5 class="mb-0"><i class="fas fa-chart-line text-info me-2"></i>الإيرادات والمصروفات</h5>
+                <span class="chart-meta">أسبوعي</span>
             </div>
             <div class="card-body" style="position: relative; height: 250px; min-height: 250px;">
-                <canvas id="categoriesChart" style="width: 100%; height: 100%;"></canvas>
+                <canvas id="revenuesExpensesChart" style="width: 100%; height: 100%;"></canvas>
             </div>
         </div>
     </div>
     <div class="col-lg-4">
         <div class="card dash-chart h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-star text-warning me-2"></i>أفضل المنتجات</h5>
-                <span class="chart-meta">الشهر</span>
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle text-warning me-2"></i>حالة المخزون</h5>
+                <span class="chart-meta">قليل الكمية</span>
             </div>
             <div class="card-body" style="position: relative; height: 250px; min-height: 250px;">
-                <canvas id="topProductsChart" style="width: 100%; height: 100%;"></canvas>
+                <canvas id="lowStockChart" style="width: 100%; height: 100%;"></canvas>
             </div>
         </div>
     </div>
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         ticks: {
                             callback: function(value) {
-                                return value.toLocaleString('ar-SA');
+                                return value.toLocaleString('en-US');
                             },
                             font: { size: 11 }
                         }
@@ -290,23 +290,123 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Categories Pie Chart
-    const categoriesCtx = document.getElementById('categoriesChart');
-    if (categoriesCtx) {
-        const ctx = categoriesCtx.getContext('2d');
-        const categoryData = {{ stats.top_categories_json|safe }};
-        if (categoryData.length > 0) {
-            const labels = categoryData.map(cat => cat.item__category__name || 'غير مصنف');
-            const data = categoryData.map(cat => cat.total_sales);
-            const chartColors = [colors.primary, colors.success, colors.warning, colors.danger];
+    // Revenues and Expenses Bar Chart
+    const revenuesExpensesCtx = document.getElementById('revenuesExpensesChart');
+    if (revenuesExpensesCtx) {
+        const ctx = revenuesExpensesCtx.getContext('2d');
+        const revenuesData = {{ stats.weekly_revenues_json|safe }};
+        const expensesData = {{ stats.weekly_expenses_json|safe }};
+        const labels = {{ stats.weekly_labels_json|safe }};
 
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'الإيرادات',
+                    data: revenuesData,
+                    backgroundColor: colors.success,
+                    borderColor: colors.success,
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.8
+                }, {
+                    label: 'المصروفات',
+                    data: expensesData,
+                    backgroundColor: colors.danger,
+                    borderColor: colors.danger,
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                layout: {
+                    padding: { top: 10, right: 6, bottom: 0, left: 0 }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            padding: 14,
+                            usePointStyle: true,
+                            pointStyle: 'rect',
+                            font: {
+                                weight: '600',
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        padding: 12,
+                        titleFont: { size: 14, weight: '700' },
+                        bodyFont: { size: 13 },
+                        cornerRadius: 12,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toLocaleString('en-US');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.15)',
+                            drawBorder: false,
+                            borderDash: [4, 4]
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('en-US');
+                            },
+                            font: { size: 11 }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            font: { size: 11 }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Stock Status Pie Chart
+    const lowStockCtx = document.getElementById('lowStockChart');
+    if (lowStockCtx) {
+        const ctx = lowStockCtx.getContext('2d');
+        const stockStatusData = {{ stats.stock_status_json|safe }};
+        
+        if (stockStatusData[0] > 0 || stockStatusData[1] > 0) {
             new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: labels,
+                    labels: ['متوفرة', 'قليلة الكمية'],
                     datasets: [{
-                        data: data,
-                        backgroundColor: chartColors.slice(0, data.length),
+                        data: stockStatusData,
+                        backgroundColor: [
+                            colors.success, // Green for available
+                            colors.danger   // Red for low stock
+                        ],
                         borderColor: '#ffffff',
                         borderWidth: 4,
                         hoverOffset: 10,
@@ -341,7 +441,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             cornerRadius: 10,
                             callbacks: {
                                 label: function(context) {
-                                    return context.label + ': ' + context.parsed;
+                                    const total = stockStatusData.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
                                 }
                             }
                         }
@@ -349,92 +451,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     cutout: '72%'
                 }
             });
-        }
-    }
-
-    // Top Products Bar Chart
-    const topProductsCtx = document.getElementById('topProductsChart');
-    if (topProductsCtx) {
-        const ctx = topProductsCtx.getContext('2d');
-        const productsData = {{ stats.top_products_json|safe }};
-        if (productsData.length > 0) {
-            const labels = productsData.map(prod => prod.item__name);
-            const data = productsData.map(prod => prod.total_revenue);
-
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'إيرادات المنتج',
-                        data: data,
-                        backgroundColor: [
-                            'rgba(99, 102, 241, 0.88)',
-                            'rgba(16, 185, 129, 0.88)',
-                            'rgba(245, 158, 11, 0.88)',
-                            'rgba(239, 68, 68, 0.88)',
-                            'rgba(59, 130, 246, 0.88)'
-                        ].slice(0, data.length),
-                        borderRadius: 10,
-                        borderSkipped: false,
-                        barPercentage: 0.72,
-                        categoryPercentage: 0.82,
-                        hoverBackgroundColor: 'rgba(255,255,255,0.95)',
-                        hoverBorderColor: 'rgba(15, 23, 42, 0.12)',
-                        hoverBorderWidth: 2
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: {
-                        padding: { top: 8, bottom: 8 }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            padding: 12,
-                            titleFont: { size: 12, weight: '700' },
-                            bodyFont: { size: 11 },
-                            cornerRadius: 10,
-                            callbacks: {
-                                label: function(context) {
-                                    return context.parsed.x;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(148, 163, 184, 0.14)',
-                                drawBorder: false,
-                                borderDash: [4, 4]
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString('ar-SA');
-                                },
-                                font: { size: 10 }
-                            }
-                        },
-                        y: {
-                            grid: {
-                                display: false,
-                                drawBorder: false
-                            },
-                            ticks: {
-                                font: { size: 10 }
-                            }
-                        }
-                    }
-                }
-            });
+        } else {
+            // Show message when no items
+            const ctx = lowStockCtx.getContext('2d');
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText('لا توجد منتجات في المخزون', lowStockCtx.width / 2, lowStockCtx.height / 2);
         }
     }
 });
