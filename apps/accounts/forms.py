@@ -98,6 +98,99 @@ class Step1UserForm(forms.Form):
         return cleaned_data
 
 
+class UserManagementForm(forms.ModelForm):
+    password = forms.CharField(
+        label='كلمة المرور',
+        required=False,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': '••••••••'
+        })
+    )
+    password_confirm = forms.CharField(
+        label='تأكيد كلمة المرور',
+        required=False,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': '••••••••'
+        })
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            'username',
+            'first_name',
+            'last_name',
+            'email',
+            'phone',
+            'role',
+            'is_tenant_admin',
+            'is_active',
+        ]
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم المستخدم'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'الاسم الأول'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم العائلة'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control text-start', 'placeholder': 'example@email.com', 'dir': 'ltr'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+000 000 000000'}),
+            'role': forms.Select(attrs={'class': 'form-select'}),
+            'is_tenant_admin': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.tenant = kwargs.pop('tenant', None)
+        super().__init__(*args, **kwargs)
+        apply_arabic_error_messages(self)
+        for field_name, field in self.fields.items():
+            if field_name in ['password', 'password_confirm']:
+                field.widget.attrs['autocomplete'] = 'new-password'
+            else:
+                field.widget.attrs['autocomplete'] = 'off'
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        qs = User.objects.filter(username=username)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError('اسم المستخدم موجود بالفعل')
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        qs = User.objects.filter(email=email)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError('البريد الإلكتروني مستخدم بالفعل')
+        return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        password_confirm = cleaned_data.get('password_confirm')
+        if password or password_confirm:
+            if password != password_confirm:
+                raise ValidationError('كلمات المرور غير متطابقة')
+        elif not self.instance.pk:
+            raise ValidationError('كلمة المرور مطلوبة عند إنشاء مستخدم جديد')
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        password = self.cleaned_data.get('password')
+        if password:
+            user.set_password(password)
+        if self.tenant and not user.tenant:
+            user.tenant = self.tenant
+        if commit:
+            user.save()
+            self.save_m2m()
+        return user
+
+
 class Step2BusinessForm(forms.Form):
     """الخطوة 2: معلومات النشاط التجاري"""
 

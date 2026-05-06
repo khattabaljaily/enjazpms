@@ -3,19 +3,21 @@ Views للحسابات - التسجيل وتسجيل الدخول
 """
 import json
 
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Q
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
 
 from apps.core.models import Tenant, Settings
 from apps.core.constants import COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
 from .models import User
-from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginForm
+from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginForm, UserManagementForm
 
 
 def _wants_json(request):
@@ -39,13 +41,200 @@ def _first_error_message(errors_dict, default='يرجى التحقق من الح
     return default
 
 
+def _ensure_tenant(request):
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return None
+    return tenant
+
+
+def _json_error(message, status=400):
+    return JsonResponse({'success': False, 'message': message}, status=status)
+
+
+def _json_ok(data=None, msg='تمت العملية بنجاح'):
+    payload = {'success': True, 'message': msg}
+    if data is not None:
+        payload['data'] = data
+    return JsonResponse(payload)
+
+
+@login_required
+def user_list(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    qs = User.objects.for_tenant(tenant)
+    total = qs.count()
+    active = qs.filter(is_active=True).count()
+    inactive = total - active
+
+    context = {
+        'stats': {
+            'total': total,
+            'active': active,
+            'inactive': inactive,
+        },
+        'form': UserManagementForm(tenant=tenant),
+    }
+    return render(request, 'accounts/user_list.html', context)
+
+
+@login_required
+def user_table_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 25))
+    search_value = request.GET.get('search[value]', '').strip()
+    status = request.GET.get('status', '').strip()
+
+    queryset = User.objects.for_tenant(tenant)
+    records_total = queryset.count()
+
+    if status == 'active':
+        queryset = queryset.filter(is_active=True)
+    elif status == 'inactive':
+        queryset = queryset.filter(is_active=False)
+
+    if search_value:
+        queryset = queryset.filter(
+            Q(username__icontains=search_value)
+            | Q(email__icontains=search_value)
+            | Q(first_name__icontains=search_value)
+            | Q(last_name__icontains=search_value)
+            | Q(role__icontains=search_value)
+        )
+
+    records_filtered = queryset.count()
+
+    order_column_index = request.GET.get('order[0][column]', '0')
+    order_dir = request.GET.get('order[0][dir]', 'asc')
+    order_column_name = request.GET.get(f'columns[{order_column_index}][data]', 'date_joined')
+
+    allowed_order_fields = {
+        'username': 'username',
+        'full_name': 'first_name',
+        'email': 'email',
+        'role': 'role',
+        'is_active': 'is_active',
+        'date_joined': 'date_joined',
+    }
+    order_field = allowed_order_fields.get(order_column_name, 'date_joined')
+    if order_dir == 'desc':
+        order_field = f'-{order_field}'
+
+    queryset = queryset.order_by(order_field)[start:start + length]
+
+    data = [
+        {
+            'id': user.id,
+            'username': user.username,
+            'full_name': user.get_full_name(),
+            'email': user.email or '-',
+            'role': getattr(user, 'role', '-'),
+            'is_active': user.is_active,
+            'date_joined': user.date_joined.strftime('%Y-%m-%d'),
+        }
+        for user in queryset
+    ]
+
+    return JsonResponse({
+        'draw': draw,
+        'recordsTotal': records_total,
+        'recordsFiltered': records_filtered,
+        'data': data,
+    })
+
+
+@login_required
+def user_create_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405)
+
+    form = UserManagementForm(request.POST, tenant=tenant)
+    if form.is_valid():
+        user = form.save(commit=False)
+        user.tenant = tenant
+        user.save()
+        return _json_ok({'id': user.id}, 'تم إضافة المستخدم بنجاح')
+
+    return JsonResponse({
+        'success': False,
+        'message': 'يرجى التحقق من الحقول المطلوبة',
+        'errors': _serialize_form_errors(form),
+    }, status=400)
+
+
+@login_required
+def user_detail_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
+    return _json_ok({
+        'id': user.id,
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'phone': getattr(user, 'phone', ''),
+        'role': getattr(user, 'role', ''),
+        'is_tenant_admin': getattr(user, 'is_tenant_admin', False),
+        'is_active': user.is_active,
+    })
+
+
+@login_required
+def user_update_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405)
+
+    user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
+    form = UserManagementForm(request.POST, instance=user, tenant=tenant)
+    if form.is_valid():
+        form.save()
+        return _json_ok(None, 'تم تحديث بيانات المستخدم بنجاح')
+
+    return JsonResponse({
+        'success': False,
+        'message': 'يرجى التحقق من الحقول المطلوبة',
+        'errors': _serialize_form_errors(form),
+    }, status=400)
+
+
+@login_required
+def user_delete_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405)
+
+    if request.user.pk == pk:
+        return _json_error('لا يمكن حذف المستخدم الحالي')
+
+    user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
+    user.delete()
+    return _json_ok(None, 'تم حذف المستخدم بنجاح')
+
+
 def register_step1(request):
     """الخطوة 1: معلومات المستخدم"""
-    
     if request.method == 'POST':
         form = Step1UserForm(request.POST)
         if form.is_valid():
-            # حفظ البيانات في Session
             request.session['reg_step1'] = {
                 'username': form.cleaned_data['username'],
                 'email': form.cleaned_data['email'],
@@ -68,14 +257,21 @@ def register_step1(request):
                 'errors': errors,
             }, status=400)
     else:
-        # استرجاع البيانات من Session إذا كانت موجودة
         initial = request.session.get('reg_step1', {})
         form = Step1UserForm(initial=initial)
-    
+
     return render(request, 'accounts/register_step1.html', {
         'form': form,
         'step': 1,
         'total_steps': 3,
+    })
+
+
+@login_required
+def profile_view(request):
+    """الملف الشخصي"""
+    return render(request, 'accounts/profile.html', {
+        'user': request.user,
     })
 
 

@@ -1,0 +1,188 @@
+/* ============================================================
+   EnjazIMS - Users Page Specific Styles
+   خاص بصفحة إدارة المستخدمين فقط
+   ============================================================ */
+
+.cx-hero .cx-hero-icon-wrap {
+    background: rgba(59, 130, 246, 0.08);
+    color: #2563eb;
+}
+
+.cx-hero .cx-hero-title {
+    color: var(--text-primary);
+}
+
+.cx-stats-inline {
+    gap: 0.75rem;
+}
+
+#usersTable .btn {
+    min-width: 38px;
+}
+
+.users-mobile-card-list {
+    display: none;
+    gap: 1rem;
+}
+
+.cx-user-card, .cx-customer-card {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.95rem;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid #ddd;
+    border-radius: 18px;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+    transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.cx-user-card:hover, .cx-customer-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(99, 102, 241, 0.24);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+}
+.cx-user-card-head, .cx-customer-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.65rem;
+    align-items: flex-start;
+}
+.cx-user-card-title-wrap, .cx-customer-card-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    min-width: 0;
+}
+.cx-user-card-title, .cx-customer-card-title {
+    margin: 0;
+    font-size: 0.99rem;
+    font-weight: 700;
+    color: var(--text-heading, #111827);
+    line-height: 1.2;
+}
+.cx-user-card-subtitle, .cx-customer-card-subtitle {
+    margin: 0;
+    font-size: 0.76rem;
+    color: var(--text-secondary, #6b7280);
+}
+.cx-user-card-meta, .cx-customer-card-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+.cx-user-card-meta div, .cx-customer-card-meta div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+    padding: 0.65rem 0.75rem;
+    background: rgba(15, 23, 42, 0.03);
+    border-radius: 14px;
+}
+.cx-user-card-meta-label, .cx-customer-card-meta-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-tertiary, #6b7280);
+    letter-spacing: 0.36px;
+    text-transform: uppercase;
+}
+.cx-user-card-meta-value, .cx-customer-card-meta-value {
+    font-size: 0.92rem;
+    color: var(--text-heading, #111827);
+    font-weight: 700;
+}
+.cx-user-card-actions, .cx-customer-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    justify-content: flex-end;
+}
+.cx-user-card-actions .cxr-act, .cx-customer-card-actions .cxr-act {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    border-radius: 14px;
+    padding: 0.62rem 0.75rem;
+    border: 1px solid transparent;
+    transition: background 160ms ease, border-color 160ms ease;
+}
+.cx-user-card-actions .cxr-act:hover, .cx-customer-card-actions .cxr-act:hover {
+    border-color: rgba(15, 23, 42, 0.12);
+}
+.cx-user-card-actions .cxr-act--view, .cx-customer-card-actions .cxr-act--view {
+    background: rgba(99, 102, 241, 0.08);
+}
+.cx-user-card-actions .cxr-act--del, .cx-customer-card-actions .cxr-act--del {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.users-card {
+    padding: 1rem;
+    border-radius: 18px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+}
+
+.users-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.users-card-title {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.users-card-badge {
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+}
+
+.users-card-badge--active {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+}
+
+.users-card-badge--inactive {
+    background: rgba(209, 213, 219, 0.55);
+    color: #4b5563;
+}
+
+.cx-modal .cx-modal-body .cx-toggle-card {
+    min-height: auto;
+}
+
+@media (max-width: 991px) {
+    .cx-table-wrap {
+        display: none;
+    }
+    .users-mobile-card-list {
+        display: grid !important;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .users-mobile-card-list { gap: 0.75rem; }
+    .cx-user-card-meta { grid-template-columns: 1fr 1fr; }
+}
+
+.cx-modal .cx-modal-body .cx-toggle-info {
+    align-items: flex-start;
+}
+
+.cx-modal .cx-modal-body .cx-toggle-desc {
+    color: var(--text-secondary);
+}
+
+.cx-modal .form-control.is-invalid,
+.cx-modal .form-select.is-invalid {
+    border-color: #dc3545;
+}
+
+.cx-modal .js-field-errors {
+    display: block;
+}

@@ -24,4 +24,12 @@ urlpatterns = [
     
     # Profile
     path('profile/', views.profile_view, name='profile'),
+
+    # User management
+    path('users/', views.user_list, name='user_list'),
+    path('users/api/table/', views.user_table_api, name='user_table_api'),
+    path('users/api/create/', views.user_create_api, name='user_create_api'),
+    path('users/api/<int:pk>/detail/', views.user_detail_api, name='user_detail_api'),
+    path('users/api/<int:pk>/update/', views.user_update_api, name='user_update_api'),
+    path('users/api/<int:pk>/delete/', views.user_delete_api, name='user_delete_api'),
 ]
