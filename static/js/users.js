@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     return `
                         <div class="d-flex flex-column">
                             <strong>${name}</strong>
-                            <span class="text-muted small">${row.email || '-'}</span>
                         </div>
                     `;
                 }

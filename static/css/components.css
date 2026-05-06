@@ -361,7 +361,7 @@ table.cx-table thead th {
 .cx-table thead th.sorting_desc::before { content: "\f0dd" !important; opacity: 0.8 !important; color: var(--primary) !important; }
 
 .cx-table tbody td {
-    padding: 0.45rem 0.75rem !important;
+    padding: 0.2rem 1rem !important;
     font-size: 0.85rem;
     color: var(--text-primary);
     border-bottom: 1px solid var(--border-light);
