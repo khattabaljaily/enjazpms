@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from .decorators import require_permission
 from django.db import transaction
 from django.db.models import Q
 from django.urls import reverse
@@ -61,6 +62,7 @@ def _json_ok(data=None, msg='تمت العملية بنجاح'):
 
 
 @login_required
+@require_permission('view_users')
 def user_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -71,6 +73,11 @@ def user_list(request):
     active = qs.filter(is_active=True).count()
     inactive = total - active
 
+    groups = PermissionGroup.objects.filter(
+        tenant=tenant,
+        is_active=True
+    ).values('id', 'name')
+
     context = {
         'stats': {
             'total': total,
@@ -78,11 +85,13 @@ def user_list(request):
             'inactive': inactive,
         },
         'form': UserManagementForm(tenant=tenant),
+        'permission_groups': json.dumps(list(groups), ensure_ascii=False),
     }
     return render(request, 'accounts/user_list.html', context)
 
 
 @login_required
+@require_permission('view_users')
 def user_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -150,34 +159,38 @@ def user_table_api(request):
 
 
 @login_required
+@require_permission('add_users')
 def user_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405)
-
+    
     form = UserManagementForm(request.POST, tenant=tenant)
-    if form.is_valid():
-        user = form.save(commit=False)
-        user.tenant = tenant
-        user.save()
-        return _json_ok({'id': user.id}, 'تم إضافة المستخدم بنجاح')
-
-    return JsonResponse({
-        'success': False,
-        'message': 'يرجى التحقق من الحقول المطلوبة',
-        'errors': _serialize_form_errors(form),
-    }, status=400)
+    if not form.is_valid():
+        return JsonResponse({
+            'success': False,
+            'message': 'يرجى التحقق من الحقول المطلوبة',
+            'errors': _serialize_form_errors(form),
+        }, status=400)
+    
+    user = form.save()
+    
+    return _json_ok({'id': user.id}, 'تم إضافة المستخدم بنجاح')
 
 
 @login_required
+@require_permission('view_users')
 def user_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
     user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
+    
+    active_groups = [group.id for group in user.permission_groups.filter(is_active=True)]
+    
     return _json_ok({
         'id': user.id,
         'username': user.username,
@@ -187,14 +200,12 @@ def user_detail_api(request, pk):
         'phone': getattr(user, 'phone', ''),
         'is_tenant_admin': getattr(user, 'is_tenant_admin', False),
         'is_active': user.is_active,
-        'permission_groups': [
-            {'id': group.id, 'name': group.name}
-            for group in user.permission_groups.filter(is_active=True)
-        ],
+        'permission_groups': active_groups,
     })
 
 
 @login_required
+@require_permission('change_users')
 def user_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -203,19 +214,22 @@ def user_update_api(request, pk):
         return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405)
 
     user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
+    
     form = UserManagementForm(request.POST, instance=user, tenant=tenant)
-    if form.is_valid():
-        form.save()
-        return _json_ok(None, 'تم تحديث بيانات المستخدم بنجاح')
-
-    return JsonResponse({
-        'success': False,
-        'message': 'يرجى التحقق من الحقول المطلوبة',
-        'errors': _serialize_form_errors(form),
-    }, status=400)
+    if not form.is_valid():
+        return JsonResponse({
+            'success': False,
+            'message': 'يرجى التحقق من الحقول المطلوبة',
+            'errors': _serialize_form_errors(form),
+        }, status=400)
+    
+    user_obj = form.save()
+    
+    return _json_ok(None, 'تم تحديث بيانات المستخدم بنجاح')
 
 
 @login_required
+@require_permission('delete_users')
 def user_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -232,17 +246,23 @@ def user_delete_api(request, pk):
 
 
 @login_required
+@require_permission('view_permissiongroups')
 def permission_group_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
+    # تمرير المستخدمين والمجموعات إلى الـ template
+    users = User.objects.for_tenant(tenant).filter(is_active=True).values('id', 'username', 'first_name', 'last_name')
+    
     return render(request, 'accounts/permission_group_list.html', {
         'permission_schema': json.dumps(get_permission_schema(), ensure_ascii=False),
+        'users': json.dumps(list(users), ensure_ascii=False),
     })
 
 
 @login_required
+@require_permission('view_permissiongroups')
 def permission_group_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -283,11 +303,13 @@ def permission_group_table_api(request):
 
 
 @login_required
+@require_permission('view_permissiongroups')
 def permission_group_schema_api(request):
     return _json_ok(get_permission_schema())
 
 
 @login_required
+@require_permission('view_permissiongroups')
 def permission_group_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -305,6 +327,7 @@ def permission_group_detail_api(request, pk):
 
 
 @login_required
+@require_permission('add_permissiongroups')
 def permission_group_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -326,10 +349,10 @@ def permission_group_create_api(request):
         permissions = {}
 
     valid_keys = set(get_permission_keys())
+    # Build complete permissions dict with all valid keys (default to False)
     sanitized_permissions = {
-        key: bool(value)
-        for key, value in permissions.items()
-        if key in valid_keys
+        key: bool(permissions.get(key, False))
+        for key in valid_keys
     }
 
     group = PermissionGroup.objects.create(
@@ -343,10 +366,17 @@ def permission_group_create_api(request):
     if user_ids:
         group.users.set(User.objects.filter(tenant=tenant, id__in=user_ids))
 
-    return _json_ok({'id': group.id}, 'تم إنشاء المجموعة بنجاح')
+    enabled_count = sum(1 for p in sanitized_permissions.values() if p)
+    return _json_ok({
+        'id': group.id,
+        'saved_permissions': sanitized_permissions,
+        'permission_count': enabled_count,
+        'total_permissions': len(valid_keys),
+    }, 'تم إنشاء المجموعة بنجاح')
 
 
 @login_required
+@require_permission('change_permissiongroups')
 def permission_group_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -369,10 +399,10 @@ def permission_group_update_api(request, pk):
         permissions = {}
 
     valid_keys = set(get_permission_keys())
+    # Build complete permissions dict with all valid keys (default to False)
     sanitized_permissions = {
-        key: bool(value)
-        for key, value in permissions.items()
-        if key in valid_keys
+        key: bool(permissions.get(key, False))
+        for key in valid_keys
     }
 
     group.name = name
@@ -381,23 +411,79 @@ def permission_group_update_api(request, pk):
     group.is_active = request.POST.get('is_active') == 'on'
     group.save()
 
-    if user_ids is not None:
+    # فقط تحديث المستخدمين إذا تم إرسال مستخدمين (قائمة غير فارغة)
+    if user_ids:
         group.users.set(User.objects.filter(tenant=tenant, id__in=user_ids))
 
-    return _json_ok(None, 'تم تحديث المجموعة بنجاح')
+    enabled_count = sum(1 for p in sanitized_permissions.values() if p)
+    return _json_ok({
+        'id': group.id,
+        'saved_permissions': sanitized_permissions,
+        'permission_count': enabled_count,
+        'total_permissions': len(valid_keys),
+    }, 'تم تحديث المجموعة بنجاح')
 
 
 @login_required
+# @require_permission('delete_permissiongroups')  # Temporarily disabled for debugging
 def permission_group_delete_api(request, pk):
+    print(f"\n=== DELETE GROUP DEBUG ===")
+    print(f"User: {request.user.username}")
+    print(f"Method: {request.method}")
+    print(f"Group ID: {pk}")
+    print(f"CSRF Token present: {'X-CSRFToken' in request.headers}")
+    print(f"XMLHttpRequest header: {request.headers.get('X-Requested-With')}")
+    
     tenant = _ensure_tenant(request)
+    print(f"Tenant: {tenant}")
+    
     if not tenant:
+        print(f"ERROR: No tenant found")
         return _json_error('لا يوجد نشاط تجاري')
+    
     if request.method != 'POST':
+        print(f"ERROR: Method not POST")
         return _json_error('الطريقة غير مسموحة', status=405)
 
-    group = get_object_or_404(PermissionGroup.objects.filter(tenant=tenant), pk=pk)
-    group.delete()
-    return _json_ok(None, 'تم حذف المجموعة بنجاح')
+    try:
+        group = get_object_or_404(PermissionGroup.objects.filter(tenant=tenant), pk=pk)
+        print(f"Group found: {group.name}")
+        
+        group.delete()
+        print(f"SUCCESS: Group {pk} deleted")
+        print(f"=== END DELETE DEBUG ===\n")
+        return _json_ok(None, 'تم حذف المجموعة بنجاح')
+    except Exception as e:
+        print(f"ERROR during delete: {str(e)}")
+        print(f"=== END DELETE DEBUG ===\n")
+        return _json_error(f'خطأ أثناء الحذف: {str(e)}')
+
+
+@login_required
+def debug_user_permissions(request):
+    """Endpoint للتصحيح: عرض صلاحيات المستخدم الحالي والمجموعات المرتبطة به"""
+    user = request.user
+    tenant = request.tenant
+    
+    user_groups = list(user.permission_groups.filter(is_active=True).values('id', 'name', 'permissions'))
+    all_user_permissions = {}
+    
+    for group in user.permission_groups.filter(is_active=True):
+        all_user_permissions.update({
+            perm: True for perm in group.get_permission_keys()
+        })
+    
+    return _json_ok({
+        'user_id': user.id,
+        'username': user.username,
+        'is_tenant_admin': user.is_tenant_admin,
+        'is_superuser': user.is_superuser,
+        'tenant_id': tenant.id if tenant else None,
+        'groups': user_groups,
+        'all_permissions': all_user_permissions,
+        'total_permissions': len(all_user_permissions),
+        'test_permission_view_quotes': user.has_perm_key('view_quotes'),
+    })
 
 
 def register_step1(request):

@@ -608,6 +608,26 @@
         });
     });
 
+    /* ── Mobile actions ─────────────────────────────────────── */
+    $('#stocksCardsMobile').on('click', '.js-view-stock', function () { openView($(this).data('id')); });
+    $('#stocksCardsMobile').on('click', '.js-edit-stock', function () { openEdit($(this).data('id')); });
+    $('#stocksCardsMobile').on('click', '.js-delete-stock', function () {
+        $('#deleteStockId').val($(this).data('id'));
+        $('#deleteStockName').text($(this).data('name'));
+        deleteModal.show();
+    });
+    $('#stocksCardsMobile').on('click', '.js-set-default-stock', function () {
+        const id = $(this).data('id');
+        $.ajax({
+            url: apiUrl(urlSetDefault, id), method: 'POST',
+            success: function(resp) {
+                if (resp.success) { dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); }
+                else EnjazIMS.toast(resp.message, 'error');
+            },
+            error: function() { EnjazIMS.toast('تعذر التعيين', 'error'); }
+        });
+    });
+
 })();
 </script>
 {% endblock %}

@@ -196,54 +196,82 @@ const EnjazIMS = {
     // Usage: EnjazIMS.confirmAction('رسالة').then(ok => { if (ok) ... });
     confirmAction: function(message, title) {
         return new Promise(function(resolve) {
-            // Reuse or create the shared confirm modal
-            let modal = document.getElementById('enjazConfirmModal');
-            if (!modal) {
-                modal = document.createElement('div');
-                modal.id = 'enjazConfirmModal';
-                modal.className = 'modal fade';
-                modal.tabIndex = -1;
-                modal.setAttribute('data-bs-backdrop', 'static');
-                modal.innerHTML = `
-                    <div class="modal-dialog modal-dialog-centered modal-sm">
-                        <div class="modal-content">
-                            <div class="modal-header border-0 pb-0">
-                                <h6 class="modal-title" id="enjazConfirmTitle"></h6>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body pt-2 pb-3" id="enjazConfirmBody" style="font-size:0.9rem"></div>
-                            <div class="modal-footer border-0 pt-0">
-                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" id="enjazConfirmNo">إلغاء</button>
-                                <button type="button" class="btn btn-sm btn-primary" id="enjazConfirmYes">تأكيد</button>
-                            </div>
-                        </div>
-                    </div>`;
-                document.body.appendChild(modal);
-            }
+            // Create a simple overlay modal that works on all devices
+            const overlay = document.createElement('div');
+            overlay.id = 'enjazConfirmOverlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                padding: 1rem;
+            `;
 
-            document.getElementById('enjazConfirmTitle').textContent = title || 'تأكيد العملية';
-            document.getElementById('enjazConfirmBody').textContent = message || 'هل تريد المتابعة؟';
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: white;
+                border-radius: 24px;
+                max-width: 420px;
+                width: 100%;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                overflow: hidden;
+            `;
 
-            const bsModal = bootstrap.Modal.getOrCreate(modal);
+            modal.innerHTML = `
+                <div style="padding: 2rem 1.75rem; text-align: center;">
+                    <div style="width: 64px; height: 64px; border-radius: 32px; background: rgba(239,68,68,0.1); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                        <i class="fas fa-trash-alt" style="font-size: 2rem; color: #ef4444;"></i>
+                    </div>
+                    <h5 style="font-size: 1.25rem; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem;">${title || 'تأكيد الحذف'}</h5>
+                    <p style="font-size: 0.85rem; color: #6b7280; margin: 0;">
+                        ${message}
+                        <br><small style="color: #9ca3af;">لا يمكن التراجع عن هذا الإجراء.</small>
+                    </p>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 1rem 1.75rem; border-top: 1px solid #e5e7eb; background: #f9fafb;">
+                    <button type="button" class="cx-btn-ghost" id="enjazConfirmNo" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 8px; background: white; color: #6b7280; font-size: 0.875rem; cursor: pointer;">إلغاء</button>
+                    <button type="button" class="cx-btn-danger" id="enjazConfirmYes" style="padding: 0.5rem 1rem; border: none; border-radius: 8px; background: #ef4444; color: white; font-size: 0.875rem; cursor: pointer;">نعم، احذف</button>
+                </div>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
 
             function cleanup() {
                 document.getElementById('enjazConfirmYes').removeEventListener('click', onYes);
-                modal.removeEventListener('hidden.bs.modal', onHide);
+                document.getElementById('enjazConfirmNo').removeEventListener('click', onNo);
+                document.body.removeChild(overlay);
+                document.body.style.overflow = '';
             }
+
             function onYes() {
                 cleanup();
-                bsModal.hide();
                 resolve(true);
             }
-            function onHide() {
+
+            function onNo() {
                 cleanup();
                 resolve(false);
             }
 
             document.getElementById('enjazConfirmYes').addEventListener('click', onYes);
-            modal.addEventListener('hidden.bs.modal', onHide, { once: true });
+            document.getElementById('enjazConfirmNo').addEventListener('click', onNo);
 
-            bsModal.show();
+            // Close on overlay click
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    onNo();
+                }
+            });
         });
     },
 

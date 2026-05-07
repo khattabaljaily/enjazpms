@@ -7,10 +7,10 @@ from decimal import Decimal, InvalidOperation
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from apps.accounts.decorators import require_permission
 from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
-import json
 
 from .models import Settings
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
@@ -309,6 +309,7 @@ def no_permission(request):
 
 
 @login_required
+@require_permission('view_tenant_settings')
 def tenant_settings(request):
     """إعدادات النشاط التجاري"""
     return render(request, 'core/tenant_settings.html', {
@@ -319,6 +320,7 @@ def tenant_settings(request):
 
 
 @login_required
+@require_permission('change_tenant_settings')
 @require_POST
 def tenant_settings_update_api(request):
     """API: تحديث إعدادات النشاط التجاري عبر AJAX."""
@@ -388,6 +390,7 @@ def tenant_settings_update_api(request):
 
 
 @login_required
+@require_permission('view_tenant_settings')
 def subscription_info(request):
     """معلومات الاشتراك"""
     tenant = request.tenant

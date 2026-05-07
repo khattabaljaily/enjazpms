@@ -9,6 +9,11 @@
     background: rgba(25, 135, 84, 0.12);
 }
 
+/* Hide mobile cards by default on desktop */
+.quotes-mobile-card-list {
+    display: none !important;
+}
+
 @media (max-width: 768px) {
     #quotesTable { display: none !important; }
     .quotes-mobile-card-list { display: grid !important; gap: 0.9rem; margin-top: 1rem; }

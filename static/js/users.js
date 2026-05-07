@@ -138,9 +138,32 @@ document.addEventListener('DOMContentLoaded', function () {
         userForm.find('.is-invalid').removeClass('is-invalid');
         userForm.find('.js-field-errors').remove();
         userForm.find('.js-form-errors').addClass('d-none').empty();
+        renderPermissionGroupCheckboxes([]);
         userModalTitle.text('إضافة مستخدم جديد');
         userModal.show();
     });
+
+    function renderPermissionGroupCheckboxes(selectedGroups) {
+        const groups = window.PERMISSION_GROUPS || [];
+        const container = $('#permissionGroupsCheckboxes');
+        container.empty();
+        const normalizedSelected = Array.isArray(selectedGroups)
+            ? selectedGroups.map((id) => String(id))
+            : [];
+
+        groups.forEach(function (group) {
+            const isChecked = normalizedSelected.includes(String(group.id));
+            const checkbox = `
+                <div class="col-12 col-md-6">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" data-group-id="${group.id}" id="permission_group_${group.id}" ${isChecked ? 'checked' : ''}>
+                        <label class="form-check-label" for="permission_group_${group.id}">${group.name}</label>
+                    </div>
+                </div>
+            `;
+            container.append(checkbox);
+        });
+    }
 
     function openUserEdit(userId) {
         const detailUrl = `/accounts/users/api/${userId}/detail/`;
@@ -167,6 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
             $('#id_is_active').prop('checked', user.is_active);
             $('#id_password').val('');
             $('#id_password_confirm').val('');
+            renderPermissionGroupCheckboxes(user.permission_groups || []);
             userModal.show();
         }).fail(function () {
             EnjazIMS.toast('تعذر جلب بيانات المستخدم', 'error');
@@ -299,12 +323,33 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const userId = userIdInput.val();
         const url = userId ? `/accounts/users/api/${userId}/update/` : '/accounts/users/api/create/';
-        const method = 'POST';
+
+        // Collect checked permission group checkboxes
+        const selectedGroups = [];
+        $('#permissionGroupsCheckboxes input[type="checkbox"]:checked').each(function () {
+            selectedGroups.push(String($(this).data('group-id')));
+        });
+        
+        console.log('=== USER FORM SUBMIT DEBUG ===');
+        console.log('Selected permission groups:', selectedGroups);
+        
+        // Remove any existing permission_groups inputs
+        userForm.find('input[name="permission_groups"]').remove();
+        
+        // Create hidden inputs for each selected group
+        selectedGroups.forEach(function (groupId) {
+            userForm.append(`<input type="hidden" name="permission_groups" value="${groupId}">`);
+        });
+        
+        console.log('Created hidden inputs, total:', selectedGroups.length);
+
         const payload = userForm.serialize();
+        console.log('Serialized payload includes permission_groups:', payload.includes('permission_groups'));
+        console.log('=== END SUBMIT DEBUG ===');
 
         $.ajax({
             url: url,
-            method: method,
+            method: 'POST',
             data: payload,
             headers: {
                 'X-CSRFToken': csrfToken,

@@ -113,6 +113,8 @@ class User(AbstractUser):
         return keys
 
     def has_perm_key(self, permission_key):
+        if not permission_key:
+            return False
         if self.is_superuser or self.is_tenant_admin:
             return True
         for group in self.permission_groups.filter(is_active=True):
@@ -162,6 +164,8 @@ class PermissionGroup(models.Model):
         return f"{self.tenant.name} - {self.name}"
 
     def get_permission_keys(self):
+        if not self.permissions:
+            return []
         return [key for key, value in self.permissions.items() if value]
 
     def set_permission_keys(self, permission_keys):
@@ -170,7 +174,9 @@ class PermissionGroup(models.Model):
 
     def has_permission(self, permission_key):
         """التحقق من وجود صلاحية معينة"""
-        return self.permissions.get(permission_key, False)
+        if not permission_key or not self.permissions:
+            return False
+        return bool(self.permissions.get(permission_key, False))
 
     @classmethod
     def create_owner_group(cls, tenant, name='مدير النشاط'):

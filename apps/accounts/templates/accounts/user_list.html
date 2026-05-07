@@ -137,8 +137,12 @@
                                 {{ form.phone }}
                             </div>
                             <div class="col-md-6">
-                                <label class="cx-label" for="id_permission_groups">{{ form.permission_groups.label }}</label>
-                                {{ form.permission_groups }}
+                                <label class="cx-label" for="permissionGroupsCheckboxes">{{ form.permission_groups.label }}</label>
+                                <div id="permissionGroupsCheckboxes" class="row gy-2"></div>
+                                {# Hidden Django form field for proper form binding #}
+                                <div style="display: none;">
+                                    {{ form.permission_groups }}
+                                </div>
                             </div>
                         </div>
 
@@ -298,5 +302,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+    window.PERMISSION_GROUPS = {{ permission_groups|safe }};
+</script>
 <script src="{% static 'js/users.js' %}?v=1.0"></script>
 {% endblock %}

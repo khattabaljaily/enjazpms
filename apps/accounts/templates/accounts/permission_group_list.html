@@ -95,7 +95,17 @@
                         </div>
 
                         <div class="cx-form-group-label mb-3">
-                            <span class="cx-form-group-num">١</span> صلاحيات المجموعة
+                            <span class="cx-form-group-num">١</span> الأعضاء
+                        </div>
+                        <div class="mb-4">
+                            <label class="cx-label" for="groupUsers">اختر المستخدمين</label>
+                            <select id="groupUsers" name="users[]" class="form-select" multiple size="5">
+                            </select>
+                            <small class="text-muted">يمكنك اختيار عدة مستخدمين بالضغط على Ctrl (أو Cmd على Mac)</small>
+                        </div>
+
+                        <div class="cx-form-group-label mb-3">
+                            <span class="cx-form-group-num">٢</span> صلاحيات المجموعة
                         </div>
                         <div id="permissionSchemaAccordion" class="accordion"></div>
                     </div>
@@ -116,6 +126,7 @@
 {% block extra_js %}
 <script>
     window.PERMISSION_SCHEMA = {{ permission_schema|safe }};
+    window.USERS_LIST = {{ users|safe }};
 </script>
 <script src="{% static 'js/permission_groups.js' %}?v=1.0"></script>
 {% endblock %}

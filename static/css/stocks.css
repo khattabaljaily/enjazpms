@@ -3,6 +3,11 @@
    خاص بصفحة المخازن فقط
    ============================================================ */
 
+/* Hide mobile cards by default on desktop */
+.stocks-mobile-card-list {
+    display: none !important;
+}
+
 /* ══════════════════════════ MOBILE CARD LAYOUT — STOCKS TABLE ══════════════════════════ */
 /*
   Stocks columns:

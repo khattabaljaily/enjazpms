@@ -146,6 +146,10 @@ class UserManagementForm(forms.ModelForm):
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+000 000 000000'}),
             'is_tenant_admin': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'permission_groups': forms.SelectMultiple(attrs={
+                'class': 'form-select',
+                'size': 6,
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -201,7 +205,10 @@ class UserManagementForm(forms.ModelForm):
             user.tenant = self.tenant
         if commit:
             user.save()
-            self.save_m2m()
+            # Manually handle M2M relationship since permission_groups is defined in form
+            permission_groups = self.cleaned_data.get('permission_groups')
+            if permission_groups is not None:
+                user.permission_groups.set(permission_groups)
         return user
 
 

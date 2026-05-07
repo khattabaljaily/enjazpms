@@ -768,6 +768,20 @@
         openExpenseView($(this).data('id'));
     });
 
+    $('#expensesCardsMobile').on('click', '.js-confirm, .js-cancel', function () {
+        const id = $(this).data('id');
+        const isConfirm = $(this).hasClass('js-confirm');
+        openExpenseActionConfirm(id, isConfirm);
+    });
+
+    $('#expensesCardsMobile').on('click', '.js-edit-expense', function () {
+        loadExpenseForEdit($(this).data('id'));
+    });
+
+    $('#expensesCardsMobile').on('click', '.js-view-expense', function () {
+        openExpenseView($(this).data('id'));
+    });
+
     expenseModalSaveBtn.addEventListener('click', saveExpense);
 })();
 </script>

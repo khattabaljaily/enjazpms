@@ -5,6 +5,11 @@
 
 @import url('sales.css');
 
+/* Hide mobile cards by default on desktop */
+.expenses-mobile-card-list {
+    display: none !important;
+}
+
 /* ══════════════════════════ MOBILE CARD LAYOUT — EXPENSES TABLE ══════════════════════════ */
 @media (max-width: 768px) {
     .cx-table-wrap { display: none !important; }

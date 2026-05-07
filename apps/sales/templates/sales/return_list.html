@@ -223,9 +223,6 @@ function renderMobileReturnCards(rows) {
             <div class="cx-return-card-head">
                 <div class="cx-return-card-title-wrap">
                     <h2 class="cx-return-card-title">${r.return_number || '—'}</h2>
-                    <div class="cx-return-card-code">
-                        <code>${r.return_date || '—'}</code>
-                    </div>
                 </div>
                 <span class="${statusClass}">${statusLabel}</span>
             </div>
@@ -241,6 +238,10 @@ function renderMobileReturnCards(rows) {
                 <div>
                     <span class="cx-return-card-meta-label">الإجمالي</span>
                     <strong class="cx-return-card-meta-value">${total}</strong>
+                </div>
+                <div>
+                    <span class="cx-return-card-meta-label">التاريخ</span>
+                    <strong class="cx-return-card-meta-value">${r.return_date || '—'}</strong>
                 </div>
             </div>
             <div class="cx-return-card-actions">

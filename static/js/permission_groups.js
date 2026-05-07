@@ -10,8 +10,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const groupIsActiveInput = $('#groupIsActive');
     const groupSubmitBtn = $('#groupSubmitBtn');
     const groupSearchInput = $('#groupSearchInput');
+    const groupUsersInput = $('#groupUsers');
     const groupsCardsMobile = $('#groupsCardsMobile');
     let activeGroupId = null;
+
+    // ملء قائمة المستخدمين عند تحميل الصفحة
+    function populateUsersList() {
+        const users = window.USERS_LIST || [];
+        groupUsersInput.empty();
+        users.forEach(user => {
+            const displayName = user.first_name && user.last_name 
+                ? `${user.first_name} ${user.last_name} (${user.username})`
+                : user.username;
+            groupUsersInput.append(`<option value="${user.id}">${displayName}</option>`);
+        });
+    }
+
+    populateUsersList();
 
     function renderPermissionSections(schema, selectedPermissions) {
         const sections = Object.entries(schema || {});
@@ -55,11 +70,15 @@ document.addEventListener('DOMContentLoaded', function () {
         return permissions;
     }
 
+    console.log('DEBUG: Initializing DataTable');
     const groupsTable = $('#groupsTable').DataTable({
         ajax: {
             url: '/accounts/groups/api/table/',
             data: function (d) {
                 d.search = groupSearchInput.val();
+            },
+            error: function(xhr, error, thrown) {
+                console.error('DEBUG: DataTable AJAX Error:', error, thrown);
             }
         },
         columns: [
@@ -154,6 +173,7 @@ document.addEventListener('DOMContentLoaded', function () {
         groupNameInput.val('');
         groupDescriptionInput.val('');
         groupIsActiveInput.prop('checked', true);
+        groupUsersInput.val([]);
         $('#groupForm .js-form-errors').addClass('d-none').empty();
         $('#groupForm .is-invalid').removeClass('is-invalid');
         $('#groupForm .js-field-errors').remove();
@@ -174,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function () {
             groupNameInput.val(group.name);
             groupDescriptionInput.val(group.description || '');
             groupIsActiveInput.prop('checked', group.is_active);
+            groupUsersInput.val(group.users || []);
             $('#permissionSchemaAccordion').html(renderPermissionSections(window.PERMISSION_SCHEMA, group.permissions || {}));
             groupModal.show();
         }).fail(function () {
@@ -195,34 +216,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    $('#groupsTable tbody').on('click', '.btn-delete-group', function () {
-        const groupId = $(this).data('id');
-        const groupName = $(this).data('name') || 'هذه المجموعة';
-        if (!groupId) return;
-        EnjazIMS.confirmAction(`هل تريد حذف المجموعة ${groupName}?`, 'تأكيد الحذف')
-            .then(function (confirmed) {
-                if (!confirmed) return;
-                $.ajax({
-                    url: `/accounts/groups/api/${groupId}/delete/`,
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrfToken,
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function (response) {
-                        if (response.success) {
-                            EnjazIMS.toast(response.message || 'تم حذف المجموعة', 'success');
-                            groupsTable.ajax.reload(null, false);
-                            return;
-                        }
-                        EnjazIMS.toast(response.message || 'تعذر حذف المجموعة', 'error');
-                    },
-                    error: function () {
-                        EnjazIMS.toast('تعذر حذف المجموعة', 'error');
-                    }
-                });
-            });
-    });
+
+
+
 
     groupsCardsMobile.on('click', '.btn-edit-group', function () {
         const groupId = $(this).data('id');
@@ -231,47 +227,23 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    groupsCardsMobile.on('click', '.btn-delete-group', function () {
-        const groupId = $(this).data('id');
-        const groupName = $(this).data('name') || 'هذه المجموعة';
-        if (!groupId) return;
-        EnjazIMS.confirmAction(`هل تريد حذف المجموعة ${groupName}?`, 'تأكيد الحذف')
-            .then(function (confirmed) {
-                if (!confirmed) return;
-                $.ajax({
-                    url: `/accounts/groups/api/${groupId}/delete/`,
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrfToken,
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function (response) {
-                        if (response.success) {
-                            EnjazIMS.toast(response.message || 'تم حذف المجموعة', 'success');
-                            groupsTable.ajax.reload(null, false);
-                            return;
-                        }
-                        EnjazIMS.toast(response.message || 'تعذر حذف المجموعة', 'error');
-                    },
-                    error: function () {
-                        EnjazIMS.toast('تعذر حذف المجموعة', 'error');
-                    }
-                });
-            });
-    });
-
     groupForm.on('submit', function (event) {
         event.preventDefault();
         const busyText = groupSubmitBtn.html();
         EnjazIMS.clearFormErrors(groupForm);
         EnjazIMS.showLoading(groupSubmitBtn);
 
-        const payload = {
-            name: groupNameInput.val().trim(),
-            description: groupDescriptionInput.val().trim(),
-            is_active: groupIsActiveInput.is(':checked') ? 'on' : '',
-            permissions: JSON.stringify(getSelectedPermissions()),
-        };
+        const formData = new FormData();
+        formData.append('name', groupNameInput.val().trim());
+        formData.append('description', groupDescriptionInput.val().trim());
+        formData.append('is_active', groupIsActiveInput.is(':checked') ? 'on' : '');
+        formData.append('permissions', JSON.stringify(getSelectedPermissions()));
+        
+        // إضافة المستخدمين المختارين
+        const selectedUsers = groupUsersInput.val() || [];
+        selectedUsers.forEach(userId => {
+            formData.append('users[]', userId);
+        });
 
         const groupId = groupIdInput.val();
         const url = groupId ? `/accounts/groups/api/${groupId}/update/` : '/accounts/groups/api/create/';
@@ -279,7 +251,9 @@ document.addEventListener('DOMContentLoaded', function () {
         $.ajax({
             url: url,
             method: 'POST',
-            data: payload,
+            data: formData,
+            processData: false,
+            contentType: false,
             headers: {
                 'X-CSRFToken': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
@@ -310,6 +284,71 @@ document.addEventListener('DOMContentLoaded', function () {
 
     groupSearchInput.on('keyup', function () {
         groupsTable.search(this.value).draw();
+    });
+
+    $('#groupsTable tbody').on('click', '.btn-delete-group', function () {
+        const groupId = $(this).data('id');
+        const groupName = $(this).data('name') || 'هذه المجموعة';
+        if (!groupId) return;
+        EnjazIMS.confirmAction(`هل تريد حذف المجموعة ${groupName}?`, 'تأكيد الحذف')
+            .then(function (confirmed) {
+                if (!confirmed) return;
+                $.ajax({
+                    url: `/accounts/groups/api/${groupId}/delete/`,
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            EnjazIMS.toast(response.message || 'تم حذف المجموعة', 'success');
+                            groupsTable.ajax.reload(null, false);
+                            return;
+                        }
+                        EnjazIMS.toast(response.message || 'تعذر حذف المجموعة', 'error');
+                    },
+                    error: function (xhr) {
+                        let errorMsg = 'تعذر حذف المجموعة';
+                        if (xhr.status === 403) errorMsg = 'ليس لديك صلاحية لحذف هذه المجموعة';
+                        if (xhr.status === 404) errorMsg = 'المجموعة غير موجودة';
+                        EnjazIMS.toast(errorMsg, 'error');
+                    }
+                });
+            });
+    });
+
+    // Handle delete button clicks in mobile cards
+    groupsCardsMobile.on('click', '.btn-delete-group', function () {
+        const groupId = $(this).data('id');
+        const groupName = $(this).data('name') || 'هذه المجموعة';
+        if (!groupId) return;
+        EnjazIMS.confirmAction(`هل تريد حذف المجموعة ${groupName}?`, 'تأكيد الحذف')
+            .then(function (confirmed) {
+                if (!confirmed) return;
+                $.ajax({
+                    url: `/accounts/groups/api/${groupId}/delete/`,
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            EnjazIMS.toast(response.message || 'تم حذف المجموعة', 'success');
+                            groupsTable.ajax.reload(null, false);
+                            return;
+                        }
+                        EnjazIMS.toast(response.message || 'تعذر حذف المجموعة', 'error');
+                    },
+                    error: function (xhr) {
+                        let errorMsg = 'تعذر حذف المجموعة';
+                        if (xhr.status === 403) errorMsg = 'ليس لديك صلاحية لحذف هذه المجموعة';
+                        if (xhr.status === 404) errorMsg = 'المجموعة غير موجودة';
+                        EnjazIMS.toast(errorMsg, 'error');
+                    }
+                });
+            });
     });
 
     resetGroupForm();
