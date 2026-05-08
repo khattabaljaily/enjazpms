@@ -1,4 +1,5 @@
 {% load static %}
+{% load humanize %}
 
 <aside class="sidebar">
 
@@ -93,12 +94,27 @@
     <!-- ── Reports ── -->
     <div class="sidebar-separator"></div>
     <ul class="nav flex-column">
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="#">
+        <li class="nav-item has-submenu">
+            <a class="nav-link nav-link-toggle" href="#">
                 <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
                 التقارير
-                <small class="nav-coming-soon">قريباً</small>
+                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
+            <ul class="nav-submenu">
+                <li class="nav-item has-submenu">
+                    <a class="nav-sublink nav-link-toggle" href="#">
+                        <i class="fas fa-folder-open me-2"></i>
+                        تقارير المبيعات
+                        <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+                    </a>
+                    <ul class="nav-submenu">
+                        <li><a href="{% url 'reports:summary_report' %}" class="nav-sublink"><i class="fas fa-chart-pie me-2"></i>ملخص المبيعات</a></li>
+                        <li><a href="{% url 'reports:by_customer_report' %}" class="nav-sublink"><i class="fas fa-users me-2"></i>المبيعات حسب العميل</a></li>
+                        <li><a href="{% url 'reports:by_item_report' %}" class="nav-sublink"><i class="fas fa-box me-2"></i>المبيعات حسب المنتج</a></li>
+                        <li><a href="{% url 'reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>المبيعات حسب التاريخ</a></li>
+                    </ul>
+                </li>
+            </ul>
         </li>
     </ul>
 
@@ -190,27 +206,36 @@
 </aside>
 
 <script>
-document.querySelectorAll('.nav-link-toggle').forEach(function(link) {
-    link.addEventListener('click', function(e) {
-        e.preventDefault();
-        const parent = this.closest('.has-submenu');
+(function attachSidebarToggles() {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    sidebar.addEventListener('click', function(event) {
+        const toggle = event.target.closest('.nav-link-toggle');
+        if (!toggle || !sidebar.contains(toggle)) return;
+
+        event.preventDefault();
+        const parent = toggle.closest('.has-submenu');
+        if (!parent) return;
+
         const isOpen = parent.classList.contains('open');
         document.querySelectorAll('.has-submenu.open').forEach(function(el) {
+            if (el === parent || el.contains(parent)) return;
             el.classList.remove('open');
         });
-        if (!isOpen) parent.classList.add('open');
+        parent.classList.toggle('open', !isOpen);
     });
-});
+})();
 
 (function markActiveSidebarLink() {
-    const currentPath = (window.location.pathname || '').replace(/\/+$/, '') || '/';
+    const currentPath = (window.location.pathname || '').replace(/\/+$, '') || '/';
     let activeLink = null;
 
     document.querySelectorAll('.sidebar a.nav-link, .sidebar a.nav-sublink').forEach(function(link) {
         const href = link.getAttribute('href');
         if (!href || href === '#' || href.startsWith('javascript:')) return;
 
-        const linkPath = href.replace(/\/+$/, '') || '/';
+        const linkPath = href.replace(/\/+$, '') || '/';
         if (linkPath === currentPath) {
             activeLink = link;
         }
@@ -225,11 +250,12 @@ document.querySelectorAll('.nav-link-toggle').forEach(function(link) {
 
     activeLink.classList.add('active');
 
-    const parentSubmenu = activeLink.closest('.has-submenu');
-    if (parentSubmenu) {
+    let parentSubmenu = activeLink.closest('.has-submenu');
+    while (parentSubmenu) {
         parentSubmenu.classList.add('open');
         const parentToggle = parentSubmenu.querySelector('.nav-link-toggle');
         if (parentToggle) parentToggle.classList.add('submenu-active');
+        parentSubmenu = parentSubmenu.parentElement ? parentSubmenu.parentElement.closest('.has-submenu') : null;
     }
 })();
 </script>

@@ -629,6 +629,7 @@ def register_step3(request):
                         subscription_start=datetime.now().date(),
                         subscription_expires=datetime.now().date() + timedelta(days=30),  # 30 يوم تجريبي
                         version_type=form.cleaned_data['version_type'],
+                        max_stocks=form.cleaned_data['num_stocks'],
                         timezone=form.cleaned_data['timezone'],
                         currency=form.cleaned_data['currency'],
                     )

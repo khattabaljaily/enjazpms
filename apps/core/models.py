@@ -2,12 +2,18 @@
 Core Models - النماذج الأساسية
 Multi-Tenant System
 """
+from contextvars import ContextVar
+
 from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
 from django.utils import timezone
 
 from .constants import DEFAULT_COUNTRY, DEFAULT_TIMEZONE
+
+
+# Context flag used during Tenant deletion to bypass related system-default protection signals
+tenant_deletion_in_progress = ContextVar('tenant_deletion_in_progress', default=False)
 
 
 # ============================================
@@ -162,6 +168,13 @@ class Tenant(models.Model):
                 counter += 1
             self.slug = slug
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        token = tenant_deletion_in_progress.set(True)
+        try:
+            return super().delete(*args, **kwargs)
+        finally:
+            tenant_deletion_in_progress.reset(token)
     
     def is_subscription_valid(self):
         """هل الاشتراك ساري"""

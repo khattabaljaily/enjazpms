@@ -1,5 +1,6 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
+{% load humanize %}
 
 {% block page_title %}مدفوعات العملاء{% endblock %}
 {% block page_description %}سجل دفعات العملاء وتسجيل دفعات جديدة بسرعة دون مغادرة الصفحة.{% endblock %}
@@ -32,14 +33,14 @@
                 <i class="fas fa-list"></i><strong>{{ stats.total }}</strong><span>عدد الدفعات</span>
             </span>
             <span class="cx-stat-badge cx-stat-badge--success">
-                <i class="fas fa-coins"></i><strong>{{ stats.cash_amount|floatformat:"2u" }}</strong><span>نقداً</span>
+                <i class="fas fa-coins"></i><strong>{{ stats.cash_amount|floatformat:"2u"|default:0|intcomma}}</strong><span>نقداً</span>
             </span>
             <span class="cx-stat-badge cx-stat-badge--info">
-                <i class="fas fa-building-columns"></i><strong>{{ stats.bank_amount|floatformat:"2u" }}</strong><span>بنكي</span>
+                <i class="fas fa-building-columns"></i><strong>{{ stats.bank_amount|floatformat:"2u"|default:0|intcomma}}</strong><span>بنكي</span>
             </span>
             <span class="cx-stat-badge cx-stat-badge--warning" title="إجمالي المدفوعات">
                 <i class="fas fa-money-bill-wave"></i>
-                <strong>{{ stats.total_amount|floatformat:"2u" }}</strong>
+                <strong>{{ stats.total_amount|floatformat:"2u"|default:0|intcomma}}</strong>
                 <span>الإجمالي</span>
             </span>
         </div>

@@ -33,6 +33,53 @@ document.addEventListener('DOMContentLoaded', function () {
     overlay.addEventListener('click', closeSidebar);
 });
 
+document.addEventListener('DOMContentLoaded', function () {
+    // Highlight active nav link and open parent submenus
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.sidebar a[href]');
+    
+    navLinks.forEach(function(link) {
+        const href = link.getAttribute('href');
+        if (href && (currentPath === href || currentPath.startsWith(href + '/'))) {
+            // Mark the link as active
+            link.classList.add('active');
+            
+            // If it's a sublink, also mark parent as submenu-active and open submenu
+            if (link.classList.contains('nav-sublink')) {
+                // Find all parent has-submenu elements and open them
+                let parent = link.closest('.has-submenu');
+                while (parent) {
+                    parent.classList.add('open');
+                    const parentLink = parent.querySelector('.nav-link-toggle');
+                    if (parentLink) parentLink.classList.add('submenu-active');
+                    parent = parent.parentElement.closest('.has-submenu');
+                }
+            }
+        }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.body.addEventListener('click', function(event) {
+        const toggle = event.target.closest('.nav-link-toggle');
+        if (!toggle) return;
+
+        const sidebar = toggle.closest('.sidebar');
+        if (!sidebar) return;
+
+        event.preventDefault();
+        const parent = toggle.closest('.has-submenu');
+        if (!parent) return;
+
+        const isOpen = parent.classList.contains('open');
+        document.querySelectorAll('.sidebar .has-submenu.open').forEach(function(el) {
+            if (el === parent || el.contains(parent)) return;
+            el.classList.remove('open');
+        });
+        parent.classList.toggle('open', !isOpen);
+    });
+});
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {

@@ -1,5 +1,6 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
+{% load humanize %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.1">
@@ -49,7 +50,7 @@
                     <div class="cx-info-item"><span class="cx-info-label">المورد</span><span class="cx-info-value">{{ invoice.supplier|default:'—' }}</span></div>
                     <div class="cx-info-item"><span class="cx-info-label">المخزن</span><span class="cx-info-value">{{ invoice.stock.name }}</span></div>
                     <div class="cx-info-item"><span class="cx-info-label">طريقة الدفع</span><span class="cx-info-value">{{ invoice.get_payment_method_display }}</span></div>
-                    <div class="cx-info-item"><span class="cx-info-label">الإجمالي</span><span class="cx-info-value">{{ invoice.grand_total }}</span></div>
+                    <div class="cx-info-item"><span class="cx-info-label">الإجمالي</span><span class="cx-info-value">{{ invoice.grand_total|floatformat:"2u"|default:0|intcomma }}</span></div>
                 </div>
             </div>
         </div>
@@ -72,9 +73,9 @@
                             <tr>
                                 <td class="line-product">{{ line.item.name }}</td>
                                 <td class="line-qty">{{ line.quantity|floatformat:"-3u" }}</td>
-                                <td>{{ line.unit_cost }}</td>
-                                <td>{{ line.tax_amount }}</td>
-                                <td class="line-total">{{ line.line_total }}</td>
+                                <td>{{ line.unit_cost|floatformat:"2u"|default:0|intcomma }}</td>
+                                <td>{{ line.tax_amount|floatformat:"2u"|default:0|intcomma }}</td>
+                                <td class="line-total">{{ line.line_total|floatformat:"2u"|default:0|intcomma }}</td>
                             </tr>
                             {% empty %}
                             <tr><td colspan="5" class="text-center text-muted">لا توجد بنود</td></tr>

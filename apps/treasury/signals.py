@@ -2,8 +2,10 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
+from apps.core.models import tenant_deletion_in_progress
+
 
 @receiver(pre_delete, sender='treasury.Treasury')
 def prevent_deleting_system_default_treasury(sender, instance, **kwargs):
-    if getattr(instance, 'is_system_default', False):
+    if getattr(instance, 'is_system_default', False) and not tenant_deletion_in_progress.get():
         raise ValidationError('لا يمكن حذف الخزينة الافتراضية النظامية.')

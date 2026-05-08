@@ -1,0 +1,199 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales_reports.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/sales_reports_summary.css' %}?v=2.0">
+<link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
+<style>
+    @media print {
+        .report-filters,
+        .cx-hero-right,
+        .btn {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <!-- ══════════════════ HERO ══════════════════ -->
+    <div class="cx-hero" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 1rem 1.5rem;">
+        <div class="cx-hero-inner" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="cx-hero-left" style="display: flex; align-items: center; gap: 1rem;">
+                <div class="cx-hero-icon-wrap" style="width: 52px; height: 52px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-chart-pie" style="color: white; font-size: 1.5rem;"></i>
+                </div>
+                <div>
+                    <h1 class="cx-hero-title" style="font-size: 1.5rem; margin-bottom: 0.25rem; color: white;">تقرير ملخص المبيعات</h1>
+                    <p class="cx-hero-desc" style="font-size: 0.85rem; margin: 0; color: rgba(255,255,255,0.9);">
+                        <i class="fas fa-calendar-alt me-1"></i> من {{ start_date }} إلى {{ end_date }}
+                    </p>
+                </div>
+            </div>
+            <div class="cx-hero-right">
+                <div class="cx-hero-actions" style="display: flex; gap: 0.5rem;">
+                    <button onclick="window.print()" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
+                        <i class="fas fa-print"></i><span> طباعة</span>
+                    </button>
+                    <a href="{% url 'reports:summary_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
+                        <i class="fas fa-download"></i><span> تصدير CSV</span>
+                    </a>
+                    <a href="{% url 'reports:reports' %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
+                        <i class="fas fa-arrow-left"></i><span> عودة</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ FILTERS ══════════════════ -->
+    <div class="report-filters" style="margin-bottom: 1.5rem; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="start_date" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">من التاريخ</label>
+                <input type="date" id="start_date" name="start_date" 
+                    value="{{ start_date|date:"Y-m-d" }}" class="form-control" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">إلى التاريخ</label>
+                <input type="date" id="end_date" name="end_date" 
+                    value="{{ end_date|date:"Y-m-d" }}" class="form-control" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="w-100" style="padding: 0.5rem; font-size: 0.85rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: white; font-weight: 600;">
+                    <i class="fas fa-search me-1"></i>بحث
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ══════════════════ SUMMARY CARDS (MODERN) ══════════════════ -->
+    <div class="report-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        
+        <div class="summary-card" style="padding: 1rem; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.3s ease;">
+            <div class="summary-card-icon" style="width: 45px; height: 45px; background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
+                <i class="fas fa-file-invoice" style="color: #667eea; font-size: 1.2rem;"></i>
+            </div>
+            <div class="summary-card-value" style="font-size: 1.5rem; font-weight: 800; margin: 0.25rem 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                {{ report.summary.invoice_count|default:0|intcomma }}
+            </div>
+            <div class="summary-card-label" style="font-size: 0.7rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">عدد الفواتير</div>
+        </div>
+        
+        <div class="summary-card" style="padding: 1rem; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.3s ease;">
+            <div class="summary-card-icon" style="width: 45px; height: 45px; background: linear-gradient(135deg, #f093fb20 0%, #f5576c20 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
+                <i class="fas fa-boxes-stacked" style="color: #f5576c; font-size: 1.2rem;"></i>
+            </div>
+            <div class="summary-card-value" style="font-size: 1.5rem; font-weight: 800; margin: 0.25rem 0; color: #f5576c;">
+                {{ report.summary.total_quantity|default:0|intcomma }}
+            </div>
+            <div class="summary-card-label" style="font-size: 0.7rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">إجمالي الكمية</div>
+        </div>
+        
+        <div class="summary-card" style="padding: 1rem; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.3s ease;">
+            <div class="summary-card-icon" style="width: 45px; height: 45px; background: linear-gradient(135deg, #4facfe20 0%, #00f2fe20 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
+                <i class="fas fa-money-bill-wave" style="color: #4facfe; font-size: 1.2rem;"></i>
+            </div>
+            <div class="summary-card-value" style="font-size: 1.5rem; font-weight: 800; margin: 0.25rem 0; color: #4facfe;">
+                {{ report.summary.total_amount|default:0|intcomma }}
+            </div>
+            <div class="summary-card-label" style="font-size: 0.7rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">إجمالي المبيعات</div>
+        </div>
+        
+        <div class="summary-card" style="padding: 1rem; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.3s ease;">
+            <div class="summary-card-icon" style="width: 45px; height: 45px; background: linear-gradient(135deg, #fa709a20 0%, #fee14020 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
+                <i class="fas fa-percent" style="color: #fa709a; font-size: 1.2rem;"></i>
+            </div>
+            <div class="summary-card-value" style="font-size: 1.5rem; font-weight: 800; margin: 0.25rem 0; color: #fa709a;">
+                {{ report.summary.total_tax|default:0|intcomma }}
+            </div>
+            <div class="summary-card-label" style="font-size: 0.7rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">إجمالي الضريبة</div>
+        </div>
+        
+        <div class="summary-card" style="padding: 1rem; background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.3s ease;">
+            <div class="summary-card-icon" style="width: 45px; height: 45px; background: linear-gradient(135deg, #43e97b20 0%, #38f9d720 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
+                <i class="fas fa-chart-line" style="color: #43e97b; font-size: 1.2rem;"></i>
+            </div>
+            <div class="summary-card-value" style="font-size: 1.5rem; font-weight: 800; margin: 0.25rem 0; color: #43e97b;">
+                {{ report.summary.avg_invoice_amount|default:0|intcomma }}
+            </div>
+            <div class="summary-card-label" style="font-size: 0.7rem; color: #6c757d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">متوسط الفاتورة</div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ DETAILS TABLE (MODERN) ══════════════════ -->
+    <div class="cx-panel" style="border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden;">
+        <div class="cx-panel-header" style="padding: 1rem 1.25rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h3 class="cx-panel-title" style="font-size: 1rem; margin: 0; color: white;">
+                <i class="fas fa-chart-simple me-2"></i>تفاصيل التقرير
+            </h3>
+        </div>
+        <div class="cx-panel-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="table" style="margin-bottom: 0;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 1rem 1.25rem; font-size: 0.85rem; color: #495057; font-weight: 700;">البيان</th>
+                            <th class="text-end" style="padding: 1rem 1.25rem; font-size: 0.85rem; color: #495057; font-weight: 700;">القيمة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 1rem 1.25rem; font-size: 0.85rem;">
+                                <i class="fas fa-check-circle me-2" style="font-size: 0.8rem; color: #667eea;"></i>
+                                عدد الفواتير المؤكدة
+                            </td>
+                            <td class="text-end" style="padding: 1rem 1.25rem; font-weight: 700; font-size: 0.9rem; color: #667eea;">
+                                {{ report.summary.invoice_count|default:0|intcomma }}
+                            </td>
+                        </tr>
+                        <tr style="background: #fafbfc; border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 1rem 1.25rem; font-size: 0.85rem;">
+                                <i class="fas fa-cubes me-2" style="font-size: 0.8rem; color: #f5576c;"></i>
+                                إجمالي الكمية المباعة
+                            </td>
+                            <td class="text-end" style="padding: 1rem 1.25rem; font-weight: 700; font-size: 0.9rem; color: #f5576c;">
+                                {{ report.summary.total_quantity|default:0|intcomma }}
+                            </td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 1rem 1.25rem; font-size: 0.85rem;">
+                                <i class="fas fa-chart-line me-2" style="font-size: 0.8rem; color: #4facfe;"></i>
+                                إجمالي المبيعات (قبل الضريبة)
+                            </td>
+                            <td class="text-end" style="padding: 1rem 1.25rem; font-weight: 700; font-size: 0.9rem; color: #4facfe;">
+                                {{ report.summary.total_amount|default:0|intcomma }}
+                            </td>
+                        </tr>
+                        <tr style="background: #fafbfc; border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 1rem 1.25rem; font-size: 0.85rem;">
+                                <i class="fas fa-receipt me-2" style="font-size: 0.8rem; color: #fa709a;"></i>
+                                إجمالي الضريبة
+                            </td>
+                            <td class="text-end" style="padding: 1rem 1.25rem; font-weight: 700; font-size: 0.9rem; color: #fa709a;">
+                                {{ report.summary.total_tax|default:0|intcomma }}
+                            </td>
+                        </tr>
+                        <tr style="background: linear-gradient(135deg, #667eea08 0%, #764ba208 100%);">
+                            <td style="padding: 1rem 1.25rem; font-size: 0.9rem; font-weight: 700;">
+                                <i class="fas fa-calculator me-2" style="font-size: 0.9rem; color: #43e97b;"></i>
+                                متوسط قيمة الفاتورة
+                            </td>
+                            <td class="text-end" style="padding: 1rem 1.25rem; font-size: 1rem; font-weight: 800; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                                {{ report.summary.avg_invoice_amount|default:0|intcomma }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

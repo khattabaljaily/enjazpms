@@ -1,5 +1,6 @@
 {% extends "layouts/dashboard.html" %}
 {% load static l10n %}
+{% load humanize %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.0">
@@ -91,7 +92,7 @@
                                value="0" data-price="{{ line.unit_price|unlocalize }}"
                                oninput="updateReturnTotal(this)">
                     </td>
-                    <td class="ret-unit-price text-end" data-value="{{ line.unit_price|unlocalize }}">{{ line.unit_price|floatformat:"2u" }}</td>
+                    <td class="ret-unit-price text-end" data-value="{{ line.unit_price|unlocalize }}">{{ line.unit_price|floatformat:"2u"|default:0|intcomma}}</td>
                     <td class="ret-line-total text-end" data-total="0">0.00</td>
                 </tr>
                 {% empty %}

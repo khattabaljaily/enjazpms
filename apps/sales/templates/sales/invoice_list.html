@@ -1,5 +1,5 @@
 {% extends "layouts/dashboard.html" %}
-{% load static %}
+{% load static %}{% load humanize %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
@@ -65,15 +65,15 @@
     <div class="cx-kpi-row">
         <div class="cx-kpi-card">
             <div class="cx-kpi-label">إجمالي المبيعات المؤكدة</div>
-            <div class="cx-kpi-value text-success">{{ stats.grand_total_sum|floatformat:"2u" }}</div>
+            <div class="cx-kpi-value text-success">{{ stats.grand_total_sum|floatformat:"2u"|default:0|intcomma }}</div>
         </div>
         <div class="cx-kpi-card">
             <div class="cx-kpi-label">إجمالي المحصَّل</div>
-            <div class="cx-kpi-value text-primary">{{ stats.paid_total|floatformat:"2u" }}</div>
+            <div class="cx-kpi-value text-primary">{{ stats.paid_total|floatformat:"2u"|default:0|intcomma}}</div>
         </div>
         <div class="cx-kpi-card cx-kpi-card--warning">
             <div class="cx-kpi-label">المتبقي (ذمم)</div>
-            <div class="cx-kpi-value text-warning">{{ stats.unpaid_total|floatformat:"2u" }}</div>
+            <div class="cx-kpi-value text-warning">{{ stats.unpaid_total|floatformat:"2u"|default:0|intcomma}}</div>
         </div>
     </div>
 </div>

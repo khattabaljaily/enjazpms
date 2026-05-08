@@ -521,7 +521,7 @@
     display: none !important;
   }
 
-  .cx-scene > *:not(.print-doc) {
+  .cx-scene:not(.printable-scene) > *:not(.print-doc) {
     display: none !important;
   }
 

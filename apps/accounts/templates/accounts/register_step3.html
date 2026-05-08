@@ -1,4 +1,5 @@
 {% extends "layouts/auth.html" %}
+{% load humanize %}
 
 {% block auth_content %}
 <div class="text-center mb-4">
@@ -38,6 +39,17 @@
         {{ form.version_type }}
         {% if form.version_type.errors %}
         <div class="text-danger small js-field-errors" data-field="version_type">{{ form.version_type.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3 field-span-2 js-num-stocks-field" style="display: none;">
+        {{ form.num_stocks.label_tag }}
+        {{ form.num_stocks }}
+        {% if form.num_stocks.help_text %}
+        <small class="text-muted">{{ form.num_stocks.help_text }}</small>
+        {% endif %}
+        {% if form.num_stocks.errors %}
+        <div class="text-danger small js-field-errors" data-field="num_stocks">{{ form.num_stocks.errors }}</div>
         {% endif %}
     </div>
 
@@ -93,4 +105,32 @@
 <p class="text-muted">
     لديك حساب بالفعل؟ <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>
 </p>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const versionTypeField = document.querySelector('#{{ form.version_type.id_for_label }}');
+    const numStocksField = document.querySelector('.js-num-stocks-field');
+    const numStocksInput = document.querySelector('#{{ form.num_stocks.id_for_label }}');
+    
+    function toggleNumStocksField() {
+        const selectedValue = versionTypeField.value;
+        if (selectedValue === 'multi_stock' || selectedValue === 'multi_branch') {
+            numStocksField.style.display = 'block';
+            numStocksInput.required = true;
+        } else {
+            numStocksField.style.display = 'none';
+            numStocksInput.required = false;
+            numStocksInput.value = '1'; // Reset to 1 for single store
+        }
+    }
+    
+    // Initial check
+    toggleNumStocksField();
+    
+    // Listen for changes
+    versionTypeField.addEventListener('change', toggleNumStocksField);
+});
+</script>
 {% endblock %}

@@ -1,0 +1,117 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales_reports.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/sales_reports_summary.css' %}?v=2.0">
+<link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
+<style>
+    @media print {
+        .report-filters,
+        .cx-hero-right,
+        .btn {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <!-- ══════════════════ HERO ══════════════════ -->
+    <div class="cx-hero" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 1rem 1.5rem;">
+        <div class="cx-hero-inner">
+            <div class="cx-hero-left">
+                <div class="cx-hero-icon-wrap" style="width: 52px; height: 52px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-users" style="color: white; font-size: 1.5rem;"></i>
+                </div>
+                <div>
+                    <h1 class="cx-hero-title" style="font-size: 1.5rem; margin-bottom: 0.25rem; color: white;">المبيعات حسب العميل</h1>
+                    <p class="cx-hero-desc" style="font-size: 0.85rem; margin: 0; color: rgba(255,255,255,0.9);">
+                        <i class="fas fa-calendar-alt me-1"></i> من {{ start_date }} إلى {{ end_date }}
+                    </p>
+                </div>
+            </div>
+            <div class="cx-hero-right">
+                <div class="cx-hero-actions" style="display: flex; gap: 0.5rem;">
+                    <button onclick="window.print()" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
+                        <i class="fas fa-print"></i><span> طباعة</span>
+                    </button>
+                    <a href="{% url 'reports:by_customer_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
+                        <i class="fas fa-download"></i><span> تصدير CSV</span>
+                    </a>
+                    <a href="{% url 'reports:reports' %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
+                        <i class="fas fa-arrow-left"></i><span> عودة</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ FILTERS ══════════════════ -->
+    <div class="report-filters" style="margin-bottom: 1.5rem; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="start_date" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">من التاريخ</label>
+                <input type="date" id="start_date" name="start_date" 
+                       value="{{ start_date|date:"Y-m-d" }}" class="form-control" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">إلى التاريخ</label>
+                <input type="date" id="end_date" name="end_date" 
+                       value="{{ end_date|date:"Y-m-d" }}" class="form-control" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="w-100" style="padding: 0.5rem; font-size: 0.85rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: white; font-weight: 600;">
+                    <i class="fas fa-search me-1"></i>بحث
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ══════════════════ DATA TABLE ══════════════════ -->
+    <div class="cx-panel">
+        <div class="cx-panel-header">
+            <h3 class="cx-panel-title">تفاصيل المبيعات حسب العميل</h3>
+        </div>
+        <div class="cx-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>اسم العميل</th>
+                            <th class="text-center">عدد الفواتير</th>
+                            <th class="text-end">الكمية الإجمالية</th>
+                            <th class="text-end">إجمالي المبيعات</th>
+                            <th class="text-end">متوسط الفاتورة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in report.data %}
+                        <tr>
+                            <td>{{ item.customer_name }}</td>
+                            <td class="text-center">{{ item.invoice_count }}</td>
+                            <td class="text-end">{{ item.total_quantity}}</td>
+                            <td class="text-end">{{ item.total_amount|floatformat:"2u"|default:0|intcomma }}</td>
+                            <td class="text-end">{{ item.avg_invoice_amount|floatformat:"2u"|default:0|intcomma }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                لا توجد بيانات مبيعات للفترة المحددة
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

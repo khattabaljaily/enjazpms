@@ -1,5 +1,6 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
+{% load humanize %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
@@ -69,9 +70,9 @@
                 <td>{{ forloop.counter }}</td>
                 <td>{{ line.item.name }}</td>
                 <td>{{ line.quantity|floatformat:"-3u" }}</td>
-                <td>{{ line.unit_cost|floatformat:"2u" }}</td>
-                <td>{{ line.tax_amount|floatformat:"2u" }}</td>
-                <td><strong>{{ line.line_total|floatformat:"2u" }}</strong></td>
+                <td>{{ line.unit_cost|floatformat:"2u"|default:0|intcomma}}</td>
+                <td>{{ line.tax_amount|floatformat:"2u"|default:0|intcomma}}</td>
+                <td><strong>{{ line.line_total|floatformat:"2u"|default:0|intcomma}}</strong></td>
               </tr>
               {% endfor %}
             </tbody>

@@ -140,7 +140,10 @@ def create_quantities_for_new_item(sender, instance, created, **kwargs):
         )
 
 
+from apps.core.models import tenant_deletion_in_progress
+
+
 @receiver(pre_delete, sender='stocks.Stock')
 def prevent_deleting_system_default_stock(sender, instance, **kwargs):
-    if getattr(instance, 'is_system_default', False):
+    if getattr(instance, 'is_system_default', False) and not tenant_deletion_in_progress.get():
         raise ValidationError('لا يمكن حذف المخزن الافتراضي النظامي.')

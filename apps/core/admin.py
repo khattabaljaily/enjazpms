@@ -1,8 +1,10 @@
 """
 Core Admin - لوحة التحكم للنماذج الأساسية
 """
-from django.contrib import admin
-from .models import BusinessType, Tenant, Settings, ActivityLog
+from django.contrib import admin, messages
+from django.db import transaction
+
+from .models import BusinessType, Tenant, Settings, ActivityLog, tenant_deletion_in_progress
 
 
 @admin.register(BusinessType)
@@ -22,6 +24,7 @@ class TenantAdmin(admin.ModelAdmin):
     search_fields = ['name', 'slug', 'email', 'phone']
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ['created_at', 'updated_at']
+    actions = ['delete_selected_tenants']
     
     fieldsets = (
         ('معلومات أساسية', {
@@ -44,6 +47,38 @@ class TenantAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def delete_model(self, request, obj):
+        token = tenant_deletion_in_progress.set(True)
+        try:
+            with transaction.atomic():
+                obj.delete()
+        finally:
+            tenant_deletion_in_progress.reset(token)
+
+    def delete_queryset(self, request, queryset):
+        token = tenant_deletion_in_progress.set(True)
+        try:
+            with transaction.atomic():
+                queryset.delete()
+        finally:
+            tenant_deletion_in_progress.reset(token)
+
+    def delete_selected_tenants(self, request, queryset):
+        count = queryset.count()
+        token = tenant_deletion_in_progress.set(True)
+        try:
+            with transaction.atomic():
+                queryset.delete()
+        finally:
+            tenant_deletion_in_progress.reset(token)
+
+        self.message_user(
+            request,
+            f'تم حذف {count} نشاط تجاري وجميع البيانات المرتبطة به.',
+            messages.SUCCESS
+        )
+    delete_selected_tenants.short_description = 'حذف النشاط التجاري وكل ما يتعلق به'
 
 
 @admin.register(Settings)

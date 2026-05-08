@@ -1,5 +1,6 @@
 {% extends "layouts/dashboard.html" %}
 {% load static l10n number_format %}
+{% load humanize %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
@@ -171,8 +172,8 @@
                             </td>
                             <td class="line-qty js-quote-qty" data-value="{{ line.quantity|unlocalize }}">{{ line.quantity|floatformat:"-3u" }}</td>
                             <td>{{ line.unit_price|money }}</td>
-                            <td class="js-quote-percent" data-value="{{ line.discount_percent|unlocalize }}">{{ line.discount_percent|floatformat:"2u" }}%</td>
-                            <td class="js-quote-percent" data-value="{{ line.tax_rate|unlocalize }}">{{ line.tax_rate|floatformat:"2u" }}%</td>
+                            <td class="js-quote-percent" data-value="{{ line.discount_percent|unlocalize }}">{{ line.discount_percent|floatformat:"2u"|default:0|intcomma}}%</td>
+                            <td class="js-quote-percent" data-value="{{ line.tax_rate|unlocalize }}">{{ line.tax_rate|floatformat:"2u"|default:0|intcomma}}%</td>
                             <td class="line-total"><strong>{{ line.line_total|money }}</strong></td>
                         </tr>
                         {% endfor %}

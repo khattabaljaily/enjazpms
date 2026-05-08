@@ -102,6 +102,12 @@
         "view_treasury_transactions": "عرض حركات الخزينة"
     },
     "التقارير": {
-        "view_reports": "عرض صفحة التقارير"
+        "view_reports": "عرض صفحة التقارير",
+        "view_sales_reports": "عرض تقارير المبيعات",
+        "export_sales_reports": "تصدير تقارير المبيعات",
+        "view_sales_summary_report": "عرض تقرير ملخص المبيعات",
+        "view_sales_by_customer_report": "عرض تقرير المبيعات حسب العميل",
+        "view_sales_by_item_report": "عرض تقرير المبيعات حسب المنتج",
+        "view_sales_by_date_report": "عرض تقرير المبيعات حسب التاريخ"
     }
 }

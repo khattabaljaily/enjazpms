@@ -1,5 +1,6 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
+{% load humanize %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
@@ -158,10 +159,10 @@
                                 <div><small class="text-muted">{{ line.item.sku }}</small></div>
                             </td>
                             <td class="line-qty">{{ line.quantity|floatformat:"-3u" }}</td>
-                            <td>{{ line.unit_price|floatformat:"2u" }}</td>
-                            <td>{{ line.discount_percent|floatformat:"2u" }}%</td>
-                            <td>{{ line.tax_rate|floatformat:"2u" }}%</td>
-                            <td class="line-total"><strong>{{ line.line_total|floatformat:"2u" }}</strong></td>
+                            <td>{{ line.unit_price|floatformat:"2u"|default:0|intcomma}}</td>
+                            <td>{{ line.discount_percent|floatformat:"2u"|default:0|intcomma}}%</td>
+                            <td>{{ line.tax_rate|floatformat:"2u"|default:0|intcomma}}%</td>
+                            <td class="line-total"><strong>{{ line.line_total|floatformat:"2u"|default:0|intcomma}}</strong></td>
                             {% if invoice.status != 'draft' %}
                             <td>
                                 {% if line.returned_quantity > 0 %}
@@ -192,7 +193,7 @@
                     <td>{{ p.payment_date }}</td>
                     <td>{{ p.get_payment_method_display }}</td>
                     <td class="{% if p.amount < 0 %}text-danger{% else %}text-success{% endif %}">
-                        {{ p.amount|floatformat:"2u" }}
+                        {{ p.amount|floatformat:"2u"|default:0|intcomma}}
                     </td>
                     <td>{{ p.reference_number|default:"—" }}</td>
                 </tr>
@@ -217,7 +218,7 @@
                 <tr>
                     <td>{{ r.return_number }}</td>
                     <td>{{ r.return_date }}</td>
-                    <td>{{ r.total_returned|floatformat:"2u" }}</td>
+                    <td>{{ r.total_returned|floatformat:"2u"|default:0|intcomma}}</td>
                     <td>{{ r.get_refund_method_display }}</td>
                     <td><a href="{% url 'sales:return_detail' r.pk %}" class="cx-btn-icon"><i class="fas fa-eye"></i></a></td>
                 </tr>
@@ -238,28 +239,28 @@
             <div class="cx-totals-block">
                 <div class="cx-totals-row">
                     <span>المجموع الفرعي</span>
-                    <strong>{{ invoice.subtotal|floatformat:"2u" }}</strong>
+                    <strong>{{ invoice.subtotal|floatformat:"2u"|default:0|intcomma}}</strong>
                 </div>
                 <div class="cx-totals-row">
                     <span>الخصم</span>
-                    <strong class="text-danger">- {{ invoice.invoice_discount_amount|floatformat:"2u" }}</strong>
+                    <strong class="text-danger">- {{ invoice.invoice_discount_amount|floatformat:"2u"|default:0|intcomma}}</strong>
                 </div>
                 <div class="cx-totals-row">
                     <span>الضريبة</span>
-                    <strong>{{ invoice.tax_amount|floatformat:"2u" }}</strong>
+                    <strong>{{ invoice.tax_amount|floatformat:"2u"|default:0|intcomma}}</strong>
                 </div>
                 <div class="cx-totals-row cx-totals-row--grand">
                     <span>الإجمالي النهائي</span>
-                    <strong>{{ invoice.grand_total|floatformat:"2u" }}</strong>
+                    <strong>{{ invoice.grand_total|floatformat:"2u"|default:0|intcomma}}</strong>
                 </div>
                 <div class="cx-totals-row">
                     <span>المدفوع</span>
-                    <strong class="text-success">{{ invoice.paid_amount|floatformat:"2u" }}</strong>
+                    <strong class="text-success">{{ invoice.paid_amount|floatformat:"2u"|default:0|intcomma}}</strong>
                 </div>
                 <div class="cx-totals-row {% if invoice.remaining_amount > 0 %}cx-totals-row--warn{% endif %}">
                     <span>المتبقي</span>
                     <strong class="{% if invoice.remaining_amount > 0 %}text-danger{% endif %}">
-                        {{ invoice.remaining_amount|floatformat:"2u" }}
+                        {{ invoice.remaining_amount|floatformat:"2u"|default:0|intcomma}}
                     </strong>
                 </div>
             </div>

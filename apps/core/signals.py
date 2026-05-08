@@ -25,6 +25,19 @@ def create_tenant_defaults(sender, instance, created, **kwargs):
         },
     )
 
+    # Create additional stocks if max_stocks > 1
+    if instance.max_stocks > 1:
+        for i in range(2, instance.max_stocks + 1):
+            Stock.objects.get_or_create(
+                tenant=instance,
+                code=f'WH-{i:03d}',
+                defaults={
+                    'name': f'مخزن {i}',
+                    'stock_type': 'main',
+                    'is_active': True,
+                },
+            )
+
     # Ensure at least one default stock flag exists
     if not Stock.objects.for_tenant(instance).filter(is_default=True).exists():
         fallback_stock = Stock.objects.for_tenant(instance).order_by('id').first()

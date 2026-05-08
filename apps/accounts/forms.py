@@ -303,6 +303,20 @@ class Step3SettingsForm(forms.Form):
         })
     )
     
+    num_stocks = forms.IntegerField(
+        label='عدد المخازن',
+        min_value=1,
+        max_value=50,
+        initial=1,
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '1',
+            'max': '50'
+        }),
+        help_text='حدد عدد المخازن التي تحتاجها (1-50)'
+    )
+    
     timezone = forms.CharField(
         label='المنطقة الزمنية',
         widget=forms.TextInput(attrs={
@@ -331,19 +345,23 @@ class Step3SettingsForm(forms.Form):
         })
     )
     
-    tax_value = forms.DecimalField(
-        label='قيمة الضريبة (%)',
-        max_digits=5,
-        decimal_places=2,
-        initial=0,
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'max': '100'
-        })
-    )
+    def clean(self):
+        cleaned_data = super().clean()
+        version_type = cleaned_data.get('version_type')
+        num_stocks = cleaned_data.get('num_stocks')
+        
+        if version_type in ['multi_stock', 'multi_branch']:
+            if not num_stocks or num_stocks < 1:
+                self.add_error('num_stocks', 'يجب تحديد عدد المخازن للنسخة المختارة')
+            elif version_type == 'multi_stock' and num_stocks > 10:
+                self.add_error('num_stocks', 'للنسخة "محل واحد بمخازن متعددة" الحد الأقصى 10 مخازن')
+            elif version_type == 'multi_branch' and num_stocks > 50:
+                self.add_error('num_stocks', 'للنسخة "فروع متعددة" الحد الأقصى 50 مخزن')
+        else:
+            # للنسخة الفردية، اجعل num_stocks = 1
+            cleaned_data['num_stocks'] = 1
+        
+        return cleaned_data
 
 
 class LoginForm(AuthenticationForm):
