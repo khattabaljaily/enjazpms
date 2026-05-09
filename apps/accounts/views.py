@@ -710,9 +710,9 @@ def login_view(request):
         if _wants_json(request):
             return JsonResponse({
                 'success': True,
-                'redirect_url': reverse('core:dashboard'),
+                'redirect_url': reverse('core:admin_dashboard') if request.user.is_superuser else reverse('core:dashboard'),
             })
-        return redirect('core:dashboard')
+        return redirect('core:admin_dashboard' if request.user.is_superuser else 'core:dashboard')
     
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -727,8 +727,11 @@ def login_view(request):
                 if not remember_me:
                     request.session.set_expiry(0)  # Session expires when browser closes
                 
-                # Redirect to next or dashboard
-                next_url = request.POST.get('next') or request.GET.get('next', 'core:dashboard')
+                # Redirect based on user type
+                if user.is_superuser:
+                    next_url = reverse('core:admin_dashboard')
+                else:
+                    next_url = request.POST.get('next') or request.GET.get('next', 'core:dashboard')
 
                 if _wants_json(request):
                     return JsonResponse({

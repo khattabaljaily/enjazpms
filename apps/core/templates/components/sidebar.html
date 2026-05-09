@@ -10,6 +10,48 @@
         <span class="sidebar-brand-text">إنجاز</span>
     </a>
 
+    {% if user.is_superuser %}
+    <!-- ── Admin Dashboard Only ── -->
+    <div class="sidebar-separator"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link active" href="{% url 'core:admin_dashboard' %}">
+                <span class="nav-icon"><i class="fas fa-gauge"></i></span>
+                لوحة مشرف النظام
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:tenant_settings' %}">
+                <span class="nav-icon"><i class="fas fa-building"></i></span>
+                إدارة العملاء
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:subscription' %}">
+                <span class="nav-icon"><i class="fas fa-credit-card"></i></span>
+                إدارة الاشتراكات
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'reports:summary_report' %}">
+                <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+                تقارير وإحصائيات
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'accounts:user_list' %}">
+                <span class="nav-icon"><i class="fas fa-users-gear"></i></span>
+                إدارة المستخدمين
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <span class="nav-icon"><i class="fas fa-headset"></i></span>
+                الدعم الفني
+            </a>
+        </li>
+    </ul>
+    {% else %}
     <!-- ── Main ── -->
     <div class="sidebar-separator"></div>
     <ul class="nav flex-column">
@@ -153,44 +195,6 @@
                 <small class="nav-coming-soon">قريباً</small>
             </a>
         </li>
-    </ul>
-
-    {% if user.is_tenant_admin or user.is_superuser or user|has_perm_key:'view_tenant_settings' or user|has_perm_key:'view_users' or user|has_perm_key:'view_permissiongroups' %}
-    <!-- ── Admin ── -->
-    <div class="sidebar-separator"></div>
-    <ul class="nav flex-column">
-        {% if user.is_tenant_admin or user.is_superuser or user|has_perm_key:'view_tenant_settings' %}
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'core:tenant_settings' %}">
-                <span class="nav-icon"><i class="fas fa-sliders"></i></span>
-                الإعدادات
-            </a>
-        </li>
-        {% endif %}
-        {% if user.is_tenant_admin or user.is_superuser %}
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'core:subscription' %}">
-                <span class="nav-icon"><i class="fas fa-credit-card"></i></span>
-                الاشتراك
-            </a>
-        </li>
-        {% endif %}
-        {% if user.is_tenant_admin or user.is_superuser or user|has_perm_key:'view_users' %}
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'accounts:user_list' %}">
-                <span class="nav-icon"><i class="fas fa-users-gear"></i></span>
-                إدارة المستخدمين
-            </a>
-        </li>
-        {% endif %}
-        {% if user.is_tenant_admin or user.is_superuser or user|has_perm_key:'view_permissiongroups' %}
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'accounts:permission_group_list' %}">
-                <span class="nav-icon"><i class="fas fa-user-shield"></i></span>
-                إدارة المجموعات والصلاحيات
-            </a>
-        </li>
-        {% endif %}
     </ul>
     {% endif %}
 

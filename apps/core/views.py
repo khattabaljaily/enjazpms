@@ -12,7 +12,7 @@ from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, Dec
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
 
-from .models import Settings
+from .models import Settings, Tenant
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
 from apps.treasury.models import TreasuryMovement
 from apps.expenses.models import Expense
@@ -22,6 +22,9 @@ from apps.expenses.models import Expense
 def dashboard(request):
     """الصفحة الرئيسية - Dashboard"""
     
+    if request.user.is_superuser:
+        return redirect('core:admin_dashboard')
+
     tenant = request.tenant
     
     # Basic stats
@@ -291,6 +294,69 @@ def dashboard(request):
     }
     
     return render(request, 'core/dashboard.html', context)
+
+
+@login_required
+def admin_dashboard(request):
+    """لوحة مشرف النظام"""
+    if not request.user.is_superuser:
+        return render(request, 'core/no_permission.html', status=403)
+
+    today = datetime.today().date()
+    total_clients = Tenant.objects.count()
+    active_clients = Tenant.objects.filter(is_active=True).count()
+    expired_clients = Tenant.objects.filter(is_active=True, subscription_expires__lt=today).count()
+    trial_clients = Tenant.objects.filter(subscription_plan='trial').count()
+    basic_clients = Tenant.objects.filter(subscription_plan='basic').count()
+    pro_clients = Tenant.objects.filter(subscription_plan='pro').count()
+    enterprise_clients = Tenant.objects.filter(subscription_plan='enterprise').count()
+    single_store_clients = Tenant.objects.filter(version_type='single_store').count()
+    multi_stock_clients = Tenant.objects.filter(version_type='multi_stock').count()
+    multi_branch_clients = Tenant.objects.filter(version_type='multi_branch').count()
+
+    recent_tenants = Tenant.objects.order_by('-created_at')[:5]
+    recent_tenants_data = [
+        {
+            'name': tenant.name,
+            'plan': tenant.get_subscription_plan_display(),
+            'version': tenant.get_version_type_display(),
+            'status': 'نشط' if tenant.is_active else 'معلق',
+            'expires': tenant.subscription_expires.strftime('%Y-%m-%d') if tenant.subscription_expires else 'مدى الحياة',
+        }
+        for tenant in recent_tenants
+    ]
+
+    stats = {
+        'total_clients': total_clients,
+        'active_clients': active_clients,
+        'expired_clients': expired_clients,
+        'trial_clients': trial_clients,
+        'basic_clients': basic_clients,
+        'pro_clients': pro_clients,
+        'enterprise_clients': enterprise_clients,
+        'single_store_clients': single_store_clients,
+        'multi_stock_clients': multi_stock_clients,
+        'multi_branch_clients': multi_branch_clients,
+        'pending_support': 12,
+        'backup_ready': max(active_clients, 0),
+        'monthly_revenue': 0,
+        'plan_distribution_json': json.dumps([
+            {'name': 'تجريبي', 'value': trial_clients},
+            {'name': 'أساسي', 'value': basic_clients},
+            {'name': 'احترافي', 'value': pro_clients},
+            {'name': 'مؤسسات', 'value': enterprise_clients},
+        ], ensure_ascii=False),
+        'version_distribution_json': json.dumps([
+            {'name': 'محل واحد بمخزن واحد', 'value': single_store_clients},
+            {'name': 'محل بمخازن متعددة', 'value': multi_stock_clients},
+            {'name': 'فروع ومخازن متعددة', 'value': multi_branch_clients},
+        ], ensure_ascii=False),
+        'recent_tenants': recent_tenants_data,
+    }
+
+    return render(request, 'core/admin_dashboard.html', {
+        'stats': stats,
+    })
 
 
 def subscription_expired(request):

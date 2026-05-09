@@ -1,0 +1,106 @@
+.dash-stat {
+    border: 1px solid var(--border-light);
+    background: var(--surface);
+    border-radius: 18px;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dash-stat:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+}
+
+.dash-stat .card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.stat-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    font-size: 1.15rem;
+    color: var(--white);
+}
+
+.stat-icon.primary { background: #6366f1; }
+.stat-icon.success { background: #10b981; }
+.stat-icon.info { background: #3b82f6; }
+.stat-icon.warning { background: #f59e0b; }
+
+.stat-text h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.stat-text p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.status-block {
+    width: 100%;
+    border-radius: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    padding: 1rem 1.1rem;
+    color: var(--text-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status-block strong {
+    font-weight: 700;
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.quick-action {
+    padding: 1rem 1rem;
+    min-height: 96px;
+    align-items: flex-start;
+}
+
+.quick-action i {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    font-size: 1rem;
+}
+
+.quick-action span {
+    display: block;
+    text-align: right;
+}
+
+.quick-action .qa-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+}
+
+.quick-action .qa-sub {
+    font-size: 0.77rem;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 992px) {
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+}

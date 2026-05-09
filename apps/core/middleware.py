@@ -25,6 +25,18 @@ class TenantMiddleware:
         if request.user.is_authenticated:
             if request.user.is_superuser:
                 request.tenant = None
+
+                # Superuser should not access tenant pages directly.
+                admin_dashboard_path = reverse('core:admin_dashboard')
+                safe_paths = [
+                    '/accounts/',
+                    '/admin/',
+                    admin_dashboard_path,
+                    '/subscription-expired/',
+                    '/no-tenant/',
+                ]
+                if not any(request.path.startswith(path) for path in safe_paths):
+                    return redirect(admin_dashboard_path)
             else:
                 request.tenant = request.user.tenant
                 
