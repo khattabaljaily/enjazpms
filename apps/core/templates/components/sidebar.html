@@ -156,6 +156,19 @@
                         <li><a href="{% url 'reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>المبيعات حسب التاريخ</a></li>
                     </ul>
                 </li>
+                <li class="nav-item has-submenu">
+                    <a class="nav-sublink nav-link-toggle" href="#">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        تقارير المشتريات
+                        <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+                    </a>
+                    <ul class="nav-submenu">
+                        <li><a href="{% url 'purchases:reports:summary_report' %}" class="nav-sublink"><i class="fas fa-chart-pie me-2"></i>ملخص المشتريات</a></li>
+                        <li><a href="{% url 'purchases:reports:by_supplier_report' %}" class="nav-sublink"><i class="fas fa-truck me-2"></i>المشتريات حسب المورد</a></li>
+                        <li><a href="{% url 'purchases:reports:by_item_report' %}" class="nav-sublink"><i class="fas fa-box me-2"></i>المشتريات حسب المنتج</a></li>
+                        <li><a href="{% url 'purchases:reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>المشتريات حسب التاريخ</a></li>
+                    </ul>
+                </li>
             </ul>
         </li>
     </ul>

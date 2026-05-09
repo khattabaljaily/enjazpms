@@ -108,6 +108,12 @@
         "view_sales_summary_report": "عرض تقرير ملخص المبيعات",
         "view_sales_by_customer_report": "عرض تقرير المبيعات حسب العميل",
         "view_sales_by_item_report": "عرض تقرير المبيعات حسب المنتج",
-        "view_sales_by_date_report": "عرض تقرير المبيعات حسب التاريخ"
+        "view_sales_by_date_report": "عرض تقرير المبيعات حسب التاريخ",
+        "view_purchases_reports": "عرض تقارير المشتريات",
+        "export_purchases_reports": "تصدير تقارير المشتريات",
+        "view_purchases_summary_report": "عرض تقرير ملخص المشتريات",
+        "view_purchases_by_supplier_report": "عرض تقرير المشتريات حسب المورد",
+        "view_purchases_by_item_report": "عرض تقرير المشتريات حسب المنتج",
+        "view_purchases_by_date_report": "عرض تقرير المشتريات حسب التاريخ"
     }
 }

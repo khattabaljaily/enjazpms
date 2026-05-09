@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 
 from . import views
 
@@ -21,4 +21,7 @@ urlpatterns = [
     path('returns/<int:pk>/', views.return_detail, name='return_detail'),
     path('returns/<int:pk>/confirm/', views.return_confirm_ajax, name='return_confirm'),
     path('returns/<int:pk>/cancel/', views.return_cancel_ajax, name='return_cancel'),
+
+    # Reports
+    path('reports/', include('apps.purchases.reports_urls')),
 ]
