@@ -8,6 +8,12 @@ from django.http import JsonResponse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.views import PasswordResetConfirmView
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
 from .decorators import require_permission
 from django.db import transaction
 from django.db.models import Q
@@ -18,7 +24,7 @@ from datetime import datetime, timedelta
 from apps.core.models import Tenant, Settings
 from apps.core.constants import COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
 from .models import PermissionGroup, User
-from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginForm, UserManagementForm
+from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginForm, UserManagementForm, PasswordResetForm, SetPasswordForm
 from .permissions import get_permission_keys, get_permission_schema
 
 
@@ -784,3 +790,90 @@ def profile_view(request):
     return render(request, 'accounts/profile.html', {
         'user': request.user,
     })
+
+
+def password_reset_request(request):
+    """طلب إعادة تعيين كلمة المرور"""
+    if request.user.is_authenticated:
+        return redirect('core:dashboard')
+
+    if request.method == 'POST':
+        form = PasswordResetForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            user = User.objects.get(email=email)
+
+            # Generate token
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            # Send email
+            reset_url = request.build_absolute_uri(
+                reverse('accounts:password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+            )
+
+            subject = 'إعادة تعيين كلمة المرور - منصة إنجاز'
+            message = render_to_string('accounts/email/password_reset_email.html', {
+                'user': user,
+                'reset_url': reset_url,
+            })
+
+            try:
+                send_mail(
+                    subject=subject,
+                    message='',  # Empty for HTML email
+                    html_message=message,
+                    from_email=None,  # Use DEFAULT_FROM_EMAIL
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+                messages.success(request, 'تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني')
+                # Stay on the same page instead of redirecting to login
+            except Exception as e:
+                messages.error(request, 'حدث خطأ في إرسال البريد الإلكتروني. يرجى المحاولة لاحقاً')
+
+    else:
+        form = PasswordResetForm()
+
+    return render(request, 'accounts/password_reset_request.html', {
+        'form': form,
+    })
+
+
+def password_reset_confirm(request, uidb64, token):
+    """تأكيد إعادة تعيين كلمة المرور"""
+    if request.user.is_authenticated:
+        return redirect('core:dashboard')
+
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == 'POST':
+            form = SetPasswordForm(request.POST)
+            if form.is_valid():
+                user.set_password(form.cleaned_data['new_password1'])
+                user.save()
+                messages.success(request, 'تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول')
+                # Stay on the same page instead of redirecting to login
+        else:
+            form = SetPasswordForm()
+    else:
+        messages.error(request, 'رابط إعادة التعيين غير صحيح أو منتهي الصلاحية')
+        return redirect('accounts:password_reset_request')
+
+    return render(request, 'accounts/password_reset_confirm.html', {
+        'form': form,
+        'valid_link': True,
+    })
+
+
+def password_reset_complete(request):
+    """تم إعادة تعيين كلمة المرور بنجاح"""
+    if request.user.is_authenticated:
+        return redirect('core:dashboard')
+
+    return render(request, 'accounts/password_reset_complete.html')

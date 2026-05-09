@@ -403,3 +403,67 @@ class LoginForm(AuthenticationForm):
             'autocomplete': 'off'
         })
     )
+
+
+class PasswordResetForm(forms.Form):
+    """نموذج طلب إعادة تعيين كلمة المرور"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_arabic_error_messages(self)
+        self.fields['email'].widget.attrs['autocomplete'] = 'email'
+
+    email = forms.EmailField(
+        label='البريد الإلكتروني',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'أدخل بريدك الإلكتروني',
+            'autofocus': True
+        })
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if not User.objects.filter(email=email, is_active=True).exists():
+            raise ValidationError('لا يوجد حساب بهذا البريد الإلكتروني')
+        return email
+
+
+class SetPasswordForm(forms.Form):
+    """نموذج تعيين كلمة مرور جديدة"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_arabic_error_messages(self)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['autocomplete'] = 'new-password'
+
+    new_password1 = forms.CharField(
+        label='كلمة المرور الجديدة',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'أدخل كلمة مرور قوية'
+        }),
+        help_text='كلمة المرور يجب أن تكون على الأقل 8 أحرف وتحتوي على أرقام وحروف'
+    )
+
+    new_password2 = forms.CharField(
+        label='تأكيد كلمة المرور الجديدة',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'أعد إدخال كلمة المرور'
+        })
+    )
+
+    def clean_new_password2(self):
+        password1 = self.cleaned_data.get('new_password1')
+        password2 = self.cleaned_data.get('new_password2')
+        if password1 and password2 and password1 != password2:
+            raise ValidationError('كلمات المرور غير متطابقة')
+        return password2
+
+    def clean_new_password1(self):
+        password = self.cleaned_data.get('new_password1')
+        if len(password) < 8:
+            raise ValidationError('كلمة المرور يجب أن تكون على الأقل 8 أحرف')
+        return password
