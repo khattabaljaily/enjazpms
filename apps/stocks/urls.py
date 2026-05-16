@@ -1,9 +1,12 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 app_name = 'stocks'
 
 urlpatterns = [
+    # Reports
+    path('reports/', include('apps.stocks.reports_urls')),
+
     # APIs
     path('api/table/', views.stock_table_api, name='table_api'),
     path('api/create/', views.stock_create_api, name='create_api'),

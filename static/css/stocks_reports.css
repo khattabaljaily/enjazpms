@@ -1,0 +1,157 @@
+/* =========================================================
+   STOCKS REPORTS - GENERAL STYLES
+   Shared styles for all stocks reports
+   ========================================================= */
+
+:root {
+  --report-primary: #4e73df;
+  --report-success: #1cc88a;
+  --report-info: #36b9cc;
+  --report-warning: #f6c23e;
+  --report-danger: #e74a3b;
+  --report-light: #f8f9fc;
+  --report-dark: #5a5c69;
+  --report-border: #e3e6f0;
+  --report-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Report Container */
+.cx-scene {
+  padding: 0 0 1rem 0;
+}
+
+.report-filters {
+  background: white;
+  border: 1px solid rgba(227, 230, 240, 0.95);
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: 0 10px 35px rgba(15, 23, 42, 0.04);
+  margin-bottom: 1.75rem;
+}
+
+.report-filters label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.45rem;
+  display: block;
+}
+
+/* Hero Section */
+.cx-hero {
+  border-radius: 20px;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--report-border);
+  box-shadow: var(--report-shadow);
+  background: linear-gradient(135deg, #ffffff 0%, #eef4fb 100%);
+}
+
+.cx-hero-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cx-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cx-hero-icon-wrap {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, rgba(78, 115, 223, 0.15), rgba(54, 185, 204, 0.08));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--report-primary);
+  font-size: 1.2rem;
+}
+
+.cx-hero-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--report-dark);
+  margin: 0;
+}
+
+.cx-hero-desc {
+  font-size: 0.9rem;
+  color: var(--report-dark);
+  opacity: 0.8;
+  margin: 0.25rem 0 0 0;
+}
+
+.cx-hero-right {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cx-hero-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Panel Styles */
+.cx-panel {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--report-border);
+  box-shadow: var(--report-shadow);
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.cx-panel-header {
+  background: linear-gradient(135deg, var(--report-light) 0%, #fff 100%);
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--report-border);
+}
+
+.cx-panel-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--report-dark);
+  margin: 0;
+}
+
+.cx-panel-body {
+  padding: 1rem;
+}
+
+/* Table Styles */
+.table {
+  width: 100%;
+  margin-bottom: 1rem;
+  color: var(--report-dark);
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.table thead th {
+  background: linear-gradient(135deg, var(--report-light) 0%, #e9ecef 100%);
+  border: none;
+  padding: 1rem 1.5rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--report-dark);
+  border-bottom: 2px solid var(--report-border);
+}
+
+.table tbody td {
+  padding: 0.5rem 1.5rem !important;
+  border-bottom: 1px solid rgba(227, 230, 240, 0.95);
+  vertical-align: middle;
+}

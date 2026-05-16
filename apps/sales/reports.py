@@ -83,17 +83,58 @@ class SalesReportGenerator:
             'details': []
         }
     
-    def get_by_customer_report(self):
+    def get_by_customer_report(self, customer_id=None):
         """تقرير المبيعات حسب العميل"""
         from apps.customers.models import Customer
-        
+        # If a specific customer is requested, return invoice-level details
+        if customer_id:
+            try:
+                customer = Customer.objects.get(tenant=self.tenant, id=customer_id)
+            except Customer.DoesNotExist:
+                return {'period': {'start': self.start_date, 'end': self.end_date}, 'data': []}
+
+            invoices = customer.sale_invoices.filter(
+                status='confirmed',
+                invoice_date__gte=self.start_date,
+                invoice_date__lte=self.end_date
+            ).prefetch_related('lines')
+
+            detail_rows = []
+            for invoice in invoices:
+                total_quantity = Decimal('0')
+                for line in invoice.lines.all():
+                    total_quantity += line.quantity or 0
+
+                # count distinct items in the invoice (عدد الأصناف)
+                try:
+                    item_count = invoice.lines.values_list('item', flat=True).distinct().count()
+                except Exception:
+                    # Fallback if queryset not available
+                    item_count = len({l.item_id for l in invoice.lines.all()})
+
+                detail_rows.append({
+                    'invoice_id': invoice.id,
+                    'invoice_number': invoice.invoice_number,
+                    'invoice_date': invoice.invoice_date,
+                    'item_count': format_number(item_count, 0),
+                    'total_quantity': format_number(float(total_quantity), 2),
+                    'grand_total': format_number(float(invoice.grand_total or 0), 2),
+                })
+
+            return {
+                'period': {'start': self.start_date, 'end': self.end_date},
+                'customer': {'id': customer.id, 'name': customer.name},
+                'data': detail_rows
+            }
+
+        # Default: aggregated per-customer
         customers = Customer.objects.filter(
             tenant=self.tenant,
             sale_invoices__status='confirmed',
             sale_invoices__invoice_date__gte=self.start_date,
             sale_invoices__invoice_date__lte=self.end_date
         ).distinct().prefetch_related('sale_invoices')
-        
+
         data = []
         for customer in customers:
             invoices = customer.sale_invoices.filter(
@@ -101,15 +142,15 @@ class SalesReportGenerator:
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
             )
-            
+
             total_amount = Decimal('0')
             total_quantity = Decimal('0')
-            
+
             for invoice in invoices:
                 total_amount += invoice.grand_total or 0
                 for line in invoice.lines.all():
                     total_quantity += line.quantity or 0
-            
+
             if invoices.exists():
                 data.append({
                     'customer_id': customer.id,
@@ -119,7 +160,7 @@ class SalesReportGenerator:
                     'total_amount': format_number(float(total_amount), 2),
                     'avg_invoice_amount': format_number(float(total_amount / invoices.count()), 2),
                 })
-        
+
         return {
             'period': {'start': self.start_date, 'end': self.end_date},
             'data': sorted(data, key=lambda x: x['total_amount'], reverse=True)

@@ -83,10 +83,50 @@ class PurchasesReportGenerator:
             'details': []
         }
 
-    def get_by_supplier_report(self):
+    def get_by_supplier_report(self, supplier_id=None):
         """تقرير المشتريات حسب المورد"""
         from apps.suppliers.models import Supplier
+        # If a specific supplier is requested, return invoices detail for that supplier
+        if supplier_id:
+            try:
+                supplier = Supplier.objects.get(tenant=self.tenant, id=supplier_id)
+            except Supplier.DoesNotExist:
+                return {'period': {'start': self.start_date, 'end': self.end_date}, 'data': []}
 
+            invoices = supplier.purchase_invoices.filter(
+                status='confirmed',
+                invoice_date__gte=self.start_date,
+                invoice_date__lte=self.end_date
+            ).prefetch_related('lines')
+
+            detail_rows = []
+            for invoice in invoices:
+                total_quantity = Decimal('0')
+                for line in invoice.lines.all():
+                    total_quantity += line.quantity or 0
+
+                # count distinct items in the invoice (عدد الأصناف)
+                try:
+                    item_count = invoice.lines.values_list('item', flat=True).distinct().count()
+                except Exception:
+                    item_count = len({l.item_id for l in invoice.lines.all()})
+
+                detail_rows.append({
+                    'invoice_id': invoice.id,
+                    'invoice_number': invoice.invoice_number,
+                    'invoice_date': invoice.invoice_date,
+                    'item_count': format_number(item_count, 0),
+                    'total_quantity': format_number(float(total_quantity), 2),
+                    'grand_total': format_number(float(invoice.grand_total or 0), 2),
+                })
+
+            return {
+                'period': {'start': self.start_date, 'end': self.end_date},
+                'supplier': {'id': supplier.id, 'name': supplier.name},
+                'data': detail_rows
+            }
+
+        # Default: aggregated per-supplier
         suppliers = Supplier.objects.filter(
             tenant=self.tenant,
             purchase_invoices__status='confirmed',

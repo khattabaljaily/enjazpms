@@ -1,5 +1,6 @@
 import json
-from datetime import timedelta
+import re
+from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
@@ -752,14 +753,31 @@ def purchases_by_supplier_report(request):
     if not end_date:
         end_date = timezone.now().date()
 
+    # Optional supplier filter
+    supplier_id = request.GET.get('supplier_id')
+
     # Generate report
     generator = PurchasesReportGenerator(tenant, start_date, end_date)
-    report_data = generator.get_by_supplier_report()
+    report_data = generator.get_by_supplier_report(supplier_id=supplier_id)
+
+    # suppliers list for filter dropdown
+    from apps.suppliers.models import Supplier
+    suppliers = Supplier.objects.filter(tenant=tenant).order_by('name')
+
+    selected_supplier = None
+    if supplier_id:
+        try:
+            selected_supplier = Supplier.objects.get(tenant=tenant, id=supplier_id)
+        except Supplier.DoesNotExist:
+            selected_supplier = None
 
     return render(request, 'purchases/reports/by_supplier.html', {
         'report': report_data,
         'start_date': start_date,
         'end_date': end_date,
+        'suppliers': suppliers,
+        'selected_supplier_id': supplier_id,
+        'selected_supplier': selected_supplier,
         'section': 'purchases_reports',
         'report_type': 'by_supplier',
     })
@@ -776,6 +794,7 @@ def purchases_by_supplier_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
+
     # Get date range
     start_date = _parse_date(request.GET.get('start_date'))
     end_date = _parse_date(request.GET.get('end_date'))
@@ -785,9 +804,12 @@ def purchases_by_supplier_report_export(request):
     if not end_date:
         end_date = timezone.now().date()
 
+    # Optional supplier filter
+    supplier_id = request.GET.get('supplier_id')
+
     # Generate report
     generator = PurchasesReportGenerator(tenant, start_date, end_date)
-    report_data = generator.get_by_supplier_report()
+    report_data = generator.get_by_supplier_report(supplier_id=supplier_id)
 
     # Create CSV
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -800,15 +822,43 @@ def purchases_by_supplier_report_export(request):
     writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
     writer.writerow([])
 
-    writer.writerow(['اسم المورد', 'عدد الأوامر', 'إجمالي الكمية', 'إجمالي المشتريات', 'متوسط الأمر'])
-    for item in report_data['data']:
-        writer.writerow([
-            item['supplier_name'],
-            item['invoice_count'],
-            item['total_quantity'],
-            item['total_amount'],
-            item['avg_invoice_amount'],
-        ])
+    # If supplier filter provided, export invoice-level details
+    if supplier_id and report_data.get('supplier'):
+        sup = None
+        try:
+            from apps.suppliers.models import Supplier
+            sup = Supplier.objects.get(tenant=tenant, id=supplier_id)
+        except Exception:
+            sup = None
+
+        if sup:
+            writer.writerow([f"المورد: {sup.name}"])
+            if getattr(sup, 'phone', None):
+                writer.writerow([f"هاتف: {sup.phone}"])
+            if getattr(sup, 'email', None):
+                writer.writerow([f"بريد إلكتروني: {sup.email}"])
+        else:
+            writer.writerow([f"المورد: {report_data['supplier']['name']}"])
+
+        writer.writerow([])
+        writer.writerow(['رقم الفاتورة', 'تاريخ الفاتورة', 'عدد الأصناف', 'قيمة الفاتورة'])
+        for row in report_data['data']:
+            writer.writerow([
+                row.get('invoice_number'),
+                row.get('invoice_date'),
+                row.get('item_count') or row.get('total_quantity'),
+                row.get('grand_total'),
+            ])
+    else:
+        writer.writerow(['اسم المورد', 'عدد الأوامر', 'إجمالي الكمية', 'إجمالي المشتريات', 'متوسط الأمر'])
+        for item in report_data['data']:
+            writer.writerow([
+                item['supplier_name'],
+                item['invoice_count'],
+                item['total_quantity'],
+                item['total_amount'],
+                item['avg_invoice_amount'],
+            ])
 
     return response
 

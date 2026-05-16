@@ -1510,13 +1510,30 @@ def sales_by_customer_report(request):
         end_date = timezone.now().date()
     
     # Generate report
+    # Optional customer filter
+    customer_id = request.GET.get('customer_id')
+
+    # Generate report
     generator = SalesReportGenerator(tenant, start_date, end_date)
-    report_data = generator.get_by_customer_report()
-    
+    report_data = generator.get_by_customer_report(customer_id=customer_id)
+
+    # customers list for filter
+    from apps.customers.models import Customer
+    customers = Customer.objects.filter(tenant=tenant).order_by('name')
+    selected_customer = None
+    if customer_id:
+        try:
+            selected_customer = Customer.objects.get(tenant=tenant, id=customer_id)
+        except Customer.DoesNotExist:
+            selected_customer = None
+
     return render(request, 'sales/reports/by_customer.html', {
         'report': report_data,
         'start_date': start_date,
         'end_date': end_date,
+        'customers': customers,
+        'selected_customer_id': customer_id,
+        'selected_customer': selected_customer,
         'section': 'sales_reports',
         'report_type': 'by_customer',
     })
@@ -1543,9 +1560,21 @@ def sales_by_customer_report_export(request):
         end_date = timezone.now().date()
     
     # Generate report
+    # Optional customer filter
+    customer_id = request.GET.get('customer_id')
+
+    # Generate report
     generator = SalesReportGenerator(tenant, start_date, end_date)
-    report_data = generator.get_by_customer_report()
-    
+    report_data = generator.get_by_customer_report(customer_id=customer_id)
+    # fetch selected customer for header if available
+    selected_customer = None
+    if customer_id:
+        from apps.customers.models import Customer
+        try:
+            selected_customer = Customer.objects.get(tenant=tenant, id=customer_id)
+        except Customer.DoesNotExist:
+            selected_customer = None
+
     # Create CSV
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="sales_by_customer_{end_date}.csv"'
@@ -1556,16 +1585,37 @@ def sales_by_customer_report_export(request):
     writer.writerow([])
     writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
     writer.writerow([])
-    
-    writer.writerow(['اسم العميل', 'عدد الفواتير', 'إجمالي الكمية', 'إجمالي المبيعات', 'متوسط الفاتورة'])
-    for item in report_data['data']:
-        writer.writerow([
-            item['customer_name'],
-            item['invoice_count'],
-            item['total_quantity'],
-            item['total_amount'],
-            item['avg_invoice_amount'],
-        ])
+
+    # If customer filter provided, export invoice-level details
+    if customer_id and report_data.get('customer'):
+        cust = selected_customer
+        if cust:
+            writer.writerow([f"العميل: {cust.name}"])
+            if cust.phone:
+                writer.writerow([f"هاتف: {cust.phone}"])
+            if cust.email:
+                writer.writerow([f"بريد إلكتروني: {cust.email}"])
+        else:
+            writer.writerow([f"العميل: {report_data['customer']['name']}"])
+        writer.writerow([])
+        writer.writerow(['رقم الفاتورة', 'تاريخ الفاتورة', 'عدد الأصناف', 'قيمة الفاتورة'])
+        for row in report_data['data']:
+            writer.writerow([
+                row.get('invoice_number'),
+                row.get('invoice_date'),
+                row.get('item_count') or row.get('total_quantity'),
+                row.get('grand_total'),
+            ])
+    else:
+        writer.writerow(['اسم العميل', 'عدد الفواتير', 'إجمالي الكمية', 'إجمالي المبيعات', 'متوسط الفاتورة'])
+        for item in report_data['data']:
+            writer.writerow([
+                item['customer_name'],
+                item['invoice_count'],
+                item['total_quantity'],
+                item['total_amount'],
+                item['avg_invoice_amount'],
+            ])
     
     return response
 

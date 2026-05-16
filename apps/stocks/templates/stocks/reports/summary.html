@@ -1,0 +1,103 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/stocks_reports.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/stocks_reports_summary.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
+<style>
+    @media print {
+        .report-filters,
+        .cx-hero-right,
+        .btn {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <!-- ══════════════════ HERO ══════════════════ -->
+    <div class="cx-hero" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="cx-hero-inner">
+            <div class="cx-hero-left">
+                <div class="cx-hero-icon-wrap" style="background: rgba(255,255,255,0.2);">
+                    <i class="fas fa-warehouse" style="color: white; font-size: 1.5rem;"></i>
+                </div>
+                <div>
+                    <h1 class="cx-hero-title" style="color: white; font-size: 1.5rem;">ملخص المخزن</h1>
+                </div>
+            </div>
+            <div class="cx-hero-right">
+                <div class="cx-hero-actions">
+                    <button onclick="window.print()" class="cx-btn-secondary" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px;">
+                        <i class="fas fa-print"></i><span> طباعة</span>
+                    </button>
+                    <a href="{% url 'stocks:reports:summary_report_export' %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px;">
+                        <i class="fas fa-download"></i><span> تصدير</span>
+                    </a>
+                    <a href="{% url 'stocks:quantities_list' %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px;">
+                        <i class="fas fa-arrow-left"></i><span> عودة</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════ SUMMARY CARDS ══════════════════ -->
+    <div class="report-summary">
+        <div class="summary-card">
+            <div class="summary-card-icon" style="background: rgba(102, 126, 234, 0.15); color: #667eea;">
+                <i class="fas fa-cube"></i>
+            </div>
+            <div class="summary-card-value">{{ report.summary.total_quantity|floatformat:0 }}</div>
+            <div class="summary-card-label">إجمالي الكمية</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-card-icon" style="background: rgba(28, 200, 138, 0.15); color: #1cc88a;">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="summary-card-value">{{ report.summary.total_available|floatformat:0 }}</div>
+            <div class="summary-card-label">الكمية المتاحة</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-card-icon" style="background: rgba(246, 194, 62, 0.15); color: #f6c23e;">
+                <i class="fas fa-lock"></i>
+            </div>
+            <div class="summary-card-value">{{ report.summary.total_reserved|floatformat:0 }}</div>
+            <div class="summary-card-label">الكمية المحجوزة</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-card-icon" style="background: rgba(54, 185, 204, 0.15); color: #36b9cc;">
+                <i class="fas fa-list"></i>
+            </div>
+            <div class="summary-card-value">{{ report.summary.unique_items }}</div>
+            <div class="summary-card-label">عدد المنتجات</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-card-icon" style="background: rgba(231, 74, 59, 0.15); color: #e74a3b;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="summary-card-value">{{ report.summary.low_stock_items }}</div>
+            <div class="summary-card-label">منتجات منخفضة</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-card-icon" style="background: rgba(78, 115, 223, 0.15); color: #4e73df;">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="summary-card-value">{{ report.summary.total_value|floatformat:0 }}</div>
+            <div class="summary-card-label">القيمة الإجمالية</div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

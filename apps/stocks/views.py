@@ -3,13 +3,15 @@ Stocks Views - عمليات CRUD للمخازن
 كل العمليات عبر JSON API (AJAX) + صفحة واحدة للعرض
 """
 import json
+import csv
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponseNotAllowed, JsonResponse
+from django.http import HttpResponseNotAllowed, JsonResponse, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
@@ -17,6 +19,7 @@ from apps.sales.models import StockMovement
 
 from .forms import StockForm
 from .models import Stock, StockQuantity
+from .reports import StocksReportGenerator
 
 
 def _ensure_tenant(request):
@@ -574,4 +577,208 @@ def stock_quantities_table_api(request):
         'recordsFiltered': filtered,
         'data': data,
     })
+
+
+# ============================================================
+# REPORTS - تقارير المخزن
+# ============================================================
+
+@login_required
+@require_permission('view_stocks_summary_report')
+def stocks_summary_report(request):
+    """تقرير ملخص المخزن"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    generator = StocksReportGenerator(tenant)
+    report_data = generator.get_summary_report()
+
+    return render(request, 'stocks/reports/summary.html', {
+        'report': report_data,
+        'section': 'stocks_reports',
+        'report_type': 'summary',
+    })
+
+
+@login_required
+@require_permission('view_stocks_summary_report')
+def stocks_summary_report_export(request):
+    """تصدير تقرير ملخص المخزن"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    generator = StocksReportGenerator(tenant)
+    report_data = generator.get_summary_report()
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="stocks_summary.csv"'
+    response.write('\ufeff')  # BOM for Excel
+
+    writer = csv.writer(response)
+    writer.writerow(['البند', 'القيمة'])
+    
+    for key, value in report_data['summary'].items():
+        writer.writerow([key, value])
+
+    return response
+
+
+@login_required
+@require_permission('view_stocks_by_item_report')
+def stocks_by_item_report(request):
+    """تقرير المخزن حسب المنتج"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    generator = StocksReportGenerator(tenant)
+    report_data = generator.get_by_item_report()
+
+    return render(request, 'stocks/reports/by_item.html', {
+        'report': report_data,
+        'section': 'stocks_reports',
+        'report_type': 'by_item',
+    })
+
+
+@login_required
+@require_permission('view_stocks_by_item_report')
+def stocks_by_item_report_export(request):
+    """تصدير تقرير المخزن حسب المنتج"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    generator = StocksReportGenerator(tenant)
+    report_data = generator.get_by_item_report()
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="stocks_by_item.csv"'
+    response.write('\ufeff')
+
+    writer = csv.writer(response)
+    writer.writerow(['المنتج', 'الوحدة', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'])
+
+    for item in report_data['data']:
+        writer.writerow([
+            item['item_name'],
+            item['item_unit'],
+            item['total_available'],
+            item['total_reserved'],
+            item['total_quantity'],
+            item['total_value']
+        ])
+
+    return response
+
+
+@login_required
+@require_permission('view_stocks_by_category_report')
+def stocks_by_category_report(request):
+    """تقرير المخزن حسب الفئة"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    generator = StocksReportGenerator(tenant)
+    report_data = generator.get_by_category_report()
+
+    return render(request, 'stocks/reports/by_category.html', {
+        'report': report_data,
+        'section': 'stocks_reports',
+        'report_type': 'by_category',
+    })
+
+
+@login_required
+@require_permission('view_stocks_by_category_report')
+def stocks_by_category_report_export(request):
+    """تصدير تقرير المخزن حسب الفئة"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    generator = StocksReportGenerator(tenant)
+    report_data = generator.get_by_category_report()
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="stocks_by_category.csv"'
+    response.write('\ufeff')
+
+    writer = csv.writer(response)
+    writer.writerow(['الفئة', 'عدد المنتجات', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'])
+
+    for category in report_data['data']:
+        writer.writerow([
+            category['category_name'],
+            category['item_count'],
+            category['total_available'],
+            category['total_reserved'],
+            category['total_quantity'],
+            category['total_value']
+        ])
+
+    return response
+
+
+@login_required
+@require_permission('view_stocks_by_location_report')
+def stocks_by_stock_report(request):
+    """تقرير المخزن حسب الموقع"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    # Optional stock filter
+    stock_id = request.GET.get('stock_id')
+
+    generator = StocksReportGenerator(tenant)
+    report_data = generator.get_by_stock_report(stock_id=stock_id)
+
+    # stocks list for dropdown
+    stocks_list = Stock.objects.filter(tenant=tenant, is_active=True).order_by('name')
+
+    return render(request, 'stocks/reports/by_stock.html', {
+        'report': report_data,
+        'section': 'stocks_reports',
+        'report_type': 'by_stock',
+        'stocks': stocks_list,
+        'selected_stock_id': stock_id,
+    })
+
+
+@login_required
+@require_permission('view_stocks_by_location_report')
+def stocks_by_stock_report_export(request):
+    """تصدير تقرير المخزن حسب الموقع"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    stock_id = request.GET.get('stock_id')
+
+    generator = StocksReportGenerator(tenant)
+    report_data = generator.get_by_stock_report(stock_id=stock_id)
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="stocks_by_location.csv"'
+    response.write('\ufeff')
+
+    writer = csv.writer(response)
+    writer.writerow(['المخزن', 'النوع', 'عدد المنتجات', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'])
+
+    for stock in report_data['data']:
+        writer.writerow([
+            stock['stock_name'],
+            stock['stock_type'],
+            stock['item_count'],
+            stock['total_available'],
+            stock['total_reserved'],
+            stock['total_quantity'],
+            stock['total_value']
+        ])
+
+    return response
 

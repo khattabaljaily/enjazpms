@@ -169,6 +169,19 @@
                         <li><a href="{% url 'purchases:reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>المشتريات حسب التاريخ</a></li>
                     </ul>
                 </li>
+                <li class="nav-item has-submenu">
+                    <a class="nav-sublink nav-link-toggle" href="#">
+                        <i class="fas fa-warehouse me-2"></i>
+                        تقارير المخزن
+                        <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+                    </a>
+                    <ul class="nav-submenu">
+                        <li><a href="{% url 'stocks:reports:summary_report' %}" class="nav-sublink"><i class="fas fa-chart-pie me-2"></i>ملخص المخزن</a></li>
+                        <li><a href="{% url 'stocks:reports:by_item_report' %}" class="nav-sublink"><i class="fas fa-box me-2"></i>المخزن حسب المنتج</a></li>
+                        <li><a href="{% url 'stocks:reports:by_category_report' %}" class="nav-sublink"><i class="fas fa-th me-2"></i>المخزن حسب الفئة</a></li>
+                        <li><a href="{% url 'stocks:reports:by_stock_report' %}" class="nav-sublink"><i class="fas fa-location-dot me-2"></i>المخزن حسب الموقع</a></li>
+                    </ul>
+                </li>
             </ul>
         </li>
     </ul>

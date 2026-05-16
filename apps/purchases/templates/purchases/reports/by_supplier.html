@@ -41,7 +41,7 @@
                     <button onclick="window.print()" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
                         <i class="fas fa-print"></i><span> طباعة</span>
                     </button>
-                    <a href="{% url 'purchases:reports:by_supplier_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
+                    <a href="{% url 'purchases:reports:by_supplier_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}{% if selected_supplier_id %}&supplier_id={{ selected_supplier_id }}{% endif %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
                         <i class="fas fa-download"></i><span> تصدير CSV</span>
                     </a>
                     <a href="{% url 'purchases:order_list' %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
@@ -65,6 +65,15 @@
                 <input type="date" id="end_date" name="end_date"
                        value="{{ end_date|date:"Y-m-d" }}" class="form-control" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
             </div>
+            <div class="col-md-3">
+                <label for="supplier_id" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">المورد</label>
+                <select id="supplier_id" name="supplier_id" class="form-select" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+                    <option value="">كل الموردين</option>
+                    {% for sup in suppliers %}
+                        <option value="{{ sup.id }}" {% if sup.id|stringformat:"s" == selected_supplier_id %}selected{% endif %}>{{ sup.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="w-100" style="padding: 0.5rem; font-size: 0.85rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: white; font-weight: 600;">
                     <i class="fas fa-search me-1"></i>بحث
@@ -79,36 +88,79 @@
             <h3 class="cx-panel-title">تفاصيل المشتريات حسب المورد</h3>
         </div>
         <div class="cx-panel-body">
-            {% if report.data %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>اسم المورد</th>
-                            <th class="text-center">عدد الأوامر</th>
-                            <th class="text-end">الكمية الإجمالية</th>
-                            <th class="text-end">إجمالي المشتريات</th>
-                            <th class="text-end">متوسط الأمر</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in report.data %}
-                        <tr>
-                            <td>{{ item.supplier_name }}</td>
-                            <td class="text-center">{{ item.invoice_count }}</td>
-                            <td class="text-end">{{ item.total_quantity}}</td>
-                            <td class="text-end">{{ item.total_amount|floatformat:"2u"|default:0|intcomma }}</td>
-                            <td class="text-end">{{ item.avg_invoice_amount|floatformat:"2u"|default:0|intcomma }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            {% if report.supplier %}
+                <div class="mb-3 p-3" style="border:1px solid #e9ecef; border-radius:8px; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+                    <h4 style="margin:0 0 6px 0;">بيانات المورد</h4>
+                    {% if selected_supplier %}
+                        <p style="margin:0; font-weight:700;">{{ selected_supplier.name }}</p>
+                        {% if selected_supplier.phone %}<p style="margin:0;">هاتف: {{ selected_supplier.phone }}</p>{% endif %}
+                        {% if selected_supplier.email %}<p style="margin:0;">بريد إلكتروني: {{ selected_supplier.email }}</p>{% endif %}
+                    {% else %}
+                        <p style="margin:0; font-weight:700;">{{ report.supplier.name }}</p>
+                    {% endif %}
+                </div>
+
+                {% if report.data %}
+                <div class="table-responsive mt-3">
+                    <table class="table table-striped table-hover" style="background:#fff; border-radius:8px; overflow:hidden;">
+                        <thead style="background:#f8fafc;">
+                            <tr>
+                                <th>رقم الفاتورة</th>
+                                <th>تاريخ الفاتورة</th>
+                                <th class="text-center">عدد الأصناف</th>
+                                <th class="text-end">قيمة الفاتورة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report.data %}
+                            <tr>
+                                <td>{{ row.invoice_number }}</td>
+                                <td>{{ row.invoice_date|date:"Y-m-d" }}</td>
+                                <td class="text-center">{{ row.item_count }}</td>
+                                <td class="text-end">{{ row.grand_total|default:0 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info mt-3">
+                    لا توجد فواتير لهذا المورد في الفترة المحددة
+                </div>
+                {% endif %}
+
             {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                لا توجد بيانات مشتريات للفترة المحددة
-            </div>
+                {% if report.data %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>اسم المورد</th>
+                                <th class="text-center">عدد الأوامر</th>
+                                <th class="text-end">الكمية الإجمالية</th>
+                                <th class="text-end">إجمالي المشتريات</th>
+                                <th class="text-end">متوسط الأمر</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in report.data %}
+                            <tr>
+                                <td>{{ item.supplier_name }}</td>
+                                <td class="text-center">{{ item.invoice_count }}</td>
+                                <td class="text-end">{{ item.total_quantity}}</td>
+                                <td class="text-end">{{ item.total_amount|floatformat:"2u"|default:0|intcomma }}</td>
+                                <td class="text-end">{{ item.avg_invoice_amount|floatformat:"2u"|default:0|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    لا توجد بيانات مشتريات للفترة المحددة
+                </div>
+                {% endif %}
             {% endif %}
         </div>
     </div>

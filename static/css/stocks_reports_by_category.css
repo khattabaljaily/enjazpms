@@ -1,0 +1,140 @@
+/* =========================================================
+   STOCKS REPORTS - BY CATEGORY REPORT STYLES
+   Specific styles for stocks by category report
+   ========================================================= */
+
+/* Category Cards Grid */
+.category-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.category-card {
+  background: linear-gradient(135deg, #fff 0%, #f8f9fc 100%);
+  border: 2px solid var(--report-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.category-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--report-success) 0%, var(--report-primary) 100%);
+}
+
+.category-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(28, 200, 138, 0.15);
+  border-color: var(--report-success);
+}
+
+.category-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--report-dark);
+  margin-bottom: 1rem;
+}
+
+.category-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.category-stat {
+  text-align: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid var(--report-border);
+}
+
+.category-stat-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--report-success);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.category-stat-label {
+  font-size: 0.75rem;
+  color: var(--report-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* Table Styles */
+.cx-panel {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.cx-panel-header {
+  background: linear-gradient(135deg, var(--report-success) 0%, #17a673 100%);
+  color: white;
+}
+
+.cx-panel-title {
+  color: white;
+}
+
+.table {
+  margin-bottom: 0;
+}
+
+.table thead th {
+  background: var(--report-light);
+  color: var(--report-dark);
+  font-weight: 700;
+  padding: 1rem 1.25rem;
+  border: none;
+}
+
+.table tbody td {
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.table tbody tr:hover {
+  background: #fafbfc;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .category-cards {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .category-card {
+    padding: 1.25rem;
+  }
+
+  .category-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .table thead th,
+  .table tbody td {
+    padding: 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .category-name {
+    font-size: 1.1rem;
+  }
+}
