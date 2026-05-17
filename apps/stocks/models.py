@@ -32,9 +32,6 @@ class Stock(TenantMixin):
     TYPE_CHOICES = (
         ('main', 'مخزن رئيسي'),
         ('branch', 'مخزن فرع'),
-        ('cold', 'مخزن مبرد'),
-        ('hazardous', 'مخزن مواد خطرة'),
-        ('transit', 'مخزن عبور / أمانات'),
     )
 
     # ------ معلومات أساسية ------
