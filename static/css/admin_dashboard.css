@@ -27,7 +27,7 @@
     justify-content: center;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
     font-size: 1.15rem;
-    color: var(--white);
+    color: var(--text-inverse);
 }
 
 .stat-icon.primary { background: #6366f1; }

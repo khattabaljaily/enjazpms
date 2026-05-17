@@ -3,10 +3,11 @@
     --st-border: #e2e8f0;
     --st-muted: #64748b;
     --st-title: #0f172a;
-    --st-card: #ffffff;
+    --st-card: var(--surface);
     --st-soft: #f9fafb;
     --st-primary: #3b82f6;
     --st-success: #10b981;
+    --st-chip-bg: #eff6ff;
     background: var(--st-bg);
     border: 1px solid var(--st-border);
     border-radius: 24px;
@@ -41,7 +42,7 @@
     font-size: 0.75rem;
     font-weight: 500;
     color: #1e40af;
-    background: #eff6ff;
+    background: var(--st-chip-bg, #eff6ff);
     border: none;
     letter-spacing: -0.01em;
 }
@@ -89,7 +90,7 @@
     border: 1px solid var(--st-border);
     border-radius: 12px;
     padding: 0.6rem 0.85rem;
-    background: #fff;
+    background: var(--surface);
     font-size: 0.9rem;
     transition: all 0.1s ease;
 }
@@ -104,7 +105,7 @@
 .settings-switches {
     border: 1px solid var(--st-border);
     border-radius: 18px;
-    background: linear-gradient(180deg, #fbfdff 0%, #f8fafc 100%);
+    background: var(--surface);
     padding: 0.8rem;
 }
 
@@ -130,7 +131,7 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 0.85rem 1rem;
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--surface);
     border: 1px solid var(--st-border);
     border-radius: 16px;
     margin-bottom: 0.65rem;
@@ -199,11 +200,11 @@
     border: none;
     border-radius: 14px;
     padding: 0.7rem 1rem;
-    background: #f1f5f9;
+    background: var(--surface);
     margin-bottom: 1rem;
     font-size: 0.8rem;
     font-weight: 500;
-    color: #334155;
+    color: var(--text-secondary);
 }
 
 .settings-actions .btn {
@@ -273,4 +274,50 @@
     .settings-switch__hint {
         font-size: 0.73rem;
     }
+}
+
+[data-theme="dark"] .settings-shell {
+    --st-bg: var(--surface);
+    --st-border: var(--border-color);
+    --st-muted: var(--text-secondary);
+    --st-title: var(--text-primary);
+    --st-soft: var(--surface-hover);
+}
+
+[data-theme="dark"] .settings-hero,
+[data-theme="dark"] .settings-switch,
+[data-theme="dark"] .settings-meta,
+[data-theme="dark"] .settings-card,
+[data-theme="dark"] .settings-card .card-header,
+[data-theme="dark"] .settings-card .card-body {
+    background: var(--surface) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .settings-chip {
+    background: rgba(255,255,255,0.08) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .settings-input,
+[data-theme="dark"] .settings-textarea {
+    background: rgba(255,255,255,0.06) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .settings-switch .form-check-input {
+    background-color: rgba(255,255,255,0.12) !important;
+}
+
+[data-theme="dark"] .settings-switch:hover {
+    border-color: var(--border-color) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
+}
+
+[data-theme="dark"] .settings-actions .btn-primary,
+[data-theme="dark"] .settings-actions .btn-success {
+    color: #fff !important;
 }

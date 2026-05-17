@@ -15,4 +15,5 @@ urlpatterns = [
     path('settings/tenant/', views.tenant_settings, name='tenant_settings'),
     path('settings/tenant/api/update/', views.tenant_settings_update_api, name='tenant_settings_update_api'),
     path('subscription/', views.subscription_info, name='subscription'),
+    path('pricing/', views.pricing, name='pricing'),
 ]

@@ -91,7 +91,7 @@
     padding-left: 3.1rem;
     border: 2px solid #d7dfed !important;
     border-radius: 12px !important;
-    background: #ffffff !important;
+    background: var(--surface) !important;
     font-weight: 700;
 }
 

@@ -3,7 +3,7 @@
 /* Profile Variables */
 :root {
     --profile-bg: linear-gradient(135deg, #f8fbff 0%, #f7fafc 48%, #f4fcf7 100%);
-    --profile-card: #ffffff;
+    --profile-card: var(--surface);
     --profile-border: #dbe5ef;
     --profile-title: #0f172a;
     --profile-muted: #64748b;
@@ -170,7 +170,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.6rem 0.8rem;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    background: var(--surface);
     border: 1px solid var(--profile-border);
     border-radius: 10px;
     transition: all 0.2s ease;
@@ -205,7 +205,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    background: var(--surface);
     border: 1px solid var(--profile-border);
     border-radius: 10px;
     transition: all 0.2s ease;
@@ -260,7 +260,7 @@
     padding: 0.75rem;
     border: 1px solid var(--profile-border);
     border-radius: 10px;
-    background: #fff;
+    background: var(--surface);
     color: var(--profile-title);
     text-decoration: none;
     font-size: 0.85rem;
@@ -335,7 +335,7 @@
     align-items: flex-start;
     border: 1px solid var(--profile-border);
     border-radius: 10px;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    background: var(--surface);
     padding: 0.7rem 0.8rem;
     color: var(--profile-title);
     transition: all 0.2s ease;

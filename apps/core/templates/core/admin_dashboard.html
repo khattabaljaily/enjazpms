@@ -177,7 +177,8 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     Chart.defaults.font.family = "'Segoe UI', 'Arabic Typesetting', sans-serif";
-    Chart.defaults.color = 'rgba(0, 0, 0, 0.65)';
+    const themeTextColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || 'rgba(0, 0, 0, 0.65)';
+    Chart.defaults.color = themeTextColor;
 
     const planData = {{ stats.plan_distribution_json|safe }};
     const versionData = {{ stats.version_distribution_json|safe }};

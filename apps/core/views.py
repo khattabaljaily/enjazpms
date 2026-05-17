@@ -478,6 +478,7 @@ def subscription_info(request):
     
     context = {
         'tenant': tenant,
+        'current_tenant': tenant,
         'days_remaining': days_remaining,
         'subscription_is_valid': is_valid,
         'subscription_status_label': status_label,
@@ -485,3 +486,70 @@ def subscription_info(request):
     }
     
     return render(request, 'core/subscription.html', context)
+
+
+def pricing(request):
+    """صفحة خطط التسعير"""
+    plans = [
+        {
+            'name': 'Basic',
+            'title_ar': 'أساسي',
+            'description': 'محل واحد مع مخزن واحد',
+            'monthly': '$49',
+            'annual': '$499',
+            'perpetual': '$3,999',
+            'stocks': '1 مخزن',
+            'users': 'حتى 5 مستخدمين',
+            'tag': 'مناسب للمتاجر الصغيرة',
+            'highlight': False,
+        },
+        {
+            'name': 'Pro',
+            'title_ar': 'احترافي',
+            'description': 'محل واحد مع ما يصل إلى 5 مخازن',
+            'monthly': '$89',
+            'annual': '$899',
+            'perpetual': '$6,999',
+            'stocks': 'حتى 5 مخازن',
+            'users': 'حتى 15 مستخدمًا',
+            'tag': 'الحل الأكثر توازناً',
+            'highlight': True,
+        },
+        {
+            'name': 'Enterprise',
+            'title_ar': 'مؤسسات',
+            'description': 'فروع ومخازن متعددة مع تحكم كامل',
+            'monthly': '$159',
+            'annual': '$1,599',
+            'perpetual': '$11,999',
+            'stocks': 'حتى 20 مخزن',
+            'users': 'حتى 40 مستخدمًا',
+            'tag': 'للشركات الكبيرة والموزعين',
+            'highlight': False,
+        },
+    ]
+
+    benefits = [
+        'تقارير مبيعات ومشتريات شاملة',
+        'إدارة المخزون بدقة مع تنبيهات المخزون المنخفض',
+        'تشغيل متعدد الفروع والمخازن',
+        'صلاحيات مستخدمين قابلة للتخصيص',
+        'دعم فني وتحديثات مستمرة',
+    ]
+
+    # Determine current tenant's plan to highlight on pricing page
+    tenant = getattr(request, 'tenant', None)
+    current_plan_key = getattr(tenant, 'subscription_plan', None) if tenant else None
+    # Normalize and mark plans
+    for p in plans:
+        p_key = p['name'].lower()
+        p['is_current'] = False
+        if current_plan_key and current_plan_key.lower() == p_key:
+            p['is_current'] = True
+
+    return render(request, 'core/pricing.html', {
+        'plans': plans,
+        'benefits': benefits,
+        'trial_days': 7,
+        'current_subscription_plan_display': tenant.get_subscription_plan_display() if tenant else None,
+    })

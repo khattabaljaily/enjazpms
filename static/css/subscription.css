@@ -1,9 +1,9 @@
 .subscription-shell {
     --sub-bg: linear-gradient(135deg, #f8fbff 0%, #f7fafc 48%, #f4fcf7 100%);
-    --sub-card: #ffffff;
+    --sub-card: var(--surface);
     --sub-border: #dbe5ef;
-    --sub-title: #0f172a;
-    --sub-muted: #64748b;
+    --sub-title: var(--text-primary);
+    --sub-muted: var(--text-secondary);
     --sub-success: #10b981;
     --sub-warning: #f59e0b;
     --sub-danger: #ef4444;
@@ -40,7 +40,7 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #475569;
+    color: var(--sub-muted);
     margin-bottom: 0.45rem;
 }
 
@@ -68,8 +68,8 @@
 }
 
 .subscription-plan-badge {
-    color: #1d4ed8;
-    background: #dbeafe;
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.12);
 }
 
 .subscription-status-badge {
@@ -77,23 +77,23 @@
 }
 
 .subscription-status-badge--success {
-    color: #065f46;
-    background: #d1fae5;
+    color: var(--success);
+    background: rgba(16, 185, 129, 0.18);
 }
 
 .subscription-status-badge--warning {
-    color: #92400e;
-    background: #fef3c7;
+    color: var(--warning);
+    background: rgba(251, 191, 36, 0.17);
 }
 
 .subscription-status-badge--danger {
-    color: #991b1b;
-    background: #fee2e2;
+    color: var(--danger);
+    background: rgba(248, 113, 113, 0.18);
 }
 
 .subscription-status-badge--info {
-    color: #0c4a6e;
-    background: #cffafe;
+    color: var(--info);
+    background: rgba(59, 130, 246, 0.17);
 }
 
 .subscription-status-number {
@@ -161,7 +161,8 @@
 
 .subscription-stat-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* three columns on desktop, fall back to 2 on medium and 1 on small via media queries */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.75rem;
     margin-bottom: 1rem;
 }
@@ -170,7 +171,7 @@
     border: 1px solid var(--sub-border);
     border-radius: 16px;
     padding: 0.95rem;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    background: var(--surface);
 }
 
 .subscription-stat__label {
@@ -198,7 +199,7 @@
     border: 1px solid var(--sub-border);
     border-radius: 14px;
     padding: 0.8rem 0.9rem;
-    background: #fff;
+    background: var(--surface);
 }
 
 .subscription-feature__label {
@@ -220,7 +221,7 @@
     position: relative;
     padding: 0.85rem 0.95rem 0.85rem 0.85rem;
     border-radius: 14px;
-    background: #fff;
+    background: var(--surface);
     border: 1px solid var(--sub-border);
 }
 
@@ -273,14 +274,52 @@
     align-items: flex-start;
     border: 1px solid var(--sub-border);
     border-radius: 14px;
-    background: #fff;
+    background: var(--surface);
     padding: 0.8rem 0.9rem;
-    color: #334155;
+    color: var(--text-primary);
 }
 
 .subscription-note-item i {
     color: var(--sub-warning);
     margin-top: 0.15rem;
+}
+
+[data-theme="dark"] .subscription-shell {
+    --sub-bg: linear-gradient(135deg, rgba(30, 41, 59, 0.44) 0%, rgba(30, 41, 59, 0.62) 100%);
+    --sub-border: var(--border-color);
+    --sub-title: var(--text-primary);
+    --sub-muted: var(--text-secondary);
+}
+
+[data-theme="dark"] .subscription-plan-badge {
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.16);
+}
+
+[data-theme="dark"] .subscription-status-badge--success {
+    color: var(--success);
+    background: rgba(16, 185, 129, 0.17);
+}
+
+[data-theme="dark"] .subscription-status-badge--warning {
+    color: var(--warning);
+    background: rgba(251, 191, 36, 0.18);
+}
+
+[data-theme="dark"] .subscription-status-badge--danger {
+    color: var(--danger);
+    background: rgba(248, 113, 113, 0.18);
+}
+
+[data-theme="dark"] .subscription-status-badge--info {
+    color: var(--info);
+    background: rgba(59, 130, 246, 0.17);
+}
+
+[data-theme="dark"] .subscription-note-item {
+    border-color: var(--border-color);
+    background: var(--surface);
+    color: var(--text-primary);
 }
 
 @media (max-width: 992px) {

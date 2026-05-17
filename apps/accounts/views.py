@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.messages import get_messages
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import PasswordResetConfirmView
 from django.core.mail import send_mail
@@ -58,6 +59,13 @@ def _ensure_tenant(request):
 
 def _json_error(message, status=400):
     return JsonResponse({'success': False, 'message': message}, status=status)
+
+
+def _clear_messages(request):
+    """Clear any pending Django messages from the session."""
+    storage = get_messages(request)
+    for _ in storage:
+        pass
 
 
 def _json_ok(data=None, msg='تمت العملية بنجاح'):
@@ -494,6 +502,7 @@ def debug_user_permissions(request):
 
 def register_step1(request):
     """الخطوة 1: معلومات المستخدم"""
+    _clear_messages(request)
     if request.method == 'POST':
         form = Step1UserForm(request.POST)
         if form.is_valid():
@@ -539,6 +548,7 @@ def profile_view(request):
 
 def register_step2(request):
     """الخطوة 2: معلومات النشاط التجاري"""
+    _clear_messages(request)
     
     # التحقق من إتمام الخطوة 1
     if 'reg_step1' not in request.session:
@@ -601,6 +611,7 @@ def register_step2(request):
 
 def register_step3(request):
     """الخطوة 3: إعدادات النظام وإنشاء الحساب"""
+    _clear_messages(request)
     
     # التحقق من إتمام الخطوات السابقة
     if 'reg_step1' not in request.session or 'reg_step2' not in request.session:
@@ -625,15 +636,18 @@ def register_step3(request):
                     from apps.core.models import BusinessType
                     business_type = BusinessType.objects.get(id=step2_data['business_type_id'])
                     
+                    subscription_plan = form.cleaned_data.get('subscription_plan', 'trial')
+                    trial_duration = 7 if subscription_plan == 'trial' else 30
+
                     tenant = Tenant.objects.create(
                         name=step2_data['business_name'],
                         business_type=business_type,
                         phone=step2_data['phone'],
                         address=step2_data['address'],
                         city=step2_data['city'],
-                        subscription_plan='trial',
+                        subscription_plan=subscription_plan,
                         subscription_start=datetime.now().date(),
-                        subscription_expires=datetime.now().date() + timedelta(days=30),  # 30 يوم تجريبي
+                        subscription_expires=datetime.now().date() + timedelta(days=trial_duration),  # 7 أيام تجريبية
                         version_type=form.cleaned_data['version_type'],
                         max_stocks=form.cleaned_data['num_stocks'],
                         timezone=form.cleaned_data['timezone'],

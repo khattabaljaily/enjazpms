@@ -391,7 +391,7 @@
 .category-track {
     height: 6px;
     border-radius: 20px;
-    background: var(--bg-secondary);
+    background: var(--border-light);
     position: relative;
     overflow: hidden;
 }
@@ -699,7 +699,7 @@ canvas {
     box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
     transition: all 0.35s ease;
     border: 1px solid rgba(148, 163, 184, 0.16);
-    background: #ffffff;
+    background: var(--surface);
     position: relative;
     overflow: hidden;
 }
@@ -732,13 +732,8 @@ canvas {
     padding: 1rem;
 }
 
-.dash-chart .card-header h5 {
-    color: #0f172a;
-}
-
 .chart-meta {
     background: rgba(148, 163, 184, 0.12);
-    color: #475569;
     font-weight: 700;
     text-transform: none;
 }

@@ -35,6 +35,14 @@
     <div class="alert alert-danger auth-alert js-form-errors d-none mb-3"></div>
 
     <div class="mb-3 field-span-2">
+        {{ form.subscription_plan.label_tag }}
+        {{ form.subscription_plan }}
+        {% if form.subscription_plan.errors %}
+        <div class="text-danger small js-field-errors" data-field="subscription_plan">{{ form.subscription_plan.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3 field-span-2">
         {{ form.version_type.label_tag }}
         {{ form.version_type }}
         {% if form.version_type.errors %}

@@ -1,0 +1,61 @@
+.pricing-hero {
+    background: linear-gradient(135deg, #2d6cdf 0%, #22c4af 100%);
+    color: white;
+    border-radius: 24px;
+    padding: 3rem 2rem;
+    box-shadow: 0 32px 80px rgba(24, 48, 102, 0.18);
+}
+.pricing-hero h1 {
+    font-size: 2.75rem;
+    line-height: 1.05;
+    margin-bottom: 1rem;
+}
+.pricing-hero p {
+    font-size: 1.05rem;
+    opacity: 0.92;
+    max-width: 680px;
+}
+.pricing-card {
+    border: 1px solid rgba(13, 110, 253, 0.12);
+    border-radius: 1.4rem;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.pricing-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 30px 60px rgba(13, 110, 253, 0.12);
+}
+.pricing-card.featured {
+    border-color: #22c4af;
+    background: rgba(34, 196, 175, 0.08);
+}
+.pricing-badge {
+    display: inline-block;
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #0d6efd;
+    font-size: 0.87rem;
+    margin-bottom: 1rem;
+}
+.pricing-card-title {
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+}
+.pricing-card-price {
+    font-size: 2.2rem;
+    font-weight: 700;
+}
+.pricing-card-subtitle {
+    color: #6c757d;
+}
+.pricing-feature-list .fa-check-circle {
+    color: #22c4af;
+    margin-left: 0.5rem;
+}
+.benefit-item {
+    border: 1px solid rgba(13, 110, 253, 0.08);
+    border-radius: 1rem;
+    padding: 1rem 1.1rem;
+    background: white;
+    min-height: 100px;
+}

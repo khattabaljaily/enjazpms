@@ -278,6 +278,11 @@
 .auth-footer a:hover { color: var(--primary-hover); text-decoration: underline; }
 .auth-footer p       { margin: 0; }
 
+/* Ensure muted auth footer text respects theme variables (dark mode) */
+.auth-footer .text-muted {
+    color: var(--text-secondary) !important;
+}
+
 /* ─────────────────────────────────────────────
    Multi-step progress indicator
    ───────────────────────────────────────────── */

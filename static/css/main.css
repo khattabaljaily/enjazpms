@@ -65,6 +65,8 @@
     /* Surface */
     --surface: #ffffff;
     --surface-hover: #f9fafb;
+    --bg-card: #ffffff;
+    --card-border-color: #e5e7eb;
     
     /* Border */
     --border-color: #e5e7eb;
@@ -126,6 +128,8 @@
     /* Surface */
     --surface: #1e293b;
     --surface-hover: #334155;
+    --bg-card: var(--surface);
+    --card-border-color: var(--border-color);
     
     /* Border */
     --border-color: #334155;
@@ -142,6 +146,8 @@
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+    --bg-card: var(--surface);
+    --card-border-color: var(--border-color);
     
     /* Sidebar */
     --sidebar-bg: #1e293b;
@@ -234,6 +240,12 @@ textarea::placeholder {
     --bs-list-group-border-color: var(--border-color);
     --bs-card-bg:             var(--surface);
     --bs-card-border-color:   var(--border-color);
+    --bs-table-bg:            var(--surface);
+    --bs-table-striped-bg:    rgba(255,255,255,0.03);
+    --bs-table-active-bg:     rgba(255,255,255,0.06);
+    --bs-table-hover-bg:      rgba(255,255,255,0.04);
+    --bs-table-border-color:  var(--border-color);
+    --bs-table-color:         var(--text-primary);
 }
 
 /* Hard overrides — some Bootstrap components use
@@ -279,3 +291,144 @@ textarea::placeholder {
     background-color: var(--surface-hover) !important;
     color: var(--text-primary) !important;
 }
+
+/* ==========================================
+   Dark-mode overrides for components with
+   hard-coded white backgrounds
+   ========================================== */
+[data-theme="dark"] .subscription-shell,
+[data-theme="dark"] .subscription-hero__main,
+[data-theme="dark"] .subscription-hero__status,
+[data-theme="dark"] .subscription-panel,
+[data-theme="dark"] .subscription-panel__body,
+[data-theme="dark"] .subscription-stat,
+[data-theme="dark"] .subscription-feature,
+[data-theme="dark"] .subscription-timeline__item,
+[data-theme="dark"] .subscription-note-item,
+[data-theme="dark"] .profile-info-item,
+[data-theme="dark"] .profile-activity-item,
+[data-theme="dark"] .profile-action-btn,
+[data-theme="dark"] .profile-note-item,
+[data-theme="dark"] .profile-activity-item .activity-icon,
+[data-theme="dark"] .dashboard-panel,
+[data-theme="dark"] .tenant-settings-panel,
+[data-theme="dark"] .card,
+[data-theme="dark"] .card-body,
+[data-theme="dark"] .list-group-item
+{
+    background: var(--surface) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .activity-icon {
+    background: rgba(255,255,255,0.04) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .card,
+[data-theme="dark"] .card-body,
+[data-theme="dark"] .card-header,
+[data-theme="dark"] .card-footer,
+[data-theme="dark"] .list-group-item,
+[data-theme="dark"] .table,
+[data-theme="dark"] .table th,
+[data-theme="dark"] .table td,
+[data-theme="dark"] .alert,
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .input-group-text,
+[data-theme="dark"] .dropdown-menu,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .settings-card,
+[data-theme="dark"] .settings-hero,
+[data-theme="dark"] .settings-switches,
+[data-theme="dark"] .summary-card,
+[data-theme="dark"] .report-filters,
+[data-theme="dark"] .subscription-shell,
+[data-theme="dark"] .profile-info-item,
+[data-theme="dark"] .profile-activity-item,
+[data-theme="dark"] .profile-note-item,
+[data-theme="dark"] .profile-action-btn,
+[data-theme="dark"] .subscription-stat,
+[data-theme="dark"] .subscription-feature,
+[data-theme="dark"] .subscription-timeline__item,
+[data-theme="dark"] .subscription-note-item {
+    background: var(--surface) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .settings-input,
+[data-theme="dark"] .settings-textarea {
+    background: rgba(255,255,255,0.05) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .dash-chart {
+    background: var(--surface) !important;
+    border-color: rgba(255,255,255,0.08) !important;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.26) !important;
+}
+
+[data-theme="dark"] .opening-qty-input {
+    background: rgba(255,255,255,0.05) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] [style*="background: #fff"] {
+    background: var(--surface) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] [style*="background: rgba(255,255,255,0.2)"] {
+    background: rgba(255,255,255,0.08) !important;
+}
+
+[data-theme="dark"] [style*="background: rgba(255,255,255,0.1)"] {
+    background: rgba(255,255,255,0.05) !important;
+}
+
+/* Overrides for template elements that use inline color/background styles */
+[data-theme="dark"] .cx-view-avatar {
+    background: var(--primary) !important;
+    color: var(--text-inverse) !important;
+}
+
+[data-theme="dark"] .cx-info-card-icon {
+    background: rgba(255,255,255,0.04) !important;
+}
+[data-theme="dark"] .cx-info-card-icon i {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .cx-hero,
+[data-theme="dark"] .summary-card,
+[data-theme="dark"] .report-filters {
+    background: var(--surface) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .cx-hero .cx-hero-title,
+[data-theme="dark"] .cx-hero .cx-hero-desc,
+[data-theme="dark"] .cx-hero .cx-btn-secondary {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .cx-hero-icon-wrap {
+    background: rgba(255,255,255,0.06) !important;
+}
+
+[data-theme="dark"] .cx-btn-secondary {
+    background: transparent !important;
+    border-color: rgba(255,255,255,0.12) !important;
+    color: var(--text-primary) !important;
+}
+

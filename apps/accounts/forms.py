@@ -288,12 +288,25 @@ class Step3SettingsForm(forms.Form):
         for field in self.fields.values():
             field.widget.attrs['autocomplete'] = 'off'
     
+    PLAN_CHOICES = (
+        ('trial', 'تجريبي'),
+    )
+
     VERSION_CHOICES = (
         ('single_store', 'محل واحد بمخزن واحد'),
         ('multi_stock', 'محل واحد بمخازن متعددة'),
         ('multi_branch', 'فروع متعددة (محلات ومخازن)'),
     )
     
+    subscription_plan = forms.ChoiceField(
+        label='الخطة',
+        choices=PLAN_CHOICES,
+        initial='trial',
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+
     version_type = forms.ChoiceField(
         label='نوع النسخة',
         choices=VERSION_CHOICES,
