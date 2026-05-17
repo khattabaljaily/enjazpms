@@ -9,32 +9,21 @@
   - المشتريات حسب التاريخ (يومي / أسبوعي / شهري)
 """
 
-import locale
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.db.models import Sum, Count, F, Q
 from django.utils import timezone
 
-# Set locale for Arabic number formatting
-try:
-    locale.setlocale(locale.LC_ALL, 'ar_SA.UTF-8')
-except locale.Error:
-    try:
-        locale.setlocale(locale.LC_ALL, 'ar.UTF-8')
-    except locale.Error:
-        # Fallback to C locale if Arabic not available
-        locale.setlocale(locale.LC_ALL, 'C')
-
 from .models import PurchaseInvoice, PurchaseInvoiceLine, PurchaseReturn
 
 
 def format_number(value, decimals=2):
-    """تنسيق الرقم بالفواصل العربية"""
+    """تنسيق الرقم بالفواصل الإنجليزية (فاصلة عشرية نقطة، فاصلة الآلاف فاصلة)"""
     try:
         if decimals == 0:
-            return locale.format_string('%.0f', value, grouping=True)
+            return f"{int(value):,}"
         else:
-            return locale.format_string(f'%.{decimals}f', value, grouping=True)
+            return f"{float(value):,.{decimals}f}"
     except (ValueError, TypeError):
         return str(value)
 
