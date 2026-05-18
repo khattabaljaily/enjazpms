@@ -1,0 +1,117 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--treasury">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-arrows-left-right"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">حركات الخزائن</h1>
+                    <p class="rpt-hero-desc">سجل شامل لجميع حركات القبض والصرف</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'treasury:reports:movements_report_export' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'treasury:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">من تاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">إلى تاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--treasury"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="rpt-kpi-card rpt-kpi--purple">
+            <div class="rpt-kpi-icon"><i class="fas fa-list"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.movement_count }}</div>
+            <div class="rpt-kpi-label">عدد الحركات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--green">
+            <div class="rpt-kpi-icon"><i class="fas fa-arrow-down"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_receipts }}</div>
+            <div class="rpt-kpi-label">إجمالي القبض</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--red">
+            <div class="rpt-kpi-icon"><i class="fas fa-arrow-up"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_disbursements }}</div>
+            <div class="rpt-kpi-label">إجمالي الصرف</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--teal">
+            <div class="rpt-kpi-icon"><i class="fas fa-balance-scale"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.net }}</div>
+            <div class="rpt-kpi-label">الصافي</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--treasury">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل الحركات</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الخزينة</th>
+                            <th>نوع الحركة</th>
+                            <th>الوصف</th>
+                            <th class="text-end" style="color:#11998e;">قبض +</th>
+                            <th class="text-end" style="color:#ef4444;">صرف −</th>
+                            <th class="text-end">الرصيد بعد</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="text-muted" style="font-size:.8rem;">{{ row.movement_date }}</td>
+                            <td class="fw-bold" style="font-size:.85rem;">{{ row.treasury_name }}</td>
+                            <td>
+                                <span class="badge" style="background:{% if row.movement_type_key == 'receipt' %}rgba(17,153,142,.12); color:#11998e{% else %}rgba(239,68,68,.12); color:#ef4444{% endif %}; font-size:.72rem; border-radius:6px; padding:.2rem .5rem;">
+                                    {{ row.movement_type }}
+                                </span>
+                            </td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ row.description|default:"—" }}</td>
+                            <td class="text-end fw-bold" style="color:#11998e;">{{ row.receipt }}</td>
+                            <td class="text-end fw-bold" style="color:#ef4444;">{{ row.disbursement }}</td>
+                            <td class="text-end text-muted">{{ row.running_balance }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-arrows-left-right"></i>
+                <p>لا توجد حركات في هذه الفترة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

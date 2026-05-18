@@ -1,0 +1,103 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--purchases">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-rotate-right"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">مرتجعات المشتريات</h1>
+                    <p class="rpt-hero-desc">ملخص عمليات إرجاع الموردين خلال الفترة</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'purchases:reports:returns_report_export' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'purchases:order_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">من تاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">إلى تاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--purchases"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="rpt-kpi-card rpt-kpi--red">
+            <div class="rpt-kpi-icon"><i class="fas fa-rotate-right"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.return_count }}</div>
+            <div class="rpt-kpi-label">عدد المرتجعات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--orange">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_returned }}</div>
+            <div class="rpt-kpi-label">إجمالي المُرتجَع</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--purchases">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل المرتجعات</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>رقم المرتجع</th>
+                            <th>الفاتورة الأصلية</th>
+                            <th>المورد</th>
+                            <th class="text-center">طريقة الاسترداد</th>
+                            <th class="text-end">إجمالي المرتجع</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="text-muted">{{ row.return_date }}</td>
+                            <td style="font-size:.82rem; font-weight:600; color:#ef4444;">{{ row.return_number }}</td>
+                            <td class="text-muted" style="font-size:.82rem;">{{ row.invoice_number }}</td>
+                            <td class="fw-bold">{{ row.supplier_name }}</td>
+                            <td class="text-center">
+                                <span class="badge" style="background:rgba(245,158,11,.12); color:#f59e0b; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ row.refund_method }}</span>
+                            </td>
+                            <td class="text-end fw-bold" style="color:#ef4444;">{{ row.total_returned }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-check-circle"></i>
+                <p>لا توجد مرتجعات في هذه الفترة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--accounting">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-chart-line"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">قائمة الدخل</h1>
+                    <p class="rpt-hero-desc">الإيرادات والمصروفات وصافي الربح للفترة</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'reports:income_statement_export' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'sales:invoice_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">من تاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">إلى تاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--accounting"><i class="fas fa-calculator me-1"></i>احتساب</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- KPI Summary -->
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="rpt-kpi-card rpt-kpi--purple">
+            <div class="rpt-kpi-icon"><i class="fas fa-arrow-trend-up"></i></div>
+            <div class="rpt-kpi-value">{{ report.revenue.net_revenue }}</div>
+            <div class="rpt-kpi-label">صافي المبيعات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-boxes-stacked"></i></div>
+            <div class="rpt-kpi-value">{{ report.cost.gross_profit }}</div>
+            <div class="rpt-kpi-label">مجمل الربح <small style="font-size:.65rem;">({{ report.cost.gross_margin }}%)</small></div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--red">
+            <div class="rpt-kpi-icon"><i class="fas fa-file-invoice"></i></div>
+            <div class="rpt-kpi-value">{{ report.expenses.total_expenses }}</div>
+            <div class="rpt-kpi-label">إجمالي المصروفات</div>
+        </div>
+        <div class="rpt-kpi-card {% if report.bottom_line.net_profit_raw >= 0 %}rpt-kpi--green{% else %}rpt-kpi--red{% endif %}">
+            <div class="rpt-kpi-icon"><i class="fas fa-scale-balanced"></i></div>
+            <div class="rpt-kpi-value">{{ report.bottom_line.net_profit }}</div>
+            <div class="rpt-kpi-label">صافي الربح <small style="font-size:.65rem;">({{ report.bottom_line.net_margin }}%)</small></div>
+        </div>
+    </div>
+
+    <!-- Income Statement Table -->
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--accounting">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>قائمة الدخل التفصيلية — {{ start_date }} إلى {{ end_date }}</h3>
+        </div>
+        <div class="rpt-panel-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <tbody>
+                        <!-- Revenue Section -->
+                        <tr style="background:rgba(99,102,241,.05);">
+                            <td colspan="2" class="fw-bold" style="color:#6366f1; font-size:.9rem; padding:.75rem 1rem;">
+                                <i class="fas fa-arrow-trend-up me-2"></i>الإيرادات
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-right:2rem;">إجمالي المبيعات ({{ report.revenue.invoice_count }} فاتورة)</td>
+                            <td class="text-end fw-bold">{{ report.revenue.gross_revenue }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding-right:2rem;">مرتجعات المبيعات</td>
+                            <td class="text-end" style="color:#ef4444;">({{ report.revenue.total_returns }})</td>
+                        </tr>
+                        <tr style="background:var(--bg-secondary);">
+                            <td class="fw-bold">صافي المبيعات</td>
+                            <td class="text-end fw-bold" style="color:#6366f1; font-size:1rem;">{{ report.revenue.net_revenue }}</td>
+                        </tr>
+
+                        <!-- COGS Section -->
+                        <tr style="background:rgba(99,102,241,.05);">
+                            <td colspan="2" class="fw-bold" style="color:#6366f1; font-size:.9rem; padding:.75rem 1rem;">
+                                <i class="fas fa-boxes-stacked me-2"></i>تكلفة البضاعة
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-right:2rem;">إجمالي المشتريات (تكلفة المبيعات)</td>
+                            <td class="text-end" style="color:#ef4444;">({{ report.cost.total_purchases }})</td>
+                        </tr>
+                        <tr style="background:var(--bg-secondary);">
+                            <td class="fw-bold">مجمل الربح</td>
+                            <td class="text-end fw-bold" style="color:#6366f1; font-size:1rem;">
+                                {{ report.cost.gross_profit }}
+                                <small class="text-muted" style="font-size:.75rem; font-weight:400;">({{ report.cost.gross_margin }}%)</small>
+                            </td>
+                        </tr>
+
+                        <!-- Expenses Section -->
+                        <tr style="background:rgba(239,68,68,.04);">
+                            <td colspan="2" class="fw-bold" style="color:#ef4444; font-size:.9rem; padding:.75rem 1rem;">
+                                <i class="fas fa-file-invoice me-2"></i>المصروفات التشغيلية
+                            </td>
+                        </tr>
+                        {% for exp in report.expenses.breakdown %}
+                        <tr>
+                            <td style="padding-right:2rem;">{{ exp.name }}</td>
+                            <td class="text-end" style="color:#ef4444;">({{ exp.amount }})</td>
+                        </tr>
+                        {% endfor %}
+                        <tr style="background:var(--bg-secondary);">
+                            <td class="fw-bold">إجمالي المصروفات</td>
+                            <td class="text-end fw-bold" style="color:#ef4444;">({{ report.expenses.total_expenses }})</td>
+                        </tr>
+
+                        <!-- Net Profit -->
+                        <tr style="background:{% if report.bottom_line.net_profit_raw >= 0 %}rgba(17,153,142,.08){% else %}rgba(239,68,68,.08){% endif %}; border-top:2px solid var(--border-color);">
+                            <td class="fw-bold" style="font-size:1rem; padding:1rem;">
+                                <i class="fas fa-scale-balanced me-2"></i>صافي الربح (الخسارة)
+                            </td>
+                            <td class="text-end fw-bold" style="font-size:1.1rem; color:{% if report.bottom_line.net_profit_raw >= 0 %}#11998e{% else %}#ef4444{% endif %}; padding:1rem;">
+                                {{ report.bottom_line.net_profit }}
+                                <small class="text-muted" style="font-size:.75rem; font-weight:400;">({{ report.bottom_line.net_margin }}%)</small>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

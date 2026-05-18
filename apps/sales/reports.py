@@ -14,7 +14,7 @@ from decimal import Decimal
 from django.db.models import Sum, Count, F, Q
 from django.utils import timezone
 
-from .models import SaleInvoice, SaleInvoiceLine, SaleReturn
+from .models import SaleInvoice, SaleInvoiceLine, SaleReturn, SalePayment, CustomerLedger
 
 
 def format_number(value, decimals=2):
@@ -247,4 +247,246 @@ class SalesReportGenerator:
             'period': {'start': self.start_date, 'end': self.end_date},
             'group_by': group_by,
             'data': result
+        }
+
+    def get_customer_statement(self, customer_id):
+        """كشف حساب عميل — CustomerLedger مرتبة بالتاريخ"""
+        from apps.customers.models import Customer
+        try:
+            customer = Customer.objects.get(pk=customer_id, tenant=self.tenant)
+        except Customer.DoesNotExist:
+            return None
+
+        entries = CustomerLedger.objects.filter(
+            tenant=self.tenant,
+            customer=customer,
+            entry_date__gte=self.start_date,
+            entry_date__lte=self.end_date,
+        ).order_by('entry_date', 'id')
+
+        data = []
+        for e in entries:
+            data.append({
+                'entry_date': e.entry_date,
+                'entry_type': e.get_entry_type_display(),
+                'entry_type_key': e.entry_type,
+                'amount': format_number(float(e.amount), 2),
+                'running_balance': format_number(float(e.running_balance), 2),
+                'notes': e.notes,
+            })
+
+        total_debit = sum(float(e.amount) for e in entries if float(e.amount) > 0)
+        total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
+        closing_balance = entries.last().running_balance if entries.exists() else 0
+
+        return {
+            'customer': customer,
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'summary': {
+                'total_debit': format_number(total_debit, 2),
+                'total_credit': format_number(total_credit, 2),
+                'closing_balance': format_number(float(closing_balance), 2),
+            },
+            'data': data,
+        }
+
+    def get_customer_balances(self):
+        """أرصدة العملاء — آخر رصيد تراكمي لكل عميل"""
+        from apps.customers.models import Customer
+        from django.db.models import Max
+
+        customers = Customer.objects.filter(tenant=self.tenant).order_by('name')
+        data = []
+        for c in customers:
+            last_entry = (
+                CustomerLedger.objects
+                .filter(tenant=self.tenant, customer=c)
+                .order_by('-entry_date', '-id')
+                .first()
+            )
+            balance = float(last_entry.running_balance) if last_entry else float(c.opening_balance)
+            data.append({
+                'code': c.code,
+                'name': c.name,
+                'phone': c.phone,
+                'credit_limit': format_number(float(c.credit_limit), 2),
+                'balance': format_number(balance, 2),
+                'balance_raw': balance,
+            })
+
+        total_balance = sum(r['balance_raw'] for r in data)
+        total_debtors = sum(1 for r in data if r['balance_raw'] > 0)
+        return {
+            'data': data,
+            'summary': {
+                'total_customers': format_number(len(data), 0),
+                'total_debtors': format_number(total_debtors, 0),
+                'total_balance': format_number(total_balance, 2),
+            },
+        }
+
+    def get_payments_report(self):
+        """تقرير مدفوعات العملاء (SalePayment) بالفترة"""
+        payments = SalePayment.objects.filter(
+            tenant=self.tenant,
+            payment_date__gte=self.start_date,
+            payment_date__lte=self.end_date,
+            is_reversed=False,
+        ).select_related('invoice', 'invoice__customer').order_by('-payment_date')
+
+        data = []
+        for p in payments:
+            data.append({
+                'payment_date': p.payment_date,
+                'invoice_number': p.invoice.invoice_number,
+                'customer_name': p.invoice.customer.name if p.invoice.customer else '—',
+                'payment_method': p.get_payment_method_display(),
+                'payment_method_key': p.payment_method,
+                'amount': format_number(float(p.amount), 2),
+                'reference_number': p.reference_number,
+                'notes': p.notes,
+            })
+
+        total_cash = sum(float(p.amount) for p in payments if p.payment_method == 'cash')
+        total_bank = sum(float(p.amount) for p in payments if p.payment_method == 'bank')
+        total_all = total_cash + total_bank
+
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'summary': {
+                'payment_count': format_number(len(data), 0),
+                'total_cash': format_number(total_cash, 2),
+                'total_bank': format_number(total_bank, 2),
+                'total_amount': format_number(total_all, 2),
+            },
+            'data': data,
+        }
+
+    def get_returns_report(self):
+        """تقرير مرتجعات المبيعات بالفترة"""
+        returns = SaleReturn.objects.filter(
+            tenant=self.tenant,
+            status='confirmed',
+            return_date__gte=self.start_date,
+            return_date__lte=self.end_date,
+        ).select_related('original_invoice', 'original_invoice__customer').order_by('-return_date')
+
+        data = []
+        for r in returns:
+            data.append({
+                'return_date': r.return_date,
+                'return_number': r.return_number,
+                'invoice_number': r.original_invoice.invoice_number,
+                'customer_name': r.original_invoice.customer.name if r.original_invoice.customer else '—',
+                'refund_method': r.get_refund_method_display(),
+                'total_returned': format_number(float(r.total_returned), 2),
+                'reason': r.reason,
+            })
+
+        total_returned = sum(float(r.total_returned) for r in returns)
+
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'summary': {
+                'return_count': format_number(len(data), 0),
+                'total_returned': format_number(total_returned, 2),
+            },
+            'data': data,
+        }
+
+
+class IncomeStatementGenerator:
+    """قائمة الدخل (الإيرادات مقابل المصروفات)"""
+
+    def __init__(self, tenant, start_date=None, end_date=None):
+        from datetime import timedelta
+        self.tenant = tenant
+        self.start_date = start_date or (timezone.now().date() - timedelta(days=30))
+        self.end_date = end_date or timezone.now().date()
+
+    def get_report(self):
+        from decimal import Decimal
+        from apps.expenses.models import Expense
+
+        # Revenue: confirmed sale invoices
+        invoices = SaleInvoice.objects.filter(
+            tenant=self.tenant,
+            status='confirmed',
+            invoice_date__gte=self.start_date,
+            invoice_date__lte=self.end_date,
+        )
+        total_revenue = sum(float(inv.grand_total or 0) for inv in invoices)
+        total_tax = sum(float(inv.tax_amount or 0) for inv in invoices)
+        invoice_count = invoices.count()
+
+        # Returns deducted from revenue
+        returns = SaleReturn.objects.filter(
+            tenant=self.tenant,
+            status='confirmed',
+            return_date__gte=self.start_date,
+            return_date__lte=self.end_date,
+        )
+        total_returns = sum(float(r.total_returned or 0) for r in returns)
+        net_revenue = total_revenue - total_returns
+
+        # Expenses: confirmed expenses
+        expenses = Expense.objects.filter(
+            tenant=self.tenant,
+            status='confirmed',
+            expense_date__gte=self.start_date,
+            expense_date__lte=self.end_date,
+        )
+        total_expenses = float(expenses.aggregate(t=__import__('django').db.models.Sum('amount'))['t'] or 0)
+
+        # COGS: purchase invoices in the period
+        from apps.purchases.models import PurchaseInvoice
+        purchases = PurchaseInvoice.objects.filter(
+            tenant=self.tenant,
+            status='confirmed',
+            invoice_date__gte=self.start_date,
+            invoice_date__lte=self.end_date,
+        )
+        total_purchases = sum(float(p.grand_total or 0) for p in purchases)
+
+        gross_profit = net_revenue - total_purchases
+        net_profit = gross_profit - total_expenses
+
+        # Expense breakdown by category
+        from apps.expenses.models import ExpenseCategory
+        from django.db.models import Sum
+        expense_by_cat = []
+        for cat in ExpenseCategory.objects.filter(tenant=self.tenant).order_by('name'):
+            cat_total = float(
+                expenses.filter(category=cat).aggregate(t=Sum('amount'))['t'] or 0
+            )
+            if cat_total > 0:
+                expense_by_cat.append({'name': cat.name, 'amount': format_number(cat_total, 2)})
+
+        uncat = float(expenses.filter(category=None).aggregate(t=Sum('amount'))['t'] or 0)
+        if uncat > 0:
+            expense_by_cat.append({'name': 'مصروفات متنوعة', 'amount': format_number(uncat, 2)})
+
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'revenue': {
+                'gross_revenue': format_number(total_revenue, 2),
+                'total_returns': format_number(total_returns, 2),
+                'net_revenue': format_number(net_revenue, 2),
+                'invoice_count': format_number(invoice_count, 0),
+                'total_tax': format_number(total_tax, 2),
+            },
+            'cost': {
+                'total_purchases': format_number(total_purchases, 2),
+                'gross_profit': format_number(gross_profit, 2),
+                'gross_margin': format_number((gross_profit / net_revenue * 100) if net_revenue else 0, 1),
+            },
+            'expenses': {
+                'total_expenses': format_number(total_expenses, 2),
+                'breakdown': expense_by_cat,
+            },
+            'bottom_line': {
+                'net_profit': format_number(net_profit, 2),
+                'net_profit_raw': net_profit,
+                'net_margin': format_number((net_profit / net_revenue * 100) if net_revenue else 0, 1),
+            },
         }

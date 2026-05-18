@@ -1437,13 +1437,21 @@ def sales_summary_report(request):
     # Generate report
     generator = SalesReportGenerator(tenant, start_date, end_date)
     report_data = generator.get_summary_report()
-    
+
+    # Chart data: daily trend for the selected period
+    import json
+    trend = generator.get_by_date_report(group_by='day')
+    chart_labels = json.dumps([d['label'] for d in trend['data']], ensure_ascii=False)
+    chart_amounts = json.dumps([float(str(d['total_amount']).replace(',', '')) for d in trend['data']])
+
     return render(request, 'sales/reports/summary.html', {
         'report': report_data,
         'start_date': start_date,
         'end_date': end_date,
         'section': 'sales_reports',
         'report_type': 'summary',
+        'chart_labels': chart_labels,
+        'chart_amounts': chart_amounts,
     })
 
 
@@ -1776,4 +1784,245 @@ def sales_by_date_report_export(request):
             item['total_amount'],
         ])
     
+    return response
+
+
+# ─────────────────────────────────────────────────────────────────
+#   NEW REPORTS: Customer Statement / Balances / Payments / Returns
+# ─────────────────────────────────────────────────────────────────
+
+@login_required
+@require_permission('view_sales_customer_statement_report')
+def sales_customer_statement(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    customer_id = request.GET.get('customer_id')
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    generator = SalesReportGenerator(tenant, start_date, end_date)
+    report = generator.get_customer_statement(customer_id) if customer_id else None
+    customers = Customer.objects.filter(tenant=tenant).order_by('name')
+
+    return render(request, 'sales/reports/customer_statement.html', {
+        'report': report,
+        'customers': customers,
+        'selected_customer_id': customer_id,
+        'start_date': start_date,
+        'end_date': end_date,
+        'section': 'sales_reports',
+    })
+
+
+@login_required
+@require_permission('view_sales_customer_statement_report')
+def sales_customer_statement_export(request):
+    import csv
+    from django.http import HttpResponse
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    customer_id = request.GET.get('customer_id')
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    generator = SalesReportGenerator(tenant, start_date, end_date)
+    report = generator.get_customer_statement(customer_id) if customer_id else None
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="customer_statement_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+
+    if report:
+        writer.writerow([f'كشف حساب: {report["customer"].name}'])
+        writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
+        writer.writerow([])
+        writer.writerow(['التاريخ', 'نوع القيد', 'المبلغ', 'الرصيد التراكمي', 'ملاحظات'])
+        for row in report['data']:
+            writer.writerow([row['entry_date'], row['entry_type'], row['amount'], row['running_balance'], row['notes']])
+    return response
+
+
+@login_required
+@require_permission('view_sales_customer_balances_report')
+def sales_customer_balances(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    generator = SalesReportGenerator(tenant)
+    report = generator.get_customer_balances()
+
+    return render(request, 'sales/reports/customer_balances.html', {
+        'report': report,
+        'section': 'sales_reports',
+    })
+
+
+@login_required
+@require_permission('view_sales_customer_balances_report')
+def sales_customer_balances_export(request):
+    import csv
+    from django.http import HttpResponse
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    report = SalesReportGenerator(tenant).get_customer_balances()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="customer_balances.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['الكود', 'اسم العميل', 'الهاتف', 'الحد الائتماني', 'الرصيد'])
+    for row in report['data']:
+        writer.writerow([row['code'], row['name'], row['phone'], row['credit_limit'], row['balance']])
+    return response
+
+
+@login_required
+@require_permission('view_sales_payments_report')
+def sales_payments_report(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    generator = SalesReportGenerator(tenant, start_date, end_date)
+    report = generator.get_payments_report()
+
+    return render(request, 'sales/reports/payments.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'section': 'sales_reports',
+    })
+
+
+@login_required
+@require_permission('view_sales_payments_report')
+def sales_payments_report_export(request):
+    import csv
+    from django.http import HttpResponse
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = SalesReportGenerator(tenant, start_date, end_date).get_payments_report()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="sales_payments_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['تاريخ الدفع', 'رقم الفاتورة', 'العميل', 'طريقة الدفع', 'المبلغ', 'رقم مرجعي'])
+    for row in report['data']:
+        writer.writerow([row['payment_date'], row['invoice_number'], row['customer_name'], row['payment_method'], row['amount'], row['reference_number']])
+    return response
+
+
+@login_required
+@require_permission('view_sales_returns_report')
+def sales_returns_report(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    generator = SalesReportGenerator(tenant, start_date, end_date)
+    report = generator.get_returns_report()
+
+    return render(request, 'sales/reports/returns.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'section': 'sales_reports',
+    })
+
+
+@login_required
+@require_permission('view_sales_returns_report')
+def sales_returns_report_export(request):
+    import csv
+    from django.http import HttpResponse
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = SalesReportGenerator(tenant, start_date, end_date).get_returns_report()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="sales_returns_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['تاريخ المرتجع', 'رقم المرتجع', 'رقم الفاتورة', 'العميل', 'طريقة الاسترداد', 'إجمالي المرتجع'])
+    for row in report['data']:
+        writer.writerow([row['return_date'], row['return_number'], row['invoice_number'], row['customer_name'], row['refund_method'], row['total_returned']])
+    return response
+
+
+# ─────────────────────────────────────────────────────────────────
+#   INCOME STATEMENT (P&L)
+# ─────────────────────────────────────────────────────────────────
+
+@login_required
+@require_permission('view_income_statement_report')
+def income_statement_report(request):
+    from .reports import IncomeStatementGenerator
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = IncomeStatementGenerator(tenant, start_date, end_date).get_report()
+
+    return render(request, 'sales/reports/income_statement.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'section': 'sales_reports',
+    })
+
+
+@login_required
+@require_permission('view_income_statement_report')
+def income_statement_report_export(request):
+    import csv
+    from django.http import HttpResponse
+    from .reports import IncomeStatementGenerator
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = IncomeStatementGenerator(tenant, start_date, end_date).get_report()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="income_statement_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['قائمة الدخل'])
+    writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
+    writer.writerow([])
+    writer.writerow(['البيان', 'المبلغ'])
+    writer.writerow(['إجمالي المبيعات', report['revenue']['gross_revenue']])
+    writer.writerow(['المرتجعات', report['revenue']['total_returns']])
+    writer.writerow(['صافي المبيعات', report['revenue']['net_revenue']])
+    writer.writerow(['تكلفة البضاعة المباعة', report['cost']['total_purchases']])
+    writer.writerow(['مجمل الربح', report['cost']['gross_profit']])
+    writer.writerow(['إجمالي المصروفات', report['expenses']['total_expenses']])
+    writer.writerow(['صافي الربح', report['bottom_line']['net_profit']])
     return response

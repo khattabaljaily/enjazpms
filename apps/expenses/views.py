@@ -342,3 +342,117 @@ def expense_cancel_ajax(request, pk):
         return _err(str(e))
 
     return JsonResponse({'success': True, 'message': 'تم إلغاء المصروف'})
+
+
+# ─────────────────────────────────────────────────────────────────
+#   REPORTS
+# ─────────────────────────────────────────────────────────────────
+
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        from datetime import datetime
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
+
+
+@login_required
+@require_permission('view_expenses_summary_report')
+def expenses_summary_report(request):
+    from datetime import timedelta
+    from .reports import ExpensesReportGenerator
+    tenant = _tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    gen = ExpensesReportGenerator(tenant, start_date, end_date)
+    report = gen.get_summary_report()
+    by_cat = gen.get_by_category_report()
+
+    return render(request, 'expenses/reports/summary.html', {
+        'report': report,
+        'by_category': by_cat,
+        'start_date': start_date,
+        'end_date': end_date,
+        'section': 'expenses_reports',
+    })
+
+
+@login_required
+@require_permission('view_expenses_summary_report')
+def expenses_summary_report_export(request):
+    import csv
+    from django.http import HttpResponse
+    from datetime import timedelta
+    from .reports import ExpensesReportGenerator
+    tenant = _tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_category_report()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="expenses_summary_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['الفئة', 'عدد المصروفات', 'الإجمالي'])
+    for row in report['data']:
+        writer.writerow([row['category_name'], row['expense_count'], row['total_amount']])
+    return response
+
+
+@login_required
+@require_permission('view_expenses_details_report')
+def expenses_details_report(request):
+    from datetime import timedelta
+    from .reports import ExpensesReportGenerator
+    tenant = _tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    category_id = request.GET.get('category_id') or None
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = ExpensesReportGenerator(tenant, start_date, end_date).get_details_report(category_id=category_id)
+
+    return render(request, 'expenses/reports/details.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'selected_category_id': category_id,
+        'section': 'expenses_reports',
+    })
+
+
+@login_required
+@require_permission('view_expenses_details_report')
+def expenses_details_report_export(request):
+    import csv
+    from django.http import HttpResponse
+    from datetime import timedelta
+    from .reports import ExpensesReportGenerator
+    tenant = _tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    category_id = request.GET.get('category_id') or None
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = ExpensesReportGenerator(tenant, start_date, end_date).get_details_report(category_id=category_id)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="expenses_details_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['التاريخ', 'الرقم', 'الوصف', 'الفئة', 'طريقة الدفع', 'الخزينة', 'المبلغ'])
+    for row in report['data']:
+        writer.writerow([row['expense_date'], row['code'], row['description'], row['category_name'], row['payment_method'], row['treasury_name'], row['amount']])
+    return response

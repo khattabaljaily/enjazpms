@@ -1,5 +1,4 @@
-from django.urls import path
-
+from django.urls import path, include
 from . import views
 
 app_name = 'treasury'
@@ -12,4 +11,6 @@ urlpatterns = [
     path('api/<int:pk>/transactions/', views.treasury_transactions_api, name='transactions_api'),
     path('api/<int:pk>/update/', views.treasury_update_api, name='update_api'),
     path('api/<int:pk>/delete/', views.treasury_delete_api, name='delete_api'),
+    # Reports
+    path('reports/', include('apps.treasury.reports_urls', namespace='reports')),
 ]

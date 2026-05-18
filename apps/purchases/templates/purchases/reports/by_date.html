@@ -3,18 +3,7 @@
 {% load humanize %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/purchases_reports.css' %}?v=1.0">
-<link rel="stylesheet" href="{% static 'css/purchases_reports_summary.css' %}?v=2.0">
-<link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
-<style>
-    @media print {
-        .report-filters,
-        .cx-hero-right,
-        .btn {
-            display: none !important;
-        }
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=1.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -22,102 +11,155 @@
 {% block content %}
 <div class="cx-scene printable-scene">
 
-    <!-- ══════════════════ HERO ══════════════════ -->
-    <div class="cx-hero" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 1rem 1.5rem;">
-        <div class="cx-hero-inner">
-            <div class="cx-hero-left">
-                <div class="cx-hero-icon-wrap" style="width: 52px; height: 52px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-calendar-days" style="color: white; font-size: 1.5rem;"></i>
-                </div>
+    <!-- ══ HERO ════════════════════════════════════════════════ -->
+    <div class="rpt-hero rpt-hero--purchases">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-calendar-days"></i></div>
                 <div>
-                    <h1 class="cx-hero-title" style="font-size: 1.5rem; margin-bottom: 0.25rem; color: white;">المشتريات حسب التاريخ</h1>
-                    <p class="cx-hero-desc" style="font-size: 0.85rem; margin: 0; color: rgba(255,255,255,0.9);">
+                    <h1 class="rpt-hero-title">المشتريات حسب التاريخ</h1>
+                    <p class="rpt-hero-desc">
                         <i class="fas fa-calendar-alt me-1"></i> من {{ start_date }} إلى {{ end_date }}
                     </p>
                 </div>
             </div>
-            <div class="cx-hero-right">
-                <div class="cx-hero-actions" style="display: flex; gap: 0.5rem;">
-                    <button onclick="window.print()" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
-                        <i class="fas fa-print"></i><span> طباعة</span>
-                    </button>
-                    <a href="{% url 'purchases:reports:by_date_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}&group_by={{ group_by }}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
-                        <i class="fas fa-download"></i><span> تصدير CSV</span>
-                    </a>
-                    <a href="{% url 'purchases:order_list' %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
-                        <i class="fas fa-arrow-left"></i><span> عودة</span>
-                    </a>
-                </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+                <a href="{% url 'purchases:reports:by_date_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}&group_by={{ group_by }}" class="rpt-hero-btn">
+                    <i class="fas fa-download"></i> تصدير CSV
+                </a>
+                <a href="{% url 'purchases:order_list' %}" class="rpt-hero-btn">
+                    <i class="fas fa-arrow-left"></i> عودة
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- ══════════════════ FILTERS ══════════════════ -->
-    <div class="report-filters" style="margin-bottom: 1.5rem; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+    <!-- ══ FILTERS ═════════════════════════════════════════════ -->
+    <div class="rpt-filters">
         <form method="get" class="row g-3">
             <div class="col-md-3">
-                <label for="start_date" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">من التاريخ</label>
+                <label for="start_date" class="form-label">من التاريخ</label>
                 <input type="date" id="start_date" name="start_date"
-                    value="{{ start_date|date:"Y-m-d" }}" class="form-control" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+                    value="{{ start_date|date:"Y-m-d" }}" class="form-control">
             </div>
             <div class="col-md-3">
-                <label for="end_date" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">إلى التاريخ</label>
+                <label for="end_date" class="form-label">إلى التاريخ</label>
                 <input type="date" id="end_date" name="end_date"
-                    value="{{ end_date|date:"Y-m-d" }}" class="form-control" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+                    value="{{ end_date|date:"Y-m-d" }}" class="form-control">
             </div>
             <div class="col-md-3">
-                <label for="group_by" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">التجميع حسب</label>
-                <select id="group_by" name="group_by" class="form-select" style="font-size: 0.85rem; padding: 0.55rem 0.8rem; border: 2px solid #e9ecef; border-radius: 8px;">
-                    <option value="day" {% if group_by == 'day' %}selected{% endif %}>يومي</option>
-                    <option value="week" {% if group_by == 'week' %}selected{% endif %}>أسبوعي</option>
+                <label for="group_by" class="form-label">التجميع حسب</label>
+                <select id="group_by" name="group_by" class="form-select">
+                    <option value="day"   {% if group_by == 'day' %}selected{% endif %}>يومي</option>
+                    <option value="week"  {% if group_by == 'week' %}selected{% endif %}>أسبوعي</option>
                     <option value="month" {% if group_by == 'month' %}selected{% endif %}>شهري</option>
                 </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="w-100" style="padding: 0.5rem; font-size: 0.85rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: white; font-weight: 600;">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--purchases">
                     <i class="fas fa-search me-1"></i>بحث
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- ══════════════════ DATA TABLE ══════════════════ -->
-    <div class="cx-panel">
-        <div class="cx-panel-header">
-            <h3 class="cx-panel-title">تفاصيل المشتريات حسب التاريخ</h3>
+    {% if report.data %}
+    <!-- ══ CHART ════════════════════════════════════════════════ -->
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--purchases">
+            <h3 class="rpt-panel-title"><i class="fas fa-chart-bar me-2"></i>رسم بياني للمشتريات</h3>
         </div>
-        <div class="cx-panel-body">
+        <div class="rpt-chart-wrap">
+            <canvas id="purchasesDateChart" class="rpt-chart-canvas"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ══ DATA TABLE ══════════════════════════════════════════ -->
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--purchases">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل المشتريات حسب التاريخ</h3>
+        </div>
+        <div class="rpt-panel-body">
             {% if report.data %}
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table">
                     <thead>
                         <tr>
-                            <th>التاريخ</th>
+                            <th>التاريخ / الفترة</th>
                             <th class="text-center">عدد الأوامر</th>
                             <th class="text-end">الكمية الإجمالية</th>
                             <th class="text-end">إجمالي المشتريات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in report.data %}
+                        {% for row in report.data %}
                         <tr>
-                            <td>{{ item.label }}</td>
-                            <td class="text-center">{{ item.invoice_count }}</td>
-                            <td class="text-end">{{ item.total_quantity}}</td>
-                            <td class="text-end">{{ item.total_amount|floatformat:"2u"|default:0|intcomma }}</td>
+                            <td class="fw-bold">{{ row.label }}</td>
+                            <td class="text-center">{{ row.invoice_count }}</td>
+                            <td class="text-end">{{ row.total_quantity }}</td>
+                            <td class="text-end fw-bold" style="color:#4facfe">{{ row.total_amount }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
             {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                لا توجد بيانات مشتريات للفترة المحددة
+            <div class="rpt-empty">
+                <i class="fas fa-calendar-xmark"></i>
+                <p>لا توجد بيانات مشتريات للفترة المحددة</p>
             </div>
             {% endif %}
         </div>
     </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if report.data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const raw = [{% for row in report.data %}{ label: "{{ row.label }}", amount: parseFloat("{{ row.total_amount }}".replace(/,/g,'')) }{% if not forloop.last %},{% endif %}{% endfor %}];
+    const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    const textColor = isDark ? '#9ca3af' : '#6b7280';
+    const isLine    = raw.length > 15;
+
+    new Chart(document.getElementById('purchasesDateChart'), {
+        type: isLine ? 'line' : 'bar',
+        data: {
+            labels: raw.map(r => r.label),
+            datasets: [{
+                label: 'المشتريات',
+                data: raw.map(r => r.amount),
+                backgroundColor: isLine ? 'rgba(79,172,254,0.12)' : 'rgba(79,172,254,0.75)',
+                borderColor: '#4facfe',
+                borderWidth: isLine ? 2 : 0,
+                borderRadius: isLine ? 0 : 6,
+                fill: isLine,
+                tension: 0.4,
+                pointRadius: isLine ? 2 : 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString('en') + ' ج.م' } }
+            },
+            scales: {
+                x: { ticks: { color: textColor, maxTicksLimit: 12 }, grid: { color: gridColor } },
+                y: { ticks: { color: textColor, callback: v => Number(v).toLocaleString('en') }, grid: { color: gridColor } }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

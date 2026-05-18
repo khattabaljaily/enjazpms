@@ -634,6 +634,23 @@
     border-right-color: var(--border-color);
 }
 
+/* ── Submenu group label ── */
+.nav-submenu-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 15px;
+    font-size: smaller;
+    color: brown;
+    pointer-events: none;
+    list-style: none;
+}
+
+[data-theme="dark"] .nav-submenu-label {
+    color: #64748b;
+}
+
 /* ── Sidebar footer (user info) ── */
 .sidebar-footer {
     margin-top: auto;

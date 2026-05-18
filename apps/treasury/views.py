@@ -265,3 +265,162 @@ def treasury_delete_api(request, pk):
     treasury.delete()
     return JsonResponse({'success': True, 'message': 'تم حذف الخزينة بنجاح'})
 
+
+
+# ─────────────────────────────────────────────────────────────────
+#   REPORTS
+# ─────────────────────────────────────────────────────────────────
+
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        from datetime import datetime
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
+
+
+@login_required
+@require_permission('view_treasury_balances_report')
+def treasury_balances_report(request):
+    from .reports import TreasuryReportGenerator
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    report = TreasuryReportGenerator(tenant).get_balances_report()
+
+    return render(request, 'treasury/reports/balances.html', {
+        'report': report,
+        'section': 'treasury_reports',
+    })
+
+
+@login_required
+@require_permission('view_treasury_balances_report')
+def treasury_balances_report_export(request):
+    import csv
+    from django.http import HttpResponse
+    from .reports import TreasuryReportGenerator
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    report = TreasuryReportGenerator(tenant).get_balances_report()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="treasury_balances.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['الخزينة', 'الكود', 'الرصيد الحالي'])
+    for row in report['data']:
+        writer.writerow([row['name'], row['code'], row['current_balance']])
+    return response
+
+
+@login_required
+@require_permission('view_treasury_statement_report')
+def treasury_statement_report(request):
+    from datetime import timedelta
+    from django.utils import timezone
+    from .reports import TreasuryReportGenerator
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    treasury_id = request.GET.get('treasury_id')
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    gen = TreasuryReportGenerator(tenant, start_date, end_date)
+    report = gen.get_statement_report(treasury_id) if treasury_id else None
+    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).order_by('name')
+
+    return render(request, 'treasury/reports/statement.html', {
+        'report': report,
+        'treasuries': treasuries,
+        'selected_treasury_id': treasury_id,
+        'start_date': start_date,
+        'end_date': end_date,
+        'section': 'treasury_reports',
+    })
+
+
+@login_required
+@require_permission('view_treasury_statement_report')
+def treasury_statement_report_export(request):
+    import csv
+    from datetime import timedelta
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from .reports import TreasuryReportGenerator
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    treasury_id = request.GET.get('treasury_id')
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = TreasuryReportGenerator(tenant, start_date, end_date).get_statement_report(treasury_id) if treasury_id else None
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="treasury_statement_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    if report:
+        writer.writerow([f'كشف خزينة: {report["treasury"].name}'])
+        writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
+        writer.writerow([])
+        writer.writerow(['التاريخ', 'نوع الحركة', 'الوصف', 'قبض', 'صرف', 'الرصيد بعد'])
+        for row in report['data']:
+            writer.writerow([row['movement_date'], row['movement_type'], row['description'], row['receipt'], row['disbursement'], row['running_balance']])
+    return response
+
+
+@login_required
+@require_permission('view_treasury_movements_report')
+def treasury_movements_report(request):
+    from datetime import timedelta
+    from django.utils import timezone
+    from .reports import TreasuryReportGenerator
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = TreasuryReportGenerator(tenant, start_date, end_date).get_movements_summary()
+
+    return render(request, 'treasury/reports/movements.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'section': 'treasury_reports',
+    })
+
+
+@login_required
+@require_permission('view_treasury_movements_report')
+def treasury_movements_report_export(request):
+    import csv
+    from datetime import timedelta
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from .reports import TreasuryReportGenerator
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = TreasuryReportGenerator(tenant, start_date, end_date).get_movements_summary()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="treasury_movements_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['التاريخ', 'الخزينة', 'نوع الحركة', 'الوصف', 'قبض', 'صرف', 'الرصيد بعد'])
+    for row in report['data']:
+        writer.writerow([row['movement_date'], row['treasury_name'], row['movement_type'], row['description'], row['receipt'], row['disbursement'], row['running_balance']])
+    return response

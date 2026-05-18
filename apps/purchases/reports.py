@@ -14,7 +14,7 @@ from decimal import Decimal
 from django.db.models import Sum, Count, F, Q
 from django.utils import timezone
 
-from .models import PurchaseInvoice, PurchaseInvoiceLine, PurchaseReturn
+from .models import PurchaseInvoice, PurchaseInvoiceLine, PurchaseReturn, PurchasePayment, SupplierLedger
 
 
 def format_number(value, decimals=2):
@@ -246,4 +246,147 @@ class PurchasesReportGenerator:
             'period': {'start': self.start_date, 'end': self.end_date},
             'group_by': group_by,
             'data': result
+        }
+    def get_supplier_statement(self, supplier_id):
+        """كشف حساب مورد — SupplierLedger مرتبة بالتاريخ"""
+        from apps.suppliers.models import Supplier
+        try:
+            supplier = Supplier.objects.get(pk=supplier_id, tenant=self.tenant)
+        except Supplier.DoesNotExist:
+            return None
+
+        entries = SupplierLedger.objects.filter(
+            tenant=self.tenant,
+            supplier=supplier,
+            entry_date__gte=self.start_date,
+            entry_date__lte=self.end_date,
+        ).order_by('entry_date', 'id')
+
+        data = []
+        for e in entries:
+            data.append({
+                'entry_date': e.entry_date,
+                'entry_type': e.get_entry_type_display(),
+                'entry_type_key': e.entry_type,
+                'amount': format_number(float(e.amount), 2),
+                'running_balance': format_number(float(e.running_balance), 2),
+                'notes': e.notes,
+            })
+
+        total_debit = sum(float(e.amount) for e in entries if float(e.amount) > 0)
+        total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
+        closing_balance = entries.last().running_balance if entries.exists() else 0
+
+        return {
+            'supplier': supplier,
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'summary': {
+                'total_debit': format_number(total_debit, 2),
+                'total_credit': format_number(total_credit, 2),
+                'closing_balance': format_number(float(closing_balance), 2),
+            },
+            'data': data,
+        }
+
+    def get_supplier_balances(self):
+        """أرصدة الموردين — آخر رصيد تراكمي لكل مورد"""
+        from apps.suppliers.models import Supplier
+
+        suppliers = Supplier.objects.filter(tenant=self.tenant).order_by('name')
+        data = []
+        for s in suppliers:
+            last_entry = (
+                SupplierLedger.objects
+                .filter(tenant=self.tenant, supplier=s)
+                .order_by('-entry_date', '-id')
+                .first()
+            )
+            balance = float(last_entry.running_balance) if last_entry else float(s.opening_balance)
+            data.append({
+                'code': s.code,
+                'name': s.name,
+                'phone': s.phone,
+                'credit_limit': format_number(float(s.credit_limit), 2),
+                'balance': format_number(balance, 2),
+                'balance_raw': balance,
+            })
+
+        total_balance = sum(r['balance_raw'] for r in data)
+        total_creditors = sum(1 for r in data if r['balance_raw'] > 0)
+        return {
+            'data': data,
+            'summary': {
+                'total_suppliers': format_number(len(data), 0),
+                'total_creditors': format_number(total_creditors, 0),
+                'total_balance': format_number(total_balance, 2),
+            },
+        }
+
+    def get_payments_report(self):
+        """تقرير مدفوعات الموردين (PurchasePayment) بالفترة"""
+        payments = PurchasePayment.objects.filter(
+            tenant=self.tenant,
+            payment_date__gte=self.start_date,
+            payment_date__lte=self.end_date,
+            is_reversed=False,
+        ).select_related('invoice', 'invoice__supplier').order_by('-payment_date')
+
+        data = []
+        for p in payments:
+            data.append({
+                'payment_date': p.payment_date,
+                'invoice_number': p.invoice.invoice_number,
+                'supplier_name': p.invoice.supplier.name if p.invoice.supplier else '—',
+                'payment_method': p.get_payment_method_display(),
+                'payment_method_key': p.payment_method,
+                'amount': format_number(float(p.amount), 2),
+                'reference_number': p.reference_number,
+                'notes': p.notes,
+            })
+
+        total_cash = sum(float(p.amount) for p in payments if p.payment_method == 'cash')
+        total_bank = sum(float(p.amount) for p in payments if p.payment_method == 'bank')
+        total_all = total_cash + total_bank
+
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'summary': {
+                'payment_count': format_number(len(data), 0),
+                'total_cash': format_number(total_cash, 2),
+                'total_bank': format_number(total_bank, 2),
+                'total_amount': format_number(total_all, 2),
+            },
+            'data': data,
+        }
+
+    def get_returns_report(self):
+        """تقرير مرتجعات المشتريات بالفترة"""
+        returns = PurchaseReturn.objects.filter(
+            tenant=self.tenant,
+            status='confirmed',
+            return_date__gte=self.start_date,
+            return_date__lte=self.end_date,
+        ).select_related('original_invoice', 'original_invoice__supplier').order_by('-return_date')
+
+        data = []
+        for r in returns:
+            data.append({
+                'return_date': r.return_date,
+                'return_number': r.return_number,
+                'invoice_number': r.original_invoice.invoice_number,
+                'supplier_name': r.original_invoice.supplier.name if r.original_invoice.supplier else '—',
+                'refund_method': r.get_refund_method_display(),
+                'total_returned': format_number(float(r.total_returned), 2),
+                'reason': r.reason if hasattr(r, 'reason') else '',
+            })
+
+        total_returned = sum(float(r.total_returned) for r in returns)
+
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'summary': {
+                'return_count': format_number(len(data), 0),
+                'total_returned': format_number(total_returned, 2),
+            },
+            'data': data,
         }

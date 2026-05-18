@@ -1,0 +1,110 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--expenses">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-list-check"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">تفاصيل المصروفات</h1>
+                    <p class="rpt-hero-desc">قائمة تفصيلية بجميع المصروفات خلال الفترة</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'expenses:reports:details_report_export' %}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_category_id %}&category_id={{ selected_category_id }}{% endif %}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'expenses:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">الفئة</label>
+                <select name="category_id" class="form-select">
+                    <option value="">كل الفئات</option>
+                    {% for cat in report.categories %}
+                    <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == selected_category_id %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">من تاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">إلى تاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--expenses"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--expenses">
+            <h3 class="rpt-panel-title">
+                <i class="fas fa-table me-2"></i>تفاصيل المصروفات
+                <span style="font-size:.78rem; opacity:.8; margin-right:.5rem;">إجمالي: {{ report.grand_total }}</span>
+            </h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الرقم</th>
+                            <th>الوصف</th>
+                            <th>الفئة</th>
+                            <th class="text-center">طريقة الدفع</th>
+                            <th>الخزينة</th>
+                            <th class="text-end">المبلغ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="text-muted" style="font-size:.8rem;">{{ row.expense_date }}</td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ row.code }}</td>
+                            <td class="fw-bold">{{ row.description }}</td>
+                            <td>
+                                <span class="badge" style="background:rgba(99,102,241,.1); color:#6366f1; font-size:.72rem; border-radius:6px; padding:.2rem .5rem;">{{ row.category_name }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge" style="background:rgba(17,153,142,.1); color:#11998e; font-size:.72rem; border-radius:6px; padding:.2rem .5rem;">{{ row.payment_method }}</span>
+                            </td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ row.treasury_name }}</td>
+                            <td class="text-end fw-bold" style="color:#ef4444;">{{ row.amount }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="rpt-total-row">
+                            <td colspan="6" class="fw-bold">الإجمالي</td>
+                            <td class="text-end fw-bold">{{ report.grand_total }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-receipt"></i>
+                <p>لا توجد مصروفات في هذه الفترة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

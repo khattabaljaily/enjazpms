@@ -1,0 +1,90 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--sales">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-users"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">أرصدة العملاء</h1>
+                    <p class="rpt-hero-desc">إجمالي الأرصدة الحالية لجميع العملاء</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'reports:customer_balances_export' %}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'sales:invoice_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="rpt-kpi-card rpt-kpi--purple">
+            <div class="rpt-kpi-icon"><i class="fas fa-users"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_customers }}</div>
+            <div class="rpt-kpi-label">إجمالي العملاء</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--amber">
+            <div class="rpt-kpi-icon"><i class="fas fa-user-clock"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_debtors }}</div>
+            <div class="rpt-kpi-label">عملاء بأرصدة مدينة</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_balance }}</div>
+            <div class="rpt-kpi-label">إجمالي الأرصدة</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--sales">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>قائمة أرصدة العملاء</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>الكود</th>
+                            <th>اسم العميل</th>
+                            <th class="text-center">الهاتف</th>
+                            <th class="text-end">الحد الائتماني</th>
+                            <th class="text-end">الرصيد الحالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="text-muted" style="font-size:.8rem;">{{ row.code }}</td>
+                            <td class="fw-bold">{{ row.name }}</td>
+                            <td class="text-center text-muted">{{ row.phone|default:"—" }}</td>
+                            <td class="text-end text-muted">{{ row.credit_limit }}</td>
+                            <td class="text-end fw-bold" style="color:{% if row.balance_raw > 0 %}#6366f1{% elif row.balance_raw < 0 %}#11998e{% else %}var(--text-secondary){% endif %}">
+                                {{ row.balance }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-users-slash"></i>
+                <p>لا يوجد عملاء</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

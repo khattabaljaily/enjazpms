@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 app_name = 'expenses'
@@ -14,4 +14,6 @@ urlpatterns = [
     # Categories
     path('categories/api/', views.category_list_api, name='category_list_api'),
     path('categories/create/', views.category_create_api, name='category_create_api'),
+    # Reports
+    path('reports/', include('apps.expenses.reports_urls', namespace='reports')),
 ]

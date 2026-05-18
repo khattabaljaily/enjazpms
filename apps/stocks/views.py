@@ -782,3 +782,105 @@ def stocks_by_stock_report_export(request):
 
     return response
 
+
+
+# ─────────────────────────────────────────────────────────────────
+#   NEW REPORTS: Item Movement / Low Stock Alert
+# ─────────────────────────────────────────────────────────────────
+
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        from datetime import datetime
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
+
+
+@login_required
+@require_permission('view_stocks_item_movement_report')
+def stocks_item_movement_report(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    item_id = request.GET.get('item_id') or None
+    stock_id = request.GET.get('stock_id') or None
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    generator = StocksReportGenerator(tenant, start_date, end_date)
+    report = generator.get_item_movement_report(item_id=item_id, stock_id=stock_id)
+
+    return render(request, 'stocks/reports/item_movement.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'selected_item_id': item_id,
+        'selected_stock_id': stock_id,
+        'section': 'stocks_reports',
+    })
+
+
+@login_required
+@require_permission('view_stocks_item_movement_report')
+def stocks_item_movement_report_export(request):
+    import csv
+    from django.http import HttpResponse
+
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    item_id = request.GET.get('item_id') or None
+    stock_id = request.GET.get('stock_id') or None
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = StocksReportGenerator(tenant, start_date, end_date).get_item_movement_report(item_id=item_id, stock_id=stock_id)
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="item_movement_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['تاريخ الحركة', 'المنتج', 'المخزن', 'نوع الحركة', 'دخول', 'خروج', 'الرصيد بعد'])
+    for row in report['data']:
+        writer.writerow([row['movement_date'], row['item_name'], row['stock_name'], row['movement_type'], row['quantity_in'], row['quantity_out'], row['balance_after']])
+    return response
+
+
+@login_required
+@require_permission('view_stocks_low_stock_report')
+def stocks_low_stock_report(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    report = StocksReportGenerator(tenant).get_low_stock_report()
+
+    return render(request, 'stocks/reports/low_stock.html', {
+        'report': report,
+        'section': 'stocks_reports',
+    })
+
+
+@login_required
+@require_permission('view_stocks_low_stock_report')
+def stocks_low_stock_report_export(request):
+    import csv
+    from django.http import HttpResponse
+
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    report = StocksReportGenerator(tenant).get_low_stock_report()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="low_stock_alert.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['المنتج', 'الوحدة', 'المخزن', 'الكمية', 'المتاح', 'الحد الأدنى', 'العجز'])
+    for row in report['data']:
+        writer.writerow([row['item_name'], row['item_unit'], row['stock_name'], row['quantity'], row['available'], row['min_quantity'], row['shortage']])
+    return response

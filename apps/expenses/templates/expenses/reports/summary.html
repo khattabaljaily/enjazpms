@@ -1,0 +1,155 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--expenses">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-chart-pie"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">ملخص المصروفات</h1>
+                    <p class="rpt-hero-desc">توزيع المصروفات على الفئات خلال الفترة</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'expenses:reports:summary_report_export' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'expenses:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">من تاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">إلى تاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--expenses"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(5, 1fr);">
+        <div class="rpt-kpi-card rpt-kpi--purple">
+            <div class="rpt-kpi-icon"><i class="fas fa-receipt"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.expense_count }}</div>
+            <div class="rpt-kpi-label">عدد المصروفات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--red">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_amount }}</div>
+            <div class="rpt-kpi-label">الإجمالي</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--green">
+            <div class="rpt-kpi-icon"><i class="fas fa-money-bill"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_cash }}</div>
+            <div class="rpt-kpi-label">نقداً</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-building-columns"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_bank }}</div>
+            <div class="rpt-kpi-label">بنكي</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--amber">
+            <div class="rpt-kpi-icon"><i class="fas fa-calculator"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.avg_expense }}</div>
+            <div class="rpt-kpi-label">متوسط المصروف</div>
+        </div>
+    </div>
+
+    {% if by_category.data %}
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--expenses">
+            <h3 class="rpt-panel-title"><i class="fas fa-chart-pie me-2"></i>توزيع المصروفات حسب الفئة</h3>
+        </div>
+        <div class="rpt-chart-wrap" style="max-width:480px; margin:0 auto;">
+            <canvas id="expensesCategoryChart" class="rpt-chart-canvas"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--expenses">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>المصروفات حسب الفئة</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if by_category.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>الفئة</th>
+                            <th class="text-center">عدد المصروفات</th>
+                            <th class="text-end">الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in by_category.data %}
+                        <tr>
+                            <td class="fw-bold">{{ row.category_name }}</td>
+                            <td class="text-center text-muted">{{ row.expense_count }}</td>
+                            <td class="text-end fw-bold" style="color:#6366f1;">{{ row.total_amount }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="rpt-total-row">
+                            <td class="fw-bold">الإجمالي</td>
+                            <td class="text-center">{{ report.summary.expense_count }}</td>
+                            <td class="text-end fw-bold">{{ by_category.grand_total }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-receipt"></i>
+                <p>لا توجد مصروفات في هذه الفترة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if by_category.data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const cats = [{% for r in by_category.data %}{ name: "{{ r.category_name|truncatechars:18 }}", amt: parseFloat("{{ r.total_amount }}".replace(/,/g,'')) || 0 }{% if not forloop.last %},{% endif %}{% endfor %}];
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#9ca3af' : '#6b7280';
+    const palette = ['#6366f1','#4f46e5','#818cf8','#a5b4fc','#c7d2fe','#e0e7ff','#f59e0b','#ef4444','#14b8a6','#10b981'];
+
+    new Chart(document.getElementById('expensesCategoryChart'), {
+        type: 'doughnut',
+        data: {
+            labels: cats.map(c => c.name),
+            datasets: [{ data: cats.map(c => c.amt), backgroundColor: cats.map((_, i) => palette[i % palette.length] + 'cc'), borderColor: cats.map((_, i) => palette[i % palette.length]), borderWidth: 2, hoverOffset: 8 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true, cutout: '55%',
+            plugins: {
+                legend: { position: 'bottom', labels: { color: textColor, padding: 12, font: { size: 12 } } },
+                tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString('en') } }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

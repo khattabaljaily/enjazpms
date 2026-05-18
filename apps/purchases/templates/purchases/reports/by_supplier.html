@@ -3,18 +3,7 @@
 {% load humanize %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/purchases_reports.css' %}?v=1.0">
-<link rel="stylesheet" href="{% static 'css/purchases_reports_summary.css' %}?v=2.0">
-<link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
-<style>
-    @media print {
-        .report-filters,
-        .cx-hero-right,
-        .btn {
-            display: none !important;
-        }
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=1.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -22,52 +11,48 @@
 {% block content %}
 <div class="cx-scene printable-scene">
 
-    <!-- ══════════════════ HERO ══════════════════ -->
-    <div class="cx-hero" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 1rem 1.5rem;">
-        <div class="cx-hero-inner">
-            <div class="cx-hero-left">
-                <div class="cx-hero-icon-wrap" style="width: 52px; height: 52px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-truck" style="color: white; font-size: 1.5rem;"></i>
-                </div>
+    <!-- ══ HERO ════════════════════════════════════════════════ -->
+    <div class="rpt-hero rpt-hero--purchases">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-truck"></i></div>
                 <div>
-                    <h1 class="cx-hero-title" style="font-size: 1.5rem; margin-bottom: 0.25rem; color: white;">المشتريات حسب المورد</h1>
-                    <p class="cx-hero-desc" style="font-size: 0.85rem; margin: 0; color: rgba(255,255,255,0.9);">
+                    <h1 class="rpt-hero-title">المشتريات حسب المورد</h1>
+                    <p class="rpt-hero-desc">
                         <i class="fas fa-calendar-alt me-1"></i> من {{ start_date }} إلى {{ end_date }}
                     </p>
                 </div>
             </div>
-            <div class="cx-hero-right">
-                <div class="cx-hero-actions" style="display: flex; gap: 0.5rem;">
-                    <button onclick="window.print()" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
-                        <i class="fas fa-print"></i><span> طباعة</span>
-                    </button>
-                    <a href="{% url 'purchases:reports:by_supplier_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}{% if selected_supplier_id %}&supplier_id={{ selected_supplier_id }}{% endif %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
-                        <i class="fas fa-download"></i><span> تصدير CSV</span>
-                    </a>
-                    <a href="{% url 'purchases:order_list' %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; color: white;">
-                        <i class="fas fa-arrow-left"></i><span> عودة</span>
-                    </a>
-                </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+                <a href="{% url 'purchases:reports:by_supplier_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}{% if selected_supplier_id %}&supplier_id={{ selected_supplier_id }}{% endif %}" class="rpt-hero-btn">
+                    <i class="fas fa-download"></i> تصدير CSV
+                </a>
+                <a href="{% url 'purchases:order_list' %}" class="rpt-hero-btn">
+                    <i class="fas fa-arrow-left"></i> عودة
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- ══════════════════ FILTERS ══════════════════ -->
-    <div class="report-filters" style="margin-bottom: 1.5rem; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+    <!-- ══ FILTERS ═════════════════════════════════════════════ -->
+    <div class="rpt-filters">
         <form method="get" class="row g-3">
             <div class="col-md-3">
-                <label for="start_date" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">من التاريخ</label>
+                <label for="start_date" class="form-label">من التاريخ</label>
                 <input type="date" id="start_date" name="start_date"
-                       value="{{ start_date|date:"Y-m-d" }}" class="form-control" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+                    value="{{ start_date|date:"Y-m-d" }}" class="form-control">
             </div>
             <div class="col-md-3">
-                <label for="end_date" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">إلى التاريخ</label>
+                <label for="end_date" class="form-label">إلى التاريخ</label>
                 <input type="date" id="end_date" name="end_date"
-                       value="{{ end_date|date:"Y-m-d" }}" class="form-control" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+                    value="{{ end_date|date:"Y-m-d" }}" class="form-control">
             </div>
             <div class="col-md-3">
-                <label for="supplier_id" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">المورد</label>
-                <select id="supplier_id" name="supplier_id" class="form-select" style="font-size: 0.85rem; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+                <label for="supplier_id" class="form-label">المورد</label>
+                <select id="supplier_id" name="supplier_id" class="form-select">
                     <option value="">كل الموردين</option>
                     {% for sup in suppliers %}
                         <option value="{{ sup.id }}" {% if sup.id|stringformat:"s" == selected_supplier_id %}selected{% endif %}>{{ sup.name }}</option>
@@ -75,35 +60,48 @@
                 </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="w-100" style="padding: 0.5rem; font-size: 0.85rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: white; font-weight: 600;">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--purchases">
                     <i class="fas fa-search me-1"></i>بحث
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- ══════════════════ DATA TABLE ══════════════════ -->
-    <div class="cx-panel">
-        <div class="cx-panel-header">
-            <h3 class="cx-panel-title">تفاصيل المشتريات حسب المورد</h3>
+    {% if not report.supplier and report.data %}
+    <!-- ══ CHART — Top 10 suppliers (aggregate view only) ══════ -->
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--purchases">
+            <h3 class="rpt-panel-title"><i class="fas fa-ranking-star me-2"></i>أعلى 10 موردين</h3>
         </div>
-        <div class="cx-panel-body">
-            {% if report.supplier %}
-                <div class="mb-3 p-3" style="border:1px solid #e9ecef; border-radius:8px; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
-                    <h4 style="margin:0 0 6px 0;">بيانات المورد</h4>
-                    {% if selected_supplier %}
-                        <p style="margin:0; font-weight:700;">{{ selected_supplier.name }}</p>
-                        {% if selected_supplier.phone %}<p style="margin:0;">هاتف: {{ selected_supplier.phone }}</p>{% endif %}
-                        {% if selected_supplier.email %}<p style="margin:0;">بريد إلكتروني: {{ selected_supplier.email }}</p>{% endif %}
-                    {% else %}
-                        <p style="margin:0; font-weight:700;">{{ report.supplier.name }}</p>
-                    {% endif %}
-                </div>
+        <div class="rpt-chart-wrap">
+            <canvas id="purchasesSupplierChart" class="rpt-chart-canvas"></canvas>
+        </div>
+    </div>
+    {% endif %}
 
+    <!-- ══ DATA TABLE ══════════════════════════════════════════ -->
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--purchases">
+            {% if report.supplier %}
+            <h3 class="rpt-panel-title"><i class="fas fa-receipt me-2"></i>فواتير المورد: {{ report.supplier.name }}</h3>
+            {% else %}
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل المشتريات حسب المورد</h3>
+            {% endif %}
+        </div>
+        <div class="rpt-panel-body">
+
+            {% if report.supplier %}
+                {% if selected_supplier %}
+                <div style="padding:1rem 1.25rem; border-bottom:1px solid var(--border-color); background:var(--bg-tertiary);">
+                    <p class="mb-0 fw-bold">{{ selected_supplier.name }}</p>
+                    {% if selected_supplier.phone %}<p class="mb-0 text-muted" style="font-size:0.82rem;">هاتف: {{ selected_supplier.phone }}</p>{% endif %}
+                    {% if selected_supplier.email %}<p class="mb-0 text-muted" style="font-size:0.82rem;">{{ selected_supplier.email }}</p>{% endif %}
+                </div>
+                {% endif %}
                 {% if report.data %}
-                <div class="table-responsive mt-3">
-                    <table class="table table-striped table-hover" style="background:#fff; border-radius:8px; overflow:hidden;">
-                        <thead style="background:#f8fafc;">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
                             <tr>
                                 <th>رقم الفاتورة</th>
                                 <th>تاريخ الفاتورة</th>
@@ -114,27 +112,29 @@
                         <tbody>
                             {% for row in report.data %}
                             <tr>
-                                <td>{{ row.invoice_number }}</td>
+                                <td class="fw-bold">{{ row.invoice_number }}</td>
                                 <td>{{ row.invoice_date|date:"Y-m-d" }}</td>
                                 <td class="text-center">{{ row.item_count }}</td>
-                                <td class="text-end">{{ row.grand_total|default:0 }}</td>
+                                <td class="text-end fw-bold" style="color:#4facfe">{{ row.grand_total|default:0 }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
                 {% else %}
-                <div class="alert alert-info mt-3">
-                    لا توجد فواتير لهذا المورد في الفترة المحددة
+                <div class="rpt-empty">
+                    <i class="fas fa-file-circle-xmark"></i>
+                    <p>لا توجد فواتير لهذا المورد في الفترة المحددة</p>
                 </div>
                 {% endif %}
 
             {% else %}
                 {% if report.data %}
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table">
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>اسم المورد</th>
                                 <th class="text-center">عدد الأوامر</th>
                                 <th class="text-end">الكمية الإجمالية</th>
@@ -145,25 +145,74 @@
                         <tbody>
                             {% for item in report.data %}
                             <tr>
-                                <td>{{ item.supplier_name }}</td>
+                                <td>
+                                    <span class="rpt-rank {% if forloop.counter == 1 %}rpt-rank--1{% elif forloop.counter == 2 %}rpt-rank--2{% elif forloop.counter == 3 %}rpt-rank--3{% else %}rpt-rank--other{% endif %}">
+                                        {{ forloop.counter }}
+                                    </span>
+                                </td>
+                                <td class="fw-bold">{{ item.supplier_name }}</td>
                                 <td class="text-center">{{ item.invoice_count }}</td>
-                                <td class="text-end">{{ item.total_quantity}}</td>
-                                <td class="text-end">{{ item.total_amount|floatformat:"2u"|default:0|intcomma }}</td>
-                                <td class="text-end">{{ item.avg_invoice_amount|floatformat:"2u"|default:0|intcomma }}</td>
+                                <td class="text-end text-muted">{{ item.total_quantity }}</td>
+                                <td class="text-end fw-bold" style="color:#4facfe">{{ item.total_amount|floatformat:"2u"|default:0|intcomma }}</td>
+                                <td class="text-end text-muted">{{ item.avg_invoice_amount|floatformat:"2u"|default:0|intcomma }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
                 {% else %}
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    لا توجد بيانات مشتريات للفترة المحددة
+                <div class="rpt-empty">
+                    <i class="fas fa-truck-ramp-box"></i>
+                    <p>لا توجد بيانات مشتريات للفترة المحددة</p>
                 </div>
                 {% endif %}
             {% endif %}
+
         </div>
     </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if not report.supplier and report.data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const top10 = [{% for item in report.data|slice:":10" %}{ name: "{{ item.supplier_name|truncatechars:16 }}", amount: parseFloat("{{ item.total_amount }}".replace(/,/g,'')) }{% if not forloop.last %},{% endif %}{% endfor %}];
+    const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    const textColor = isDark ? '#9ca3af' : '#6b7280';
+    const colors    = ['#4facfe','#0575e6','#667eea','#764ba2','#43e97b','#11998e','#fa709a','#f59e0b','#14b8a6','#ef4444'];
+
+    new Chart(document.getElementById('purchasesSupplierChart'), {
+        type: 'bar',
+        data: {
+            labels: top10.map(r => r.name),
+            datasets: [{
+                label: 'إجمالي المشتريات',
+                data: top10.map(r => r.amount),
+                backgroundColor: top10.map((_, i) => colors[i % colors.length] + 'cc'),
+                borderColor: top10.map((_, i) => colors[i % colors.length]),
+                borderWidth: 1,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString('en') + ' ج.م' } }
+            },
+            scales: {
+                x: { ticks: { color: textColor, callback: v => Number(v).toLocaleString('en') }, grid: { color: gridColor } },
+                y: { ticks: { color: textColor }, grid: { display: false } }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

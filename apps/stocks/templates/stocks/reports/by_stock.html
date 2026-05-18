@@ -2,18 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/stocks_reports.css' %}?v=1.0">
-<link rel="stylesheet" href="{% static 'css/stocks_reports_by_stock.css' %}?v=1.0">
-<link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
-<style>
-    @media print {
-        .report-filters,
-        .cx-hero-right,
-        .btn {
-            display: none !important;
-        }
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=1.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -21,38 +10,35 @@
 {% block content %}
 <div class="cx-scene printable-scene">
 
-    <!-- ══════════════════ HERO ══════════════════ -->
-    <div class="cx-hero" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        <div class="cx-hero-inner">
-            <div class="cx-hero-left">
-                <div class="cx-hero-icon-wrap" style="background: rgba(255,255,255,0.2);">
-                    <i class="fas fa-location-dot" style="color: white; font-size: 1.5rem;"></i>
-                </div>
+    <!-- ══ HERO ════════════════════════════════════════════════ -->
+    <div class="rpt-hero rpt-hero--stocks">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-location-dot"></i></div>
                 <div>
-                    <h1 class="cx-hero-title" style="color: white; font-size: 1.5rem;">المخزن حسب الموقع</h1>
+                    <h1 class="rpt-hero-title">المخزن حسب الموقع</h1>
+                    <p class="rpt-hero-desc">مقارنة الكميات بين المخازن</p>
                 </div>
             </div>
-            <div class="cx-hero-right">
-                <div class="cx-hero-actions">
-                    <button onclick="window.print()" class="cx-btn-secondary" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px;">
-                        <i class="fas fa-print"></i><span> طباعة</span>
-                    </button>
-                    <a href="{% url 'stocks:reports:by_stock_report_export' %}{% if selected_stock_id %}?stock_id={{ selected_stock_id }}{% endif %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px;">
-                        <i class="fas fa-download"></i><span> تصدير</span>
-                    </a>
-                    <a href="{% url 'stocks:quantities_list' %}" class="cx-btn-secondary" style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px;">
-                        <i class="fas fa-arrow-left"></i><span> عودة</span>
-                    </a>
-                </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+                <a href="{% url 'stocks:reports:by_stock_report_export' %}{% if selected_stock_id %}?stock_id={{ selected_stock_id }}{% endif %}" class="rpt-hero-btn">
+                    <i class="fas fa-download"></i> تصدير
+                </a>
+                <a href="{% url 'stocks:quantities_list' %}" class="rpt-hero-btn">
+                    <i class="fas fa-arrow-left"></i> عودة
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- ══════════════════ DATA TABLE ══════════════════ -->
-    <div class="report-filters" style="margin-bottom: 1rem; background: white; padding: 1rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+    <!-- ══ FILTERS ═════════════════════════════════════════════ -->
+    <div class="rpt-filters">
         <form method="get" class="row g-3">
             <div class="col-md-4">
-                <label for="stock_id" class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem; color: #6c757d; font-weight: 600;">المخزن</label>
+                <label for="stock_id" class="form-label">المخزن</label>
                 <select id="stock_id" name="stock_id" class="form-select">
                     <option value="">كل المخازن</option>
                     {% for s in stocks %}
@@ -61,60 +47,113 @@
                 </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="w-100" style="padding: 0.5rem; font-size: 0.85rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: white; font-weight: 600;">بحث</button>
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--stocks">
+                    <i class="fas fa-search me-1"></i>بحث
+                </button>
             </div>
         </form>
     </div>
-    <div class="cx-panel">
-        <div class="cx-panel-header">
-            <h3 class="cx-panel-title">تفاصيل المخزن حسب الموقع</h3>
+
+    {% if report.data and not selected_stock_id %}
+    <!-- ══ CHART — stocks comparison ════════════════════════════ -->
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--stocks">
+            <h3 class="rpt-panel-title"><i class="fas fa-chart-bar me-2"></i>مقارنة المخازن بالكمية المتاحة</h3>
         </div>
-        <div class="cx-panel-body">
+        <div class="rpt-chart-wrap">
+            <canvas id="stocksStockChart" class="rpt-chart-canvas"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ══ DATA TABLE ══════════════════════════════════════════ -->
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--stocks">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل المخزن حسب الموقع</h3>
+        </div>
+        <div class="rpt-panel-body">
             {% if report.data %}
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>المخزن</th>
                             <th class="text-center">النوع</th>
                             <th class="text-center">عدد المنتجات</th>
-                            <th class="text-center">الكمية المتاحة</th>
-                            <th class="text-center">الكمية المحجوزة</th>
-                            <th class="text-center">إجمالي الكمية</th>
-                            <th class="text-center">منتجات منخفضة</th>
-                            <th class="text-end">القيمة الإجمالية</th>
+                            <th class="text-center">المتاح</th>
+                            <th class="text-center">المحجوز</th>
+                            <th class="text-center">الإجمالي</th>
+                            <th class="text-center">منخفضة</th>
+                            <th class="text-end">القيمة</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for stock in report.data %}
                         <tr>
-                            <td><strong>{{ stock.stock_name }}</strong></td>
-                            <td class="text-center">{{ stock.stock_type }}</td>
+                            <td class="fw-bold">{{ stock.stock_name }}</td>
+                            <td class="text-center text-muted">{{ stock.stock_type }}</td>
                             <td class="text-center">{{ stock.item_count }}</td>
-                            <td class="text-center">{{ stock.total_available|floatformat:0 }}</td>
-                            <td class="text-center">{{ stock.total_reserved|floatformat:0 }}</td>
+                            <td class="text-center fw-bold" style="color:#11998e">{{ stock.total_available|floatformat:0 }}</td>
+                            <td class="text-center" style="color:#f59e0b">{{ stock.total_reserved|floatformat:0 }}</td>
                             <td class="text-center">{{ stock.total_quantity|floatformat:0 }}</td>
                             <td class="text-center">
                                 {% if stock.low_stock_items > 0 %}
-                                    <span style="color: red; font-weight: bold;">⚠️ {{ stock.low_stock_items }}</span>
-                                {% else %}
-                                    -
-                                {% endif %}
+                                <span style="color:#ef4444; font-weight:700;">
+                                    <i class="fas fa-triangle-exclamation"></i> {{ stock.low_stock_items }}
+                                </span>
+                                {% else %}—{% endif %}
                             </td>
-                            <td class="text-end">{{ stock.total_value|floatformat:2 }}</td>
+                            <td class="text-end text-muted">{{ stock.total_value|floatformat:2 }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
             {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                لا توجد بيانات مخزن
+            <div class="rpt-empty">
+                <i class="fas fa-warehouse"></i>
+                <p>لا توجد بيانات مخزن</p>
             </div>
             {% endif %}
         </div>
     </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if report.data and not selected_stock_id %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const data = [{% for s in report.data %}{ name: "{{ s.stock_name|truncatechars:16 }}", available: parseFloat("{{ s.total_available }}") || 0, reserved: parseFloat("{{ s.total_reserved }}") || 0 }{% if not forloop.last %},{% endif %}{% endfor %}];
+    const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    const textColor = isDark ? '#9ca3af' : '#6b7280';
+
+    new Chart(document.getElementById('stocksStockChart'), {
+        type: 'bar',
+        data: {
+            labels: data.map(r => r.name),
+            datasets: [
+                { label: 'متاح',   data: data.map(r => r.available), backgroundColor: 'rgba(17,153,142,0.75)',  borderColor: '#11998e', borderWidth:1, borderRadius:4 },
+                { label: 'محجوز',  data: data.map(r => r.reserved),  backgroundColor: 'rgba(245,158,11,0.75)', borderColor: '#f59e0b', borderWidth:1, borderRadius:4 },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'top', labels: { color: textColor } },
+                tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString('en') + ' وحدة' } }
+            },
+            scales: {
+                x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                y: { ticks: { color: textColor, callback: v => Number(v).toLocaleString('en') }, grid: { color: gridColor } }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

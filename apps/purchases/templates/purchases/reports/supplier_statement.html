@@ -1,0 +1,139 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--purchases">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">كشف حساب مورد</h1>
+                    <p class="rpt-hero-desc">سجل المشتريات والمدفوعات لمورد محدد</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                {% if report %}
+                <a href="{% url 'purchases:reports:supplier_statement_export' %}?supplier_id={{ selected_supplier_id }}&start_date={{ start_date }}&end_date={{ end_date }}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                {% endif %}
+                <a href="{% url 'purchases:order_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">المورد</label>
+                <select name="supplier_id" class="form-select">
+                    <option value="">— اختر مورداً —</option>
+                    {% for s in suppliers %}
+                    <option value="{{ s.id }}" {% if s.id|stringformat:"s" == selected_supplier_id %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">من تاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">إلى تاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--purchases"><i class="fas fa-search me-1"></i>عرض</button>
+            </div>
+        </form>
+    </div>
+
+    {% if report %}
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-file-invoice"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_debit }}</div>
+            <div class="rpt-kpi-label">إجمالي الفواتير</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--green">
+            <div class="rpt-kpi-icon"><i class="fas fa-hand-holding-dollar"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_credit }}</div>
+            <div class="rpt-kpi-label">إجمالي المدفوعات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--amber">
+            <div class="rpt-kpi-icon"><i class="fas fa-balance-scale"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.closing_balance }}</div>
+            <div class="rpt-kpi-label">الرصيد الختامي</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--purchases">
+            <h3 class="rpt-panel-title">
+                <i class="fas fa-table me-2"></i>كشف حساب: {{ report.supplier.name }}
+                <span style="font-size:.78rem; opacity:.8; margin-right:.5rem;">{{ start_date }} — {{ end_date }}</span>
+            </h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>نوع القيد</th>
+                            <th class="text-end">المبلغ</th>
+                            <th class="text-end">الرصيد التراكمي</th>
+                            <th>ملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in report.data %}
+                        <tr>
+                            <td class="text-muted">{{ entry.entry_date }}</td>
+                            <td>
+                                {% if entry.entry_type_key == 'invoice' %}
+                                <span class="badge" style="background:rgba(79,172,254,.12); color:#4facfe; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ entry.entry_type }}</span>
+                                {% elif entry.entry_type_key == 'payment' %}
+                                <span class="badge" style="background:rgba(17,153,142,.12); color:#11998e; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ entry.entry_type }}</span>
+                                {% elif entry.entry_type_key == 'return' %}
+                                <span class="badge" style="background:rgba(239,68,68,.12); color:#ef4444; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ entry.entry_type }}</span>
+                                {% else %}
+                                <span class="badge" style="background:rgba(107,114,128,.12); color:#6b7280; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ entry.entry_type }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold">{{ entry.amount }}</td>
+                            <td class="text-end fw-bold" style="color:#6366f1;">{{ entry.running_balance }}</td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ entry.notes|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <p>لا توجد حركات في هذه الفترة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="rpt-panel">
+        <div class="rpt-panel-body">
+            <div class="rpt-empty">
+                <i class="fas fa-hand-pointer"></i>
+                <p>اختر مورداً وحدد الفترة الزمنية لعرض الكشف</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

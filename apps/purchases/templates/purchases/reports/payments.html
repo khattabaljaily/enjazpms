@@ -1,0 +1,117 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--purchases">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-money-bill-transfer"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">مدفوعات الموردين</h1>
+                    <p class="rpt-hero-desc">سجل دفعات المشتريات النقدية والبنكية</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'purchases:reports:payments_report_export' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'purchases:order_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">من تاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">إلى تاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--purchases"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-receipt"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.payment_count }}</div>
+            <div class="rpt-kpi-label">عدد الدفعات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--green">
+            <div class="rpt-kpi-icon"><i class="fas fa-money-bill"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_cash }}</div>
+            <div class="rpt-kpi-label">نقداً</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--cyan">
+            <div class="rpt-kpi-icon"><i class="fas fa-building-columns"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_bank }}</div>
+            <div class="rpt-kpi-label">تحويل بنكي</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--purple">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_amount }}</div>
+            <div class="rpt-kpi-label">الإجمالي</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--purchases">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل المدفوعات</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>رقم الفاتورة</th>
+                            <th>المورد</th>
+                            <th class="text-center">طريقة الدفع</th>
+                            <th class="text-end">المبلغ</th>
+                            <th>رقم مرجعي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="text-muted">{{ row.payment_date }}</td>
+                            <td style="font-size:.82rem; font-weight:600;">{{ row.invoice_number }}</td>
+                            <td class="fw-bold">{{ row.supplier_name }}</td>
+                            <td class="text-center">
+                                {% if row.payment_method_key == 'cash' %}
+                                <span class="badge" style="background:rgba(17,153,142,.12); color:#11998e; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;"><i class="fas fa-money-bill me-1"></i>{{ row.payment_method }}</span>
+                                {% else %}
+                                <span class="badge" style="background:rgba(79,172,254,.12); color:#4facfe; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;"><i class="fas fa-building-columns me-1"></i>{{ row.payment_method }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold" style="color:#6366f1;">{{ row.amount }}</td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ row.reference_number|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-money-bill-slash"></i>
+                <p>لا توجد دفعات في هذه الفترة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

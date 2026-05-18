@@ -1,0 +1,503 @@
+/* =============================================================
+   Reports Base CSS — EnjazIMS
+   Shared by all 12 report templates.
+   Uses CSS variables from main.css → works in dark & light mode.
+   ============================================================= */
+
+/* ── Hero Banner ─────────────────────────────────────────────── */
+.rpt-hero {
+    margin-bottom: 1.5rem;
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.rpt-hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -4%;
+    width: 180px;
+    height: 180px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.rpt-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -50%;
+    left: 8%;
+    width: 130px;
+    height: 130px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+/* Unified gradient — all modules share one indigo brand color */
+.rpt-hero--sales,
+.rpt-hero--purchases,
+.rpt-hero--stocks,
+.rpt-hero--expenses,
+.rpt-hero--treasury,
+.rpt-hero--accounting { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+
+.rpt-hero-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    z-index: 1;
+}
+.rpt-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.rpt-hero-icon {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: white;
+}
+.rpt-hero-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 0.2rem;
+    line-height: 1.3;
+}
+.rpt-hero-desc {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+}
+.rpt-hero-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.rpt-hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: white;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+.rpt-hero-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+/* ── Filter Bar ──────────────────────────────────────────────── */
+.rpt-filters {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+.rpt-filters .form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    margin-bottom: 0.3rem;
+    display: block;
+}
+.rpt-filters .form-control,
+.rpt-filters .form-select {
+    font-size: 0.85rem;
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text-primary);
+    padding: 0.45rem 0.75rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.rpt-filters .form-control:focus,
+.rpt-filters .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+    outline: none;
+    background: var(--surface);
+    color: var(--text-primary);
+}
+
+/* Submit button variants */
+.rpt-filter-btn {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.rpt-filter-btn:hover { opacity: 0.88; color: white; }
+.rpt-filter-btn--sales,
+.rpt-filter-btn--purchases,
+.rpt-filter-btn--stocks,
+.rpt-filter-btn--expenses,
+.rpt-filter-btn--treasury,
+.rpt-filter-btn--accounting { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+
+/* ── KPI Cards Grid ──────────────────────────────────────────── */
+.rpt-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.rpt-kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1.1rem;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.rpt-kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+.rpt-kpi-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+}
+.rpt-kpi-value {
+    font-size: 1.45rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 0.3rem;
+    direction: ltr;
+}
+.rpt-kpi-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* KPI accent color classes */
+.rpt-kpi--purple .rpt-kpi-icon { background: rgba(102, 126, 234, 0.13); color: #667eea; }
+.rpt-kpi--purple .rpt-kpi-value { color: #667eea; }
+
+.rpt-kpi--violet .rpt-kpi-icon { background: rgba(118, 75, 162, 0.13); color: #764ba2; }
+.rpt-kpi--violet .rpt-kpi-value { color: #764ba2; }
+
+.rpt-kpi--blue .rpt-kpi-icon { background: rgba(79, 172, 254, 0.13); color: #4facfe; }
+.rpt-kpi--blue .rpt-kpi-value { color: #4facfe; }
+
+.rpt-kpi--cyan .rpt-kpi-icon { background: rgba(5, 117, 230, 0.13); color: #0575e6; }
+.rpt-kpi--cyan .rpt-kpi-value { color: #0575e6; }
+
+.rpt-kpi--green .rpt-kpi-icon { background: rgba(17, 153, 142, 0.13); color: #11998e; }
+.rpt-kpi--green .rpt-kpi-value { color: #11998e; }
+
+.rpt-kpi--emerald .rpt-kpi-icon { background: rgba(16, 185, 129, 0.13); color: #10b981; }
+.rpt-kpi--emerald .rpt-kpi-value { color: #10b981; }
+
+.rpt-kpi--orange .rpt-kpi-icon { background: rgba(250, 112, 154, 0.13); color: #fa709a; }
+.rpt-kpi--orange .rpt-kpi-value { color: #fa709a; }
+
+.rpt-kpi--amber .rpt-kpi-icon { background: rgba(245, 158, 11, 0.13); color: #f59e0b; }
+.rpt-kpi--amber .rpt-kpi-value { color: #f59e0b; }
+
+.rpt-kpi--red .rpt-kpi-icon { background: rgba(239, 68, 68, 0.13); color: #ef4444; }
+.rpt-kpi--red .rpt-kpi-value { color: #ef4444; }
+
+.rpt-kpi--teal .rpt-kpi-icon { background: rgba(20, 184, 166, 0.13); color: #14b8a6; }
+.rpt-kpi--teal .rpt-kpi-value { color: #14b8a6; }
+
+/* ── Content Panel ───────────────────────────────────────────── */
+.rpt-panel {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.5rem;
+}
+.rpt-panel-header {
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+}
+.rpt-panel-header--sales,
+.rpt-panel-header--purchases,
+.rpt-panel-header--stocks,
+.rpt-panel-header--expenses,
+.rpt-panel-header--treasury,
+.rpt-panel-header--accounting {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border-bottom: none;
+}
+.rpt-panel-header--sales .rpt-panel-title,
+.rpt-panel-header--purchases .rpt-panel-title,
+.rpt-panel-header--stocks .rpt-panel-title,
+.rpt-panel-header--expenses .rpt-panel-title,
+.rpt-panel-header--treasury .rpt-panel-title,
+.rpt-panel-header--accounting .rpt-panel-title {
+    color: white;
+}
+.rpt-panel-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.rpt-panel-body { padding: 0; }
+
+/* Table inside panel */
+.rpt-panel .table { margin: 0; }
+.rpt-panel .table thead th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 0.65rem 1rem;
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+.rpt-panel .table tbody td {
+    padding: 0.55rem 1rem;
+    font-size: 0.83rem;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+.rpt-panel .table tbody tr:last-child td { border-bottom: none; }
+.rpt-panel .table tbody tr:hover { background: var(--surface-hover); }
+
+/* Total row highlight */
+.rpt-panel .table tbody tr.rpt-total-row td {
+    background: var(--bg-tertiary);
+    font-weight: 800;
+    font-size: 0.87rem;
+    border-top: 2px solid var(--border-color);
+    border-bottom: none;
+}
+
+/* ── Chart Wrapper ───────────────────────────────────────────── */
+.rpt-chart-wrap {
+    padding: 1.25rem 1.25rem 1rem;
+}
+.rpt-chart-canvas { max-height: 280px; }
+
+/* ── Empty State ─────────────────────────────────────────────── */
+.rpt-empty {
+    padding: 2.5rem 1.25rem;
+    text-align: center;
+    color: var(--text-tertiary);
+}
+.rpt-empty i {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.75rem;
+    opacity: 0.35;
+}
+.rpt-empty p { font-size: 0.9rem; margin: 0; }
+
+/* ── Rank Badge (top items / customers) ─────────────────────── */
+.rpt-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.rpt-rank--1 { background: #fef3c7; color: #92400e; }
+.rpt-rank--2 { background: #f3f4f6; color: #374151; }
+.rpt-rank--3 { background: #fde8d8; color: #9a3412; }
+.rpt-rank--other { background: var(--bg-tertiary); color: var(--text-tertiary); }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .rpt-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+    .rpt-hero-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .rpt-hero-actions { width: 100%; }
+    .rpt-hero-title { font-size: 1.2rem; }
+    .rpt-hero { padding: 1rem; }
+    .rpt-panel .table thead th,
+    .rpt-panel .table tbody td { padding: 0.5rem 0.75rem; font-size: 0.78rem; }
+}
+@media (max-width: 480px) {
+    .rpt-kpi-grid { grid-template-columns: 1fr; }
+    .rpt-chart-canvas { max-height: 220px; }
+}
+
+/* ── Print Styles ────────────────────────────────────────────── */
+@page { size: A4; margin: 14mm 12mm; }
+
+@media print {
+    /* ── 1. Hide layout chrome ──────────────────────────────── */
+    .navbar,
+    .sidebar,
+    .sidebar-overlay,
+    footer,
+    .rpt-filters,
+    .rpt-hero-actions,
+    .rpt-chart-wrap,
+    .rpt-hero::before,
+    .rpt-hero::after { display: none !important; }
+
+    /* ── 2. Reset backgrounds & layout ─────────────────────── */
+    html, body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .dashboard-shell,
+    .dashboard-body,
+    .dashboard-main,
+    .content,
+    .cx-scene {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
+    }
+
+    /* ── 3. Hero: strip gradient, show as plain title bar ───── */
+    .rpt-hero {
+        background: none !important;
+        border: none !important;
+        border-bottom: 2px solid #222 !important;
+        border-radius: 0 !important;
+        padding: 0.5rem 0 0.75rem !important;
+        margin-bottom: 1rem !important;
+    }
+    .rpt-hero-icon { display: none !important; }
+    .rpt-hero-title { color: #111 !important; font-size: 1.15rem !important; }
+    .rpt-hero-desc  { color: #555 !important; }
+
+    /* ── 4. KPI cards: white, no color fill ─────────────────── */
+    .rpt-kpi-grid { gap: 0.5rem !important; margin-bottom: 1rem !important; }
+    .rpt-kpi-card {
+        background: #fff !important;
+        border: 1px solid #bbb !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+    }
+    .rpt-kpi-icon { display: none !important; }
+    .rpt-kpi-value { color: #111 !important; font-size: 1.2rem !important; }
+    .rpt-kpi-label { color: #444 !important; }
+
+    /* Strip accent colors from every KPI variant */
+    .rpt-kpi--purple .rpt-kpi-value, .rpt-kpi--violet .rpt-kpi-value,
+    .rpt-kpi--blue .rpt-kpi-value,   .rpt-kpi--cyan .rpt-kpi-value,
+    .rpt-kpi--green .rpt-kpi-value,  .rpt-kpi--emerald .rpt-kpi-value,
+    .rpt-kpi--orange .rpt-kpi-value, .rpt-kpi--amber .rpt-kpi-value,
+    .rpt-kpi--red .rpt-kpi-value,    .rpt-kpi--teal .rpt-kpi-value {
+        color: #111 !important;
+    }
+
+    /* ── 5. Panels: no gradient headers ─────────────────────── */
+    .rpt-panel {
+        background: #fff !important;
+        border: 1px solid #bbb !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+        margin-bottom: 1rem !important;
+        border-radius: 0 !important;
+    }
+    .rpt-panel-header,
+    .rpt-panel-header--sales,
+    .rpt-panel-header--purchases,
+    .rpt-panel-header--stocks,
+    .rpt-panel-header--expenses,
+    .rpt-panel-header--treasury,
+    .rpt-panel-header--accounting {
+        background: #f0f0f0 !important;
+        border-bottom: 1px solid #bbb !important;
+    }
+    .rpt-panel-title,
+    .rpt-panel-header--sales .rpt-panel-title,
+    .rpt-panel-header--purchases .rpt-panel-title,
+    .rpt-panel-header--stocks .rpt-panel-title,
+    .rpt-panel-header--expenses .rpt-panel-title,
+    .rpt-panel-header--treasury .rpt-panel-title,
+    .rpt-panel-header--accounting .rpt-panel-title {
+        color: #111 !important;
+    }
+
+    /* ── 6. Tables: clean black on white ────────────────────── */
+    .rpt-panel .table thead th {
+        background: #f0f0f0 !important;
+        color: #111 !important;
+        border-bottom: 2px solid #999 !important;
+    }
+    .rpt-panel .table tbody td,
+    .rpt-panel .table tbody td * {
+        color: #111 !important;
+        background: transparent !important;
+        border-bottom-color: #ddd !important;
+    }
+    .rpt-panel .table tbody tr:hover { background: transparent !important; }
+    .rpt-panel .table tbody tr.rpt-total-row td {
+        background: #f5f5f5 !important;
+        border-top: 1px solid #999 !important;
+    }
+    .table-responsive { overflow: visible !important; }
+
+    /* ── 7. Rank badges: monochrome ─────────────────────────── */
+    .rpt-rank,
+    .rpt-rank--1,
+    .rpt-rank--2,
+    .rpt-rank--3,
+    .rpt-rank--other {
+        background: #eee !important;
+        color: #333 !important;
+    }
+
+    /* ── 8. Low-stock row highlight: keep subtle ────────────── */
+    tr[style*="rgba(239,68,68"] { background: #fff9f9 !important; }
+
+    /* ── 9. Empty state ─────────────────────────────────────── */
+    .rpt-empty { color: #555 !important; }
+}

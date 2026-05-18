@@ -1,0 +1,135 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--stocks">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-arrows-up-down"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">حركة الأصناف</h1>
+                    <p class="rpt-hero-desc">سجل دخول وخروج المخزون خلال الفترة</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'stocks:reports:item_movement_report_export' %}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_item_id %}&item_id={{ selected_item_id }}{% endif %}{% if selected_stock_id %}&stock_id={{ selected_stock_id }}{% endif %}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'stocks:quantities_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">المنتج</label>
+                <select name="item_id" class="form-select">
+                    <option value="">كل المنتجات</option>
+                    {% for item in report.items %}
+                    <option value="{{ item.id }}" {% if item.id|stringformat:"s" == selected_item_id %}selected{% endif %}>{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">المخزن</label>
+                <select name="stock_id" class="form-select">
+                    <option value="">كل المخازن</option>
+                    {% for s in report.stocks %}
+                    <option value="{{ s.id }}" {% if s.id|stringformat:"s" == selected_stock_id %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">من تاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">إلى تاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--stocks"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="rpt-kpi-card rpt-kpi--purple">
+            <div class="rpt-kpi-icon"><i class="fas fa-list"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.movement_count }}</div>
+            <div class="rpt-kpi-label">عدد الحركات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--green">
+            <div class="rpt-kpi-icon"><i class="fas fa-arrow-down"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_in }}</div>
+            <div class="rpt-kpi-label">إجمالي الدخول</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--red">
+            <div class="rpt-kpi-icon"><i class="fas fa-arrow-up"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_out }}</div>
+            <div class="rpt-kpi-label">إجمالي الخروج</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--teal">
+            <div class="rpt-kpi-icon"><i class="fas fa-balance-scale"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.net }}</div>
+            <div class="rpt-kpi-label">الصافي</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--stocks">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل الحركات</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>المنتج</th>
+                            <th>المخزن</th>
+                            <th>نوع الحركة</th>
+                            <th class="text-center" style="color:#11998e;">دخول +</th>
+                            <th class="text-center" style="color:#ef4444;">خروج −</th>
+                            <th class="text-end">الرصيد بعد</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="text-muted" style="font-size:.8rem;">{{ row.movement_date }}</td>
+                            <td class="fw-bold">{{ row.item_name }}</td>
+                            <td class="text-muted">{{ row.stock_name }}</td>
+                            <td>
+                                <span class="badge" style="background:{% if row.direction == 'in' %}rgba(17,153,142,.12){% else %}rgba(239,68,68,.12){% endif %}; color:{% if row.direction == 'in' %}#11998e{% else %}#ef4444{% endif %}; font-size:.72rem; border-radius:6px; padding:.2rem .5rem;">
+                                    {{ row.movement_type }}
+                                </span>
+                            </td>
+                            <td class="text-center fw-bold" style="color:#11998e;">{% if row.direction == 'in' %}{{ row.quantity_in }}{% else %}—{% endif %}</td>
+                            <td class="text-center fw-bold" style="color:#ef4444;">{% if row.direction == 'out' %}{{ row.quantity_out }}{% else %}—{% endif %}</td>
+                            <td class="text-end text-muted">{{ row.balance_after }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-arrows-up-down"></i>
+                <p>لا توجد حركات في هذه الفترة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

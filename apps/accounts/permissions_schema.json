@@ -120,6 +120,22 @@
         "view_stocks_summary_report": "عرض تقرير ملخص المخزن",
         "view_stocks_by_item_report": "عرض تقرير المخزن حسب المنتج",
         "view_stocks_by_category_report": "عرض تقرير المخزن حسب الفئة",
-        "view_stocks_by_location_report": "عرض تقرير المخزن حسب الموقع"
+        "view_stocks_by_location_report": "عرض تقرير المخزن حسب الموقع",
+        "view_sales_customer_statement_report": "عرض كشف حساب العميل",
+        "view_sales_customer_balances_report": "عرض أرصدة العملاء",
+        "view_sales_payments_report": "عرض تقرير مدفوعات المبيعات",
+        "view_sales_returns_report": "عرض تقرير مرتجعات المبيعات",
+        "view_purchases_supplier_statement_report": "عرض كشف حساب المورد",
+        "view_purchases_supplier_balances_report": "عرض أرصدة الموردين",
+        "view_purchases_payments_report": "عرض تقرير مدفوعات المشتريات",
+        "view_purchases_returns_report": "عرض تقرير مرتجعات المشتريات",
+        "view_stocks_item_movement_report": "عرض تقرير حركة الأصناف",
+        "view_stocks_low_stock_report": "عرض تقرير المخزون المنخفض",
+        "view_expenses_summary_report": "عرض تقرير ملخص المصروفات",
+        "view_expenses_details_report": "عرض تقرير تفاصيل المصروفات",
+        "view_treasury_balances_report": "عرض تقرير أرصدة الخزائن",
+        "view_treasury_statement_report": "عرض كشف حساب الخزينة",
+        "view_treasury_movements_report": "عرض تقرير حركات الخزائن",
+        "view_income_statement_report": "عرض قائمة الدخل (الأرباح والخسائر)"
     }
 }

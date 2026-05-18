@@ -1,0 +1,85 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--treasury">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-vault"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">أرصدة الخزائن</h1>
+                    <p class="rpt-hero-desc">الأرصدة الحالية لجميع الخزائن النشطة</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'treasury:reports:balances_report_export' %}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'treasury:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="rpt-kpi-card rpt-kpi--purple">
+            <div class="rpt-kpi-icon"><i class="fas fa-vault"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.treasury_count }}</div>
+            <div class="rpt-kpi-label">عدد الخزائن</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--green">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_balance }}</div>
+            <div class="rpt-kpi-label">إجمالي الأرصدة</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--treasury">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>أرصدة الخزائن</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>الخزينة</th>
+                            <th class="text-center">الكود</th>
+                            <th class="text-end">الرصيد الحالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="fw-bold">{{ row.name }}</td>
+                            <td class="text-center text-muted" style="font-size:.8rem;">{{ row.code }}</td>
+                            <td class="text-end fw-bold" style="color:{% if row.current_balance_raw >= 0 %}#11998e{% else %}#ef4444{% endif %}; font-size:1rem;">
+                                {{ row.current_balance }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="rpt-total-row">
+                            <td colspan="2" class="fw-bold">الإجمالي</td>
+                            <td class="text-end fw-bold">{{ report.summary.total_balance }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-vault"></i>
+                <p>لا توجد خزائن نشطة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
