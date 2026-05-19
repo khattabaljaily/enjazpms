@@ -131,6 +131,9 @@ class PurchaseInvoiceLine(TenantMixin):
     line_subtotal = models.DecimalField('المجموع قبل الضريبة', max_digits=14, decimal_places=2, default=0)
     line_total = models.DecimalField('المجموع النهائي', max_digits=14, decimal_places=2, default=0)
     returned_quantity = models.DecimalField('الكمية المُرتجعة', max_digits=12, decimal_places=3, default=0)
+    batch_number = models.CharField('رقم الدفعة', max_length=100, blank=True)
+    serial_number = models.CharField('الرقم التسلسلي', max_length=100, blank=True)
+    expiry_date = models.DateField('تاريخ انتهاء الصلاحية', null=True, blank=True)
 
     class Meta:
         db_table = 'purchase_invoice_lines'

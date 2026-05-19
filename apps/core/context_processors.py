@@ -2,7 +2,7 @@
 Context Processors - معالجات السياق
 توفر متغيرات عامة لجميع Templates
 """
-from apps.core.models import Settings
+from apps.core.models import Settings, TenantCapabilities
 
 
 def tenant_context(request):
@@ -12,19 +12,25 @@ def tenant_context(request):
     context = {
         'current_tenant': None,
         'tenant_settings': None,
+        'tenant_capabilities': None,
     }
-    
+
     if hasattr(request, 'tenant') and request.tenant:
-        context['current_tenant'] = request.tenant
-        
-        # Get or create tenant settings
+        tenant = request.tenant
+        context['current_tenant'] = tenant
+
         try:
-            settings = Settings.objects.get(tenant=request.tenant)
+            context['tenant_settings'] = Settings.objects.get(tenant=tenant)
         except Settings.DoesNotExist:
-            settings = Settings.objects.create(tenant=request.tenant)
-        
-        context['tenant_settings'] = settings
-    
+            context['tenant_settings'] = Settings.objects.create(tenant=tenant)
+
+        try:
+            context['tenant_capabilities'] = TenantCapabilities.objects.get(tenant=tenant)
+        except TenantCapabilities.DoesNotExist:
+            caps = TenantCapabilities.from_business_type(tenant)
+            caps.save()
+            context['tenant_capabilities'] = caps
+
     return context
 
 

@@ -132,9 +132,9 @@ class Tenant(models.Model):
         choices=VERSION_TYPES,
         default='single_store'
     )
-    max_branches = models.IntegerField('عدد الفروع المسموح', default=1)
-    max_stocks = models.IntegerField('عدد المخازن المسموح', default=1)
-    max_users = models.IntegerField('عدد المستخدمين المسموح', default=5)
+    max_branches = models.IntegerField('عدد الفروع', default=1)
+    max_stocks = models.IntegerField('عدد المخازن', default=1)
+    max_users = models.IntegerField('عدد المستخدمين', default=5)
     
     # Settings
     timezone = models.CharField('المنطقة الزمنية', max_length=50, default=DEFAULT_TIMEZONE)
@@ -190,6 +190,65 @@ class Tenant(models.Model):
             return None
         delta = self.subscription_expires - timezone.now().date()
         return delta.days
+
+
+# ============================================
+# TENANT CAPABILITIES (قدرات النشاط التجاري)
+# ============================================
+
+class TenantCapabilities(models.Model):
+    """
+    القدرات التشغيلية لكل tenant.
+    تُملأ تلقائياً من BusinessType عند الإنشاء، وقابلة للتعديل لاحقاً.
+    """
+
+    tenant = models.OneToOneField(
+        Tenant,
+        on_delete=models.CASCADE,
+        verbose_name='العميل',
+        related_name='capabilities'
+    )
+
+    # تتبع المنتجات
+    has_expiry_dates = models.BooleanField('تواريخ انتهاء الصلاحية', default=False)
+    has_batch_numbers = models.BooleanField('أرقام الدُفعات / الباتش', default=False)
+    has_serial_numbers = models.BooleanField('أرقام تسلسلية', default=False)
+
+    # الكميات والتشكيلات
+    has_weight_items = models.BooleanField('منتجات بالوزن أو الحجم', default=False)
+    has_variants = models.BooleanField('متغيرات (مقاسات / ألوان)', default=False)
+
+    # العمليات
+    has_services = models.BooleanField('بنود الخدمة', default=False)
+    has_manufacturing = models.BooleanField('التصنيع والوصفات من مواد خام', default=False)
+    has_work_orders = models.BooleanField('أوامر العمل', default=False)
+
+    created_at = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True)
+    updated_at = models.DateTimeField('تاريخ التحديث', auto_now=True)
+
+    class Meta:
+        db_table = 'tenant_capabilities'
+        verbose_name = 'قدرات النشاط'
+        verbose_name_plural = 'قدرات الأنشطة'
+
+    def __str__(self):
+        return f"قدرات {self.tenant.name}"
+
+    @classmethod
+    def from_business_type(cls, tenant):
+        """إنشاء قدرات tenant من features نوع النشاط التجاري"""
+        features = tenant.business_type.features if tenant.business_type else {}
+        return cls(
+            tenant=tenant,
+            has_expiry_dates=features.get('has_expiry_dates', False),
+            has_batch_numbers=features.get('has_batch_numbers', False),
+            has_serial_numbers=features.get('has_serial_numbers', False),
+            has_weight_items=features.get('has_weight_items', False),
+            has_variants=features.get('has_variants', False),
+            has_services=features.get('has_services', False),
+            has_manufacturing=features.get('has_manufacturing', False),
+            has_work_orders=features.get('has_work_orders', False),
+        )
 
 
 # ============================================

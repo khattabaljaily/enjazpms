@@ -1,6 +1,7 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
 {% load humanize %}
+{% load capabilities_tags %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.0">
@@ -315,6 +316,11 @@ const STOCK_ITEMS_URL = "{% url 'sales:stock_items_api' %}";
 const CUSTOMER_INFO_URL = "{% url 'sales:customer_info_api' %}";
 const FORM_ACTION = "{{ action }}";
 const INVOICE_ID = "{{ invoice.id|default:'' }}";
+const CAP = {
+    hasExpiryDates:  {{ tenant_capabilities.has_expiry_dates|yesno:"true,false" }},
+    hasBatchNumbers: {{ tenant_capabilities.has_batch_numbers|yesno:"true,false" }},
+    hasSerialNumbers:{{ tenant_capabilities.has_serial_numbers|yesno:"true,false" }},
+};
 
 {% if existing_lines %}
 const EXISTING_LINES = {{ existing_lines|safe }};
@@ -473,10 +479,17 @@ function addLineToTable(lineData) {
     const tax = EnjazIMS.parseNumber(lineData.tax_rate) || 0;
     const lineTotal = calcLineTotal(qty, price, disc, tax);
 
+    const trackingHtml = [
+        CAP.hasBatchNumbers  ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="batch-${id}" value="${(lineData.batch_number || '').replace(/"/g, '&quot;')}" placeholder="رقم الدفعة"></div>` : '',
+        CAP.hasSerialNumbers ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="serial-${id}" value="${(lineData.serial_number || '').replace(/"/g, '&quot;')}" placeholder="الرقم التسلسلي"></div>` : '',
+        CAP.hasExpiryDates   ? `<div class="mt-1"><input type="date" class="cx-input cx-input--xs" id="expiry-${id}" value="${lineData.expiry_date || ''}"></div>` : '',
+    ].join('');
+
     row.innerHTML = `
         <td>
             <div class="sales-line-item-name">${lineData.item_name}</div>
             <div class="sales-line-item-sku">${lineData.item_sku || ''}</div>
+            ${trackingHtml}
         </td>
         <td>
             <input type="number" class="cx-input cx-input--sm line-qty" id="qty-${id}"
@@ -624,9 +637,9 @@ function collectLines() {
             discount_percent: EnjazIMS.parseNumber(document.getElementById(`disc-${id}`).value || 0).toFixed(2),
             tax_rate: EnjazIMS.parseNumber(document.getElementById(`tax-${id}`).value || 0).toFixed(2),
             cost_price_snapshot: row.dataset.costPrice || '0',
-            batch_number: row.dataset.batchNumber || '',
-            serial_number: row.dataset.serialNumber || '',
-            expiry_date: row.dataset.expiryDate || null,
+            batch_number: CAP.hasBatchNumbers  ? (document.getElementById(`batch-${id}`)?.value || '') : '',
+            serial_number: CAP.hasSerialNumbers ? (document.getElementById(`serial-${id}`)?.value || '') : '',
+            expiry_date: CAP.hasExpiryDates   ? (document.getElementById(`expiry-${id}`)?.value || null) : null,
         });
     });
     return lines;

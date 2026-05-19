@@ -4,15 +4,17 @@ Core Views - Dashboard وصفحات النظام الأساسية
 import json
 from decimal import Decimal, InvalidOperation
 
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseNotAllowed
+from django.shortcuts import get_object_or_404
 from apps.accounts.decorators import require_permission
 from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
 
-from .models import Settings, Tenant
+from .models import Settings, Tenant, BusinessType
+from .forms import TenantForm
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
 from apps.treasury.models import TreasuryMovement
 from apps.expenses.models import Expense
@@ -486,6 +488,239 @@ def subscription_info(request):
     }
     
     return render(request, 'core/subscription.html', context)
+
+
+# ============================================================
+# TENANT MANAGEMENT — Superuser Only
+# ============================================================
+
+def _superuser_required(request):
+    """Return 403 JsonResponse if not superuser, else None."""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'غير مصرح'}, status=403)
+    return None
+
+
+@login_required
+def tenant_list(request):
+    """قائمة العملاء (المستأجرين) - للمشرف فقط"""
+    if not request.user.is_superuser:
+        return render(request, 'core/no_permission.html', status=403)
+    business_types = BusinessType.objects.filter(is_active=True).order_by('display_order', 'name_ar')
+    total = Tenant.objects.count()
+    active = Tenant.objects.filter(is_active=True).count()
+    suspended = total - active
+    today = datetime.today().date()
+    expired = Tenant.objects.filter(is_active=True, subscription_expires__lt=today).count()
+    context = {
+        'form': TenantForm(),
+        'business_types': business_types,
+        'stats': {'total': total, 'active': active, 'suspended': suspended, 'expired': expired},
+    }
+    return render(request, 'core/tenant_list.html', context)
+
+
+@login_required
+def tenant_table_api(request):
+    """API: جدول العملاء لـ DataTable"""
+    err = _superuser_required(request)
+    if err:
+        return err
+
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 25))
+    search_value = request.GET.get('search[value]', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    plan_filter = request.GET.get('plan', '').strip()
+
+    qs = Tenant.objects.select_related('business_type').all()
+    records_total = qs.count()
+
+    today = datetime.today().date()
+
+    if status_filter == 'active':
+        qs = qs.filter(is_active=True)
+    elif status_filter == 'suspended':
+        qs = qs.filter(is_active=False)
+    elif status_filter == 'expired':
+        qs = qs.filter(is_active=True, subscription_expires__lt=today)
+
+    if plan_filter:
+        qs = qs.filter(subscription_plan=plan_filter)
+
+    if search_value:
+        qs = qs.filter(
+            Q(name__icontains=search_value)
+            | Q(email__icontains=search_value)
+            | Q(phone__icontains=search_value)
+            | Q(city__icontains=search_value)
+            | Q(slug__icontains=search_value)
+        )
+
+    records_filtered = qs.count()
+
+    order_col_idx = request.GET.get('order[0][column]', '0')
+    order_dir = request.GET.get('order[0][dir]', 'desc')
+    col_map = {
+        '0': 'name', '1': 'business_type__name_ar', '2': 'subscription_plan',
+        '3': 'version_type', '4': 'subscription_expires', '5': 'is_active',
+    }
+    order_field = col_map.get(order_col_idx, 'created_at')
+    if order_dir == 'desc':
+        order_field = f'-{order_field}'
+    qs = qs.order_by(order_field)[start:start + length]
+
+    data = []
+    for t in qs:
+        days = t.days_until_expiry()
+        if not t.subscription_expires:
+            exp_label = 'مفتوحة'
+            exp_status = 'lifetime'
+        elif days is not None and days < 0:
+            exp_label = f'منتهية منذ {abs(days)} يوم'
+            exp_status = 'expired'
+        elif days is not None and days <= 30:
+            exp_label = f'تنتهي خلال {days} يوم'
+            exp_status = 'soon'
+        else:
+            exp_label = t.subscription_expires.strftime('%Y-%m-%d') if t.subscription_expires else '—'
+            exp_status = 'ok'
+
+        data.append({
+            'id': t.id,
+            'name': t.name,
+            'slug': t.slug,
+            'business_type': t.business_type.name_ar if t.business_type else '—',
+            'subscription_plan': t.get_subscription_plan_display(),
+            'subscription_plan_key': t.subscription_plan,
+            'version_type': t.get_version_type_display(),
+            'version_type_key': t.version_type,
+            'is_active': t.is_active,
+            'is_demo': t.is_demo,
+            'subscription_expires': t.subscription_expires.strftime('%Y-%m-%d') if t.subscription_expires else None,
+            'exp_label': exp_label,
+            'exp_status': exp_status,
+            'email': t.email or '—',
+            'phone': t.phone or '—',
+            'city': t.city or '—',
+        })
+
+    return JsonResponse({'draw': draw, 'recordsTotal': records_total, 'recordsFiltered': records_filtered, 'data': data})
+
+
+@login_required
+def tenant_create_api(request):
+    """API: إنشاء عميل جديد"""
+    err = _superuser_required(request)
+    if err:
+        return err
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    form = TenantForm(request.POST)
+    if form.is_valid():
+        tenant = form.save()
+        return JsonResponse({'success': True, 'message': 'تم إنشاء العميل بنجاح', 'id': tenant.id})
+
+    errors = {f: [str(e) for e in errs] for f, errs in form.errors.items()}
+    return JsonResponse({'success': False, 'message': 'يرجى مراجعة الحقول', 'errors': errors}, status=400)
+
+
+@login_required
+def tenant_detail_api(request, pk):
+    """API: تفاصيل عميل"""
+    err = _superuser_required(request)
+    if err:
+        return err
+
+    tenant = get_object_or_404(Tenant.objects.select_related('business_type'), pk=pk)
+    days = tenant.days_until_expiry()
+    is_valid = tenant.is_subscription_valid()
+
+    from apps.accounts.models import User
+    user_count = User.objects.filter(tenant=tenant).count()
+
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'id': tenant.id,
+            'name': tenant.name,
+            'slug': tenant.slug,
+            'business_type_id': tenant.business_type_id,
+            'business_type': tenant.business_type.name_ar if tenant.business_type else '—',
+            'email': tenant.email or '',
+            'phone': tenant.phone or '',
+            'city': tenant.city or '',
+            'country': tenant.country or '',
+            'address': tenant.address or '',
+            'subscription_plan': tenant.subscription_plan,
+            'subscription_plan_display': tenant.get_subscription_plan_display(),
+            'subscription_start': tenant.subscription_start.strftime('%Y-%m-%d') if tenant.subscription_start else '',
+            'subscription_expires': tenant.subscription_expires.strftime('%Y-%m-%d') if tenant.subscription_expires else '',
+            'version_type': tenant.version_type,
+            'version_type_display': tenant.get_version_type_display(),
+            'max_users': tenant.max_users,
+            'max_stocks': tenant.max_stocks,
+            'max_branches': tenant.max_branches,
+            'is_active': tenant.is_active,
+            'is_demo': tenant.is_demo,
+            'days_until_expiry': days,
+            'is_subscription_valid': is_valid,
+            'user_count': user_count,
+            'created_at': tenant.created_at.strftime('%Y-%m-%d'),
+        }
+    })
+
+
+@login_required
+def tenant_update_api(request, pk):
+    """API: تعديل بيانات عميل"""
+    err = _superuser_required(request)
+    if err:
+        return err
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    tenant = get_object_or_404(Tenant, pk=pk)
+    form = TenantForm(request.POST, instance=tenant)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'success': True, 'message': 'تم تعديل بيانات العميل بنجاح'})
+
+    errors = {f: [str(e) for e in errs] for f, errs in form.errors.items()}
+    return JsonResponse({'success': False, 'message': 'يرجى مراجعة الحقول', 'errors': errors}, status=400)
+
+
+@login_required
+def tenant_delete_api(request, pk):
+    """API: حذف عميل"""
+    err = _superuser_required(request)
+    if err:
+        return err
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    tenant = get_object_or_404(Tenant, pk=pk)
+    name = tenant.name
+    tenant.delete()
+    return JsonResponse({'success': True, 'message': f'تم حذف العميل "{name}" بنجاح'})
+
+
+@login_required
+def tenant_suspend_api(request, pk):
+    """API: تعليق / إلغاء تعليق عميل"""
+    err = _superuser_required(request)
+    if err:
+        return err
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    tenant = get_object_or_404(Tenant, pk=pk)
+    tenant.is_active = not tenant.is_active
+    tenant.save(update_fields=['is_active', 'updated_at'])
+    action = 'تم تفعيل' if tenant.is_active else 'تم تعليق'
+    return JsonResponse({'success': True, 'message': f'{action} العميل "{tenant.name}" بنجاح', 'is_active': tenant.is_active})
 
 
 def pricing(request):
