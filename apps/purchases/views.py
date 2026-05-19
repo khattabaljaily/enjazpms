@@ -14,6 +14,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.items.models import Item
+from apps.purchases.models import PurchaseInvoice, PurchaseReturn, PurchaseReturnLine
+from apps.purchases.services import build_purchase_from_post, cancel_purchase_return, confirm_purchase_invoice, confirm_purchase_return
 from apps.stocks.models import Stock
 from apps.suppliers.models import Supplier
 
