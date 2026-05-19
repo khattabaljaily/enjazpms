@@ -1,0 +1,155 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <!-- ══ HERO ════════════════════════════════════════════════ -->
+    <div class="rpt-hero rpt-hero--sales">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-user-tie"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">المبيعات حسب المستخدم</h1>
+                    <p class="rpt-hero-desc">
+                        <i class="fas fa-calendar-alt me-1"></i> من {{ start_date }} إلى {{ end_date }}
+                    </p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+                <a href="{% url 'reports:by_user_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}" class="rpt-hero-btn">
+                    <i class="fas fa-download"></i> تصدير CSV
+                </a>
+                <a href="{% url 'reports:reports' %}" class="rpt-hero-btn">
+                    <i class="fas fa-arrow-left"></i> عودة
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ FILTERS ═════════════════════════════════════════════ -->
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">من التاريخ</label>
+                <input type="date" id="start_date" name="start_date"
+                    value="{{ start_date|date:"Y-m-d" }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">إلى التاريخ</label>
+                <input type="date" id="end_date" name="end_date"
+                    value="{{ end_date|date:"Y-m-d" }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="user_id" class="form-label">المستخدم</label>
+                <select id="user_id" name="user_id" class="form-select">
+                    <option value="">كل المستخدمين</option>
+                    {% for u in users %}
+                        <option value="{{ u.id }}" {% if u.id|stringformat:"s" == selected_user_id %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--sales">
+                    <i class="fas fa-search me-1"></i>بحث
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ══ DATA TABLE ══════════════════════════════════════════ -->
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--sales">
+            {% if report.user %}
+            <h3 class="rpt-panel-title"><i class="fas fa-receipt me-2"></i>فواتير المستخدم: {{ report.user.name }}</h3>
+            {% else %}
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل المبيعات حسب المستخدم</h3>
+            {% endif %}
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.user %}
+                <!-- ── Single-user detail view ── -->
+                {% if report.data %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>رقم الفاتورة</th>
+                                <th>تاريخ الفاتورة</th>
+                                <th>العميل</th>
+                                <th class="text-end">الكمية الإجمالية</th>
+                                <th class="text-end">الإجمالي</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report.data %}
+                            <tr>
+                                <td class="fw-bold" style="color:#667eea">{{ row.invoice_number }}</td>
+                                <td class="text-muted">{{ row.invoice_date|date:"Y-m-d" }}</td>
+                                <td>{{ row.customer_name }}</td>
+                                <td class="text-end text-muted">{{ row.total_quantity }}</td>
+                                <td class="text-end fw-bold">{{ row.grand_total }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="rpt-empty">
+                    <i class="fas fa-file-circle-xmark"></i>
+                    <p>لا توجد فواتير لهذا المستخدم في الفترة المحددة</p>
+                </div>
+                {% endif %}
+            {% else %}
+                <!-- ── All-users aggregate view ── -->
+                {% if report.data %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>اسم المستخدم</th>
+                                <th class="text-center">عدد الفواتير</th>
+                                <th class="text-end">إجمالي المبيعات</th>
+                                <th class="text-end">متوسط الفاتورة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report.data %}
+                            <tr>
+                                <td>
+                                    <span class="rpt-rank {% if forloop.counter == 1 %}rpt-rank--1{% elif forloop.counter == 2 %}rpt-rank--2{% elif forloop.counter == 3 %}rpt-rank--3{% else %}rpt-rank--other{% endif %}">
+                                        {{ forloop.counter }}
+                                    </span>
+                                </td>
+                                <td class="fw-bold">{{ row.user_name }}</td>
+                                <td class="text-center">{{ row.invoice_count }}</td>
+                                <td class="text-end fw-bold" style="color:#667eea">{{ row.total_amount }}</td>
+                                <td class="text-end text-muted">{{ row.avg_invoice_amount }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="rpt-empty">
+                    <i class="fas fa-users-slash"></i>
+                    <p>لا توجد بيانات مبيعات للفترة المحددة</p>
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -884,23 +884,24 @@ def purchases_by_item_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    # Get date range
-    start_date = _parse_date(request.GET.get('start_date'))
-    end_date = _parse_date(request.GET.get('end_date'))
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    item_id = request.GET.get('item_id') or None
 
-    if not start_date:
-        start_date = (timezone.now().date() - timedelta(days=30))
-    if not end_date:
-        end_date = timezone.now().date()
-
-    # Generate report
     generator = PurchasesReportGenerator(tenant, start_date, end_date)
-    report_data = generator.get_by_item_report()
+    report_data = generator.get_by_item_report(item_id=item_id)
+
+    items = Item.objects.filter(
+        tenant=tenant,
+        purchase_lines__invoice__status='confirmed',
+    ).distinct().order_by('name')
 
     return render(request, 'purchases/reports/by_item.html', {
         'report': report_data,
         'start_date': start_date,
         'end_date': end_date,
+        'items': items,
+        'selected_item_id': item_id,
         'section': 'purchases_reports',
         'report_type': 'by_item',
     })
@@ -917,40 +918,30 @@ def purchases_by_item_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    # Get date range
-    start_date = _parse_date(request.GET.get('start_date'))
-    end_date = _parse_date(request.GET.get('end_date'))
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    item_id = request.GET.get('item_id') or None
 
-    if not start_date:
-        start_date = (timezone.now().date() - timedelta(days=30))
-    if not end_date:
-        end_date = timezone.now().date()
-
-    # Generate report
     generator = PurchasesReportGenerator(tenant, start_date, end_date)
-    report_data = generator.get_by_item_report()
+    report_data = generator.get_by_item_report(item_id=item_id)
 
-    # Create CSV
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="purchases_by_item_{end_date}.csv"'
     response.write('\ufeff')
-
     writer = csv.writer(response)
-    writer.writerow(['تقرير المشتريات حسب المنتج'])
-    writer.writerow([])
     writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
     writer.writerow([])
 
-    writer.writerow(['اسم المنتج', 'الوحدة', 'الكمية المشتراة', 'إجمالي المشتريات', 'متوسط سعر الوحدة', 'عدد البنود'])
-    for item in report_data['data']:
-        writer.writerow([
-            item['item_name'],
-            item['unit'],
-            item['quantity_purchased'],
-            item['total_amount'],
-            item['avg_unit_cost'],
-            item['purchase_lines'],
-        ])
+    if report_data.get('item'):
+        writer.writerow([f'المنتج: {report_data["item"]["name"]}'])
+        writer.writerow([])
+        writer.writerow(['رقم الفاتورة', 'تاريخ الفاتورة', 'المورد', 'الكمية', 'سعر الوحدة', 'الإجمالي'])
+        for row in report_data['data']:
+            writer.writerow([row['invoice_number'], row['invoice_date'], row['supplier_name'], row['quantity'], row['unit_cost'], row['line_total']])
+    else:
+        writer.writerow(['اسم المنتج', 'الوحدة', 'الكمية المشتراة', 'إجمالي المشتريات', 'متوسط سعر الوحدة', 'عدد البنود'])
+        for item in report_data['data']:
+            writer.writerow([item['item_name'], item['unit'], item['quantity_purchased'], item['total_amount'], item['avg_unit_cost'], item['purchase_lines']])
 
     return response
 
@@ -1208,7 +1199,74 @@ def purchases_returns_report_export(request):
     response['Content-Disposition'] = f'attachment; filename="purchase_returns_{end_date}.csv"'
     response.write('﻿')
     writer = csv.writer(response)
-    writer.writerow(['تاريخ المرتجع', 'رقم المرتجع', 'رقم الفاتورة', 'المورد', 'طريقة الاسترداد', 'إجمالي المرتجع'])
+    writer.writerow(['تاريخ المرتجع', 'رقم المرتجع', 'رقم الفاتورة', 'المورد', 'اسم المنتج', 'الكمية المرتجعة', 'سعر الوحدة', 'إجمالي السطر', 'طريقة الاسترداد'])
     for row in report['data']:
-        writer.writerow([row['return_date'], row['return_number'], row['invoice_number'], row['supplier_name'], row['refund_method'], row['total_returned']])
+        writer.writerow([row['return_date'], row['return_number'], row['invoice_number'], row['supplier_name'], row['item_name'], row['returned_quantity'], row['unit_cost'], row['line_total'], row['refund_method']])
+    return response
+
+
+# ─────────────────────────────────────────────────────────────────
+#   BY USER
+# ─────────────────────────────────────────────────────────────────
+
+@login_required
+@require_permission('view_purchases_by_user_report')
+def purchases_by_user_report(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    user_id = request.GET.get('user_id') or None
+
+    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    report = generator.get_by_user_report(user_id=user_id)
+
+    from django.contrib.auth import get_user_model
+    user_ids = PurchaseInvoice.objects.filter(tenant=tenant, status='confirmed').values_list('created_by', flat=True).distinct()
+    users = get_user_model().objects.filter(pk__in=user_ids).order_by('first_name', 'last_name')
+
+    return render(request, 'purchases/reports/by_user.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'users': users,
+        'selected_user_id': user_id,
+        'section': 'purchases_reports',
+    })
+
+
+@login_required
+@require_permission('view_purchases_by_user_report')
+def purchases_by_user_report_export(request):
+    import csv
+    from django.http import HttpResponse
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    user_id = request.GET.get('user_id') or None
+
+    report = PurchasesReportGenerator(tenant, start_date, end_date).get_by_user_report(user_id=user_id)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="purchases_by_user_{end_date}.csv"'
+    response.write('\ufeff')
+    writer = csv.writer(response)
+    writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
+    writer.writerow([])
+
+    if report.get('user'):
+        writer.writerow([f'المستخدم: {report["user"]["name"]}'])
+        writer.writerow([])
+        writer.writerow(['رقم الفاتورة', 'تاريخ الفاتورة', 'المورد', 'الكمية الإجمالية', 'الإجمالي'])
+        for row in report['data']:
+            writer.writerow([row['invoice_number'], row['invoice_date'], row['supplier_name'], row['total_quantity'], row['grand_total']])
+    else:
+        writer.writerow(['المستخدم', 'عدد الفواتير', 'إجمالي المشتريات', 'متوسط الفاتورة'])
+        for row in report['data']:
+            writer.writerow([row['user_name'], row['invoice_count'], row['total_amount'], row['avg_invoice_amount']])
+
     return response

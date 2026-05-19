@@ -3,7 +3,7 @@
 {% load humanize %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=3.0">
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -99,44 +99,50 @@
     </div>
     {% endif %}
 
-    <!-- ══ SUMMARY TABLE ═══════════════════════════════════════ -->
+    <!-- ══ INVOICES TABLE ════════════════════════════════════════ -->
     <div class="rpt-panel">
         <div class="rpt-panel-header rpt-panel-header--purchases">
-            <h3 class="rpt-panel-title"><i class="fas fa-table-list me-2"></i>تفاصيل التقرير</h3>
+            <h3 class="rpt-panel-title"><i class="fas fa-file-invoice me-2"></i>قائمة أوامر الشراء</h3>
         </div>
         <div class="rpt-panel-body">
+            {% if report.details %}
             <div class="table-responsive">
-                <table class="table rpt-summary-table">
+                <table class="table">
                     <thead>
                         <tr>
-                            <th>البيان</th>
-                            <th class="text-end">القيمة</th>
+                            <th>رقم الأمر</th>
+                            <th>التاريخ</th>
+                            <th>المورد</th>
+                            <th class="text-end">الكمية</th>
+                            <th class="text-end">الإجمالي</th>
                         </tr>
                     </thead>
                     <tbody>
+                        {% for row in report.details %}
                         <tr>
-                            <td><i class="fas fa-check-circle me-2 text-muted"></i>عدد أوامر الشراء المؤكدة</td>
-                            <td class="text-end fw-bold" style="color:#4facfe">{{ report.summary.invoice_count|default:0 }}</td>
+                            <td class="fw-bold" style="color:#4facfe">{{ row.invoice_number }}</td>
+                            <td class="text-muted">{{ row.invoice_date|date:"Y-m-d" }}</td>
+                            <td>{{ row.supplier_name }}</td>
+                            <td class="text-end text-muted">{{ row.total_quantity }}</td>
+                            <td class="text-end fw-bold">{{ row.grand_total }}</td>
                         </tr>
-                        <tr>
-                            <td><i class="fas fa-cubes me-2 text-muted"></i>إجمالي الكمية المشتراة</td>
-                            <td class="text-end fw-bold" style="color:#0575e6">{{ report.summary.total_quantity|default:0 }}</td>
-                        </tr>
-                        <tr>
-                            <td><i class="fas fa-chart-line me-2 text-muted"></i>إجمالي المشتريات (قبل الضريبة)</td>
-                            <td class="text-end fw-bold" style="color:#667eea">{{ report.summary.total_amount|default:0 }}</td>
-                        </tr>
-                        <tr>
-                            <td><i class="fas fa-receipt me-2 text-muted"></i>إجمالي الضريبة</td>
-                            <td class="text-end fw-bold" style="color:#f59e0b">{{ report.summary.total_tax|default:0 }}</td>
-                        </tr>
-                        <tr class="rpt-total-row">
-                            <td><i class="fas fa-calculator me-2"></i>متوسط قيمة الأمر</td>
-                            <td class="text-end" style="color:#4facfe">{{ report.summary.avg_invoice_amount|default:0 }}</td>
-                        </tr>
+                        {% endfor %}
                     </tbody>
+                    <tfoot>
+                        <tr class="rpt-total-row">
+                            <td colspan="3"><i class="fas fa-calculator me-2"></i>الإجمالي</td>
+                            <td class="text-end">{{ report.summary.total_quantity }}</td>
+                            <td class="text-end fw-bold" style="color:#4facfe">{{ report.summary.total_amount }}</td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-file-circle-xmark"></i>
+                <p>لا توجد أوامر شراء في الفترة المحددة</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -175,7 +181,7 @@
             maintainAspectRatio: true,
             plugins: {
                 legend: { display: false },
-                tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString('en') + ' ج.م' } }
+                tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString('en') } }
             },
             scales: {
                 x: { ticks: { color: textColor, maxTicksLimit: 10 }, grid: { color: gridColor } },

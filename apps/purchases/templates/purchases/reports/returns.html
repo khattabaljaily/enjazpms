@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=3.0">
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -46,8 +46,8 @@
     <div class="rpt-kpi-grid" style="grid-template-columns: repeat(2, 1fr);">
         <div class="rpt-kpi-card rpt-kpi--red">
             <div class="rpt-kpi-icon"><i class="fas fa-rotate-right"></i></div>
-            <div class="rpt-kpi-value">{{ report.summary.return_count }}</div>
-            <div class="rpt-kpi-label">عدد المرتجعات</div>
+            <div class="rpt-kpi-value">{{ report.summary.line_count }}</div>
+            <div class="rpt-kpi-label">عدد بنود المرتجع</div>
         </div>
         <div class="rpt-kpi-card rpt-kpi--orange">
             <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
@@ -68,10 +68,13 @@
                         <tr>
                             <th>التاريخ</th>
                             <th>رقم المرتجع</th>
-                            <th>الفاتورة الأصلية</th>
+                            <th>الأمر الأصلي</th>
                             <th>المورد</th>
+                            <th>الصنف المرتجع</th>
+                            <th class="text-end">الكمية</th>
+                            <th class="text-end">سعر الوحدة</th>
+                            <th class="text-end">إجمالي السطر</th>
                             <th class="text-center">طريقة الاسترداد</th>
-                            <th class="text-end">إجمالي المرتجع</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -81,13 +84,23 @@
                             <td style="font-size:.82rem; font-weight:600; color:#ef4444;">{{ row.return_number }}</td>
                             <td class="text-muted" style="font-size:.82rem;">{{ row.invoice_number }}</td>
                             <td class="fw-bold">{{ row.supplier_name }}</td>
+                            <td>{{ row.item_name }}</td>
+                            <td class="text-end text-muted">{{ row.returned_quantity }}</td>
+                            <td class="text-end text-muted">{{ row.unit_cost }}</td>
+                            <td class="text-end fw-bold" style="color:#ef4444;">{{ row.line_total }}</td>
                             <td class="text-center">
                                 <span class="badge" style="background:rgba(245,158,11,.12); color:#f59e0b; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ row.refund_method }}</span>
                             </td>
-                            <td class="text-end fw-bold" style="color:#ef4444;">{{ row.total_returned }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
+                    <tfoot>
+                        <tr class="rpt-total-row">
+                            <td colspan="7"><i class="fas fa-calculator me-2"></i>الإجمالي</td>
+                            <td class="text-end fw-bold" style="color:#ef4444;">{{ report.summary.total_returned }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
             {% else %}

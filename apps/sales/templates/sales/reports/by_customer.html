@@ -3,7 +3,7 @@
 {% load humanize %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=3.0">
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -206,7 +206,7 @@
             maintainAspectRatio: true,
             plugins: {
                 legend: { display: false },
-                tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString('en') + ' ج.م' } }
+                tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString('en') } }
             },
             scales: {
                 x: { ticks: { color: textColor, callback: v => Number(v).toLocaleString('en') }, grid: { color: gridColor } },

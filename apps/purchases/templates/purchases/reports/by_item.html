@@ -3,7 +3,7 @@
 {% load humanize %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=3.0">
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -27,7 +27,7 @@
                 <button onclick="window.print()" class="rpt-hero-btn">
                     <i class="fas fa-print"></i> طباعة
                 </button>
-                <a href="{% url 'purchases:reports:by_item_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}" class="rpt-hero-btn">
+                <a href="{% url 'purchases:reports:by_item_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}{% if selected_item_id %}&item_id={{ selected_item_id }}{% endif %}" class="rpt-hero-btn">
                     <i class="fas fa-download"></i> تصدير CSV
                 </a>
                 <a href="{% url 'purchases:order_list' %}" class="rpt-hero-btn">
@@ -50,6 +50,15 @@
                 <input type="date" id="end_date" name="end_date"
                     value="{{ end_date|date:"Y-m-d" }}" class="form-control">
             </div>
+            <div class="col-md-3">
+                <label for="item_id" class="form-label">المنتج</label>
+                <select id="item_id" name="item_id" class="form-select">
+                    <option value="">كل المنتجات</option>
+                    {% for item in items %}
+                        <option value="{{ item.id }}" {% if item.id|stringformat:"s" == selected_item_id %}selected{% endif %}>{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="rpt-filter-btn rpt-filter-btn--purchases">
                     <i class="fas fa-search me-1"></i>بحث
@@ -58,7 +67,7 @@
         </form>
     </div>
 
-    {% if report.data %}
+    {% if not report.item and report.data %}
     <!-- ══ CHART — Top 10 items ════════════════════════════════ -->
     <div class="rpt-panel">
         <div class="rpt-panel-header rpt-panel-header--purchases">
@@ -73,45 +82,95 @@
     <!-- ══ DATA TABLE ══════════════════════════════════════════ -->
     <div class="rpt-panel">
         <div class="rpt-panel-header rpt-panel-header--purchases">
+            {% if report.item %}
+            <h3 class="rpt-panel-title"><i class="fas fa-receipt me-2"></i>أوامر الشراء للمنتج: {{ report.item.name }}</h3>
+            {% else %}
             <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل المشتريات حسب المنتج</h3>
+            {% endif %}
         </div>
         <div class="rpt-panel-body">
-            {% if report.data %}
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>اسم المنتج</th>
-                            <th class="text-center">الوحدة</th>
-                            <th class="text-end">الكمية المشتراة</th>
-                            <th class="text-end">إجمالي التكلفة</th>
-                            <th class="text-end">متوسط السعر</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in report.data %}
-                        <tr>
-                            <td>
-                                <span class="rpt-rank {% if forloop.counter == 1 %}rpt-rank--1{% elif forloop.counter == 2 %}rpt-rank--2{% elif forloop.counter == 3 %}rpt-rank--3{% else %}rpt-rank--other{% endif %}">
-                                    {{ forloop.counter }}
-                                </span>
-                            </td>
-                            <td class="fw-bold">{{ item.item_name }}</td>
-                            <td class="text-center text-muted">{{ item.unit }}</td>
-                            <td class="text-end">{{ item.quantity_purchased }}</td>
-                            <td class="text-end fw-bold" style="color:#4facfe">{{ item.total_amount|floatformat:"2u"|default:0|intcomma }}</td>
-                            <td class="text-end text-muted">{{ item.avg_unit_price|floatformat:"2u"|default:0|intcomma }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            {% if report.item %}
+                <!-- ── Drill-down: single item invoices ── -->
+                {% if report.data %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>رقم الأمر</th>
+                                <th>تاريخ الأمر</th>
+                                <th>المورد</th>
+                                <th class="text-end">الكمية</th>
+                                <th class="text-end">سعر الوحدة</th>
+                                <th class="text-end">إجمالي السطر</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report.data %}
+                            <tr>
+                                <td class="fw-bold" style="color:#4facfe">{{ row.invoice_number }}</td>
+                                <td class="text-muted">{{ row.invoice_date|date:"Y-m-d" }}</td>
+                                <td>{{ row.supplier_name }}</td>
+                                <td class="text-end text-muted">{{ row.quantity }}</td>
+                                <td class="text-end text-muted">{{ row.unit_cost }}</td>
+                                <td class="text-end fw-bold">{{ row.line_total }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="rpt-total-row">
+                                <td colspan="3"><i class="fas fa-calculator me-2"></i>الإجمالي</td>
+                                <td class="text-end">{{ report.summary.total_quantity }}</td>
+                                <td></td>
+                                <td class="text-end fw-bold" style="color:#4facfe">{{ report.summary.total_amount }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="rpt-empty">
+                    <i class="fas fa-box-open"></i>
+                    <p>لا توجد أوامر لهذا المنتج في الفترة المحددة</p>
+                </div>
+                {% endif %}
             {% else %}
-            <div class="rpt-empty">
-                <i class="fas fa-box-open"></i>
-                <p>لا توجد بيانات مشتريات للفترة المحددة</p>
-            </div>
+                <!-- ── Aggregate view ── -->
+                {% if report.data %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>اسم المنتج</th>
+                                <th class="text-center">الوحدة</th>
+                                <th class="text-end">الكمية المشتراة</th>
+                                <th class="text-end">إجمالي التكلفة</th>
+                                <th class="text-end">متوسط سعر الوحدة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in report.data %}
+                            <tr>
+                                <td>
+                                    <span class="rpt-rank {% if forloop.counter == 1 %}rpt-rank--1{% elif forloop.counter == 2 %}rpt-rank--2{% elif forloop.counter == 3 %}rpt-rank--3{% else %}rpt-rank--other{% endif %}">
+                                        {{ forloop.counter }}
+                                    </span>
+                                </td>
+                                <td class="fw-bold">{{ item.item_name }}</td>
+                                <td class="text-center text-muted">{{ item.unit }}</td>
+                                <td class="text-end">{{ item.quantity_purchased }}</td>
+                                <td class="text-end fw-bold" style="color:#4facfe">{{ item.total_amount }}</td>
+                                <td class="text-end text-muted">{{ item.avg_unit_cost }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="rpt-empty">
+                    <i class="fas fa-box-open"></i>
+                    <p>لا توجد بيانات مشتريات للفترة المحددة</p>
+                </div>
+                {% endif %}
             {% endif %}
         </div>
     </div>
@@ -120,7 +179,7 @@
 {% endblock %}
 
 {% block extra_js %}
-{% if report.data %}
+{% if not report.item and report.data %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 (function () {
@@ -149,7 +208,7 @@
             maintainAspectRatio: true,
             plugins: {
                 legend: { display: false },
-                tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString('en') + ' ج.م' } }
+                tooltip: { callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString('en') } }
             },
             scales: {
                 x: { ticks: { color: textColor, callback: v => Number(v).toLocaleString('en') }, grid: { color: gridColor } },

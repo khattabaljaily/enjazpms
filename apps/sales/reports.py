@@ -37,31 +37,38 @@ class SalesReportGenerator:
         self.end_date = end_date or timezone.now().date()
         
     def get_summary_report(self):
-        """تقرير ملخص المبيعات"""
+        """تقرير ملخص المبيعات — مع قائمة الفواتير التفصيلية"""
         invoices = SaleInvoice.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date
-        ).prefetch_related('lines')
-        
+        ).select_related('customer').prefetch_related('lines').order_by('-invoice_date')
+
         total_amount = Decimal('0')
         total_tax = Decimal('0')
         total_quantity = Decimal('0')
         total_count = 0
-        
+        details = []
+
         for invoice in invoices:
+            inv_qty = Decimal('0')
+            for line in invoice.lines.all():
+                inv_qty += line.quantity or 0
+                total_quantity += line.quantity or 0
             total_amount += invoice.grand_total or 0
             total_tax += invoice.tax_amount or 0
             total_count += 1
-            for line in invoice.lines.all():
-                total_quantity += line.quantity or 0
-        
+            details.append({
+                'invoice_number': invoice.invoice_number,
+                'invoice_date': invoice.invoice_date,
+                'customer_name': invoice.customer.name if invoice.customer else '—',
+                'total_quantity': format_number(float(inv_qty), 2),
+                'grand_total': format_number(float(invoice.grand_total or 0), 2),
+            })
+
         return {
-            'period': {
-                'start': self.start_date,
-                'end': self.end_date
-            },
+            'period': {'start': self.start_date, 'end': self.end_date},
             'summary': {
                 'invoice_count': format_number(total_count, 0),
                 'total_quantity': format_number(float(total_quantity), 2),
@@ -69,7 +76,7 @@ class SalesReportGenerator:
                 'total_tax': format_number(float(total_tax), 2),
                 'avg_invoice_amount': format_number(float(total_amount / total_count) if total_count > 0 else 0, 2),
             },
-            'details': []
+            'details': details,
         }
     
     def get_by_customer_report(self, customer_id=None):
@@ -155,17 +162,57 @@ class SalesReportGenerator:
             'data': sorted(data, key=lambda x: x['total_amount'], reverse=True)
         }
     
-    def get_by_item_report(self):
-        """تقرير المبيعات حسب المنتج"""
+    def get_by_item_report(self, item_id=None):
+        """تقرير المبيعات حسب المنتج — يدعم التفصيل لمنتج واحد"""
         from apps.items.models import Item
-        
+
+        if item_id:
+            try:
+                item = Item.objects.get(tenant=self.tenant, id=item_id)
+            except Item.DoesNotExist:
+                return {'period': {'start': self.start_date, 'end': self.end_date}, 'item': None, 'data': [], 'summary': {}}
+
+            lines = item.sale_lines.filter(
+                invoice__status='confirmed',
+                invoice__invoice_date__gte=self.start_date,
+                invoice__invoice_date__lte=self.end_date
+            ).select_related('invoice', 'invoice__customer').order_by('-invoice__invoice_date')
+
+            data = []
+            total_qty = Decimal('0')
+            total_amount = Decimal('0')
+            for line in lines:
+                qty = line.quantity or Decimal('0')
+                price = line.unit_price or Decimal('0')
+                subtotal = qty * price
+                total_qty += qty
+                total_amount += subtotal
+                data.append({
+                    'invoice_number': line.invoice.invoice_number,
+                    'invoice_date': line.invoice.invoice_date,
+                    'customer_name': line.invoice.customer.name if line.invoice.customer else '—',
+                    'quantity': format_number(float(qty), 2),
+                    'unit_price': format_number(float(price), 2),
+                    'line_total': format_number(float(subtotal), 2),
+                })
+
+            return {
+                'period': {'start': self.start_date, 'end': self.end_date},
+                'item': {'id': item.id, 'name': item.name, 'unit': item.unit.name if item.unit else ''},
+                'summary': {
+                    'total_quantity': format_number(float(total_qty), 2),
+                    'total_amount': format_number(float(total_amount), 2),
+                },
+                'data': data,
+            }
+
         items = Item.objects.filter(
             tenant=self.tenant,
             sale_lines__invoice__status='confirmed',
             sale_lines__invoice__invoice_date__gte=self.start_date,
             sale_lines__invoice__invoice_date__lte=self.end_date
         ).distinct().prefetch_related('sale_lines')
-        
+
         data = []
         for item in items:
             lines = item.sale_lines.filter(
@@ -173,14 +220,11 @@ class SalesReportGenerator:
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date
             )
-            
             total_quantity = Decimal('0')
             total_amount = Decimal('0')
-            
             for line in lines:
                 total_quantity += line.quantity or 0
                 total_amount += (line.quantity or 0) * (line.unit_price or 0)
-            
             if lines.exists():
                 data.append({
                     'item_id': item.id,
@@ -191,10 +235,11 @@ class SalesReportGenerator:
                     'avg_unit_price': format_number(float(total_amount / total_quantity) if total_quantity > 0 else 0, 2),
                     'sale_lines': format_number(lines.count(), 0),
                 })
-        
+
         return {
             'period': {'start': self.start_date, 'end': self.end_date},
-            'data': sorted(data, key=lambda x: x['total_amount'], reverse=True)
+            'item': None,
+            'data': sorted(data, key=lambda x: x['total_amount'], reverse=True),
         }
     
     def get_by_date_report(self, group_by='day'):
@@ -363,34 +408,93 @@ class SalesReportGenerator:
         }
 
     def get_returns_report(self):
-        """تقرير مرتجعات المبيعات بالفترة"""
+        """تقرير مرتجعات المبيعات — صف لكل منتج مُرتجَع"""
         returns = SaleReturn.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             return_date__gte=self.start_date,
             return_date__lte=self.end_date,
-        ).select_related('original_invoice', 'original_invoice__customer').order_by('-return_date')
+        ).select_related('original_invoice', 'original_invoice__customer').prefetch_related('lines__item').order_by('-return_date')
 
         data = []
+        total_returned = Decimal('0')
         for r in returns:
-            data.append({
-                'return_date': r.return_date,
-                'return_number': r.return_number,
-                'invoice_number': r.original_invoice.invoice_number,
-                'customer_name': r.original_invoice.customer.name if r.original_invoice.customer else '—',
-                'refund_method': r.get_refund_method_display(),
-                'total_returned': format_number(float(r.total_returned), 2),
-                'reason': r.reason,
-            })
-
-        total_returned = sum(float(r.total_returned) for r in returns)
+            for line in r.lines.all():
+                data.append({
+                    'return_date': r.return_date,
+                    'return_number': r.return_number,
+                    'invoice_number': r.original_invoice.invoice_number,
+                    'customer_name': r.original_invoice.customer.name if r.original_invoice.customer else '—',
+                    'item_name': line.item.name,
+                    'returned_quantity': format_number(float(line.returned_quantity), 2),
+                    'unit_price': format_number(float(line.unit_price), 2),
+                    'line_total': format_number(float(line.line_total), 2),
+                    'refund_method': r.get_refund_method_display(),
+                })
+                total_returned += line.line_total
 
         return {
             'period': {'start': self.start_date, 'end': self.end_date},
             'summary': {
-                'return_count': format_number(len(data), 0),
-                'total_returned': format_number(total_returned, 2),
+                'return_count': format_number(returns.count(), 0),
+                'total_returned': format_number(float(total_returned), 2),
             },
+            'data': data,
+        }
+
+    def get_by_user_report(self, user_id=None):
+        """تقرير المبيعات حسب المستخدم/البائع"""
+        from collections import defaultdict
+
+        base_qs = SaleInvoice.objects.filter(
+            tenant=self.tenant,
+            status='confirmed',
+            invoice_date__gte=self.start_date,
+            invoice_date__lte=self.end_date,
+        ).select_related('customer', 'created_by').order_by('-invoice_date')
+
+        if user_id:
+            invoices = base_qs.filter(created_by_id=user_id)
+            user_obj = invoices.first().created_by if invoices.exists() else None
+            data = []
+            total = Decimal('0')
+            for inv in invoices:
+                data.append({
+                    'invoice_number': inv.invoice_number,
+                    'invoice_date': inv.invoice_date,
+                    'customer_name': inv.customer.name if inv.customer else '—',
+                    'grand_total': format_number(float(inv.grand_total or 0), 2),
+                })
+                total += inv.grand_total or 0
+            return {
+                'period': {'start': self.start_date, 'end': self.end_date},
+                'user': {'id': user_id, 'name': str(user_obj) if user_obj else '—'},
+                'summary': {
+                    'invoice_count': format_number(len(data), 0),
+                    'total_amount': format_number(float(total), 2),
+                },
+                'data': data,
+            }
+
+        agg = defaultdict(lambda: {'invoice_count': 0, 'total_amount': Decimal('0'), 'user_name': '—'})
+        for inv in base_qs:
+            uid = inv.created_by_id or 0
+            agg[uid]['user_name'] = str(inv.created_by) if inv.created_by else '—'
+            agg[uid]['invoice_count'] += 1
+            agg[uid]['total_amount'] += inv.grand_total or 0
+
+        data = [
+            {
+                'user_id': uid,
+                'user_name': v['user_name'],
+                'invoice_count': format_number(v['invoice_count'], 0),
+                'total_amount': format_number(float(v['total_amount']), 2),
+            }
+            for uid, v in sorted(agg.items(), key=lambda x: x[1]['total_amount'], reverse=True)
+        ]
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'user': None,
             'data': data,
         }
 

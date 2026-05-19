@@ -37,31 +37,38 @@ class PurchasesReportGenerator:
         self.end_date = end_date or timezone.now().date()
 
     def get_summary_report(self):
-        """تقرير ملخص المشتريات"""
+        """تقرير ملخص المشتريات — مع قائمة الفواتير التفصيلية"""
         invoices = PurchaseInvoice.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date
-        ).prefetch_related('lines')
+        ).select_related('supplier').prefetch_related('lines').order_by('-invoice_date')
 
         total_amount = Decimal('0')
         total_tax = Decimal('0')
         total_quantity = Decimal('0')
         total_count = 0
+        details = []
 
         for invoice in invoices:
+            inv_qty = Decimal('0')
+            for line in invoice.lines.all():
+                inv_qty += line.quantity or 0
+                total_quantity += line.quantity or 0
             total_amount += invoice.grand_total or 0
             total_tax += invoice.tax_amount or 0
             total_count += 1
-            for line in invoice.lines.all():
-                total_quantity += line.quantity or 0
+            details.append({
+                'invoice_number': invoice.invoice_number,
+                'invoice_date': invoice.invoice_date,
+                'supplier_name': invoice.supplier.name if invoice.supplier else '—',
+                'total_quantity': format_number(float(inv_qty), 2),
+                'grand_total': format_number(float(invoice.grand_total or 0), 2),
+            })
 
         return {
-            'period': {
-                'start': self.start_date,
-                'end': self.end_date
-            },
+            'period': {'start': self.start_date, 'end': self.end_date},
             'summary': {
                 'invoice_count': format_number(total_count, 0),
                 'total_quantity': format_number(float(total_quantity), 2),
@@ -69,7 +76,7 @@ class PurchasesReportGenerator:
                 'total_tax': format_number(float(total_tax), 2),
                 'avg_invoice_amount': format_number(float(total_amount / total_count) if total_count > 0 else 0, 2),
             },
-            'details': []
+            'details': details,
         }
 
     def get_by_supplier_report(self, supplier_id=None):
@@ -154,9 +161,49 @@ class PurchasesReportGenerator:
             'data': sorted(data, key=lambda x: x['total_amount'], reverse=True)
         }
 
-    def get_by_item_report(self):
+    def get_by_item_report(self, item_id=None):
         """تقرير المشتريات حسب المنتج"""
         from apps.items.models import Item
+
+        if item_id:
+            try:
+                item = Item.objects.get(tenant=self.tenant, id=item_id)
+            except Item.DoesNotExist:
+                return {'period': {'start': self.start_date, 'end': self.end_date}, 'item': None, 'data': []}
+
+            lines = item.purchase_lines.filter(
+                invoice__status='confirmed',
+                invoice__invoice_date__gte=self.start_date,
+                invoice__invoice_date__lte=self.end_date,
+            ).select_related('invoice', 'invoice__supplier').order_by('-invoice__invoice_date')
+
+            data = []
+            total_quantity = Decimal('0')
+            total_amount = Decimal('0')
+            for line in lines:
+                qty = line.quantity or Decimal('0')
+                cost = line.unit_cost or Decimal('0')
+                lt = qty * cost
+                total_quantity += qty
+                total_amount += lt
+                data.append({
+                    'invoice_number': line.invoice.invoice_number,
+                    'invoice_date': line.invoice.invoice_date,
+                    'supplier_name': line.invoice.supplier.name if line.invoice.supplier else '—',
+                    'quantity': format_number(float(qty), 2),
+                    'unit_cost': format_number(float(cost), 2),
+                    'line_total': format_number(float(lt), 2),
+                })
+
+            return {
+                'period': {'start': self.start_date, 'end': self.end_date},
+                'item': {'id': item.id, 'name': item.name, 'unit': item.unit.name if item.unit else ''},
+                'summary': {
+                    'total_quantity': format_number(float(total_quantity), 2),
+                    'total_amount': format_number(float(total_amount), 2),
+                },
+                'data': data,
+            }
 
         items = Item.objects.filter(
             tenant=self.tenant,
@@ -193,6 +240,7 @@ class PurchasesReportGenerator:
 
         return {
             'period': {'start': self.start_date, 'end': self.end_date},
+            'item': None,
             'data': sorted(data, key=lambda x: x['total_amount'], reverse=True)
         }
 
@@ -360,33 +408,105 @@ class PurchasesReportGenerator:
         }
 
     def get_returns_report(self):
-        """تقرير مرتجعات المشتريات بالفترة"""
-        returns = PurchaseReturn.objects.filter(
+        """تقرير مرتجعات المشتريات بالفترة — سطر لكل صنف مرتجع"""
+        from .models import PurchaseReturnLine
+        lines = PurchaseReturnLine.objects.filter(
             tenant=self.tenant,
-            status='confirmed',
-            return_date__gte=self.start_date,
-            return_date__lte=self.end_date,
-        ).select_related('original_invoice', 'original_invoice__supplier').order_by('-return_date')
+            purchase_return__status='confirmed',
+            purchase_return__return_date__gte=self.start_date,
+            purchase_return__return_date__lte=self.end_date,
+        ).select_related(
+            'purchase_return',
+            'purchase_return__original_invoice',
+            'purchase_return__original_invoice__supplier',
+            'item',
+        ).order_by('-purchase_return__return_date')
 
         data = []
-        for r in returns:
+        total_returned = Decimal('0')
+        for line in lines:
+            r = line.purchase_return
+            lt = line.line_total or Decimal('0')
+            total_returned += lt
             data.append({
                 'return_date': r.return_date,
                 'return_number': r.return_number,
                 'invoice_number': r.original_invoice.invoice_number,
                 'supplier_name': r.original_invoice.supplier.name if r.original_invoice.supplier else '—',
+                'item_name': line.item.name if line.item else '—',
+                'returned_quantity': format_number(float(line.returned_quantity or 0), 2),
+                'unit_cost': format_number(float(line.unit_cost or 0), 2),
+                'line_total': format_number(float(lt), 2),
                 'refund_method': r.get_refund_method_display(),
-                'total_returned': format_number(float(r.total_returned), 2),
-                'reason': r.reason if hasattr(r, 'reason') else '',
             })
-
-        total_returned = sum(float(r.total_returned) for r in returns)
 
         return {
             'period': {'start': self.start_date, 'end': self.end_date},
             'summary': {
-                'return_count': format_number(len(data), 0),
-                'total_returned': format_number(total_returned, 2),
+                'line_count': format_number(len(data), 0),
+                'total_returned': format_number(float(total_returned), 2),
             },
             'data': data,
+        }
+
+    def get_by_user_report(self, user_id=None):
+        """تقرير المشتريات حسب المستخدم"""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        base_qs = PurchaseInvoice.objects.filter(
+            tenant=self.tenant,
+            status='confirmed',
+            invoice_date__gte=self.start_date,
+            invoice_date__lte=self.end_date,
+        )
+
+        if user_id:
+            try:
+                user = User.objects.get(pk=user_id)
+            except User.DoesNotExist:
+                return {'period': {'start': self.start_date, 'end': self.end_date}, 'user': None, 'data': []}
+
+            invoices = base_qs.filter(created_by=user).select_related('supplier').prefetch_related('lines').order_by('-invoice_date')
+            data = []
+            for invoice in invoices:
+                inv_qty = Decimal('0')
+                for line in invoice.lines.all():
+                    inv_qty += line.quantity or 0
+                data.append({
+                    'invoice_number': invoice.invoice_number,
+                    'invoice_date': invoice.invoice_date,
+                    'supplier_name': invoice.supplier.name if invoice.supplier else '—',
+                    'total_quantity': format_number(float(inv_qty), 2),
+                    'grand_total': format_number(float(invoice.grand_total or 0), 2),
+                })
+
+            return {
+                'period': {'start': self.start_date, 'end': self.end_date},
+                'user': {'id': user.id, 'name': user.get_full_name() or user.username},
+                'data': data,
+            }
+
+        user_ids = base_qs.values_list('created_by', flat=True).distinct()
+        users = User.objects.filter(pk__in=user_ids)
+
+        data = []
+        for user in users:
+            invoices = base_qs.filter(created_by=user)
+            total_amount = Decimal('0')
+            for invoice in invoices:
+                total_amount += invoice.grand_total or 0
+            count = invoices.count()
+            data.append({
+                'user_id': user.id,
+                'user_name': user.get_full_name() or user.username,
+                'invoice_count': format_number(count, 0),
+                'total_amount': format_number(float(total_amount), 2),
+                'avg_invoice_amount': format_number(float(total_amount / count) if count > 0 else 0, 2),
+            })
+
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'user': None,
+            'data': sorted(data, key=lambda x: x['total_amount'], reverse=True),
         }

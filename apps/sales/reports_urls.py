@@ -38,6 +38,10 @@ urlpatterns = [
     path('sales/returns/', views.sales_returns_report, name='returns_report'),
     path('sales/returns/export/', views.sales_returns_report_export, name='returns_report_export'),
 
+    # By User
+    path('sales/by-user/', views.sales_by_user_report, name='by_user_report'),
+    path('sales/by-user/export/', views.sales_by_user_report_export, name='by_user_report_export'),
+
     # Income Statement (P&L)
     path('accounting/income-statement/', views.income_statement_report, name='income_statement'),
     path('accounting/income-statement/export/', views.income_statement_report_export, name='income_statement_export'),

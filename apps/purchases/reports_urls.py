@@ -37,4 +37,8 @@ urlpatterns = [
     # Returns
     path('purchases/returns/', views.purchases_returns_report, name='returns_report'),
     path('purchases/returns/export/', views.purchases_returns_report_export, name='returns_report_export'),
+
+    # By User
+    path('purchases/by-user/', views.purchases_by_user_report, name='by_user_report'),
+    path('purchases/by-user/export/', views.purchases_by_user_report_export, name='by_user_report_export'),
 ]

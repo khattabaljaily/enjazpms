@@ -60,7 +60,21 @@
     
     <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}?v=3.7"></script>
-    
+
+    <!-- Inject print date for report letterhead (no-op on non-report pages) -->
+    <script>
+    !function(){
+        var s=document.querySelector('.printable-scene');
+        if(!s)return;
+        function f(d){
+            try{return d.toLocaleDateString('ar-EG',{year:'numeric',month:'long',day:'numeric'});}
+            catch(e){return d.toISOString().slice(0,10);}
+        }
+        s.setAttribute('data-print-date',f(new Date()));
+        window.addEventListener('beforeprint',function(){s.setAttribute('data-print-date',f(new Date()));});
+    }();
+    </script>
+
     {% block extra_js %}{% endblock %}
     
     <script>
