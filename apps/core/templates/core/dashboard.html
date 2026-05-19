@@ -1,466 +1,530 @@
 {% extends "layouts/dashboard.html" %}
 {% load humanize %}
+{% load static %}
 
 {% block page_title %}نظرة عامة{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=2.0">
+{% endblock %}
+
 {% block content %}
-<!-- Charts Section - 3 Charts Row -->
-<div class="row g-3 mb-4 animate-fade-in">
-    <div class="col-lg-4">
-        <div class="card dash-chart h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-chart-area text-primary me-2"></i>مبيعات الأسبوع</h5>
-                <span class="chart-meta">أسبوعي</span>
-            </div>
-            <div class="card-body" style="position: relative; height: 250px; min-height: 250px;">
-                <canvas id="weeklySalesChart" style="width: 100%; height: 100%;"></canvas>
-            </div>
-        </div>
+
+<!-- ══ GREETING ══════════════════════════════════════════════════ -->
+<div class="db-greeting">
+    <div class="db-greeting-text">
+        <h2>مرحباً، {{ request.user.get_full_name|default:request.user.username }} 👋</h2>
+        <p>{% if tenant %}{{ tenant.name }} — {% endif %}إليك نظرة سريعة على أداء اليوم</p>
     </div>
-    <div class="col-lg-4">
-        <div class="card dash-chart h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-chart-line text-info me-2"></i>الإيرادات والمصروفات</h5>
-                <span class="chart-meta">أسبوعي</span>
-            </div>
-            <div class="card-body" style="position: relative; height: 250px; min-height: 250px;">
-                <canvas id="revenuesExpensesChart" style="width: 100%; height: 100%;"></canvas>
-            </div>
+    <div class="db-greeting-badges">
+        <div class="db-badge">
+            <span class="db-badge-val">{{ stats.today_sales|floatformat:2|intcomma }}</span>
+            <span class="db-badge-lbl">مبيعات اليوم</span>
         </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="card dash-chart h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-exclamation-triangle text-warning me-2"></i>حالة المخزون</h5>
-                <span class="chart-meta">قليل الكمية</span>
-            </div>
-            <div class="card-body" style="position: relative; height: 250px; min-height: 250px;">
-                <canvas id="lowStockChart" style="width: 100%; height: 100%;"></canvas>
-            </div>
+        <div class="db-badge">
+            <span class="db-badge-val">{{ stats.today_invoices|default:0 }}</span>
+            <span class="db-badge-lbl">فواتير اليوم</span>
+        </div>
+        <div class="db-badge">
+            <span class="db-badge-val">{{ stats.pending_invoices|default:0 }}</span>
+            <span class="db-badge-lbl">غير مسددة</span>
         </div>
     </div>
 </div>
 
-<!-- KPI Strip -->
-<div class="kpi-strip mb-3">
-    <div class="dash-kpi primary animate-fade-in">
-        <div class="stat-icon"><i class="fas fa-users"></i></div>
-        <div class="stat-body">
-            <div class="stat-value">{{ stats.total_users }}</div>
-            <div class="stat-label">المستخدمون</div>
+<!-- ══ PRIMARY KPI ROW ════════════════════════════════════════════ -->
+<div class="db-kpi-grid">
+
+    <div class="db-kpi db-kpi--indigo">
+        <div class="db-kpi-icon"><i class="fas fa-arrow-trend-up"></i></div>
+        <div class="db-kpi-body">
+            <div class="db-kpi-val">{{ stats.today_sales|floatformat:2|intcomma }}</div>
+            <div class="db-kpi-lbl">مبيعات اليوم</div>
+            <span class="db-kpi-tag db-kpi-tag--info"><i class="fas fa-calendar-day"></i> اليوم</span>
         </div>
     </div>
-    <div class="dash-kpi success animate-fade-in">
-        <div class="stat-icon"><i class="fas fa-box-open"></i></div>
-        <div class="stat-body">
-            <div class="stat-value">{{ stats.total_products }}</div>
-            <div class="stat-label">المنتجات</div>
+
+    <div class="db-kpi db-kpi--emerald">
+        <div class="db-kpi-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="db-kpi-body">
+            <div class="db-kpi-val">{{ stats.this_month_sales|floatformat:2|intcomma }}</div>
+            <div class="db-kpi-lbl">مبيعات الشهر</div>
+            <span class="db-kpi-tag db-kpi-tag--up"><i class="fas fa-calendar-alt"></i> هذا الشهر</span>
         </div>
     </div>
-    <div class="dash-kpi info animate-fade-in">
-        <div class="stat-icon"><i class="fas fa-user-group"></i></div>
-        <div class="stat-body">
-            <div class="stat-value">{{ stats.total_customers }}</div>
-            <div class="stat-label">العملاء</div>
+
+    <div class="db-kpi db-kpi--amber">
+        <div class="db-kpi-icon"><i class="fas fa-file-invoice"></i></div>
+        <div class="db-kpi-body">
+            <div class="db-kpi-val">{{ stats.today_invoices|default:0 }}</div>
+            <div class="db-kpi-lbl">فواتير اليوم</div>
+            <span class="db-kpi-tag db-kpi-tag--info"><i class="fas fa-receipt"></i> مؤكدة</span>
         </div>
     </div>
-    <div class="dash-kpi warning animate-fade-in">
-        <div class="stat-icon"><i class="fas fa-truck"></i></div>
-        <div class="stat-body">
-            <div class="stat-value">{{ stats.total_suppliers }}</div>
-            <div class="stat-label">الموردين</div>
+
+    <div class="db-kpi db-kpi--rose">
+        <div class="db-kpi-icon"><i class="fas fa-clock-rotate-left"></i></div>
+        <div class="db-kpi-body">
+            <div class="db-kpi-val">{{ stats.pending_invoices|default:0 }}</div>
+            <div class="db-kpi-lbl">فواتير آجلة غير مسددة</div>
+            <span class="db-kpi-tag {% if stats.pending_invoices %}db-kpi-tag--down{% else %}db-kpi-tag--up{% endif %}">
+                <i class="fas {% if stats.pending_invoices %}fa-exclamation{% else %}fa-check{% endif %}"></i>
+                {% if stats.pending_invoices %}تحتاج متابعة{% else %}لا يوجد متأخر{% endif %}
+            </span>
         </div>
     </div>
+
 </div>
 
-<!-- Category + Health Status -->
-<div class="row g-3 mb-3 animate-fade-in">
-    <div class="col-lg-7">
-        <div class="card dash-chart h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-chart-pie text-success me-2"></i>أفضل الفئات</h5>
-                <span class="chart-meta">هذا الشهر</span>
+<!-- ══ SECONDARY STATS ════════════════════════════════════════════ -->
+<div class="db-stat-row">
+
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(99,102,241,.1); color:#6366f1;">
+            <i class="fas fa-users"></i>
+        </div>
+        <div>
+            <div class="db-stat-num">{{ stats.total_users }}</div>
+            <div class="db-stat-lbl">مستخدمون</div>
+        </div>
+    </div>
+
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(16,185,129,.1); color:#10b981;">
+            <i class="fas fa-box-open"></i>
+        </div>
+        <div>
+            <div class="db-stat-num">{{ stats.total_products }}</div>
+            <div class="db-stat-lbl">منتجات</div>
+        </div>
+    </div>
+
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(14,165,233,.1); color:#0ea5e9;">
+            <i class="fas fa-user-group"></i>
+        </div>
+        <div>
+            <div class="db-stat-num">{{ stats.total_customers }}</div>
+            <div class="db-stat-lbl">عملاء</div>
+        </div>
+    </div>
+
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(245,158,11,.1); color:#d97706;">
+            <i class="fas fa-truck"></i>
+        </div>
+        <div>
+            <div class="db-stat-num">{{ stats.total_suppliers }}</div>
+            <div class="db-stat-lbl">موردون</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══ CHARTS ROW ═════════════════════════════════════════════════ -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-chart-area" style="color:#6366f1;"></i>
+                    مسار المبيعات الأسبوعية
+                </h3>
+                <span class="db-panel-meta">7 أيام</span>
             </div>
-            <div class="card-body">
-                <div class="category-list">
-                    {% for cat in stats.top_categories %}
-                    <div class="category-row">
-                        <span>{{ cat.item__category__name|default:"غير مصنف" }}</span>
-                        <div class="category-track"><div class="category-fill" style="width: {{ cat.percentage }}%"></div></div>
-                        <span class="category-value">{{ cat.percentage }}%</span>
-                    </div>
-                    {% empty %}
-                    <div class="category-row">
-                        <span>لا توجد مبيعات هذا الشهر</span>
-                        <div class="category-track"><div class="category-fill category-fill-0"></div></div>
-                        <span class="category-value">0%</span>
-                    </div>
-                    {% endfor %}
+            <div class="db-panel-body">
+                <div class="db-chart-wrap">
+                    <canvas id="weeklySalesChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
+    <div class="col-lg-4">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-chart-column" style="color:#10b981;"></i>
+                    إيرادات ومصروفات
+                </h3>
+                <span class="db-panel-meta">أسبوعي</span>
+            </div>
+            <div class="db-panel-body">
+                <div class="db-chart-wrap">
+                    <canvas id="revenuesExpensesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ BOTTOM ROW ═════════════════════════════════════════════════ -->
+<div class="row g-3 mb-3">
+
+    <!-- Top Products -->
     <div class="col-lg-5">
-        <div class="card dash-chart h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-shield-heart text-warning me-2"></i>مؤشرات الحالة</h5>
-                <span class="chart-meta">احصائيات</span>
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-ranking-star" style="color:#f59e0b;"></i>
+                    أفضل المنتجات مبيعاً
+                </h3>
+                <span class="db-panel-meta">هذا الشهر</span>
             </div>
-            <div class="card-body">
-                <div class="status-list">
-                    <div class="status-row">
-                        <span><i class="fas fa-triangle-exclamation text-warning me-2"></i>مخزون منخفض</span>
-                        <span class="value">{{ stats.low_stock_items }}</span>
-                    </div>
-                    <div class="status-row">
-                        <span><i class="fas fa-calendar-xmark text-danger me-2"></i>منتهي الصلاحية</span>
-                        <span class="value">{{ stats.expired_items }}</span>
-                    </div>
-                    <div class="status-row">
-                        <span><i class="fas fa-users text-info me-2"></i>نشاط العملاء</span>
-                        <span class="value">جيد</span>
-                    </div>
-                    <div class="status-row">
-                        <span><i class="fas fa-bolt text-success me-2"></i>سرعة النظام</span>
-                        <span class="value">98%</span>
-                    </div>
+            <div class="db-panel-body" style="padding: 0;">
+                <table class="db-prod-table">
+                    <thead>
+                        <tr>
+                            <th style="width:36px;">#</th>
+                            <th>المنتج</th>
+                            <th class="text-end">الكمية</th>
+                            <th class="text-end">الإيراد</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topProductsBody">
+                        <!-- filled by JS -->
+                    </tbody>
+                </table>
+                <div id="topProductsEmpty" class="text-center" style="padding:2rem; color:var(--text-tertiary); display:none;">
+                    <i class="fas fa-box-open fa-2x mb-2" style="opacity:.4;"></i>
+                    <p class="mb-0" style="font-size:.85rem;">لا توجد مبيعات هذا الشهر</p>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Quick Actions -->
-<div class="card dash-quick mt-3 animate-fade-in">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-bolt text-warning me-2"></i>
-            إجراءات سريعة
-        </h5>
-    </div>
-    <div class="card-body">
-        <div class="dash-actions-grid">
-            <div>
-                <a href="{% url 'sales:invoice_create' %}" class="quick-action primary">
-                    <i class="fas fa-plus"></i>
-                    <span>
-                        <span class="qa-title d-block">فاتورة جديدة</span>
-                        <span class="qa-sub d-block">تسجيل بيع جديد</span>
-                    </span>
-                </a>
+    <!-- Top Categories + Stock Status -->
+    <div class="col-lg-4">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-chart-pie" style="color:#8b5cf6;"></i>
+                    أفضل الفئات
+                </h3>
+                <span class="db-panel-meta">هذا الشهر</span>
             </div>
-            <div>
-                <a href="{% url 'items:list' %}" class="quick-action success">
-                    <i class="fas fa-box"></i>
-                    <span>
-                        <span class="qa-title d-block">إدارة المنتجات</span>
-                        <span class="qa-sub d-block">إضافة أو تعديل صنف</span>
-                    </span>
-                </a>
-            </div>
-            <div>
-                <a href="{% url 'customers:create' %}" class="quick-action info">
-                    <i class="fas fa-user-plus"></i>
-                    <span>
-                        <span class="qa-title d-block">عميل جديد</span>
-                        <span class="qa-sub d-block">إضافة عميل سريع</span>
-                    </span>
-                </a>
-            </div>
-            <div>
-                <a href="{% url 'sales:invoice_list' %}" class="quick-action warning">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>
-                        <span class="qa-title d-block">المبيعات</span>
-                        <span class="qa-sub d-block">عرض الفواتير</span>
-                    </span>
-                </a>
+            <div class="db-panel-body">
+                {% for cat in stats.top_categories %}
+                <div class="db-cat-row">
+                    <span class="db-cat-name">{{ cat.item__category__name|default:"غير مصنف" }}</span>
+                    <div class="db-cat-track">
+                        <div class="db-cat-fill" style="width:{{ cat.percentage }}%"></div>
+                    </div>
+                    <span class="db-cat-pct">{{ cat.percentage }}%</span>
+                </div>
+                {% empty %}
+                <div class="text-center" style="padding:1.5rem 0; color:var(--text-tertiary);">
+                    <i class="fas fa-chart-pie fa-2x mb-2" style="opacity:.4;"></i>
+                    <p class="mb-0" style="font-size:.82rem;">لا توجد بيانات</p>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
+
+    <!-- Health + Ring -->
+    <div class="col-lg-3">
+        <div class="db-panel" style="height:auto;">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-shield-heart" style="color:#ef4444;"></i>
+                    مؤشرات النظام
+                </h3>
+            </div>
+            <div class="db-panel-body">
+
+                <!-- Payment ring -->
+                <div class="db-ring-wrap mb-3">
+                    <svg class="db-ring-svg" width="90" height="90" viewBox="0 0 90 90">
+                        <circle class="db-ring-track" cx="45" cy="45" r="35"/>
+                        <circle class="db-ring-fill" id="paymentRing" cx="45" cy="45" r="35"
+                            stroke-dasharray="220"
+                            stroke-dashoffset="{{ 220|add:0 }}"/>
+                    </svg>
+                    <span class="db-ring-label" id="paymentPct">{{ stats.payment_percentage }}%</span>
+                    <span class="db-ring-sub">نسبة تحصيل الفواتير</span>
+                </div>
+
+                <div class="db-status-row">
+                    <span class="db-status-label">
+                        <i class="fas fa-triangle-exclamation" style="color:#f59e0b;"></i>
+                        مخزون منخفض
+                    </span>
+                    <span class="db-status-val {% if stats.low_stock_items %}db-status-val--warn{% else %}db-status-val--ok{% endif %}">
+                        {{ stats.low_stock_items }}
+                    </span>
+                </div>
+                <div class="db-status-row">
+                    <span class="db-status-label">
+                        <i class="fas fa-calendar-xmark" style="color:#ef4444;"></i>
+                        منتهي الصلاحية
+                    </span>
+                    <span class="db-status-val {% if stats.expired_items %}db-status-val--danger{% else %}db-status-val--ok{% endif %}">
+                        {{ stats.expired_items|default:0 }}
+                    </span>
+                </div>
+                <div class="db-status-row">
+                    <span class="db-status-label">
+                        <i class="fas fa-bolt" style="color:#10b981;"></i>
+                        سرعة النظام
+                    </span>
+                    <span class="db-status-val db-status-val--ok">98%</span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
 </div>
+
+<!-- ══ QUICK ACTIONS + LOW STOCK ══════════════════════════════════ -->
+<div class="row g-3 mb-2">
+
+    <!-- Quick actions -->
+    <div class="col-lg-6">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-bolt" style="color:#d97706;"></i>
+                    إجراءات سريعة
+                </h3>
+            </div>
+            <div class="db-panel-body">
+                <div class="db-actions-grid">
+                    <a href="{% url 'sales:invoice_create' %}" class="db-action db-action--indigo">
+                        <div class="db-action-icon"><i class="fas fa-plus"></i></div>
+                        <div>
+                            <span class="db-action-title">فاتورة جديدة</span>
+                            <span class="db-action-sub">تسجيل بيع جديد</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'items:list' %}" class="db-action db-action--emerald">
+                        <div class="db-action-icon"><i class="fas fa-box"></i></div>
+                        <div>
+                            <span class="db-action-title">المنتجات</span>
+                            <span class="db-action-sub">إدارة الأصناف</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'customers:create' %}" class="db-action db-action--sky">
+                        <div class="db-action-icon"><i class="fas fa-user-plus"></i></div>
+                        <div>
+                            <span class="db-action-title">عميل جديد</span>
+                            <span class="db-action-sub">إضافة عميل سريع</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'sales:invoice_list' %}" class="db-action db-action--amber">
+                        <div class="db-action-icon"><i class="fas fa-list-check"></i></div>
+                        <div>
+                            <span class="db-action-title">الفواتير</span>
+                            <span class="db-action-sub">عرض جميع الفواتير</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'purchases:order_list' %}" class="db-action db-action--violet">
+                        <div class="db-action-icon"><i class="fas fa-cart-shopping"></i></div>
+                        <div>
+                            <span class="db-action-title">أوامر الشراء</span>
+                            <span class="db-action-sub">إدارة المشتريات</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'reports:reports' %}" class="db-action db-action--rose">
+                        <div class="db-action-icon"><i class="fas fa-chart-bar"></i></div>
+                        <div>
+                            <span class="db-action-title">التقارير</span>
+                            <span class="db-action-sub">تقارير وإحصاءات</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low stock -->
+    <div class="col-lg-6">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-triangle-exclamation" style="color:#ef4444;"></i>
+                    تنبيهات المخزون المنخفض
+                </h3>
+                {% if stats.low_stock_items %}
+                <span class="db-panel-meta" style="background:rgba(239,68,68,.1); color:#ef4444;">
+                    {{ stats.low_stock_items }} صنف
+                </span>
+                {% endif %}
+            </div>
+            <div class="db-panel-body" id="lowStockPanel">
+                <div class="text-center" style="padding:2rem 0; color:var(--text-tertiary);">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Chart.js global options
-    Chart.defaults.font.family = "'Segoe UI', 'Arabic Typesetting', sans-serif";
-    Chart.defaults.color = 'rgba(0, 0, 0, 0.6)';
-    
-    // Color palette
-    const colors = {
-        primary: 'rgba(99, 102, 241, 1)',
-        primaryLight: 'rgba(99, 102, 241, 0.1)',
-        success: 'rgba(16, 185, 129, 1)',
-        successLight: 'rgba(16, 185, 129, 0.1)',
-        warning: 'rgba(245, 158, 11, 1)',
-        warningLight: 'rgba(245, 158, 11, 0.1)',
-        danger: 'rgba(239, 68, 68, 1)',
-        dangerLight: 'rgba(239, 68, 68, 0.1)',
-        info: 'rgba(59, 130, 246, 1)',
-        infoLight: 'rgba(59, 130, 246, 0.1)',
-    };
+(function () {
+    const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
+    const grid   = () => isDark() ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)';
+    const tick   = () => isDark() ? '#94a3b8' : '#9ca3af';
+    const fmt    = v  => Number(v).toLocaleString('en');
 
-    // Weekly Sales Chart - Area Chart Style
-    const weeklyCtx = document.getElementById('weeklySalesChart');
-    if (weeklyCtx) {
-        const ctx = weeklyCtx.getContext('2d');
-        
-        // Create gradient
-        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.25)');
-        gradient.addColorStop(1, 'rgba(99, 102, 241, 0.01)');
-        
-        new Chart(ctx, {
+    /* ── Weekly Sales Area Chart ── */
+    const wCtx = document.getElementById('weeklySalesChart');
+    if (wCtx) {
+        const ctx = wCtx.getContext('2d');
+        const grad = ctx.createLinearGradient(0, 0, 0, 220);
+        grad.addColorStop(0, 'rgba(99,102,241,.22)');
+        grad.addColorStop(1, 'rgba(99,102,241,.01)');
+
+        new Chart(wCtx, {
             type: 'line',
             data: {
                 labels: {{ stats.weekly_labels_json|safe }},
                 datasets: [{
-                    label: 'المبيعات الأسبوعية',
                     data: {{ stats.weekly_sales_json|safe }},
+                    fill: true,
+                    backgroundColor: grad,
+                    borderColor: '#6366f1',
+                    borderWidth: 2.5,
                     tension: 0.42,
                     pointRadius: 4,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: colors.primary,
-                    pointBorderColor: '#ffffff',
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#fff',
                     pointBorderWidth: 2,
-                    fill: true,
-                    backgroundColor: gradient,
-                    borderColor: colors.primary,
-                    borderWidth: 3,
-                    segment: {
-                        borderDash: ctx => [4, 4]
-                    }
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                layout: {
-                    padding: { top: 10, right: 6, bottom: 0, left: 0 }
-                },
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 8 } },
                 plugins: {
-                    legend: {
-                        display: false
-                    },
+                    legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        padding: 12,
-                        titleFont: { size: 14, weight: '700' },
-                        bodyFont: { size: 13 },
-                        cornerRadius: 12,
+                        backgroundColor: 'rgba(15,23,42,.95)',
+                        padding: 12, cornerRadius: 10,
                         displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.y;
-                            }
-                        }
+                        titleFont: { size: 13, weight: '700' },
+                        callbacks: { label: c => ' ' + fmt(c.parsed.y) }
                     }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(148, 163, 184, 0.15)',
-                            drawBorder: false,
-                            borderDash: [4, 4]
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return value.toLocaleString('en-US');
-                            },
-                            font: { size: 11 }
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false,
-                            drawBorder: false
-                        },
-                        ticks: {
-                            font: { size: 11 }
-                        }
-                    }
+                    x: { grid: { display: false, drawBorder: false }, ticks: { color: tick(), font: { size: 11 } } },
+                    y: { beginAtZero: true, grid: { color: grid(), borderDash: [4,4], drawBorder: false },
+                         ticks: { color: tick(), callback: fmt, font: { size: 11 } } }
                 }
             }
         });
     }
 
-    // Revenues and Expenses Bar Chart
-    const revenuesExpensesCtx = document.getElementById('revenuesExpensesChart');
-    if (revenuesExpensesCtx) {
-        const ctx = revenuesExpensesCtx.getContext('2d');
-        const revenuesData = {{ stats.weekly_revenues_json|safe }};
-        const expensesData = {{ stats.weekly_expenses_json|safe }};
-        const labels = {{ stats.weekly_labels_json|safe }};
-
-        new Chart(ctx, {
+    /* ── Rev vs Exp Bar Chart ── */
+    const rvCtx = document.getElementById('revenuesExpensesChart');
+    if (rvCtx) {
+        new Chart(rvCtx, {
             type: 'bar',
             data: {
-                labels: labels,
-                datasets: [{
-                    label: 'الإيرادات',
-                    data: revenuesData,
-                    backgroundColor: colors.success,
-                    borderColor: colors.success,
-                    borderWidth: 2,
-                    borderRadius: 6,
-                    borderSkipped: false,
-                    barPercentage: 0.6,
-                    categoryPercentage: 0.8
-                }, {
-                    label: 'المصروفات',
-                    data: expensesData,
-                    backgroundColor: colors.danger,
-                    borderColor: colors.danger,
-                    borderWidth: 2,
-                    borderRadius: 6,
-                    borderSkipped: false,
-                    barPercentage: 0.6,
-                    categoryPercentage: 0.8
-                }]
+                labels: {{ stats.weekly_labels_json|safe }},
+                datasets: [
+                    { label: 'إيرادات', data: {{ stats.weekly_revenues_json|safe }},
+                      backgroundColor: 'rgba(16,185,129,.75)', borderRadius: 5, barPercentage: .65, categoryPercentage: .85 },
+                    { label: 'مصروفات', data: {{ stats.weekly_expenses_json|safe }},
+                      backgroundColor: 'rgba(239,68,68,.7)',  borderRadius: 5, barPercentage: .65, categoryPercentage: .85 }
+                ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                layout: {
-                    padding: { top: 10, right: 6, bottom: 0, left: 0 }
-                },
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 8 } },
                 plugins: {
                     legend: {
                         position: 'top',
-                        labels: {
-                            padding: 14,
-                            usePointStyle: true,
-                            pointStyle: 'rect',
-                            font: {
-                                weight: '600',
-                                size: 11
-                            }
-                        }
+                        labels: { usePointStyle: true, pointStyle: 'rect', padding: 12, font: { size: 11, weight: '600' } }
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        padding: 12,
-                        titleFont: { size: 14, weight: '700' },
-                        bodyFont: { size: 13 },
-                        cornerRadius: 12,
-                        displayColors: true,
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y.toLocaleString('en-US');
-                            }
-                        }
+                        backgroundColor: 'rgba(15,23,42,.95)', padding: 10, cornerRadius: 10,
+                        titleFont: { size: 12, weight: '700' },
+                        callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmt(c.parsed.y) }
                     }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(148, 163, 184, 0.15)',
-                            drawBorder: false,
-                            borderDash: [4, 4]
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return value.toLocaleString('en-US');
-                            },
-                            font: { size: 11 }
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false,
-                            drawBorder: false
-                        },
-                        ticks: {
-                            font: { size: 11 }
-                        }
-                    }
+                    x: { grid: { display: false, drawBorder: false }, ticks: { color: tick(), font: { size: 10 } } },
+                    y: { beginAtZero: true, grid: { color: grid(), borderDash: [4,4], drawBorder: false },
+                         ticks: { color: tick(), callback: fmt, font: { size: 10 } } }
                 }
             }
         });
     }
 
-    // Stock Status Pie Chart
-    const lowStockCtx = document.getElementById('lowStockChart');
-    if (lowStockCtx) {
-        const ctx = lowStockCtx.getContext('2d');
-        const stockStatusData = {{ stats.stock_status_json|safe }};
-        
-        if (stockStatusData[0] > 0 || stockStatusData[1] > 0) {
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['متوفرة', 'قليلة الكمية'],
-                    datasets: [{
-                        data: stockStatusData,
-                        backgroundColor: [
-                            colors.success, // Green for available
-                            colors.danger   // Red for low stock
-                        ],
-                        borderColor: '#ffffff',
-                        borderWidth: 4,
-                        hoverOffset: 10,
-                        weight: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 1200,
-                        easing: 'easeOutCubic'
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 14,
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                font: {
-                                    weight: '600',
-                                    size: 11
-                                }
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            padding: 12,
-                            titleFont: { size: 13, weight: '700' },
-                            bodyFont: { size: 12 },
-                            cornerRadius: 10,
-                            callbacks: {
-                                label: function(context) {
-                                    const total = stockStatusData.reduce((a, b) => a + b, 0);
-                                    const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
-                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
-                                }
-                            }
-                        }
-                    },
-                    cutout: '72%'
-                }
-            });
-        } else {
-            // Show message when no items
-            const ctx = lowStockCtx.getContext('2d');
-            ctx.font = '14px Arial';
-            ctx.fillStyle = '#666';
-            ctx.textAlign = 'center';
-            ctx.fillText('لا توجد منتجات في المخزون', lowStockCtx.width / 2, lowStockCtx.height / 2);
-        }
+    /* ── Top Products Table ── */
+    const topProds = {{ stats.top_products_json|safe }};
+    const tbody = document.getElementById('topProductsBody');
+    const empty = document.getElementById('topProductsEmpty');
+    if (topProds.length) {
+        const rankClass = i => ['db-prod-rank--1','db-prod-rank--2','db-prod-rank--3'][i] || 'db-prod-rank--n';
+        topProds.forEach((p, i) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><span class="db-prod-rank ${rankClass(i)}">${i+1}</span></td>
+                <td class="fw-bold" style="color:var(--text-primary)">${p['item__name'] || '—'}</td>
+                <td class="text-end text-muted">${fmt(p.total_qty)}</td>
+                <td class="text-end fw-bold" style="color:#6366f1">${fmt(Math.round(p.total_revenue))}</td>`;
+            tbody.appendChild(tr);
+        });
+    } else {
+        tbody.closest('table').style.display = 'none';
+        empty.style.display = 'block';
     }
-});
+
+    /* ── Low Stock Panel ── */
+    const lowStockData = {{ stats.low_stock_items_json|safe }};
+    const panel = document.getElementById('lowStockPanel');
+    if (lowStockData.length) {
+        const html = lowStockData.map(s => `
+            <div class="db-stock-item">
+                <span class="db-stock-dot" style="background:#ef4444;"></span>
+                <span class="db-stock-name">${s['item__name']}</span>
+                <span class="db-stock-qty">${fmt(s.quantity)}</span>
+                <span class="db-stock-sep">/</span>
+                <span class="db-stock-min">${fmt(s.min_quantity)}</span>
+            </div>`).join('');
+        panel.innerHTML = html;
+    } else {
+        panel.innerHTML = `<div class="text-center" style="padding:2rem 0; color:var(--text-tertiary);">
+            <i class="fas fa-check-circle fa-2x mb-2" style="color:#10b981; opacity:.7;"></i>
+            <p class="mb-0" style="font-size:.85rem;">المخزون في وضع جيد</p>
+        </div>`;
+    }
+
+    /* ── Payment Ring ── */
+    const pct = {{ stats.payment_percentage|default:0 }};
+    const ring = document.getElementById('paymentRing');
+    if (ring) {
+        const r = 35, circ = 2 * Math.PI * r;
+        ring.setAttribute('stroke-dasharray', circ);
+        ring.setAttribute('stroke-dashoffset', circ - (pct / 100) * circ);
+        if (pct >= 80) ring.style.stroke = '#10b981';
+        else if (pct >= 50) ring.style.stroke = '#f59e0b';
+        else ring.style.stroke = '#ef4444';
+    }
+
+    /* ── Re-theme charts on dark mode toggle ── */
+    const observer = new MutationObserver(() => {
+        Chart.instances && Object.values(Chart.instances).forEach(ch => {
+            const s = ch.options.scales;
+            if (!s) return;
+            ['x','y'].forEach(ax => {
+                if (!s[ax]) return;
+                if (s[ax].ticks) s[ax].ticks.color = tick();
+                if (s[ax].grid)  s[ax].grid.color  = grid();
+            });
+            ch.update('none');
+        });
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
 </script>
 {% endblock %}

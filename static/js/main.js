@@ -403,7 +403,7 @@ const EnjazIMS = {
     // Apply Arabic numeral conversion to numeric inputs
     initNumericInputs: function() {
         const numericInputs = document.querySelectorAll('input[type="number"], input[inputmode="decimal"], input.numeric-input');
-        
+
         numericInputs.forEach(input => {
             input.addEventListener('input', function(e) {
                 const converted = EnjazIMS.convertArabicNumerals(e.target.value);
@@ -411,7 +411,7 @@ const EnjazIMS = {
                     e.target.value = converted;
                 }
             });
-            
+
             input.addEventListener('paste', function(e) {
                 setTimeout(() => {
                     const converted = EnjazIMS.convertArabicNumerals(e.target.value);
@@ -420,6 +420,52 @@ const EnjazIMS = {
                     }
                 }, 0);
             });
+        });
+    },
+
+    // Wrap every number input (not already wrapped) with +/- stepper buttons
+    initNumberSteppers: function() {
+        document.querySelectorAll('input[type="number"]').forEach(function(input) {
+            // Skip if already wrapped or opted out
+            if (input.closest('.num-stepper') || input.dataset.noStepper !== undefined) return;
+            // Skip hidden inputs
+            if (input.offsetParent === null && input.type === 'hidden') return;
+
+            const min  = input.hasAttribute('min')  ? parseFloat(input.min)  : null;
+            const max  = input.hasAttribute('max')  ? parseFloat(input.max)  : null;
+
+            // Build wrapper
+            const wrapper = document.createElement('div');
+            wrapper.className = 'input-group num-stepper';
+
+            // Clone to preserve all attributes/listeners
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            function makeBtn(label, delta) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-secondary num-stepper-btn';
+                btn.textContent = label;
+                btn.addEventListener('click', function() {
+                    const cur = parseFloat(input.value) || 0;
+                    let next  = Math.round((cur + delta) * 1e9) / 1e9; // avoid float drift
+                    if (min !== null) next = Math.max(min, next);
+                    if (max !== null) next = Math.min(max, next);
+                    input.value = next;
+                    input.dispatchEvent(new Event('input',  { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                return btn;
+            }
+
+            // In RTL layout: prepend = right side, append = left side
+            // Put + on right (prepend), − on left (append)
+            const btnPlus  = makeBtn('+', 1);
+            const btnMinus = makeBtn('−', -1);
+
+            wrapper.insertBefore(btnPlus, input);   // right of input in RTL
+            wrapper.appendChild(btnMinus);           // left of input in RTL
         });
     }
 };
@@ -438,7 +484,18 @@ $(document).ready(function() {
     if ($.fn.DataTable) {
         $('.data-table').DataTable();
     }
-    
+
+    // Number steppers — initial page load
+    EnjazIMS.initNumberSteppers();
+
+    // Re-run steppers when DOM changes (dynamic invoice lines, modals, etc.)
+    let _stepperTimer = null;
+    new MutationObserver(function(muts) {
+        if (!muts.some(m => m.addedNodes.length)) return;
+        clearTimeout(_stepperTimer);
+        _stepperTimer = setTimeout(function() { EnjazIMS.initNumberSteppers(); }, 120);
+    }).observe(document.body, { childList: true, subtree: true });
+
     // Auto-focus first input in modals
     $('.modal').on('shown.bs.modal', function() {
         $(this).find('input:not([type=hidden]):first').focus();

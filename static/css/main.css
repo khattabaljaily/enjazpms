@@ -201,6 +201,20 @@ textarea::placeholder {
     text-align: right;
 }
 
+/* LTR field types — text aligns right but renders left-to-right */
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="time"],
+input[type="email"],
+input[type="url"],
+input[type="tel"] {
+    direction: ltr;
+    text-align: right;
+}
+
 /* ==========================================
    5. Dark Mode — Bootstrap Variable Overrides
    Bootstrap 5.3 uses its own --bs-* variables
@@ -430,5 +444,51 @@ textarea::placeholder {
     background: transparent !important;
     border-color: rgba(255,255,255,0.12) !important;
     color: var(--text-primary) !important;
+}
+
+/* ==========================================
+   Number Stepper Buttons
+   ========================================== */
+.num-stepper { flex-wrap: nowrap; }
+
+.num-stepper-btn {
+    padding: 0 .7rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-tertiary);
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    min-width: 32px;
+    user-select: none;
+    transition: background .15s, color .15s;
+}
+.num-stepper-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+.num-stepper-btn:active { transform: scale(.93); }
+
+.num-stepper input[type="number"] {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    direction: ltr;
+}
+
+/* hide browser native spin arrows globally */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+[data-theme="dark"] .num-stepper-btn {
+    background: rgba(255,255,255,.06);
+    border-color: var(--border-color);
+    color: var(--text-tertiary);
+}
+[data-theme="dark"] .num-stepper-btn:hover {
+    background: var(--primary);
+    color: #fff;
 }
 
