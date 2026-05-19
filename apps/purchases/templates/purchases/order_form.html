@@ -1,6 +1,7 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
 {% load humanize %}
+{% load capabilities_tags %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.1">
@@ -166,6 +167,11 @@ const ITEM_SEARCH_URL = "{% url 'items:search_api' %}";
 const FORM_ACTION = "{{ action|default:'create' }}";
 const INVOICE_ID = "{{ invoice.id|default:'' }}";
 const EXISTING_LINES = {{ existing_lines|default:'[]'|safe }};
+const CAP = {
+    hasExpiryDates:  {{ tenant_capabilities.has_expiry_dates|yesno:"true,false" }},
+    hasBatchNumbers: {{ tenant_capabilities.has_batch_numbers|yesno:"true,false" }},
+    hasSerialNumbers:{{ tenant_capabilities.has_serial_numbers|yesno:"true,false" }},
+};
 let lineCounter = 0;
 
 function toggleHidden(id, hidden) {
@@ -235,19 +241,25 @@ function searchItems() {
     }, 250);
 }
 
-function addLine(itemId, itemName, itemSku, suggestedCost) {
+function addLine(itemId, itemName, itemSku, suggestedCost, opts = {}) {
     const id = ++lineCounter;
     const tbody = document.getElementById('linesBody');
     document.getElementById('emptyLinesMsg').style.display = 'none';
+
+    const trackingHtml = [
+        CAP.hasBatchNumbers  ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="batch-${id}" value="${(opts.batch_number || '').replace(/"/g, '&quot;')}" placeholder="رقم الدفعة"></div>` : '',
+        CAP.hasSerialNumbers ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="serial-${id}" value="${(opts.serial_number || '').replace(/"/g, '&quot;')}" placeholder="الرقم التسلسلي"></div>` : '',
+        CAP.hasExpiryDates   ? `<div class="mt-1"><input type="date" class="cx-input cx-input--xs" id="expiry-${id}" value="${opts.expiry_date || ''}"></div>` : '',
+    ].join('');
 
     const row = document.createElement('tr');
     row.id = `line-${id}`;
     row.dataset.itemId = itemId;
     row.innerHTML = `
-        <td><div class="sales-line-item-name">${itemName}</div><div class="sales-line-item-sku">${itemSku || ''}</div></td>
-        <td><input type="number" min="0.001" step="0.01" value="1" class="cx-input cx-input--sm" id="qty-${id}" oninput="recalc()"></td>
+        <td><div class="sales-line-item-name">${itemName}</div><div class="sales-line-item-sku">${itemSku || ''}</div>${trackingHtml}</td>
+        <td><input type="number" min="0.001" step="0.01" value="${EnjazIMS.parseNumber(opts.qty || 1).toFixed(3)}" class="cx-input cx-input--sm" id="qty-${id}" oninput="recalc()"></td>
         <td><input type="number" min="0" step="0.01" value="${(suggestedCost || 0).toFixed(2)}" class="cx-input cx-input--sm" id="cost-${id}" oninput="recalc()"></td>
-        <td><input type="number" min="0" step="0.01" value="0" class="cx-input cx-input--sm" id="tax-${id}" oninput="recalc()"></td>
+        <td><input type="number" min="0" step="0.01" value="${EnjazIMS.parseNumber(opts.tax_rate || 0).toFixed(2)}" class="cx-input cx-input--sm" id="tax-${id}" oninput="recalc()"></td>
         <td class="text-end" id="total-${id}">${EnjazIMS.formatMoney(0)}</td>
         <td><button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})"><i class="fas fa-trash"></i></button></td>
     `;
@@ -310,6 +322,9 @@ function collectLines() {
             quantity: document.getElementById(`qty-${id}`).value,
             unit_cost: document.getElementById(`cost-${id}`).value,
             tax_rate: document.getElementById(`tax-${id}`).value,
+            batch_number: CAP.hasBatchNumbers  ? (document.getElementById(`batch-${id}`)?.value || '') : '',
+            serial_number: CAP.hasSerialNumbers ? (document.getElementById(`serial-${id}`)?.value || '') : '',
+            expiry_date: CAP.hasExpiryDates   ? (document.getElementById(`expiry-${id}`)?.value || null) : null,
         });
     });
     return lines;
@@ -413,14 +428,15 @@ function submitOrder(action) {
                 Number(line.item_id || 0),
                 line.item_name || '',
                 line.item_sku || '',
-                EnjazIMS.parseNumber(line.unit_cost || 0)
+                EnjazIMS.parseNumber(line.unit_cost || 0),
+                {
+                    qty: line.quantity,
+                    tax_rate: line.tax_rate,
+                    batch_number: line.batch_number || '',
+                    serial_number: line.serial_number || '',
+                    expiry_date: line.expiry_date || '',
+                }
             );
-
-            const rowId = lineCounter;
-            const qtyInput = document.getElementById(`qty-${rowId}`);
-            const taxInput = document.getElementById(`tax-${rowId}`);
-            if (qtyInput) qtyInput.value = EnjazIMS.parseNumber(line.quantity || 0).toFixed(3);
-            if (taxInput) taxInput.value = EnjazIMS.parseNumber(line.tax_rate || 0).toFixed(2);
         });
         recalc();
     }

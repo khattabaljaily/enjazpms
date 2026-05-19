@@ -205,6 +205,12 @@
   border-radius: 12px;
 }
 
+.cx-input--xs {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.78rem;
+  border-radius: 10px;
+}
+
 textarea.cx-input {
   resize: vertical;
   min-height: 70px;

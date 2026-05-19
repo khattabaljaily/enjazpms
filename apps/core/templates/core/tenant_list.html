@@ -1,0 +1,868 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/tenants.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════════════════════ PAGE HERO ══════════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-building"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">إدارة الاشتراكات</h1>
+                <p class="cx-hero-desc">متابعة وإدارة اشتراكات العملاء وخطط الباقات</p>
+            </div>
+        </div>
+        <div class="cx-hero-actions">
+            <button type="button" class="cx-btn-add" id="btnOpenCreateTenant">
+                <i class="fas fa-plus"></i>
+                <span>اشتراك جديد</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-building"></i>
+            <strong id="kpiTotal">{{ stats.total }}</strong>
+            <span>مشترك</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-check-circle"></i>
+            <strong id="kpiActive">{{ stats.active }}</strong>
+            <span>اشتراك نشط</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-pause-circle"></i>
+            <strong id="kpiSuspended">{{ stats.suspended }}</strong>
+            <span>موقوف</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--danger">
+            <i class="fas fa-exclamation-circle"></i>
+            <strong id="kpiExpired">{{ stats.expired }}</strong>
+            <span>منتهي</span>
+        </span>
+    </div>
+</div>
+
+<!-- ══════════════════════════ MAIN PANEL ══════════════════════════ -->
+<div class="cx-panel">
+
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="tenantSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو البريد أو المدينة...">
+        </div>
+
+        <div class="cx-toolbar-end">
+            <select id="planFilter" class="cx-select-filter">
+                <option value="">كل الباقات</option>
+                <option value="trial">تجريبي</option>
+                <option value="basic">أساسي</option>
+                <option value="pro">احترافي</option>
+                <option value="enterprise">مؤسسات</option>
+            </select>
+
+            <div class="cx-filter-tabs" role="group">
+                <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
+                <button type="button" class="cx-filter-tab" data-status="active">نشط</button>
+                <button type="button" class="cx-filter-tab" data-status="suspended">معلق</button>
+                <button type="button" class="cx-filter-tab" data-status="expired">منتهي</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-table-wrap">
+        <table id="tenantsTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>العميل</th>
+                    <th>نوع النشاط</th>
+                    <th>الباقة</th>
+                    <th>النسخة</th>
+                    <th>الاشتراك</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Mobile card list — populated by buildCards() on ≤768px screens -->
+    <div id="tenantCardList" class="cx-card-list"></div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════ CREATE / EDIT MODAL ══════════════════════════ -->
+<div class="modal fade" id="tenantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-modal-dialog--xl tn-form-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="tenantForm" novalidate>
+                {% csrf_token %}
+                <input type="hidden" id="tenantId" value="">
+
+                <div class="cx-modal-header">
+                    <div>
+                        <h5 class="cx-modal-title" id="tenantModalTitle">اشتراك جديد</h5>
+                        <p class="cx-modal-subtitle" id="tenantModalSubtitle">أدخل بيانات النشاط التجاري والاشتراك</p>
+                    </div>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="cx-modal-body">
+                    <div class="alert alert-danger d-none js-form-errors mb-4"></div>
+
+                    <!-- ① بيانات النشاط -->
+                    <div class="cx-form-group-label">
+                        <span class="cx-form-group-num">١</span> بيانات النشاط التجاري
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="cx-label" for="id_name">{{ form.name.label }} <sup class="cx-required">*</sup></label>
+                            {{ form.name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label" for="id_business_type">{{ form.business_type.label }} <sup class="cx-required">*</sup></label>
+                            {{ form.business_type }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label" for="id_email">{{ form.email.label }}</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label" for="id_phone">{{ form.phone.label }}</label>
+                            {{ form.phone }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="cx-label" for="id_city">{{ form.city.label }}</label>
+                            {{ form.city }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="cx-label" for="id_country">{{ form.country.label }}</label>
+                            {{ form.country }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label" for="id_address">{{ form.address.label }}</label>
+                            {{ form.address }}
+                        </div>
+                    </div>
+
+                    <!-- ② الاشتراك -->
+                    <div class="cx-form-group-label">
+                        <span class="cx-form-group-num">٢</span> بيانات الاشتراك
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="cx-label" for="id_subscription_plan">{{ form.subscription_plan.label }}</label>
+                            {{ form.subscription_plan }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="cx-label" for="id_subscription_start">{{ form.subscription_start.label }}</label>
+                            {{ form.subscription_start }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="cx-label" for="id_subscription_expires">{{ form.subscription_expires.label }}</label>
+                            {{ form.subscription_expires }}
+                        </div>
+                    </div>
+
+                    <!-- ③ إعدادات النسخة -->
+                    <div class="cx-form-group-label">
+                        <span class="cx-form-group-num">٣</span> إعدادات النسخة والحدود
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="cx-label" for="id_version_type">{{ form.version_type.label }}</label>
+                            {{ form.version_type }}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="cx-label" for="id_max_users">{{ form.max_users.label }}</label>
+                            {{ form.max_users }}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="cx-label" for="id_max_stocks">{{ form.max_stocks.label }}</label>
+                            {{ form.max_stocks }}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="cx-label" for="id_max_branches">{{ form.max_branches.label }}</label>
+                            {{ form.max_branches }}
+                        </div>
+                    </div>
+
+                    <!-- ④ حالة -->
+                    <div class="cx-form-group-label">
+                        <span class="cx-form-group-num">٤</span> الحالة
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="cx-toggle-card" for="id_is_active">
+                                <div class="cx-toggle-info">
+                                    <span class="cx-toggle-title">{{ form.is_active.label }}</span>
+                                    <span class="cx-toggle-desc">تفعيل العميل يسمح له بالدخول وإدارة نشاطه</span>
+                                </div>
+                                {{ form.is_active }}
+                                <div class="cx-toggle-switch"></div>
+                            </label>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-toggle-card" for="id_is_demo">
+                                <div class="cx-toggle-info">
+                                    <span class="cx-toggle-title">{{ form.is_demo.label }}</span>
+                                    <span class="cx-toggle-desc">حساب تجريبي للعرض والاختبار</span>
+                                </div>
+                                {{ form.is_demo }}
+                                <div class="cx-toggle-switch"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="cx-btn-primary" id="tenantSubmitBtn">
+                        <i class="fas fa-check me-1"></i> حفظ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ VIEW / SUBSCRIPTION MODAL ══════════════════════════ -->
+<div class="modal fade" id="viewTenantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-view-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar" id="viewTenantAvatar"></div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewTenantName"></h5>
+                        <p class="cx-view-subtitle" id="viewTenantSlug"></p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="cx-view-body">
+
+                <!-- معلومات أساسية -->
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-building"></i> المعلومات الأساسية
+                    </div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon tn-info-icon--type"><i class="fas fa-store"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">نوع النشاط</span>
+                                <span class="cx-info-card-value" id="viewBusinessType"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--phone"><i class="fas fa-phone"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الهاتف</span>
+                                <span class="cx-info-card-value" id="viewPhone"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--email"><i class="fas fa-envelope"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">البريد الإلكتروني</span>
+                                <span class="cx-info-card-value" id="viewEmail"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--city"><i class="fas fa-city"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المدينة / الدولة</span>
+                                <span class="cx-info-card-value" id="viewCity"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon tn-info-icon--users"><i class="fas fa-users"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المستخدمون</span>
+                                <span class="cx-info-card-value" id="viewUserCount"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon tn-info-icon--date"><i class="fas fa-calendar-plus"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">تاريخ الإنشاء</span>
+                                <span class="cx-info-card-value" id="viewCreatedAt"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- معلومات الاشتراك -->
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-credit-card"></i> معلومات الاشتراك
+                    </div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card cx-info-card--sub">
+                            <div class="cx-info-card-icon tn-info-icon--plan"><i class="fas fa-layer-group"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الباقة</span>
+                                <span class="cx-info-card-value" id="viewPlan"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--sub">
+                            <div class="cx-info-card-icon tn-info-icon--version"><i class="fas fa-code-branch"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">نوع النسخة</span>
+                                <span class="cx-info-card-value" id="viewVersion"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--sub">
+                            <div class="cx-info-card-icon tn-info-icon--start"><i class="fas fa-calendar-check"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">بداية الاشتراك</span>
+                                <span class="cx-info-card-value" id="viewSubStart"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--sub">
+                            <div class="cx-info-card-icon tn-info-icon--expire"><i class="fas fa-calendar-xmark"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">نهاية الاشتراك</span>
+                                <span class="cx-info-card-value" id="viewSubExpires"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tn-sub-status-bar" id="viewSubStatusBar">
+                        <div class="tn-sub-status-icon" id="viewSubStatusIcon"></div>
+                        <div class="tn-sub-status-text" id="viewSubStatusText"></div>
+                        <span class="tn-sub-status-badge" id="viewSubStatusBadge"></span>
+                    </div>
+                </div>
+
+                <!-- الحدود -->
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-sliders"></i> حدود النظام
+                    </div>
+                    <div class="tn-limits-grid">
+                        <div class="tn-limit-card">
+                            <div class="tn-limit-val" id="viewMaxUsers"></div>
+                            <div class="tn-limit-label">مستخدمين</div>
+                        </div>
+                        <div class="tn-limit-card">
+                            <div class="tn-limit-val" id="viewMaxStocks"></div>
+                            <div class="tn-limit-label">مخازن</div>
+                        </div>
+                        <div class="tn-limit-card">
+                            <div class="tn-limit-val" id="viewMaxBranches"></div>
+                            <div class="tn-limit-label">فروع</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="cx-btn-warning js-suspend-from-view" id="viewSuspendBtn">
+                    <i class="fas fa-pause me-1"></i> تعليق
+                </button>
+                <button type="button" class="cx-btn-primary" id="viewEditTenantBtn">
+                    <i class="fas fa-pen-to-square me-1"></i> تعديل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ SUSPEND MODAL ══════════════════════════ -->
+<div class="modal fade" id="suspendTenantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
+        <div class="modal-content cx-confirm-modal">
+            <div class="cx-confirm-body">
+                <div class="cx-confirm-icon">
+                    <i class="fas fa-pause-circle"></i>
+                </div>
+                <h5 class="cx-confirm-title" id="suspendModalTitle">تعليق العميل؟</h5>
+                <p class="cx-confirm-desc">
+                    ستقوم بتعليق <strong id="suspendTenantName"></strong>.
+                    <br>لن يتمكن المستخدمون من الدخول حتى يتم إعادة تفعيله.
+                </p>
+                <input type="hidden" id="suspendTenantId" value="">
+                <input type="hidden" id="suspendTenantIsActive" value="">
+            </div>
+            <div class="cx-confirm-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-warning" id="confirmSuspendBtn">
+                    تأكيد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ DELETE MODAL ══════════════════════════ -->
+<div class="modal fade" id="deleteTenantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
+        <div class="modal-content cx-confirm-modal">
+            <div class="cx-confirm-body">
+                <div class="cx-confirm-icon cx-confirm-icon--danger">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <h5 class="cx-confirm-title">حذف العميل نهائياً؟</h5>
+                <p class="cx-confirm-desc">
+                    ستقوم بحذف <strong id="deleteTenantName"></strong> بشكل نهائي.
+                    <br><strong class="text-danger">سيتم حذف جميع بياناته ولا يمكن التراجع.</strong>
+                </p>
+                <input type="hidden" id="deleteTenantId" value="">
+            </div>
+            <div class="cx-confirm-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteTenantBtn">
+                    نعم، احذف نهائياً
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const urlTable   = "{% url 'core:tenant_table_api' %}";
+    const urlCreate  = "{% url 'core:tenant_create_api' %}";
+    const urlDetail  = "{% url 'core:tenant_detail_api' 0 %}";
+    const urlUpdate  = "{% url 'core:tenant_update_api' 0 %}";
+    const urlDelete  = "{% url 'core:tenant_delete_api' 0 %}";
+    const urlSuspend = "{% url 'core:tenant_suspend_api' 0 %}";
+
+    function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+
+    /* ── Append modals to body to avoid stacking context issues ── */
+    ['tenantModal','viewTenantModal','suspendTenantModal','deleteTenantModal'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== document.body) document.body.appendChild(el);
+    });
+
+    const tenantModal  = new bootstrap.Modal(document.getElementById('tenantModal'));
+    const viewModal    = new bootstrap.Modal(document.getElementById('viewTenantModal'));
+    const suspendModal = new bootstrap.Modal(document.getElementById('suspendTenantModal'));
+    const deleteModal  = new bootstrap.Modal(document.getElementById('deleteTenantModal'));
+
+    const $form      = $('#tenantForm');
+    const $submitBtn = $('#tenantSubmitBtn');
+    const $idInput   = $('#tenantId');
+    let activeStatus = '';
+    let activePlan   = '';
+
+    /* ── Mobile card builder ── */
+    const CARD_PLAN_CLS = { trial: 'plan-trial', basic: 'plan-basic', pro: 'plan-pro', enterprise: 'plan-enterprise' };
+    const CARD_EXP_CLS  = { expired: 'tnr-exp--expired', soon: 'tnr-exp--soon', ok: 'tnr-exp--ok', lifetime: 'tnr-exp--lifetime' };
+
+    function buildCards(api) {
+        const $list = $('#tenantCardList');
+        if (window.innerWidth > 768) { $list.empty(); return; }
+        const rows = api.rows({ page: 'current' }).data();
+        $list.empty();
+        if (!rows.length) {
+            $list.html('<div class="cx-card-empty"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>لا توجد بيانات</div>');
+            return;
+        }
+        rows.each(function (r) {
+            const planCls    = CARD_PLAN_CLS[r.subscription_plan_key] || '';
+            const expCls     = CARD_EXP_CLS[r.exp_status] || '';
+            const statusHtml = r.is_active
+                ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+                : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>معلق</span>';
+            const demoBadge  = r.is_demo ? '<span class="tnr-badge tnr-badge--demo">تجريبي</span>' : '';
+            const suspIcon   = r.is_active ? 'fa-pause' : 'fa-play';
+            const suspTitle  = r.is_active ? 'تعليق' : 'تفعيل';
+            $list.append(`
+            <div class="cx-card-item">
+                <div class="cx-card-header">
+                    <div class="cx-card-title-group">
+                        <span class="tnr-name">${r.name} ${demoBadge}</span>
+                    </div>
+                    ${statusHtml}
+                </div>
+                <div class="cx-card-meta">
+                    <span class="tnr-plan ${planCls}">${r.subscription_plan}</span>
+                    <span class="tnr-version">${r.version_type}</span>
+                    <span class="tnr-exp ${expCls}">${r.exp_label}</span>
+                    <span class="tnr-btype">${r.business_type}</span>
+                </div>
+                <div class="cx-card-footer">
+                    <div class="cxr-actions">
+                        <button class="cxr-act cxr-act--view js-view-tenant"    data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
+                        <button class="cxr-act js-edit-tenant"                   data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                        <button class="cxr-act cxr-act--warn js-suspend-tenant" data-id="${r.id}" data-name="${r.name}" data-active="${r.is_active}" title="${suspTitle}"><i class="fas ${suspIcon}"></i></button>
+                        <button class="cxr-act cxr-act--del js-delete-tenant"   data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>`);
+        });
+    }
+
+    /* ── DataTable ── */
+    const dt = $('#tenantsTable').DataTable({
+        processing : true,
+        serverSide : true,
+        searching  : true,
+        ordering   : true,
+        pageLength : 25,
+        dom        : '<"d-none"f>rt<"tn-dt-bottom"ip>',
+        language   : {
+            emptyTable    : 'لا توجد بيانات',
+            info          : 'عرض _START_ إلى _END_ من أصل _TOTAL_ مشترك',
+            infoEmpty     : 'لا توجد بيانات',
+            infoFiltered  : '(مُصفّى من _MAX_)',
+            lengthMenu    : 'عرض _MENU_',
+            loadingRecords: 'جاري التحميل...',
+            processing    : 'جاري المعالجة...',
+            zeroRecords   : 'لم يتم العثور على نتائج',
+            paginate      : { first: 'الأول', last: 'الأخير', next: 'التالي', previous: 'السابق' }
+        },
+        ajax: {
+            url : urlTable,
+            data: function (d) {
+                d.status = activeStatus;
+                d.plan   = activePlan;
+            }
+        },
+        columns: [
+            {
+                data: null,
+                render: function (_, __, r) {
+                    const demoBadge = r.is_demo ? '<span class="tnr-badge tnr-badge--demo">تجريبي</span>' : '';
+                    return `<div class="tnr-tenant-cell">
+                        <div class="tnr-tenant-info">
+                            <span class="tnr-name">${r.name} ${demoBadge}</span>
+                        </div>
+                    </div>`;
+                }
+            },
+            { data: 'business_type', render: v => `<span class="tnr-btype">${v}</span>` },
+            {
+                data: 'subscription_plan_key',
+                render: function (key, _, r) {
+                    const cls = { trial: 'plan-trial', basic: 'plan-basic', pro: 'plan-pro', enterprise: 'plan-enterprise' }[key] || '';
+                    return `<span class="tnr-plan ${cls}">${r.subscription_plan}</span>`;
+                }
+            },
+            { data: 'version_type', render: v => `<span class="tnr-version">${v}</span>` },
+            {
+                data: 'exp_status',
+                render: function (status, _, r) {
+                    const cls = { expired: 'tnr-exp--expired', soon: 'tnr-exp--soon', ok: 'tnr-exp--ok', lifetime: 'tnr-exp--lifetime' }[status] || '';
+                    return `<span class="tnr-exp ${cls}">${r.exp_label}</span>`;
+                }
+            },
+            {
+                data: 'is_active',
+                render: a => a
+                    ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
+                    : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>معلق</span>`
+            },
+            {
+                data: null, orderable: false, searchable: false,
+                render: function (_, __, r) {
+                    const suspendLabel = r.is_active ? 'تعليق' : 'تفعيل';
+                    const suspendIcon  = r.is_active ? 'fa-pause' : 'fa-play';
+                    return `<div class="cxr-actions">
+                        <button class="cxr-act cxr-act--view js-view-tenant"    data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
+                        <button class="cxr-act js-edit-tenant"                   data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                        <button class="cxr-act cxr-act--warn js-suspend-tenant" data-id="${r.id}" data-name="${r.name}" data-active="${r.is_active}" title="${suspendLabel}"><i class="fas ${suspendIcon}"></i></button>
+                        <button class="cxr-act cxr-act--del js-delete-tenant"   data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>
+                    </div>`;
+                }
+            }
+        ],
+        drawCallback: function () { buildCards(this.api()); }
+    });
+
+    /* Rebuild cards on orientation change / resize without re-fetching */
+    let _resizeTimer;
+    $(window).on('resize', function () {
+        clearTimeout(_resizeTimer);
+        _resizeTimer = setTimeout(function () { buildCards(dt); }, 200);
+    });
+
+    /* ── Search ── */
+    let searchTimer;
+    $('#tenantSearchInput').on('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+
+    /* ── Status tabs ── */
+    $('.cx-filter-tab').on('click', function () {
+        $('.cx-filter-tab').removeClass('active');
+        $(this).addClass('active');
+        activeStatus = $(this).data('status');
+        dt.ajax.reload();
+    });
+
+    /* ── Plan filter ── */
+    $('#planFilter').on('change', function () {
+        activePlan = $(this).val();
+        dt.ajax.reload();
+    });
+
+    /* ── Form helpers ── */
+    function resetForm() {
+        $form[0].reset();
+        $idInput.val('');
+        $('#id_is_active').prop('checked', true);
+        $('#id_is_demo').prop('checked', false);
+        EnjazIMS.clearFormErrors($form);
+    }
+
+    function openCreate() {
+        resetForm();
+        $('#tenantModalTitle').text('اشتراك جديد');
+        $('#tenantModalSubtitle').text('أدخل بيانات النشاط التجاري والاشتراك');
+        $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
+        const today = new Date().toISOString().split('T')[0];
+        $('#id_subscription_start').val(today);
+        tenantModal.show();
+    }
+
+    function openEdit(id) {
+        resetForm();
+        $.ajax({
+            url: apiUrl(urlDetail, id), method: 'GET',
+            success: function (resp) {
+                if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                const d = resp.data;
+                $idInput.val(d.id);
+                $('#id_name').val(d.name || '');
+                $('#id_business_type').val(d.business_type_id || '');
+                $('#id_email').val(d.email || '');
+                $('#id_phone').val(d.phone || '');
+                $('#id_city').val(d.city || '');
+                $('#id_country').val(d.country || '');
+                $('#id_address').val(d.address || '');
+                $('#id_subscription_plan').val(d.subscription_plan || 'trial');
+                $('#id_subscription_start').val(d.subscription_start || '');
+                $('#id_subscription_expires').val(d.subscription_expires || '');
+                $('#id_version_type').val(d.version_type || 'single_store');
+                $('#id_max_users').val(d.max_users || 5);
+                $('#id_max_stocks').val(d.max_stocks || 1);
+                $('#id_max_branches').val(d.max_branches || 1);
+                $('#id_is_active').prop('checked', !!d.is_active);
+                $('#id_is_demo').prop('checked', !!d.is_demo);
+                $('#tenantModalTitle').text('تعديل الاشتراك');
+                $('#tenantModalSubtitle').text(d.name);
+                $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
+                tenantModal.show();
+            },
+            error: function () { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+        });
+    }
+
+    /* ── Save ── */
+    $form.on('submit', function (e) {
+        e.preventDefault();
+        EnjazIMS.clearFormErrors($form);
+        const id  = $idInput.val();
+        const url = id ? apiUrl(urlUpdate, id) : urlCreate;
+        const orig = $submitBtn.html();
+        EnjazIMS.showLoading($submitBtn);
+        $.ajax({
+            url, method: 'POST', data: $form.serialize(),
+            success: function (resp) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                if (resp.success) {
+                    tenantModal.hide();
+                    dt.ajax.reload(null, false);
+                    EnjazIMS.toast(resp.message || 'تم الحفظ', 'success');
+                    return;
+                }
+                EnjazIMS.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
+            },
+            error: function (xhr) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                const r = xhr.responseJSON || {};
+                if (r.errors) EnjazIMS.renderFieldErrors($form, r.errors);
+                EnjazIMS.showFormError($form, r.message || 'حدث خطأ');
+            }
+        });
+    });
+
+    /* ── View ── */
+    function openView(id) {
+        $.ajax({
+            url: apiUrl(urlDetail, id), method: 'GET',
+            success: function (resp) {
+                if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                const d = resp.data;
+
+                const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
+                const color  = colors[(d.name || '').charCodeAt(0) % colors.length];
+                const initial = (d.name || '?').trim().charAt(0).toUpperCase();
+                $('#viewTenantAvatar').html(initial).css('background', color);
+                $('#viewTenantName').text(d.name);
+                $('#viewTenantSlug').html(`<code>${d.slug}</code>`);
+
+                $('#viewBusinessType').text(d.business_type || '—');
+                $('#viewPhone').text(d.phone || '—');
+                $('#viewEmail').text(d.email || '—');
+                const cityCountry = [d.city, d.country].filter(Boolean).join(' / ') || '—';
+                $('#viewCity').text(cityCountry);
+                $('#viewUserCount').text(`${d.user_count} / ${d.max_users}`);
+                $('#viewCreatedAt').text(d.created_at || '—');
+
+                $('#viewPlan').html(`<span class="tnr-plan plan-${d.subscription_plan}">${d.subscription_plan_display}</span>`);
+                $('#viewVersion').text(d.version_type_display);
+                $('#viewSubStart').text(d.subscription_start || '—');
+                $('#viewSubExpires').text(d.subscription_expires || 'مفتوحة');
+
+                $('#viewMaxUsers').text(d.max_users);
+                $('#viewMaxStocks').text(d.max_stocks);
+                $('#viewMaxBranches').text(d.max_branches);
+
+                // Subscription status bar
+                const bar   = $('#viewSubStatusBar');
+                const icon  = $('#viewSubStatusIcon');
+                const text  = $('#viewSubStatusText');
+                const badge = $('#viewSubStatusBadge');
+                bar.removeClass('tn-sub--ok tn-sub--soon tn-sub--expired tn-sub--lifetime');
+
+                if (!d.subscription_expires) {
+                    bar.addClass('tn-sub--lifetime');
+                    icon.html('<i class="fas fa-infinity"></i>');
+                    text.text('اشتراك مفتوح المدة');
+                    badge.text('مدى الحياة').removeClass().addClass('tn-sub-status-badge tn-sub-badge--lifetime');
+                } else if (!d.is_subscription_valid) {
+                    bar.addClass('tn-sub--expired');
+                    icon.html('<i class="fas fa-times-circle"></i>');
+                    text.text('الاشتراك منتهٍ');
+                    badge.text('منتهي').removeClass().addClass('tn-sub-status-badge tn-sub-badge--expired');
+                } else if (d.days_until_expiry !== null && d.days_until_expiry <= 30) {
+                    bar.addClass('tn-sub--soon');
+                    icon.html('<i class="fas fa-exclamation-triangle"></i>');
+                    text.text(`ينتهي خلال ${d.days_until_expiry} يوم`);
+                    badge.text('قريب الانتهاء').removeClass().addClass('tn-sub-status-badge tn-sub-badge--soon');
+                } else {
+                    bar.addClass('tn-sub--ok');
+                    icon.html('<i class="fas fa-check-circle"></i>');
+                    text.text(`الاشتراك ساري — متبقٍ ${d.days_until_expiry} يوم`);
+                    badge.text('ساري').removeClass().addClass('tn-sub-status-badge tn-sub-badge--ok');
+                }
+
+                // Suspend button
+                const $suspBtn = $('#viewSuspendBtn');
+                $suspBtn.data('id', d.id).data('name', d.name).data('active', d.is_active);
+                if (d.is_active) {
+                    $suspBtn.html('<i class="fas fa-pause me-1"></i> تعليق').removeClass('cx-btn-success').addClass('cx-btn-warning');
+                } else {
+                    $suspBtn.html('<i class="fas fa-play me-1"></i> تفعيل').removeClass('cx-btn-warning').addClass('cx-btn-success');
+                }
+
+                $('#viewEditTenantBtn').data('id', d.id);
+                viewModal.show();
+            },
+            error: function () { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+        });
+    }
+
+    /* ── Suspend / Activate ── */
+    function openSuspend(id, name, isActive) {
+        $('#suspendTenantId').val(id);
+        $('#suspendTenantName').text(name);
+        $('#suspendTenantIsActive').val(isActive ? '1' : '0');
+        if (isActive) {
+            $('#suspendModalTitle').text('تعليق العميل؟');
+            $('#confirmSuspendBtn').html('تعليق').removeClass('cx-btn-success').addClass('cx-btn-warning');
+        } else {
+            $('#suspendModalTitle').text('تفعيل العميل؟');
+            $('#confirmSuspendBtn').html('تفعيل').removeClass('cx-btn-warning').addClass('cx-btn-success');
+        }
+        suspendModal.show();
+    }
+
+    $('#confirmSuspendBtn').on('click', function () {
+        const id = $('#suspendTenantId').val();
+        if (!id) return;
+        $.ajax({
+            url: apiUrl(urlSuspend, id), method: 'POST',
+            success: function (resp) {
+                if (resp.success) {
+                    suspendModal.hide();
+                    viewModal.hide();
+                    dt.ajax.reload(null, false);
+                    EnjazIMS.toast(resp.message || 'تم التحديث', 'success');
+                    return;
+                }
+                EnjazIMS.toast(resp.message || 'تعذرت العملية', 'error');
+            },
+            error: function () { EnjazIMS.toast('تعذرت العملية', 'error'); }
+        });
+    });
+
+    /* ── Delete ── */
+    $('#confirmDeleteTenantBtn').on('click', function () {
+        const id = $('#deleteTenantId').val();
+        if (!id) return;
+        $.ajax({
+            url: apiUrl(urlDelete, id), method: 'POST',
+            success: function (resp) {
+                if (resp.success) {
+                    deleteModal.hide();
+                    dt.ajax.reload(null, false);
+                    EnjazIMS.toast(resp.message || 'تم الحذف', 'success');
+                    return;
+                }
+                EnjazIMS.toast(resp.message || 'تعذر الحذف', 'error');
+            },
+            error: function () { EnjazIMS.toast('تعذر الحذف', 'error'); }
+        });
+    });
+
+    /* ── Bindings ── */
+    $('#btnOpenCreateTenant').on('click', openCreate);
+
+    /* Delegate from document so both table rows and mobile cards fire the same handlers */
+    $(document).on('click', '.js-view-tenant',    function () { openView($(this).data('id')); });
+    $(document).on('click', '.js-edit-tenant',    function () { openEdit($(this).data('id')); });
+    $(document).on('click', '.js-suspend-tenant', function () {
+        openSuspend($(this).data('id'), $(this).data('name'), $(this).data('active'));
+    });
+    $(document).on('click', '.js-delete-tenant', function () {
+        $('#deleteTenantId').val($(this).data('id'));
+        $('#deleteTenantName').text($(this).data('name'));
+        deleteModal.show();
+    });
+
+    $('#viewEditTenantBtn').on('click', function () {
+        viewModal.hide();
+        openEdit($(this).data('id'));
+    });
+
+    $('#viewSuspendBtn').on('click', function () {
+        openSuspend($(this).data('id'), $(this).data('name'), $(this).data('active'));
+    });
+
+})();
+</script>
+{% endblock %}

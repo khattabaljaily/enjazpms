@@ -19,6 +19,13 @@ def _ensure_tenant(request):
     return getattr(request, 'tenant', None)
 
 
+def _get_capabilities(tenant):
+    try:
+        return tenant.capabilities
+    except Exception:
+        return None
+
+
 def _serialize_errors(form):
     return {f: [str(e) for e in errs] for f, errs in form.errors.items()}
 
@@ -39,22 +46,15 @@ def item_list(request):
     active = qs.filter(is_active=True).count()
     out_of_stock = qs.filter(is_active=True, min_quantity__gt=0).count()
 
-    # هل النظام صيدلية أو ما يحتاج expiry tracking؟
-    business_features = {}
-    if tenant.business_type:
-        business_features = tenant.business_type.features or {}
-
+    caps = _get_capabilities(tenant)
     context = {
-        'item_form': ItemForm(tenant=tenant),
+        'item_form': ItemForm(tenant=tenant, capabilities=caps),
         'stats': {
             'total': total,
             'active': active,
             'inactive': total - active,
             'out_of_stock': out_of_stock,
         },
-        'business_features': business_features,
-        'version_type': tenant.version_type,
-        'business_type_slug': tenant.business_type.slug if tenant.business_type else '',
     }
     return render(request, 'items/item_list.html', context)
 
@@ -201,7 +201,7 @@ def item_create_api(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    form = ItemForm(request.POST, request.FILES, tenant=tenant)
+    form = ItemForm(request.POST, request.FILES, tenant=tenant, capabilities=_get_capabilities(tenant))
     if form.is_valid():
         item = form.save(commit=False)
         item.tenant = tenant
@@ -343,7 +343,7 @@ def item_update_api(request, pk):
     except Item.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المنتج غير موجود'}, status=404)
 
-    form = ItemForm(request.POST, request.FILES, instance=item, tenant=tenant)
+    form = ItemForm(request.POST, request.FILES, instance=item, tenant=tenant, capabilities=_get_capabilities(tenant))
     if form.is_valid():
         updated = form.save(commit=False)
         updated.updated_by = request.user

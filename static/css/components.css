@@ -187,6 +187,12 @@
     color: #f59e0b;
 }
 
+.cx-stat-badge--danger {
+    background: rgba(239,68,68,0.08);
+    border-color: rgba(239,68,68,0.2);
+    color: #ef4444;
+}
+
 /* ══════════════════════════ MAIN PANEL ══════════════════════════ */
 .cx-panel {
     background: var(--surface);
@@ -262,17 +268,44 @@
     gap: 1rem;
 }
 
+/* Select filter — RTL-aware dropdown with custom arrow */
+.cx-select-filter {
+    padding: 0.55rem 0.85rem 0.55rem 2rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background-color: var(--bg-secondary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236b7280' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+    background-position: left 0.65rem center;
+    background-repeat: no-repeat;
+    background-size: 10px;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    font-family: 'Cairo', sans-serif;
+    cursor: pointer;
+    direction: rtl;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    height: 42px;
+}
+
+.cx-select-filter:focus { outline: none; border-color: var(--primary); }
+
 /* Filter Tabs */
 .cx-filter-tabs {
     display: flex;
     align-items: center;
     gap: 0.25rem;
+    height: 42px;
+    border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 0.25rem;
+    background: var(--bg-secondary);
+    padding: 3px;
+    box-sizing: border-box;
 }
 
 .cx-filter-tab {
-    padding: 0.4rem 1rem;
+    padding: 0.35rem 1rem;
     font-size: 0.8rem;
     font-weight: 600;
     font-family: 'Cairo', sans-serif;
@@ -282,6 +315,7 @@
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.15s ease;
+    white-space: nowrap;
 }
 
 .cx-filter-tab.active {
@@ -467,6 +501,7 @@ table.cx-table thead th {
 
 .cxr-act:hover         { background: rgba(99,102,241,0.1);  color: var(--primary); }
 .cxr-act--view:hover   { background: rgba(16,185,129,0.1);  color: #10b981; }
+.cxr-act--warn:hover   { background: rgba(245,158,11,0.1);  color: #f59e0b; }
 .cxr-act--del:hover    { background: rgba(239,68,68,0.1);   color: #ef4444; }
 
 /* ══════════════════════════ MODAL ══════════════════════════ */
@@ -475,6 +510,10 @@ table.cx-table thead th {
 
 .cx-modal-dialog {
     max-width: 750px;
+}
+
+.cx-modal-dialog--xl {
+    max-width: 860px;
 }
 
 .cx-modal {
@@ -796,6 +835,40 @@ input[type="date"].cx-input {
 
 .cx-btn-danger:hover { background: #dc2626; }
 
+.cx-btn-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.5rem;
+    background: #f59e0b;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: 'Cairo', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.cx-btn-warning:hover { background: #d97706; }
+
+.cx-btn-success {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.5rem;
+    background: #10b981;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: 'Cairo', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.cx-btn-success:hover { background: #059669; }
+
 /* ══════════════════════════ DELETE CONFIRM MODAL ══════════════════════════ */
 .cx-delete-dialog {
     max-width: 420px;
@@ -849,6 +922,57 @@ input[type="date"].cx-input {
     padding: 1rem 1.75rem;
     border-top: 1px solid var(--border-light);
     background: var(--bg-secondary);
+}
+
+/* ══════════════════════════ CONFIRM MODAL (warning / danger) ══════════════════════════ */
+.cx-confirm-dialog { max-width: 440px; }
+
+.cx-confirm-modal {
+    border: none;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.cx-confirm-body {
+    padding: 2.25rem 2rem 1.5rem;
+    text-align: center;
+}
+
+.cx-confirm-icon {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    margin-bottom: 1.25rem;
+    background: rgba(245,158,11,0.1);
+    color: #f59e0b;
+}
+
+.cx-confirm-icon--danger { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+.cx-confirm-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 0.65rem;
+}
+
+.cx-confirm-desc {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.cx-confirm-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem 1.5rem;
 }
 
 /* ══════════════════════════ VIEW MODAL ══════════════════════════ */
@@ -975,6 +1099,11 @@ input[type="date"].cx-input {
 
 .cx-info-card--full  { grid-column: 1 / -1; }
 
+.cx-info-card--sub {
+    background: rgba(99,102,241,0.04);
+    border-color: rgba(99,102,241,0.12);
+}
+
 .cx-info-card--money {
     border-inline-end: 3px solid rgba(16,185,129,0.45);
     background: rgba(16,185,129,0.04);
@@ -1039,6 +1168,110 @@ input[type="date"].cx-input {
     border-top: 1px solid var(--border-light);
     background: var(--bg-secondary);
 }
+
+/* ══════════════════════════ MOBILE CARD LIST ══════════════════════════ */
+/*
+  Generic card list used by pages that prefer card-per-row over
+  the table-grid approach on mobile. Hidden by default; each page's
+  CSS enables it at the desired breakpoint.
+*/
+.cx-card-list { display: none; }
+
+.cx-card-item {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.12s ease;
+}
+.cx-card-item:last-child { border-bottom: none; }
+.cx-card-item:hover { background: var(--bg-secondary); }
+
+.cx-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
+}
+
+.cx-card-title-group {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.cx-card-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.cx-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.cx-card-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* ══════════════════════════ DATATABLES GLOBAL RTL ══════════════════════════ */
+/*
+  Forces right-align on ALL DataTable headers and cells site-wide.
+  Moves sort arrows to the left (correct for RTL Arabic UI).
+*/
+table.dataTable thead th,
+table.dataTable thead td {
+    text-align: right !important;
+}
+
+table.dataTable tbody td,
+table.dataTable tbody th {
+    text-align: right !important;
+}
+
+/* Hide default DataTables sort icons */
+table.dataTable thead th.sorting::after,
+table.dataTable thead th.sorting_asc::after,
+table.dataTable thead th.sorting_desc::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Render sort icon on the LEFT side via ::before */
+table.dataTable thead th.sorting,
+table.dataTable thead th.sorting_asc,
+table.dataTable thead th.sorting_desc {
+    padding-left: 2rem !important;
+    padding-right: 0.85rem !important;
+    cursor: pointer;
+    position: relative;
+}
+
+table.dataTable thead th.sorting::before,
+table.dataTable thead th.sorting_asc::before,
+table.dataTable thead th.sorting_desc::before {
+    position: absolute !important;
+    left: 0.55rem !important;
+    right: auto !important;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 0.65rem;
+    opacity: 0.35;
+    color: var(--text-secondary);
+}
+
+table.dataTable thead th.sorting::before      { content: "\f0dc" !important; }
+table.dataTable thead th.sorting_asc::before  { content: "\f0de" !important; opacity: 0.9 !important; color: var(--primary) !important; }
+table.dataTable thead th.sorting_desc::before { content: "\f0dd" !important; opacity: 0.9 !important; color: var(--primary) !important; }
 
 /* ══════════════════════════ DATATABLES FOOTER ══════════════════════════ */
 .cx-panel .dataTables_wrapper .cx-dt-bottom {
@@ -1123,6 +1356,10 @@ input[type="date"].cx-input {
     background: rgba(255,255,255,0.02);
 }
 
+[data-theme="dark"] .cx-confirm-modal { background-color: var(--surface) !important; }
+[data-theme="dark"] .cx-confirm-body  { background-color: var(--surface); }
+[data-theme="dark"] .cx-confirm-footer { background-color: var(--bg-secondary); border-top-color: var(--border-light); }
+
 [data-theme="dark"] .cx-modal,
 [data-theme="dark"] .cx-delete-modal,
 [data-theme="dark"] .cx-view-modal {
@@ -1184,7 +1421,6 @@ input[type="date"].cx-input {
 
 /* ══════════════════════════ RESPONSIVE (Generic) ══════════════════════════ */
 @media (max-width: 992px) {
-    .cx-hero { padding: 1.25rem 1.5rem 0.25rem; }
     .cx-hero-title { font-size: 1.4rem; }
     .cx-modal-dialog { max-width: 90%; margin: 1rem; }
 }
@@ -1192,6 +1428,9 @@ input[type="date"].cx-input {
 @media (max-width: 768px) {
     .cx-hero-inner { flex-direction: column; }
     .cx-hero-left  { width: 100%; }
+
+    .cx-hero-actions,
+    .cx-hero-right { width: 100%; }
 
     .cx-btn-add {
         width: 100%;
@@ -1204,10 +1443,18 @@ input[type="date"].cx-input {
     }
 
     .cx-toolbar-search { max-width: 100%; }
-    .cx-toolbar-end    { justify-content: center; }
+    .cx-toolbar-end    { flex-direction: column; align-items: stretch; }
+    .cx-select-filter  { width: 100%; }
 
     .cx-filter-tabs {
         width: 100%;
+        height: 42px;
+    }
+
+    .cx-filter-tab {
+        flex: 1;
+        display: flex;
+        align-items: center;
         justify-content: center;
     }
 
@@ -1252,6 +1499,10 @@ input[type="date"].cx-input {
         padding: 15px !important;
         margin: 0 !important;
         position: relative !important;
+    }
+
+    div.dataTables_wrapper div.dataTables_paginate {
+        margin: 15px !important;
     }
 
     .cx-table tbody tr::before {
@@ -1309,6 +1560,22 @@ input[type="date"].cx-input {
     .cx-view-body                 { padding: 1rem 1.25rem; }
     .cx-view-avatar               { width: 48px; height: 48px; font-size: 1.2rem; }
     .cx-view-title                { font-size: 1.1rem; }
+
+    .cx-modal-dialog, .cx-modal-dialog--xl { max-width: 100%; margin: 0.5rem; }
+    .cx-view-dialog, .cx-confirm-dialog    { max-width: calc(100vw - 1rem); margin: 0.5rem auto; }
+
+    .cx-modal-footer  { flex-direction: column-reverse; gap: 0.5rem; }
+    .cx-modal-footer  .cx-btn-primary,
+    .cx-modal-footer  .cx-btn-ghost { width: 100%; justify-content: center; }
+
+    .cx-view-footer   { flex-direction: column-reverse; gap: 0.5rem; }
+    .cx-view-footer   .cx-btn-primary,
+    .cx-view-footer   .cx-btn-ghost,
+    .cx-view-footer   .cx-btn-warning,
+    .cx-view-footer   .cx-btn-success { width: 100%; justify-content: center; }
+
+    .cx-confirm-footer { flex-direction: column; gap: 0.5rem; padding-bottom: 1.25rem; }
+    .cx-confirm-footer button { width: 100%; justify-content: center; }
 }
 
 /* ══════════════════════════ PROFILE ══════════════════════════ */

@@ -1,5 +1,6 @@
 {% load static %}
 {% load humanize %}
+{% load capabilities_tags %}
 
 <aside class="sidebar">
 
@@ -15,25 +16,19 @@
     <div class="sidebar-separator"></div>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link active" href="{% url 'core:admin_dashboard' %}">
+            <a class="nav-link{% if request.resolver_match.url_name == 'admin_dashboard' %} active{% endif %}" href="{% url 'core:admin_dashboard' %}">
                 <span class="nav-icon"><i class="fas fa-gauge"></i></span>
                 لوحة مشرف النظام
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'core:tenant_settings' %}">
+            <a class="nav-link{% if request.resolver_match.url_name == 'tenant_list' %} active{% endif %}" href="{% url 'core:tenant_list' %}">
                 <span class="nav-icon"><i class="fas fa-building"></i></span>
-                إدارة العملاء
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'core:subscription' %}">
-                <span class="nav-icon"><i class="fas fa-credit-card"></i></span>
                 إدارة الاشتراكات
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'reports:summary_report' %}">
+            <a class="nav-link{% if 'summary_report' in request.resolver_match.url_name %} active{% endif %}" href="{% url 'reports:summary_report' %}">
                 <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
                 تقارير وإحصائيات
             </a>
@@ -102,6 +97,12 @@
                 <li><a href="{% url 'items:list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة المنتجات</a></li>
                 <li><a href="{% url 'items:category_list' %}" class="nav-sublink"><i class="fas fa-tags me-2"></i>التصنيفات</a></li>
                 <li><a href="{% url 'items:unit_list' %}" class="nav-sublink"><i class="fas fa-ruler me-2"></i>وحدات القياس</a></li>
+                {% if tenant_capabilities|has_capability:"has_manufacturing" %}
+                <li><a href="#" class="nav-sublink sidebar-link-muted"><i class="fas fa-flask me-2"></i>الوصفات والتصنيع <small class="nav-coming-soon">قريباً</small></a></li>
+                {% endif %}
+                {% if tenant_capabilities|has_capability:"has_variants" %}
+                <li><a href="#" class="nav-sublink sidebar-link-muted"><i class="fas fa-palette me-2"></i>المقاسات والألوان <small class="nav-coming-soon">قريباً</small></a></li>
+                {% endif %}
             </ul>
         </li>
         <li class="nav-item">
@@ -110,6 +111,15 @@
                 المخازن
             </a>
         </li>
+        {% if tenant_capabilities|has_capability:"has_work_orders" %}
+        <li class="nav-item">
+            <a class="nav-link sidebar-link-muted" href="#">
+                <span class="nav-icon"><i class="fas fa-clipboard-list"></i></span>
+                أوامر العمل
+                <small class="nav-coming-soon">قريباً</small>
+            </a>
+        </li>
+        {% endif %}
     </ul>
 
     <!-- ── Contacts ── -->

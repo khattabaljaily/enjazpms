@@ -211,6 +211,9 @@ def order_edit(request, pk):
             'quantity': str(line.quantity),
             'unit_cost': str(line.unit_cost),
             'tax_rate': str(line.tax_rate),
+            'batch_number': line.batch_number or '',
+            'serial_number': line.serial_number or '',
+            'expiry_date': line.expiry_date.isoformat() if line.expiry_date else '',
         })
 
     context = {

@@ -1,0 +1,146 @@
+/* ============================================================
+   EnjazIMS — Tenant Management Page
+   Tenant-specific styles only. Generic UI lives in components.css.
+   ============================================================ */
+
+/* ══ FORM MODAL SIZE ═════════════════════════════════════════ */
+/* Create/edit form is wider than the default cx-modal-dialog  */
+.tn-form-modal-dialog { max-width: 860px; }
+
+/* ══ TABLE ROW RENDERERS ══════════════════════════════════════ */
+.tnr-tenant-cell { display: flex; align-items: center; gap: 0.75rem; }
+
+.tnr-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.tnr-tenant-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.tnr-name  { font-weight: 700; color: var(--text-primary); font-size: 0.9rem; }
+.tnr-slug  { font-size: 0.72rem; color: var(--text-tertiary); font-family: 'Courier New', monospace; }
+
+.tnr-badge { font-size: 0.62rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 50px; margin-right: 0.3rem; }
+.tnr-badge--demo { background: rgba(251,191,36,0.15); color: #d97706; border: 1px solid rgba(251,191,36,0.3); }
+
+.tnr-btype { font-size: 0.82rem; color: var(--text-secondary); }
+
+/* ══ PLAN BADGES ══════════════════════════════════════════════ */
+.tnr-plan {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.65rem;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.plan-trial      { background: rgba(107,114,128,0.1);  color: #6b7280; }
+.plan-basic      { background: rgba(59,130,246,0.1);   color: #3b82f6; }
+.plan-pro        { background: rgba(99,102,241,0.1);   color: #6366f1; }
+.plan-enterprise { background: rgba(139,92,246,0.1);   color: #8b5cf6; }
+
+/* ══ VERSION & EXPIRY ════════════════════════════════════════ */
+.tnr-version { font-size: 0.8rem; color: var(--text-secondary); }
+
+.tnr-exp { font-size: 0.8rem; font-weight: 600; }
+.tnr-exp--ok       { color: #10b981; }
+.tnr-exp--soon     { color: #f59e0b; }
+.tnr-exp--expired  { color: #ef4444; }
+.tnr-exp--lifetime { color: #6366f1; }
+
+/* ══ SUBSCRIPTION STATUS BAR (View Modal) ════════════════════ */
+.tn-sub-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    margin-top: 0.75rem;
+    border: 1px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.tn-sub--ok       { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.2);  color: #10b981; }
+.tn-sub--soon     { background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.2);  color: #f59e0b; }
+.tn-sub--expired  { background: rgba(239,68,68,0.06);  border-color: rgba(239,68,68,0.2);   color: #ef4444; }
+.tn-sub--lifetime { background: rgba(99,102,241,0.06); border-color: rgba(99,102,241,0.2);  color: #6366f1; }
+
+.tn-sub-status-icon { font-size: 1rem; flex-shrink: 0; }
+.tn-sub-status-text { flex: 1; }
+
+.tn-sub-status-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.tn-sub-badge--ok       { background: rgba(16,185,129,0.15); color: #10b981; }
+.tn-sub-badge--soon     { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.tn-sub-badge--expired  { background: rgba(239,68,68,0.15);  color: #ef4444; }
+.tn-sub-badge--lifetime { background: rgba(99,102,241,0.15); color: #6366f1; }
+
+/* ══ LIMITS GRID (View Modal) ════════════════════════════════ */
+.tn-limits-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+.tn-limit-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    border-radius: 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    text-align: center;
+}
+
+.tn-limit-val   { font-size: 1.8rem; font-weight: 800; color: var(--primary); line-height: 1; margin-bottom: 0.3rem; }
+.tn-limit-label { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
+
+/* ══ INFO ICON VARIANTS (not in shared cx-info-icon-*) ══════ */
+.tn-info-icon--type    { background: rgba(99,102,241,0.1);  color: #6366f1; }
+.tn-info-icon--users   { background: rgba(139,92,246,0.1);  color: #8b5cf6; }
+.tn-info-icon--date    { background: rgba(107,114,128,0.1); color: #6b7280; }
+.tn-info-icon--plan    { background: rgba(99,102,241,0.12); color: #6366f1; }
+.tn-info-icon--version { background: rgba(59,130,246,0.12); color: #3b82f6; }
+.tn-info-icon--start   { background: rgba(16,185,129,0.12); color: #10b981; }
+.tn-info-icon--expire  { background: rgba(239,68,68,0.12);  color: #ef4444; }
+
+/* ══ PAGE-LEVEL RESPONSIVE OVERRIDES ════════════════════════ */
+@media (max-width: 768px) {
+    /* Stack toolbar-end vertically so select + tabs each take full width */
+    .cx-toolbar-end    { flex-direction: column; align-items: stretch; }
+    .cx-filter-tab     { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .cx-filter-tabs    { width: 100%; }
+
+    /* Switch: hide table, show card list */
+    .cx-table-wrap { display: none !important; }
+    .cx-card-list  { display: block; }
+
+    /* Larger touch targets for action buttons inside cards */
+    .cxr-act { width: 40px; height: 40px; border-radius: 11px; font-size: 0.85rem; }
+    .cxr-actions { gap: 0.5rem; }
+
+    /* DataTable pagination row */
+    .tn-dt-bottom {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.5rem;
+    }
+}

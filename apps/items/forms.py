@@ -127,8 +127,19 @@ class ItemForm(forms.ModelForm):
             'is_purchasable': 'قابل للشراء',
         }
 
-    def __init__(self, *args, tenant=None, **kwargs):
+    def __init__(self, *args, tenant=None, capabilities=None, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Filter item_type choices based on capabilities
+        allowed_types = ['product']
+        if capabilities is None or capabilities.has_services:
+            allowed_types.append('service')
+        if capabilities is None or capabilities.has_manufacturing:
+            allowed_types.extend(['raw_material', 'semi_finished'])
+        self.fields['item_type'].choices = [
+            (v, l) for v, l in Item.ITEM_TYPE_CHOICES if v in allowed_types
+        ]
+
         if tenant:
             self.fields['category'].queryset = Category.objects.filter(
                 tenant=tenant, is_active=True

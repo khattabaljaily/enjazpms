@@ -458,6 +458,9 @@ def edit_confirmed_purchase_invoice(invoice: PurchaseInvoice, header_data: dict,
             quantity=Decimal(str(ld['quantity'])),
             unit_cost=Decimal(str(ld['unit_cost'])),
             tax_rate=Decimal(str(ld.get('tax_rate', 0))),
+            batch_number=ld.get('batch_number', '') or '',
+            serial_number=ld.get('serial_number', '') or '',
+            expiry_date=ld.get('expiry_date') or None,
         )
         line.calculate()
         new_lines.append(line)
@@ -503,6 +506,9 @@ def build_purchase_from_post(tenant, stock, data: dict, lines_data: list, user) 
             quantity=Decimal(str(ld['quantity'])),
             unit_cost=Decimal(str(ld['unit_cost'])),
             tax_rate=Decimal(str(ld.get('tax_rate', 0))),
+            batch_number=ld.get('batch_number', '') or '',
+            serial_number=ld.get('serial_number', '') or '',
+            expiry_date=ld.get('expiry_date') or None,
             created_by=user,
             updated_by=user,
         )

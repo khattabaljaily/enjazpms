@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from apps.core.models import Tenant
+from apps.core.models import Tenant, TenantCapabilities
 
 
 @receiver(post_save, sender=Tenant)
@@ -63,3 +63,7 @@ def create_tenant_defaults(sender, instance, created, **kwargs):
         if fallback_treasury:
             fallback_treasury.is_default = True
             fallback_treasury.save(update_fields=['is_default', 'updated_at'])
+
+    # Capabilities derived from business type
+    caps = TenantCapabilities.from_business_type(instance)
+    caps.save()
