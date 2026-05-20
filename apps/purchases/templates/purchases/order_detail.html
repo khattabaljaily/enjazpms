@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.1">
-<link rel="stylesheet" href="{% static 'css/sales_invoice_detail.css' %}?v=1.1">
+<link rel="stylesheet" href="{% static 'css/inv_detail.css' %}?v=1.0">
 <link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
 {% endblock %}
 
@@ -12,81 +12,190 @@
 
 {% block content %}
 <div class="cx-scene">
-    <div class="cx-hero">
-        <div class="cx-hero-inner">
-            <div class="cx-hero-left">
-                <div class="cx-hero-icon-wrap"><i class="fas fa-file-invoice-dollar"></i></div>
-                <div>
-                    <h1 class="cx-hero-title">{{ invoice.invoice_number }}</h1>
-                    <p class="cx-hero-desc">{{ invoice.get_status_display }} — {{ invoice.invoice_date|date:'Y-m-d' }}</p>
+
+<!-- ══ DOCUMENT HERO ══════════════════════════════ -->
+<div class="doc-hero" data-status="{{ invoice.status }}">
+    <div class="doc-hero-inner">
+        <div class="doc-hero-left">
+            <div class="doc-hero-icon" style="background:linear-gradient(135deg,#f59e0b,#f97316)">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <div>
+                <div class="doc-hero-number">{{ invoice.invoice_number }}</div>
+                <div class="doc-hero-meta">
+                    <span class="doc-hero-meta-item"><i class="fas fa-calendar-day"></i>{{ invoice.invoice_date|date:"Y-m-d" }}</span>
+                    {% if invoice.supplier %}<span class="doc-hero-meta-item"><i class="fas fa-truck"></i>{{ invoice.supplier }}</span>{% endif %}
+                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ invoice.stock.name }}</span>
+                </div>
+                <div class="doc-pills">
+                    {% if invoice.status == 'draft' %}
+                    <span class="doc-pill doc-pill--draft"><i class="fas fa-pencil"></i> مسودة</span>
+                    {% elif invoice.status == 'confirmed' %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> مؤكد</span>
+                    {% elif invoice.status == 'cancelled' %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-ban"></i> ملغى</span>
+                    {% elif invoice.status == 'returned' %}
+                    <span class="doc-pill doc-pill--warning"><i class="fas fa-rotate-left"></i> مرتجع كلياً</span>
+                    {% elif invoice.status == 'partially_returned' %}
+                    <span class="doc-pill doc-pill--warning"><i class="fas fa-rotate-left"></i> مرتجع جزئياً</span>
+                    {% else %}
+                    <span class="doc-pill doc-pill--muted">{{ invoice.get_status_display }}</span>
+                    {% endif %}
+                    <span class="doc-pill doc-pill--muted"><i class="fas fa-wallet"></i> {{ invoice.get_payment_method_display }}</span>
                 </div>
             </div>
-            <div class="cx-hero-right">
-                <div class="cx-hero-actions">
-                    <a href="{% url 'purchases:order_list' %}" class="cx-btn-secondary"><i class="fas fa-arrow-right"></i><span>العودة للقائمة</span></a>
-                    <a href="{% url 'purchases:order_detail' invoice.id %}?print=1" target="_blank" rel="noopener" class="cx-btn-secondary"><i class="fas fa-print"></i><span>طباعة</span></a>
-                    {% if can_edit %}
-                    <a href="{% url 'purchases:order_edit' invoice.id %}" class="cx-btn-secondary"><i class="fas fa-pen-to-square"></i><span>تعديل</span></a>
-                    {% endif %}
-                    {% if can_return %}
-                    <a href="{% url 'purchases:return_create' invoice.id %}" class="cx-btn-secondary"><i class="fas fa-rotate-left"></i><span>مرتجع</span></a>
-                    {% endif %}
-                    {% if can_confirm %}
-                    <button id="confirmBtn" class="cx-btn-add" type="button"><i class="fas fa-check"></i><span>تأكيد</span></button>
-                    {% endif %}
-                    {% if can_cancel %}
-                    <button id="cancelBtn" class="cx-btn-secondary" type="button"><i class="fas fa-ban"></i><span>إلغاء</span></button>
-                    {% endif %}
-                </div>
-            </div>
+        </div>
+        <div class="doc-hero-actions">
+            <a href="{% url 'purchases:order_list' %}" class="cx-btn-secondary">
+                <i class="fas fa-arrow-right"></i><span>القائمة</span>
+            </a>
+            <a href="{% url 'purchases:order_detail' invoice.id %}?print=1" target="_blank" rel="noopener" class="cx-btn-secondary">
+                <i class="fas fa-print"></i><span>طباعة</span>
+            </a>
+            {% if can_edit %}
+            <a href="{% url 'purchases:order_edit' invoice.id %}" class="cx-btn-secondary">
+                <i class="fas fa-pen-to-square"></i><span>تعديل</span>
+            </a>
+            {% endif %}
+            {% if can_return %}
+            <a href="{% url 'purchases:return_create' invoice.id %}" class="cx-btn-secondary">
+                <i class="fas fa-rotate-left"></i><span>مرتجع</span>
+            </a>
+            {% endif %}
+            {% if can_confirm %}
+            <button id="confirmBtn" class="cx-btn-add" type="button">
+                <i class="fas fa-check"></i><span>تأكيد</span>
+            </button>
+            {% endif %}
+            {% if can_cancel %}
+            <button id="cancelBtn" class="cx-btn-danger" type="button">
+                <i class="fas fa-ban"></i><span>إلغاء</span>
+            </button>
+            {% endif %}
         </div>
     </div>
+</div>
 
-    <div class="row g-3">
-        <div class="col-lg-4">
-            <div class="cx-panel p-4">
-                <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات الأمر</h3></div>
-                <div class="cx-info-grid">
-                    <div class="cx-info-item"><span class="cx-info-label">المورد</span><span class="cx-info-value">{{ invoice.supplier|default:'—' }}</span></div>
-                    <div class="cx-info-item"><span class="cx-info-label">المخزن</span><span class="cx-info-value">{{ invoice.stock.name }}</span></div>
-                    <div class="cx-info-item"><span class="cx-info-label">طريقة الدفع</span><span class="cx-info-value">{{ invoice.get_payment_method_display }}</span></div>
-                    <div class="cx-info-item"><span class="cx-info-label">الإجمالي</span><span class="cx-info-value">{{ invoice.grand_total|floatformat:"2u"|default:0|intcomma }}</span></div>
-                </div>
-            </div>
+<!-- ══ INFO CARDS ══════════════════════════════════ -->
+<div class="doc-cards">
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--amber"><i class="fas fa-hashtag"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">رقم الأمر</span>
+            <span class="doc-card-value">{{ invoice.invoice_number }}</span>
         </div>
-        <div class="col-lg-8">
-            <div class="cx-panel p-4">
-                <div class="cx-panel-header"><h3 class="cx-panel-title">بنود أمر الشراء</h3></div>
-                <div class="table-responsive cx-table-wrap">
-                    <table class="cx-table mobile-compact-items">
-                        <thead>
-                            <tr>
-                                <th>المنتج</th>
-                                <th>الكمية</th>
-                                <th>سعر الشراء</th>
-                                <th>الضريبة</th>
-                                <th>الإجمالي</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for line in lines %}
-                            <tr>
-                                <td class="line-product">{{ line.item.name }}</td>
-                                <td class="line-qty">{{ line.quantity|floatformat:"-3u" }}</td>
-                                <td>{{ line.unit_cost|floatformat:"2u"|default:0|intcomma }}</td>
-                                <td>{{ line.tax_amount|floatformat:"2u"|default:0|intcomma }}</td>
-                                <td class="line-total">{{ line.line_total|floatformat:"2u"|default:0|intcomma }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="5" class="text-center text-muted">لا توجد بنود</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--violet"><i class="fas fa-calendar-day"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">التاريخ</span>
+            <span class="doc-card-value">{{ invoice.invoice_date|date:"Y-m-d" }}</span>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--sky"><i class="fas fa-truck"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">المورد</span>
+            <span class="doc-card-value">{{ invoice.supplier|default:"—" }}</span>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--emerald"><i class="fas fa-warehouse"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">المخزن</span>
+            <span class="doc-card-value">{{ invoice.stock.name }}</span>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--rose"><i class="fas fa-wallet"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">طريقة الدفع</span>
+            <span class="doc-card-value">{{ invoice.get_payment_method_display }}</span>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--indigo"><i class="fas fa-signal"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">الحالة</span>
+            <span class="doc-card-value">{{ invoice.get_status_display }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+
+<!-- ── LEFT COLUMN ── -->
+<div class="col-lg-8">
+    <div class="doc-panel">
+        <div class="doc-panel-head">
+            <span class="doc-panel-title"><i class="fas fa-list-ol"></i> بنود أمر الشراء</span>
+            <span class="doc-panel-badge">{{ lines|length }} صنف</span>
+        </div>
+        <div class="table-responsive">
+            <table class="doc-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>المنتج</th>
+                        <th class="text-center">الكمية</th>
+                        <th class="text-end">سعر الشراء</th>
+                        <th class="text-end">الضريبة</th>
+                        <th class="text-end">الإجمالي</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for line in lines %}
+                    <tr>
+                        <td style="color:var(--text-tertiary);font-size:.75rem;font-weight:600">{{ forloop.counter }}</td>
+                        <td>
+                            <div class="doc-line-name">{{ line.item.name }}</div>
+                            {% if line.item.sku %}<div class="doc-line-sku">{{ line.item.sku }}</div>{% endif %}
+                        </td>
+                        <td class="text-center fw-bold">{{ line.quantity|floatformat:"-3u" }}</td>
+                        <td class="text-end">{{ line.unit_cost|floatformat:"2u"|default:0|intcomma }}</td>
+                        <td class="text-end text-muted">{{ line.tax_amount|floatformat:"2u"|default:0|intcomma }}</td>
+                        <td class="text-end doc-line-total">{{ line.line_total|floatformat:"2u"|default:0|intcomma }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">لا توجد بنود</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div><!-- col-lg-8 -->
+
+<!-- ── RIGHT COLUMN ── -->
+<div class="col-lg-4">
+    <div class="doc-totals-card">
+        <div class="doc-totals-head"><i class="fas fa-calculator"></i> ملخص الأمر</div>
+        <div class="doc-totals-body">
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">المجموع الفرعي</span>
+                <span class="doc-trow-val">{{ invoice.subtotal|floatformat:"2u"|default:0|intcomma }}</span>
+            </div>
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">الضريبة</span>
+                <span class="doc-trow-val">{{ invoice.tax_amount|floatformat:"2u"|default:0|intcomma }}</span>
+            </div>
+            <div class="doc-grand">
+                <span class="doc-grand-lbl">الإجمالي النهائي</span>
+                <span class="doc-grand-val">{{ invoice.grand_total|floatformat:"2u"|default:0|intcomma }}</span>
+            </div>
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">طريقة الدفع</span>
+                <span class="doc-trow-val">{{ invoice.get_payment_method_display }}</span>
+            </div>
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">الحالة</span>
+                <span class="doc-trow-val">{{ invoice.get_status_display }}</span>
             </div>
         </div>
     </div>
 </div>
+
+</div><!-- row -->
+</div><!-- cx-scene -->
 
 {% include "purchases/partials/print_order.html" %}
 {% endblock %}
@@ -112,9 +221,7 @@
     function postAction(url) {
         fetch(url, {
             method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
         })
         .then(r => r.json())
         .then(data => {

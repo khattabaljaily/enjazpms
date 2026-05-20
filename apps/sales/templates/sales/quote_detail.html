@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
-<link rel="stylesheet" href="{% static 'css/sales_quote_detail.css' %}?v=2.0">
+<link rel="stylesheet" href="{% static 'css/inv_detail.css' %}?v=1.0">
 <link rel="stylesheet" href="{% static 'css/print_quote.css' %}?v=2.2">
 {% endblock %}
 
@@ -13,216 +13,226 @@
 {% block content %}
 <div class="cx-scene">
 
-<!-- ══════════════════ HERO ══════════════════ -->
-<div class="cx-hero">
-    <div class="cx-hero-inner">
-        <div class="cx-hero-left">
-            <div class="cx-hero-icon-wrap">
-                <i class="fas fa-file-contract"></i>
-            </div>
+<!-- ══ DOCUMENT HERO ══════════════════════════════ -->
+<div class="doc-hero" data-status="{{ quote.status }}">
+    <div class="doc-hero-inner">
+        <div class="doc-hero-left">
+            <div class="doc-hero-icon"><i class="fas fa-file-contract"></i></div>
             <div>
-                <h1 class="cx-hero-title">{{ quote.quote_number }}</h1>
-                <p class="cx-hero-desc">
-                    {{ quote.quote_date }} — {{ quote.stock.name }}
-                    {% if quote.customer %} — {{ quote.customer.name }}{% endif %}
-                </p>
+                <div class="doc-hero-number">{{ quote.quote_number }}</div>
+                <div class="doc-hero-meta">
+                    <span class="doc-hero-meta-item"><i class="fas fa-calendar-day"></i>{{ quote.quote_date }}</span>
+                    {% if quote.customer %}<span class="doc-hero-meta-item"><i class="fas fa-user"></i>{{ quote.customer.name }}</span>{% endif %}
+                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ quote.stock.name }}</span>
+                    {% if quote.expiry_date %}<span class="doc-hero-meta-item"><i class="fas fa-calendar-xmark"></i>صالح حتى {{ quote.expiry_date }}</span>{% endif %}
+                </div>
+                <div class="doc-pills">
+                    {% if quote.status == 'draft' %}
+                    <span class="doc-pill doc-pill--draft"><i class="fas fa-pencil"></i> مسودة</span>
+                    {% elif quote.status == 'sent' %}
+                    <span class="doc-pill doc-pill--primary"><i class="fas fa-paper-plane"></i> مُرسَل</span>
+                    {% elif quote.status == 'accepted' %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> مقبول</span>
+                    {% elif quote.status == 'rejected' %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-times-circle"></i> مرفوض</span>
+                    {% elif quote.status == 'converted' %}
+                    <span class="doc-pill doc-pill--info"><i class="fas fa-file-invoice"></i> مُحوَّل لفاتورة</span>
+                    {% elif quote.status == 'expired' %}
+                    <span class="doc-pill doc-pill--warning"><i class="fas fa-clock"></i> منتهي الصلاحية</span>
+                    {% elif quote.status == 'cancelled' %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-ban"></i> ملغى</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        <div class="cx-hero-right">
-            <div class="cx-hero-actions">
-                <button onclick="window.print()" class="cx-btn-secondary">
-                    <i class="fas fa-print"></i><span>طباعة</span>
-                </button>
-                {% if can_edit %}
-                <a href="{% url 'sales:quote_edit' quote.pk %}" class="cx-btn-secondary">
-                    <i class="fas fa-pencil"></i><span>تعديل</span>
-                </a>
-                {% endif %}
-                {% if can_edit %}
-                <button class="cx-btn-danger" onclick="doDeleteDraft()">
-                    <i class="fas fa-trash"></i><span>حذف المسودة</span>
-                </button>
-                {% endif %}
-                {% if can_send %}
-                <button class="cx-btn-secondary" onclick="doAction('send','إرسال العرض','سيتم تغيير حالة العرض إلى مُرسَل.')">
-                    <i class="fas fa-paper-plane"></i><span>إرسال</span>
-                </button>
-                {% endif %}
-                {% if can_accept %}
-                <button class="cx-btn-add" onclick="doAction('accept','قبول العرض','سيتم تغيير حالة العرض إلى مقبول.')">
-                    <i class="fas fa-check"></i><span>قبول</span>
-                </button>
-                {% endif %}
-                {% if can_reject %}
-                <button class="cx-btn-danger" onclick="doAction('reject','رفض العرض','سيتم تغيير حالة العرض إلى مرفوض.')">
-                    <i class="fas fa-times"></i><span>رفض</span>
-                </button>
-                {% endif %}
-                {% if can_convert %}
-                <button class="cx-btn-add" onclick="openConvertModal()">
-                    <i class="fas fa-file-invoice"></i><span>تحويل لفاتورة</span>
-                </button>
-                {% endif %}
-                {% if can_cancel %}
-                <button class="cx-btn-danger" onclick="doAction('cancel','إلغاء العرض','سيتم إلغاء عرض السعر نهائياً.')">
-                    <i class="fas fa-ban"></i><span>إلغاء</span>
-                </button>
-                {% endif %}
-            </div>
+        <div class="doc-hero-actions">
+            <button onclick="window.print()" class="cx-btn-secondary">
+                <i class="fas fa-print"></i><span>طباعة</span>
+            </button>
+            {% if can_edit %}
+            <a href="{% url 'sales:quote_edit' quote.pk %}" class="cx-btn-secondary">
+                <i class="fas fa-pencil"></i><span>تعديل</span>
+            </a>
+            <button class="cx-btn-danger" onclick="doDeleteDraft()">
+                <i class="fas fa-trash"></i><span>حذف</span>
+            </button>
+            {% endif %}
+            {% if can_send %}
+            <button class="cx-btn-secondary" onclick="doAction('send','إرسال العرض','سيتم تغيير حالة العرض إلى مُرسَل.')">
+                <i class="fas fa-paper-plane"></i><span>إرسال</span>
+            </button>
+            {% endif %}
+            {% if can_accept %}
+            <button class="cx-btn-add" onclick="doAction('accept','قبول العرض','سيتم تغيير حالة العرض إلى مقبول.')">
+                <i class="fas fa-check"></i><span>قبول</span>
+            </button>
+            {% endif %}
+            {% if can_reject %}
+            <button class="cx-btn-danger" onclick="doAction('reject','رفض العرض','سيتم تغيير حالة العرض إلى مرفوض.')">
+                <i class="fas fa-times"></i><span>رفض</span>
+            </button>
+            {% endif %}
+            {% if can_convert %}
+            <button class="cx-btn-add" onclick="openConvertModal()">
+                <i class="fas fa-file-invoice"></i><span>تحويل لفاتورة</span>
+            </button>
+            {% endif %}
+            {% if can_cancel %}
+            <button class="cx-btn-danger" onclick="doAction('cancel','إلغاء العرض','سيتم إلغاء عرض السعر نهائياً.')">
+                <i class="fas fa-ban"></i><span>إلغاء</span>
+            </button>
+            {% endif %}
         </div>
-    </div>
-    <div class="cx-stats-inline">
-        {% if quote.status == 'draft' %}
-        <span class="cx-stat-badge cx-stat-badge--muted"><i class="fas fa-pencil"></i> مسودة</span>
-        {% elif quote.status == 'sent' %}
-        <span class="cx-stat-badge cx-stat-badge--primary"><i class="fas fa-paper-plane"></i> مُرسَل</span>
-        {% elif quote.status == 'accepted' %}
-        <span class="cx-stat-badge cx-stat-badge--success"><i class="fas fa-check"></i> مقبول</span>
-        {% elif quote.status == 'rejected' %}
-        <span class="cx-stat-badge cx-stat-badge--danger"><i class="fas fa-times"></i> مرفوض</span>
-        {% elif quote.status == 'converted' %}
-        <span class="cx-stat-badge cx-stat-badge--info"><i class="fas fa-file-invoice"></i> مُحوَّل لفاتورة</span>
-        {% elif quote.status == 'expired' %}
-        <span class="cx-stat-badge cx-stat-badge--warning"><i class="fas fa-clock"></i> منتهي الصلاحية</span>
-        {% elif quote.status == 'cancelled' %}
-        <span class="cx-stat-badge cx-stat-badge--danger"><i class="fas fa-ban"></i> ملغى</span>
-        {% endif %}
     </div>
 </div>
 
+<!-- ══ INFO CARDS ══════════════════════════════════ -->
+<div class="doc-cards">
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--indigo"><i class="fas fa-hashtag"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">رقم العرض</span>
+            <span class="doc-card-value">{{ quote.quote_number }}</span>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--violet"><i class="fas fa-calendar-day"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">تاريخ العرض</span>
+            <span class="doc-card-value">{{ quote.quote_date }}</span>
+        </div>
+    </div>
+    {% if quote.expiry_date %}
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--amber"><i class="fas fa-calendar-xmark"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">صالح حتى</span>
+            <span class="doc-card-value">{{ quote.expiry_date }}</span>
+        </div>
+    </div>
+    {% endif %}
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--teal"><i class="fas fa-user"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">العميل</span>
+            <span class="doc-card-value">{{ quote.customer.name|default:"زبون عابر" }}</span>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--emerald"><i class="fas fa-warehouse"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">المخزن</span>
+            <span class="doc-card-value">{{ quote.stock.name }}</span>
+        </div>
+    </div>
+    {% if quote.reference_number %}
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--blue"><i class="fas fa-link"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">الرقم المرجعي</span>
+            <span class="doc-card-value">{{ quote.reference_number }}</span>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if quote.notes or quote.terms %}
+<div class="doc-panel mb-3">
+    <div class="doc-panel-head">
+        <span class="doc-panel-title"><i class="fas fa-comment-lines"></i> ملاحظات وشروط</span>
+    </div>
+    {% if quote.notes %}<p class="doc-note-text">{{ quote.notes }}</p>{% endif %}
+    {% if quote.terms %}
+    {% if quote.notes %}<hr style="margin:0;border-color:var(--border-light)">{% endif %}
+    <p class="doc-note-text">{{ quote.terms }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
 <div class="row g-3">
 
-<!-- ── تفاصيل العرض ── -->
+<!-- ── LEFT COLUMN ── -->
 <div class="col-lg-8">
 
-    <!-- بيانات الرأس -->
-    <div class="cx-panel mb-3 p-4">
-        <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات العرض</h3></div>
-        <div class="cx-panel-body">
-            <div class="cx-info-grid">
-                <div class="cx-info-item">
-                    <span class="cx-info-label">رقم العرض</span>
-                    <span class="cx-info-value">{{ quote.quote_number }}</span>
-                </div>
-                <div class="cx-info-item">
-                    <span class="cx-info-label">تاريخ العرض</span>
-                    <span class="cx-info-value">{{ quote.quote_date }}</span>
-                </div>
-                {% if quote.expiry_date %}
-                <div class="cx-info-item">
-                    <span class="cx-info-label">صالح حتى</span>
-                    <span class="cx-info-value">{{ quote.expiry_date }}</span>
-                </div>
-                {% endif %}
-                <div class="cx-info-item">
-                    <span class="cx-info-label">العميل</span>
-                    <span class="cx-info-value">{{ quote.customer.name|default:"زبون عابر" }}</span>
-                </div>
-                <div class="cx-info-item">
-                    <span class="cx-info-label">المخزن</span>
-                    <span class="cx-info-value">{{ quote.stock.name }}</span>
-                </div>
-                {% if quote.reference_number %}
-                <div class="cx-info-item">
-                    <span class="cx-info-label">الرقم المرجعي</span>
-                    <span class="cx-info-value">{{ quote.reference_number }}</span>
-                </div>
-                {% endif %}
-                {% if quote.notes %}
-                <div class="cx-info-item cx-info-item--full">
-                    <span class="cx-info-label">ملاحظات</span>
-                    <span class="cx-info-value">{{ quote.notes }}</span>
-                </div>
-                {% endif %}
-                {% if quote.terms %}
-                <div class="cx-info-item cx-info-item--full">
-                    <span class="cx-info-label">الشروط والأحكام</span>
-                    <span class="cx-info-value">{{ quote.terms }}</span>
-                </div>
-                {% endif %}
-            </div>
+    <!-- Line Items -->
+    <div class="doc-panel">
+        <div class="doc-panel-head">
+            <span class="doc-panel-title"><i class="fas fa-list-ol"></i> بنود العرض</span>
+            <span class="doc-panel-badge">{{ lines|length }} صنف</span>
+        </div>
+        <div class="table-responsive">
+            <table class="doc-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>المنتج</th>
+                        <th class="text-center">الكمية</th>
+                        <th class="text-end">سعر الوحدة</th>
+                        <th class="text-center">خصم</th>
+                        <th class="text-center">ضريبة</th>
+                        <th class="text-end">الإجمالي</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for line in lines %}
+                    <tr>
+                        <td style="color:var(--text-tertiary);font-size:.75rem;font-weight:600">{{ forloop.counter }}</td>
+                        <td>
+                            <div class="doc-line-name">{{ line.item.name }}</div>
+                            {% if line.variant %}<div class="doc-line-sku">{{ line.variant }}</div>{% endif %}
+                            <div class="doc-line-sku">{{ line.item.sku }}</div>
+                        </td>
+                        <td class="text-center js-quote-qty" data-value="{{ line.quantity|unlocalize }}">{{ line.quantity|floatformat:"-3u" }}</td>
+                        <td class="text-end">{{ line.unit_price|money }}</td>
+                        <td class="text-center text-muted js-quote-percent" data-value="{{ line.discount_percent|unlocalize }}">{{ line.discount_percent|floatformat:"2u"|default:0 }}%</td>
+                        <td class="text-center text-muted js-quote-percent" data-value="{{ line.tax_rate|unlocalize }}">{{ line.tax_rate|floatformat:"2u"|default:0 }}%</td>
+                        <td class="text-end doc-line-total">{{ line.line_total|money }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- بنود العرض -->
-    <div class="cx-panel mb-3 p-4">
-        <div class="cx-panel-header"><h3 class="cx-panel-title">بنود العرض</h3></div>
-        <div class="cx-panel-body p-0">
-            <div class="table-responsive">
-                <table class="cx-table mobile-compact-items mobile-compact-items--hide-index">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>المنتج</th>
-                            <th>الكمية</th>
-                            <th>سعر الوحدة</th>
-                            <th>الخصم %</th>
-                            <th>الضريبة %</th>
-                            <th>الإجمالي</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for line in lines %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td class="line-product">
-                                <div>{{ line.item.name }}</div>
-                                {% if line.variant %}<small class="text-muted">{{ line.variant }}</small>{% endif %}
-                                <div><small class="text-muted">{{ line.item.sku }}</small></div>
-                            </td>
-                            <td class="line-qty js-quote-qty" data-value="{{ line.quantity|unlocalize }}">{{ line.quantity|floatformat:"-3u" }}</td>
-                            <td>{{ line.unit_price|money }}</td>
-                            <td class="js-quote-percent" data-value="{{ line.discount_percent|unlocalize }}">{{ line.discount_percent|floatformat:"2u"|default:0|intcomma}}%</td>
-                            <td class="js-quote-percent" data-value="{{ line.tax_rate|unlocalize }}">{{ line.tax_rate|floatformat:"2u"|default:0|intcomma}}%</td>
-                            <td class="line-total"><strong>{{ line.line_total|money }}</strong></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- الفاتورة المنشأة (إن وُجدت) -->
+    <!-- Converted Invoice -->
     {% if quote.converted_invoice %}
-    <div class="cx-panel mb-3 p-4">
-        <div class="cx-panel-header"><h3 class="cx-panel-title">الفاتورة المُنشأة</h3></div>
-        <div class="cx-panel-body">
-            <p class="mb-1">
-                تم تحويل هذا العرض إلى
-                <a href="{% url 'sales:invoice_detail' quote.converted_invoice.pk %}" class="cx-link">
-                    {{ quote.converted_invoice.invoice_number }}
-                </a>
-                {% if quote.converted_at %}— {{ quote.converted_at|date:"Y-m-d" }}{% endif %}
-            </p>
+    <div class="doc-panel">
+        <div class="doc-panel-head">
+            <span class="doc-panel-title"><i class="fas fa-file-invoice"></i> الفاتورة المُنشأة</span>
+        </div>
+        <div style="padding:.9rem 1.25rem;font-size:.875rem;display:flex;align-items:center;gap:.6rem">
+            <i class="fas fa-link" style="color:var(--primary)"></i>
+            تم تحويل هذا العرض إلى
+            <a href="{% url 'sales:invoice_detail' quote.converted_invoice.pk %}" style="font-weight:700;color:var(--primary)">
+                {{ quote.converted_invoice.invoice_number }}
+            </a>
+            {% if quote.converted_at %}<span style="color:var(--text-tertiary)">— {{ quote.converted_at|date:"Y-m-d" }}</span>{% endif %}
         </div>
     </div>
     {% endif %}
 
-</div>
+</div><!-- col-lg-8 -->
 
-<!-- ── الإجماليات ── -->
+<!-- ── RIGHT COLUMN ── -->
 <div class="col-lg-4">
-    <div class="cx-panel sticky-top sales-sticky-panel p-4">
-        <div class="cx-panel-header"><h3 class="cx-panel-title">الإجماليات</h3></div>
-        <div class="cx-panel-body">
-            <div class="cx-totals-block">
-                <div class="cx-totals-row">
-                    <span>المجموع الفرعي</span>
-                    <strong>{{ quote.subtotal|money }}</strong>
-                </div>
-                <div class="cx-totals-row">
-                    <span>الخصم</span>
-                    <strong class="text-danger">- {{ quote.quote_discount_amount|money }}</strong>
-                </div>
-                <div class="cx-totals-row">
-                    <span>الضريبة</span>
-                    <strong>{{ quote.tax_amount|money }}</strong>
-                </div>
-                <div class="cx-totals-row cx-totals-row--grand">
-                    <span>الإجمالي النهائي</span>
-                    <strong>{{ quote.grand_total|money }}</strong>
-                </div>
+    <div class="doc-totals-card">
+        <div class="doc-totals-head"><i class="fas fa-calculator"></i> الإجماليات</div>
+        <div class="doc-totals-body">
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">المجموع الفرعي</span>
+                <span class="doc-trow-val">{{ quote.subtotal|money }}</span>
+            </div>
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">الخصم</span>
+                <span class="doc-trow-val doc-trow-val--red">- {{ quote.quote_discount_amount|money }}</span>
+            </div>
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">الضريبة</span>
+                <span class="doc-trow-val">{{ quote.tax_amount|money }}</span>
+            </div>
+            <div class="doc-grand">
+                <span class="doc-grand-lbl">الإجمالي النهائي</span>
+                <span class="doc-grand-val">{{ quote.grand_total|money }}</span>
             </div>
         </div>
     </div>
@@ -422,40 +432,26 @@ function submitConvert() {
     .then(async (response) => {
         const contentType = response.headers.get('content-type') || '';
         let data = null;
-
         if (contentType.includes('application/json')) {
             data = await response.json();
         } else {
             const text = await response.text();
             throw new Error(text || `HTTP ${response.status}`);
         }
-
         if (!response.ok || !data?.success) {
             throw new Error(data?.message || 'تعذر تحويل عرض السعر إلى فاتورة');
         }
-
         const redirectUrl = data.invoice_url || data.redirect;
-        if (!redirectUrl) {
-            throw new Error('تم التحويل لكن لم يتم استلام رابط الفاتورة');
-        }
-
+        if (!redirectUrl) throw new Error('تم التحويل لكن لم يتم استلام رابط الفاتورة');
         sessionStorage.setItem('__enjazFlash', JSON.stringify({
             message: data.message || 'تم تحويل العرض إلى فاتورة',
             type: 'success'
         }));
-
-        setTimeout(() => {
-            window.location.href = redirectUrl;
-        }, 150);
+        setTimeout(() => { window.location.href = redirectUrl; }, 150);
     })
-    .catch((error) => {
-        showAlert(error?.message || 'حدث خطأ في الاتصال', 'danger');
-    })
+    .catch((error) => { showAlert(error?.message || 'حدث خطأ في الاتصال', 'danger'); })
     .finally(() => {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalHtml;
-        }
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalHtml; }
     });
 }
 
@@ -469,9 +465,7 @@ function formatQuoteNumbers() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    if (!formatQuoteNumbers()) {
-        setTimeout(formatQuoteNumbers, 0);
-    }
+    if (!formatQuoteNumbers()) setTimeout(formatQuoteNumbers, 0);
 });
 window.addEventListener('load', formatQuoteNumbers);
 

@@ -4,8 +4,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
-    <link rel="stylesheet" href="{% static 'css/sales_invoice_detail.css' %}?v=2.0">
-    <link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
+<link rel="stylesheet" href="{% static 'css/inv_detail.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.2">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -13,277 +13,311 @@
 {% block content %}
 <div class="cx-scene">
 
-<!-- ══════════════════ HERO ══════════════════ -->
-<div class="cx-hero">
-    <div class="cx-hero-inner">
-        <div class="cx-hero-left">
-            <div class="cx-hero-icon-wrap">
-                <i class="fas fa-file-invoice"></i>
-            </div>
+<!-- ══ DOCUMENT HERO ══════════════════════════════ -->
+<div class="doc-hero" data-status="{{ invoice.status }}">
+    <div class="doc-hero-inner">
+        <div class="doc-hero-left">
+            <div class="doc-hero-icon"><i class="fas fa-file-invoice"></i></div>
             <div>
-                <h1 class="cx-hero-title">{{ invoice.invoice_number }}</h1>
-                <p class="cx-hero-desc">
-                    {{ invoice.invoice_date }} — {{ invoice.stock.name }}
-                    {% if invoice.customer %} — {{ invoice.customer.name }}{% endif %}
-                </p>
+                <div class="doc-hero-number">{{ invoice.invoice_number }}</div>
+                <div class="doc-hero-meta">
+                    <span class="doc-hero-meta-item"><i class="fas fa-calendar-day"></i>{{ invoice.invoice_date|date:"Y-m-d" }}</span>
+                    {% if invoice.customer %}<span class="doc-hero-meta-item"><i class="fas fa-user"></i>{{ invoice.customer.name }}</span>{% endif %}
+                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ invoice.stock.name }}</span>
+                </div>
+                <div class="doc-pills">
+                    {% if invoice.status == 'draft' %}
+                    <span class="doc-pill doc-pill--draft"><i class="fas fa-pencil"></i> مسودة</span>
+                    {% elif invoice.status == 'confirmed' %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> مؤكدة</span>
+                    {% elif invoice.status == 'cancelled' %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-ban"></i> ملغاة</span>
+                    {% elif invoice.status == 'returned' %}
+                    <span class="doc-pill doc-pill--warning"><i class="fas fa-rotate-left"></i> مرتجعة كلياً</span>
+                    {% elif invoice.status == 'partially_returned' %}
+                    <span class="doc-pill doc-pill--warning"><i class="fas fa-rotate-left"></i> مرتجعة جزئياً</span>
+                    {% endif %}
+                    <span class="doc-pill doc-pill--muted"><i class="fas fa-wallet"></i> {{ invoice.get_payment_method_display }}</span>
+                </div>
             </div>
         </div>
-        <div class="cx-hero-right">
-            <div class="cx-hero-actions">
-                <button onclick="window.print()" class="cx-btn-secondary">
-                    <i class="fas fa-print"></i><span>طباعة</span>
-                </button>
-                {% if can_edit %}
-                <a href="{% url 'sales:invoice_edit' invoice.pk %}" class="cx-btn-secondary">
-                    <i class="fas fa-pencil"></i><span>تعديل</span>
-                </a>
-                {% endif %}
-                {% if can_delete_draft %}
-                <button class="cx-btn-danger" onclick="deleteDraft()">
-                    <i class="fas fa-trash"></i><span>حذف المسودة</span>
-                </button>
-                {% endif %}
-                {% if can_confirm %}
-                <button class="cx-btn-add" onclick="doConfirm()">
-                    <i class="fas fa-check"></i><span>تأكيد الفاتورة</span>
-                </button>
-                {% endif %}
-                {% if can_cancel %}
-                <button class="cx-btn-danger" onclick="doCancel()">
-                    <i class="fas fa-ban"></i><span>إلغاء</span>
-                </button>
-                {% endif %}
-                {% if can_return %}
-                <a href="{% url 'sales:return_create' invoice.pk %}" class="cx-btn-warning">
-                    <i class="fas fa-rotate-left"></i><span>إرجاع</span>
-                </a>
-                {% endif %}
-            </div>
+        <div class="doc-hero-actions">
+            <button onclick="window.print()" class="cx-btn-secondary">
+                <i class="fas fa-print"></i><span>طباعة</span>
+            </button>
+            {% if can_edit %}
+            <a href="{% url 'sales:invoice_edit' invoice.pk %}" class="cx-btn-secondary">
+                <i class="fas fa-pencil"></i><span>تعديل</span>
+            </a>
+            {% endif %}
+            {% if can_delete_draft %}
+            <button class="cx-btn-danger" onclick="deleteDraft()">
+                <i class="fas fa-trash"></i><span>حذف</span>
+            </button>
+            {% endif %}
+            {% if can_confirm %}
+            <button class="cx-btn-add" onclick="doConfirm()">
+                <i class="fas fa-check"></i><span>تأكيد</span>
+            </button>
+            {% endif %}
+            {% if can_cancel %}
+            <button class="cx-btn-danger" onclick="doCancel()">
+                <i class="fas fa-ban"></i><span>إلغاء</span>
+            </button>
+            {% endif %}
+            {% if can_return %}
+            <a href="{% url 'sales:return_create' invoice.pk %}" class="cx-btn-warning">
+                <i class="fas fa-rotate-left"></i><span>إرجاع</span>
+            </a>
+            {% endif %}
         </div>
-    </div>
-    <div class="cx-stats-inline">
-        {% if invoice.status == 'draft' %}
-        <span class="cx-stat-badge cx-stat-badge--muted"><i class="fas fa-pencil"></i> مسودة</span>
-        {% elif invoice.status == 'confirmed' %}
-        <span class="cx-stat-badge cx-stat-badge--success"><i class="fas fa-check"></i> مؤكدة</span>
-        {% elif invoice.status == 'cancelled' %}
-        <span class="cx-stat-badge cx-stat-badge--danger"><i class="fas fa-ban"></i> ملغاة</span>
-        {% elif invoice.status == 'returned' %}
-        <span class="cx-stat-badge cx-stat-badge--warning"><i class="fas fa-rotate-left"></i> مرتجعة كلياً</span>
-        {% elif invoice.status == 'partially_returned' %}
-        <span class="cx-stat-badge cx-stat-badge--warning"><i class="fas fa-rotate-left"></i> مرتجعة جزئياً</span>
-        {% endif %}
-        <span class="cx-stat-badge cx-stat-badge--primary">{{ invoice.get_payment_method_display }}</span>
     </div>
 </div>
 
+<!-- ══ INFO CARDS ══════════════════════════════════ -->
+<div class="doc-cards">
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--indigo"><i class="fas fa-hashtag"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">رقم الفاتورة</span>
+            <span class="doc-card-value">{{ invoice.invoice_number }}</span>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--violet"><i class="fas fa-calendar-day"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">التاريخ</span>
+            <span class="doc-card-value">{{ invoice.invoice_date|date:"Y-m-d" }}</span>
+        </div>
+    </div>
+    {% if invoice.due_date %}
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--amber"><i class="fas fa-calendar-xmark"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">تاريخ الاستحقاق</span>
+            <span class="doc-card-value">{{ invoice.due_date|date:"Y-m-d" }}</span>
+        </div>
+    </div>
+    {% endif %}
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--teal"><i class="fas fa-user"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">العميل</span>
+            <span class="doc-card-value">{{ invoice.customer.name|default:"زبون عابر" }}</span>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--emerald"><i class="fas fa-warehouse"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">المخزن</span>
+            <span class="doc-card-value">{{ invoice.stock.name }}</span>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--rose"><i class="fas fa-wallet"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">طريقة الدفع</span>
+            <span class="doc-card-value">{{ invoice.get_payment_method_display }}</span>
+        </div>
+    </div>
+    {% if invoice.reference_number %}
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--blue"><i class="fas fa-link"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">الرقم المرجعي</span>
+            <span class="doc-card-value">{{ invoice.reference_number }}</span>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if invoice.notes %}
+<div class="doc-panel mb-3">
+    <div class="doc-panel-head">
+        <span class="doc-panel-title"><i class="fas fa-comment-lines"></i> ملاحظات</span>
+    </div>
+    <p class="doc-note-text">{{ invoice.notes }}</p>
+</div>
+{% endif %}
+
 <div class="row g-3">
 
-<!-- ── تفاصيل الفاتورة ── -->
+<!-- ── LEFT COLUMN ── -->
 <div class="col-lg-8">
 
-    <!-- رأس الفاتورة -->
-    <div class="cx-panel mb-3 p-4">
-        <div class="cx-panel-header"><h3 class="cx-panel-title">بيانات الفاتورة</h3></div>
-        <div class="cx-panel-body">
-            <div class="cx-info-grid">
-                <div class="cx-info-item">
-                    <span class="cx-info-label">رقم الفاتورة</span>
-                    <span class="cx-info-value">{{ invoice.invoice_number }}</span>
-                </div>
-                <div class="cx-info-item">
-                    <span class="cx-info-label">التاريخ</span>
-                    <span class="cx-info-value">{{ invoice.invoice_date }}</span>
-                </div>
-                {% if invoice.due_date %}
-                <div class="cx-info-item">
-                    <span class="cx-info-label">تاريخ الاستحقاق</span>
-                    <span class="cx-info-value">{{ invoice.due_date }}</span>
-                </div>
-                {% endif %}
-                <div class="cx-info-item">
-                    <span class="cx-info-label">العميل</span>
-                    <span class="cx-info-value">{{ invoice.customer.name|default:"زبون عابر" }}</span>
-                </div>
-                <div class="cx-info-item">
-                    <span class="cx-info-label">المخزن</span>
-                    <span class="cx-info-value">{{ invoice.stock.name }}</span>
-                </div>
-                <div class="cx-info-item">
-                    <span class="cx-info-label">طريقة الدفع</span>
-                    <span class="cx-info-value">{{ invoice.get_payment_method_display }}</span>
-                </div>
-                {% if invoice.reference_number %}
-                <div class="cx-info-item">
-                    <span class="cx-info-label">الرقم المرجعي</span>
-                    <span class="cx-info-value">{{ invoice.reference_number }}</span>
-                </div>
-                {% endif %}
-                {% if invoice.notes %}
-                <div class="cx-info-item cx-info-item--full">
-                    <span class="cx-info-label">ملاحظات</span>
-                    <span class="cx-info-value">{{ invoice.notes }}</span>
-                </div>
-                {% endif %}
-            </div>
+    <!-- Line Items -->
+    <div class="doc-panel">
+        <div class="doc-panel-head">
+            <span class="doc-panel-title"><i class="fas fa-list-ol"></i> بنود الفاتورة</span>
+            <span class="doc-panel-badge">{{ lines|length }} صنف</span>
         </div>
-    </div>
-
-    <!-- بنود الفاتورة -->
-    <div class="cx-panel mb-3 p-4">
-        <div class="cx-panel-header"><h3 class="cx-panel-title">بنود الفاتورة</h3></div>
-        <div class="cx-panel-body p-0">
-            <div class="table-responsive">
-                <table class="cx-table mobile-compact-items mobile-compact-items--hide-index">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>المنتج</th>
-                            <th>الكمية</th>
-                            <th>سعر الوحدة</th>
-                            <th>الخصم %</th>
-                            <th>الضريبة %</th>
-                            <th>الإجمالي</th>
-                            {% if invoice.status != 'draft' %}
-                            <th>المُرتجَع</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for line in lines %}
-                        <tr{% if line.returned_quantity >= line.quantity %} class="sales-row-disabled"{% endif %}>
-                            <td>{{ forloop.counter }}</td>
-                            <td class="line-product">
-                                <div>{{ line.item.name }}</div>
-                                {% if line.variant %}<small class="text-muted">{{ line.variant }}</small>{% endif %}
-                                <div><small class="text-muted">{{ line.item.sku }}</small></div>
-                            </td>
-                            <td class="line-qty">{{ line.quantity|floatformat:"-3u" }}</td>
-                            <td>{{ line.unit_price|floatformat:"2u"|default:0|intcomma}}</td>
-                            <td>{{ line.discount_percent|floatformat:"2u"|default:0|intcomma}}%</td>
-                            <td>{{ line.tax_rate|floatformat:"2u"|default:0|intcomma}}%</td>
-                            <td class="line-total"><strong>{{ line.line_total|floatformat:"2u"|default:0|intcomma}}</strong></td>
-                            {% if invoice.status != 'draft' %}
-                            <td>
-                                {% if line.returned_quantity > 0 %}
-                                <span class="cx-badge cx-badge--warning">{{ line.returned_quantity|floatformat:"-3u" }}</span>
-                                {% else %}—{% endif %}
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- الدفعات -->
-    {% if payments %}
-    <div class="cx-panel mb-3 p-4">
-        <div class="cx-panel-header"><h3 class="cx-panel-title">سجل الدفعات</h3></div>
-        <div class="cx-panel-body p-0">
-            <table class="cx-table">
+        <div class="table-responsive">
+            <table class="doc-table">
                 <thead>
-                    <tr><th>التاريخ</th><th>الطريقة</th><th>المبلغ</th><th>المرجع</th></tr>
+                    <tr>
+                        <th>#</th>
+                        <th>المنتج</th>
+                        <th class="text-center">الكمية</th>
+                        <th class="text-end">سعر الوحدة</th>
+                        <th class="text-center">خصم</th>
+                        <th class="text-center">ضريبة</th>
+                        <th class="text-end">الإجمالي</th>
+                        {% if invoice.status != 'draft' %}<th class="text-center">المُرتجَع</th>{% endif %}
+                    </tr>
                 </thead>
                 <tbody>
-                {% for p in payments %}
-                <tr{% if p.is_reversed %} class="sales-row-disabled"{% endif %}>
-                    <td>{{ p.payment_date }}</td>
-                    <td>{{ p.get_payment_method_display }}</td>
-                    <td class="{% if p.amount < 0 %}text-danger{% else %}text-success{% endif %}">
-                        {{ p.amount|floatformat:"2u"|default:0|intcomma}}
-                    </td>
-                    <td>{{ p.reference_number|default:"—" }}</td>
-                </tr>
-                {% endfor %}
+                    {% for line in lines %}
+                    <tr{% if line.returned_quantity >= line.quantity %} class="doc-row-faded"{% endif %}>
+                        <td style="color:var(--text-tertiary);font-size:.75rem;font-weight:600">{{ forloop.counter }}</td>
+                        <td>
+                            <div class="doc-line-name">{{ line.item.name }}</div>
+                            {% if line.variant %}<div class="doc-line-sku">{{ line.variant }}</div>{% endif %}
+                            <div class="doc-line-sku">{{ line.item.sku }}</div>
+                        </td>
+                        <td class="text-center fw-600">{{ line.quantity|floatformat:"-3u" }}</td>
+                        <td class="text-end">{{ line.unit_price|floatformat:"2u"|default:0|intcomma }}</td>
+                        <td class="text-center text-muted">{{ line.discount_percent|floatformat:"2u"|default:0 }}%</td>
+                        <td class="text-center text-muted">{{ line.tax_rate|floatformat:"2u"|default:0 }}%</td>
+                        <td class="text-end doc-line-total">{{ line.line_total|floatformat:"2u"|default:0|intcomma }}</td>
+                        {% if invoice.status != 'draft' %}
+                        <td class="text-center">
+                            {% if line.returned_quantity > 0 %}
+                            <span class="doc-ret-badge">{{ line.returned_quantity|floatformat:"-3u" }}</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+
+    <!-- Payments -->
+    {% if payments %}
+    <div class="doc-panel">
+        <div class="doc-panel-head">
+            <span class="doc-panel-title"><i class="fas fa-money-bill-wave"></i> سجل الدفعات</span>
+            <span class="doc-panel-badge">{{ payments|length }}</span>
+        </div>
+        <table class="doc-mini-table">
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>الطريقة</th>
+                    <th class="text-end">المبلغ</th>
+                    <th>المرجع</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr{% if p.is_reversed %} class="doc-row-faded"{% endif %}>
+                    <td>{{ p.payment_date }}</td>
+                    <td>{{ p.get_payment_method_display }}</td>
+                    <td class="text-end fw-bold {% if p.amount < 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ p.amount|floatformat:"2u"|default:0|intcomma }}
+                    </td>
+                    <td style="color:var(--text-tertiary)">{{ p.reference_number|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% endif %}
 
-    <!-- المرتجعات -->
+    <!-- Returns -->
     {% if returns %}
-    <div class="cx-panel mb-3 p-4">
-        <div class="cx-panel-header"><h3 class="cx-panel-title">المرتجعات</h3></div>
-        <div class="cx-panel-body p-0">
-            <table class="cx-table">
-                <thead>
-                    <tr><th>رقم المرتجع</th><th>التاريخ</th><th>الإجمالي</th><th>طريقة الاسترداد</th><th></th></tr>
-                </thead>
-                <tbody>
+    <div class="doc-panel">
+        <div class="doc-panel-head">
+            <span class="doc-panel-title"><i class="fas fa-rotate-left"></i> المرتجعات</span>
+            <span class="doc-panel-badge">{{ returns|length }}</span>
+        </div>
+        <table class="doc-mini-table">
+            <thead>
+                <tr>
+                    <th>رقم المرتجع</th>
+                    <th>التاريخ</th>
+                    <th class="text-end">الإجمالي</th>
+                    <th>طريقة الاسترداد</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
                 {% for r in returns %}
                 <tr>
-                    <td>{{ r.return_number }}</td>
+                    <td class="fw-bold">{{ r.return_number }}</td>
                     <td>{{ r.return_date }}</td>
-                    <td>{{ r.total_returned|floatformat:"2u"|default:0|intcomma}}</td>
+                    <td class="text-end fw-bold" style="color:#d97706">{{ r.total_returned|floatformat:"2u"|default:0|intcomma }}</td>
                     <td>{{ r.get_refund_method_display }}</td>
                     <td><a href="{% url 'sales:return_detail' r.pk %}" class="cx-btn-icon"><i class="fas fa-eye"></i></a></td>
                 </tr>
                 {% endfor %}
-                </tbody>
-            </table>
-        </div>
+            </tbody>
+        </table>
     </div>
     {% endif %}
 
-</div>
+</div><!-- col-lg-8 -->
 
-<!-- ── بطاقة الإجماليات ── -->
+<!-- ── RIGHT COLUMN ── -->
 <div class="col-lg-4">
-    <div class="cx-panel sticky-top sales-sticky-panel p-4">
-        <div class="cx-panel-header"><h3 class="cx-panel-title">الإجماليات</h3></div>
-        <div class="cx-panel-body">
-            <div class="cx-totals-block">
-                <div class="cx-totals-row">
-                    <span>المجموع الفرعي</span>
-                    <strong>{{ invoice.subtotal|floatformat:"2u"|default:0|intcomma}}</strong>
-                </div>
-                <div class="cx-totals-row">
-                    <span>الخصم</span>
-                    <strong class="text-danger">- {{ invoice.invoice_discount_amount|floatformat:"2u"|default:0|intcomma}}</strong>
-                </div>
-                <div class="cx-totals-row">
-                    <span>الضريبة</span>
-                    <strong>{{ invoice.tax_amount|floatformat:"2u"|default:0|intcomma}}</strong>
-                </div>
-                <div class="cx-totals-row cx-totals-row--grand">
-                    <span>الإجمالي النهائي</span>
-                    <strong>{{ invoice.grand_total|floatformat:"2u"|default:0|intcomma}}</strong>
-                </div>
-                <div class="cx-totals-row">
-                    <span>المدفوع</span>
-                    <strong class="text-success">{{ invoice.paid_amount|floatformat:"2u"|default:0|intcomma}}</strong>
-                </div>
-                <div class="cx-totals-row {% if invoice.remaining_amount > 0 %}cx-totals-row--warn{% endif %}">
-                    <span>المتبقي</span>
-                    <strong class="{% if invoice.remaining_amount > 0 %}text-danger{% endif %}">
-                        {{ invoice.remaining_amount|floatformat:"2u"|default:0|intcomma}}
-                    </strong>
-                </div>
+    <div class="doc-totals-card">
+        <div class="doc-totals-head"><i class="fas fa-calculator"></i> الإجماليات</div>
+        <div class="doc-totals-body">
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">المجموع الفرعي</span>
+                <span class="doc-trow-val">{{ invoice.subtotal|floatformat:"2u"|default:0|intcomma }}</span>
             </div>
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">الخصم</span>
+                <span class="doc-trow-val doc-trow-val--red">- {{ invoice.invoice_discount_amount|floatformat:"2u"|default:0|intcomma }}</span>
+            </div>
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">الضريبة</span>
+                <span class="doc-trow-val">{{ invoice.tax_amount|floatformat:"2u"|default:0|intcomma }}</span>
+            </div>
+            <div class="doc-grand">
+                <span class="doc-grand-lbl">الإجمالي النهائي</span>
+                <span class="doc-grand-val">{{ invoice.grand_total|floatformat:"2u"|default:0|intcomma }}</span>
+            </div>
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">المدفوع</span>
+                <span class="doc-trow-val doc-trow-val--green">{{ invoice.paid_amount|floatformat:"2u"|default:0|intcomma }}</span>
+            </div>
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">المتبقي</span>
+                <span class="doc-trow-val {% if invoice.remaining_amount > 0 %}doc-trow-val--red{% else %}doc-trow-val--green{% endif %}">
+                    {{ invoice.remaining_amount|floatformat:"2u"|default:0|intcomma }}
+                </span>
+            </div>
+            {% if invoice.remaining_amount <= 0 %}
+            <div class="doc-balance-tag doc-balance-tag--ok">
+                <i class="fas fa-circle-check"></i> مسددة بالكامل
+            </div>
+            {% else %}
+            <div class="doc-balance-tag doc-balance-tag--due">
+                <i class="fas fa-exclamation-circle"></i> يوجد رصيد متبقٍ
+            </div>
+            {% endif %}
 
             {% if can_pay %}
-            <hr>
-            <div>
-                <h6 class="mb-2">تسجيل دفعة جديدة</h6>
+            <div class="doc-pay-form">
+                <div class="doc-pay-form-title"><i class="fas fa-plus-circle"></i> تسجيل دفعة جديدة</div>
                 <div class="mb-2">
-                    <label class="cx-label">المبلغ</label>
-                    <input type="number" id="payAmount" class="cx-input" min="0.01" step="0.01"
-                           max="{{ invoice.remaining_amount }}">
+                    <label class="cx-label" style="font-size:.78rem">المبلغ</label>
+                    <input type="number" id="payAmount" class="cx-input cx-input--sm" min="0.01" step="0.01"
+                           max="{{ invoice.remaining_amount }}" placeholder="0.00">
                 </div>
                 <div class="mb-2">
-                    <label class="cx-label">الطريقة</label>
-                    <select id="payMethod" class="cx-input">
+                    <label class="cx-label" style="font-size:.78rem">الطريقة</label>
+                    <select id="payMethod" class="cx-input cx-input--sm">
                         <option value="cash">نقداً</option>
                         <option value="bank">تحويل بنكي</option>
                     </select>
                 </div>
                 <div class="mb-2">
-                    <label class="cx-label">المرجع</label>
-                    <input type="text" id="payRef" class="cx-input">
+                    <label class="cx-label" style="font-size:.78rem">المرجع</label>
+                    <input type="text" id="payRef" class="cx-input cx-input--sm">
                 </div>
                 <button class="cx-btn-add w-100" onclick="doPayment()">
                     <i class="fas fa-money-bill-wave me-1"></i>تسجيل الدفعة
@@ -295,7 +329,6 @@
 </div>
 
 </div><!-- row -->
-
 </div><!-- cx-scene -->
 
 {% include "sales/partials/print_invoice.html" %}

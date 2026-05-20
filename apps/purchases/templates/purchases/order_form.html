@@ -257,9 +257,9 @@ function addLine(itemId, itemName, itemSku, suggestedCost, opts = {}) {
     row.dataset.itemId = itemId;
     row.innerHTML = `
         <td><div class="sales-line-item-name">${itemName}</div><div class="sales-line-item-sku">${itemSku || ''}</div>${trackingHtml}</td>
-        <td><input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.qty || 1).toFixed(3)}" class="cx-input cx-input--sm inv-num-field" id="qty-${id}" oninput="recalc()"></td>
-        <td><input type="text" inputmode="decimal" value="${(suggestedCost || 0).toFixed(2)}" class="cx-input cx-input--sm inv-num-field" id="cost-${id}" oninput="recalc()"></td>
-        <td><input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.tax_rate || 0).toFixed(2)}" class="cx-input cx-input--sm inv-num-field" id="tax-${id}" oninput="recalc()"></td>
+        <td><input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.qty || 1)}" class="cx-input cx-input--sm inv-num-field" id="qty-${id}" oninput="recalc()"></td>
+        <td><input type="text" inputmode="decimal" value="${suggestedCost || 0}" class="cx-input cx-input--sm inv-num-field" id="cost-${id}" oninput="recalc()"></td>
+        <td><input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.tax_rate || 0)}" class="cx-input cx-input--sm inv-num-field" id="tax-${id}" oninput="recalc()"></td>
         <td class="text-end" id="total-${id}">${EnjazIMS.formatMoney(0)}</td>
         <td><button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})"><i class="fas fa-trash"></i></button></td>
     `;
