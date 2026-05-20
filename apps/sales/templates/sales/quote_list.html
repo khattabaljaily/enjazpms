@@ -256,9 +256,7 @@ function renderMobileQuoteCards(rows) {
         const deleteBtn = r.status === 'draft'
             ? `<button class="cxr-act cxr-act--del" onclick="deleteDraftQuote(${r.id})" title="حذف" aria-label="حذف"><i class="fas fa-trash"></i></button>`
             : '';
-        const convertBtn = ['draft','sent','accepted'].includes(r.status)
-            ? `<a href="${QUOTE_BASE_URL}${r.id}/" class="cxr-act cxr-act--convert" title="تحويل لفاتورة" aria-label="تحويل لفاتورة"><i class="fas fa-file-invoice"></i></a>`
-            : '';
+        const convertBtn = `<a href="${QUOTE_BASE_URL}${r.id}/" class="cxr-act cxr-act--convert" title="تفاصيل الفاتورة" aria-label="تفاصيل الفاتورة"><i class="fas fa-file-invoice"></i></a>`;
 
         return `<article class="cx-quote-card">
             <div class="cx-quote-card-head">
@@ -347,9 +345,7 @@ function initTable() {
                     const deleteBtn = row.status === 'draft'
                         ? `<button class="cx-btn-icon cx-btn-icon--danger" onclick="deleteDraftQuote(${row.id})" title="حذف"><i class="fas fa-trash"></i></button>`
                         : `<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>`;
-                    const convertBtn = ['draft','sent','accepted'].includes(row.status)
-                        ? `<a href="${QUOTE_BASE_URL}${row.id}/" class="cx-btn-icon cx-btn-icon--success" title="تحويل لفاتورة"><i class="fas fa-file-invoice"></i></a>`
-                        : `<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>`;
+                    const convertBtn = `<a href="${QUOTE_BASE_URL}${row.id}/" class="cx-btn-icon cx-btn-icon--success" title="تفاصيل الفاتورة"><i class="fas fa-file-invoice"></i></a>`;
                     return `
                     <div class="cx-actions">
                         <button type="button" class="cx-btn-icon js-view-quote" data-id="${row.id}" title="عرض"><i class="fas fa-eye"></i></button>

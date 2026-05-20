@@ -110,6 +110,7 @@
             const editBtn = ['draft', 'confirmed'].includes(r.status)
                 ? `<a href="/purchases/${r.id}/edit/" class="cxr-act" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></a>`
                 : '';
+            const detailBtn = `<a href="/purchases/${r.id}/" class="cxr-act" aria-label="تفاصيل الفاتورة" title="تفاصيل الفاتورة"><i class="fas fa-file-invoice"></i></a>`;
 
             return `<article class="cx-order-card">
                 <div class="cx-order-card-head">
@@ -140,6 +141,7 @@
                 <div class="cx-order-card-actions">
                     <a href="/purchases/${r.id}/" class="cxr-act cxr-act--view" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></a>
                     <a href="/purchases/${r.id}/print/" target="_blank" rel="noopener" class="cxr-act" aria-label="طباعة" title="طباعة"><i class="fas fa-print"></i></a>
+                    ${detailBtn}
                     ${editBtn}
                     ${confirmBtn}
                     ${cancelBtn}
@@ -199,6 +201,7 @@
                         <div class="cx-actions">
                             <a href="/purchases/${row.id}/" class="cx-btn-icon" title="عرض"><i class="fas fa-eye"></i></a>
                             <a href="/purchases/${row.id}/print/" target="_blank" rel="noopener" class="cx-btn-icon" title="طباعة"><i class="fas fa-print"></i></a>
+                            <a href="/purchases/${row.id}/" class="cx-btn-icon cx-btn-icon--success" title="تفاصيل الفاتورة"><i class="fas fa-file-invoice"></i></a>
                             ${editBtn}
                             ${confirmBtn}
                             ${cancelBtn}

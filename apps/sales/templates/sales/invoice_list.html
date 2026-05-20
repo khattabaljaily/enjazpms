@@ -296,6 +296,7 @@ function renderMobileInvoiceCards(rows) {
         const cancelBtn = r.status === 'confirmed'
             ? `<button class="cxr-act cxr-act--del" onclick="cancelInvoice(${r.id})" aria-label="إلغاء" title="إلغاء"><i class="fas fa-ban"></i></button>`
             : '';
+        const detailBtn = `<a href="${INVOICE_BASE_URL}${r.id}/" class="cxr-act" aria-label="تفاصيل الفاتورة" title="تفاصيل الفاتورة"><i class="fas fa-file-invoice"></i></a>`;
 
         return `<article class="cx-invoice-card">
             <div class="cx-invoice-card-head">
@@ -326,6 +327,7 @@ function renderMobileInvoiceCards(rows) {
             <div class="cx-invoice-card-actions">
                 ${viewBtn}
                 ${printBtn}
+                ${detailBtn}
                 ${editBtn}
                 ${deleteBtn}
                 ${cancelBtn}
@@ -412,6 +414,9 @@ function initTable() {
                         </button>
                         <a href="${INVOICE_BASE_URL}${row.id}/?print=1" target="_blank" rel="noopener" class="cx-btn-icon" title="طباعة">
                             <i class="fas fa-print"></i>
+                        </a>
+                        <a href="${INVOICE_BASE_URL}${row.id}/" class="cx-btn-icon cx-btn-icon--success" title="تفاصيل الفاتورة">
+                            <i class="fas fa-file-invoice"></i>
                         </a>
                         ${['draft', 'confirmed'].includes(row.status) ? `
                         <a href="${INVOICE_BASE_URL}${row.id}/edit/" class="cx-btn-icon" title="تعديل">
