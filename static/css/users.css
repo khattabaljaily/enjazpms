@@ -170,6 +170,24 @@
     .cx-user-card-meta { grid-template-columns: 1fr 1fr; }
 }
 
+/* Dark mode */
+[data-theme="dark"] .cx-user-card {
+    background: var(--surface);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] .cx-user-card-meta div {
+    background: rgba(255,255,255,0.04);
+}
+
+@media (max-width: 480px) {
+    .cx-user-card { padding: 0.75rem; }
+    .cx-user-card-actions { justify-content: flex-start; }
+}
+
+@media (max-width: 360px) {
+    .cx-user-card-meta { grid-template-columns: 1fr; }
+}
+
 .cx-modal .cx-modal-body .cx-toggle-info {
     align-items: flex-start;
 }

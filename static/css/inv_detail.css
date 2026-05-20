@@ -345,6 +345,7 @@
   .doc-card               { flex: 1 1 calc(50% - .3rem); min-width: calc(50% - .3rem); padding: .75rem .85rem; }
   .doc-card-value         { font-size: .8rem; }
   .doc-grand-val          { font-size: 1.1rem; }
+  .doc-totals-card        { position: static; }
   .doc-hero-actions {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr);
@@ -358,4 +359,23 @@
   .doc-hero-actions > *:last-child:nth-child(odd) {
     grid-column: span 2; max-width: 60%; margin: 0 auto;
   }
+}
+
+@media (max-width: 480px) {
+  .doc-hero        { padding: .875rem; border-radius: 14px; }
+  .doc-hero-number { font-size: 1.1rem; }
+  .doc-hero-icon   { width: 44px; height: 44px; font-size: 1.15rem; }
+  .doc-cards       { gap: .5rem; }
+  .doc-card        { flex: 1 1 calc(50% - .25rem); min-width: 0; padding: .65rem .75rem; }
+  .doc-card-icon   { width: 34px; height: 34px; font-size: .85rem; }
+  .doc-card-value  { font-size: .78rem; }
+  .doc-grand       { padding: .75rem .875rem; }
+  .doc-grand-val   { font-size: 1rem; }
+  .doc-panel-head  { padding: .7rem 1rem; }
+  .doc-hero-actions a,
+  .doc-hero-actions button { padding: 8px !important; font-size: 12px !important; }
+}
+
+@media (max-width: 360px) {
+  .doc-card { flex: 1 1 100%; }
 }

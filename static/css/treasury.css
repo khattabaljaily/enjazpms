@@ -249,4 +249,23 @@
     .cx-treasury-card-actions .cxr-act--del:hover {
         background: rgba(239, 68, 68, 0.12);
     }
+
+    #movementTreasuryFilter { min-width: 120px; }
+}
+
+/* Dark mode */
+[data-theme="dark"] .cx-treasury-card {
+    background: var(--surface);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] .cx-treasury-card-balance {
+    background: rgba(255,255,255,0.04);
+}
+
+@media (max-width: 480px) {
+    #movementTreasuryFilter { width: 100%; min-width: 0; }
+}
+
+@media (max-width: 360px) {
+    .cx-treasury-card-actions { justify-content: flex-start; }
 }

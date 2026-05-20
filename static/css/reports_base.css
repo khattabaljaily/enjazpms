@@ -437,14 +437,31 @@
 @media (max-width: 768px) {
     .rpt-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
     .rpt-hero-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
-    .rpt-hero-actions { width: 100%; }
+    .rpt-hero-actions { width: 100%; flex-direction: row; flex-wrap: wrap; gap: 0.4rem; }
     .rpt-hero-title { font-size: 1.25rem; }
-    .rpt-hero { padding: 1.1rem; }
+    .rpt-hero { padding: 1.1rem; border-radius: 14px; }
+    .rpt-hero-icon { width: 48px; height: 48px; font-size: 1.2rem; }
+    .rpt-hero-btn { padding: 0.4rem 0.85rem; font-size: 0.78rem; }
+    .rpt-filters { padding: 0.875rem 1rem; }
+    .rpt-panel-header { padding: 0.75rem 1rem; }
     .rpt-panel .table thead th,
     .rpt-panel .table tbody td { padding: 0.5rem 0.75rem; font-size: 0.78rem; }
 }
 @media (max-width: 480px) {
-    .rpt-kpi-grid { grid-template-columns: 1fr 1fr; }
+    .rpt-hero { padding: 0.875rem; border-radius: 12px; }
+    .rpt-hero-title { font-size: 1.05rem; }
+    .rpt-hero-desc { font-size: 0.78rem; }
+    .rpt-hero-icon { width: 40px; height: 40px; font-size: 1rem; border-radius: 12px; }
+    .rpt-hero-btn { width: 100%; justify-content: center; font-size: 0.78rem; }
+    .rpt-hero-actions { flex-direction: column; }
+
+    .rpt-kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .rpt-kpi-card { padding: 0.875rem 0.75rem; }
+    .rpt-kpi-icon { width: 38px; height: 38px; font-size: 0.95rem; margin-bottom: 0.6rem; }
+    .rpt-kpi-value { font-size: 1.25rem; }
+
+    .rpt-filters { padding: 0.75rem 0.875rem; }
+    .rpt-panel-header { padding: 0.6rem 0.875rem; }
     .rpt-chart-canvas { max-height: 220px; }
 }
 

@@ -256,3 +256,17 @@
         background: rgba(239, 68, 68, 0.12);
     }
 }
+
+/* Dark mode */
+[data-theme="dark"] .cx-stock-card {
+    background: var(--surface);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] .cx-stock-card-meta div {
+    background: rgba(255,255,255,0.04);
+}
+
+@media (max-width: 360px) {
+    .cx-stock-card-meta { grid-template-columns: 1fr; }
+    .cx-stock-card-actions { justify-content: flex-start; }
+}

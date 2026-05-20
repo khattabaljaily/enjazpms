@@ -485,11 +485,25 @@
     .ts-hero { padding: 1.25rem; }
     .ts-hero__inner { flex-wrap: wrap; }
     .ts-hero__title { font-size: 1.2rem; }
+    .ts-hero__right { flex-wrap: wrap; gap: 0.65rem; }
     .ts-card__body { padding: 1rem; }
     .ts-switch { padding: 0.7rem 0.85rem; }
 }
 
 @media (max-width: 480px) {
+    .ts-hero { padding: 1rem; }
     .ts-hero__left { flex-direction: column; align-items: flex-start; }
     .ts-hero__icon { display: none; }
+    .ts-hero__title { font-size: 1.05rem; margin-bottom: 0.45rem; }
+    .ts-hero__right { display: none; }
+    .ts-card__body { padding: 0.85rem; }
+    .ts-card__header { padding: 0.85rem 1rem; }
+    .ts-btn { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 360px) {
+    .ts-hero { padding: 0.85rem; }
+    .ts-hero__badges { gap: 0.3rem; }
+    .ts-pill { font-size: 0.65rem; padding: 0.22rem 0.55rem; }
+    .ts-switch { padding: 0.65rem 0.75rem; }
 }

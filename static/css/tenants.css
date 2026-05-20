@@ -144,3 +144,18 @@
         gap: 0.5rem;
     }
 }
+
+@media (max-width: 576px) {
+    .tn-limits-grid { grid-template-columns: repeat(2, 1fr); }
+    .tn-form-modal-dialog { max-width: calc(100vw - 1.5rem); }
+}
+
+@media (max-width: 480px) {
+    .tn-limit-card { padding: 0.75rem; }
+    .tn-limit-val  { font-size: 1.45rem; }
+    .cxr-act { width: 38px; height: 38px; font-size: 0.82rem; }
+}
+
+@media (max-width: 360px) {
+    .tn-limits-grid { grid-template-columns: 1fr; }
+}

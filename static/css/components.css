@@ -1576,6 +1576,25 @@ table.dataTable thead th.sorting_desc::before { content: "\f0dd" !important; opa
 
     .cx-confirm-footer { flex-direction: column; gap: 0.5rem; padding-bottom: 1.25rem; }
     .cx-confirm-footer button { width: 100%; justify-content: center; }
+
+    .cx-modal-sidebar { display: none; }
+}
+
+@media (max-width: 480px) {
+    .cx-hero { padding: 0.6rem 0.75rem 0.3rem; }
+    .cx-hero-title { font-size: 1.05rem; }
+    .cx-hero-desc  { font-size: 0.75rem; }
+    .cx-hero-icon-wrap { width: 38px; height: 38px; font-size: 1rem; }
+
+    .cx-panel { border-radius: 14px; }
+
+    .cx-toolbar { padding: 0.6rem 0.75rem; gap: 0.5rem; }
+    .cx-search-input { height: 38px; font-size: 0.825rem; }
+
+    .cx-stat-badge { font-size: 0.72rem; padding: 0.25rem 0.55rem; gap: 0.3rem; }
+    .cx-stat-badge strong { font-size: 0.8rem; }
+
+    .cx-btn-add, .cx-btn-secondary { padding: 0.5rem 1rem; font-size: 0.825rem; }
 }
 
 /* ══════════════════════════ PROFILE ══════════════════════════ */

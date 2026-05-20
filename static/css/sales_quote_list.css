@@ -179,3 +179,18 @@
         background: rgba(239, 68, 68, 0.12);
     }
 }
+
+/* Dark mode — quote mobile cards */
+[data-theme="dark"] .cx-quote-card {
+    background: var(--surface);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] .cx-quote-card-meta div {
+    background: rgba(255,255,255,0.04);
+}
+
+/* Tiny phones */
+@media (max-width: 360px) {
+    .cx-quote-card-meta { grid-template-columns: 1fr; }
+    .cx-quote-card-actions { justify-content: flex-start; }
+}

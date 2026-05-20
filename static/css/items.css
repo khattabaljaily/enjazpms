@@ -317,3 +317,27 @@
     .units-mobile-card-list { gap: 0.75rem; }
     .cx-unit-card-meta { grid-template-columns: 1fr 1fr; }
 }
+
+/* Dark mode — all item cards */
+[data-theme="dark"] .cx-item-card,
+[data-theme="dark"] .cx-category-card,
+[data-theme="dark"] .cx-unit-card {
+    background: var(--surface);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] .cx-item-card-meta div,
+[data-theme="dark"] .cx-category-card-meta div,
+[data-theme="dark"] .cx-unit-card-meta div {
+    background: rgba(255,255,255,0.04);
+}
+
+/* Tiny phones */
+@media (max-width: 360px) {
+    .cx-item-card-meta,
+    .cx-category-card-meta,
+    .cx-unit-card-meta { grid-template-columns: 1fr; }
+
+    .cx-item-card-actions,
+    .cx-category-card-actions,
+    .cx-unit-card-actions { justify-content: flex-start; }
+}

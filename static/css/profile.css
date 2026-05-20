@@ -391,3 +391,21 @@
         font-size: 0.8rem;
     }
 }
+
+@media (max-width: 480px) {
+    .subscription-shell { padding: 0.6rem; border-radius: 14px; }
+    .subscription-hero__main,
+    .subscription-hero__status { padding: 0.65rem 0.75rem; }
+    .subscription-title { font-size: 1.1rem; }
+    .subscription-panel__header { padding: 0.65rem 0.75rem; }
+    .subscription-panel__body  { padding: 0.75rem; }
+    .profile-info-item { padding: 0.5rem 0.65rem; }
+    .profile-info-label { font-size: 0.74rem; }
+    .profile-info-value { font-size: 0.8rem; }
+}
+
+@media (max-width: 360px) {
+    .subscription-title { font-size: 0.98rem; }
+    .subscription-kicker { font-size: 0.65rem; }
+    .profile-action-btn { font-size: 0.76rem; }
+}

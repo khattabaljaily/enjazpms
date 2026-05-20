@@ -167,6 +167,26 @@
         flex-direction: column;
         align-items: stretch;
     }
+
+    .cx-select-sm { min-width: 160px; }
+    .opening-stock-label { flex-wrap: wrap; }
+}
+
+@media (max-width: 480px) {
+    .cx-select-sm { width: 100%; min-width: 0; }
+}
+
+/* Dark mode */
+[data-theme="dark"] .cx-opening-card {
+    background: var(--surface);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] .cx-opening-card-meta div {
+    background: rgba(255,255,255,0.04);
+}
+
+@media (max-width: 360px) {
+    .cx-opening-card-meta { grid-template-columns: 1fr; }
 }
 
 /* ══════════════════════════ MOBILE CARDS ══════════════════════════ */

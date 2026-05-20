@@ -397,6 +397,46 @@
 .db-ring-label { font-size: 1.4rem; font-weight: 800; color: var(--text-primary); }
 .db-ring-sub   { font-size: .75rem; color: var(--text-tertiary); text-align: center; }
 
+/* ── Responsive ───────────────────────────────────────── */
+@media (max-width: 768px) {
+    .db-kpi { padding: 1rem 1.1rem; gap: .75rem; }
+    .db-kpi-val { font-size: 1.4rem; }
+    .db-kpi-icon { width: 42px; height: 42px; font-size: 1rem; }
+    .db-panel-body { padding: 0.875rem 1rem; }
+    .db-panel-head { padding: .7rem 1rem; }
+    .db-chart-wrap { height: 200px; }
+    .db-actions-grid { gap: .55rem; }
+}
+
+@media (max-width: 575px) {
+    .db-greeting { padding: 1.25rem 1.25rem; border-radius: 16px; }
+    .db-greeting-text h2 { font-size: 1.15rem; }
+    .db-badge { padding: .45rem .8rem; min-width: 86px; }
+    .db-badge-val { font-size: 1.1rem; }
+
+    .db-kpi { padding: 0.875rem 1rem; }
+    .db-kpi-val { font-size: 1.3rem; }
+    .db-kpi-icon { width: 38px; height: 38px; font-size: .9rem; }
+
+    .db-stat { padding: .75rem .9rem; gap: .65rem; }
+    .db-stat-icon { width: 34px; height: 34px; font-size: .85rem; }
+    .db-stat-num { font-size: 1.2rem; }
+
+    .db-actions-grid { grid-template-columns: 1fr; }
+    .db-action { padding: .75rem .875rem; }
+
+    .db-cat-name { flex: 0 0 90px; font-size: .77rem; }
+    .db-chart-wrap { height: 180px; }
+    .db-panel-head { padding: .6rem .875rem; }
+    .db-panel-body { padding: .75rem .875rem; }
+}
+
+@media (max-width: 360px) {
+    .db-greeting-badges { flex-wrap: wrap; gap: .5rem; }
+    .db-badge { min-width: 72px; padding: .4rem .65rem; }
+    .db-stat-row { gap: .5rem; }
+}
+
 /* ── Dark overrides ───────────────────────────────────── */
 [data-theme="dark"] .db-panel,
 [data-theme="dark"] .db-kpi,

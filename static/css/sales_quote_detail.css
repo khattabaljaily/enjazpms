@@ -72,3 +72,21 @@
     }
 
 }
+
+@media (max-width: 480px) {
+    .cx-hero-actions {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+
+    .cx-hero-actions a,
+    .cx-hero-actions button {
+        padding: 9px !important;
+        font-size: 12px !important;
+        min-height: 40px !important;
+    }
+
+    .cx-hero-actions > *:last-child:nth-child(odd) {
+        max-width: 100% !important;
+    }
+}

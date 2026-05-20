@@ -662,3 +662,20 @@
     .pr-topbar { padding: 0.75rem 1rem; }
     .pr-footer__inner { flex-direction: column; text-align: center; }
 }
+
+@media (max-width: 480px) {
+    .pr-hero { padding: 2.5rem 0 2.25rem; }
+    .pr-hero__title { font-size: 1.35rem; }
+    .pr-hero__desc { font-size: 0.85rem; }
+    .pr-cta { padding: 2rem 1.25rem; }
+    .pr-cta__title { font-size: 1.35rem; }
+    .pr-section-title { font-size: 1.3rem; }
+    .pr-card { padding: 1.35rem; }
+    .pr-topbar__links { display: none; }
+}
+
+@media (max-width: 360px) {
+    .pr-hero__title { font-size: 1.2rem; }
+    .pr-card__price-num { font-size: 1.7rem; }
+    .pr-cta__title { font-size: 1.15rem; }
+}

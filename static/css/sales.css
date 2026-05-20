@@ -671,33 +671,63 @@ select.cx-input {
 /* Small Mobile */
 @media (max-width: 480px) {
   .cx-hero {
-    padding: 0.875rem 1rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: 18px;
   }
-  
+
   .cx-hero-left {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
   }
-  
+
   .cx-hero-icon-wrap {
     display: none;
   }
-  
+
+  .cx-stats-inline { gap: 0.4rem; }
+
   .cx-stat-badge {
     flex: 1;
     justify-content: center;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.78rem;
   }
-  
+
+  .cx-badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; }
+
   .cx-input {
     padding: 0.6rem 0.85rem;
   }
-  
+
   .cx-btn-secondary,
   .cx-btn-add {
     padding: 0.6rem 1rem;
     justify-content: center;
   }
+
+  .cx-select-sm { width: 100%; }
+}
+
+/* Tiny phones — collapse meta grids to 1 column */
+@media (max-width: 360px) {
+  .cx-order-card-meta,
+  .cx-invoice-card-meta { grid-template-columns: 1fr; }
+
+  .cx-order-card-actions,
+  .cx-invoice-card-actions { justify-content: flex-start; }
+}
+
+/* Dark mode — mobile cards */
+[data-theme="dark"] .cx-order-card,
+[data-theme="dark"] .cx-invoice-card {
+    background: var(--surface);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .cx-order-card-meta div,
+[data-theme="dark"] .cx-invoice-card-meta div {
+    background: rgba(255,255,255,0.04);
 }
 
 /* Print Styles */

@@ -575,3 +575,18 @@
 .animate-fade-in {
     animation: authFadeUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+@media (max-width: 480px) {
+    .auth-card { padding: 1.5rem 1.25rem; border-radius: 20px; }
+    .auth-title { font-size: 1.35rem; }
+    .auth-logo img { height: 58px; }
+    .auth-page { padding: 1.5rem 0; }
+    .progress-step-circle { width: 34px; height: 34px; font-size: 0.8rem; }
+    .progress-step-label { font-size: 0.68rem; max-width: 60px; }
+}
+
+@media (max-width: 360px) {
+    .auth-card { padding: 1.25rem 1rem; border-radius: 16px; }
+    .auth-title { font-size: 1.2rem; }
+    .auth-logo img { height: 50px; }
+}
