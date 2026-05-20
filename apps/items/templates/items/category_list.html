@@ -28,6 +28,14 @@
                     <i class="fas fa-arrow-right"></i>
                     <span>المنتجات</span>
                 </a>
+                <a href="{% url 'items:category_export_api' %}" class="cx-btn-secondary">
+                    <i class="fas fa-file-export"></i>
+                    <span>تصدير</span>
+                </a>
+                <button type="button" class="cx-btn-secondary" id="btnOpenImportCategories">
+                    <i class="fas fa-file-import"></i>
+                    <span>استيراد</span>
+                </button>
                 <button type="button" class="cx-btn-add" id="btnOpenCreateCategory">
                     <i class="fas fa-plus"></i>
                     <span>إضافة تصنيف</span>
@@ -133,6 +141,40 @@
     </div>
 </div>
 
+<!-- IMPORT MODAL -->
+<div class="modal fade" id="importCategoriesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-modal-dialog" style="max-width:480px">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-main">
+                <div class="cx-modal-header">
+                    <h5 class="cx-modal-title"><i class="fas fa-file-import me-2"></i>استيراد تصنيفات</h5>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cx-modal-body">
+                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" style="font-size:.875rem">
+                        <i class="fas fa-circle-info mt-1"></i>
+                        <div>
+                            ارفع ملف CSV أو Excel يحتوي على بيانات التصنيفات.
+                            <a href="{% url 'items:category_template_api' %}" class="fw-bold">تحميل النموذج</a>
+                        </div>
+                    </div>
+                    <div id="importCategoriesResult" class="d-none mb-3"></div>
+                    <div class="mb-3">
+                        <label class="cx-label" for="importCategoriesFile">اختر الملف <sup class="cx-required">*</sup></label>
+                        <input type="file" class="form-control" id="importCategoriesFile" accept=".csv,.xlsx,.xls">
+                    </div>
+                </div>
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="cx-btn-primary" id="confirmImportCategoriesBtn">
+                        <i class="fas fa-upload me-1"></i> استيراد
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- DELETE MODAL -->
 <div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
@@ -163,7 +205,7 @@
     const urlDelete = "{% url 'items:category_delete_api' 0 %}";
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
-    ['categoryModal','deleteCategoryModal'].forEach(function(id) {
+    ['categoryModal','deleteCategoryModal','importCategoriesModal'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el && el.parentElement !== document.body) document.body.appendChild(el);
     });
@@ -315,6 +357,46 @@
         }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
     });
     $('#categoriesTable').on('click', '.js-edit-category', function() { openEdit($(this).data('id')); });
+
+    /* ── Import ──────────────────────────────────────────────── */
+    const importCategoriesModal = new bootstrap.Modal(document.getElementById('importCategoriesModal'));
+
+    $('#btnOpenImportCategories').on('click', function () {
+        $('#importCategoriesFile').val('');
+        $('#importCategoriesResult').addClass('d-none').html('');
+        importCategoriesModal.show();
+    });
+
+    $('#confirmImportCategoriesBtn').on('click', function () {
+        const file = $('#importCategoriesFile')[0].files[0];
+        if (!file) { EnjazIMS.toast('الرجاء اختيار ملف', 'error'); return; }
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').first().val());
+        const $btn = $(this);
+        EnjazIMS.showLoading($btn);
+        $.ajax({
+            url: "{% url 'items:category_import_api' %}",
+            method: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function (resp) {
+                EnjazIMS.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
+                const cls = resp.success ? 'alert-success' : 'alert-danger';
+                let html = `<div class="alert ${cls} mb-0">${resp.message}</div>`;
+                if (resp.errors && resp.errors.length) {
+                    html += '<ul class="mt-2 mb-0 small text-danger">' + resp.errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+                }
+                $('#importCategoriesResult').removeClass('d-none').html(html);
+                if (resp.success && resp.imported > 0) dt.ajax.reload(null, false);
+            },
+            error: function () {
+                EnjazIMS.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
+                EnjazIMS.toast('حدث خطأ أثناء الاستيراد', 'error');
+            }
+        });
+    });
 })();
 </script>
 {% endblock %}

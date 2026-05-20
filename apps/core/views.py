@@ -477,7 +477,17 @@ def subscription_info(request):
     else:
         status_label = 'منتهي / غير صالح'
         status_tone = 'danger'
-    
+
+    from apps.accounts.models import User as TenantUser
+    from apps.stocks.models import Stock
+    current_users  = TenantUser.objects.filter(tenant=tenant).count() if tenant else 0
+    current_stocks = Stock.objects.filter(tenant=tenant, is_active=True).count() if tenant else 0
+
+    def pct(used, limit):
+        if not limit:
+            return 0
+        return min(round(used / limit * 100), 100)
+
     context = {
         'tenant': tenant,
         'current_tenant': tenant,
@@ -485,8 +495,12 @@ def subscription_info(request):
         'subscription_is_valid': is_valid,
         'subscription_status_label': status_label,
         'subscription_status_tone': status_tone,
+        'current_users': current_users,
+        'current_stocks': current_stocks,
+        'users_pct': pct(current_users, tenant.max_users if tenant else 1),
+        'stocks_pct': pct(current_stocks, tenant.max_stocks if tenant else 1),
     }
-    
+
     return render(request, 'core/subscription.html', context)
 
 
@@ -611,7 +625,7 @@ def tenant_table_api(request):
 
 @login_required
 def tenant_create_api(request):
-    """API: إنشاء عميل جديد"""
+    """API: إنشاء عميل جديد مع مستخدم مدير"""
     err = _superuser_required(request)
     if err:
         return err
@@ -619,12 +633,73 @@ def tenant_create_api(request):
         return HttpResponseNotAllowed(['POST'])
 
     form = TenantForm(request.POST)
-    if form.is_valid():
-        tenant = form.save()
-        return JsonResponse({'success': True, 'message': 'تم إنشاء العميل بنجاح', 'id': tenant.id})
 
-    errors = {f: [str(e) for e in errs] for f, errs in form.errors.items()}
-    return JsonResponse({'success': False, 'message': 'يرجى مراجعة الحقول', 'errors': errors}, status=400)
+    # Validate admin user fields
+    from apps.accounts.models import User, PermissionGroup
+    username   = request.POST.get('admin_username', '').strip()
+    password   = request.POST.get('admin_password', '').strip()
+    password2  = request.POST.get('admin_password2', '').strip()
+    email      = request.POST.get('admin_email', '').strip()
+    full_name  = request.POST.get('admin_full_name', '').strip()
+
+    user_errors = {}
+    if not username:
+        user_errors['admin_username'] = ['اسم المستخدم مطلوب']
+    elif User.objects.filter(username=username).exists():
+        user_errors['admin_username'] = ['اسم المستخدم مستخدم بالفعل']
+    if not password:
+        user_errors['admin_password'] = ['كلمة المرور مطلوبة']
+    elif len(password) < 6:
+        user_errors['admin_password'] = ['كلمة المرور يجب أن تكون 6 أحرف على الأقل']
+    elif password != password2:
+        user_errors['admin_password2'] = ['كلمتا المرور غير متطابقتين']
+    if email and User.objects.filter(email=email).exists():
+        user_errors['admin_email'] = ['البريد الإلكتروني مستخدم بالفعل']
+
+    if not form.is_valid() or user_errors:
+        errors = {f: [str(e) for e in errs] for f, errs in form.errors.items()}
+        errors.update(user_errors)
+        first_msg = next(iter(errors.values()), ['يرجى مراجعة الحقول'])[0]
+        return JsonResponse({'success': False, 'message': first_msg, 'errors': errors}, status=400)
+
+    from django.db import transaction
+    try:
+        with transaction.atomic():
+            tenant = form.save()
+
+            # Create admin user
+            first, _, last = full_name.partition(' ')
+            user = User.objects.create_user(
+                username=username,
+                email=email or '',
+                password=password,
+                first_name=first,
+                last_name=last,
+                tenant=tenant,
+                is_tenant_admin=True,
+            )
+            owner_group = PermissionGroup.create_owner_group(tenant, name='مدير النشاط')
+            owner_group.users.add(user)
+
+            # Create Settings
+            tax_enabled = request.POST.get('tax_enabled') in ('on', 'true', '1', 'True')
+            try:
+                tax_value = float(request.POST.get('tax_value', 0) or 0)
+            except (ValueError, TypeError):
+                tax_value = 0
+            from .models import Settings
+            Settings.objects.create(tenant=tenant, tax_enabled=tax_enabled, tax_value=tax_value)
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error('tenant_create_api error: %s', e, exc_info=True)
+        return JsonResponse({'success': False, 'message': f'حدث خطأ: {e}'}, status=500)
+
+    return JsonResponse({
+        'success': True,
+        'message': f'تم إنشاء العميل "{tenant.name}" ومدير النشاط "{username}" بنجاح',
+        'id': tenant.id,
+    })
 
 
 @login_required
@@ -639,7 +714,15 @@ def tenant_detail_api(request, pk):
     is_valid = tenant.is_subscription_valid()
 
     from apps.accounts.models import User
+    admin_user = User.objects.filter(tenant=tenant, is_tenant_admin=True).order_by('id').first()
     user_count = User.objects.filter(tenant=tenant).count()
+
+    settings_obj = tenant.settings if hasattr(tenant, 'settings') else None
+    try:
+        from .models import Settings as TenantSettings
+        settings_obj = TenantSettings.objects.filter(tenant=tenant).first()
+    except Exception:
+        settings_obj = None
 
     return JsonResponse({
         'success': True,
@@ -663,12 +746,19 @@ def tenant_detail_api(request, pk):
             'max_users': tenant.max_users,
             'max_stocks': tenant.max_stocks,
             'max_branches': tenant.max_branches,
+            'timezone': tenant.timezone or '',
+            'currency': tenant.currency or '',
             'is_active': tenant.is_active,
             'is_demo': tenant.is_demo,
             'days_until_expiry': days,
             'is_subscription_valid': is_valid,
             'user_count': user_count,
             'created_at': tenant.created_at.strftime('%Y-%m-%d'),
+            'admin_username': admin_user.username if admin_user else '',
+            'admin_email': admin_user.email if admin_user else '',
+            'admin_full_name': admin_user.get_full_name() if admin_user else '',
+            'tax_enabled': settings_obj.tax_enabled if settings_obj else False,
+            'tax_value': float(settings_obj.tax_value) if settings_obj else 0,
         }
     })
 
@@ -684,12 +774,56 @@ def tenant_update_api(request, pk):
 
     tenant = get_object_or_404(Tenant, pk=pk)
     form = TenantForm(request.POST, instance=tenant)
-    if form.is_valid():
-        form.save()
-        return JsonResponse({'success': True, 'message': 'تم تعديل بيانات العميل بنجاح'})
 
-    errors = {f: [str(e) for e in errs] for f, errs in form.errors.items()}
-    return JsonResponse({'success': False, 'message': 'يرجى مراجعة الحقول', 'errors': errors}, status=400)
+    from apps.accounts.models import User
+    password  = request.POST.get('admin_password', '').strip()
+    password2 = request.POST.get('admin_password2', '').strip()
+    email     = request.POST.get('admin_email', '').strip()
+    full_name = request.POST.get('admin_full_name', '').strip()
+
+    user_errors = {}
+    if password and password != password2:
+        user_errors['admin_password2'] = ['كلمتا المرور غير متطابقتين']
+    if password and len(password) < 6:
+        user_errors['admin_password'] = ['كلمة المرور يجب أن تكون 6 أحرف على الأقل']
+    admin_user = User.objects.filter(tenant=tenant, is_tenant_admin=True).order_by('id').first()
+    if email and admin_user and email != admin_user.email:
+        if User.objects.filter(email=email).exclude(pk=admin_user.pk).exists():
+            user_errors['admin_email'] = ['البريد الإلكتروني مستخدم بالفعل']
+
+    if not form.is_valid() or user_errors:
+        errors = {f: [str(e) for e in errs] for f, errs in form.errors.items()}
+        errors.update(user_errors)
+        first_msg = next(iter(errors.values()), ['يرجى مراجعة الحقول'])[0]
+        return JsonResponse({'success': False, 'message': first_msg, 'errors': errors}, status=400)
+
+    from django.db import transaction
+    with transaction.atomic():
+        form.save()
+
+        if admin_user:
+            first, _, last = full_name.partition(' ')
+            if full_name:
+                admin_user.first_name = first
+                admin_user.last_name  = last
+            if email:
+                admin_user.email = email
+            if password:
+                admin_user.set_password(password)
+            admin_user.save()
+
+        tax_enabled = request.POST.get('tax_enabled') in ('on', 'true', '1', 'True')
+        try:
+            tax_value = float(request.POST.get('tax_value', 0) or 0)
+        except (ValueError, TypeError):
+            tax_value = 0
+        from .models import Settings as TenantSettings
+        TenantSettings.objects.update_or_create(
+            tenant=tenant,
+            defaults={'tax_enabled': tax_enabled, 'tax_value': tax_value},
+        )
+
+    return JsonResponse({'success': True, 'message': 'تم تعديل بيانات العميل بنجاح'})
 
 
 @login_required
@@ -703,8 +837,60 @@ def tenant_delete_api(request, pk):
 
     tenant = get_object_or_404(Tenant, pk=pk)
     name = tenant.name
-    tenant.delete()
+    try:
+        _delete_tenant_data(tenant)
+        tenant.delete()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error('tenant_delete_api error pk=%s: %s', pk, e, exc_info=True)
+        return JsonResponse({'success': False, 'message': f'تعذر الحذف: {e}'}, status=400)
     return JsonResponse({'success': True, 'message': f'تم حذف العميل "{name}" بنجاح'})
+
+
+def _delete_tenant_data(tenant):
+    """
+    Delete all tenant-scoped records in an order that avoids PROTECT FK violations.
+    Many models use on_delete=PROTECT to guard referential integrity within a tenant,
+    but when wiping an entire tenant all those objects must go together.
+    """
+    from apps.core.models import tenant_deletion_in_progress
+    token = tenant_deletion_in_progress.set(True)
+    try:
+        t = {'tenant': tenant}
+        # 1. Deepest dependents first (protect SaleInvoiceLine / SaleReturn / etc.)
+        from apps.sales.models import SaleReturnLine, SaleReturn, SaleInvoiceLine
+        from apps.sales.models import SaleQuoteLine, SaleInvoice, SaleQuote
+        from apps.sales.models import StockMovement, CustomerLedger, SalePayment
+        from apps.purchases.models import (
+            PurchaseReturnLine, PurchaseReturn,
+            PurchaseInvoiceLine, PurchaseInvoice,
+            PurchasePayment, SupplierLedger,
+        )
+        from apps.expenses.models import Expense
+        from apps.treasury.models import TreasuryMovement
+
+        SaleReturnLine.objects.filter(**t).delete()
+        SaleReturn.objects.filter(**t).delete()
+        PurchaseReturnLine.objects.filter(**t).delete()
+        PurchaseReturn.objects.filter(**t).delete()
+        StockMovement.objects.filter(**t).delete()
+        SaleInvoiceLine.objects.filter(**t).delete()
+        PurchaseInvoiceLine.objects.filter(**t).delete()
+        SaleQuoteLine.objects.filter(**t).delete()
+        SalePayment.objects.filter(**t).delete()
+        PurchasePayment.objects.filter(**t).delete()
+        SaleInvoice.objects.filter(**t).delete()
+        SaleQuote.objects.filter(**t).delete()
+        PurchaseInvoice.objects.filter(**t).delete()
+        CustomerLedger.objects.filter(**t).delete()
+        SupplierLedger.objects.filter(**t).delete()
+        Expense.objects.filter(**t).delete()
+        TreasuryMovement.objects.filter(**t).delete()
+        # After the above, tenant.delete() cascades safely through
+        # Customer, Supplier, Item, ItemVariant, Stock, StockQuantity,
+        # Treasury, ExpenseCategory, Users, Settings, etc.
+    finally:
+        tenant_deletion_in_progress.reset(token)
 
 
 @login_required

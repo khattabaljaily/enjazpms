@@ -382,14 +382,14 @@ function addLineToTable(lineData) {
             <div class="sales-line-item-name">${lineData.item_name}</div>
             <div class="sales-line-item-sku">${lineData.item_sku || ''}</div>
         </td>
-        <td><input type="number" class="cx-input cx-input--sm sales-input-qty" id="qty-${id}"
-               value="${qty}" min="0.0001" step="0.01" oninput="updateLine(${id})"></td>
-        <td><input type="number" class="cx-input cx-input--sm sales-input-price" id="price-${id}"
-               value="${price}" min="0" step="0.01" oninput="updateLine(${id})"></td>
-        <td><input type="number" class="cx-input cx-input--sm sales-input-pct" id="disc-${id}"
-               value="${disc}" min="0" max="100" step="0.01" oninput="updateLine(${id})"></td>
-        <td><input type="number" class="cx-input cx-input--sm sales-input-pct" id="tax-${id}"
-               value="${tax}" min="0" step="0.01" oninput="updateLine(${id})"></td>
+        <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-qty inv-num-field" id="qty-${id}"
+               value="${qty}" oninput="updateLine(${id})"></td>
+        <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-price inv-num-field" id="price-${id}"
+               value="${price}" oninput="updateLine(${id})"></td>
+        <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-pct inv-num-field" id="disc-${id}"
+               value="${disc}" oninput="updateLine(${id})"></td>
+        <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-pct inv-num-field" id="tax-${id}"
+               value="${tax}" oninput="updateLine(${id})"></td>
         <td class="text-end" id="total-${id}"><strong>${EnjazIMS.formatMoney(lineTotal)}</strong></td>
         <td>
             <button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})">

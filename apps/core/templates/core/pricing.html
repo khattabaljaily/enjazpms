@@ -4,124 +4,214 @@
 {% block title %}خطط الأسعار | إنجاز{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/pricing.css' %}">
+<link rel="stylesheet" href="{% static 'css/pricing.css' %}?v=2.0">
 {% endblock %}
 
 {% block body %}
-<div class="container py-5">
-    <div class="pricing-hero mb-5">
-        <div class="row align-items-center">
-            <div class="col-lg-7">
-                <span class="d-inline-block mb-3 badge bg-white text-primary rounded-pill py-2 px-3">7 أيام تجربة مجانية</span>
-                <h1>خطط تسعير مصممة لأعمال التجزئة والمخازن</h1>
-                <p>اختر الخطة المناسبة لك، سواء كنت متجر صغير، نشاط بمخازن متعددة، أو مؤسسة تمتلك أكثر من فرع. كل خطة تدعم إدارة المخزون، الفواتير، والمبيعات مع أدوات تحكم احترافية.</p>
-                <div class="mt-4 d-flex flex-column flex-sm-row gap-2">
-                    <a href="{% url 'accounts:register_step1' %}" class="btn btn-light btn-lg text-primary">ابدأ الفترة التجريبية</a>
-                    <a href="{% url 'accounts:login' %}" class="btn btn-outline-light btn-lg">تسجيل الدخول</a>
+<div class="pr-page">
+
+    <!-- ─── Top Bar ──────────────────────────────────────────────── -->
+    <nav class="pr-topbar">
+        <a href="/" class="pr-topbar__brand">
+            <img src="{% static 'img/logo/logo-6547bd.png' %}" alt="إنجاز" height="30">
+            <span>إنجاز</span>
+        </a>
+        <div class="pr-topbar__links">
+            <a href="{% url 'accounts:login' %}" class="pr-topbar__link">تسجيل الدخول</a>
+            <a href="{% url 'accounts:register_step1' %}" class="pr-topbar__cta">ابدأ مجاناً</a>
+        </div>
+    </nav>
+
+    <!-- ─── Hero ─────────────────────────────────────────────────── -->
+    <section class="pr-hero">
+        <div class="pr-hero__orb pr-hero__orb--1"></div>
+        <div class="pr-hero__orb pr-hero__orb--2"></div>
+        <div class="pr-hero__orb pr-hero__orb--3"></div>
+        <div class="pr-container">
+            <div class="pr-hero__inner">
+                <span class="pr-hero__badge">
+                    <i class="fas fa-gift"></i>
+                    {{ trial_days }} أيام تجربة مجانية — بدون دفع مسبق!
+                </span>
+                <h1 class="pr-hero__title">
+                    خطط مصممة لأعمال<br>
+                    <span class="pr-hero__accent">التجزئة والمخازن</span>
+                </h1>
+                <p class="pr-hero__desc">
+                    سواء كنت متجراً صغيراً أو مؤسسة بفروع متعددة — نجد لك الخطة المثالية.<br>
+                    إدارة مخزون، فواتير، ومبيعات في مكان واحد.
+                </p>
+                <div class="pr-hero__cta">
+                    <a href="{% url 'accounts:register_step1' %}" class="pr-btn pr-btn--primary pr-btn--lg">
+                        <i class="fas fa-rocket"></i>
+                        ابدأ الفترة التجريبية
+                    </a>
+                    <a href="{% url 'accounts:login' %}" class="pr-btn pr-btn--ghost pr-btn--lg">
+                        تسجيل الدخول
+                    </a>
                 </div>
-            </div>
-            <div class="col-lg-5 mt-4 mt-lg-0">
-                <div class="card shadow-sm border-0" style="border-radius: 24px; overflow: hidden;">
-                    <div class="card-body p-4" style="background: rgba(255,255,255,0.92);">
-                        <h2 class="h4 text-dark mb-3">لماذا تختار إنجاز؟</h2>
-                        <ul class="list-unstyled text-muted mb-0">
-                            <li class="mb-2"><i class="fas fa-check-circle me-2 text-primary"></i>واجهة عربية حديثة وسهلة الاستخدام.</li>
-                            <li class="mb-2"><i class="fas fa-check-circle me-2 text-primary"></i>دعم متقدم للمخازن والفروع.</li>
-                            <li class="mb-2"><i class="fas fa-check-circle me-2 text-primary"></i>نظام صلاحيات مرن لكل فريق العمل.</li>
-                            <li class="mb-2"><i class="fas fa-check-circle me-2 text-primary"></i>تحديثات وتقارير فورية على أعمالك.</li>
-                        </ul>
-                    </div>
+                <div class="pr-hero__trust">
+                    <span><i class="fas fa-shield-alt"></i> آمن وموثوق</span>
+                    <span><i class="fas fa-headset"></i> دعم فني متواصل</span>
+                    <span><i class="fas fa-sync"></i> تحديثات مستمرة</span>
+                    <span><i class="fas fa-globe"></i> واجهة عربية كاملة</span>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
+    <!-- ─── Current Plan Banner ──────────────────────────────────── -->
     {% if current_subscription_plan_display %}
-    <div class="mb-4">
-        <div class="alert alert-info d-flex align-items-center" role="alert">
-            <strong class="me-2">باقة حالياً:</strong>
-            <div>{{ current_subscription_plan_display }}</div>
+    <div class="pr-container">
+        <div class="pr-current-banner">
+            <i class="fas fa-check-circle"></i>
+            <span>باقتك الحالية:</span>
+            <strong>{{ current_subscription_plan_display }}</strong>
         </div>
     </div>
     {% endif %}
 
-    <div class="row g-4 mb-5">
-        {% for plan in plans %}
-        <div class="col-md-6 col-xl-4">
-            <div class="card pricing-card {% if plan.highlight %}featured{% endif %} h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="mb-3 d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <span class="pricing-badge">{{ plan.title_ar }}</span>
-                            <h3 class="pricing-card-title">{{ plan.name }}</h3>
-                            <p class="pricing-card-subtitle">{{ plan.description }}</p>
-                        </div>
-                        {% if plan.is_current %}
-                        <div>
-                            <span class="badge bg-success">الخطة الحالية</span>
-                        </div>
-                        {% endif %}
+    <!-- ─── Plans ─────────────────────────────────────────────────── -->
+    <section class="pr-plans">
+        <div class="pr-container">
+            <div class="pr-section-head">
+                <span class="pr-section-kicker">خطط الأسعار</span>
+                <h2 class="pr-section-title">اختر ما يناسب نشاطك</h2>
+                <p class="pr-section-sub">كل خطة تشمل نظام مخزون كامل، فواتير مبيعات وشراء، وتقارير تفصيلية.</p>
+            </div>
+
+            <div class="pr-cards">
+                {% for plan in plans %}
+                <div class="pr-card {% if plan.highlight %}pr-card--featured{% endif %}">
+                    {% if plan.highlight %}
+                    <div class="pr-card__ribbon">الأكثر شيوعاً</div>
+                    {% endif %}
+                    {% if plan.is_current and not plan.highlight %}
+                    <div class="pr-card__ribbon pr-card__ribbon--current">خطتك الحالية</div>
+                    {% endif %}
+                    {% if plan.is_current and plan.highlight %}
+                    <div class="pr-card__ribbon">خطتك الحالية ✦ الأكثر شيوعاً</div>
+                    {% endif %}
+
+                    <div class="pr-card__head">
+                        <span class="pr-card__badge">{{ plan.title_ar }}</span>
+                        <h3 class="pr-card__name">{{ plan.name }}</h3>
+                        <p class="pr-card__desc">{{ plan.description }}</p>
                     </div>
 
-                    <div class="mb-4">
-                        <div class="pricing-card-price">{{ plan.monthly }}<small class="text-muted fs-6">/شهر</small></div>
-                        <div class="text-muted">{{ plan.annual }} سنويًا | {{ plan.perpetual }} امتلاك دائم</div>
+                    <div class="pr-card__price">
+                        <span class="pr-card__price-num">{{ plan.monthly }}</span>
+                        <span class="pr-card__price-period">/شهر</span>
+                    </div>
+                    <div class="pr-card__price-alt">
+                        {{ plan.annual }} سنوياً &nbsp;·&nbsp; {{ plan.perpetual }} ترخيص دائم
                     </div>
 
-                    <ul class="list-unstyled mb-4">
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>{{ plan.stocks }}</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>{{ plan.users }}</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>تجربة مجانية {{ trial_days }} أيام</li>
-                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>{{ plan.tag }}</li>
+                    <ul class="pr-card__features">
+                        <li><i class="fas fa-check"></i>{{ plan.stocks }}</li>
+                        <li><i class="fas fa-check"></i>{{ plan.users }}</li>
+                        <li><i class="fas fa-check"></i>تجربة مجانية {{ trial_days }} أيام</li>
+                        <li><i class="fas fa-check"></i>{{ plan.tag }}</li>
+                        <li><i class="fas fa-check"></i>فواتير مبيعات وشراء</li>
+                        <li><i class="fas fa-check"></i>تقارير تفصيلية</li>
                     </ul>
 
-                    <div class="mt-auto">
-                        <a href="{% url 'accounts:register_step1' %}" class="btn {% if plan.highlight %}btn-primary{% else %}btn-outline-primary{% endif %} w-100">اختر هذه الخطة</a>
-                    </div>
+                    <a href="{% url 'accounts:register_step1' %}"
+                       class="pr-btn {% if plan.highlight %}pr-btn--primary{% else %}pr-btn--outline{% endif %} pr-btn--full">
+                        ابدأ الآن
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
                 </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div class="row align-items-center">
-        <div class="col-lg-6 mb-4 mb-lg-0">
-            <h2>ميزات النظام الشاملة</h2>
-            <p class="text-muted">كل خطة تتضمن مجموعة قوية من الميزات التي تغطي العمليات اليومية من المبيعات إلى الجرد وإدارة الفروع. اختر ما يناسبك وأضف توسعة لاحقًا حسب احتياجك.</p>
-            <ul class="list-unstyled">
-                {% for benefit in benefits %}
-                <li class="mb-3"><i class="fas fa-check-circle text-primary me-2"></i>{{ benefit }}</li>
                 {% endfor %}
-            </ul>
+            </div>
         </div>
-        <div class="col-lg-6">
-            <div class="row g-3">
-                <div class="col-sm-6">
-                    <div class="benefit-item">
-                        <h5>تقارير فورية</h5>
-                        <p class="mb-0 text-muted">لوحات تحكم ومؤشرات أداء لتتبع المبيعات والمشتريات بسهولة.</p>
+    </section>
+
+    <!-- ─── Features Grid ────────────────────────────────────────── -->
+    <section class="pr-features">
+        <div class="pr-container">
+            <div class="pr-section-head">
+                <span class="pr-section-kicker">لماذا إنجاز؟</span>
+                <h2 class="pr-section-title">ميزات النظام الشاملة</h2>
+                <p class="pr-section-sub">كل ما تحتاجه لإدارة نشاطك التجاري من مكان واحد.</p>
+            </div>
+            <div class="pr-benefits">
+                <div class="pr-benefit">
+                    <div class="pr-benefit__icon pr-benefit__icon--indigo">
+                        <i class="fas fa-chart-line"></i>
                     </div>
+                    <h4 class="pr-benefit__title">تقارير فورية</h4>
+                    <p class="pr-benefit__desc">لوحات تحكم ومؤشرات أداء لتتبع المبيعات والمشتريات بسهولة.</p>
                 </div>
-                <div class="col-sm-6">
-                    <div class="benefit-item">
-                        <h5>إدارة فروع متعددة</h5>
-                        <p class="mb-0 text-muted">تحكم كامل بالمخازن والفروع من مكان واحد.</p>
+                <div class="pr-benefit">
+                    <div class="pr-benefit__icon pr-benefit__icon--violet">
+                        <i class="fas fa-code-branch"></i>
                     </div>
+                    <h4 class="pr-benefit__title">إدارة فروع متعددة</h4>
+                    <p class="pr-benefit__desc">تحكم كامل بالمخازن والفروع من مكان واحد.</p>
                 </div>
-                <div class="col-sm-6">
-                    <div class="benefit-item">
-                        <h5>صلاحيات قابلة للتخصيص</h5>
-                        <p class="mb-0 text-muted">حدد من يصل لأي جزء من النظام بسهولة.</p>
+                <div class="pr-benefit">
+                    <div class="pr-benefit__icon pr-benefit__icon--blue">
+                        <i class="fas fa-shield-alt"></i>
                     </div>
+                    <h4 class="pr-benefit__title">صلاحيات قابلة للتخصيص</h4>
+                    <p class="pr-benefit__desc">حدد من يصل لأي جزء من النظام بسهولة تامة.</p>
                 </div>
-                <div class="col-sm-6">
-                    <div class="benefit-item">
-                        <h5>دعم فني مستمر</h5>
-                        <p class="mb-0 text-muted">تحديثات وصيانة جاهزة لتشغيل سلس.</p>
+                <div class="pr-benefit">
+                    <div class="pr-benefit__icon pr-benefit__icon--green">
+                        <i class="fas fa-headset"></i>
                     </div>
+                    <h4 class="pr-benefit__title">دعم فني مستمر</h4>
+                    <p class="pr-benefit__desc">تحديثات وصيانة جاهزة لتشغيل سلس دون انقطاع.</p>
+                </div>
+                <div class="pr-benefit">
+                    <div class="pr-benefit__icon pr-benefit__icon--orange">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <h4 class="pr-benefit__title">فواتير احترافية</h4>
+                    <p class="pr-benefit__desc">إنشاء فواتير PDF احترافية وإرسالها مباشرة لعملائك بضغطة واحدة.</p>
+                </div>
+                <div class="pr-benefit">
+                    <div class="pr-benefit__icon pr-benefit__icon--teal">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                    <h4 class="pr-benefit__title">إدارة المخزون</h4>
+                    <p class="pr-benefit__desc">تتبع الكميات وتنبيهات المخزون المنخفض ومراقبة الحركة.</p>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
+
+    <!-- ─── CTA Banner ───────────────────────────────────────────── -->
+    <section class="pr-cta-section">
+        <div class="pr-container">
+            <div class="pr-cta">
+                <div class="pr-cta__orb pr-cta__orb--1"></div>
+                <div class="pr-cta__orb pr-cta__orb--2"></div>
+                <div class="pr-cta__content">
+                    <h2 class="pr-cta__title">جاهز للبدء؟</h2>
+                    <p class="pr-cta__desc">جرّب إنجاز مجاناً لمدة {{ trial_days }} أيام — بدون أي التزام.</p>
+                    <a href="{% url 'accounts:register_step1' %}" class="pr-btn pr-btn--white pr-btn--lg">
+                        <i class="fas fa-rocket"></i>
+                        ابدأ الآن مجاناً
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Footer ───────────────────────────────────────────────── -->
+    <footer class="pr-footer">
+        <div class="pr-container">
+            <div class="pr-footer__inner">
+                <span class="pr-footer__copy">إنجاز &copy; 2025 — نظام إدارة المخزون</span>
+                <div class="pr-footer__links">
+                    <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>
+                    <a href="{% url 'accounts:register_step1' %}">إنشاء حساب</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
 </div>
 {% endblock %}

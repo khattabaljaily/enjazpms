@@ -388,7 +388,7 @@ const EnjazIMS = {
     },
     
     // Format currency
-    formatCurrency: function(amount, currency = 'EGP') {
+    formatCurrency: function(amount, currency = 'SDG') {
         const formatted = this.formatMoney(amount);
         return `${formatted} ${currency}`;
     },
@@ -495,6 +495,33 @@ $(document).ready(function() {
         clearTimeout(_stepperTimer);
         _stepperTimer = setTimeout(function() { EnjazIMS.initNumberSteppers(); }, 120);
     }).observe(document.body, { childList: true, subtree: true });
+
+    // Numeric-only filter for invoice line fields (.inv-num-field)
+    // Allows: digits 0-9, one decimal point, backspace/delete/arrows/tab/home/end
+    document.addEventListener('keydown', function(e) {
+        var el = e.target;
+        if (!el.classList || !el.classList.contains('inv-num-field')) return;
+        var allowed = [
+            'Backspace','Delete','Tab','Escape','Enter',
+            'ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
+            'Home','End'
+        ];
+        if (allowed.indexOf(e.key) !== -1) return;
+        if ((e.ctrlKey || e.metaKey) && ['a','c','v','x','z'].indexOf(e.key.toLowerCase()) !== -1) return;
+        if (e.key === '.' || e.key === ',') {
+            // allow only one decimal separator
+            if (el.value.indexOf('.') !== -1 || el.value.indexOf(',') !== -1) e.preventDefault();
+            return;
+        }
+        if (e.key < '0' || e.key > '9') e.preventDefault();
+    }, true);
+
+    document.addEventListener('paste', function(e) {
+        var el = e.target;
+        if (!el.classList || !el.classList.contains('inv-num-field')) return;
+        var text = (e.clipboardData || window.clipboardData).getData('text');
+        if (!/^\d+([.,]\d*)?$/.test(text.trim())) e.preventDefault();
+    }, true);
 
     // Auto-focus first input in modals
     $('.modal').on('shown.bs.modal', function() {

@@ -23,7 +23,8 @@ class TenantForm(forms.ModelForm):
             'name', 'business_type', 'email', 'phone', 'city', 'country',
             'address', 'subscription_plan', 'subscription_start',
             'subscription_expires', 'version_type', 'max_users',
-            'max_stocks', 'max_branches', 'is_active', 'is_demo',
+            'max_stocks', 'max_branches', 'timezone', 'currency',
+            'is_active', 'is_demo',
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم النشاط التجاري'}),
@@ -38,6 +39,8 @@ class TenantForm(forms.ModelForm):
             'max_users': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'max_stocks': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'max_branches': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'timezone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Asia/Riyadh'}),
+            'currency': forms.TextInput(attrs={'class': 'form-control text-start', 'dir': 'ltr', 'placeholder': 'مثال: SDG', 'maxlength': '10'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_demo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }

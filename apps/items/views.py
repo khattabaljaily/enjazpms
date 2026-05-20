@@ -5,7 +5,7 @@ Items Views - عمليات CRUD للمنتجات والتصنيفات والوح
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q, Sum
-from django.http import HttpResponseNotAllowed, JsonResponse
+from django.http import HttpResponseNotAllowed, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 
 from apps.accounts.decorators import require_permission
@@ -701,3 +701,237 @@ def unit_delete_api(request, pk):
     name = unit.name
     unit.delete()
     return JsonResponse({'success': True, 'message': f'تم حذف وحدة القياس "{name}" بنجاح'})
+
+
+# ══════════════════════════════════════════════════════
+# IMPORT / EXPORT
+# ══════════════════════════════════════════════════════
+
+@login_required
+@require_permission('view_items')
+def item_export_api(request):
+    from apps.core.io_utils import csv_response, csv_writer
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    response = csv_response('items.csv')
+    writer = csv_writer(response)
+    writer.writerow([
+        'الاسم', 'الاسم الإنجليزي', 'الرمز (SKU)', 'الباركود',
+        'التصنيف', 'الوحدة', 'وحدة الشراء',
+        'سعر التكلفة', 'سعر البيع', 'أدنى سعر بيع',
+        'الحد الأدنى للمخزون', 'الحد الأقصى للمخزون',
+        'تتبع الصلاحية', 'تتبع الدفعات', 'تتبع السيريال', 'متغيرات',
+        'للبيع', 'للشراء', 'نشط',
+    ])
+    qs = Item.objects.for_tenant(tenant).select_related('category', 'unit', 'purchase_unit').order_by('name')
+    for item in qs:
+        writer.writerow([
+            item.name,
+            item.name_en or '',
+            item.sku or '',
+            item.barcode or '',
+            item.category.name if item.category else '',
+            item.unit.name if item.unit else '',
+            item.purchase_unit.name if item.purchase_unit else '',
+            item.cost_price,
+            item.selling_price,
+            item.min_selling_price,
+            item.min_quantity,
+            item.max_quantity,
+            'نعم' if item.track_expiry else 'لا',
+            'نعم' if item.track_batch else 'لا',
+            'نعم' if item.track_serial else 'لا',
+            'نعم' if item.has_variants else 'لا',
+            'نعم' if item.is_sellable else 'لا',
+            'نعم' if item.is_purchasable else 'لا',
+            'نعم' if item.is_active else 'لا',
+        ])
+    return response
+
+
+@login_required
+@require_permission('add_items')
+def item_import_api(request):
+    from apps.core.io_utils import parse_uploaded_file, get, safe_decimal
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    if 'file' not in request.FILES:
+        return JsonResponse({'success': False, 'message': 'لم يتم رفع أي ملف'}, status=400)
+
+    rows, err = parse_uploaded_file(request.FILES['file'])
+    if err:
+        return JsonResponse({'success': False, 'message': err}, status=400)
+
+    imported, errors = 0, []
+    for i, row in enumerate(rows, start=2):
+        try:
+            name = get(row, 'الاسم', 'name')
+            if not name:
+                errors.append(f'الصف {i}: الاسم مطلوب')
+                continue
+
+            # Resolve / create category
+            cat_name = get(row, 'التصنيف', 'category')
+            category = None
+            if cat_name:
+                category, _ = Category.objects.for_tenant(tenant).get_or_create(
+                    name=cat_name, defaults={'tenant': tenant}
+                )
+
+            # Resolve / create unit
+            unit_name = get(row, 'الوحدة', 'unit')
+            unit = None
+            if unit_name:
+                unit, _ = Unit.objects.for_tenant(tenant).get_or_create(
+                    name=unit_name, defaults={'tenant': tenant}
+                )
+
+            pu_name = get(row, 'وحدة الشراء', 'purchase_unit')
+            purchase_unit = None
+            if pu_name:
+                purchase_unit, _ = Unit.objects.for_tenant(tenant).get_or_create(
+                    name=pu_name, defaults={'tenant': tenant}
+                )
+
+            Item.objects.create(
+                tenant=tenant,
+                name=name,
+                name_en=get(row, 'الاسم الإنجليزي', 'name_en'),
+                barcode=get(row, 'الباركود', 'barcode') or None,
+                category=category,
+                unit=unit,
+                purchase_unit=purchase_unit,
+                cost_price=safe_decimal(get(row, 'سعر التكلفة', 'cost_price', default='0')),
+                selling_price=safe_decimal(get(row, 'سعر البيع', 'selling_price', default='0')),
+                min_selling_price=safe_decimal(get(row, 'أدنى سعر بيع', 'min_selling_price', default='0')),
+                min_quantity=safe_decimal(get(row, 'الحد الأدنى للمخزون', 'min_quantity', default='0')),
+                max_quantity=safe_decimal(get(row, 'الحد الأقصى للمخزون', 'max_quantity', default='0')),
+                is_active=True,
+            )
+            imported += 1
+        except Exception as exc:
+            errors.append(f'الصف {i}: {exc}')
+
+    msg = f'تم استيراد {imported} منتج بنجاح'
+    if errors:
+        msg += f'. {len(errors)} أخطاء'
+    return JsonResponse({'success': True, 'message': msg, 'imported': imported, 'errors': errors[:10]})
+
+
+@login_required
+def item_download_template(request):
+    from apps.core.io_utils import csv_response, csv_writer
+    response = csv_response('items_template.csv')
+    writer = csv_writer(response)
+    writer.writerow(['الاسم', 'التصنيف', 'الوحدة', 'سعر التكلفة', 'سعر البيع', 'الحد الأدنى للمخزون'])
+    writer.writerow(['منتج تجريبي', 'إلكترونيات', 'قطعة', '100', '150', '5'])
+    return response
+
+
+# ============================================================
+# استيراد / تصدير التصنيفات
+# ============================================================
+
+@login_required
+@require_permission('view_items')
+def category_export_api(request):
+    from apps.core.io_utils import csv_response, csv_writer
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    response = csv_response('categories_export.csv')
+    writer = csv_writer(response)
+    writer.writerow(['الاسم', 'التصنيف الرئيسي', 'الوصف', 'الترتيب', 'الحالة'])
+
+    qs = Category.objects.for_tenant(tenant).select_related('parent').order_by('display_order', 'name')
+    for cat in qs:
+        writer.writerow([
+            cat.name,
+            cat.parent.name if cat.parent else '',
+            cat.description or '',
+            cat.display_order,
+            'نعم' if cat.is_active else 'لا',
+        ])
+    return response
+
+
+@login_required
+@require_permission('add_items')
+def category_import_api(request):
+    from apps.core.io_utils import parse_uploaded_file, get as io_get, bool_from_str
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    f = request.FILES.get('file')
+    if not f:
+        return JsonResponse({'success': False, 'message': 'الرجاء اختيار ملف'}, status=400)
+
+    rows, err = parse_uploaded_file(f)
+    if err:
+        return JsonResponse({'success': False, 'message': err}, status=400)
+
+    imported, errors = 0, []
+    for i, row in enumerate(rows, start=2):
+        name = io_get(row, 'الاسم', 'name')
+        if not name:
+            errors.append(f'الصف {i}: اسم التصنيف مطلوب')
+            continue
+        try:
+            parent_name = io_get(row, 'التصنيف الرئيسي', 'parent')
+            parent = None
+            if parent_name:
+                parent = Category.objects.for_tenant(tenant).filter(name=parent_name).first()
+
+            is_active = bool_from_str(io_get(row, 'الحالة', 'is_active', default='نعم'))
+            try:
+                display_order = int(io_get(row, 'الترتيب', 'display_order', default='0'))
+            except (ValueError, TypeError):
+                display_order = 0
+
+            cat, created = Category.objects.for_tenant(tenant).get_or_create(
+                name=name,
+                defaults={
+                    'tenant': tenant,
+                    'parent': parent,
+                    'description': io_get(row, 'الوصف', 'description'),
+                    'display_order': display_order,
+                    'is_active': is_active,
+                },
+            )
+            if not created:
+                if parent is not None:
+                    cat.parent = parent
+                cat.is_active = is_active
+                cat.display_order = display_order
+                if io_get(row, 'الوصف', 'description'):
+                    cat.description = io_get(row, 'الوصف', 'description')
+                cat.save()
+            imported += 1
+        except Exception as exc:
+            errors.append(f'الصف {i}: {exc}')
+
+    msg = f'تم استيراد {imported} تصنيف بنجاح'
+    if errors:
+        msg += f'. {len(errors)} أخطاء'
+    return JsonResponse({'success': True, 'message': msg, 'imported': imported, 'errors': errors[:10]})
+
+
+@login_required
+def category_download_template(request):
+    from apps.core.io_utils import csv_response, csv_writer
+    response = csv_response('categories_template.csv')
+    writer = csv_writer(response)
+    writer.writerow(['الاسم', 'التصنيف الرئيسي', 'الوصف', 'الترتيب', 'الحالة'])
+    writer.writerow(['إلكترونيات', '', 'منتجات إلكترونية', '1', 'نعم'])
+    writer.writerow(['هواتف', 'إلكترونيات', 'الهواتف الذكية', '1', 'نعم'])
+    return response

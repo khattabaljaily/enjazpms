@@ -201,24 +201,36 @@
                             <label class="cx-label" for="id_max_branches">{{ form.max_branches.label }}</label>
                             {{ form.max_branches }}
                         </div>
+                        <div class="col-md-6">
+                            <label class="cx-label" for="id_timezone">{{ form.timezone.label }}</label>
+                            {{ form.timezone }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="cx-label" for="id_currency">{{ form.currency.label }}</label>
+                            {{ form.currency }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="cx-label" for="id_tax_value">نسبة الضريبة %</label>
+                            <input type="number" id="id_tax_value" name="tax_value" class="form-control" min="0" max="100" step="0.01" value="0" placeholder="0">
+                        </div>
                     </div>
 
                     <!-- ④ حالة -->
                     <div class="cx-form-group-label">
                         <span class="cx-form-group-icon"><i class="fas fa-toggle-on"></i></span> الحالة
                     </div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
                             <label class="cx-toggle-card" for="id_is_active">
                                 <div class="cx-toggle-info">
                                     <span class="cx-toggle-title">{{ form.is_active.label }}</span>
-                                    <span class="cx-toggle-desc">تفعيل العميل يسمح له بالدخول وإدارة نشاطه</span>
+                                    <span class="cx-toggle-desc">السماح بالدخول والنشاط</span>
                                 </div>
                                 {{ form.is_active }}
                                 <div class="cx-toggle-switch"></div>
                             </label>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="cx-toggle-card" for="id_is_demo">
                                 <div class="cx-toggle-info">
                                     <span class="cx-toggle-title">{{ form.is_demo.label }}</span>
@@ -227,6 +239,48 @@
                                 {{ form.is_demo }}
                                 <div class="cx-toggle-switch"></div>
                             </label>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="cx-toggle-card" for="id_tax_enabled">
+                                <div class="cx-toggle-info">
+                                    <span class="cx-toggle-title">تفعيل الضريبة</span>
+                                    <span class="cx-toggle-desc">إضافة ضريبة على الفواتير</span>
+                                </div>
+                                <input type="checkbox" id="id_tax_enabled" name="tax_enabled" class="form-check-input">
+                                <div class="cx-toggle-switch"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- ⑤ بيانات مدير النشاط -->
+                    <div id="adminUserSection">
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-icon"><i class="fas fa-user-shield"></i></span>
+                            بيانات مدير النشاط
+                            <small id="adminUserSectionNote" class="text-muted" style="font-weight:400; font-size:.8rem; margin-right:.5rem;">سيُنشأ حساب مدير تلقائياً</small>
+                        </div>
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="admin_full_name">الاسم الكامل</label>
+                                <input type="text" id="admin_full_name" name="admin_full_name" class="form-control" placeholder="مثال: أحمد محمد" autocomplete="off">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="admin_username">اسم المستخدم <sup class="cx-required">*</sup></label>
+                                <input type="text" id="admin_username" name="admin_username" class="form-control" placeholder="مثال: admin_store" autocomplete="off">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="admin_email">البريد الإلكتروني</label>
+                                <input type="email" id="admin_email" name="admin_email" class="form-control text-start" placeholder="example@email.com" dir="ltr" autocomplete="off">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="admin_password">كلمة المرور <sup class="cx-required js-pass-required">*</sup></label>
+                                <input type="password" id="admin_password" name="admin_password" class="form-control" placeholder="••••••••" autocomplete="new-password">
+                                <small id="adminPassHint" class="text-muted d-none" style="font-size:.78rem;">اتركها فارغة للإبقاء على الحالية</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="admin_password2">تأكيد كلمة المرور <sup class="cx-required js-pass-required">*</sup></label>
+                                <input type="password" id="admin_password2" name="admin_password2" class="form-control" placeholder="••••••••" autocomplete="new-password">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -634,6 +688,10 @@
         $idInput.val('');
         $('#id_is_active').prop('checked', true);
         $('#id_is_demo').prop('checked', false);
+        $('#id_tax_enabled').prop('checked', false);
+        $('#admin_full_name, #admin_username, #admin_email, #admin_password, #admin_password2').val('');
+        $('#admin_username').prop('readonly', false);
+        $('#adminUserSectionNote').text('سيُنشأ حساب مدير تلقائياً');
         EnjazIMS.clearFormErrors($form);
     }
 
@@ -644,11 +702,20 @@
         $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
         const today = new Date().toISOString().split('T')[0];
         $('#id_subscription_start').val(today);
+        $('#adminUserSection').show();
+        $('#admin_username, #admin_password, #admin_password2').attr('required', 'required');
+        $('#adminPassHint').addClass('d-none');
+        $('.js-pass-required').show();
         tenantModal.show();
     }
 
     function openEdit(id) {
         resetForm();
+        $('#adminUserSection').show();
+        $('#admin_username, #admin_password, #admin_password2').removeAttr('required');
+        $('#adminUserSectionNote').text('كلمة المرور اختيارية عند التعديل');
+        $('#adminPassHint').removeClass('d-none');
+        $('.js-pass-required').hide();
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function (resp) {
@@ -669,8 +736,16 @@
                 $('#id_max_users').val(d.max_users || 5);
                 $('#id_max_stocks').val(d.max_stocks || 1);
                 $('#id_max_branches').val(d.max_branches || 1);
+                $('#id_timezone').val(d.timezone || '');
+                $('#id_currency').val(d.currency || '');
                 $('#id_is_active').prop('checked', !!d.is_active);
                 $('#id_is_demo').prop('checked', !!d.is_demo);
+                $('#id_tax_enabled').prop('checked', !!d.tax_enabled);
+                $('#id_tax_value').val(d.tax_value || 0);
+                $('#admin_full_name').val(d.admin_full_name || '');
+                $('#admin_username').val(d.admin_username || '').prop('readonly', true);
+                $('#admin_email').val(d.admin_email || '');
+                $('#admin_password, #admin_password2').val('');
                 $('#tenantModalTitle').text('تعديل الاشتراك');
                 $('#tenantModalSubtitle').text(d.name);
                 $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
@@ -806,6 +881,7 @@
         if (!id) return;
         $.ajax({
             url: apiUrl(urlSuspend, id), method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
             success: function (resp) {
                 if (resp.success) {
                     suspendModal.hide();
@@ -826,6 +902,7 @@
         if (!id) return;
         $.ajax({
             url: apiUrl(urlDelete, id), method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
             success: function (resp) {
                 if (resp.success) {
                     deleteModal.hide();
@@ -835,7 +912,11 @@
                 }
                 EnjazIMS.toast(resp.message || 'تعذر الحذف', 'error');
             },
-            error: function () { EnjazIMS.toast('تعذر الحذف', 'error'); }
+            error: function (xhr) {
+                let msg = 'تعذر الحذف';
+                try { msg = JSON.parse(xhr.responseText).message || msg; } catch (e) {}
+                EnjazIMS.toast(msg, 'error');
+            }
         });
     });
 

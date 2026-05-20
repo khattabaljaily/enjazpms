@@ -6,7 +6,7 @@
 {% block page_description %}مراجعة حالة الباقة الحالية، مدة الاشتراك، والحدود المتاحة للنشاط التجاري{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/subscription.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/subscription.css' %}?v=2.0">
 {% endblock %}
 
 {% block breadcrumb_items %}
@@ -14,93 +14,210 @@
 {% endblock %}
 
 {% block content %}
-<div class="subscription-shell">
-    <div class="subscription-hero">
-        <div class="subscription-hero__main">
-            <div class="subscription-kicker">ملخص الاشتراك</div>
-            <h2 class="subscription-title">{{ current_tenant.name|default:"النشاط التجاري" }}</h2>
-            <p class="subscription-desc">متابعة سريعة للباقـة الحالية، مدة التفعيل، وحدود الاستخدام المسموحة داخل النظام.</p>
-        </div>
+<div class="sub-wrapper">
 
-        <div class="subscription-hero__status" style="min-width: 32.5%;">
-            <div class="subscription-plan-badge">
-                <i class="fas fa-layer-group"></i>
-                {{ current_tenant.get_subscription_plan_display|default:"-" }}
+    <!-- ─── Hero Banner ─────────────────────────────────────────── -->
+    <div class="sub-hero">
+        <div class="sub-hero__orb sub-hero__orb--1"></div>
+        <div class="sub-hero__orb sub-hero__orb--2"></div>
+        <div class="sub-hero__inner">
+            <div class="sub-hero__left">
+                <div class="sub-hero__icon">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="sub-hero__text">
+                    <div class="sub-hero__kicker">ملخص الاشتراك</div>
+                    <h2 class="sub-hero__title">{{ current_tenant.name|default:"النشاط التجاري" }}</h2>
+                    <div class="sub-hero__badges">
+                        <span class="sub-pill sub-pill--white">
+                            <i class="fas fa-star"></i>
+                            {{ current_tenant.get_subscription_plan_display|default:"-" }}
+                        </span>
+                        <span class="sub-pill sub-pill--status sub-pill--{{ subscription_status_tone }}">
+                            <i class="fas fa-circle"></i>
+                            {{ subscription_status_label }}
+                        </span>
+                        <span class="sub-pill sub-pill--ghost">
+                            <i class="fas fa-tag"></i>
+                            {{ current_tenant.get_version_type_display|default:"-" }}
+                        </span>
+                    </div>
+                </div>
             </div>
-            <div class="subscription-status-badge subscription-status-badge--{{ subscription_status_tone }}">
-                <i class="fas fa-signal"></i>
-                {{ subscription_status_label }}
+            <div class="sub-hero__ring">
+                <svg class="sub-ring" viewBox="0 0 120 120">
+                    <circle class="sub-ring__track" cx="60" cy="60" r="50"/>
+                    <circle class="sub-ring__fill sub-ring__fill--{{ subscription_status_tone }}"
+                            id="subRingFill"
+                            cx="60" cy="60" r="50"
+                            stroke-dasharray="314"
+                            stroke-dashoffset="314"/>
+                </svg>
+                <div class="sub-ring__label">
+                    <span class="sub-ring__num" id="subDaysNum">{% if days_remaining != None %}{{ days_remaining }}{% else %}∞{% endif %}</span>
+                    <span class="sub-ring__text">يوم متبقي</span>
+                </div>
             </div>
-            <div class="subscription-status-number">
-                {% if days_remaining != None %}
-                    {{ days_remaining }}
-                {% else %}
-                    ∞
-                {% endif %}
-            </div>
-            <div class="subscription-status-caption">عدد الأيام المتبقية حتى نهاية الاشتراك</div>
         </div>
     </div>
 
-    <div class="subscription-grid">
-        <div class="subscription-col-8">
-            <section class="subscription-panel">
-                <div class="subscription-panel__header">
-                    <h3 class="subscription-panel__title"><i class="fas fa-credit-card me-2 text-primary"></i>ملخص الاشتراك</h3>
-                    <span class="subscription-plan-badge">{{ current_tenant.get_version_type_display|default:"-" }}</span>
-                </div>
-                <div class="subscription-panel__body">
-                    <div class="subscription-stat-grid">
-                        <div class="subscription-stat">
-                            <div class="subscription-stat__label">بداية الاشتراك</div>
-                            <div class="subscription-stat__value">{{ current_tenant.subscription_start|date:"Y-m-d"|default:"-" }}</div>
+    <!-- ─── Stats Row ───────────────────────────────────────────── -->
+    <div class="sub-stats">
+        <div class="sub-stat">
+            <div class="sub-stat__icon sub-stat__icon--indigo">
+                <i class="fas fa-calendar-plus"></i>
+            </div>
+            <div class="sub-stat__info">
+                <div class="sub-stat__label">بداية الاشتراك</div>
+                <div class="sub-stat__value">{{ current_tenant.subscription_start|date:"Y-m-d"|default:"-" }}</div>
+            </div>
+        </div>
+        <div class="sub-stat">
+            <div class="sub-stat__icon sub-stat__icon--violet">
+                <i class="fas fa-calendar-times"></i>
+            </div>
+            <div class="sub-stat__info">
+                <div class="sub-stat__label">نهاية الاشتراك</div>
+                <div class="sub-stat__value">{{ current_tenant.subscription_expires|date:"Y-m-d"|default:"-" }}</div>
+            </div>
+        </div>
+        <div class="sub-stat">
+            <div class="sub-stat__icon sub-stat__icon--teal">
+                <i class="fas fa-briefcase"></i>
+            </div>
+            <div class="sub-stat__info">
+                <div class="sub-stat__label">نوع النشاط</div>
+                <div class="sub-stat__value">{{ current_tenant.business_type.name_ar|default:"-" }}</div>
+            </div>
+        </div>
+        <div class="sub-stat">
+            <div class="sub-stat__icon sub-stat__icon--amber">
+                <i class="fas fa-signal"></i>
+            </div>
+            <div class="sub-stat__info">
+                <div class="sub-stat__label">حالة الحساب</div>
+                <div class="sub-stat__value">{{ subscription_status_label }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Body ────────────────────────────────────────────────── -->
+    <div class="sub-body">
+
+        <!-- Limits -->
+        <div class="sub-panel">
+            <div class="sub-panel__header">
+                <i class="fas fa-sliders"></i>
+                حدود الاستخدام
+            </div>
+            <div class="sub-panel__body">
+                <div class="sub-limits">
+
+                    <div class="sub-limit">
+                        <div class="sub-limit__row">
+                            <div class="sub-limit__icon sub-limit__icon--indigo">
+                                <i class="fas fa-code-branch"></i>
+                            </div>
+                            <div class="sub-limit__info">
+                                <div class="sub-limit__name">عدد الفروع المتاح</div>
+                                <div class="sub-limit__val">
+                                    {{ current_tenant.max_branches }}
+                                    <span>فرع</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="subscription-stat">
-                            <div class="subscription-stat__label">نهاية الاشتراك</div>
-                            <div class="subscription-stat__value">{{ current_tenant.subscription_expires|date:"Y-m-d"|default:"-" }}</div>
-                        </div>
-                        <div class="subscription-stat">
-                            <div class="subscription-stat__label">حالة الحساب</div>
-                            <div class="subscription-stat__value">{{ subscription_status_label }}</div>
+                        <div class="sub-limit__bar">
+                            <div class="sub-limit__fill sub-limit__fill--indigo"></div>
                         </div>
                     </div>
 
-                    <div class="subscription-feature-list">
-                        <div class="subscription-feature">
-                            <div class="subscription-feature__label">عدد الفروع</div>
-                            <div class="subscription-feature__value">{{ current_tenant.max_branches }}</div>
+                    <div class="sub-limit">
+                        <div class="sub-limit__row">
+                            <div class="sub-limit__icon sub-limit__icon--violet">
+                                <i class="fas fa-warehouse"></i>
+                            </div>
+                            <div class="sub-limit__info">
+                                <div class="sub-limit__name">المخازن</div>
+                                <div class="sub-limit__val">
+                                    {{ current_stocks }} / {{ current_tenant.max_stocks }}
+                                    <span>مخزن</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="subscription-feature">
-                            <div class="subscription-feature__label">عدد المخازن</div>
-                            <div class="subscription-feature__value">{{ current_tenant.max_stocks }}</div>
-                        </div>
-                        <div class="subscription-feature">
-                            <div class="subscription-feature__label">عدد المستخدمين</div>
-                            <div class="subscription-feature__value">{{ current_tenant.max_users }}</div>
-                        </div>
-                        <div class="subscription-feature">
-                            <div class="subscription-feature__label">نوع النشاط</div>
-                            <div class="subscription-feature__value">{{ current_tenant.business_type.name_ar|default:"-" }}</div>
+                        <div class="sub-limit__bar">
+                            <div class="sub-limit__fill sub-limit__fill--violet" style="width:{{ stocks_pct }}%"></div>
                         </div>
                     </div>
+
+                    <div class="sub-limit">
+                        <div class="sub-limit__row">
+                            <div class="sub-limit__icon sub-limit__icon--teal">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="sub-limit__info">
+                                <div class="sub-limit__name">المستخدمون</div>
+                                <div class="sub-limit__val">
+                                    {{ current_users }} / {{ current_tenant.max_users }}
+                                    <span>مستخدم</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sub-limit__bar">
+                            <div class="sub-limit__fill sub-limit__fill--teal" style="width:{{ users_pct }}%"></div>
+                        </div>
+                    </div>
+
                 </div>
-            </section>
+            </div>
         </div>
 
-        <div class="subscription-col-4">
-            <section class="subscription-panel">
-                <div class="subscription-panel__header">
-                    <h3 class="subscription-panel__title"><i class="fas fa-lightbulb me-2 text-warning"></i>ملاحظات مهمة</h3>
+        <!-- Notes -->
+        <div class="sub-panel">
+            <div class="sub-panel__header">
+                <i class="fas fa-lightbulb"></i>
+                ملاحظات مهمة
+            </div>
+            <div class="sub-panel__body">
+                <div class="sub-notes">
+                    <div class="sub-note">
+                        <div class="sub-note__icon sub-note__icon--indigo">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <p class="sub-note__text">يمكنك متابعة تاريخ نهاية الاشتراك من هذه الصفحة في أي وقت.</p>
+                    </div>
+                    <div class="sub-note">
+                        <div class="sub-note__icon sub-note__icon--amber">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <p class="sub-note__text">الحسابات القريبة من الانتهاء تحتاج مراجعة الاشتراك قبل توقف الصلاحية.</p>
+                    </div>
+                    <div class="sub-note">
+                        <div class="sub-note__icon sub-note__icon--teal">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <p class="sub-note__text">الحدود المعروضة هنا تنظم عدد المستخدمين والمخازن والفروع المتاحة.</p>
+                    </div>
                 </div>
-                <div class="subscription-panel__body">
-                    <ul class="subscription-note-list">
-                        <li class="subscription-note-item"><i class="fas fa-check-circle"></i><span>يمكنك متابعة تاريخ نهاية الاشتراك من هذه الصفحة في أي وقت.</span></li>
-                        <li class="subscription-note-item"><i class="fas fa-bell"></i><span>الحسابات القريبة من الانتهاء تحتاج مراجعة الاشتراك قبل توقف الصلاحية.</span></li>
-                        <li class="subscription-note-item"><i class="fas fa-users"></i><span>الحدود المعروضة هنا تنظم عدد المستخدمين والمخازن والفروع المتاحة.</span></li>
-                    </ul>
-                </div>
-            </section>
+            </div>
         </div>
+
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var days = {% if days_remaining != None %}{{ days_remaining }}{% else %}-1{% endif %};
+    var fill = document.getElementById('subRingFill');
+    if (!fill || days < 0) return;
+    var max = 365;
+    var fraction = Math.min(days / max, 1);
+    var offset = 314 * (1 - fraction);
+    setTimeout(function () {
+        fill.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)';
+        fill.style.strokeDashoffset = offset;
+    }, 200);
+}());
+</script>
 {% endblock %}

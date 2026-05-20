@@ -27,6 +27,16 @@ urlpatterns = [
     path('units/api/<int:pk>/update/', views.unit_update_api, name='unit_update_api'),
     path('units/api/<int:pk>/delete/', views.unit_delete_api, name='unit_delete_api'),
 
+    # ------- Items Import/Export -------
+    path('api/export/', views.item_export_api, name='export_api'),
+    path('api/import/', views.item_import_api, name='import_api'),
+    path('api/template/', views.item_download_template, name='template_api'),
+
+    # ------- Categories Import/Export -------
+    path('categories/api/export/', views.category_export_api, name='category_export_api'),
+    path('categories/api/import/', views.category_import_api, name='category_import_api'),
+    path('categories/api/template/', views.category_download_template, name='category_template_api'),
+
     # ------- Pages -------
     path('', views.item_list, name='list'),
     path('categories/', views.category_list, name='category_list'),

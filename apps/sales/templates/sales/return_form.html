@@ -87,9 +87,9 @@
                     <td class="ret-returned-qty" data-value="{{ line.returned_quantity|unlocalize }}">{{ line.returned_quantity|floatformat:"-3u" }}</td>
                     <td><strong class="text-success ret-returnable-qty" data-value="{{ line.returnable_quantity|unlocalize }}">{{ line.returnable_quantity|floatformat:"-3u" }}</strong></td>
                     <td>
-                        <input type="number" class="cx-input cx-input--sm ret-qty"
-                               min="0" max="{{ line.returnable_quantity|unlocalize }}" step="0.01"
+                        <input type="text" inputmode="decimal" class="cx-input cx-input--sm ret-qty inv-num-field"
                                value="0" data-price="{{ line.unit_price|unlocalize }}"
+                               data-max="{{ line.returnable_quantity|unlocalize }}"
                                oninput="updateReturnTotal(this)">
                     </td>
                     <td class="ret-unit-price text-end" data-value="{{ line.unit_price|unlocalize }}">{{ line.unit_price|floatformat:"2u"|default:0|intcomma}}</td>

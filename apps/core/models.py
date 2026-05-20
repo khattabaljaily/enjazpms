@@ -139,7 +139,7 @@ class Tenant(models.Model):
     # Settings
     timezone = models.CharField('المنطقة الزمنية', max_length=50, default=DEFAULT_TIMEZONE)
     language = models.CharField('اللغة', max_length=10, default='ar')
-    currency = models.CharField('العملة', max_length=3, default='EGP')
+    currency = models.CharField('العملة', max_length=3, default='SDG')
     
     # Meta
     created_at = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True)

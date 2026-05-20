@@ -1,323 +1,495 @@
-.settings-shell {
-    --st-bg: #f8fafc;
-    --st-border: #e2e8f0;
-    --st-muted: #64748b;
-    --st-title: #0f172a;
-    --st-card: var(--surface);
-    --st-soft: #f9fafb;
-    --st-primary: #3b82f6;
-    --st-success: #10b981;
-    --st-chip-bg: #eff6ff;
-    background: var(--st-bg);
-    border: 1px solid var(--st-border);
-    border-radius: 24px;
-    padding: 1rem;
-}
+/* ==========================================================
+   Tenant Settings Page  —  v2.0
+   ========================================================== */
 
-.settings-hero {
+.ts-wrapper {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
     gap: 1rem;
-    padding: 1rem;
-    border-radius: 20px;
-    background: var(--st-card);
-    border: 1px solid var(--st-border);
-    margin-bottom: 0.75rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-.settings-hero__meta {
+/* ── Hero ────────────────────────────────────────────────── */
+.ts-hero {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #0f4c8a 100%);
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.3);
+    padding: 1.6rem 2rem;
+}
+
+.ts-hero__orb {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+.ts-hero__orb--1 {
+    top: -50%;
+    right: -4%;
+    width: 260px;
+    height: 260px;
+    background: rgba(255, 255, 255, 0.05);
+}
+.ts-hero__orb--2 {
+    bottom: -60%;
+    left: 5%;
+    width: 180px;
+    height: 180px;
+    background: rgba(99, 102, 241, 0.12);
+}
+
+.ts-hero__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.ts-hero__left {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+}
+
+.ts-hero__icon {
+    width: 58px;
+    height: 58px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: white;
+    backdrop-filter: blur(8px);
+}
+
+.ts-hero__kicker {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 0.28rem;
+}
+
+.ts-hero__title {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: white;
+    margin: 0 0 0.65rem;
+    letter-spacing: -0.02em;
+}
+
+.ts-hero__badges {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
 }
 
-.settings-chip {
+.ts-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    border-radius: 40px;
-    padding: 0.35rem 0.9rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #1e40af;
-    background: var(--st-chip-bg, #eff6ff);
-    border: none;
-    letter-spacing: -0.01em;
-}
-
-.settings-chip i {
-    font-size: 0.7rem;
-    opacity: 0.8;
-}
-
-.settings-card {
-    border: 1px solid var(--st-border);
-    border-radius: 20px;
-    background: var(--st-card);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-    overflow: hidden;
-    transition: box-shadow 0.1s ease;
-}
-
-.settings-card .card-header {
-    border-bottom: 1px solid var(--st-border);
-    background: var(--st-card);
+    gap: 0.38rem;
+    border-radius: 999px;
+    padding: 0.28rem 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    font-size: 0.95rem;
-    color: var(--st-title);
-    padding: 1rem 1.25rem;
-    letter-spacing: -0.01em;
 }
 
-.settings-card .card-body {
-    background: var(--st-card);
-    padding: 1.25rem;
+.ts-pill i { font-size: 0.55rem; }
+
+.ts-pill--active {
+    background: rgba(16, 185, 129, 0.25);
+    color: #bbf7d0;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+.ts-pill--inactive {
+    background: rgba(239, 68, 68, 0.25);
+    color: #fecaca;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+.ts-pill--white {
+    background: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.settings-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--st-muted);
-    margin-bottom: 0.5rem;
+/* Hero right stats */
+.ts-hero__right {
+    display: flex;
+    gap: 1rem;
 }
 
-.settings-input,
-.settings-textarea {
-    border: 1px solid var(--st-border);
-    border-radius: 12px;
-    padding: 0.6rem 0.85rem;
+.ts-hero-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    padding: 0.7rem 1rem;
+    backdrop-filter: blur(6px);
+}
+
+.ts-hero-stat__icon {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.65);
+    width: 28px;
+    text-align: center;
+}
+
+.ts-hero-stat__val {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: white;
+    line-height: 1.1;
+}
+
+.ts-hero-stat__lbl {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 0.1rem;
+}
+
+/* ── Card ────────────────────────────────────────────────── */
+.ts-card {
     background: var(--surface);
-    font-size: 0.9rem;
-    transition: all 0.1s ease;
-}
-
-.settings-input:focus,
-.settings-textarea:focus {
-    border-color: var(--st-primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 1px 2px rgba(0, 0, 0, 0.02);
-    outline: 0;
-}
-
-.settings-switches {
-    border: 1px solid var(--st-border);
+    border: 1px solid var(--border-color);
     border-radius: 18px;
-    background: var(--surface);
-    padding: 0.8rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
 }
 
-.settings-switches__head {
-    padding: 0.2rem 0.2rem 0.8rem;
+.ts-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-hover);
 }
 
-.settings-switches__title {
-    font-size: 0.9rem;
+.ts-card__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.ts-card__icon--blue  { background: rgba(99,102,241,.12); color: #6366f1; }
+.ts-card__icon--green { background: rgba(16,185,129,.12); color: #10b981; }
+
+.ts-card__title {
+    font-size: 0.92rem;
     font-weight: 700;
-    color: var(--st-title);
-    margin-bottom: 0.2rem;
+    color: var(--text-primary);
+    line-height: 1.2;
 }
 
-.settings-switches__subtitle {
-    font-size: 0.77rem;
-    color: var(--st-muted);
+.ts-card__subtitle {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-top: 0.12rem;
 }
 
-.settings-switch {
+.ts-card__body {
+    padding: 1.25rem;
+    flex: 1;
+}
+
+/* ── Form Fields ─────────────────────────────────────────── */
+.ts-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    margin-bottom: 0.45rem;
+}
+
+.ts-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ts-field--textarea {
+    align-items: flex-start;
+}
+
+.ts-field__icon {
+    position: absolute;
+    right: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    font-size: 0.82rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.ts-field__icon--top {
+    top: 0.75rem;
+    transform: none;
+}
+
+.ts-input {
+    padding-right: 2.35rem !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    background: var(--surface) !important;
+    font-size: 0.88rem !important;
+    color: var(--text-primary) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    width: 100%;
+}
+
+.ts-input:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+    outline: 0 !important;
+    background: var(--surface) !important;
+}
+
+.ts-input[readonly] {
+    background: var(--surface-hover) !important;
+    color: var(--text-tertiary) !important;
+    cursor: default;
+}
+
+/* ── Switches ────────────────────────────────────────────── */
+.ts-switches {
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--surface-hover);
+}
+
+.ts-switches__head {
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ts-switches__title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.ts-switches__subtitle {
+    font-size: 0.73rem;
+    color: var(--text-tertiary);
+    margin-top: 0.15rem;
+}
+
+.ts-switches__list {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.ts-switch {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    padding: 0.85rem 1rem;
+    padding: 0.8rem 1rem;
     background: var(--surface);
-    border: 1px solid var(--st-border);
-    border-radius: 16px;
-    margin-bottom: 0.65rem;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    margin: 0;
 }
 
-.settings-switch:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+.ts-switch:hover {
+    border-color: rgba(99, 102, 241, 0.25);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
 }
 
-.settings-switch:focus-within {
-    border-color: rgba(59, 130, 246, 0.35);
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
-}
-
-.settings-switch__content {
+.ts-switch__info {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.2rem;
+    gap: 0.15rem;
     flex: 1;
     min-width: 0;
 }
 
-.settings-switch__hint {
-    display: block;
-    font-size: 0.76rem;
-    line-height: 1.45;
-    color: var(--st-muted);
+.ts-switch__name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-.settings-switch .form-check-input {
-    width: 2.4rem;
-    height: 1.3rem;
-    margin-top: 0;
-    background-color: #cbd5e1;
-    border: none;
-    cursor: pointer;
-    border-radius: 30px;
-    transition: 0.1s ease;
+.ts-switch__hint {
+    font-size: 0.73rem;
+    line-height: 1.45;
+    color: var(--text-tertiary);
+}
+
+/* Custom toggle */
+.ts-switch__toggle {
     position: relative;
-    float: none;
-    margin-left: 0;
     flex-shrink: 0;
 }
 
-.settings-switch .form-check-input:checked {
-    background-color: var(--st-primary);
-    border: none;
+.ts-switch__toggle input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
-.settings-switch .form-check-label {
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: var(--st-title);
-    margin: 0;
+.ts-switch__track {
+    display: block;
+    width: 42px;
+    height: 24px;
+    background: var(--border-color);
+    border-radius: 999px;
+    position: relative;
+    transition: background 0.2s ease;
     cursor: pointer;
 }
 
-.settings-switch:not(:last-child) {
-    margin-bottom: 0.65rem;
+.ts-switch__track::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease;
 }
 
-.settings-meta {
+.ts-switch__toggle input:checked ~ .ts-switch__track {
+    background: var(--primary);
+}
+
+.ts-switch__toggle input:checked ~ .ts-switch__track::after {
+    transform: translateX(-18px);
+}
+
+/* ── Actions ─────────────────────────────────────────────── */
+.ts-actions {
+    padding-top: 0.25rem;
+}
+
+.ts-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     border: none;
-    border-radius: 14px;
-    padding: 0.7rem 1rem;
-    background: var(--surface);
-    margin-bottom: 1rem;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
-
-.settings-actions .btn {
     border-radius: 40px;
-    padding: 0.55rem 1.4rem;
-    font-weight: 550;
-    font-size: 0.8rem;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
     letter-spacing: -0.01em;
-    transition: all 0.1s ease;
 }
 
-.settings-actions .btn-primary {
-    background: #0f172a;
-    border: none;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+.ts-btn--primary {
+    background: #6366f1;
+    color: white;
+    box-shadow: 0 3px 10px rgba(99, 102, 241, 0.3);
 }
-
-.settings-actions .btn-primary:hover {
-    background: var(--st-primary);
+.ts-btn--primary:hover {
+    background: #4f46e5;
+    box-shadow: 0 5px 16px rgba(99, 102, 241, 0.4);
     transform: translateY(-1px);
 }
-
-.settings-actions .btn-success {
-    background: #0f172a;
-    border: none;
+.ts-btn--primary:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
 }
 
-.settings-actions .btn-success:hover {
-    background: var(--st-success);
+.ts-btn--success {
+    background: #10b981;
+    color: white;
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+}
+.ts-btn--success:hover {
+    background: #059669;
+    box-shadow: 0 5px 16px rgba(16, 185, 129, 0.4);
     transform: translateY(-1px);
 }
-
-.btn {
-    transition: all 0.1s ease;
+.ts-btn--success:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
 }
 
+/* ── Dark Mode ───────────────────────────────────────────── */
+[data-theme="dark"] .ts-card {
+    background: var(--surface);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .ts-card__header {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .ts-input {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .ts-input[readonly] {
+    background: rgba(255, 255, 255, 0.02) !important;
+}
+
+[data-theme="dark"] .ts-switches {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .ts-switch {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .ts-switch:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .ts-switch__track {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="dark"] .ts-switch__track::after {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 768px) {
-    .settings-shell {
-        padding: 0.7rem;
-        border-radius: 20px;
-    }
-
-    .settings-hero {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.75rem;
-        padding: 0.9rem;
-    }
-    
-    .settings-card .card-header {
-        padding: 0.9rem 1rem;
-    }
-    
-    .settings-card .card-body {
-        padding: 1rem;
-    }
-    
-    .settings-actions .btn {
-        padding: 0.5rem 1rem;
-    }
-
-    .settings-switch {
-        padding: 0.8rem 0.85rem;
-        gap: 0.75rem;
-    }
-
-    .settings-switch__hint {
-        font-size: 0.73rem;
-    }
+    .ts-hero { padding: 1.25rem; }
+    .ts-hero__inner { flex-wrap: wrap; }
+    .ts-hero__title { font-size: 1.2rem; }
+    .ts-card__body { padding: 1rem; }
+    .ts-switch { padding: 0.7rem 0.85rem; }
 }
 
-[data-theme="dark"] .settings-shell {
-    --st-bg: var(--surface);
-    --st-border: var(--border-color);
-    --st-muted: var(--text-secondary);
-    --st-title: var(--text-primary);
-    --st-soft: var(--surface-hover);
-}
-
-[data-theme="dark"] .settings-hero,
-[data-theme="dark"] .settings-switch,
-[data-theme="dark"] .settings-meta,
-[data-theme="dark"] .settings-card,
-[data-theme="dark"] .settings-card .card-header,
-[data-theme="dark"] .settings-card .card-body {
-    background: var(--surface) !important;
-    border-color: var(--border-color) !important;
-    color: var(--text-primary) !important;
-    box-shadow: none !important;
-}
-
-[data-theme="dark"] .settings-chip {
-    background: rgba(255,255,255,0.08) !important;
-    color: var(--text-primary) !important;
-}
-
-[data-theme="dark"] .settings-input,
-[data-theme="dark"] .settings-textarea {
-    background: rgba(255,255,255,0.06) !important;
-    border-color: var(--border-color) !important;
-    color: var(--text-primary) !important;
-}
-
-[data-theme="dark"] .settings-switch .form-check-input {
-    background-color: rgba(255,255,255,0.12) !important;
-}
-
-[data-theme="dark"] .settings-switch:hover {
-    border-color: var(--border-color) !important;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
-}
-
-[data-theme="dark"] .settings-actions .btn-primary,
-[data-theme="dark"] .settings-actions .btn-success {
-    color: #fff !important;
+@media (max-width: 480px) {
+    .ts-hero__left { flex-direction: column; align-items: flex-start; }
+    .ts-hero__icon { display: none; }
 }

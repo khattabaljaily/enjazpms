@@ -449,17 +449,18 @@ input[type="tel"] {
 /* ==========================================
    Number Stepper Buttons
    ========================================== */
-.num-stepper { flex-wrap: nowrap; }
+.num-stepper { flex-wrap: nowrap; height: 40px; }
 
 .num-stepper-btn {
-    padding: 0 .7rem;
-    font-size: 1.1rem;
+    padding: 0 0.5rem;
+    font-size: 1rem;
     font-weight: 700;
     line-height: 1;
     color: var(--text-tertiary);
     background: var(--bg-tertiary);
     border-color: var(--border-color);
-    min-width: 32px;
+    min-width: 28px;
+    flex-shrink: 0;
     user-select: none;
     transition: background .15s, color .15s;
 }
@@ -471,10 +472,12 @@ input[type="tel"] {
 .num-stepper-btn:active { transform: scale(.93); }
 
 .num-stepper input[type="number"] {
-    flex: 1;
+    flex: 1 1 0;
     min-width: 0;
-    text-align: right;
+    width: 0;
+    text-align: center;
     direction: ltr;
+    border-radius: 0 !important;
 }
 
 /* hide browser native spin arrows globally */

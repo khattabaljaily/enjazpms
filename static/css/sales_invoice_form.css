@@ -2,6 +2,14 @@
    SALES MODULE — نموذج الفاتورة (إنشاء / تعديل)
    ========================================================= */
 
+/* Invoice line-item numeric text fields */
+.inv-num-field {
+  text-align: center;
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+
 /* Form stats section */
 .sales-form-stats {
   border-top: 1px solid var(--border-light);
@@ -21,10 +29,10 @@
 
 /* Column widths */
 .sales-th-product  { min-width: 220px; width: 35%; }
-.sales-th-qty      { width: 90px; }
-.sales-th-price    { width: 120px; }
-.sales-th-discount { width: 90px; }
-.sales-th-tax      { width: 90px; }
+.sales-th-qty      { width: 110px; }
+.sales-th-price    { width: 140px; }
+.sales-th-discount { width: 110px; }
+.sales-th-tax      { width: 110px; }
 .sales-th-total    { width: 120px; }
 .sales-th-actions  { width: 60px; text-align: center; }
 
