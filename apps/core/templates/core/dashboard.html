@@ -1,6 +1,7 @@
 {% extends "layouts/dashboard.html" %}
 {% load humanize %}
 {% load static %}
+{% load number_format %}
 
 {% block page_title %}نظرة عامة{% endblock %}
 
@@ -18,7 +19,7 @@
     </div>
     <div class="db-greeting-badges">
         <div class="db-badge">
-            <span class="db-badge-val">{{ stats.today_sales|floatformat:2|intcomma }}</span>
+            <span class="db-badge-val">{{ stats.today_sales|money }}</span>
             <span class="db-badge-lbl">مبيعات اليوم</span>
         </div>
         <div class="db-badge">
@@ -38,7 +39,7 @@
     <div class="db-kpi db-kpi--indigo">
         <div class="db-kpi-icon"><i class="fas fa-arrow-trend-up"></i></div>
         <div class="db-kpi-body">
-            <div class="db-kpi-val">{{ stats.today_sales|floatformat:2|intcomma }}</div>
+            <div class="db-kpi-val">{{ stats.today_sales|money }}</div>
             <div class="db-kpi-lbl">مبيعات اليوم</div>
             <span class="db-kpi-tag db-kpi-tag--info"><i class="fas fa-calendar-day"></i> اليوم</span>
         </div>
@@ -47,7 +48,7 @@
     <div class="db-kpi db-kpi--emerald">
         <div class="db-kpi-icon"><i class="fas fa-chart-line"></i></div>
         <div class="db-kpi-body">
-            <div class="db-kpi-val">{{ stats.this_month_sales|floatformat:2|intcomma }}</div>
+            <div class="db-kpi-val">{{ stats.this_month_sales|money }}</div>
             <div class="db-kpi-lbl">مبيعات الشهر</div>
             <span class="db-kpi-tag db-kpi-tag--up"><i class="fas fa-calendar-alt"></i> هذا الشهر</span>
         </div>
