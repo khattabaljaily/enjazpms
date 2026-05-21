@@ -361,6 +361,78 @@ def admin_dashboard(request):
     })
 
 
+@login_required
+def admin_users(request):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    from apps.accounts.models import User
+    users = User.objects.select_related('tenant').order_by('-date_joined')
+    return render(request, 'core/admin_users.html', {'users': users})
+
+
+@login_required
+def admin_user_create(request):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    return render(request, 'core/admin_user_create.html', {})
+
+
+@login_required
+def admin_support(request):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    return render(request, 'core/admin_support.html', {})
+
+
+@login_required
+def admin_report_subscriptions(request):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    return render(request, 'core/admin_report_subscriptions.html', {})
+
+
+@login_required
+def admin_report_revenue(request):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    return render(request, 'core/admin_report_revenue.html', {})
+
+
+@login_required
+def admin_report_activity(request):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    return render(request, 'core/admin_report_activity.html', {})
+
+
+@login_required
+def admin_audit_log(request):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    return render(request, 'core/admin_audit_log.html', {})
+
+
+@login_required
+def admin_settings(request):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    return render(request, 'core/admin_settings.html', {})
+
+
+@login_required
+def admin_backup(request):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    return render(request, 'core/admin_backup.html', {})
+
+
+@login_required
+def admin_training(request):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    return render(request, 'core/admin_training.html', {})
+
+
 def subscription_expired(request):
     """صفحة انتهاء الاشتراك"""
     return render(request, 'core/subscription_expired.html')

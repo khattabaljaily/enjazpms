@@ -25,4 +25,24 @@ urlpatterns = [
     path('tenants/api/<int:pk>/update/', views.tenant_update_api, name='tenant_update_api'),
     path('tenants/api/<int:pk>/delete/', views.tenant_delete_api, name='tenant_delete_api'),
     path('tenants/api/<int:pk>/suspend/', views.tenant_suspend_api, name='tenant_suspend_api'),
+
+    # Admin — Users
+    path('admin/users/', views.admin_users, name='admin_users'),
+    path('admin/users/create/', views.admin_user_create, name='admin_user_create'),
+
+    # Admin — Support
+    path('admin/support/', views.admin_support, name='admin_support'),
+
+    # Admin — Reports
+    path('admin/reports/subscriptions/', views.admin_report_subscriptions, name='admin_report_subscriptions'),
+    path('admin/reports/revenue/', views.admin_report_revenue, name='admin_report_revenue'),
+    path('admin/reports/activity/', views.admin_report_activity, name='admin_report_activity'),
+
+    # Admin — System
+    path('admin/audit-log/', views.admin_audit_log, name='admin_audit_log'),
+    path('admin/settings/', views.admin_settings, name='admin_settings'),
+
+    # Admin — Backup & Training
+    path('admin/backup/', views.admin_backup, name='admin_backup'),
+    path('admin/training/', views.admin_training, name='admin_training'),
 ]

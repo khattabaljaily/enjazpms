@@ -14,7 +14,7 @@
     overflow: hidden;
     border-radius: 20px;
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a5f 100%);
-    padding: 1.75rem 2rem;
+    padding: 0.75rem 1.2rem;
     box-shadow: 0 8px 32px rgba(15, 23, 42, 0.28);
 }
 
@@ -289,14 +289,16 @@
 
 .adm-panel__body--chart {
     position: relative;
-    flex: 1;
-    min-height: 0;
+    height: 180px;
+    max-height: 180px;
+    overflow: hidden;
     padding: 0.75rem;
 }
 
 .adm-panel__body--chart canvas {
     width: 100% !important;
     height: 100% !important;
+    max-height: 156px;
 }
 
 .adm-panel__body--flush {

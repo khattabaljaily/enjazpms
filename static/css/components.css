@@ -1729,3 +1729,41 @@ table.dataTable thead th.sorting_desc::before { content: "\f0dd" !important; opa
         height: 32px;
     }
 }
+
+/* ── Coming Soon / Under Construction ───────────────────────── */
+.cx-coming-soon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 2rem;
+    text-align: center;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 18px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.05);
+    min-height: 320px;
+}
+.cx-coming-soon__icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(99,102,241,.1);
+    color: #6366f1;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+}
+.cx-coming-soon__title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary, #1e293b);
+    margin-bottom: .5rem;
+}
+.cx-coming-soon__text {
+    font-size: .88rem;
+    color: var(--text-tertiary, #94a3b8);
+    margin: 0;
+}

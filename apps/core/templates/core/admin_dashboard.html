@@ -2,7 +2,7 @@
 {% load static humanize %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin_dashboard.css' %}?v=2.8">
+<link rel="stylesheet" href="{% static 'css/admin_dashboard.css' %}?v=2.9">
 {% endblock %}
 
 {% block page_title %}لوحة مشرف النظام{% endblock %}
@@ -220,7 +220,7 @@
                         </div>
                         <i class="fas fa-arrow-left adm-quick__arrow"></i>
                     </a>
-                    <a href="#" class="adm-quick adm-quick--blue">
+                    <a href="{% url 'core:admin_support' %}" class="adm-quick adm-quick--blue">
                         <div class="adm-quick__icon"><i class="fas fa-headset"></i></div>
                         <div class="adm-quick__text">
                             <span class="adm-quick__title">الدعم الفني</span>
@@ -228,7 +228,7 @@
                         </div>
                         <i class="fas fa-arrow-left adm-quick__arrow"></i>
                     </a>
-                    <a href="#" class="adm-quick adm-quick--amber">
+                    <a href="{% url 'core:admin_backup' %}" class="adm-quick adm-quick--amber">
                         <div class="adm-quick__icon"><i class="fas fa-database"></i></div>
                         <div class="adm-quick__text">
                             <span class="adm-quick__title">النسخ الاحتياطي</span>
