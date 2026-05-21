@@ -1,0 +1,159 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/inv_detail.css' %}?v=1.5">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- Hero -->
+<div class="doc-hero">
+    <div class="doc-hero-inner">
+        <div class="doc-hero-left">
+            <a href="{% url 'stocks:manufacturing_list' %}" class="doc-back-btn">
+                <i class="fas fa-arrow-right"></i>
+            </a>
+            <div class="doc-hero-icon" style="background:var(--indigo)">
+                <i class="fas fa-industry"></i>
+            </div>
+            <div>
+                <h1 class="doc-hero-number">{{ order.order_number }}</h1>
+                <p class="doc-hero-meta">{{ order.order_date }} — {{ order.stock.name }}</p>
+            </div>
+        </div>
+        <div class="doc-hero-right">
+            <span class="doc-pill
+                {% if order.status == 'confirmed' %}doc-pill--confirmed
+                {% elif order.status == 'cancelled' %}doc-pill--cancelled
+                {% else %}doc-pill--draft{% endif %}">
+                {{ order.get_status_display }}
+            </span>
+            <div class="doc-hero-actions ms-2">
+                {% if order.status == 'draft' %}
+                <button class="cx-btn-add btn-sm" onclick="confirmOrder()">
+                    <i class="fas fa-check me-1"></i> تأكيد
+                </button>
+                <button class="cx-btn-danger btn-sm ms-1" onclick="deleteOrder()">
+                    <i class="fas fa-trash me-1"></i> حذف
+                </button>
+                {% elif order.status == 'confirmed' %}
+                <button class="cx-btn-danger btn-sm" onclick="cancelOrder()">
+                    <i class="fas fa-ban me-1"></i> إلغاء
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Order Info -->
+    <div class="col-md-4">
+        <div class="cx-panel p-3">
+            <h6 class="cx-panel-title mb-3"><i class="fas fa-info-circle me-2 text-muted"></i>تفاصيل الأمر</h6>
+            <table class="table table-sm table-borderless">
+                <tr><th class="text-muted">المنتج النهائي</th><td>{{ order.recipe.item.name }}</td></tr>
+                <tr><th class="text-muted">الوصفة</th><td>{{ order.recipe }}</td></tr>
+                <tr><th class="text-muted">الكمية المنتجة</th><td><strong>{{ order.quantity|floatformat:4 }}</strong></td></tr>
+                <tr><th class="text-muted">المخزن</th><td>{{ order.stock.name }}</td></tr>
+                <tr><th class="text-muted">التاريخ</th><td>{{ order.order_date }}</td></tr>
+                <tr><th class="text-muted">التكلفة الكلية</th><td><strong>{{ order.cost|floatformat:2 }}</strong></td></tr>
+                {% if order.notes %}
+                <tr><th class="text-muted">ملاحظات</th><td>{{ order.notes }}</td></tr>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+
+    <!-- Components Breakdown -->
+    <div class="col-md-8">
+        <div class="cx-panel">
+            <div class="cx-panel-header p-3">
+                <h6 class="cx-panel-title mb-0"><i class="fas fa-list me-2 text-muted"></i>تفصيل المكوّنات</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="cx-table table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>المكوّن</th>
+                            <th>SKU</th>
+                            <th>الكمية لكل وحدة</th>
+                            <th>الكمية الإجمالية</th>
+                            <th>الوحدة</th>
+                            <th>سعر التكلفة</th>
+                            <th>الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in lines %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ line.component.name }}</td>
+                            <td><code>{{ line.component.sku }}</code></td>
+                            <td>{{ line.quantity|floatformat:4 }}</td>
+                            <td><strong>{{ line.quantity|floatformat:4 }}</strong> × {{ order.quantity|floatformat:4 }}</td>
+                            <td>{{ line.unit.name|default:"-" }}</td>
+                            <td>{{ line.component.cost_price|floatformat:2 }}</td>
+                            <td>{{ line.component.cost_price|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-3">لا توجد مكوّنات في الوصفة</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ORDER_ID = {{ order.id }};
+const CONFIRM_URL = "{% url 'stocks:manufacturing_confirm' order.id %}";
+const CANCEL_URL  = "{% url 'stocks:manufacturing_cancel' order.id %}";
+const DELETE_URL  = "{% url 'stocks:manufacturing_delete' order.id %}";
+const CSRF_TOKEN  = "{{ csrf_token }}";
+
+function ajaxAction(url, confirmMsg, successMsg) {
+    if (!confirm(confirmMsg)) return;
+    fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN }
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            alert(successMsg);
+            location.reload();
+        } else {
+            alert('خطأ: ' + res.message);
+        }
+    })
+    .catch(() => alert('حدث خطأ في الاتصال'));
+}
+
+function confirmOrder() {
+    ajaxAction(CONFIRM_URL, 'هل تريد تأكيد أمر التصنيع؟ سيتم خصم المكوّنات وإضافة المنتج النهائي.', 'تم تأكيد الأمر بنجاح');
+}
+
+function cancelOrder() {
+    ajaxAction(CANCEL_URL, 'هل تريد إلغاء أمر التصنيع؟ سيتم عكس جميع حركات المخزون.', 'تم إلغاء الأمر');
+}
+
+function deleteOrder() {
+    ajaxAction(DELETE_URL, 'هل تريد حذف هذه المسودة نهائياً؟', 'تم حذف الأمر');
+    setTimeout(() => { window.location.href = "{% url 'stocks:manufacturing_list' %}"; }, 1500);
+}
+</script>
+{% endblock %}

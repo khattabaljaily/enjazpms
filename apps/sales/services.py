@@ -313,11 +313,12 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
 
     # ── 1. خصم المخزون ──────────────────────────────────
     for line in lines:
+        qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
         _deduct_stock(
             tenant=tenant,
             stock=invoice.stock,
             item=line.item,
-            qty=line.quantity,
+            qty=qty_base,
             unit_cost=line.cost_price_snapshot,
             invoice=invoice,
             variant=line.variant,
@@ -508,6 +509,9 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
         if ld.get('variant_id'):
             variant = ItemVariant.objects.get(id=ld['variant_id'], tenant=tenant)
 
+        from apps.items.models import Unit as ItemUnit
+        unit_obj = ItemUnit.objects.filter(pk=ld['unit_id'], tenant=tenant).first() if ld.get('unit_id') else None
+
         line = SaleInvoiceLine(
             tenant=tenant,
             invoice=invoice,
@@ -521,6 +525,8 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
             batch_number=ld.get('batch_number', ''),
             serial_number=ld.get('serial_number', ''),
             expiry_date=ld.get('expiry_date'),
+            unit=unit_obj,
+            unit_factor=Decimal(str(ld.get('unit_factor', 1) or 1)),
         )
         line.calculate()
         new_lines.append(line)
@@ -854,6 +860,9 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
         if ld.get('variant_id'):
             variant = ItemVariant.objects.get(id=ld['variant_id'], tenant=tenant)
 
+        from apps.items.models import Unit as ItemUnit
+        unit_obj = ItemUnit.objects.filter(pk=ld['unit_id'], tenant=tenant).first() if ld.get('unit_id') else None
+
         line = SaleInvoiceLine(
             tenant=tenant,
             invoice=invoice,
@@ -867,6 +876,8 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
             batch_number=ld.get('batch_number', ''),
             serial_number=ld.get('serial_number', ''),
             expiry_date=ld.get('expiry_date'),
+            unit=unit_obj,
+            unit_factor=Decimal(str(ld.get('unit_factor', 1) or 1)),
             created_by=user,
         )
         line.calculate()

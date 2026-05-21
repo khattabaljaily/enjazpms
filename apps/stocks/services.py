@@ -3,13 +3,26 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.sales.models import StockMovement
-from .models import StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine
+from .models import StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine, ManufacturingOrder
 
 
 def _get_sq(tenant, stock, item):
     return StockQuantity.objects.select_for_update().get(
         tenant=tenant, stock=stock, item=item
     )
+
+
+def _get_or_create_sq(tenant, stock, item):
+    """Get or create a StockQuantity row (with SELECT FOR UPDATE on existing rows)."""
+    sq, created = StockQuantity.objects.get_or_create(
+        tenant=tenant, stock=stock, item=item,
+        defaults={'quantity': Decimal('0'), 'reserved_quantity': Decimal('0')}
+    )
+    if not created:
+        sq = StockQuantity.objects.select_for_update().get(
+            tenant=tenant, stock=stock, item=item
+        )
+    return sq
 
 
 @transaction.atomic
@@ -152,3 +165,98 @@ def confirm_stocktake(stocktake):
 
     stocktake.status = 'confirmed'
     stocktake.save(update_fields=['status', 'updated_at'])
+
+
+# ─────────────────────────────────────────────
+# Manufacturing Order Services
+# ─────────────────────────────────────────────
+
+@transaction.atomic
+def confirm_manufacturing_order(order):
+    if order.status != 'draft':
+        raise ValueError('الأمر ليس في حالة مسودة')
+
+    recipe = order.recipe
+    total_cost = Decimal('0')
+
+    for bom_line in recipe.lines.select_related('component', 'unit').all():
+        factor = Decimal('1')
+        if bom_line.unit and bom_line.unit.base_unit and bom_line.unit.conversion_factor:
+            factor = bom_line.unit.conversion_factor
+        needed = (bom_line.quantity * factor * order.quantity).quantize(Decimal('0.0001'))
+
+        sq = _get_or_create_sq(order.tenant, order.stock, bom_line.component)
+        if sq.quantity < needed:
+            raise ValueError(
+                f"رصيد «{bom_line.component.name}» غير كافٍ. "
+                f"المتاح: {sq.quantity}، المطلوب: {needed}."
+            )
+        sq.quantity -= needed
+        sq.save(update_fields=['quantity', 'updated_at'])
+
+        StockMovement.objects.create(
+            tenant=order.tenant,
+            item=bom_line.component,
+            stock=order.stock,
+            movement_type='adjustment_out',
+            direction='out',
+            quantity=needed,
+            unit_cost=bom_line.component.cost_price,
+            balance_after=sq.quantity,
+            reference_type='manufacturing_order',
+            reference_id=order.id,
+            movement_date=order.order_date,
+            notes=f"خصم مكوّن: {order.order_number}",
+        )
+        total_cost += (bom_line.component.cost_price * needed)
+
+    # Add finished product
+    finished_sq = _get_or_create_sq(order.tenant, order.stock, recipe.item)
+    finished_sq.quantity += order.quantity
+    finished_sq.save(update_fields=['quantity', 'updated_at'])
+
+    unit_cost = (total_cost / order.quantity).quantize(Decimal('0.01')) if order.quantity else Decimal('0')
+    StockMovement.objects.create(
+        tenant=order.tenant,
+        item=recipe.item,
+        stock=order.stock,
+        movement_type='adjustment_in',
+        direction='in',
+        quantity=order.quantity,
+        unit_cost=unit_cost,
+        balance_after=finished_sq.quantity,
+        reference_type='manufacturing_order',
+        reference_id=order.id,
+        movement_date=order.order_date,
+        notes=f"إنتاج: {order.order_number}",
+    )
+
+    order.cost = total_cost
+    order.status = 'confirmed'
+    order.save(update_fields=['cost', 'status', 'updated_at'])
+
+
+@transaction.atomic
+def cancel_manufacturing_order(order):
+    if order.status != 'confirmed':
+        raise ValueError('لا يمكن إلغاء أمر غير مؤكد')
+
+    movements = StockMovement.objects.filter(
+        tenant=order.tenant,
+        reference_type='manufacturing_order',
+        reference_id=order.id,
+    ).select_related('item').select_for_update()
+
+    for mv in movements:
+        sq = _get_or_create_sq(order.tenant, order.stock, mv.item)
+        if mv.movement_type == 'adjustment_out':
+            sq.quantity += mv.quantity
+        else:
+            if sq.quantity < mv.quantity:
+                raise ValueError(f"لا يمكن عكس الأمر: رصيد «{mv.item.name}» غير كافٍ.")
+            sq.quantity -= mv.quantity
+        sq.save(update_fields=['quantity', 'updated_at'])
+
+    movements.delete()
+    order.status = 'cancelled'
+    order.save(update_fields=['status', 'updated_at'])

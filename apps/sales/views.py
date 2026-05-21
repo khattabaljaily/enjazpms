@@ -336,7 +336,13 @@ def invoice_edit(request, pk):
         return redirect('sales:invoice_edit', pk=pk)
 
     existing_lines = []
-    for line in invoice.lines.select_related('item', 'variant'):
+    for line in invoice.lines.select_related('item', 'variant', 'unit'):
+        base_unit = line.item.unit
+        units = []
+        if base_unit:
+            units.append({'id': base_unit.id, 'name': str(base_unit), 'factor': '1'})
+            for sub in base_unit.sub_units.filter(is_active=True, tenant=tenant):
+                units.append({'id': sub.id, 'name': str(sub), 'factor': str(sub.conversion_factor)})
         existing_lines.append({
             'item_id': line.item_id,
             'item_name': line.item.name,
@@ -351,6 +357,13 @@ def invoice_edit(request, pk):
             'serial_number': line.serial_number,
             'expiry_date': line.expiry_date.isoformat() if line.expiry_date else '',
             'line_total': str(line.line_total),
+            'unit_id': line.unit_id or (base_unit.id if base_unit else None),
+            'unit_name': str(line.unit) if line.unit else (str(base_unit) if base_unit else ''),
+            'unit_factor': str(line.unit_factor) if line.unit_factor else '1',
+            'units': units,
+            'track_batch': line.item.track_batch,
+            'track_serial': line.item.track_serial,
+            'track_expiry': line.item.track_expiry,
         })
 
     context = {
@@ -396,6 +409,8 @@ def _process_invoice_post(request, tenant, invoice):
                 'batch_number': ld.get('batch_number', ''),
                 'serial_number': ld.get('serial_number', ''),
                 'expiry_date': ld.get('expiry_date') or None,
+                'unit_id': int(ld['unit_id']) if ld.get('unit_id') else None,
+                'unit_factor': Decimal(str(ld.get('unit_factor', 1) or 1)),
             })
         except (KeyError, InvalidOperation, ValueError) as e:
             return _json_error(f'خطأ في بيانات البنود: {e}')
@@ -947,6 +962,13 @@ def item_info_api(request):
                 'selling_price': str(v.selling_price or item.selling_price),
             })
 
+    base_unit = item.unit
+    units = []
+    if base_unit:
+        units.append({'id': base_unit.id, 'name': str(base_unit), 'factor': '1'})
+        for sub in base_unit.sub_units.filter(is_active=True, tenant=tenant):
+            units.append({'id': sub.id, 'name': str(sub), 'factor': str(sub.conversion_factor)})
+
     return JsonResponse({
         'success': True,
         'item': {
@@ -965,6 +987,10 @@ def item_info_api(request):
             'is_service': is_service,
             'available_qty': available_qty,
             'variants': variants,
+            'unit_id': base_unit.id if base_unit else None,
+            'unit_name': str(base_unit) if base_unit else '',
+            'unit_factor': '1',
+            'units': units,
         }
     })
 

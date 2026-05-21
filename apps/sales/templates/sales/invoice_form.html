@@ -451,6 +451,13 @@ function selectItem(itemId) {
             item_type: item.item_type,
             is_service: !!item.is_service,
             available_qty: item.available_qty,
+            unit_id: item.unit_id || null,
+            unit_name: item.unit_name || '',
+            unit_factor: item.unit_factor || '1',
+            units: item.units || [],
+            track_batch: !!item.track_batch,
+            track_serial: !!item.track_serial,
+            track_expiry: !!item.track_expiry,
         });
         closeItemSearch();
     });
@@ -472,6 +479,11 @@ function addLineToTable(lineData) {
     row.dataset.batchNumber = lineData.batch_number || '';
     row.dataset.serialNumber = lineData.serial_number || '';
     row.dataset.expiryDate = lineData.expiry_date || '';
+    row.dataset.unitId = lineData.unit_id || '';
+    row.dataset.unitFactor = lineData.unit_factor || '1';
+    row.dataset.trackBatch = lineData.track_batch ? '1' : '0';
+    row.dataset.trackSerial = lineData.track_serial ? '1' : '0';
+    row.dataset.trackExpiry = lineData.track_expiry ? '1' : '0';
 
     const qty = EnjazIMS.parseNumber(lineData.quantity) || 1;
     const price = EnjazIMS.parseNumber(lineData.unit_price) || 0;
@@ -479,16 +491,34 @@ function addLineToTable(lineData) {
     const tax = EnjazIMS.parseNumber(lineData.tax_rate) || 0;
     const lineTotal = calcLineTotal(qty, price, disc, tax);
 
+    const showBatch  = CAP.hasBatchNumbers  && (lineData.track_batch  ?? true);
+    const showSerial = CAP.hasSerialNumbers && (lineData.track_serial ?? true);
+    const showExpiry = CAP.hasExpiryDates   && (lineData.track_expiry ?? true);
+
     const trackingHtml = [
-        CAP.hasBatchNumbers  ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="batch-${id}" value="${(lineData.batch_number || '').replace(/"/g, '&quot;')}" placeholder="رقم الدفعة"></div>` : '',
-        CAP.hasSerialNumbers ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="serial-${id}" value="${(lineData.serial_number || '').replace(/"/g, '&quot;')}" placeholder="الرقم التسلسلي"></div>` : '',
-        CAP.hasExpiryDates   ? `<div class="mt-1"><input type="date" class="cx-input cx-input--xs" id="expiry-${id}" value="${lineData.expiry_date || ''}"></div>` : '',
+        showBatch  ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="batch-${id}" value="${(lineData.batch_number || '').replace(/"/g, '&quot;')}" placeholder="رقم الدفعة"></div>` : '',
+        showSerial ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="serial-${id}" value="${(lineData.serial_number || '').replace(/"/g, '&quot;')}" placeholder="الرقم التسلسلي"></div>` : '',
+        showExpiry ? `<div class="mt-1"><input type="date" class="cx-input cx-input--xs" id="expiry-${id}" value="${lineData.expiry_date || ''}"></div>` : '',
     ].join('');
+
+    const units = lineData.units || [];
+    let unitHtml = '';
+    if (units.length > 1) {
+        const opts = units.map(u =>
+            `<option value="${u.id}" data-factor="${u.factor}" ${String(u.id) === String(lineData.unit_id) ? 'selected' : ''}>${u.name}</option>`
+        ).join('');
+        unitHtml = `<div class="mt-1"><select class="cx-input cx-input--xs line-unit-sel" id="unit-sel-${id}" onchange="onUnitChange(${id})">${opts}</select></div>`;
+    } else if (units.length === 1) {
+        unitHtml = `<div class="mt-1"><span class="badge bg-secondary">${units[0].name}</span></div>`;
+    } else if (lineData.unit_name) {
+        unitHtml = `<div class="mt-1"><span class="badge bg-secondary">${lineData.unit_name}</span></div>`;
+    }
 
     row.innerHTML = `
         <td>
             <div class="sales-line-item-name">${lineData.item_name}</div>
             <div class="sales-line-item-sku">${lineData.item_sku || ''}</div>
+            ${unitHtml}
             ${trackingHtml}
         </td>
         <td>
@@ -525,6 +555,15 @@ function addLineToTable(lineData) {
 
     updateLineCount();
     recalcTotals();
+}
+
+function onUnitChange(id) {
+    const sel = document.getElementById(`unit-sel-${id}`);
+    if (!sel) return;
+    const opt = sel.options[sel.selectedIndex];
+    const row = document.getElementById(`line-${id}`);
+    row.dataset.unitId = sel.value;
+    row.dataset.unitFactor = opt.dataset.factor || '1';
 }
 
 function calcLineTotal(qty, price, discPct, taxRate) {
@@ -625,6 +664,9 @@ function collectLines() {
     const lines = [];
     document.querySelectorAll('#linesBody tr').forEach(row => {
         const id = row.id.replace('line-', '');
+        const showBatch  = CAP.hasBatchNumbers  && row.dataset.trackBatch  !== '0';
+        const showSerial = CAP.hasSerialNumbers && row.dataset.trackSerial !== '0';
+        const showExpiry = CAP.hasExpiryDates   && row.dataset.trackExpiry !== '0';
         lines.push({
             item_id: row.dataset.itemId,
             variant_id: row.dataset.variantId || null,
@@ -633,9 +675,11 @@ function collectLines() {
             discount_percent: EnjazIMS.parseNumber(document.getElementById(`disc-${id}`).value || 0).toFixed(2),
             tax_rate: EnjazIMS.parseNumber(document.getElementById(`tax-${id}`).value || 0).toFixed(2),
             cost_price_snapshot: row.dataset.costPrice || '0',
-            batch_number: CAP.hasBatchNumbers  ? (document.getElementById(`batch-${id}`)?.value || '') : '',
-            serial_number: CAP.hasSerialNumbers ? (document.getElementById(`serial-${id}`)?.value || '') : '',
-            expiry_date: CAP.hasExpiryDates   ? (document.getElementById(`expiry-${id}`)?.value || null) : null,
+            batch_number: showBatch  ? (document.getElementById(`batch-${id}`)?.value || '') : '',
+            serial_number: showSerial ? (document.getElementById(`serial-${id}`)?.value || '') : '',
+            expiry_date: showExpiry ? (document.getElementById(`expiry-${id}`)?.value || null) : null,
+            unit_id: row.dataset.unitId || null,
+            unit_factor: row.dataset.unitFactor || '1',
         });
     });
     return lines;

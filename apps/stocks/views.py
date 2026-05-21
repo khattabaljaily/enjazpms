@@ -18,9 +18,9 @@ from django.utils import timezone
 from apps.sales.models import StockMovement
 
 from .forms import StockForm
-from .models import Stock, StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine
+from .models import Stock, StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine, ManufacturingOrder
 from .reports import StocksReportGenerator
-from .services import confirm_stock_transfer, cancel_stock_transfer, confirm_stocktake
+from .services import confirm_stock_transfer, cancel_stock_transfer, confirm_stocktake, confirm_manufacturing_order, cancel_manufacturing_order
 
 
 def _ensure_tenant(request):
@@ -1473,3 +1473,179 @@ def stocktake_cancel_ajax(request, pk):
         return JsonResponse({'success': True})
     except Stocktake.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'الجرد غير موجود'}, status=404)
+
+
+# ============================================================
+# MANUFACTURING ORDERS — أوامر التصنيع
+# ============================================================
+
+@login_required
+@require_permission('view_stocks')
+def manufacturing_list(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+    qs = ManufacturingOrder.objects.filter(tenant=tenant)
+    stats = {
+        'total': qs.count(),
+        'draft': qs.filter(status='draft').count(),
+        'confirmed': qs.filter(status='confirmed').count(),
+        'cancelled': qs.filter(status='cancelled').count(),
+    }
+    return render(request, 'stocks/manufacturing_list.html', {'stats': stats})
+
+
+@login_required
+@require_permission('view_stocks')
+def manufacturing_table_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 25))
+    search_value = request.GET.get('search[value]', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+
+    qs = ManufacturingOrder.objects.filter(tenant=tenant).select_related('recipe__item', 'stock')
+    records_total = qs.count()
+
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    if search_value:
+        qs = qs.filter(
+            Q(order_number__icontains=search_value) |
+            Q(recipe__item__name__icontains=search_value)
+        )
+
+    records_filtered = qs.count()
+    qs = qs.order_by('-order_date', '-id')[start:start + length]
+
+    data = [
+        {
+            'id': o.id,
+            'order_number': o.order_number,
+            'item_name': o.recipe.item.name,
+            'stock_name': o.stock.name,
+            'quantity': str(o.quantity),
+            'order_date': o.order_date.strftime('%Y-%m-%d'),
+            'status': o.status,
+            'status_display': o.get_status_display(),
+            'cost': str(o.cost),
+        }
+        for o in qs
+    ]
+    return JsonResponse({'draw': draw, 'recordsTotal': records_total, 'recordsFiltered': records_filtered, 'data': data})
+
+
+@login_required
+@require_permission('add_stocks')
+def manufacturing_create(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    if request.method == 'POST':
+        import json as _json
+        try:
+            payload = _json.loads(request.body)
+        except Exception:
+            payload = request.POST.dict()
+
+        from apps.items.models import BOMRecipe
+        try:
+            recipe = BOMRecipe.objects.get(pk=payload.get('recipe_id'), tenant=tenant)
+            stock = Stock.objects.get(pk=payload.get('stock_id'), tenant=tenant)
+            from datetime import datetime as _dt
+            order_date = _dt.strptime(payload.get('order_date', ''), '%Y-%m-%d').date()
+            quantity = Decimal(str(payload.get('quantity', '1')))
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'بيانات غير صالحة: {e}'}, status=400)
+
+        order = ManufacturingOrder.objects.create(
+            tenant=tenant,
+            recipe=recipe,
+            stock=stock,
+            quantity=quantity,
+            order_date=order_date,
+            notes=payload.get('notes', ''),
+            created_by=request.user,
+            updated_by=request.user,
+        )
+        return JsonResponse({'success': True, 'id': order.id, 'order_number': order.order_number})
+
+    from apps.items.models import BOMRecipe
+    recipes = BOMRecipe.objects.filter(tenant=tenant, is_active=True).select_related('item')
+    stocks = Stock.objects.filter(tenant=tenant, is_active=True)
+    return render(request, 'stocks/manufacturing_form.html', {
+        'recipes': recipes,
+        'stocks': stocks,
+        'today': timezone.now().date().strftime('%Y-%m-%d'),
+    })
+
+
+@login_required
+@require_permission('view_stocks')
+def manufacturing_detail(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    from django.shortcuts import get_object_or_404
+    order = get_object_or_404(ManufacturingOrder, pk=pk, tenant=tenant)
+    lines = order.recipe.lines.select_related('component', 'unit').all()
+    return render(request, 'stocks/manufacturing_detail.html', {'order': order, 'lines': lines})
+
+
+@login_required
+@require_permission('add_stocks')
+def manufacturing_confirm_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        order = ManufacturingOrder.objects.get(pk=pk, tenant=tenant)
+        confirm_manufacturing_order(order)
+        return JsonResponse({'success': True, 'message': 'تم تأكيد أمر التصنيع بنجاح'})
+    except ManufacturingOrder.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الأمر غير موجود'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'خطأ غير متوقع: {e}'}, status=500)
+
+
+@login_required
+@require_permission('add_stocks')
+def manufacturing_cancel_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        order = ManufacturingOrder.objects.get(pk=pk, tenant=tenant)
+        cancel_manufacturing_order(order)
+        return JsonResponse({'success': True, 'message': 'تم إلغاء أمر التصنيع'})
+    except ManufacturingOrder.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الأمر غير موجود'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'خطأ غير متوقع: {e}'}, status=500)
+
+
+@login_required
+@require_permission('add_stocks')
+def manufacturing_delete_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        order = ManufacturingOrder.objects.get(pk=pk, tenant=tenant)
+        if order.status != 'draft':
+            return JsonResponse({'success': False, 'message': 'لا يمكن حذف إلا المسودات'}, status=400)
+        order.delete()
+        return JsonResponse({'success': True, 'message': 'تم حذف الأمر'})
+    except ManufacturingOrder.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الأمر غير موجود'}, status=404)

@@ -41,4 +41,16 @@ urlpatterns = [
     path('', views.item_list, name='list'),
     path('categories/', views.category_list, name='category_list'),
     path('units/', views.unit_list, name='unit_list'),
+
+    # ------- BOM Recipes -------
+    path('bom/', views.bom_recipe_list, name='bom_list'),
+    path('bom/api/', views.bom_recipe_api, name='bom_api'),
+    path('bom/create/', views.bom_recipe_create_ajax, name='bom_create_ajax'),
+    path('bom/<int:pk>/', views.bom_recipe_detail, name='bom_detail'),
+
+    # ------- Item Meta API -------
+    path('api/meta/<int:pk>/', views.item_meta_api, name='item_meta_api'),
+
+    # ------- Item Batches -------
+    path('<int:pk>/batches/', views.item_batches, name='item_batches'),
 ]

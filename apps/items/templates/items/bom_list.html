@@ -1,0 +1,196 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:var(--indigo)">
+                <i class="fas fa-flask"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">وصفات التصنيع</h1>
+                <p class="cx-hero-desc">قوائم مكوّنات المنتجات المصنّعة (BOM)</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <button class="cx-btn-add" onclick="openCreateRecipeModal()">
+                    <i class="fas fa-plus"></i>
+                    <span>وصفة جديدة</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-flask"></i>
+            <strong>{{ recipes|length }}</strong><span>إجمالي الوصفات</span>
+        </span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="cx-panel mb-3 p-3">
+    <div class="row g-2">
+        <div class="col-md-4">
+            <input type="text" id="searchInput" class="cx-input" placeholder="ابحث باسم المنتج…">
+        </div>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="cx-panel">
+    <div class="table-responsive">
+        <table id="bomTable" class="cx-table table">
+            <thead>
+                <tr>
+                    <th>رقم</th>
+                    <th>المنتج النهائي</th>
+                    <th>SKU</th>
+                    <th>عدد المكوّنات</th>
+                    <th>التكلفة الإجمالية</th>
+                    <th>الحالة</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- Modal: إنشاء وصفة جديدة -->
+<div class="modal fade" id="createRecipeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إنشاء وصفة تصنيع جديدة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">المنتج النهائي</label>
+                    <select id="createItemSelect" class="cx-input">
+                        <option value="">-- اختر منتجاً --</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">ملاحظات</label>
+                    <textarea id="createNotes" class="cx-input" rows="2"></textarea>
+                </div>
+                <div id="createRecipeError" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="cx-btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-add" onclick="doCreateRecipe()">
+                    <i class="fas fa-save me-1"></i> إنشاء
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const BOM_API_URL = "{% url 'items:bom_api' %}";
+const BOM_CREATE_URL = "{% url 'items:bom_create_ajax' %}";
+const ITEM_SEARCH_URL = "{% url 'items:search_api' %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+let bomTable;
+
+$(document).ready(function() {
+    bomTable = $('#bomTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: BOM_API_URL,
+            data: function(d) {
+                d.search = { value: $('#searchInput').val() };
+            }
+        },
+        dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        language: {
+            processing: 'جاري التحميل…',
+            emptyTable: 'لا توجد وصفات تصنيع',
+            info: 'عرض _START_ إلى _END_ من _TOTAL_',
+            infoEmpty: 'لا توجد بيانات',
+            paginate: { next: 'التالي', previous: 'السابق' }
+        },
+        columns: [
+            { data: 'id', width: '60px' },
+            { data: 'item_name' },
+            { data: 'item_sku' },
+            { data: 'lines_count', className: 'text-center' },
+            { data: 'total_cost', render: d => parseFloat(d).toLocaleString('ar-SA', {minimumFractionDigits:2}) },
+            {
+                data: 'is_active',
+                render: d => d
+                    ? '<span class="badge bg-success">نشط</span>'
+                    : '<span class="badge bg-secondary">غير نشط</span>'
+            },
+            {
+                data: 'id',
+                orderable: false,
+                render: function(id) {
+                    return `<a href="/items/bom/${id}/" class="cxr-act cxr-act--view" title="عرض"><i class="fas fa-eye"></i></a>`;
+                }
+            }
+        ]
+    });
+
+    $('#searchInput').on('keyup', () => bomTable.draw());
+});
+
+function openCreateRecipeModal() {
+    // Load items
+    $.getJSON(ITEM_SEARCH_URL + '?q=&min_chars=0', function(data) {
+        const sel = $('#createItemSelect');
+        sel.empty().append('<option value="">-- اختر منتجاً --</option>');
+        (data.results || []).forEach(item => {
+            sel.append(`<option value="${item.id}">${item.name} (${item.sku})</option>`);
+        });
+    });
+    $('#createRecipeError').addClass('d-none');
+    new bootstrap.Modal(document.getElementById('createRecipeModal')).show();
+}
+
+function doCreateRecipe() {
+    const itemId = $('#createItemSelect').val();
+    const notes = $('#createNotes').val();
+    if (!itemId) {
+        $('#createRecipeError').removeClass('d-none').text('يرجى اختيار منتج');
+        return;
+    }
+    $.ajax({
+        url: BOM_CREATE_URL,
+        method: 'POST',
+        contentType: 'application/json',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        data: JSON.stringify({ item_id: itemId, notes: notes }),
+        success: function(res) {
+            if (res.success) {
+                window.location.href = `/items/bom/${res.id}/`;
+            } else {
+                $('#createRecipeError').removeClass('d-none').text(res.message);
+            }
+        },
+        error: function(xhr) {
+            const msg = xhr.responseJSON?.message || 'حدث خطأ';
+            $('#createRecipeError').removeClass('d-none').text(msg);
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -226,13 +226,24 @@ function searchItems() {
             .then(data => {
                 const items = data.results || [];
                 const html = items.length ? items.map(item => `
-                    <div class="sale-item-result js-add-item" data-id="${item.id}" data-name="${item.name || ''}" data-sku="${item.sku || ''}" data-cost="${parseFloat(item.selling_price || 0)}">
+                    <div class="sale-item-result js-add-item"
+                         data-id="${item.id}"
+                         data-name="${item.name || ''}"
+                         data-sku="${item.sku || ''}"
+                         data-cost="${parseFloat(item.cost_price || 0)}"
+                         data-units='${JSON.stringify(item.units || [])}'
+                         data-purchase-unit-id="${item.purchase_unit_id || ''}"
+                         data-purchase-unit-factor="${item.purchase_unit_factor || '1'}"
+                         data-track-batch="${item.track_batch ? '1' : ''}"
+                         data-track-serial="${item.track_serial ? '1' : ''}"
+                         data-track-expiry="${item.track_expiry ? '1' : ''}">
                         <div>
                             <div class="sale-item-result__name">${item.name}</div>
                             <div class="sale-item-result__sku">${item.sku || '—'}</div>
                         </div>
                         <div class="sale-item-result__meta">
-                            <div class="sale-item-result__price">${EnjazIMS.formatMoney(item.selling_price || 0)}</div>
+                            <div class="sale-item-result__price">${EnjazIMS.formatMoney(item.cost_price || 0)}</div>
+                            ${item.purchase_unit_name ? `<div style="font-size:.72rem;color:var(--text-tertiary)">${item.purchase_unit_name}</div>` : ''}
                         </div>
                     </div>
                 `).join('') : '<div class="text-muted text-center py-3">لا توجد نتائج</div>';
@@ -246,18 +257,45 @@ function addLine(itemId, itemName, itemSku, suggestedCost, opts = {}) {
     const tbody = document.getElementById('linesBody');
     document.getElementById('emptyLinesMsg').style.display = 'none';
 
+    // Unit selector
+    const units = opts.units || [];
+    const defaultUnitId = opts.unit_id || opts.purchase_unit_id || '';
+    const defaultFactor  = parseFloat(opts.unit_factor || opts.purchase_unit_factor || 1);
+    let unitHtml = '';
+    if (units.length > 1) {
+        const opts_html = units.map(u =>
+            `<option value="${u.id}" data-factor="${u.factor}" ${String(u.id) === String(defaultUnitId) ? 'selected' : ''}>${u.name}</option>`
+        ).join('');
+        unitHtml = `<select class="cx-input cx-input--xs mt-1" id="unit-sel-${id}" onchange="onUnitChange(${id})">${opts_html}</select>`;
+    } else if (units.length === 1) {
+        unitHtml = `<span class="badge bg-light text-secondary mt-1" style="font-size:.72rem">${units[0].name}</span>`;
+    }
+
+    // Per-item tracking (uses item flags when available, falls back to tenant CAP)
+    const trkBatch  = opts.track_batch  || CAP.hasBatchNumbers;
+    const trkSerial = opts.track_serial || CAP.hasSerialNumbers;
+    const trkExpiry = opts.track_expiry || CAP.hasExpiryDates;
     const trackingHtml = [
-        CAP.hasBatchNumbers  ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="batch-${id}" value="${(opts.batch_number || '').replace(/"/g, '&quot;')}" placeholder="رقم الدفعة"></div>` : '',
-        CAP.hasSerialNumbers ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="serial-${id}" value="${(opts.serial_number || '').replace(/"/g, '&quot;')}" placeholder="الرقم التسلسلي"></div>` : '',
-        CAP.hasExpiryDates   ? `<div class="mt-1"><input type="date" class="cx-input cx-input--xs" id="expiry-${id}" value="${opts.expiry_date || ''}"></div>` : '',
+        trkBatch  ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="batch-${id}" value="${(opts.batch_number || '').replace(/"/g, '&quot;')}" placeholder="رقم الدفعة"></div>` : '',
+        trkSerial ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="serial-${id}" value="${(opts.serial_number || '').replace(/"/g, '&quot;')}" placeholder="الرقم التسلسلي"></div>` : '',
+        trkExpiry ? `<div class="mt-1"><input type="date" class="cx-input cx-input--xs" id="expiry-${id}" value="${opts.expiry_date || ''}"></div>` : '',
     ].join('');
 
     const row = document.createElement('tr');
     row.id = `line-${id}`;
     row.dataset.itemId = itemId;
+    row.dataset.unitFactor = defaultFactor;
+    row.dataset.unitId = defaultUnitId;
+    row.dataset.trackBatch  = trkBatch  ? '1' : '';
+    row.dataset.trackSerial = trkSerial ? '1' : '';
+    row.dataset.trackExpiry = trkExpiry ? '1' : '';
+
     row.innerHTML = `
         <td><div class="sales-line-item-name">${itemName}</div><div class="sales-line-item-sku">${itemSku || ''}</div>${trackingHtml}</td>
-        <td><input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.qty || 1)}" class="cx-input cx-input--sm inv-num-field" id="qty-${id}" oninput="recalc()"></td>
+        <td>
+            <input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.qty || 1)}" class="cx-input cx-input--sm inv-num-field" id="qty-${id}" oninput="recalc()">
+            ${unitHtml}
+        </td>
         <td><input type="text" inputmode="decimal" value="${suggestedCost || 0}" class="cx-input cx-input--sm inv-num-field" id="cost-${id}" oninput="recalc()"></td>
         <td><input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.tax_rate || 0)}" class="cx-input cx-input--sm inv-num-field" id="tax-${id}" oninput="recalc()"></td>
         <td class="text-end" id="total-${id}">${EnjazIMS.formatMoney(0)}</td>
@@ -267,6 +305,15 @@ function addLine(itemId, itemName, itemSku, suggestedCost, opts = {}) {
 
     closeItemSearch();
     recalc();
+}
+
+function onUnitChange(id) {
+    const sel = document.getElementById(`unit-sel-${id}`);
+    if (!sel) return;
+    const opt = sel.options[sel.selectedIndex];
+    const row = document.getElementById(`line-${id}`);
+    row.dataset.unitFactor = opt.dataset.factor || 1;
+    row.dataset.unitId = sel.value;
 }
 
 function removeLine(id) {
@@ -322,9 +369,11 @@ function collectLines() {
             quantity: document.getElementById(`qty-${id}`).value,
             unit_cost: document.getElementById(`cost-${id}`).value,
             tax_rate: document.getElementById(`tax-${id}`).value,
-            batch_number: CAP.hasBatchNumbers  ? (document.getElementById(`batch-${id}`)?.value || '') : '',
-            serial_number: CAP.hasSerialNumbers ? (document.getElementById(`serial-${id}`)?.value || '') : '',
-            expiry_date: CAP.hasExpiryDates   ? (document.getElementById(`expiry-${id}`)?.value || null) : null,
+            unit_id: row.dataset.unitId || null,
+            unit_factor: parseFloat(row.dataset.unitFactor || 1),
+            batch_number: row.dataset.trackBatch  ? (document.getElementById(`batch-${id}`)?.value || '') : '',
+            serial_number: row.dataset.trackSerial ? (document.getElementById(`serial-${id}`)?.value || '') : '',
+            expiry_date:  row.dataset.trackExpiry  ? (document.getElementById(`expiry-${id}`)?.value || null) : null,
         });
     });
     return lines;
@@ -414,11 +463,23 @@ function submitOrder(action) {
     document.getElementById('itemSearchResults').addEventListener('click', function(event) {
         const card = event.target.closest('.js-add-item');
         if (!card) return;
+        let units = [];
+        try { units = JSON.parse(card.dataset.units || '[]'); } catch(e) {}
         addLine(
             Number(card.dataset.id || 0),
             card.dataset.name || '',
             card.dataset.sku || '',
-            Number(card.dataset.cost || 0)
+            Number(card.dataset.cost || 0),
+            {
+                units,
+                unit_id: card.dataset.purchaseUnitId || '',
+                unit_factor: parseFloat(card.dataset.purchaseUnitFactor || 1),
+                purchase_unit_id: card.dataset.purchaseUnitId || '',
+                purchase_unit_factor: parseFloat(card.dataset.purchaseUnitFactor || 1),
+                track_batch:  card.dataset.trackBatch  === '1',
+                track_serial: card.dataset.trackSerial === '1',
+                track_expiry: card.dataset.trackExpiry === '1',
+            }
         );
     });
 

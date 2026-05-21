@@ -304,6 +304,16 @@ class SaleInvoiceLine(TenantMixin):
         'سعر التكلفة وقت البيع', max_digits=14, decimal_places=2, default=0
     )
 
+    # وحدة البيع ومعامل التحويل (لدعم وحدات متعددة)
+    unit = models.ForeignKey(
+        'items.Unit', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sale_lines', verbose_name='الوحدة'
+    )
+    unit_factor = models.DecimalField(
+        'معامل التحويل', max_digits=10, decimal_places=4, default=1,
+        help_text='1 وحدة مستخدمة = unit_factor وحدة أساسية'
+    )
+
     # بيانات تتبع الدُفعة / المسلسل / الصلاحية (اختياري)
     batch_number = models.CharField('رقم الدُفعة', max_length=100, blank=True)
     serial_number = models.CharField('الرقم التسلسلي', max_length=100, blank=True)

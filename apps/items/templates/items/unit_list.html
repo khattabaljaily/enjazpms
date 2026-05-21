@@ -204,7 +204,7 @@
                     </div>
                     <div>
                         <span class="cx-unit-card-meta-label">عامل التحويل</span>
-                        <strong class="cx-unit-card-meta-value">${r.conversion_factor || '1'}</strong>
+                        <strong class="cx-unit-card-meta-value">${parseFloat(r.conversion_factor) || 1}</strong>
                     </div>
                 </div>
                 <div class="cx-unit-card-actions">
@@ -230,7 +230,7 @@
             { data: 'name', render: n => `<strong>${n}</strong>` },
             { data: 'abbreviation', render: a => a==='-' ? `<span class="cxr-empty">—</span>` : `<code class="cxr-code">${a}</code>` },
             { data: 'base_unit', render: b => b==='-' ? `<span class="badge bg-secondary">أساسية</span>` : `<span>${b}</span>` },
-            { data: 'conversion_factor' },
+            { data: 'conversion_factor', render: v => parseFloat(v) || 1 },
             { data: 'is_active', render: a => a
                 ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
                 : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>` },

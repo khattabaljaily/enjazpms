@@ -126,6 +126,13 @@ class PurchaseInvoiceLine(TenantMixin):
 
     quantity = models.DecimalField('الكمية', max_digits=12, decimal_places=3)
     unit_cost = models.DecimalField('سعر الوحدة', max_digits=14, decimal_places=2)
+    unit = models.ForeignKey(
+        'items.Unit', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='purchase_lines', verbose_name='الوحدة'
+    )
+    unit_factor = models.DecimalField(
+        'معامل التحويل', max_digits=10, decimal_places=4, default=1,
+    )
     tax_rate = models.DecimalField('نسبة الضريبة', max_digits=5, decimal_places=2, default=0)
     tax_amount = models.DecimalField('مبلغ الضريبة', max_digits=14, decimal_places=2, default=0)
     line_subtotal = models.DecimalField('المجموع قبل الضريبة', max_digits=14, decimal_places=2, default=0)

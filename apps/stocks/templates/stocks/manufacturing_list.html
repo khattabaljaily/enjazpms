@@ -1,0 +1,150 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:var(--indigo)">
+                <i class="fas fa-industry"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">أوامر التصنيع</h1>
+                <p class="cx-hero-desc">إدارة عمليات التصنيع من الوصفات</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'stocks:manufacturing_create' %}" class="cx-btn-add">
+                    <i class="fas fa-plus"></i>
+                    <span>أمر تصنيع جديد</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-industry"></i>
+            <strong>{{ stats.total }}</strong><span>إجمالي</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-pencil"></i>
+            <strong>{{ stats.draft }}</strong><span>مسودة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-check-circle"></i>
+            <strong>{{ stats.confirmed }}</strong><span>مؤكد</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--danger">
+            <i class="fas fa-ban"></i>
+            <strong>{{ stats.cancelled }}</strong><span>ملغي</span>
+        </span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="cx-panel mb-3 p-3">
+    <div class="row g-2">
+        <div class="col-md-4">
+            <input type="text" id="searchInput" class="cx-input" placeholder="ابحث برقم الأمر أو اسم المنتج…">
+        </div>
+        <div class="col-md-3">
+            <select id="statusFilter" class="cx-input">
+                <option value="">كل الحالات</option>
+                <option value="draft">مسودة</option>
+                <option value="confirmed">مؤكد</option>
+                <option value="cancelled">ملغي</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="cx-panel">
+    <div class="table-responsive">
+        <table id="mfgTable" class="cx-table table">
+            <thead>
+                <tr>
+                    <th>رقم الأمر</th>
+                    <th>المنتج</th>
+                    <th>المخزن</th>
+                    <th>الكمية</th>
+                    <th>التاريخ</th>
+                    <th>الحالة</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const MFG_API_URL = "{% url 'stocks:manufacturing_api' %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+let mfgTable;
+
+$(document).ready(function() {
+    mfgTable = $('#mfgTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: MFG_API_URL,
+            data: function(d) {
+                d.status = $('#statusFilter').val();
+            }
+        },
+        dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        language: {
+            processing: 'جاري التحميل…',
+            emptyTable: 'لا توجد أوامر تصنيع',
+            info: 'عرض _START_ إلى _END_ من _TOTAL_',
+            infoEmpty: 'لا توجد بيانات',
+            paginate: { next: 'التالي', previous: 'السابق' }
+        },
+        columns: [
+            { data: 'order_number' },
+            { data: 'item_name' },
+            { data: 'stock_name' },
+            { data: 'quantity' },
+            { data: 'order_date' },
+            {
+                data: 'status',
+                render: function(status, type, row) {
+                    const map = {
+                        draft: ['secondary', 'مسودة'],
+                        confirmed: ['success', 'مؤكد'],
+                        cancelled: ['danger', 'ملغي']
+                    };
+                    const [cls, label] = map[status] || ['muted', status];
+                    return `<span class="badge bg-${cls}">${label}</span>`;
+                }
+            },
+            {
+                data: 'id',
+                orderable: false,
+                render: function(id) {
+                    return `<a href="/stocks/manufacturing/${id}/" class="cxr-act cxr-act--view" title="عرض"><i class="fas fa-eye"></i></a>`;
+                }
+            }
+        ]
+    });
+
+    $('#searchInput').on('keyup', () => mfgTable.draw());
+    $('#statusFilter').on('change', () => mfgTable.draw());
+});
+</script>
+{% endblock %}

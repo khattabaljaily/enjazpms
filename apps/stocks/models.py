@@ -361,3 +361,54 @@ class StocktakeLine(TenantMixin):
     @property
     def difference(self):
         return self.counted_quantity - self.system_quantity
+
+
+# ============================================
+# MANUFACTURING ORDER (أوامر التصنيع)
+# ============================================
+
+class ManufacturingOrder(TenantMixin):
+    """أمر تصنيع — تنفيذ وصفة BOM"""
+    STATUS_CHOICES = (
+        ('draft', 'مسودة'),
+        ('confirmed', 'مؤكد'),
+        ('cancelled', 'ملغي'),
+    )
+    order_number = models.CharField('رقم الأمر', max_length=30, blank=True)
+    recipe = models.ForeignKey(
+        'items.BOMRecipe', on_delete=models.PROTECT,
+        related_name='manufacturing_orders', verbose_name='الوصفة'
+    )
+    stock = models.ForeignKey(
+        Stock, on_delete=models.PROTECT,
+        related_name='manufacturing_orders', verbose_name='المخزن'
+    )
+    quantity = models.DecimalField('الكمية المنتجة', max_digits=12, decimal_places=4)
+    order_date = models.DateField('تاريخ الأمر')
+    status = models.CharField('الحالة', max_length=12, choices=STATUS_CHOICES, default='draft')
+    cost = models.DecimalField('التكلفة الكلية', max_digits=14, decimal_places=2, default=0)
+    notes = models.TextField('ملاحظات', blank=True)
+
+    class Meta:
+        db_table = 'manufacturing_orders'
+        verbose_name = 'أمر تصنيع'
+        verbose_name_plural = 'أوامر التصنيع'
+        ordering = ['-order_date', '-id']
+
+    def __str__(self):
+        return self.order_number or f"MFG-{self.pk}"
+
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            last = ManufacturingOrder.objects.filter(
+                tenant=self.tenant,
+                order_number__startswith='MFG-'
+            ).order_by('-id').first()
+            num = 1
+            if last:
+                try:
+                    num = int(last.order_number.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    pass
+            self.order_number = f"MFG-{num:05d}"
+        super().save(*args, **kwargs)

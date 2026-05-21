@@ -1,0 +1,84 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:var(--info)">
+                <i class="fas fa-boxes-stacked"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">دفعات: {{ item.name }}</h1>
+                <p class="cx-hero-desc">{{ item.sku }} — تتبع الدفعات وتواريخ الانتهاء</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'items:list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i><span>العودة للمنتجات</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel mt-3">
+    <div class="table-responsive cx-table-wrap">
+        <table class="cx-table w-100" id="batchTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>رقم الدفعة</th>
+                    <th>المخزن</th>
+                    <th>تاريخ الانتهاء</th>
+                    <th class="text-end">الكمية الواردة</th>
+                    <th class="text-end">الكمية المتبقية</th>
+                    <th>الحالة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in batches %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ b.batch_number|default:"—" }}</strong></td>
+                    <td>{{ b.stock.name }}</td>
+                    <td>
+                        {% if b.expiry_date %}
+                            {{ b.expiry_date }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ b.quantity_received|floatformat:"-2" }}</td>
+                    <td class="text-end"><strong>{{ b.quantity_remaining|floatformat:"-2" }}</strong></td>
+                    <td>
+                        {% if b.is_expired %}
+                            <span class="badge bg-danger">منتهي الصلاحية</span>
+                        {% elif b.days_to_expiry is not None and b.days_to_expiry <= 30 %}
+                            <span class="badge bg-warning text-dark">ينتهي خلال {{ b.days_to_expiry }} يوم</span>
+                        {% elif b.quantity_remaining <= 0 %}
+                            <span class="badge bg-secondary">نفذ</span>
+                        {% else %}
+                            <span class="badge bg-success">جيد</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">لا توجد دفعات مسجّلة لهذا المنتج</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+{% endblock %}

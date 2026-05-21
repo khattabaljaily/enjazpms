@@ -41,4 +41,13 @@ urlpatterns = [
     path('stocktakes/<int:pk>/save-counts/', views.stocktake_save_counts_ajax, name='stocktake_save_counts'),
     path('stocktakes/<int:pk>/confirm/', views.stocktake_confirm_ajax, name='stocktake_confirm'),
     path('stocktakes/<int:pk>/cancel/', views.stocktake_cancel_ajax, name='stocktake_cancel'),
+
+    # Manufacturing Orders
+    path('manufacturing/', views.manufacturing_list, name='manufacturing_list'),
+    path('manufacturing/api/', views.manufacturing_table_api, name='manufacturing_api'),
+    path('manufacturing/create/', views.manufacturing_create, name='manufacturing_create'),
+    path('manufacturing/<int:pk>/', views.manufacturing_detail, name='manufacturing_detail'),
+    path('manufacturing/<int:pk>/confirm/', views.manufacturing_confirm_ajax, name='manufacturing_confirm'),
+    path('manufacturing/<int:pk>/cancel/', views.manufacturing_cancel_ajax, name='manufacturing_cancel'),
+    path('manufacturing/<int:pk>/delete/', views.manufacturing_delete_ajax, name='manufacturing_delete'),
 ]

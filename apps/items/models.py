@@ -297,3 +297,106 @@ class ItemVariant(TenantMixin):
     @property
     def selling_price(self):
         return self.item.selling_price + self.price_adjustment
+
+
+# ============================================
+# BOM RECIPE (وصفة التصنيع)
+# ============================================
+
+class BOMRecipe(TenantMixin):
+    """وصفة التصنيع — مرتبطة بمنتج نهائي واحد"""
+    item = models.OneToOneField(
+        Item, on_delete=models.CASCADE, related_name='bom_recipe',
+        verbose_name='المنتج النهائي'
+    )
+    notes = models.TextField('ملاحظات', blank=True)
+    is_active = models.BooleanField('نشط', default=True)
+
+    class Meta:
+        db_table = 'bom_recipes'
+        verbose_name = 'وصفة تصنيع'
+        verbose_name_plural = 'وصفات التصنيع'
+
+    def __str__(self):
+        return f"وصفة: {self.item.name}"
+
+    @property
+    def total_cost(self):
+        return sum(
+            (line.component.cost_price * line.quantity)
+            for line in self.lines.select_related('component').all()
+        )
+
+
+class BOMLine(TenantMixin):
+    """مكوّن واحد في الوصفة"""
+    recipe = models.ForeignKey(
+        BOMRecipe, on_delete=models.CASCADE, related_name='lines'
+    )
+    component = models.ForeignKey(
+        Item, on_delete=models.PROTECT, related_name='used_in_bom',
+        verbose_name='المكوّن'
+    )
+    quantity = models.DecimalField('الكمية', max_digits=12, decimal_places=4)
+    unit = models.ForeignKey(
+        Unit, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name='الوحدة'
+    )
+    notes = models.CharField('ملاحظات', max_length=200, blank=True)
+
+    class Meta:
+        db_table = 'bom_lines'
+        verbose_name = 'مكوّن وصفة'
+        verbose_name_plural = 'مكوّنات الوصفات'
+
+    def __str__(self):
+        return f"{self.component.name} × {self.quantity}"
+
+
+# ============================================
+# ITEM BATCH (دفعات المنتج)
+# ============================================
+
+class ItemBatch(TenantMixin):
+    """تتبع الدفعات والمخزون لكل دفعة"""
+    item = models.ForeignKey(
+        Item, on_delete=models.CASCADE, related_name='batches',
+        verbose_name='المنتج'
+    )
+    stock = models.ForeignKey(
+        'stocks.Stock', on_delete=models.CASCADE, related_name='batches',
+        verbose_name='المخزن'
+    )
+    batch_number = models.CharField('رقم الدفعة', max_length=100, blank=True)
+    expiry_date = models.DateField('تاريخ انتهاء الصلاحية', null=True, blank=True)
+    quantity_received = models.DecimalField('الكمية الواردة', max_digits=12, decimal_places=4, default=0)
+    quantity_remaining = models.DecimalField('الكمية المتبقية', max_digits=12, decimal_places=4, default=0)
+    purchase_date = models.DateField('تاريخ الشراء', null=True, blank=True)
+    notes = models.TextField('ملاحظات', blank=True)
+
+    class Meta:
+        db_table = 'item_batches'
+        verbose_name = 'دفعة'
+        verbose_name_plural = 'الدفعات'
+        ordering = ['expiry_date', 'batch_number']
+        indexes = [
+            models.Index(fields=['tenant', 'item', 'stock']),
+            models.Index(fields=['tenant', 'expiry_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.item.name} — {self.batch_number or 'بدون رقم'}"
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        if self.expiry_date:
+            return self.expiry_date < timezone.now().date()
+        return False
+
+    @property
+    def days_to_expiry(self):
+        from django.utils import timezone
+        if self.expiry_date:
+            return (self.expiry_date - timezone.now().date()).days
+        return None

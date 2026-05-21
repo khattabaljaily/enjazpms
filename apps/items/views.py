@@ -10,7 +10,7 @@ from django.shortcuts import redirect, render
 
 from apps.accounts.decorators import require_permission
 from .forms import CategoryForm, ItemForm, ItemVariantForm, UnitForm
-from .models import Category, Item, ItemVariant, Unit
+from .models import Category, Item, ItemVariant, Unit, BOMRecipe, BOMLine, ItemBatch
 from apps.sales.models import StockMovement
 from apps.stocks.models import StockQuantity
 
@@ -413,20 +413,37 @@ def item_search_api(request):
         Q(name__icontains=q) |
         Q(barcode__icontains=q) |
         Q(sku__icontains=q)
-    ).select_related('unit')[:15]
+    ).select_related('unit', 'purchase_unit')[:15]
 
-    results = [
-        {
+    results = []
+    for item in qs:
+        pu = item.purchase_unit
+        u  = item.unit
+        # Build unit options: each entry = {id, name, factor}
+        units = []
+        if u:
+            units.append({'id': u.id, 'name': str(u), 'factor': '1'})
+        if pu and pu.id != (u.id if u else None):
+            units.append({'id': pu.id, 'name': str(pu), 'factor': str(pu.conversion_factor)})
+
+        results.append({
             'id': item.id,
             'name': item.name,
             'sku': item.sku,
             'barcode': item.barcode,
+            'cost_price': str(item.cost_price),
             'selling_price': str(item.selling_price),
-            'unit': str(item.unit) if item.unit else '',
+            'unit_id': u.id if u else None,
+            'unit_name': str(u) if u else '',
+            'purchase_unit_id': pu.id if pu else (u.id if u else None),
+            'purchase_unit_name': str(pu) if pu else (str(u) if u else ''),
+            'purchase_unit_factor': str(pu.conversion_factor) if pu else '1',
+            'units': units,
+            'track_expiry': item.track_expiry,
+            'track_batch': item.track_batch,
+            'track_serial': item.track_serial,
             'has_variants': item.has_variants,
-        }
-        for item in qs
-    ]
+        })
     return JsonResponse({'results': results})
 
 
@@ -935,3 +952,200 @@ def category_download_template(request):
     writer.writerow(['إلكترونيات', '', 'منتجات إلكترونية', '1', 'نعم'])
     writer.writerow(['هواتف', 'إلكترونيات', 'الهواتف الذكية', '1', 'نعم'])
     return response
+
+
+# ============================================================
+# BOM RECIPES — وصفات التصنيع
+# ============================================================
+
+@login_required
+@require_permission('view_items')
+def bom_recipe_list(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+    recipes = BOMRecipe.objects.filter(tenant=tenant).select_related('item').order_by('item__name')
+    return render(request, 'items/bom_list.html', {'recipes': recipes})
+
+
+@login_required
+@require_permission('view_items')
+def bom_recipe_api(request):
+    """DataTable JSON for BOM recipe list."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 25))
+    search_value = request.GET.get('search[value]', '').strip()
+
+    qs = BOMRecipe.objects.filter(tenant=tenant).select_related('item')
+    records_total = qs.count()
+
+    if search_value:
+        qs = qs.filter(Q(item__name__icontains=search_value))
+
+    records_filtered = qs.count()
+    qs = qs[start:start + length]
+
+    data = [
+        {
+            'id': r.id,
+            'item_name': r.item.name,
+            'item_sku': r.item.sku,
+            'lines_count': r.lines.count(),
+            'is_active': r.is_active,
+            'total_cost': str(r.total_cost),
+        }
+        for r in qs
+    ]
+    return JsonResponse({'draw': draw, 'recordsTotal': records_total, 'recordsFiltered': records_filtered, 'data': data})
+
+
+@login_required
+@require_permission('view_items')
+def bom_recipe_detail(request, pk):
+    """GET: show recipe detail. POST (AJAX): save/delete a BOM line."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    recipe = BOMRecipe.objects.filter(pk=pk, tenant=tenant).select_related('item').first()
+    if not recipe:
+        from django.http import Http404
+        raise Http404
+
+    if request.method == 'POST':
+        import json as _json
+        try:
+            payload = _json.loads(request.body)
+        except Exception:
+            payload = {}
+
+        action = payload.get('action', '')
+
+        if action == 'add_line':
+            component_id = payload.get('component_id')
+            quantity = payload.get('quantity', '1')
+            unit_id = payload.get('unit_id') or None
+            notes = payload.get('notes', '')
+            try:
+                component = Item.objects.get(pk=component_id, tenant=tenant)
+                unit = Unit.objects.get(pk=unit_id, tenant=tenant) if unit_id else None
+                from decimal import Decimal as D
+                line = BOMLine.objects.create(
+                    tenant=tenant,
+                    recipe=recipe,
+                    component=component,
+                    quantity=D(str(quantity)),
+                    unit=unit,
+                    notes=notes,
+                )
+                return JsonResponse({'success': True, 'id': line.id, 'message': 'تم إضافة المكوّن'})
+            except Exception as e:
+                return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+        elif action == 'delete_line':
+            line_id = payload.get('line_id')
+            try:
+                line = BOMLine.objects.get(pk=line_id, recipe=recipe, tenant=tenant)
+                line.delete()
+                return JsonResponse({'success': True, 'message': 'تم حذف المكوّن'})
+            except BOMLine.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'المكوّن غير موجود'}, status=404)
+
+        return JsonResponse({'success': False, 'message': 'إجراء غير معروف'}, status=400)
+
+    lines = recipe.lines.select_related('component', 'unit').order_by('id')
+    units = Unit.objects.filter(tenant=tenant, is_active=True)
+    items_qs = Item.objects.filter(tenant=tenant, is_active=True).exclude(pk=recipe.item.pk)
+    return render(request, 'items/bom_detail.html', {
+        'recipe': recipe,
+        'lines': lines,
+        'units': units,
+        'items': items_qs,
+    })
+
+
+@login_required
+@require_permission('add_items')
+def bom_recipe_create_ajax(request):
+    """Create a BOM recipe for an item (AJAX POST)."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    import json as _json
+    try:
+        payload = _json.loads(request.body)
+    except Exception:
+        payload = {}
+
+    item_id = payload.get('item_id')
+    try:
+        item = Item.objects.get(pk=item_id, tenant=tenant)
+    except Item.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'المنتج غير موجود'}, status=404)
+
+    if hasattr(item, 'bom_recipe'):
+        return JsonResponse({'success': False, 'message': 'توجد وصفة بالفعل لهذا المنتج', 'id': item.bom_recipe.pk})
+
+    recipe = BOMRecipe.objects.create(
+        tenant=tenant,
+        item=item,
+        notes=payload.get('notes', ''),
+        is_active=True,
+        created_by=request.user,
+        updated_by=request.user,
+    )
+    return JsonResponse({'success': True, 'id': recipe.pk, 'message': 'تم إنشاء الوصفة'})
+
+
+# ============================================================
+# ITEM META API — معلومات المنتج للنماذج الديناميكية
+# ============================================================
+
+@login_required
+@require_permission('view_items')
+def item_meta_api(request, pk):
+    """Returns item tracking flags for dynamic form behavior"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    from django.shortcuts import get_object_or_404
+    item = get_object_or_404(Item, pk=pk, tenant=tenant)
+    return JsonResponse({
+        'id': item.id,
+        'name': item.name,
+        'track_expiry': item.track_expiry,
+        'track_batch': item.track_batch,
+        'track_serial': item.track_serial,
+        'cost_price': str(item.cost_price),
+        'selling_price': str(item.selling_price),
+        'unit_id': item.unit_id,
+        'unit_name': str(item.unit) if item.unit else '',
+        'purchase_unit_id': item.purchase_unit_id,
+        'purchase_unit_name': str(item.purchase_unit) if item.purchase_unit else '',
+        'purchase_unit_factor': str(item.purchase_unit.conversion_factor) if item.purchase_unit else '1',
+    })
+
+
+# ============================================================
+# ITEM BATCHES — دفعات المنتج
+# ============================================================
+
+@login_required
+@require_permission('view_items')
+def item_batches(request, pk):
+    """قائمة دفعات منتج معين"""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+    from django.shortcuts import get_object_or_404
+    item = get_object_or_404(Item, pk=pk, tenant=tenant)
+    batches = ItemBatch.objects.filter(tenant=tenant, item=item).select_related('stock').order_by('expiry_date')
+    return render(request, 'items/item_batches.html', {'item': item, 'batches': batches})

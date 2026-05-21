@@ -1,0 +1,139 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <a href="{% url 'stocks:manufacturing_list' %}" class="btn btn-sm btn-outline-secondary me-2">
+                <i class="fas fa-arrow-right"></i>
+            </a>
+            <div class="cx-hero-icon-wrap" style="background:var(--indigo)">
+                <i class="fas fa-industry"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">أمر تصنيع جديد</h1>
+                <p class="cx-hero-desc">إنشاء أمر إنتاج من وصفة تصنيع</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="cx-panel p-4">
+            <div id="formError" class="alert alert-danger d-none"></div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">الوصفة / المنتج النهائي <span class="text-danger">*</span></label>
+                <select id="recipeSelect" class="cx-input" onchange="onRecipeChange()">
+                    <option value="">-- اختر وصفة --</option>
+                    {% for recipe in recipes %}
+                    <option value="{{ recipe.id }}" data-item="{{ recipe.item.name }}">
+                        {{ recipe.item.name }} ({{ recipe.item.sku }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="recipeInfo" class="alert alert-info d-none mb-3"></div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">المخزن <span class="text-danger">*</span></label>
+                <select id="stockSelect" class="cx-input">
+                    <option value="">-- اختر مخزناً --</option>
+                    {% for stock in stocks %}
+                    <option value="{{ stock.id }}">{{ stock.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="form-label fw-semibold">الكمية المنتجة <span class="text-danger">*</span></label>
+                    <input type="number" id="quantityInput" class="cx-input" value="1" step="0.0001" min="0.0001">
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-semibold">تاريخ الأمر <span class="text-danger">*</span></label>
+                    <input type="date" id="orderDateInput" class="cx-input" value="{{ today }}">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">ملاحظات</label>
+                <textarea id="notesInput" class="cx-input" rows="2"></textarea>
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end">
+                <a href="{% url 'stocks:manufacturing_list' %}" class="cx-btn-secondary">إلغاء</a>
+                <button type="button" class="cx-btn-add" onclick="doCreate()">
+                    <i class="fas fa-save me-1"></i> حفظ كمسودة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CREATE_URL = "{% url 'stocks:manufacturing_create' %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+function onRecipeChange() {
+    const sel = document.getElementById('recipeSelect');
+    const opt = sel.options[sel.selectedIndex];
+    const info = document.getElementById('recipeInfo');
+    if (opt.value) {
+        info.classList.remove('d-none');
+        info.textContent = `المنتج النهائي: ${opt.dataset.item}`;
+    } else {
+        info.classList.add('d-none');
+    }
+}
+
+function doCreate() {
+    const recipeId = document.getElementById('recipeSelect').value;
+    const stockId = document.getElementById('stockSelect').value;
+    const quantity = document.getElementById('quantityInput').value;
+    const orderDate = document.getElementById('orderDateInput').value;
+    const notes = document.getElementById('notesInput').value;
+    const errDiv = document.getElementById('formError');
+
+    if (!recipeId) { errDiv.classList.remove('d-none'); errDiv.textContent = 'يرجى اختيار وصفة'; return; }
+    if (!stockId) { errDiv.classList.remove('d-none'); errDiv.textContent = 'يرجى اختيار مخزن'; return; }
+    if (!quantity || parseFloat(quantity) <= 0) { errDiv.classList.remove('d-none'); errDiv.textContent = 'يرجى إدخال كمية صالحة'; return; }
+    if (!orderDate) { errDiv.classList.remove('d-none'); errDiv.textContent = 'يرجى إدخال تاريخ الأمر'; return; }
+    errDiv.classList.add('d-none');
+
+    fetch(CREATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body: JSON.stringify({ recipe_id: recipeId, stock_id: stockId, quantity, order_date: orderDate, notes })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            window.location.href = `/stocks/manufacturing/${res.id}/`;
+        } else {
+            errDiv.classList.remove('d-none');
+            errDiv.textContent = res.message;
+        }
+    })
+    .catch(() => {
+        errDiv.classList.remove('d-none');
+        errDiv.textContent = 'حدث خطأ في الاتصال';
+    });
+}
+</script>
+{% endblock %}

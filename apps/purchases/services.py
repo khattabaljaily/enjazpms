@@ -191,15 +191,28 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user) -> PurchaseInvoice:
     if not lines:
         raise ValueError('لا يمكن تأكيد أمر شراء فارغ.')
 
+    from apps.items.models import ItemBatch
     for line in lines:
+        qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
         _add_stock(
             tenant=tenant,
             stock=invoice.stock,
             item=line.item,
-            qty=line.quantity,
+            qty=qty_base,
             unit_cost=line.unit_cost,
             invoice=invoice,
         )
+        if line.batch_number or line.expiry_date:
+            ItemBatch.objects.create(
+                tenant=tenant,
+                item=line.item,
+                stock=invoice.stock,
+                batch_number=line.batch_number or '',
+                expiry_date=line.expiry_date,
+                quantity_received=qty_base,
+                quantity_remaining=qty_base,
+                purchase_date=invoice.invoice_date,
+            )
 
     total = invoice.grand_total
     pm = invoice.payment_method
@@ -497,8 +510,12 @@ def build_purchase_from_post(tenant, stock, data: dict, lines_data: list, user) 
         updated_by=user,
     )
 
+    from apps.items.models import Unit as ItemUnit
     for ld in lines_data:
         item = Item.objects.get(id=ld['item_id'], tenant=tenant)
+        unit_obj = None
+        if ld.get('unit_id'):
+            unit_obj = ItemUnit.objects.filter(pk=ld['unit_id'], tenant=tenant).first()
         line = PurchaseInvoiceLine(
             tenant=tenant,
             invoice=invoice,
@@ -506,6 +523,8 @@ def build_purchase_from_post(tenant, stock, data: dict, lines_data: list, user) 
             quantity=Decimal(str(ld['quantity'])),
             unit_cost=Decimal(str(ld['unit_cost'])),
             tax_rate=Decimal(str(ld.get('tax_rate', 0))),
+            unit=unit_obj,
+            unit_factor=Decimal(str(ld.get('unit_factor', 1) or 1)),
             batch_number=ld.get('batch_number', '') or '',
             serial_number=ld.get('serial_number', '') or '',
             expiry_date=ld.get('expiry_date') or None,
