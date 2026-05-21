@@ -214,8 +214,9 @@ function doAddLine() {
     });
 }
 
-function deleteLine(lineId) {
-    if (!confirm('هل تريد حذف هذا المكوّن؟')) return;
+async function deleteLine(lineId) {
+    const ok = await EnjazIMS.confirmAction('هل تريد حذف هذا المكوّن؟', 'حذف مكوّن');
+    if (!ok) return;
     $.ajax({
         url: RECIPE_DETAIL_URL,
         method: 'POST',
@@ -233,11 +234,11 @@ function deleteLine(lineId) {
                     `);
                 }
             } else {
-                alert(res.message);
+                EnjazIMS.toast(res.message, 'error');
             }
         },
         error: function(xhr) {
-            alert(xhr.responseJSON?.message || 'حدث خطأ');
+            EnjazIMS.toast(xhr.responseJSON?.message || 'حدث خطأ', 'error');
         }
     });
 }

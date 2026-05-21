@@ -199,16 +199,18 @@
 <script>
 const CSRF = "{{ csrf_token }}";
 
-function doAction(action, msg) {
-    if (!confirm(msg)) return;
-    fetch(`/purchases/rfq/{{ rfq.pk }}/${action}/`, {
+async function doAction(action, msg) {
+    if (!await EnjazIMS.confirmAction(msg)) return;
+    const r = await fetch(`/purchases/rfq/{{ rfq.pk }}/${action}/`, {
         method: 'POST', headers: { 'X-CSRFToken': CSRF },
-    }).then(r => r.json()).then(d => {
-        if (d.success) {
-            if (d.redirect) window.location = d.redirect;
-            else location.reload();
-        } else showToast('error', d.message);
     });
+    const d = await r.json();
+    if (d.success) {
+        if (d.redirect) window.location = d.redirect;
+        else location.reload();
+    } else {
+        showToast('error', d.message);
+    }
 }
 
 function showReceiveModal() {

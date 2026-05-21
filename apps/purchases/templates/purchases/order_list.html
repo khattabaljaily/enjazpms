@@ -225,14 +225,15 @@
     $('#orderStatusFilter').on('change', function() { dt.ajax.reload(); });
     $('#orderSearch').on('input', function() { dt.search(this.value).draw(); });
 
-    $('#ordersTable').on('click', '.js-confirm, .js-cancel', function() {
+    $('#ordersTable').on('click', '.js-confirm, .js-cancel', async function() {
         const id = $(this).data('id');
         const isConfirm = $(this).hasClass('js-confirm');
         const url = isConfirm ? `/purchases/${id}/confirm/` : `/purchases/${id}/cancel/`;
         const message = isConfirm
             ? 'سيتم تأكيد أمر الشراء وتطبيق تأثيراته، هل تريد المتابعة؟'
             : 'سيتم إلغاء أمر الشراء وعكس تأثيراته، هل تريد المتابعة؟';
-        if (!window.confirm(message)) return;
+        const title = isConfirm ? 'تأكيد أمر الشراء' : 'إلغاء أمر الشراء';
+        if (!await EnjazIMS.confirmAction(message, title)) return;
 
         $.ajax({
             url,

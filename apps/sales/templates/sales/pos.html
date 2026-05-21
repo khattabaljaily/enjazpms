@@ -4,34 +4,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نقطة البيع — EnjazIMS</title>
-    <!-- Bootstrap RTL (same as base.html) -->
+    <title>الكاشير — EnjazIMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Core design system (Cairo font + CSS vars) -->
     <link rel="stylesheet" href="{% static 'css/main.css' %}?v=8.1">
-    <link rel="stylesheet" href="{% static 'css/pos.css' %}?v=1.0">
+    <link rel="stylesheet" href="{% static 'css/pos.css' %}?v=2.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <script>
-        // Apply saved theme before render to avoid flash
-        (function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();
-    </script>
+    <script>(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
 </head>
 <body>
 
 <div class="pos-root" id="posRoot">
 
-    <!-- ══ LEFT: PRODUCTS ═══════════════════════════════════════ -->
+    <!-- ══ LEFT: PRODUCTS ══════════════════════════════════ -->
     <div class="pos-products">
 
-        <!-- Top bar -->
         <div class="pos-topbar">
-            <span class="pos-topbar-title"><i class="fas fa-cash-register me-1"></i> POS</span>
+            <div class="pos-topbar-brand">
+                <i class="fas fa-cash-register"></i>
+                <span>الكاشير</span>
+            </div>
+            <div class="pos-topbar-divider"></div>
 
             <div class="pos-search">
                 <i class="fas fa-search pos-search-icon"></i>
-                <input type="text" id="posSearch" placeholder="بحث بالاسم، الباركود، SKU…" autocomplete="off">
+                <input type="text" id="posSearch" placeholder="ابحث بالاسم، SKU، باركود…" autocomplete="off" spellcheck="false">
             </div>
 
             <select id="posStock" class="pos-stock-select">
@@ -41,11 +38,11 @@
             </select>
 
             <a href="{% url 'sales:invoice_list' %}" class="pos-home-btn">
-                <i class="fas fa-arrow-right"></i> خروج
+                <i class="fas fa-arrow-right"></i>
+                <span>خروج</span>
             </a>
         </div>
 
-        <!-- Category tabs -->
         <div class="pos-cats" id="posCats">
             <button class="pos-cat-btn active" data-cat="">الكل</button>
             {% for cat in categories %}
@@ -53,30 +50,30 @@
             {% endfor %}
         </div>
 
-        <!-- Product grid -->
         <div class="pos-grid-wrap">
             <div class="pos-grid" id="posGrid">
-                <div class="pos-loading">
-                    <div class="pos-spinner"></div> جار التحميل…
-                </div>
+                <div class="pos-loading"><div class="pos-spinner"></div> جار التحميل…</div>
             </div>
         </div>
 
-    </div><!-- end pos-products -->
+    </div>
 
-    <!-- ══ RIGHT: CART ═══════════════════════════════════════════ -->
+    <!-- ══ RIGHT: CART ══════════════════════════════════════ -->
     <div class="pos-cart">
 
-        <!-- Cart header -->
         <div class="pos-cart-head">
             <div class="pos-cart-head-row">
-                <span class="pos-cart-title"><i class="fas fa-shopping-cart me-1"></i> السلة</span>
-                <button class="pos-cart-clear" id="clearCartBtn" title="مسح السلة">
-                    <i class="fas fa-trash-alt me-1"></i>مسح
+                <span class="pos-cart-title">
+                    <i class="fas fa-shopping-cart"></i>
+                    السلة
+                    <span class="pos-cart-badge zero" id="cartBadge">0</span>
+                </span>
+                <button class="pos-cart-clear" id="clearCartBtn">
+                    <i class="fas fa-trash-alt"></i>مسح
                 </button>
             </div>
             <div class="pos-customer-row">
-                <select id="posCustomer" class="pos-stock-select" style="width:100%">
+                <select id="posCustomer" class="pos-stock-select" style="width:100%;max-width:none;">
                     <option value="">زبون عابر</option>
                     {% for c in customers %}
                     <option value="{{ c.id }}">{{ c.name }}</option>
@@ -85,7 +82,6 @@
             </div>
         </div>
 
-        <!-- Cart items -->
         <div class="pos-cart-items" id="cartItems">
             <div class="pos-cart-empty" id="cartEmpty">
                 <i class="fas fa-shopping-basket"></i>
@@ -96,11 +92,9 @@
         <!-- Totals -->
         <div class="pos-totals">
             <div class="pos-total-row">
-                <span>المجموع</span>
+                <span>المجموع الجزئي</span>
                 <span class="pos-total-val" id="totSubtotal">0.00</span>
             </div>
-
-            <!-- Discount row -->
             <div class="pos-discount-row">
                 <select id="discountType" class="pos-discount-type">
                     <option value="fixed">خصم ثابت</option>
@@ -108,7 +102,6 @@
                 </select>
                 <input type="number" id="discountValue" class="pos-discount-input" placeholder="0" min="0" step="1">
             </div>
-
             <div class="pos-total-row" id="discountRow" style="display:none;">
                 <span>الخصم</span>
                 <span class="pos-total-val" id="totDiscount" style="color:var(--danger)">-0.00</span>
@@ -121,6 +114,11 @@
                 <span>الإجمالي</span>
                 <span class="pos-total-val" id="totGrand">0.00</span>
             </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="pos-notes-wrap">
+            <textarea id="orderNotes" class="pos-notes-input" placeholder="ملاحظات الطلب… (اختياري)" rows="1"></textarea>
         </div>
 
         <!-- Payment -->
@@ -140,14 +138,30 @@
                 </button>
             </div>
 
-            <!-- Split fields -->
+            <!-- Cash: received + change -->
+            <div class="pos-cash-row" id="cashRow">
+                <input type="number" id="cashReceived" class="pos-cash-received" placeholder="المبلغ المستلم" min="0" step="1">
+                <div class="pos-change-box" id="changeBox">
+                    <div class="pos-change-label">الباقي</div>
+                    <div class="pos-change-val" id="changeVal">—</div>
+                </div>
+            </div>
+            <div class="pos-quick-cash" id="quickCashBtns"></div>
+
+            <!-- Split -->
             <div class="pos-split-fields" id="splitFields">
                 <input type="number" id="splitCash" class="pos-split-input" placeholder="نقدي" min="0" step="1">
                 <input type="number" id="splitBank" class="pos-split-input" placeholder="بنك" min="0" step="1">
             </div>
 
-            <!-- Bank reference -->
+            <!-- Bank ref -->
             <input type="text" id="bankRef" class="pos-bank-ref" placeholder="رقم المرجع / التحويل (اختياري)">
+
+            <!-- Error -->
+            <div class="pos-error-banner" id="posError">
+                <i class="fas fa-circle-exclamation"></i>
+                <span id="posErrorMsg"></span>
+            </div>
 
             <button class="pos-checkout-btn" id="checkoutBtn" disabled>
                 <i class="fas fa-check-circle"></i>
@@ -156,17 +170,21 @@
             </button>
         </div>
 
-    </div><!-- end pos-cart -->
+    </div>
 
-</div><!-- end pos-root -->
+</div>
 
-<!-- ══ SUCCESS OVERLAY ═══════════════════════════════════════════ -->
+<!-- ══ SUCCESS OVERLAY ══════════════════════════════════════ -->
 <div class="pos-success-overlay" id="successOverlay">
     <div class="pos-success-box">
         <div class="pos-success-icon"><i class="fas fa-check"></i></div>
         <div class="pos-success-title">تم البيع بنجاح!</div>
         <div class="pos-success-num" id="successNum"></div>
         <div class="pos-success-total" id="successTotal"></div>
+        <div class="pos-success-change" id="successChange" style="display:none;">
+            <i class="fas fa-coins"></i>
+            <span>الباقي: <strong id="successChangeVal"></strong></span>
+        </div>
         <div class="pos-success-btns">
             <button class="pos-success-btn" id="successPrint">
                 <i class="fas fa-print me-1"></i>طباعة
@@ -182,41 +200,56 @@
 (function() {
 'use strict';
 
-const CSRF = document.querySelector('meta[name="csrf-token"]').content;
-const ITEMS_URL  = '{% url "sales:pos_items_api" %}';
+const CSRF         = document.querySelector('meta[name="csrf-token"]').content;
+const ITEMS_URL    = '{% url "sales:pos_items_api" %}';
 const CHECKOUT_URL = '{% url "sales:pos_checkout_api" %}';
-const INV_BASE   = '{% url "sales:invoice_list" %}';  // fallback
 
-/* ── State ───────────────────────────────────────────────── */
-let cart = [];       // [{item, qty, unit_price, discount_percent, tax_rate}]
-let allItems = [];   // full items list from API
-let lastInvoiceId = null;
-
-/* ── DOM refs ────────────────────────────────────────────── */
-const $grid      = document.getElementById('posGrid');
-const $cartItems = document.getElementById('cartItems');
-const $cartEmpty = document.getElementById('cartEmpty');
-const $search    = document.getElementById('posSearch');
-const $stock     = document.getElementById('posStock');
-const $customer  = document.getElementById('posCustomer');
-const $discType  = document.getElementById('discountType');
-const $discVal   = document.getElementById('discountValue');
-const $bankRef   = document.getElementById('bankRef');
-const $splitCash = document.getElementById('splitCash');
-const $splitBank = document.getElementById('splitBank');
-const $splitFields = document.getElementById('splitFields');
-const $checkoutBtn = document.getElementById('checkoutBtn');
-
+/* ── State ───────────────────────────────────────────── */
+let cart = [];
+let allItems = [];
+let activeCat = '';
 let currentMethod = 'cash';
+let lastInvoiceId = null;
+let searchTimer;
 
-/* ── Fetch items ─────────────────────────────────────────── */
-function loadItems(categoryId = '', query = '') {
+/* ── DOM refs ────────────────────────────────────────── */
+const $grid       = document.getElementById('posGrid');
+const $cartItems  = document.getElementById('cartItems');
+const $cartEmpty  = document.getElementById('cartEmpty');
+const $cartBadge  = document.getElementById('cartBadge');
+const $search     = document.getElementById('posSearch');
+const $stock      = document.getElementById('posStock');
+const $customer   = document.getElementById('posCustomer');
+const $discType   = document.getElementById('discountType');
+const $discVal    = document.getElementById('discountValue');
+const $bankRef    = document.getElementById('bankRef');
+const $splitCash  = document.getElementById('splitCash');
+const $splitBank  = document.getElementById('splitBank');
+const $splitFields= document.getElementById('splitFields');
+const $cashRow    = document.getElementById('cashRow');
+const $cashRcvd   = document.getElementById('cashReceived');
+const $changeBox  = document.getElementById('changeBox');
+const $changeVal  = document.getElementById('changeVal');
+const $quickCash  = document.getElementById('quickCashBtns');
+const $checkoutBtn= document.getElementById('checkoutBtn');
+const $posError   = document.getElementById('posError');
+const $posErrorMsg= document.getElementById('posErrorMsg');
+const $notes      = document.getElementById('orderNotes');
+
+/* ── Error display ───────────────────────────────────── */
+function showError(msg) {
+    $posErrorMsg.textContent = msg;
+    $posError.classList.add('visible');
+    setTimeout(() => $posError.classList.remove('visible'), 4000);
+}
+
+/* ── Fetch items ─────────────────────────────────────── */
+function loadItems(catId, query) {
+    catId = catId || '';
+    query = query || '';
     $grid.innerHTML = '<div class="pos-loading"><div class="pos-spinner"></div> جار التحميل…</div>';
-    const params = new URLSearchParams({
-        stock_id: $stock.value,
-        q: query,
-    });
-    if (categoryId) params.set('category_id', categoryId);
+    const params = new URLSearchParams({ stock_id: $stock.value, q: query });
+    if (catId) params.set('category_id', catId);
 
     fetch(ITEMS_URL + '?' + params)
         .then(r => r.json())
@@ -234,15 +267,21 @@ function renderGrid(items) {
         $grid.innerHTML = '<div class="pos-empty"><i class="fas fa-box-open"></i><p>لا توجد منتجات</p></div>';
         return;
     }
+
     $grid.innerHTML = items.map(item => {
         const oos = !item.is_service && item.available_qty !== null && item.available_qty <= 0;
         const img = item.image_url
-            ? `<img class="pos-item-img" src="${item.image_url}" alt="">`
+            ? `<img class="pos-item-img" src="${item.image_url}" alt="" loading="lazy">`
             : `<div class="pos-item-icon"><i class="fas fa-box"></i></div>`;
-        const qtyBadge = item.is_service ? '' :
-            item.available_qty !== null
-                ? `<div class="pos-item-qty">${item.available_qty > 0 ? 'متاح: ' + item.available_qty : 'نفد'}</div>`
-                : '';
+
+        let qtyBadge = '';
+        if (!item.is_service && item.available_qty !== null) {
+            const q = item.available_qty;
+            const cls = q <= 0 ? '' : q <= 3 ? 'very-low' : q <= 10 ? 'low' : '';
+            const label = q <= 0 ? 'نفد' : `متاح: ${q}`;
+            qtyBadge = `<div class="pos-item-qty${cls ? ' ' + cls : ''}">${label}</div>`;
+        }
+
         return `
         <div class="pos-item-card${oos ? ' out-of-stock' : ''}"
              data-id="${item.id}"
@@ -250,9 +289,10 @@ function renderGrid(items) {
              data-tax="${item.tax_rate}"
              data-cost="${item.cost_price}"
              data-name="${escHtml(item.name)}">
+            <div class="pos-item-card-add"><i class="fas fa-plus"></i></div>
             ${img}
             <div class="pos-item-name">${escHtml(item.name)}</div>
-            <div class="pos-item-price">${formatMoney(item.selling_price)}</div>
+            <div class="pos-item-price">${fmt(item.selling_price)}</div>
             ${qtyBadge}
             ${oos ? '<div class="pos-item-oos">نفد المخزون</div>' : ''}
         </div>`;
@@ -263,13 +303,13 @@ function renderGrid(items) {
     });
 }
 
-/* ── Cart operations ─────────────────────────────────────── */
+/* ── Cart operations ─────────────────────────────────── */
 function addToCart(card) {
-    const id      = parseInt(card.dataset.id);
-    const price   = parseFloat(card.dataset.price) || 0;
-    const tax     = parseFloat(card.dataset.tax)   || 0;
-    const cost    = parseFloat(card.dataset.cost)  || 0;
-    const name    = card.dataset.name;
+    const id    = parseInt(card.dataset.id);
+    const price = parseFloat(card.dataset.price) || 0;
+    const tax   = parseFloat(card.dataset.tax)   || 0;
+    const cost  = parseFloat(card.dataset.cost)  || 0;
+    const name  = card.dataset.name;
 
     const existing = cart.find(c => c.item_id === id);
     if (existing) {
@@ -277,6 +317,12 @@ function addToCart(card) {
     } else {
         cart.push({ item_id: id, name, qty: 1, unit_price: price, discount_percent: 0, tax_rate: tax, cost_price: cost });
     }
+
+    // Flash card
+    card.classList.remove('just-added');
+    void card.offsetWidth; // reflow
+    card.classList.add('just-added');
+
     renderCart();
 }
 
@@ -286,8 +332,9 @@ function removeFromCart(idx) {
 }
 
 function updateQty(idx, delta) {
-    cart[idx].qty = Math.max(0.001, cart[idx].qty + delta);
-    if (cart[idx].qty <= 0) { cart.splice(idx, 1); }
+    const newQty = cart[idx].qty + delta;
+    if (newQty <= 0) { cart.splice(idx, 1); }
+    else { cart[idx].qty = newQty; }
     renderCart();
 }
 
@@ -301,8 +348,18 @@ function clearCart() {
     renderCart();
 }
 
-/* ── Render cart ─────────────────────────────────────────── */
+/* ── Render cart ─────────────────────────────────────── */
 function renderCart() {
+    // Badge
+    const total = cart.reduce((s, l) => s + l.qty, 0);
+    $cartBadge.textContent = total || 0;
+    $cartBadge.classList.toggle('zero', !total);
+    if (total) {
+        $cartBadge.classList.remove('bump');
+        void $cartBadge.offsetWidth;
+        $cartBadge.classList.add('bump');
+    }
+
     if (!cart.length) {
         $cartItems.innerHTML = '';
         $cartItems.appendChild($cartEmpty);
@@ -312,37 +369,42 @@ function renderCart() {
     }
     $cartEmpty.style.display = 'none';
 
+    const prevIds = new Set(
+        [...$cartItems.querySelectorAll('.pos-cart-item')].map(r => r.dataset.idx)
+    );
+
     $cartItems.innerHTML = cart.map((line, i) => {
         const lineTotal = (line.qty * line.unit_price * (1 - line.discount_percent / 100)).toFixed(2);
+        const isNew = !prevIds.has(String(i));
         return `
-        <div class="pos-cart-item">
-            <div style="flex:1;min-width:0;">
+        <div class="pos-cart-item${isNew ? ' flash' : ''}" data-idx="${i}">
+            <div class="pos-ci-info">
                 <div class="pos-ci-name">${escHtml(line.name)}</div>
-                <div class="pos-ci-price">${formatMoney(line.unit_price)} × ${line.qty}</div>
+                <div class="pos-ci-price">${fmt(line.unit_price)} / وحدة</div>
             </div>
             <div class="pos-ci-controls">
                 <button class="pos-ci-qty-btn" data-action="dec" data-idx="${i}">−</button>
                 <input class="pos-ci-qty" type="number" value="${line.qty}" min="0.001" step="1" data-idx="${i}">
                 <button class="pos-ci-qty-btn" data-action="inc" data-idx="${i}">+</button>
             </div>
-            <div class="pos-ci-total">${formatMoney(lineTotal)}</div>
-            <button class="pos-ci-remove" data-idx="${i}"><i class="fas fa-times"></i></button>
+            <div class="pos-ci-total">${fmt(lineTotal)}</div>
+            <button class="pos-ci-remove" data-idx="${i}" title="حذف"><i class="fas fa-times"></i></button>
         </div>`;
     }).join('');
 
     $cartItems.querySelectorAll('[data-action="inc"]').forEach(b =>
-        b.addEventListener('click', () => { updateQty(parseInt(b.dataset.idx), 1); }));
+        b.addEventListener('click', () => updateQty(+b.dataset.idx,  1)));
     $cartItems.querySelectorAll('[data-action="dec"]').forEach(b =>
-        b.addEventListener('click', () => { updateQty(parseInt(b.dataset.idx), -1); }));
+        b.addEventListener('click', () => updateQty(+b.dataset.idx, -1)));
     $cartItems.querySelectorAll('.pos-ci-qty').forEach(inp =>
-        inp.addEventListener('change', () => setQty(parseInt(inp.dataset.idx), inp.value)));
+        inp.addEventListener('change', () => setQty(+inp.dataset.idx, inp.value)));
     $cartItems.querySelectorAll('.pos-ci-remove').forEach(b =>
-        b.addEventListener('click', () => removeFromCart(parseInt(b.dataset.idx))));
+        b.addEventListener('click', () => removeFromCart(+b.dataset.idx)));
 
     updateTotals();
 }
 
-/* ── Totals ──────────────────────────────────────────────── */
+/* ── Totals ──────────────────────────────────────────── */
 function calcTotals() {
     let subtotal = 0, tax = 0;
     cart.forEach(line => {
@@ -351,11 +413,10 @@ function calcTotals() {
         tax += base * (line.tax_rate / 100);
     });
 
-    const discType = $discType.value;
-    const discVal  = parseFloat($discVal.value) || 0;
+    const discVal = parseFloat($discVal.value) || 0;
     let discount = 0;
     if (discVal > 0) {
-        discount = discType === 'percent'
+        discount = $discType.value === 'percent'
             ? subtotal * discVal / 100
             : Math.min(discVal, subtotal);
     }
@@ -365,60 +426,129 @@ function calcTotals() {
 
 function updateTotals() {
     const t = calcTotals();
-    document.getElementById('totSubtotal').textContent = formatMoney(t.subtotal);
-    document.getElementById('totTax').textContent = formatMoney(t.tax);
-    document.getElementById('totGrand').textContent = formatMoney(t.grand);
-    document.getElementById('totDiscount').textContent = '-' + formatMoney(t.discount);
+    document.getElementById('totSubtotal').textContent = fmt(t.subtotal);
+    document.getElementById('totTax').textContent      = fmt(t.tax);
+    document.getElementById('totGrand').textContent    = fmt(t.grand);
+    document.getElementById('totDiscount').textContent = '−' + fmt(t.discount);
     document.getElementById('discountRow').style.display = t.discount > 0 ? 'flex' : 'none';
-    document.getElementById('checkoutTotal').textContent = formatMoney(t.grand);
+    document.getElementById('checkoutTotal').textContent = fmt(t.grand);
     $checkoutBtn.disabled = cart.length === 0;
+
+    updateChangeCalc();
+    updateQuickCash(t.grand);
 }
 
-/* ── Payment method toggle ───────────────────────────────── */
+/* ── Change calculator ───────────────────────────────── */
+function updateChangeCalc() {
+    if (currentMethod !== 'cash') return;
+    const grand    = calcTotals().grand;
+    const received = parseFloat($cashRcvd.value) || 0;
+    if (received <= 0) {
+        $changeVal.textContent = '—';
+        $changeBox.classList.remove('negative');
+        return;
+    }
+    const change = received - grand;
+    $changeVal.textContent = fmt(Math.abs(change));
+    $changeBox.classList.toggle('negative', change < 0);
+}
+
+function updateQuickCash(grand) {
+    if (currentMethod !== 'cash' || !grand) {
+        $quickCash.innerHTML = '';
+        return;
+    }
+    // Generate round-number quick amounts >= grand
+    const amts = new Set();
+    [1, 5, 10, 20, 50, 100, 200, 500].forEach(d => {
+        const v = Math.ceil(grand / d) * d;
+        if (v >= grand && v <= grand * 3) amts.add(v);
+    });
+    amts.add(Math.ceil(grand)); // exact
+    const sorted = [...amts].sort((a, b) => a - b).slice(0, 4);
+
+    $quickCash.innerHTML = sorted.map(v =>
+        `<button class="pos-quick-btn" data-val="${v}">${fmt(v)}</button>`
+    ).join('');
+
+    $quickCash.querySelectorAll('.pos-quick-btn').forEach(btn =>
+        btn.addEventListener('click', () => {
+            $cashRcvd.value = btn.dataset.val;
+            updateChangeCalc();
+        })
+    );
+}
+
+/* ── Payment method toggle ───────────────────────────── */
 document.querySelectorAll('.pos-pay-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.pos-pay-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentMethod = btn.dataset.method;
-        $splitFields.classList.toggle('visible', currentMethod === 'split');
+
+        $cashRow.classList.toggle('visible',    currentMethod === 'cash');
+        $quickCash.classList.toggle('visible',  currentMethod === 'cash');
+        $splitFields.classList.toggle('visible',currentMethod === 'split');
+
         const needRef = currentMethod === 'bank' || currentMethod === 'split';
         $bankRef.classList.toggle('visible', needRef);
+
+        updateTotals();
     });
 });
 
-/* ── Checkout ────────────────────────────────────────────── */
+// Show cash row by default
+$cashRow.classList.add('visible');
+$quickCash.classList.add('visible');
+
+/* ── Checkout ────────────────────────────────────────── */
 $checkoutBtn.addEventListener('click', async () => {
     if (!cart.length) return;
+    $posError.classList.remove('visible');
 
     const t = calcTotals();
     let cashAmt = 0, bankAmt = 0;
-    if (currentMethod === 'cash')   { cashAmt = t.grand; }
-    else if (currentMethod === 'bank') { bankAmt = t.grand; }
-    else if (currentMethod === 'split') {
+
+    if (currentMethod === 'cash') {
+        cashAmt = t.grand;
+    } else if (currentMethod === 'bank') {
+        bankAmt = t.grand;
+    } else if (currentMethod === 'split') {
         cashAmt = parseFloat($splitCash.value) || 0;
         bankAmt = parseFloat($splitBank.value) || 0;
         if (cashAmt + bankAmt < t.grand - 0.01) {
-            alert('مجموع نقدي + بنك أقل من الإجمالي');
+            showError('مجموع النقدي + البنك أقل من الإجمالي');
+            return;
+        }
+    } else if (currentMethod === 'credit') {
+        if (!$customer.value) {
+            showError('الدفع الآجل يتطلب اختيار عميل');
             return;
         }
     }
 
+    const received = parseFloat($cashRcvd.value) || 0;
+    const change   = currentMethod === 'cash' && received > 0
+        ? Math.max(0, received - t.grand)
+        : 0;
+
     const payload = {
-        stock_id: $stock.value,
-        customer_id: $customer.value || null,
-        payment_method: currentMethod,
-        cash_amount: cashAmt,
-        bank_amount: bankAmt,
+        stock_id:       $stock.value,
+        customer_id:    $customer.value || null,
+        payment_method: currentMethod === 'split' ? 'mixed' : currentMethod,
+        cash_amount:    cashAmt,
+        bank_amount:    bankAmt,
         bank_reference: $bankRef.value,
-        discount_type: $discType.value,
+        discount_type:  $discType.value,
         discount_value: parseFloat($discVal.value) || 0,
+        notes:          $notes.value,
         lines: cart.map(c => ({
-            item_id: c.item_id,
-            quantity: c.qty,
-            unit_price: c.unit_price,
+            item_id:          c.item_id,
+            quantity:         c.qty,
+            unit_price:       c.unit_price,
             discount_percent: c.discount_percent,
-            tax_rate: c.tax_rate,
-            cost_price: c.cost_price,
+            tax_rate:         c.tax_rate,
+            cost_price:       c.cost_price,
         })),
     };
 
@@ -435,38 +565,49 @@ $checkoutBtn.addEventListener('click', async () => {
 
         if (data.success) {
             lastInvoiceId = data.invoice_id;
-            document.getElementById('successNum').textContent  = 'فاتورة رقم: ' + data.invoice_number;
-            document.getElementById('successTotal').textContent = formatMoney(data.grand_total);
+            document.getElementById('successNum').textContent   = 'فاتورة رقم: ' + data.invoice_number;
+            document.getElementById('successTotal').textContent = fmt(data.grand_total);
+
+            const $sc = document.getElementById('successChange');
+            if (change > 0) {
+                document.getElementById('successChangeVal').textContent = fmt(change);
+                $sc.style.display = 'inline-flex';
+            } else {
+                $sc.style.display = 'none';
+            }
+
             document.getElementById('successOverlay').classList.add('show');
         } else {
-            alert('خطأ: ' + data.message);
+            showError(data.message || 'حدث خطأ أثناء الحفظ');
         }
     } catch(e) {
-        alert('تعذّر الاتصال بالخادم');
+        showError('تعذّر الاتصال بالخادم');
     } finally {
-        $checkoutBtn.disabled = false;
+        $checkoutBtn.disabled = cart.length === 0;
         $checkoutBtn.innerHTML = '<i class="fas fa-check-circle"></i><span>إتمام البيع</span><span id="checkoutTotal" style="font-size:.85rem;opacity:.85;margin-right:.25rem;direction:ltr;"></span>';
         updateTotals();
     }
 });
 
-/* ── Success modal actions ───────────────────────────────── */
+/* ── Success overlay actions ─────────────────────────── */
 document.getElementById('successPrint').addEventListener('click', () => {
-    if (lastInvoiceId) {
-        window.open('/sales/' + lastInvoiceId + '/', '_blank');
-    }
+    if (lastInvoiceId) window.open('/sales/' + lastInvoiceId + '/', '_blank');
 });
 
 document.getElementById('successNew').addEventListener('click', () => {
     document.getElementById('successOverlay').classList.remove('show');
     clearCart();
-    $discVal.value = '';
-    $customer.value = '';
-    loadItems(activeCat);
+    $discVal.value   = '';
+    $cashRcvd.value  = '';
+    $notes.value     = '';
+    $customer.value  = '';
+    $changeVal.textContent = '—';
+    loadItems(activeCat, '');
+    $search.value = '';
+    $search.focus();
 });
 
-/* ── Category tabs ───────────────────────────────────────── */
-let activeCat = '';
+/* ── Category tabs ───────────────────────────────────── */
 document.getElementById('posCats').addEventListener('click', e => {
     const btn = e.target.closest('.pos-cat-btn');
     if (!btn) return;
@@ -476,14 +617,12 @@ document.getElementById('posCats').addEventListener('click', e => {
     loadItems(activeCat, $search.value);
 });
 
-/* ── Search ──────────────────────────────────────────────── */
-let searchTimer;
+/* ── Search ──────────────────────────────────────────── */
 $search.addEventListener('input', () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => loadItems(activeCat, $search.value), 280);
 });
 
-/* ── Barcode scan (Enter key in search) ─────────────────── */
 $search.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
         clearTimeout(searchTimer);
@@ -491,31 +630,55 @@ $search.addEventListener('keydown', e => {
     }
 });
 
-/* ── Stock change ────────────────────────────────────────── */
-$stock.addEventListener('change', () => loadItems(activeCat, $search.value));
+/* ── Keyboard shortcuts ──────────────────────────────── */
+document.addEventListener('keydown', e => {
+    // Escape: close success overlay
+    if (e.key === 'Escape') {
+        const overlay = document.getElementById('successOverlay');
+        if (overlay.classList.contains('show')) {
+            overlay.classList.remove('show');
+            return;
+        }
+    }
 
-/* ── Discount ────────────────────────────────────────────── */
-$discVal.addEventListener('input', updateTotals);
-$discType.addEventListener('change', updateTotals);
-
-/* ── Clear cart ──────────────────────────────────────────── */
-document.getElementById('clearCartBtn').addEventListener('click', () => {
-    if (cart.length && confirm('هل تريد مسح السلة؟')) clearCart();
+    // Any printable char (not in an input): focus search
+    const tag = document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.key.length === 1) {
+        $search.focus();
+        // Don't prevent default — let the char appear in search
+    }
+    if (e.key === 'F2') {
+        e.preventDefault();
+        $search.focus();
+        $search.select();
+    }
 });
 
-/* ── Helpers ─────────────────────────────────────────────── */
-function formatMoney(v) {
-    const n = parseFloat(v) || 0;
-    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/* ── Stock + misc ────────────────────────────────────── */
+$stock.addEventListener('change', () => loadItems(activeCat, $search.value));
+$discVal.addEventListener('input', updateTotals);
+$discType.addEventListener('change', updateTotals);
+$cashRcvd.addEventListener('input', updateChangeCalc);
+
+document.getElementById('clearCartBtn').addEventListener('click', () => {
+    if (cart.length) clearCart();
+});
+
+/* ── Helpers ─────────────────────────────────────────── */
+function fmt(v) {
+    return (parseFloat(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function escHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-/* ── Init ────────────────────────────────────────────────── */
+/* ── Init ────────────────────────────────────────────── */
 loadItems();
 renderCart();
+$search.focus();
 
 })();
 </script>

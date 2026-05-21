@@ -64,8 +64,8 @@
   }
   const c=document.getElementById('confirmBtn');
   const x=document.getElementById('cancelBtn');
-  if(c){ c.addEventListener('click', function(){ if(!window.confirm('تأكيد المرتجع وتطبيق التأثيرات؟')) return; postAction("{% url 'purchases:return_confirm' purchase_return.id %}"); }); }
-  if(x){ x.addEventListener('click', function(){ if(!window.confirm('إلغاء المرتجع وعكس التأثيرات؟')) return; postAction("{% url 'purchases:return_cancel' purchase_return.id %}"); }); }
+  if(c){ c.addEventListener('click', async function(){ if(!await EnjazIMS.confirmAction('تأكيد المرتجع وتطبيق التأثيرات؟', 'تأكيد المرتجع')) return; postAction("{% url 'purchases:return_confirm' purchase_return.id %}"); }); }
+  if(x){ x.addEventListener('click', async function(){ if(!await EnjazIMS.confirmAction('إلغاء المرتجع وعكس التأثيرات؟', 'إلغاء المرتجع')) return; postAction("{% url 'purchases:return_cancel' purchase_return.id %}"); }); }
 })();
 </script>
 {% endblock %}

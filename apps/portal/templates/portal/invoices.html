@@ -1,0 +1,64 @@
+{% extends "portal/layout.html" %}
+{% load portal_extras %}
+
+{% block title %}فواتيري{% endblock %}
+{% block tab_invoices %}active{% endblock %}
+
+{% block content %}
+
+<div class="p-panel">
+  <div class="p-panel-head">
+    <i class="fas fa-file-invoice"></i>
+    جميع الفواتير
+    <span class="ms-auto badge bg-secondary" style="font-size:.78rem;">{{ invoices.count }}</span>
+  </div>
+  {% if invoices %}
+  <div class="table-responsive">
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th>رقم الفاتورة</th>
+          <th>التاريخ</th>
+          <th class="hide-mobile">طريقة الدفع</th>
+          <th>الإجمالي</th>
+          <th class="hide-mobile">المدفوع</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr>
+          <td><strong>{{ inv.invoice_number }}</strong></td>
+          <td class="text-muted">{{ inv.invoice_date }}</td>
+          <td class="hide-mobile text-muted">{{ inv.get_payment_method_display }}</td>
+          <td><strong>{{ inv.grand_total|money_fmt }}</strong></td>
+          <td class="hide-mobile">{{ inv.paid_amount|money_fmt }}</td>
+          <td>
+            {% if inv.is_fully_paid %}
+              <span class="p-badge p-badge--paid"><i class="fas fa-check-circle"></i> مسددة</span>
+            {% elif inv.paid_amount > 0 %}
+              <span class="p-badge p-badge--partial"><i class="fas fa-circle-half-stroke"></i> جزئي</span>
+            {% else %}
+              <span class="p-badge p-badge--unpaid"><i class="fas fa-circle-exclamation"></i> غير مسددة</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'portal:invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-primary" style="font-size:.78rem; padding:.2rem .6rem;">
+              <i class="fas fa-eye me-1"></i>تفاصيل
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="p-empty">
+    <i class="fas fa-file-invoice"></i>
+    <p>لا توجد فواتير مؤكدة حتى الآن</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

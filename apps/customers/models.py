@@ -1,4 +1,7 @@
+import uuid
+
 from django.db import models
+from django.utils import timezone
 
 from apps.core.models import TenantMixin
 
@@ -17,6 +20,10 @@ class Customer(TenantMixin):
 
     is_active = models.BooleanField('نشط', default=True)
 
+    # بوابة العميل الإلكترونية
+    portal_token = models.UUIDField('رمز البوابة', null=True, blank=True, db_index=True)
+    portal_token_expires = models.DateTimeField('انتهاء رمز البوابة', null=True, blank=True)
+
     class Meta:
         db_table = 'customers'
         verbose_name = 'عميل'
@@ -31,6 +38,20 @@ class Customer(TenantMixin):
 
     def __str__(self):
         return self.name
+
+    @property
+    def portal_token_valid(self):
+        if not self.portal_token:
+            return False
+        if self.portal_token_expires and self.portal_token_expires < timezone.now():
+            return False
+        return True
+
+    def refresh_portal_token(self):
+        from datetime import timedelta
+        self.portal_token = uuid.uuid4()
+        self.portal_token_expires = timezone.now() + timedelta(days=30)
+        self.save(update_fields=['portal_token', 'portal_token_expires'])
 
     def save(self, *args, **kwargs):
         if not self.code:

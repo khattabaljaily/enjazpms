@@ -313,6 +313,32 @@
                     </div>
                 </div>
 
+                {# ── Customer Portal ── #}
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title">
+                        <i class="fas fa-globe"></i>
+                        بوابة العميل الإلكترونية
+                    </div>
+                    <div id="portalSection">
+                        <p class="text-muted" style="font-size:.88rem; margin-bottom:.75rem;">
+                            أنشئ رابط وصول خاص للعميل حتى يستطيع مشاهدة فواتيره وحسابه. صلاحية الرابط 30 يوماً.
+                        </p>
+                        <div id="portalLinkWrap" class="d-none mb-2">
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="portalLinkInput" class="form-control" readonly style="font-size:.8rem; direction:ltr; text-align:left;">
+                                <button class="btn btn-outline-secondary" type="button" id="copyPortalLinkBtn" title="نسخ">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted" id="portalLinkExpiry" style="font-size:.77rem;"></small>
+                        </div>
+                        <button type="button" class="cx-btn-secondary" id="generatePortalTokenBtn" style="font-size:.85rem; padding:.35rem .8rem;">
+                            <i class="fas fa-link me-1"></i>
+                            <span id="generatePortalBtnLabel">إنشاء رابط الوصول</span>
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
             <div class="cx-view-footer">
@@ -870,6 +896,62 @@
         openEdit($(this).data('id')); 
     });
     setModalSidebar('عميل جديد', '+', 'var(--primary)');
+
+    /* ══════════════════════════ CUSTOMER PORTAL TOKEN ══════════════════════════ */
+    const urlPortalToken = "{% url 'customers:generate_portal_token' 0 %}";
+
+    $('#generatePortalTokenBtn').on('click', function () {
+        const customerId = $('#viewEditCustomerBtn').data('id');
+        if (!customerId) return;
+        const $btn = $(this);
+        const origLabel = $('#generatePortalBtnLabel').text();
+        $('#generatePortalBtnLabel').text('جاري الإنشاء...');
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            url: apiUrl(urlPortalToken, customerId),
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            success: function (r) {
+                $btn.prop('disabled', false);
+                $('#generatePortalBtnLabel').text('تجديد الرابط');
+                if (r.success) {
+                    $('#portalLinkInput').val(r.portal_url);
+                    $('#portalLinkExpiry').text('صالح حتى: ' + r.expires_at);
+                    $('#portalLinkWrap').removeClass('d-none');
+                    EnjazIMS.toast('تم إنشاء رابط البوابة', 'success');
+                } else {
+                    EnjazIMS.toast(r.message || 'حدث خطأ', 'error');
+                    $('#generatePortalBtnLabel').text(origLabel);
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false);
+                $('#generatePortalBtnLabel').text(origLabel);
+                EnjazIMS.toast('تعذر الإنشاء', 'error');
+            }
+        });
+    });
+
+    $('#copyPortalLinkBtn').on('click', function () {
+        const val = $('#portalLinkInput').val();
+        if (!val) return;
+        navigator.clipboard.writeText(val).then(function () {
+            EnjazIMS.toast('تم نسخ الرابط', 'success');
+        }).catch(function () {
+            $('#portalLinkInput').select();
+            document.execCommand('copy');
+            EnjazIMS.toast('تم نسخ الرابط', 'success');
+        });
+    });
+
+    // Reset portal section when modal opens for a new customer
+    $('#viewCustomerModal').on('show.bs.modal', function () {
+        $('#portalLinkWrap').addClass('d-none');
+        $('#portalLinkInput').val('');
+        $('#generatePortalBtnLabel').text('إنشاء رابط الوصول');
+        $('#generatePortalTokenBtn').prop('disabled', false);
+    });
 
     /* ══════════════════════════ IMPORT / EXPORT ══════════════════════════ */
     const importModalEl = document.getElementById('importCustomersModal');

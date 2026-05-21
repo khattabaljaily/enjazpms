@@ -236,15 +236,15 @@
     }
 
     if (confirmBtn) {
-        confirmBtn.addEventListener('click', function() {
-            if (!window.confirm('سيتم تأكيد أمر الشراء وتطبيق تأثيراته. هل تريد المتابعة؟')) return;
+        confirmBtn.addEventListener('click', async function() {
+            if (!await EnjazIMS.confirmAction('سيتم تأكيد أمر الشراء وتطبيق تأثيراته. هل تريد المتابعة؟', 'تأكيد أمر الشراء')) return;
             postAction("{% url 'purchases:order_confirm' invoice.id %}");
         });
     }
 
     if (cancelBtn) {
-        cancelBtn.addEventListener('click', function() {
-            if (!window.confirm('سيتم إلغاء أمر الشراء وعكس تأثيراته. هل تريد المتابعة؟')) return;
+        cancelBtn.addEventListener('click', async function() {
+            if (!await EnjazIMS.confirmAction('سيتم إلغاء أمر الشراء وعكس تأثيراته. هل تريد المتابعة؟', 'إلغاء أمر الشراء')) return;
             postAction("{% url 'purchases:order_cancel' invoice.id %}");
         });
     }

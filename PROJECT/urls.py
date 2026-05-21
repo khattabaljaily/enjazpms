@@ -23,6 +23,7 @@ urlpatterns = [
     path('treasury/', include('apps.treasury.urls')),
     path('expenses/', include('apps.expenses.urls')),
     path('notifications/', include('apps.notifications.urls')),
+    path('portal/', include('apps.portal.urls')),
 ]
 
 # Serve media files in development

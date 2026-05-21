@@ -262,7 +262,7 @@ function doConfirm() {
 }
 
 async function doCancel() {
-    if (!confirm('إلغاء جلسة الجرد بدون تطبيق؟')) return;
+    if (!await EnjazIMS.confirmAction('إلغاء جلسة الجرد بدون تطبيق؟', 'تأكيد الإلغاء')) return;
     const r = await fetch(CANCEL_URL, {
         method: 'POST', headers: { 'X-CSRFToken': CSRF },
     });

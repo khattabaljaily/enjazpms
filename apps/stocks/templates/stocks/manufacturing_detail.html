@@ -125,22 +125,25 @@ const CANCEL_URL  = "{% url 'stocks:manufacturing_cancel' order.id %}";
 const DELETE_URL  = "{% url 'stocks:manufacturing_delete' order.id %}";
 const CSRF_TOKEN  = "{{ csrf_token }}";
 
-function ajaxAction(url, confirmMsg, successMsg) {
-    if (!confirm(confirmMsg)) return;
-    fetch(url, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': CSRF_TOKEN }
-    })
-    .then(r => r.json())
-    .then(res => {
+async function ajaxAction(url, confirmMsg, successMsg, redirectAfter) {
+    const ok = await EnjazIMS.confirmAction(confirmMsg);
+    if (!ok) return;
+    try {
+        const r = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
+        const res = await r.json();
         if (res.success) {
-            alert(successMsg);
-            location.reload();
+            EnjazIMS.toast(successMsg, 'success');
+            if (redirectAfter) {
+                setTimeout(() => { window.location.href = redirectAfter; }, 800);
+            } else {
+                setTimeout(() => location.reload(), 800);
+            }
         } else {
-            alert('خطأ: ' + res.message);
+            EnjazIMS.toast('خطأ: ' + res.message, 'error');
         }
-    })
-    .catch(() => alert('حدث خطأ في الاتصال'));
+    } catch {
+        EnjazIMS.toast('حدث خطأ في الاتصال', 'error');
+    }
 }
 
 function confirmOrder() {
@@ -152,8 +155,7 @@ function cancelOrder() {
 }
 
 function deleteOrder() {
-    ajaxAction(DELETE_URL, 'هل تريد حذف هذه المسودة نهائياً؟', 'تم حذف الأمر');
-    setTimeout(() => { window.location.href = "{% url 'stocks:manufacturing_list' %}"; }, 1500);
+    ajaxAction(DELETE_URL, 'هل تريد حذف هذه المسودة نهائياً؟', 'تم حذف الأمر', "{% url 'stocks:manufacturing_list' %}");
 }
 </script>
 {% endblock %}

@@ -180,6 +180,27 @@ def customer_create_api(request):
 
 @login_required
 @require_permission('view_customers')
+def generate_portal_token(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
+    customer.refresh_portal_token()
+    from django.urls import reverse
+    portal_url = request.build_absolute_uri(
+        reverse('portal:login_via_token', args=[str(customer.portal_token)])
+    )
+    return JsonResponse({
+        'success': True,
+        'portal_url': portal_url,
+        'expires_at': customer.portal_token_expires.strftime('%Y-%m-%d'),
+    })
+
+
+@login_required
+@require_permission('view_customers')
 def customer_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:

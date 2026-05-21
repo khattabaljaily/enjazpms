@@ -1,0 +1,146 @@
+{% extends "portal/layout.html" %}
+{% load portal_extras %}
+
+{% block title %}{{ invoice.invoice_number }}{% endblock %}
+{% block tab_invoices %}active{% endblock %}
+
+{% block content %}
+
+<div class="mb-3">
+  <a href="{% url 'portal:invoices' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="fas fa-arrow-right me-1"></i>العودة للفواتير
+  </a>
+</div>
+
+<div class="p-inv-head">
+  <div class="row align-items-center">
+    <div class="col">
+      <div class="p-inv-head-title">{{ invoice.invoice_number }}</div>
+      <div class="p-inv-head-sub">{{ invoice.get_payment_method_display }}</div>
+    </div>
+    <div class="col-auto">
+      {% if invoice.is_fully_paid %}
+        <span class="p-badge p-badge--paid" style="background:rgba(255,255,255,.2); color:#fff; font-size:.9rem; padding:.35rem .9rem;">
+          <i class="fas fa-check-circle"></i> مسددة
+        </span>
+      {% elif invoice.paid_amount > 0 %}
+        <span class="p-badge p-badge--partial" style="background:rgba(255,255,255,.2); color:#fff; font-size:.9rem; padding:.35rem .9rem;">
+          <i class="fas fa-circle-half-stroke"></i> جزئي
+        </span>
+      {% else %}
+        <span class="p-badge p-badge--unpaid" style="background:rgba(255,255,255,.2); color:#fff; font-size:.9rem; padding:.35rem .9rem;">
+          <i class="fas fa-circle-exclamation"></i> غير مسددة
+        </span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="p-inv-meta mt-2">
+    <div class="p-inv-meta-item">
+      <strong>{{ invoice.invoice_date }}</strong>
+      تاريخ الفاتورة
+    </div>
+    {% if invoice.due_date %}
+    <div class="p-inv-meta-item">
+      <strong>{{ invoice.due_date }}</strong>
+      تاريخ الاستحقاق
+    </div>
+    {% endif %}
+    <div class="p-inv-meta-item">
+      <strong>{{ invoice.stock.name }}</strong>
+      المخزن / الفرع
+    </div>
+    {% if invoice.reference_number %}
+    <div class="p-inv-meta-item">
+      <strong>{{ invoice.reference_number }}</strong>
+      مرجع خارجي
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="p-panel mb-4">
+  <div class="p-panel-head">
+    <i class="fas fa-list"></i>
+    بنود الفاتورة
+  </div>
+  <div class="table-responsive">
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المنتج</th>
+          <th class="text-end">الكمية</th>
+          <th class="hide-mobile text-end">سعر الوحدة</th>
+          <th class="hide-mobile text-end">الخصم %</th>
+          <th class="hide-mobile text-end">الضريبة %</th>
+          <th class="text-end">الإجمالي</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for line in lines %}
+        <tr>
+          <td class="text-muted">{{ forloop.counter }}</td>
+          <td>
+            <div><strong>{{ line.item.name }}</strong></div>
+            {% if line.item.sku %}<div class="text-muted" style="font-size:.78rem;">{{ line.item.sku }}</div>{% endif %}
+            {% if line.unit %}<div><span class="badge bg-secondary">{{ line.unit }}</span></div>{% endif %}
+          </td>
+          <td class="text-end">{{ line.quantity|floatformat:"-2" }}</td>
+          <td class="hide-mobile text-end">{{ line.unit_price|money_fmt }}</td>
+          <td class="hide-mobile text-end">{% if line.discount_percent %}{{ line.discount_percent|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td class="hide-mobile text-end">{% if line.tax_rate %}{{ line.tax_rate|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td class="text-end"><strong>{{ line.line_total|money_fmt }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row justify-content-end">
+  <div class="col-md-5 col-lg-4">
+    <div class="p-total-box">
+      <div class="p-total-row">
+        <span class="text-muted">المجموع الجزئي</span>
+        <span>{{ invoice.subtotal|money_fmt }}</span>
+      </div>
+      {% if invoice.invoice_discount_amount %}
+      <div class="p-total-row">
+        <span class="text-muted">الخصم</span>
+        <span class="text-danger">— {{ invoice.invoice_discount_amount|money_fmt }}</span>
+      </div>
+      {% endif %}
+      {% if invoice.tax_amount %}
+      <div class="p-total-row">
+        <span class="text-muted">الضريبة</span>
+        <span>{{ invoice.tax_amount|money_fmt }}</span>
+      </div>
+      {% endif %}
+      <div class="p-total-row">
+        <span>الإجمالي</span>
+        <span>{{ invoice.grand_total|money_fmt }}</span>
+      </div>
+      {% if invoice.paid_amount %}
+      <div class="p-total-row" style="border-top: 1px solid #e2e8f0; margin-top:.25rem; padding-top:.5rem;">
+        <span class="text-muted">المدفوع</span>
+        <span class="text-success">{{ invoice.paid_amount|money_fmt }}</span>
+      </div>
+      <div class="p-total-row" style="font-size:1.05rem;">
+        <span>المتبقي</span>
+        <span {% if invoice.remaining_amount > 0 %}class="text-danger"{% else %}class="text-success"{% endif %}>
+          {{ invoice.remaining_amount|money_fmt }}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if invoice.notes %}
+<div class="p-panel mt-3">
+  <div class="p-panel-head"><i class="fas fa-note-sticky"></i> ملاحظات</div>
+  <div style="padding:1rem 1.25rem; color:#64748b; font-size:.92rem;">{{ invoice.notes }}</div>
+</div>
+{% endif %}
+
+{% endblock %}
