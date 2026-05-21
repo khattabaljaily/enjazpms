@@ -41,4 +41,8 @@ urlpatterns = [
     # By User
     path('purchases/by-user/', views.purchases_by_user_report, name='by_user_report'),
     path('purchases/by-user/export/', views.purchases_by_user_report_export, name='by_user_report_export'),
+
+    # Price History
+    path('purchases/price-history/', views.purchases_price_history_report, name='price_history_report'),
+    path('purchases/price-history/export/', views.purchases_price_history_report_export, name='price_history_report_export'),
 ]

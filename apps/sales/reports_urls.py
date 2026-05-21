@@ -45,4 +45,12 @@ urlpatterns = [
     # Income Statement (P&L)
     path('accounting/income-statement/', views.income_statement_report, name='income_statement'),
     path('accounting/income-statement/export/', views.income_statement_report_export, name='income_statement_export'),
+
+    # Profit Margin per Item
+    path('sales/profit-margin/', views.sales_profit_margin_report, name='profit_margin_report'),
+    path('sales/profit-margin/export/', views.sales_profit_margin_report_export, name='profit_margin_report_export'),
+
+    # By Payment Method
+    path('sales/by-payment-method/', views.sales_by_payment_method_report, name='by_payment_method_report'),
+    path('sales/by-payment-method/export/', views.sales_by_payment_method_report_export, name='by_payment_method_report_export'),
 ]

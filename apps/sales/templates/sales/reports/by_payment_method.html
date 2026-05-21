@@ -1,0 +1,141 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--sales">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-credit-card"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">المبيعات حسب طريقة الدفع</h1>
+                    <p class="rpt-hero-desc"><i class="fas fa-calendar-alt me-1"></i> من {{ start_date }} إلى {{ end_date }}</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'reports:by_payment_method_report_export' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" class="rpt-hero-btn">
+                    <i class="fas fa-download"></i> تصدير CSV
+                </a>
+                <a href="{% url 'sales:invoice_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">من التاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">إلى التاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--sales"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- KPIs -->
+    <div class="rpt-kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="rpt-kpi-card rpt-kpi--purple">
+            <div class="rpt-kpi-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_invoiced }}</div>
+            <div class="rpt-kpi-label">إجمالي الفواتير</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--green">
+            <div class="rpt-kpi-icon"><i class="fas fa-hand-holding-dollar"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_paid }}</div>
+            <div class="rpt-kpi-label">إجمالي المحصل</div>
+        </div>
+        <div class="rpt-kpi-card {% if report.summary.outstanding_raw > 0 %}rpt-kpi--amber{% else %}rpt-kpi--green{% endif %}">
+            <div class="rpt-kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.outstanding }}</div>
+            <div class="rpt-kpi-label">المتبقي</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-receipt"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.payment_count }}</div>
+            <div class="rpt-kpi-label">عدد المدفوعات</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--sales">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>توزيع المدفوعات حسب الطريقة</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>طريقة الدفع</th>
+                            <th class="text-center">عدد المدفوعات</th>
+                            <th class="text-end">الإجمالي المحصل</th>
+                            <th class="text-end">النسبة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td>
+                                {% if row.method_key == 'cash' %}
+                                    <span class="badge bg-success me-2"><i class="fas fa-money-bill-wave"></i></span>
+                                {% elif row.method_key == 'bank' %}
+                                    <span class="badge bg-primary me-2"><i class="fas fa-building-columns"></i></span>
+                                {% else %}
+                                    <span class="badge bg-secondary me-2"><i class="fas fa-credit-card"></i></span>
+                                {% endif %}
+                                <span class="fw-bold">{{ row.method_label }}</span>
+                            </td>
+                            <td class="text-center">{{ row.payment_count }}</td>
+                            <td class="text-end fw-bold" style="color:#4facfe">{{ row.total_amount }}</td>
+                            <td class="text-end text-muted">
+                                {% if report.summary.total_paid != "0.00" %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="rpt-total-row">
+                            <td class="fw-bold">الإجمالي المحصل</td>
+                            <td class="text-center fw-bold">{{ report.summary.payment_count }}</td>
+                            <td class="text-end fw-bold" style="color:#4facfe">{{ report.summary.total_paid }}</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">إجمالي الفواتير الصادرة</td>
+                            <td></td>
+                            <td class="text-end fw-bold">{{ report.summary.total_invoiced }}</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted {% if report.summary.outstanding_raw > 0 %}text-warning{% endif %}">المتبقي غير المحصل</td>
+                            <td></td>
+                            <td class="text-end fw-bold {% if report.summary.outstanding_raw > 0 %}text-warning{% endif %}">{{ report.summary.outstanding }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty"><i class="fas fa-file-circle-xmark"></i><p>لا توجد مدفوعات في الفترة المحددة</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

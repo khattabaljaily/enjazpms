@@ -510,3 +510,102 @@ class PurchasesReportGenerator:
             'user': None,
             'data': sorted(data, key=lambda x: x['total_amount'], reverse=True),
         }
+
+    def get_price_history_report(self, item_id=None):
+        """تقرير تاريخ أسعار الشراء لكل منتج"""
+        from apps.items.models import Item
+        from collections import defaultdict
+
+        base_lines = PurchaseInvoiceLine.objects.filter(
+            invoice__tenant=self.tenant,
+            invoice__status='confirmed',
+            invoice__invoice_date__gte=self.start_date,
+            invoice__invoice_date__lte=self.end_date,
+        ).select_related('invoice', 'invoice__supplier', 'item', 'item__unit').order_by('invoice__invoice_date')
+
+        if item_id:
+            try:
+                item = Item.objects.get(tenant=self.tenant, id=item_id)
+            except Item.DoesNotExist:
+                return {'period': {'start': self.start_date, 'end': self.end_date}, 'item': None, 'data': [], 'summary': {}}
+
+            lines = base_lines.filter(item=item)
+            data = []
+            prices = []
+            total_qty = Decimal('0')
+            total_spent = Decimal('0')
+            for line in lines:
+                qty = line.quantity or Decimal('0')
+                cost = line.unit_cost or Decimal('0')
+                lt = qty * cost
+                total_qty += qty
+                total_spent += lt
+                prices.append(float(cost))
+                data.append({
+                    'invoice_date': line.invoice.invoice_date,
+                    'invoice_number': line.invoice.invoice_number,
+                    'supplier_name': line.invoice.supplier.name if line.invoice.supplier else '—',
+                    'quantity': format_number(float(qty), 2),
+                    'unit_cost': format_number(float(cost), 2),
+                    'unit_cost_raw': float(cost),
+                    'line_total': format_number(float(lt), 2),
+                })
+
+            min_price = min(prices) if prices else 0
+            max_price = max(prices) if prices else 0
+            avg_price = sum(prices) / len(prices) if prices else 0
+
+            return {
+                'period': {'start': self.start_date, 'end': self.end_date},
+                'item': {'id': item.id, 'name': item.name, 'unit': item.unit.name if item.unit else ''},
+                'summary': {
+                    'total_qty': format_number(float(total_qty), 2),
+                    'total_spent': format_number(float(total_spent), 2),
+                    'min_price': format_number(min_price, 2),
+                    'max_price': format_number(max_price, 2),
+                    'avg_price': format_number(avg_price, 2),
+                    'purchase_count': format_number(len(data), 0),
+                },
+                'data': data,
+            }
+
+        agg = defaultdict(lambda: {
+            'item_name': '', 'unit': '',
+            'prices': [], 'total_qty': Decimal('0'), 'last_date': None, 'last_supplier': '—',
+        })
+        for line in base_lines:
+            iid = line.item_id
+            agg[iid]['item_name'] = line.item.name
+            agg[iid]['unit'] = line.item.unit.name if line.item.unit else ''
+            cost = float(line.unit_cost or 0)
+            agg[iid]['prices'].append(cost)
+            agg[iid]['total_qty'] += line.quantity or Decimal('0')
+            if agg[iid]['last_date'] is None or line.invoice.invoice_date > agg[iid]['last_date']:
+                agg[iid]['last_date'] = line.invoice.invoice_date
+                agg[iid]['last_price'] = cost
+                agg[iid]['last_supplier'] = line.invoice.supplier.name if line.invoice.supplier else '—'
+
+        data = []
+        for iid, v in agg.items():
+            prices = v['prices']
+            data.append({
+                'item_id': iid,
+                'item_name': v['item_name'],
+                'unit': v['unit'],
+                'purchase_count': format_number(len(prices), 0),
+                'last_purchase_date': v['last_date'],
+                'last_supplier': v['last_supplier'],
+                'last_price': format_number(v.get('last_price', 0), 2),
+                'min_price': format_number(min(prices), 2),
+                'max_price': format_number(max(prices), 2),
+                'avg_price': format_number(sum(prices) / len(prices), 2),
+                'price_variance': format_number(max(prices) - min(prices), 2),
+                'price_variance_raw': max(prices) - min(prices),
+            })
+
+        data.sort(key=lambda x: x['price_variance_raw'], reverse=True)
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'item': None,
+            'data': data,
+        }

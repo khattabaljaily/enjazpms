@@ -1,0 +1,115 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--expenses">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-layer-group"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">المصروفات حسب الفئة</h1>
+                    <p class="rpt-hero-desc"><i class="fas fa-calendar-alt me-1"></i> من {{ start_date }} إلى {{ end_date }}</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'expenses:reports:by_category_report_export' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" class="rpt-hero-btn">
+                    <i class="fas fa-download"></i> تصدير CSV
+                </a>
+                <a href="{% url 'expenses:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">من التاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">إلى التاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--expenses"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--expenses">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>توزيع المصروفات حسب الفئة</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>الفئة</th>
+                            <th class="text-center">عدد المصروفات</th>
+                            <th class="text-end">الإجمالي</th>
+                            <th style="width:200px">التوزيع</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td>
+                                <span class="rpt-rank {% if forloop.counter == 1 %}rpt-rank--1{% elif forloop.counter == 2 %}rpt-rank--2{% elif forloop.counter == 3 %}rpt-rank--3{% else %}rpt-rank--other{% endif %}">{{ forloop.counter }}</span>
+                            </td>
+                            <td class="fw-bold">{{ row.category_name }}</td>
+                            <td class="text-center">{{ row.expense_count }}</td>
+                            <td class="text-end fw-bold" style="color:#f59e0b">{{ row.total_amount }}</td>
+                            <td>
+                                <div style="background:var(--border-color);border-radius:4px;height:8px;overflow:hidden;">
+                                    <div style="height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24);width:{{ row.total_amount_raw|floatformat:0 }}px;" data-value="{{ row.total_amount_raw }}" class="cat-bar"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="rpt-total-row">
+                            <td colspan="3" class="fw-bold">الإجمالي الكلي</td>
+                            <td class="text-end fw-bold" style="color:#f59e0b">{{ report.grand_total }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty"><i class="fas fa-file-circle-xmark"></i><p>لا توجد مصروفات للفترة المحددة</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const bars = document.querySelectorAll('.cat-bar');
+    let maxVal = 0;
+    bars.forEach(b => { const v = parseFloat(b.dataset.value || 0); if (v > maxVal) maxVal = v; });
+    if (maxVal > 0) {
+        bars.forEach(b => {
+            const v = parseFloat(b.dataset.value || 0);
+            b.style.width = ((v / maxVal) * 100) + '%';
+        });
+    }
+});
+</script>
+{% endblock %}

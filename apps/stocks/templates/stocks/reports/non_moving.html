@@ -1,0 +1,118 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--stocks">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-box-archive"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">الأصناف الراكدة</h1>
+                    <p class="rpt-hero-desc">
+                        أصناف بمخزون لكن لا حركة خروج في الفترة
+                        <span class="ms-2 text-muted" style="font-size:.85rem;">{{ start_date }} إلى {{ end_date }}</span>
+                    </p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'stocks:reports:non_moving_report_export' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" class="rpt-hero-btn">
+                    <i class="fas fa-download"></i> تصدير CSV
+                </a>
+                <a href="{% url 'stocks:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">من التاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">إلى التاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--stocks"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns:repeat(2,1fr);">
+        <div class="rpt-kpi-card rpt-kpi--amber">
+            <div class="rpt-kpi-icon"><i class="fas fa-box-archive"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.non_moving_count }}</div>
+            <div class="rpt-kpi-label">أصناف راكدة</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--red">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_value }}</div>
+            <div class="rpt-kpi-label">قيمة المخزون الراكد</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--stocks">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>قائمة الأصناف الراكدة</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>الصنف</th>
+                            <th>الوحدة</th>
+                            <th>الفئة</th>
+                            <th class="text-end">الكمية</th>
+                            <th class="text-end">سعر التكلفة</th>
+                            <th class="text-end">القيمة</th>
+                            <th>آخر حركة</th>
+                            <th class="text-center">أيام الركود</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="fw-bold">{{ row.item_name }}</td>
+                            <td class="text-muted">{{ row.item_unit }}</td>
+                            <td class="text-muted">{{ row.category_name }}</td>
+                            <td class="text-end">{{ row.total_qty }}</td>
+                            <td class="text-end text-muted">{{ row.cost_price }}</td>
+                            <td class="text-end fw-bold" style="color:#f59e0b">{{ row.total_value }}</td>
+                            <td class="text-muted">
+                                {% if row.last_movement_date %}{{ row.last_movement_date|date:"Y-m-d" }}{% else %}<span class="text-danger">لا توجد حركة</span>{% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if row.days_idle %}
+                                    <span class="badge {% if row.days_idle > 90 %}bg-danger{% elif row.days_idle > 30 %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">
+                                        {{ row.days_idle }} يوم
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger">غير معروف</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty"><i class="fas fa-check-circle"></i><p>لا توجد أصناف راكدة في هذه الفترة</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

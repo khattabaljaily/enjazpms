@@ -1,0 +1,116 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--stocks">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-coins"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">تقييم المخزون</h1>
+                    <p class="rpt-hero-desc">قيمة المخزون الحالي بسعر التكلفة</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'stocks:reports:valuation_report_export' %}" class="rpt-hero-btn">
+                    <i class="fas fa-download"></i> تصدير CSV
+                </a>
+                <a href="{% url 'stocks:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="rpt-kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-boxes-stacked"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.item_count }}</div>
+            <div class="rpt-kpi-label">عدد الأصناف</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--indigo">
+            <div class="rpt-kpi-icon"><i class="fas fa-layer-group"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.category_count }}</div>
+            <div class="rpt-kpi-label">الفئات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--teal">
+            <div class="rpt-kpi-icon"><i class="fas fa-cubes"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_qty }}</div>
+            <div class="rpt-kpi-label">إجمالي الكميات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--green">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.grand_total }}</div>
+            <div class="rpt-kpi-label">إجمالي قيمة المخزون</div>
+        </div>
+    </div>
+
+    {% for cat in report.categories %}
+    <div class="rpt-panel mb-3">
+        <div class="rpt-panel-header rpt-panel-header--stocks" style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;">
+            <h3 class="rpt-panel-title mb-0"><i class="fas fa-tag me-2"></i>{{ cat.name }}</h3>
+            <span class="fw-bold" style="color:#00d2ff;font-size:1rem;">{{ cat.subtotal }}</span>
+        </div>
+        <div class="rpt-panel-body p-0">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>المنتج</th>
+                            <th>الوحدة</th>
+                            <th class="text-end">الكمية</th>
+                            <th class="text-end">سعر التكلفة</th>
+                            <th class="text-end">القيمة الإجمالية</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in cat.items %}
+                        <tr>
+                            <td class="fw-bold">{{ row.item_name }}</td>
+                            <td class="text-muted">{{ row.item_unit }}</td>
+                            <td class="text-end">{{ row.total_qty }}</td>
+                            <td class="text-end text-muted">{{ row.cost_price }}</td>
+                            <td class="text-end fw-bold" style="color:#00d2ff">{{ row.total_value }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:var(--bg-secondary);">
+                            <td colspan="4" class="fw-bold text-muted" style="font-size:.85rem;">إجمالي فئة {{ cat.name }}</td>
+                            <td class="text-end fw-bold" style="color:#00d2ff">{{ cat.subtotal }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="rpt-panel">
+        <div class="rpt-panel-body">
+            <div class="rpt-empty"><i class="fas fa-boxes-stacked"></i><p>لا يوجد مخزون حالياً</p></div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if report.categories %}
+    <div class="rpt-panel" style="border-top:2px solid var(--border-color);">
+        <div class="rpt-panel-body" style="padding:1rem 1.25rem;">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold fs-5">إجمالي قيمة المخزون الكلي</span>
+                <span class="fw-bold fs-4" style="color:#00d2ff">{{ report.summary.grand_total }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--purchases">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-tags"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">تاريخ أسعار الشراء</h1>
+                    <p class="rpt-hero-desc"><i class="fas fa-calendar-alt me-1"></i> من {{ start_date }} إلى {{ end_date }}</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'purchases:reports:price_history_report_export' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}{% if selected_item_id %}&item_id={{ selected_item_id }}{% endif %}" class="rpt-hero-btn">
+                    <i class="fas fa-download"></i> تصدير CSV
+                </a>
+                <a href="{% url 'purchases:order_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">من التاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">إلى التاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">المنتج</label>
+                <select name="item_id" class="form-select">
+                    <option value="">كل المنتجات</option>
+                    {% for item in items %}
+                        <option value="{{ item.id }}" {% if item.id|stringformat:"s" == selected_item_id %}selected{% endif %}>{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--purchases"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    {% if report.item %}
+    <!-- ── drill-down: single item ── -->
+    <div class="rpt-kpi-grid" style="grid-template-columns:repeat(5,1fr);">
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-receipt"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.purchase_count }}</div>
+            <div class="rpt-kpi-label">عدد مرات الشراء</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--indigo">
+            <div class="rpt-kpi-icon"><i class="fas fa-arrow-down"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.min_price }}</div>
+            <div class="rpt-kpi-label">أقل سعر</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--amber">
+            <div class="rpt-kpi-icon"><i class="fas fa-arrow-up"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.max_price }}</div>
+            <div class="rpt-kpi-label">أعلى سعر</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--teal">
+            <div class="rpt-kpi-icon"><i class="fas fa-equals"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.avg_price }}</div>
+            <div class="rpt-kpi-label">متوسط السعر</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--purple">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_spent }}</div>
+            <div class="rpt-kpi-label">إجمالي المدفوع</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--purchases">
+            <h3 class="rpt-panel-title"><i class="fas fa-history me-2"></i>سجل الشراء: {{ report.item.name }}</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>رقم الفاتورة</th>
+                            <th>المورد</th>
+                            <th class="text-end">الكمية</th>
+                            <th class="text-end">سعر الوحدة</th>
+                            <th class="text-end">الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="text-muted">{{ row.invoice_date|date:"Y-m-d" }}</td>
+                            <td class="fw-bold" style="color:#4facfe">{{ row.invoice_number }}</td>
+                            <td>{{ row.supplier_name }}</td>
+                            <td class="text-end text-muted">{{ row.quantity }}</td>
+                            <td class="text-end fw-bold" style="color:#4facfe">{{ row.unit_cost }}</td>
+                            <td class="text-end fw-bold">{{ row.line_total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty"><i class="fas fa-file-circle-xmark"></i><p>لا توجد مشتريات لهذا المنتج في الفترة المحددة</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% else %}
+    <!-- ── aggregate: all items ── -->
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--purchases">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>ملخص أسعار الشراء لكل المنتجات</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>المنتج</th>
+                            <th>الوحدة</th>
+                            <th class="text-center">عدد مرات الشراء</th>
+                            <th>آخر شراء</th>
+                            <th>آخر مورد</th>
+                            <th class="text-end">آخر سعر</th>
+                            <th class="text-end">أقل سعر</th>
+                            <th class="text-end">أعلى سعر</th>
+                            <th class="text-end">متوسط</th>
+                            <th class="text-end">فارق السعر</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="fw-bold">{{ row.item_name }}</td>
+                            <td class="text-muted">{{ row.unit }}</td>
+                            <td class="text-center">{{ row.purchase_count }}</td>
+                            <td class="text-muted">{% if row.last_purchase_date %}{{ row.last_purchase_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+                            <td class="text-muted">{{ row.last_supplier }}</td>
+                            <td class="text-end fw-bold" style="color:#4facfe">{{ row.last_price }}</td>
+                            <td class="text-end text-success">{{ row.min_price }}</td>
+                            <td class="text-end text-danger">{{ row.max_price }}</td>
+                            <td class="text-end text-muted">{{ row.avg_price }}</td>
+                            <td class="text-end">
+                                <span class="badge {% if row.price_variance_raw > 0 %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                    {{ row.price_variance }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty"><i class="fas fa-users-slash"></i><p>لا توجد بيانات مشتريات للفترة المحددة</p></div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

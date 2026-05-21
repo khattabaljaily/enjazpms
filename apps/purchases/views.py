@@ -1270,3 +1270,75 @@ def purchases_by_user_report_export(request):
             writer.writerow([row['user_name'], row['invoice_count'], row['total_amount'], row['avg_invoice_amount']])
 
     return response
+
+
+# ─────────────────────────────────────────────────────────────────
+#   PURCHASE PRICE HISTORY REPORT
+# ─────────────────────────────────────────────────────────────────
+
+@login_required
+@require_permission('view_purchases_price_history_report')
+def purchases_price_history_report(request):
+    from apps.items.models import Item
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    item_id = request.GET.get('item_id') or None
+
+    report = PurchasesReportGenerator(tenant, start_date, end_date).get_price_history_report(item_id=item_id)
+
+    items = Item.objects.filter(
+        tenant=tenant,
+        purchase_lines__invoice__status='confirmed',
+    ).distinct().order_by('name')
+
+    return render(request, 'purchases/reports/price_history.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'items': items,
+        'selected_item_id': item_id,
+        'section': 'purchases_reports',
+    })
+
+
+@login_required
+@require_permission('view_purchases_price_history_report')
+def purchases_price_history_report_export(request):
+    import csv
+    from django.http import HttpResponse
+    from apps.items.models import Item
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    item_id = request.GET.get('item_id') or None
+
+    report = PurchasesReportGenerator(tenant, start_date, end_date).get_price_history_report(item_id=item_id)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="price_history_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
+    writer.writerow([])
+
+    if report.get('item'):
+        writer.writerow([f'المنتج: {report["item"]["name"]}'])
+        writer.writerow([])
+        writer.writerow(['التاريخ', 'رقم الفاتورة', 'المورد', 'الكمية', 'سعر الوحدة', 'الإجمالي'])
+        for row in report['data']:
+            writer.writerow([row['invoice_date'], row['invoice_number'], row['supplier_name'],
+                             row['quantity'], row['unit_cost'], row['line_total']])
+    else:
+        writer.writerow(['المنتج', 'الوحدة', 'عدد مرات الشراء', 'آخر شراء', 'آخر مورد',
+                         'آخر سعر', 'أقل سعر', 'أعلى سعر', 'متوسط السعر', 'فارق السعر'])
+        for row in report['data']:
+            writer.writerow([row['item_name'], row['unit'], row['purchase_count'],
+                             row['last_purchase_date'], row['last_supplier'], row['last_price'],
+                             row['min_price'], row['max_price'], row['avg_price'], row['price_variance']])
+    return response

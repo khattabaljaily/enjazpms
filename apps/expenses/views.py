@@ -456,3 +456,114 @@ def expenses_details_report_export(request):
     for row in report['data']:
         writer.writerow([row['expense_date'], row['code'], row['description'], row['category_name'], row['payment_method'], row['treasury_name'], row['amount']])
     return response
+
+
+# ─────────────────────────────────────────────────────────────────
+#   EXPENSES BY CATEGORY
+# ─────────────────────────────────────────────────────────────────
+
+@login_required
+@require_permission('view_expenses_by_category_report')
+def expenses_by_category_report(request):
+    from datetime import timedelta
+    from .reports import ExpensesReportGenerator
+    tenant = _tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_category_report()
+
+    return render(request, 'expenses/reports/by_category.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'section': 'expenses_reports',
+    })
+
+
+@login_required
+@require_permission('view_expenses_by_category_report')
+def expenses_by_category_report_export(request):
+    import csv
+    from django.http import HttpResponse
+    from datetime import timedelta
+    from .reports import ExpensesReportGenerator
+    tenant = _tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+
+    report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_category_report()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="expenses_by_category_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
+    writer.writerow([])
+    writer.writerow(['الفئة', 'عدد المصروفات', 'الإجمالي'])
+    for row in report['data']:
+        writer.writerow([row['category_name'], row['expense_count'], row['total_amount']])
+    writer.writerow([])
+    writer.writerow(['الإجمالي الكلي', '', report['grand_total']])
+    return response
+
+
+# ─────────────────────────────────────────────────────────────────
+#   EXPENSES BY DATE
+# ─────────────────────────────────────────────────────────────────
+
+@login_required
+@require_permission('view_expenses_by_date_report')
+def expenses_by_date_report(request):
+    from datetime import timedelta
+    from .reports import ExpensesReportGenerator
+    tenant = _tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    group_by = request.GET.get('group_by', 'day')
+
+    report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_date_report(group_by=group_by)
+
+    return render(request, 'expenses/reports/by_date.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'group_by': group_by,
+        'section': 'expenses_reports',
+    })
+
+
+@login_required
+@require_permission('view_expenses_by_date_report')
+def expenses_by_date_report_export(request):
+    import csv
+    from django.http import HttpResponse
+    from datetime import timedelta
+    from .reports import ExpensesReportGenerator
+    tenant = _tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    group_by = request.GET.get('group_by', 'day')
+
+    report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_date_report(group_by=group_by)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="expenses_by_date_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
+    writer.writerow([])
+    writer.writerow(['الفترة', 'عدد المصروفات', 'الإجمالي'])
+    for row in report['data']:
+        writer.writerow([row['label'], row['expense_count'], row['total_amount']])
+    return response

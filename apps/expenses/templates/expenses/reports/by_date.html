@@ -1,0 +1,138 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--expenses">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-calendar-days"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">المصروفات حسب التاريخ</h1>
+                    <p class="rpt-hero-desc"><i class="fas fa-calendar-alt me-1"></i> من {{ start_date }} إلى {{ end_date }}</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'expenses:reports:by_date_report_export' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&group_by={{ group_by }}" class="rpt-hero-btn">
+                    <i class="fas fa-download"></i> تصدير CSV
+                </a>
+                <a href="{% url 'expenses:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">من التاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">إلى التاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">التجميع</label>
+                <select name="group_by" class="form-select">
+                    <option value="day" {% if group_by == 'day' %}selected{% endif %}>يومي</option>
+                    <option value="month" {% if group_by == 'month' %}selected{% endif %}>شهري</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--expenses"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    {% if report.data %}
+    <div class="rpt-panel mb-3">
+        <div class="rpt-panel-header rpt-panel-header--expenses">
+            <h3 class="rpt-panel-title"><i class="fas fa-chart-bar me-2"></i>مخطط المصروفات</h3>
+        </div>
+        <div class="rpt-panel-body" style="height:280px;">
+            <canvas id="expensesDateChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--expenses">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل المصروفات حسب الفترة</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>الفترة</th>
+                            <th class="text-center">عدد المصروفات</th>
+                            <th class="text-end">الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="fw-bold">{{ row.label }}</td>
+                            <td class="text-center text-muted">{{ row.expense_count }}</td>
+                            <td class="text-end fw-bold" style="color:#f59e0b">{{ row.total_amount }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty"><i class="fas fa-file-circle-xmark"></i><p>لا توجد مصروفات للفترة المحددة</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if report.data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const labels = [{% for row in report.data %}"{{ row.label }}",{% endfor %}];
+    const values = [{% for row in report.data %}{{ row.total_amount|default:"0" }},{% endfor %}];
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+    const textColor = isDark ? '#94a3b8' : '#6b7280';
+
+    new Chart(document.getElementById('expensesDateChart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'المصروفات',
+                data: values,
+                backgroundColor: 'rgba(245,158,11,0.7)',
+                borderColor: '#f59e0b',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: gridColor }, ticks: { color: textColor } },
+                y: { grid: { color: gridColor }, ticks: { color: textColor } }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

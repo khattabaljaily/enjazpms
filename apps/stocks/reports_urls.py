@@ -27,4 +27,12 @@ urlpatterns = [
     # Low Stock Alert
     path('low-stock/', views.stocks_low_stock_report, name='low_stock_report'),
     path('low-stock/export/', views.stocks_low_stock_report_export, name='low_stock_report_export'),
+
+    # Inventory Valuation
+    path('valuation/', views.stocks_valuation_report, name='valuation_report'),
+    path('valuation/export/', views.stocks_valuation_report_export, name='valuation_report_export'),
+
+    # Non-Moving Items
+    path('non-moving/', views.stocks_non_moving_report, name='non_moving_report'),
+    path('non-moving/export/', views.stocks_non_moving_report_export, name='non_moving_report_export'),
 ]

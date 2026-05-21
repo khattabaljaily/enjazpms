@@ -498,6 +498,163 @@ class SalesReportGenerator:
             'data': data,
         }
 
+    def get_profit_margin_report(self, item_id=None):
+        """تقرير هامش الربح لكل منتج — الإيراد مقابل التكلفة"""
+        from apps.items.models import Item
+
+        base_lines = SaleInvoiceLine.objects.filter(
+            invoice__tenant=self.tenant,
+            invoice__status='confirmed',
+            invoice__invoice_date__gte=self.start_date,
+            invoice__invoice_date__lte=self.end_date,
+        ).select_related('invoice', 'invoice__customer', 'item')
+
+        if item_id:
+            try:
+                item = Item.objects.get(tenant=self.tenant, id=item_id)
+            except Item.DoesNotExist:
+                return {'period': {'start': self.start_date, 'end': self.end_date}, 'item': None, 'data': [], 'summary': {}}
+
+            lines = base_lines.filter(item=item).order_by('-invoice__invoice_date')
+            data = []
+            total_qty = Decimal('0')
+            total_revenue = Decimal('0')
+            total_cogs = Decimal('0')
+            for line in lines:
+                qty = line.quantity or Decimal('0')
+                price = line.unit_price or Decimal('0')
+                cost = line.item.cost_price or Decimal('0')
+                revenue = qty * price
+                cogs = qty * cost
+                profit = revenue - cogs
+                margin = (profit / revenue * 100) if revenue else Decimal('0')
+                total_qty += qty
+                total_revenue += revenue
+                total_cogs += cogs
+                data.append({
+                    'invoice_number': line.invoice.invoice_number,
+                    'invoice_date': line.invoice.invoice_date,
+                    'customer_name': line.invoice.customer.name if line.invoice.customer else '—',
+                    'quantity': format_number(float(qty), 2),
+                    'unit_price': format_number(float(price), 2),
+                    'unit_cost': format_number(float(cost), 2),
+                    'revenue': format_number(float(revenue), 2),
+                    'cogs': format_number(float(cogs), 2),
+                    'profit': format_number(float(profit), 2),
+                    'margin': format_number(float(margin), 1),
+                    'profit_raw': float(profit),
+                })
+            total_profit = total_revenue - total_cogs
+            total_margin = (total_profit / total_revenue * 100) if total_revenue else Decimal('0')
+            return {
+                'period': {'start': self.start_date, 'end': self.end_date},
+                'item': {'id': item.id, 'name': item.name},
+                'summary': {
+                    'total_quantity': format_number(float(total_qty), 2),
+                    'total_revenue': format_number(float(total_revenue), 2),
+                    'total_cogs': format_number(float(total_cogs), 2),
+                    'total_profit': format_number(float(total_profit), 2),
+                    'avg_margin': format_number(float(total_margin), 1),
+                    'total_profit_raw': float(total_profit),
+                },
+                'data': data,
+            }
+
+        from collections import defaultdict
+        agg = defaultdict(lambda: {
+            'item_name': '', 'unit': '', 'cost_price': Decimal('0'),
+            'total_qty': Decimal('0'), 'total_revenue': Decimal('0'), 'total_cogs': Decimal('0'),
+        })
+        for line in base_lines:
+            iid = line.item_id
+            agg[iid]['item_name'] = line.item.name
+            agg[iid]['unit'] = line.item.unit.name if line.item.unit else ''
+            agg[iid]['cost_price'] = line.item.cost_price or Decimal('0')
+            qty = line.quantity or Decimal('0')
+            price = line.unit_price or Decimal('0')
+            cost = line.item.cost_price or Decimal('0')
+            agg[iid]['total_qty'] += qty
+            agg[iid]['total_revenue'] += qty * price
+            agg[iid]['total_cogs'] += qty * cost
+
+        data = []
+        for iid, v in agg.items():
+            rev = v['total_revenue']
+            cogs = v['total_cogs']
+            profit = rev - cogs
+            margin = (profit / rev * 100) if rev else Decimal('0')
+            data.append({
+                'item_id': iid,
+                'item_name': v['item_name'],
+                'unit': v['unit'],
+                'total_qty': format_number(float(v['total_qty']), 2),
+                'total_revenue': format_number(float(rev), 2),
+                'total_cogs': format_number(float(cogs), 2),
+                'gross_profit': format_number(float(profit), 2),
+                'gross_margin': format_number(float(margin), 1),
+                'gross_profit_raw': float(profit),
+                'gross_margin_raw': float(margin),
+            })
+
+        data.sort(key=lambda x: x['gross_profit_raw'], reverse=True)
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'item': None,
+            'data': data,
+        }
+
+    def get_by_payment_method_report(self):
+        """تقرير المبيعات حسب طريقة الدفع"""
+        from collections import defaultdict
+
+        payments = SalePayment.objects.filter(
+            tenant=self.tenant,
+            payment_date__gte=self.start_date,
+            payment_date__lte=self.end_date,
+            is_reversed=False,
+        ).select_related('invoice')
+
+        method_agg = defaultdict(lambda: {'label': '', 'count': 0, 'total': Decimal('0')})
+        for p in payments:
+            key = p.payment_method
+            method_agg[key]['label'] = p.get_payment_method_display()
+            method_agg[key]['count'] += 1
+            method_agg[key]['total'] += p.amount or Decimal('0')
+
+        rows = []
+        grand_total = Decimal('0')
+        for key, v in sorted(method_agg.items()):
+            grand_total += v['total']
+            rows.append({
+                'method_key': key,
+                'method_label': v['label'],
+                'payment_count': format_number(v['count'], 0),
+                'total_amount': format_number(float(v['total']), 2),
+                'total_raw': float(v['total']),
+            })
+
+        invoices = SaleInvoice.objects.filter(
+            tenant=self.tenant,
+            status='confirmed',
+            invoice_date__gte=self.start_date,
+            invoice_date__lte=self.end_date,
+        )
+        total_invoiced = sum(float(inv.grand_total or 0) for inv in invoices)
+        total_paid = float(grand_total)
+        outstanding = total_invoiced - total_paid
+
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'summary': {
+                'total_invoiced': format_number(total_invoiced, 2),
+                'total_paid': format_number(total_paid, 2),
+                'outstanding': format_number(outstanding, 2),
+                'outstanding_raw': outstanding,
+                'payment_count': format_number(payments.count(), 0),
+            },
+            'data': rows,
+        }
+
 
 class IncomeStatementGenerator:
     """قائمة الدخل (الإيرادات مقابل المصروفات)"""

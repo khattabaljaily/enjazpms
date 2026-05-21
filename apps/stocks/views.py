@@ -884,3 +884,119 @@ def stocks_low_stock_report_export(request):
     for row in report['data']:
         writer.writerow([row['item_name'], row['item_unit'], row['stock_name'], row['quantity'], row['available'], row['min_quantity'], row['shortage']])
     return response
+
+
+# ─────────────────────────────────────────────────────────────────
+#   INVENTORY VALUATION REPORT
+# ─────────────────────────────────────────────────────────────────
+
+@login_required
+@require_permission('view_stocks_valuation_report')
+def stocks_valuation_report(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    report = StocksReportGenerator(tenant).get_valuation_report()
+
+    return render(request, 'stocks/reports/valuation.html', {
+        'report': report,
+        'section': 'stocks_reports',
+    })
+
+
+@login_required
+@require_permission('view_stocks_valuation_report')
+def stocks_valuation_report_export(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    report = StocksReportGenerator(tenant).get_valuation_report()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="inventory_valuation.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['المنتج', 'الوحدة', 'الفئة', 'الكمية', 'سعر التكلفة', 'القيمة الإجمالية'])
+    for cat in report['categories']:
+        for row in cat['items']:
+            writer.writerow([row['item_name'], row['item_unit'], row['category_name'], row['total_qty'], row['cost_price'], row['total_value']])
+        writer.writerow(['', '', f'إجمالي {cat["name"]}', '', '', cat['subtotal']])
+        writer.writerow([])
+    writer.writerow(['', '', 'الإجمالي الكلي', '', '', report['summary']['grand_total']])
+    return response
+
+
+# ─────────────────────────────────────────────────────────────────
+#   NON-MOVING ITEMS REPORT
+# ─────────────────────────────────────────────────────────────────
+
+@login_required
+@require_permission('view_stocks_non_moving_report')
+def stocks_non_moving_report(request):
+    from datetime import date as date_type
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    if start_date:
+        try:
+            from datetime import datetime
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        except ValueError:
+            start_date = None
+    if end_date:
+        try:
+            from datetime import datetime
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            end_date = None
+
+    start_date = start_date or (timezone.now().date() - timedelta(days=30))
+    end_date = end_date or timezone.now().date()
+
+    report = StocksReportGenerator(tenant, start_date, end_date).get_non_moving_report()
+
+    return render(request, 'stocks/reports/non_moving.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'section': 'stocks_reports',
+    })
+
+
+@login_required
+@require_permission('view_stocks_non_moving_report')
+def stocks_non_moving_report_export(request):
+    from datetime import datetime
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else None
+    except ValueError:
+        start_date = end_date = None
+
+    start_date = start_date or (timezone.now().date() - timedelta(days=30))
+    end_date = end_date or timezone.now().date()
+
+    report = StocksReportGenerator(tenant, start_date, end_date).get_non_moving_report()
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="non_moving_items.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow([f'الفترة المرجعية: {start_date} إلى {end_date}'])
+    writer.writerow([])
+    writer.writerow(['المنتج', 'الوحدة', 'الفئة', 'الكمية', 'سعر التكلفة', 'القيمة', 'آخر حركة', 'أيام الركود'])
+    for row in report['data']:
+        writer.writerow([row['item_name'], row['item_unit'], row['category_name'],
+                         row['total_qty'], row['cost_price'], row['total_value'],
+                         row['last_movement_date'] or '—', row['days_idle'] or '—'])
+    return response

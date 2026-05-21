@@ -293,3 +293,149 @@ class StocksReportGenerator:
             },
             'data': data,
         }
+
+    def get_valuation_report(self):
+        """تقرير تقييم المخزون — قيمة كل صنف بسعر التكلفة، مجمّعة حسب الفئة"""
+        from apps.items.models import Category
+
+        quantities = StockQuantity.objects.filter(
+            tenant=self.tenant,
+            quantity__gt=0,
+        ).select_related('item', 'item__unit', 'item__category', 'stock')
+
+        category_data = {}
+        grand_total_qty = Decimal('0')
+        grand_total_value = Decimal('0')
+        item_agg = {}
+
+        for sq in quantities:
+            iid = sq.item_id
+            if iid not in item_agg:
+                item_agg[iid] = {
+                    'item_name': sq.item.name,
+                    'item_unit': sq.item.unit.name if sq.item.unit else '',
+                    'category_name': sq.item.category.name if sq.item.category else 'غير مصنف',
+                    'category_id': sq.item.category_id,
+                    'cost_price': float(sq.item.cost_price or 0),
+                    'total_qty': Decimal('0'),
+                }
+            item_agg[iid]['total_qty'] += sq.quantity or Decimal('0')
+
+        rows = []
+        for iid, v in item_agg.items():
+            value = float(v['total_qty']) * v['cost_price']
+            grand_total_qty += v['total_qty']
+            grand_total_value += Decimal(str(value))
+            rows.append({
+                'item_name': v['item_name'],
+                'item_unit': v['item_unit'],
+                'category_name': v['category_name'],
+                'category_id': v['category_id'],
+                'cost_price': format_number(v['cost_price'], 2),
+                'total_qty': format_number(float(v['total_qty']), 2),
+                'total_value': format_number(value, 2),
+                'total_value_raw': value,
+            })
+
+        rows.sort(key=lambda x: (x['category_name'], -x['total_value_raw']))
+
+        by_category = {}
+        for row in rows:
+            cat = row['category_name']
+            if cat not in by_category:
+                by_category[cat] = {'items': [], 'subtotal': 0.0}
+            by_category[cat]['items'].append(row)
+            by_category[cat]['subtotal'] += row['total_value_raw']
+
+        category_list = [
+            {
+                'name': cat,
+                'items': v['items'],
+                'subtotal': format_number(v['subtotal'], 2),
+                'subtotal_raw': v['subtotal'],
+            }
+            for cat, v in sorted(by_category.items(), key=lambda x: -x[1]['subtotal'])
+        ]
+
+        return {
+            'summary': {
+                'item_count': format_number(len(item_agg), 0),
+                'total_qty': format_number(float(grand_total_qty), 2),
+                'grand_total': format_number(float(grand_total_value), 2),
+                'category_count': format_number(len(by_category), 0),
+            },
+            'categories': category_list,
+            'all_rows': rows,
+        }
+
+    def get_non_moving_report(self):
+        """تقرير الأصناف الراكدة — لها مخزون لكن لا حركة خروج في الفترة"""
+        from django.db.models import Max
+
+        quantities = StockQuantity.objects.filter(
+            tenant=self.tenant,
+            quantity__gt=0,
+        ).select_related('item', 'item__unit', 'item__category', 'stock')
+
+        moving_item_ids = set(
+            StockMovement.objects.filter(
+                tenant=self.tenant,
+                direction='out',
+                movement_date__gte=self.start_date,
+                movement_date__lte=self.end_date,
+            ).values_list('item_id', flat=True)
+        )
+
+        item_agg = {}
+        for sq in quantities:
+            if sq.item_id in moving_item_ids:
+                continue
+            iid = sq.item_id
+            if iid not in item_agg:
+                item_agg[iid] = {
+                    'item_name': sq.item.name,
+                    'item_unit': sq.item.unit.name if sq.item.unit else '',
+                    'category_name': sq.item.category.name if sq.item.category else 'غير مصنف',
+                    'cost_price': float(sq.item.cost_price or 0),
+                    'total_qty': Decimal('0'),
+                }
+            item_agg[iid]['total_qty'] += sq.quantity or Decimal('0')
+
+        last_movement_qs = (
+            StockMovement.objects.filter(tenant=self.tenant)
+            .values('item_id')
+            .annotate(last_date=Max('movement_date'))
+        )
+        last_movement = {m['item_id']: m['last_date'] for m in last_movement_qs}
+
+        today = tz.now().date()
+        data = []
+        total_value = 0.0
+        for iid, v in item_agg.items():
+            qty = float(v['total_qty'])
+            value = qty * v['cost_price']
+            total_value += value
+            last_date = last_movement.get(iid)
+            days_idle = (today - last_date).days if last_date else None
+            data.append({
+                'item_name': v['item_name'],
+                'item_unit': v['item_unit'],
+                'category_name': v['category_name'],
+                'total_qty': format_number(qty, 2),
+                'cost_price': format_number(v['cost_price'], 2),
+                'total_value': format_number(value, 2),
+                'total_value_raw': value,
+                'last_movement_date': last_date,
+                'days_idle': days_idle,
+            })
+
+        data.sort(key=lambda x: -(x['days_idle'] or 99999))
+
+        return {
+            'period': {'start': self.start_date, 'end': self.end_date},
+            'summary': {
+                'non_moving_count': format_number(len(data), 0),
+                'total_value': format_number(total_value, 2),
+            },
+            'data': data,
+        }
