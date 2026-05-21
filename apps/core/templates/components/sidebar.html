@@ -43,27 +43,27 @@
     </ul>
     {% else %}
 
-    <!-- ── Main ── -->
-    <div class="sidebar-separator"></div>
+    <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item">
             <a class="nav-link" href="{% url 'core:dashboard' %}">
-                <span class="nav-icon"><i class="fas fa-gauge"></i></span>
+                <span class="nav-icon nav-icon--dash"><i class="fas fa-gauge"></i></span>
                 لوحة التحكم
             </a>
         </li>
     </ul>
 
     <!-- ── Transactions ── -->
-    <div class="sidebar-separator"></div>
+    <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
-                <span class="nav-icon"><i class="fas fa-receipt"></i></span>
+                <span class="nav-icon nav-icon--sales"><i class="fas fa-receipt"></i></span>
                 المبيعات
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
+                <li><a href="{% url 'sales:pos' %}" class="nav-sublink"><i class="fas fa-cash-register me-2"></i>نقطة البيع (POS)</a></li>
                 <li><a href="{% url 'sales:quote_list' %}" class="nav-sublink"><i class="fas fa-file-contract me-2"></i>عروض الأسعار</a></li>
                 <li><a href="{% url 'sales:invoice_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>فاتورة مبيعات</a></li>
                 <li><a href="{% url 'sales:invoice_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الفواتير</a></li>
@@ -72,24 +72,25 @@
         </li>
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
-                <span class="nav-icon"><i class="fas fa-cart-arrow-down"></i></span>
+                <span class="nav-icon nav-icon--buy"><i class="fas fa-cart-arrow-down"></i></span>
                 المشتريات
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
-                <li><a href="{% url 'purchases:order_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>أمر شراء</a></li>
-                <li><a href="{% url 'purchases:order_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الطلبات</a></li>
+                <li><a href="{% url 'purchases:rfq_list' %}" class="nav-sublink"><i class="fas fa-file-invoice me-2"></i>طلبات عروض الأسعار</a></li>
+                <li><a href="{% url 'purchases:order_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>أمر شراء جديد</a></li>
+                <li><a href="{% url 'purchases:order_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة أوامر الشراء</a></li>
                 <li><a href="{% url 'purchases:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
             </ul>
         </li>
     </ul>
 
     <!-- ── Inventory ── -->
-    <div class="sidebar-separator"></div>
+    <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
-                <span class="nav-icon"><i class="fas fa-box-open"></i></span>
+                <span class="nav-icon nav-icon--stock"><i class="fas fa-box-open"></i></span>
                 المنتجات
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
@@ -105,11 +106,18 @@
                 {% endif %}
             </ul>
         </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'stocks:list' %}">
-                <span class="nav-icon"><i class="fas fa-warehouse"></i></span>
+        <li class="nav-item has-submenu">
+            <a class="nav-link nav-link-toggle" href="#">
+                <span class="nav-icon nav-icon--stock"><i class="fas fa-warehouse"></i></span>
                 المخازن
+                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
+            <ul class="nav-submenu">
+                <li><a href="{% url 'stocks:list' %}" class="nav-sublink"><i class="fas fa-warehouse me-2"></i>قائمة المخازن</a></li>
+                <li><a href="{% url 'stocks:quantities_list' %}" class="nav-sublink"><i class="fas fa-cubes me-2"></i>أرصدة المخزون</a></li>
+                <li><a href="{% url 'stocks:transfer_list' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>تحويلات المخزون</a></li>
+                <li><a href="{% url 'stocks:stocktake_list' %}" class="nav-sublink"><i class="fas fa-clipboard-list me-2"></i>جرد المخزون</a></li>
+            </ul>
         </li>
         {% if tenant_capabilities|has_capability:"has_work_orders" %}
         <li class="nav-item">
@@ -123,28 +131,46 @@
     </ul>
 
     <!-- ── Contacts ── -->
-    <div class="sidebar-separator"></div>
+    <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item">
             <a class="nav-link" href="{% url 'customers:list' %}">
-                <span class="nav-icon"><i class="fas fa-users"></i></span>
+                <span class="nav-icon nav-icon--sales"><i class="fas fa-users"></i></span>
                 العملاء
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link" href="{% url 'suppliers:list' %}">
-                <span class="nav-icon"><i class="fas fa-truck"></i></span>
+                <span class="nav-icon nav-icon--buy"><i class="fas fa-truck"></i></span>
                 الموردين
             </a>
         </li>
     </ul>
 
-    <!-- ── Reports ── -->
-    <div class="sidebar-separator"></div>
+    <!-- ── Accounting ── -->
+    <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
-                <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+                <span class="nav-icon nav-icon--acct"><i class="fas fa-calculator"></i></span>
+                الحسابات والمالية
+                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+            </a>
+            <ul class="nav-submenu">
+                <li><a href="{% url 'customers:payments' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>مدفوعات العملاء</a></li>
+                <li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين</a></li>
+                <li><a href="{% url 'expenses:list' %}" class="nav-sublink"><i class="fas fa-receipt me-2"></i>المصروفات</a></li>
+                <li><a href="{% url 'treasury:list' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>الخزائن</a></li>
+            </ul>
+        </li>
+    </ul>
+
+    <!-- ── Reports ── -->
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item has-submenu">
+            <a class="nav-link nav-link-toggle" href="#">
+                <span class="nav-icon nav-icon--report"><i class="fas fa-chart-bar"></i></span>
                 التقارير
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
@@ -161,6 +187,8 @@
                         <li><a href="{% url 'reports:by_customer_report' %}" class="nav-sublink"><i class="fas fa-users me-2"></i>حسب العميل</a></li>
                         <li><a href="{% url 'reports:by_item_report' %}" class="nav-sublink"><i class="fas fa-box me-2"></i>حسب المنتج</a></li>
                         <li><a href="{% url 'reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>حسب التاريخ</a></li>
+                        <li><a href="{% url 'reports:profit_margin_report' %}" class="nav-sublink"><i class="fas fa-percent me-2"></i>هامش الربح</a></li>
+                        <li><a href="{% url 'reports:by_payment_method_report' %}" class="nav-sublink"><i class="fas fa-credit-card me-2"></i>حسب طريقة الدفع</a></li>
                     </ul>
                 </li>
 
@@ -175,6 +203,7 @@
                         <li><a href="{% url 'purchases:reports:by_supplier_report' %}" class="nav-sublink"><i class="fas fa-truck me-2"></i>حسب المورد</a></li>
                         <li><a href="{% url 'purchases:reports:by_item_report' %}" class="nav-sublink"><i class="fas fa-box me-2"></i>حسب المنتج</a></li>
                         <li><a href="{% url 'purchases:reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>حسب التاريخ</a></li>
+                        <li><a href="{% url 'purchases:reports:price_history_report' %}" class="nav-sublink"><i class="fas fa-chart-line me-2"></i>تاريخ الأسعار</a></li>
                     </ul>
                 </li>
 
@@ -191,6 +220,8 @@
                         <li><a href="{% url 'stocks:reports:by_stock_report' %}" class="nav-sublink"><i class="fas fa-location-dot me-2"></i>حسب الموقع</a></li>
                         <li><a href="{% url 'stocks:reports:item_movement_report' %}" class="nav-sublink"><i class="fas fa-arrows-up-down me-2"></i>حركة الأصناف</a></li>
                         <li><a href="{% url 'stocks:reports:low_stock_report' %}" class="nav-sublink"><i class="fas fa-triangle-exclamation me-2"></i>مخزون منخفض</a></li>
+                        <li><a href="{% url 'stocks:reports:valuation_report' %}" class="nav-sublink"><i class="fas fa-coins me-2"></i>تقييم المخزون</a></li>
+                        <li><a href="{% url 'stocks:reports:non_moving_report' %}" class="nav-sublink"><i class="fas fa-hourglass me-2"></i>الأصناف الراكدة</a></li>
                     </ul>
                 </li>
 
@@ -214,6 +245,8 @@
                         <li class="nav-submenu-label">المصروفات</li>
                         <li><a href="{% url 'expenses:reports:summary_report' %}" class="nav-sublink"><i class="fas fa-chart-pie me-2"></i>ملخص المصروفات</a></li>
                         <li><a href="{% url 'expenses:reports:details_report' %}" class="nav-sublink"><i class="fas fa-list-check me-2"></i>تفاصيل المصروفات</a></li>
+                        <li><a href="{% url 'expenses:reports:by_category_report' %}" class="nav-sublink"><i class="fas fa-tags me-2"></i>حسب الفئة</a></li>
+                        <li><a href="{% url 'expenses:reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>حسب التاريخ</a></li>
                         <li class="nav-submenu-label">الخزائن</li>
                         <li><a href="{% url 'treasury:reports:balances_report' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>أرصدة الخزائن</a></li>
                         <li><a href="{% url 'treasury:reports:statement_report' %}" class="nav-sublink"><i class="fas fa-cash-register me-2"></i>كشف الصندوق</a></li>
@@ -228,7 +261,7 @@
     </ul>
 
     {% if user.is_tenant_admin %}
-    <div class="sidebar-separator"></div>
+    <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
@@ -256,39 +289,12 @@
     </ul>
     {% endif %}
 
-    <!-- ── Accounting ── -->
-    <div class="sidebar-separator"></div>
-    <ul class="nav flex-column">
-        <li class="nav-item has-submenu">
-            <a class="nav-link nav-link-toggle" href="#">
-                <span class="nav-icon"><i class="fas fa-calculator"></i></span>
-                الحسابات
-                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
-            </a>
-            <ul class="nav-submenu">
-                <li><a href="{% url 'customers:payments' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>مدفوعات العملاء</a></li>
-                <li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين</a></li>
-                <li><a href="{% url 'expenses:list' %}" class="nav-sublink"><i class="fas fa-receipt me-2"></i>المصروفات</a></li>
-                <li><a href="{% url 'treasury:list' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>الخزائن</a></li>
-            </ul>
-        </li>
-    </ul>
-
-    <!-- ── Communication ── -->
-    <div class="sidebar-separator"></div>
-    <ul class="nav flex-column">
+    <!-- ── Notifications ── -->
+    <ul class="nav flex-column mt-1">
         <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="#">
-                <span class="nav-icon"><i class="fas fa-envelope"></i></span>
-                البريد الإلكتروني
-                <small class="nav-coming-soon">قريباً</small>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link sidebar-link-muted" href="#">
-                <span class="nav-icon"><i class="fas fa-headset"></i></span>
-                الدعم الفني
-                <small class="nav-coming-soon">قريباً</small>
+            <a class="nav-link" href="{% url 'notifications:list' %}">
+                <span class="nav-icon nav-icon--notif"><i class="fas fa-bell"></i></span>
+                الإشعارات
             </a>
         </li>
     </ul>

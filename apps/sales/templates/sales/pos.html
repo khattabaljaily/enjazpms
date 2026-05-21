@@ -1,0 +1,524 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نقطة البيع — EnjazIMS</title>
+    <!-- Bootstrap RTL (same as base.html) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Core design system (Cairo font + CSS vars) -->
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=8.1">
+    <link rel="stylesheet" href="{% static 'css/pos.css' %}?v=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script>
+        // Apply saved theme before render to avoid flash
+        (function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();
+    </script>
+</head>
+<body>
+
+<div class="pos-root" id="posRoot">
+
+    <!-- ══ LEFT: PRODUCTS ═══════════════════════════════════════ -->
+    <div class="pos-products">
+
+        <!-- Top bar -->
+        <div class="pos-topbar">
+            <span class="pos-topbar-title"><i class="fas fa-cash-register me-1"></i> POS</span>
+
+            <div class="pos-search">
+                <i class="fas fa-search pos-search-icon"></i>
+                <input type="text" id="posSearch" placeholder="بحث بالاسم، الباركود، SKU…" autocomplete="off">
+            </div>
+
+            <select id="posStock" class="pos-stock-select">
+                {% for s in stocks %}
+                <option value="{{ s.id }}" {% if s == default_stock %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+
+            <a href="{% url 'sales:invoice_list' %}" class="pos-home-btn">
+                <i class="fas fa-arrow-right"></i> خروج
+            </a>
+        </div>
+
+        <!-- Category tabs -->
+        <div class="pos-cats" id="posCats">
+            <button class="pos-cat-btn active" data-cat="">الكل</button>
+            {% for cat in categories %}
+            <button class="pos-cat-btn" data-cat="{{ cat.id }}">{{ cat.name }}</button>
+            {% endfor %}
+        </div>
+
+        <!-- Product grid -->
+        <div class="pos-grid-wrap">
+            <div class="pos-grid" id="posGrid">
+                <div class="pos-loading">
+                    <div class="pos-spinner"></div> جار التحميل…
+                </div>
+            </div>
+        </div>
+
+    </div><!-- end pos-products -->
+
+    <!-- ══ RIGHT: CART ═══════════════════════════════════════════ -->
+    <div class="pos-cart">
+
+        <!-- Cart header -->
+        <div class="pos-cart-head">
+            <div class="pos-cart-head-row">
+                <span class="pos-cart-title"><i class="fas fa-shopping-cart me-1"></i> السلة</span>
+                <button class="pos-cart-clear" id="clearCartBtn" title="مسح السلة">
+                    <i class="fas fa-trash-alt me-1"></i>مسح
+                </button>
+            </div>
+            <div class="pos-customer-row">
+                <select id="posCustomer" class="pos-stock-select" style="width:100%">
+                    <option value="">زبون عابر</option>
+                    {% for c in customers %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Cart items -->
+        <div class="pos-cart-items" id="cartItems">
+            <div class="pos-cart-empty" id="cartEmpty">
+                <i class="fas fa-shopping-basket"></i>
+                <span>السلة فارغة</span>
+            </div>
+        </div>
+
+        <!-- Totals -->
+        <div class="pos-totals">
+            <div class="pos-total-row">
+                <span>المجموع</span>
+                <span class="pos-total-val" id="totSubtotal">0.00</span>
+            </div>
+
+            <!-- Discount row -->
+            <div class="pos-discount-row">
+                <select id="discountType" class="pos-discount-type">
+                    <option value="fixed">خصم ثابت</option>
+                    <option value="percent">خصم %</option>
+                </select>
+                <input type="number" id="discountValue" class="pos-discount-input" placeholder="0" min="0" step="1">
+            </div>
+
+            <div class="pos-total-row" id="discountRow" style="display:none;">
+                <span>الخصم</span>
+                <span class="pos-total-val" id="totDiscount" style="color:var(--danger)">-0.00</span>
+            </div>
+            <div class="pos-total-row">
+                <span>الضريبة</span>
+                <span class="pos-total-val" id="totTax">0.00</span>
+            </div>
+            <div class="pos-total-row grand">
+                <span>الإجمالي</span>
+                <span class="pos-total-val" id="totGrand">0.00</span>
+            </div>
+        </div>
+
+        <!-- Payment -->
+        <div class="pos-payment">
+            <div class="pos-pay-methods">
+                <button class="pos-pay-btn active" data-method="cash">
+                    <i class="fas fa-money-bill-wave"></i>نقدي
+                </button>
+                <button class="pos-pay-btn" data-method="bank">
+                    <i class="fas fa-building-columns"></i>بنك
+                </button>
+                <button class="pos-pay-btn" data-method="split">
+                    <i class="fas fa-code-branch"></i>مختلط
+                </button>
+                <button class="pos-pay-btn" data-method="credit">
+                    <i class="fas fa-clock"></i>آجل
+                </button>
+            </div>
+
+            <!-- Split fields -->
+            <div class="pos-split-fields" id="splitFields">
+                <input type="number" id="splitCash" class="pos-split-input" placeholder="نقدي" min="0" step="1">
+                <input type="number" id="splitBank" class="pos-split-input" placeholder="بنك" min="0" step="1">
+            </div>
+
+            <!-- Bank reference -->
+            <input type="text" id="bankRef" class="pos-bank-ref" placeholder="رقم المرجع / التحويل (اختياري)">
+
+            <button class="pos-checkout-btn" id="checkoutBtn" disabled>
+                <i class="fas fa-check-circle"></i>
+                <span>إتمام البيع</span>
+                <span id="checkoutTotal" style="font-size:.85rem;opacity:.85;margin-right:.25rem;direction:ltr;"></span>
+            </button>
+        </div>
+
+    </div><!-- end pos-cart -->
+
+</div><!-- end pos-root -->
+
+<!-- ══ SUCCESS OVERLAY ═══════════════════════════════════════════ -->
+<div class="pos-success-overlay" id="successOverlay">
+    <div class="pos-success-box">
+        <div class="pos-success-icon"><i class="fas fa-check"></i></div>
+        <div class="pos-success-title">تم البيع بنجاح!</div>
+        <div class="pos-success-num" id="successNum"></div>
+        <div class="pos-success-total" id="successTotal"></div>
+        <div class="pos-success-btns">
+            <button class="pos-success-btn" id="successPrint">
+                <i class="fas fa-print me-1"></i>طباعة
+            </button>
+            <button class="pos-success-btn primary" id="successNew">
+                <i class="fas fa-plus me-1"></i>بيعة جديدة
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+'use strict';
+
+const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+const ITEMS_URL  = '{% url "sales:pos_items_api" %}';
+const CHECKOUT_URL = '{% url "sales:pos_checkout_api" %}';
+const INV_BASE   = '{% url "sales:invoice_list" %}';  // fallback
+
+/* ── State ───────────────────────────────────────────────── */
+let cart = [];       // [{item, qty, unit_price, discount_percent, tax_rate}]
+let allItems = [];   // full items list from API
+let lastInvoiceId = null;
+
+/* ── DOM refs ────────────────────────────────────────────── */
+const $grid      = document.getElementById('posGrid');
+const $cartItems = document.getElementById('cartItems');
+const $cartEmpty = document.getElementById('cartEmpty');
+const $search    = document.getElementById('posSearch');
+const $stock     = document.getElementById('posStock');
+const $customer  = document.getElementById('posCustomer');
+const $discType  = document.getElementById('discountType');
+const $discVal   = document.getElementById('discountValue');
+const $bankRef   = document.getElementById('bankRef');
+const $splitCash = document.getElementById('splitCash');
+const $splitBank = document.getElementById('splitBank');
+const $splitFields = document.getElementById('splitFields');
+const $checkoutBtn = document.getElementById('checkoutBtn');
+
+let currentMethod = 'cash';
+
+/* ── Fetch items ─────────────────────────────────────────── */
+function loadItems(categoryId = '', query = '') {
+    $grid.innerHTML = '<div class="pos-loading"><div class="pos-spinner"></div> جار التحميل…</div>';
+    const params = new URLSearchParams({
+        stock_id: $stock.value,
+        q: query,
+    });
+    if (categoryId) params.set('category_id', categoryId);
+
+    fetch(ITEMS_URL + '?' + params)
+        .then(r => r.json())
+        .then(data => {
+            allItems = data.items || [];
+            renderGrid(allItems);
+        })
+        .catch(() => {
+            $grid.innerHTML = '<div class="pos-empty"><i class="fas fa-exclamation-circle"></i><p>تعذّر تحميل المنتجات</p></div>';
+        });
+}
+
+function renderGrid(items) {
+    if (!items.length) {
+        $grid.innerHTML = '<div class="pos-empty"><i class="fas fa-box-open"></i><p>لا توجد منتجات</p></div>';
+        return;
+    }
+    $grid.innerHTML = items.map(item => {
+        const oos = !item.is_service && item.available_qty !== null && item.available_qty <= 0;
+        const img = item.image_url
+            ? `<img class="pos-item-img" src="${item.image_url}" alt="">`
+            : `<div class="pos-item-icon"><i class="fas fa-box"></i></div>`;
+        const qtyBadge = item.is_service ? '' :
+            item.available_qty !== null
+                ? `<div class="pos-item-qty">${item.available_qty > 0 ? 'متاح: ' + item.available_qty : 'نفد'}</div>`
+                : '';
+        return `
+        <div class="pos-item-card${oos ? ' out-of-stock' : ''}"
+             data-id="${item.id}"
+             data-price="${item.selling_price}"
+             data-tax="${item.tax_rate}"
+             data-cost="${item.cost_price}"
+             data-name="${escHtml(item.name)}">
+            ${img}
+            <div class="pos-item-name">${escHtml(item.name)}</div>
+            <div class="pos-item-price">${formatMoney(item.selling_price)}</div>
+            ${qtyBadge}
+            ${oos ? '<div class="pos-item-oos">نفد المخزون</div>' : ''}
+        </div>`;
+    }).join('');
+
+    $grid.querySelectorAll('.pos-item-card:not(.out-of-stock)').forEach(card => {
+        card.addEventListener('click', () => addToCart(card));
+    });
+}
+
+/* ── Cart operations ─────────────────────────────────────── */
+function addToCart(card) {
+    const id      = parseInt(card.dataset.id);
+    const price   = parseFloat(card.dataset.price) || 0;
+    const tax     = parseFloat(card.dataset.tax)   || 0;
+    const cost    = parseFloat(card.dataset.cost)  || 0;
+    const name    = card.dataset.name;
+
+    const existing = cart.find(c => c.item_id === id);
+    if (existing) {
+        existing.qty += 1;
+    } else {
+        cart.push({ item_id: id, name, qty: 1, unit_price: price, discount_percent: 0, tax_rate: tax, cost_price: cost });
+    }
+    renderCart();
+}
+
+function removeFromCart(idx) {
+    cart.splice(idx, 1);
+    renderCart();
+}
+
+function updateQty(idx, delta) {
+    cart[idx].qty = Math.max(0.001, cart[idx].qty + delta);
+    if (cart[idx].qty <= 0) { cart.splice(idx, 1); }
+    renderCart();
+}
+
+function setQty(idx, val) {
+    const q = parseFloat(val);
+    if (!isNaN(q) && q > 0) { cart[idx].qty = q; renderCart(); }
+}
+
+function clearCart() {
+    cart = [];
+    renderCart();
+}
+
+/* ── Render cart ─────────────────────────────────────────── */
+function renderCart() {
+    if (!cart.length) {
+        $cartItems.innerHTML = '';
+        $cartItems.appendChild($cartEmpty);
+        $cartEmpty.style.display = 'flex';
+        updateTotals();
+        return;
+    }
+    $cartEmpty.style.display = 'none';
+
+    $cartItems.innerHTML = cart.map((line, i) => {
+        const lineTotal = (line.qty * line.unit_price * (1 - line.discount_percent / 100)).toFixed(2);
+        return `
+        <div class="pos-cart-item">
+            <div style="flex:1;min-width:0;">
+                <div class="pos-ci-name">${escHtml(line.name)}</div>
+                <div class="pos-ci-price">${formatMoney(line.unit_price)} × ${line.qty}</div>
+            </div>
+            <div class="pos-ci-controls">
+                <button class="pos-ci-qty-btn" data-action="dec" data-idx="${i}">−</button>
+                <input class="pos-ci-qty" type="number" value="${line.qty}" min="0.001" step="1" data-idx="${i}">
+                <button class="pos-ci-qty-btn" data-action="inc" data-idx="${i}">+</button>
+            </div>
+            <div class="pos-ci-total">${formatMoney(lineTotal)}</div>
+            <button class="pos-ci-remove" data-idx="${i}"><i class="fas fa-times"></i></button>
+        </div>`;
+    }).join('');
+
+    $cartItems.querySelectorAll('[data-action="inc"]').forEach(b =>
+        b.addEventListener('click', () => { updateQty(parseInt(b.dataset.idx), 1); }));
+    $cartItems.querySelectorAll('[data-action="dec"]').forEach(b =>
+        b.addEventListener('click', () => { updateQty(parseInt(b.dataset.idx), -1); }));
+    $cartItems.querySelectorAll('.pos-ci-qty').forEach(inp =>
+        inp.addEventListener('change', () => setQty(parseInt(inp.dataset.idx), inp.value)));
+    $cartItems.querySelectorAll('.pos-ci-remove').forEach(b =>
+        b.addEventListener('click', () => removeFromCart(parseInt(b.dataset.idx))));
+
+    updateTotals();
+}
+
+/* ── Totals ──────────────────────────────────────────────── */
+function calcTotals() {
+    let subtotal = 0, tax = 0;
+    cart.forEach(line => {
+        const base = line.qty * line.unit_price * (1 - line.discount_percent / 100);
+        subtotal += base;
+        tax += base * (line.tax_rate / 100);
+    });
+
+    const discType = $discType.value;
+    const discVal  = parseFloat($discVal.value) || 0;
+    let discount = 0;
+    if (discVal > 0) {
+        discount = discType === 'percent'
+            ? subtotal * discVal / 100
+            : Math.min(discVal, subtotal);
+    }
+    const grand = Math.max(0, subtotal - discount + tax);
+    return { subtotal, discount, tax, grand };
+}
+
+function updateTotals() {
+    const t = calcTotals();
+    document.getElementById('totSubtotal').textContent = formatMoney(t.subtotal);
+    document.getElementById('totTax').textContent = formatMoney(t.tax);
+    document.getElementById('totGrand').textContent = formatMoney(t.grand);
+    document.getElementById('totDiscount').textContent = '-' + formatMoney(t.discount);
+    document.getElementById('discountRow').style.display = t.discount > 0 ? 'flex' : 'none';
+    document.getElementById('checkoutTotal').textContent = formatMoney(t.grand);
+    $checkoutBtn.disabled = cart.length === 0;
+}
+
+/* ── Payment method toggle ───────────────────────────────── */
+document.querySelectorAll('.pos-pay-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.pos-pay-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMethod = btn.dataset.method;
+        $splitFields.classList.toggle('visible', currentMethod === 'split');
+        const needRef = currentMethod === 'bank' || currentMethod === 'split';
+        $bankRef.classList.toggle('visible', needRef);
+    });
+});
+
+/* ── Checkout ────────────────────────────────────────────── */
+$checkoutBtn.addEventListener('click', async () => {
+    if (!cart.length) return;
+
+    const t = calcTotals();
+    let cashAmt = 0, bankAmt = 0;
+    if (currentMethod === 'cash')   { cashAmt = t.grand; }
+    else if (currentMethod === 'bank') { bankAmt = t.grand; }
+    else if (currentMethod === 'split') {
+        cashAmt = parseFloat($splitCash.value) || 0;
+        bankAmt = parseFloat($splitBank.value) || 0;
+        if (cashAmt + bankAmt < t.grand - 0.01) {
+            alert('مجموع نقدي + بنك أقل من الإجمالي');
+            return;
+        }
+    }
+
+    const payload = {
+        stock_id: $stock.value,
+        customer_id: $customer.value || null,
+        payment_method: currentMethod,
+        cash_amount: cashAmt,
+        bank_amount: bankAmt,
+        bank_reference: $bankRef.value,
+        discount_type: $discType.value,
+        discount_value: parseFloat($discVal.value) || 0,
+        lines: cart.map(c => ({
+            item_id: c.item_id,
+            quantity: c.qty,
+            unit_price: c.unit_price,
+            discount_percent: c.discount_percent,
+            tax_rate: c.tax_rate,
+            cost_price: c.cost_price,
+        })),
+    };
+
+    $checkoutBtn.disabled = true;
+    $checkoutBtn.innerHTML = '<div class="pos-spinner"></div> جار التأكيد…';
+
+    try {
+        const resp = await fetch(CHECKOUT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            lastInvoiceId = data.invoice_id;
+            document.getElementById('successNum').textContent  = 'فاتورة رقم: ' + data.invoice_number;
+            document.getElementById('successTotal').textContent = formatMoney(data.grand_total);
+            document.getElementById('successOverlay').classList.add('show');
+        } else {
+            alert('خطأ: ' + data.message);
+        }
+    } catch(e) {
+        alert('تعذّر الاتصال بالخادم');
+    } finally {
+        $checkoutBtn.disabled = false;
+        $checkoutBtn.innerHTML = '<i class="fas fa-check-circle"></i><span>إتمام البيع</span><span id="checkoutTotal" style="font-size:.85rem;opacity:.85;margin-right:.25rem;direction:ltr;"></span>';
+        updateTotals();
+    }
+});
+
+/* ── Success modal actions ───────────────────────────────── */
+document.getElementById('successPrint').addEventListener('click', () => {
+    if (lastInvoiceId) {
+        window.open('/sales/' + lastInvoiceId + '/', '_blank');
+    }
+});
+
+document.getElementById('successNew').addEventListener('click', () => {
+    document.getElementById('successOverlay').classList.remove('show');
+    clearCart();
+    $discVal.value = '';
+    $customer.value = '';
+    loadItems(activeCat);
+});
+
+/* ── Category tabs ───────────────────────────────────────── */
+let activeCat = '';
+document.getElementById('posCats').addEventListener('click', e => {
+    const btn = e.target.closest('.pos-cat-btn');
+    if (!btn) return;
+    document.querySelectorAll('.pos-cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeCat = btn.dataset.cat;
+    loadItems(activeCat, $search.value);
+});
+
+/* ── Search ──────────────────────────────────────────────── */
+let searchTimer;
+$search.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadItems(activeCat, $search.value), 280);
+});
+
+/* ── Barcode scan (Enter key in search) ─────────────────── */
+$search.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        clearTimeout(searchTimer);
+        loadItems(activeCat, $search.value);
+    }
+});
+
+/* ── Stock change ────────────────────────────────────────── */
+$stock.addEventListener('change', () => loadItems(activeCat, $search.value));
+
+/* ── Discount ────────────────────────────────────────────── */
+$discVal.addEventListener('input', updateTotals);
+$discType.addEventListener('change', updateTotals);
+
+/* ── Clear cart ──────────────────────────────────────────── */
+document.getElementById('clearCartBtn').addEventListener('click', () => {
+    if (cart.length && confirm('هل تريد مسح السلة؟')) clearCart();
+});
+
+/* ── Helpers ─────────────────────────────────────────────── */
+function formatMoney(v) {
+    const n = parseFloat(v) || 0;
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ── Init ────────────────────────────────────────────────── */
+loadItems();
+renderCart();
+
+})();
+</script>
+
+</body>
+</html>

@@ -18,8 +18,9 @@ from django.utils import timezone
 from apps.sales.models import StockMovement
 
 from .forms import StockForm
-from .models import Stock, StockQuantity
+from .models import Stock, StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine
 from .reports import StocksReportGenerator
+from .services import confirm_stock_transfer, cancel_stock_transfer, confirm_stocktake
 
 
 def _ensure_tenant(request):
@@ -1000,3 +1001,475 @@ def stocks_non_moving_report_export(request):
                          row['total_qty'], row['cost_price'], row['total_value'],
                          row['last_movement_date'] or '—', row['days_idle'] or '—'])
     return response
+
+
+# ============================================================
+# تحويلات المخزون
+# ============================================================
+
+@login_required
+@require_permission('view_stocks')
+def transfer_list(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    qs = StockTransfer.objects.for_tenant(tenant)
+    stats = {
+        'total':     qs.count(),
+        'draft':     qs.filter(status='draft').count(),
+        'confirmed': qs.filter(status='confirmed').count(),
+        'cancelled': qs.filter(status='cancelled').count(),
+    }
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    return render(request, 'stocks/transfer_list.html', {'stats': stats, 'stocks': stocks})
+
+
+@login_required
+@require_permission('view_stocks')
+def transfer_table_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'error': 'no tenant'}, status=400)
+
+    draw     = int(request.GET.get('draw', 1))
+    start    = int(request.GET.get('start', 0))
+    length   = int(request.GET.get('length', 25))
+    search   = request.GET.get('search[value]', '').strip()
+    status_f = request.GET.get('status', '').strip()
+    stock_f  = request.GET.get('stock_id', '').strip()
+
+    qs = StockTransfer.objects.for_tenant(tenant).select_related('from_stock', 'to_stock')
+    total = qs.count()
+
+    if status_f:
+        qs = qs.filter(status=status_f)
+    if stock_f:
+        qs = qs.filter(Q(from_stock_id=stock_f) | Q(to_stock_id=stock_f))
+    if search:
+        qs = qs.filter(
+            Q(transfer_number__icontains=search) |
+            Q(from_stock__name__icontains=search) |
+            Q(to_stock__name__icontains=search) |
+            Q(notes__icontains=search)
+        )
+
+    filtered = qs.count()
+    qs = qs[start:start + length]
+
+    STATUS_LABELS = {'draft': 'مسودة', 'confirmed': 'مؤكد', 'cancelled': 'ملغي'}
+    STATUS_COLORS = {'draft': 'secondary', 'confirmed': 'success', 'cancelled': 'danger'}
+
+    rows = []
+    for t in qs:
+        badge = (
+            f'<span class="badge bg-{STATUS_COLORS.get(t.status,"secondary")}">'
+            f'{STATUS_LABELS.get(t.status, t.status)}</span>'
+        )
+        rows.append({
+            'DT_RowId': f'row_{t.id}',
+            'transfer_number': t.transfer_number,
+            'transfer_date': str(t.transfer_date),
+            'from_stock': t.from_stock.name,
+            'to_stock': t.to_stock.name,
+            'status_badge': badge,
+            'status': t.status,
+            'total_lines': t.lines.count(),
+            'id': t.id,
+        })
+
+    return JsonResponse({'draw': draw, 'recordsTotal': total, 'recordsFiltered': filtered, 'data': rows})
+
+
+@login_required
+@require_permission('add_stocks')
+def transfer_create(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    from apps.items.models import Item
+    stocks  = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    items   = Item.objects.for_tenant(tenant).filter(is_active=True, item_type__in=['product', 'material'])
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            data = request.POST.dict()
+
+        from_id   = data.get('from_stock')
+        to_id     = data.get('to_stock')
+        tdate     = data.get('transfer_date') or str(timezone.now().date())
+        notes     = data.get('notes', '')
+        lines_raw = data.get('lines', [])
+
+        errors = {}
+        if not from_id:
+            errors['from_stock'] = ['المخزن المرسِل مطلوب']
+        if not to_id:
+            errors['to_stock'] = ['المخزن المستلِم مطلوب']
+        if from_id and to_id and from_id == to_id:
+            errors['to_stock'] = ['يجب أن يكون المخزنان مختلفَين']
+        if not lines_raw:
+            errors['lines'] = ['أضف بنداً واحداً على الأقل']
+
+        if errors:
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+        try:
+            from_stock = Stock.objects.for_tenant(tenant).get(pk=from_id)
+            to_stock   = Stock.objects.for_tenant(tenant).get(pk=to_id)
+        except Stock.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'مخزن غير موجود'}, status=400)
+
+        with transaction.atomic():
+            transfer = StockTransfer.objects.create(
+                tenant=tenant,
+                from_stock=from_stock,
+                to_stock=to_stock,
+                transfer_date=tdate,
+                notes=notes,
+            )
+            for ln in lines_raw:
+                item_id = ln.get('item_id')
+                qty     = Decimal(str(ln.get('quantity', 0)))
+                if not item_id or qty <= 0:
+                    continue
+                try:
+                    item = Item.objects.for_tenant(tenant).get(pk=item_id)
+                except Item.DoesNotExist:
+                    continue
+                StockTransferLine.objects.create(
+                    tenant=tenant, transfer=transfer, item=item, quantity=qty,
+                    notes=ln.get('notes', ''),
+                )
+
+        return JsonResponse({'success': True, 'id': transfer.id,
+                             'redirect': f'/stocks/transfers/{transfer.id}/'})
+
+    context = {'stocks': stocks, 'items': items, 'today': str(timezone.now().date())}
+    return render(request, 'stocks/transfer_form.html', context)
+
+
+@login_required
+@require_permission('view_stocks')
+def transfer_detail(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    try:
+        transfer = (
+            StockTransfer.objects.for_tenant(tenant)
+            .select_related('from_stock', 'to_stock')
+            .prefetch_related('lines__item')
+            .get(pk=pk)
+        )
+    except StockTransfer.DoesNotExist:
+        from django.http import Http404
+        raise Http404
+
+    return render(request, 'stocks/transfer_detail.html', {'transfer': transfer})
+
+
+@login_required
+@require_permission('add_stocks')
+def transfer_confirm_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        transfer = StockTransfer.objects.for_tenant(tenant).get(pk=pk)
+        confirm_stock_transfer(transfer)
+        return JsonResponse({'success': True, 'message': 'تم تأكيد التحويل بنجاح'})
+    except (StockTransfer.DoesNotExist, StockQuantity.DoesNotExist):
+        return JsonResponse({'success': False, 'message': 'التحويل أو الكمية غير موجودة'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+@login_required
+@require_permission('add_stocks')
+def transfer_cancel_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        transfer = StockTransfer.objects.for_tenant(tenant).get(pk=pk)
+        cancel_stock_transfer(transfer)
+        return JsonResponse({'success': True, 'message': 'تم إلغاء التحويل'})
+    except (StockTransfer.DoesNotExist, StockQuantity.DoesNotExist):
+        return JsonResponse({'success': False, 'message': 'التحويل غير موجود'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+@login_required
+@require_permission('add_stocks')
+def transfer_delete_draft_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        transfer = StockTransfer.objects.for_tenant(tenant).get(pk=pk, status='draft')
+        transfer.delete()
+        return JsonResponse({'success': True})
+    except StockTransfer.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'المسودة غير موجودة'}, status=404)
+
+
+@login_required
+@require_permission('view_stocks')
+def transfer_items_api(request):
+    """Returns available quantity for items in a given stock."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'error': 'no tenant'}, status=400)
+
+    stock_id = request.GET.get('stock_id')
+    search   = request.GET.get('q', '').strip()
+
+    from apps.items.models import Item
+    qs = Item.objects.for_tenant(tenant).filter(
+        is_active=True, item_type__in=['product', 'material']
+    )
+    if search:
+        qs = qs.filter(Q(name__icontains=search) | Q(sku__icontains=search))
+
+    qs = list(qs.order_by('name')[:60])
+    item_ids = [i.id for i in qs]
+
+    qty_map = {}
+    if stock_id and item_ids:
+        for sq in StockQuantity.objects.filter(
+            tenant=tenant, stock_id=stock_id, item_id__in=item_ids
+        ).values('item_id', 'quantity', 'reserved_quantity'):
+            avail = float((sq['quantity'] or 0) - (sq['reserved_quantity'] or 0))
+            qty_map[sq['item_id']] = avail
+
+    data = []
+    for item in qs:
+        data.append({
+            'id': item.id,
+            'name': item.name,
+            'sku': item.sku or '',
+            'unit': item.unit.name if item.unit else '',
+            'available_qty': qty_map.get(item.id, 0),
+        })
+
+    return JsonResponse({'items': data})
+
+
+# ============================================================
+# جرد المخزون (Stocktake)
+# ============================================================
+
+@login_required
+@require_permission('view_stocks')
+def stocktake_list(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    qs = Stocktake.objects.for_tenant(tenant)
+    stats = {
+        'total':     qs.count(),
+        'draft':     qs.filter(status='draft').count(),
+        'confirmed': qs.filter(status='confirmed').count(),
+        'cancelled': qs.filter(status='cancelled').count(),
+    }
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    return render(request, 'stocks/stocktake_list.html', {'stats': stats, 'stocks': stocks})
+
+
+@login_required
+@require_permission('view_stocks')
+def stocktake_table_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'error': 'no tenant'}, status=400)
+
+    draw     = int(request.GET.get('draw', 1))
+    start    = int(request.GET.get('start', 0))
+    length   = int(request.GET.get('length', 25))
+    search   = request.GET.get('search[value]', '').strip()
+    status_f = request.GET.get('status', '').strip()
+    stock_f  = request.GET.get('stock_id', '').strip()
+
+    qs = Stocktake.objects.for_tenant(tenant).select_related('stock')
+    total = qs.count()
+
+    if status_f:
+        qs = qs.filter(status=status_f)
+    if stock_f:
+        qs = qs.filter(stock_id=stock_f)
+    if search:
+        qs = qs.filter(
+            Q(stocktake_number__icontains=search) | Q(stock__name__icontains=search)
+        )
+
+    filtered = qs.count()
+    qs = qs[start:start + length]
+
+    STATUS_LABELS = {'draft': 'جاري الجرد', 'confirmed': 'مكتمل', 'cancelled': 'ملغي'}
+    STATUS_COLORS = {'draft': 'warning', 'confirmed': 'success', 'cancelled': 'danger'}
+
+    rows = []
+    for t in qs:
+        badge = (
+            f'<span class="badge bg-{STATUS_COLORS.get(t.status,"secondary")}">'
+            f'{STATUS_LABELS.get(t.status, t.status)}</span>'
+        )
+        rows.append({
+            'DT_RowId': f'row_{t.id}',
+            'stocktake_number': t.stocktake_number,
+            'stocktake_date': str(t.stocktake_date),
+            'stock': t.stock.name,
+            'total_lines': t.lines.count(),
+            'status_badge': badge,
+            'status': t.status,
+            'id': t.id,
+        })
+
+    return JsonResponse({'draw': draw, 'recordsTotal': total, 'recordsFiltered': filtered, 'data': rows})
+
+
+@login_required
+@require_permission('add_stocks')
+def stocktake_create(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            data = request.POST.dict()
+
+        stock_id = data.get('stock_id')
+        tdate    = data.get('stocktake_date') or str(timezone.now().date())
+        notes    = data.get('notes', '')
+
+        if not stock_id:
+            return JsonResponse({'success': False, 'errors': {'stock_id': ['المخزن مطلوب']}}, status=400)
+
+        try:
+            stock = Stock.objects.for_tenant(tenant).get(pk=stock_id)
+        except Stock.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=400)
+
+        with transaction.atomic():
+            stocktake = Stocktake.objects.create(
+                tenant=tenant, stock=stock,
+                stocktake_date=tdate, notes=notes,
+            )
+            # Pre-populate lines with all items that have stock in this warehouse
+            sq_qs = StockQuantity.objects.filter(
+                tenant=tenant, stock=stock
+            ).select_related('item').exclude(item__item_type='service')
+
+            lines_to_create = []
+            for sq in sq_qs:
+                lines_to_create.append(StocktakeLine(
+                    tenant=tenant,
+                    stocktake=stocktake,
+                    item=sq.item,
+                    system_quantity=sq.quantity,
+                    counted_quantity=sq.quantity,
+                ))
+            StocktakeLine.objects.bulk_create(lines_to_create)
+
+        return JsonResponse({'success': True, 'id': stocktake.id,
+                             'redirect': f'/stocks/stocktakes/{stocktake.id}/'})
+
+    context = {'stocks': stocks, 'today': str(timezone.now().date())}
+    return render(request, 'stocks/stocktake_form.html', context)
+
+
+@login_required
+@require_permission('view_stocks')
+def stocktake_detail(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    try:
+        stocktake = (
+            Stocktake.objects.for_tenant(tenant)
+            .select_related('stock')
+            .prefetch_related('lines__item__unit')
+            .get(pk=pk)
+        )
+    except Stocktake.DoesNotExist:
+        from django.http import Http404
+        raise Http404
+
+    return render(request, 'stocks/stocktake_detail.html', {'stocktake': stocktake})
+
+
+@login_required
+@require_permission('add_stocks')
+def stocktake_save_counts_ajax(request, pk):
+    """Save counted quantities without confirming."""
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        stocktake = Stocktake.objects.for_tenant(tenant).get(pk=pk, status='draft')
+    except Stocktake.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الجرد غير موجود أو مؤكد بالفعل'}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'message': 'بيانات غير صالحة'}, status=400)
+
+    counts = data.get('counts', {})  # {line_id: counted_qty}
+    with transaction.atomic():
+        for line_id, qty_val in counts.items():
+            try:
+                qty = Decimal(str(qty_val))
+                StocktakeLine.objects.filter(
+                    pk=int(line_id), stocktake=stocktake
+                ).update(counted_quantity=qty)
+            except (InvalidOperation, ValueError):
+                pass
+
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_permission('add_stocks')
+def stocktake_confirm_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        stocktake = Stocktake.objects.for_tenant(tenant).get(pk=pk)
+        confirm_stocktake(stocktake)
+        return JsonResponse({'success': True, 'message': 'تم تأكيد الجرد وتطبيق التعديلات'})
+    except Stocktake.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الجرد غير موجود'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+@login_required
+@require_permission('add_stocks')
+def stocktake_cancel_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        stocktake = Stocktake.objects.for_tenant(tenant).get(pk=pk)
+        if stocktake.status == 'confirmed':
+            return JsonResponse({'success': False, 'message': 'لا يمكن إلغاء جرد مؤكد'}, status=400)
+        stocktake.status = 'cancelled'
+        stocktake.save(update_fields=['status', 'updated_at'])
+        return JsonResponse({'success': True})
+    except Stocktake.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الجرد غير موجود'}, status=404)

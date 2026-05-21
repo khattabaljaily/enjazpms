@@ -1,0 +1,103 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:var(--info)">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">جرد مخزون جديد</h1>
+                <p class="cx-hero-desc">سيتم تحميل جميع منتجات المخزن تلقائياً</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="cx-panel p-4">
+            <div class="cx-panel-header mb-3">
+                <h3 class="cx-panel-title"><i class="fas fa-warehouse me-2"></i>اختر المخزن</h3>
+            </div>
+
+            <div class="mb-3">
+                <label class="cx-label">المخزن <span class="text-danger">*</span></label>
+                <select id="stockId" class="cx-input">
+                    <option value="">— اختر المخزن —</option>
+                    {% for s in stocks %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="cx-label">تاريخ الجرد</label>
+                <input type="date" id="stocktakeDate" class="cx-input" value="{{ today }}">
+            </div>
+
+            <div class="mb-3">
+                <label class="cx-label">ملاحظات</label>
+                <textarea id="stocktakeNotes" class="cx-input" rows="3"></textarea>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                سيتم تحميل جميع منتجات المخزن المختار تلقائياً لبدء عملية العد.
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'stocks:stocktake_list' %}" class="cx-btn-secondary">إلغاء</a>
+                <button id="btnCreate" class="cx-btn-add">
+                    <i class="fas fa-play me-1"></i> بدء الجرد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('btnCreate').addEventListener('click', async function () {
+    const stockId = document.getElementById('stockId').value;
+    if (!stockId) {
+        alert('يرجى اختيار المخزن');
+        return;
+    }
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري التحميل…';
+
+    const r = await fetch("{% url 'stocks:stocktake_create' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({
+            stock_id: stockId,
+            stocktake_date: document.getElementById('stocktakeDate').value,
+            notes: document.getElementById('stocktakeNotes').value,
+        }),
+    });
+    const d = await r.json();
+    if (d.success) {
+        window.location = d.redirect;
+    } else {
+        alert(d.message || 'حدث خطأ');
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-play me-1"></i> بدء الجرد';
+    }
+});
+</script>
+{% endblock %}

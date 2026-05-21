@@ -75,7 +75,8 @@ INSTALLED_APPS = [
     'apps.treasury',
     'apps.expenses',
     'apps.stocks',
-    'django.contrib.humanize', 
+    'apps.notifications',
+    'django.contrib.humanize',
 ]
 
 MIDDLEWARE = [

@@ -22,4 +22,23 @@ urlpatterns = [
     path('', views.stock_list, name='list'),
     path('opening-balances/', views.opening_balance_list, name='opening_balance_list'),
     path('quantities/', views.stock_quantities_list, name='quantities_list'),
+
+    # Transfers
+    path('transfers/', views.transfer_list, name='transfer_list'),
+    path('transfers/api/', views.transfer_table_api, name='transfer_api'),
+    path('transfers/create/', views.transfer_create, name='transfer_create'),
+    path('transfers/<int:pk>/', views.transfer_detail, name='transfer_detail'),
+    path('transfers/<int:pk>/confirm/', views.transfer_confirm_ajax, name='transfer_confirm'),
+    path('transfers/<int:pk>/cancel/', views.transfer_cancel_ajax, name='transfer_cancel'),
+    path('transfers/<int:pk>/delete/', views.transfer_delete_draft_ajax, name='transfer_delete'),
+    path('transfers/api/items/', views.transfer_items_api, name='transfer_items_api'),
+
+    # Stocktake
+    path('stocktakes/', views.stocktake_list, name='stocktake_list'),
+    path('stocktakes/api/', views.stocktake_table_api, name='stocktake_api'),
+    path('stocktakes/create/', views.stocktake_create, name='stocktake_create'),
+    path('stocktakes/<int:pk>/', views.stocktake_detail, name='stocktake_detail'),
+    path('stocktakes/<int:pk>/save-counts/', views.stocktake_save_counts_ajax, name='stocktake_save_counts'),
+    path('stocktakes/<int:pk>/confirm/', views.stocktake_confirm_ajax, name='stocktake_confirm'),
+    path('stocktakes/<int:pk>/cancel/', views.stocktake_cancel_ajax, name='stocktake_cancel'),
 ]

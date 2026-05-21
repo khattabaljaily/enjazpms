@@ -41,4 +41,9 @@ urlpatterns = [
     path('api/item-info/', views.item_info_api, name='item_info_api'),
     path('api/customer-info/', views.customer_info_api, name='customer_info_api'),
     path('api/stock-items/', views.stock_items_api, name='stock_items_api'),
+
+    # ── POS ──────────────────────────────────────────────────
+    path('pos/', views.pos_view, name='pos'),
+    path('pos/api/items/', views.pos_items_api, name='pos_items_api'),
+    path('pos/api/checkout/', views.pos_checkout_api, name='pos_checkout_api'),
 ]

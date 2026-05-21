@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.items.models import Item
-from apps.purchases.models import PurchaseInvoice, PurchaseReturn, PurchaseReturnLine
+from apps.purchases.models import PurchaseInvoice, PurchaseReturn, PurchaseReturnLine, PurchaseRFQ, PurchaseRFQLine
 from apps.purchases.services import build_purchase_from_post, cancel_purchase_return, confirm_purchase_invoice, confirm_purchase_return
 from apps.stocks.models import Stock
 from apps.suppliers.models import Supplier
@@ -1342,3 +1342,320 @@ def purchases_price_history_report_export(request):
                              row['last_purchase_date'], row['last_supplier'], row['last_price'],
                              row['min_price'], row['max_price'], row['avg_price'], row['price_variance']])
     return response
+
+
+# ============================================================
+# طلبات عروض الأسعار (Purchase RFQ)
+# ============================================================
+
+@login_required
+@require_permission('view_purchases')
+def rfq_list(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    qs = PurchaseRFQ.objects.filter(tenant=tenant)
+    STATUS_LABELS = dict(PurchaseRFQ.STATUS_CHOICES)
+    stats = {
+        'total':     qs.count(),
+        'draft':     qs.filter(status='draft').count(),
+        'sent':      qs.filter(status='sent').count(),
+        'received':  qs.filter(status='received').count(),
+        'converted': qs.filter(status='converted').count(),
+    }
+    suppliers = Supplier.objects.for_tenant(tenant).filter(is_active=True)
+    return render(request, 'purchases/rfq_list.html', {
+        'stats': stats, 'suppliers': suppliers, 'STATUS_LABELS': STATUS_LABELS,
+    })
+
+
+@login_required
+@require_permission('view_purchases')
+def rfq_table_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'error': 'no tenant'}, status=400)
+
+    draw      = int(request.GET.get('draw', 1))
+    start     = int(request.GET.get('start', 0))
+    length    = int(request.GET.get('length', 25))
+    search    = request.GET.get('search[value]', '').strip()
+    status_f  = request.GET.get('status', '').strip()
+
+    qs = PurchaseRFQ.objects.filter(tenant=tenant).select_related('supplier', 'stock')
+    total = qs.count()
+
+    if status_f:
+        qs = qs.filter(status=status_f)
+    if search:
+        qs = qs.filter(
+            Q(rfq_number__icontains=search) |
+            Q(supplier__name__icontains=search)
+        )
+
+    filtered = qs.count()
+    qs = qs[start:start + length]
+
+    STATUS_COLORS = {
+        'draft': 'secondary', 'sent': 'info', 'received': 'primary',
+        'accepted': 'success', 'rejected': 'danger',
+        'converted': 'success', 'cancelled': 'danger',
+    }
+    STATUS_LABELS = dict(PurchaseRFQ.STATUS_CHOICES)
+
+    rows = []
+    for r in qs:
+        badge = (
+            f'<span class="badge bg-{STATUS_COLORS.get(r.status, "secondary")}">'
+            f'{STATUS_LABELS.get(r.status, r.status)}</span>'
+        )
+        rows.append({
+            'DT_RowId': f'row_{r.id}',
+            'rfq_number': r.rfq_number,
+            'rfq_date': str(r.rfq_date),
+            'supplier': r.supplier.name if r.supplier else '—',
+            'stock': r.stock.name,
+            'grand_total': str(r.grand_total),
+            'status_badge': badge,
+            'status': r.status,
+            'total_lines': r.lines.count(),
+            'id': r.id,
+        })
+
+    return JsonResponse({'draw': draw, 'recordsTotal': total, 'recordsFiltered': filtered, 'data': rows})
+
+
+@login_required
+@require_permission('add_purchases')
+def rfq_create(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    suppliers = Supplier.objects.for_tenant(tenant).filter(is_active=True)
+    stocks    = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    items     = Item.objects.for_tenant(tenant).filter(is_active=True).exclude(item_type='service')
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            data = request.POST.dict()
+
+        supplier_id = data.get('supplier_id')
+        stock_id    = data.get('stock_id')
+        rfq_date    = data.get('rfq_date') or str(timezone.now().date())
+        expiry_date = data.get('expiry_date') or None
+        notes       = data.get('notes', '')
+        terms       = data.get('terms', '')
+        lines_raw   = data.get('lines', [])
+
+        errors = {}
+        if not stock_id:
+            errors['stock_id'] = ['المخزن مطلوب']
+        if not lines_raw:
+            errors['lines'] = ['أضف بنداً واحداً على الأقل']
+        if errors:
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+        try:
+            stock = Stock.objects.for_tenant(tenant).get(pk=stock_id)
+        except Stock.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=400)
+
+        supplier = None
+        if supplier_id:
+            try:
+                supplier = Supplier.objects.for_tenant(tenant).get(pk=supplier_id)
+            except Supplier.DoesNotExist:
+                pass
+
+        with transaction.atomic():
+            rfq = PurchaseRFQ.objects.create(
+                tenant=tenant, supplier=supplier, stock=stock,
+                rfq_date=rfq_date, expiry_date=expiry_date or None,
+                notes=notes, terms=terms,
+            )
+            for ln in lines_raw:
+                item_id = ln.get('item_id')
+                qty = Decimal(str(ln.get('quantity', 0)))
+                if not item_id or qty <= 0:
+                    continue
+                try:
+                    item = Item.objects.for_tenant(tenant).get(pk=item_id)
+                except Item.DoesNotExist:
+                    continue
+                PurchaseRFQLine.objects.create(
+                    tenant=tenant, rfq=rfq, item=item,
+                    requested_quantity=qty,
+                    quoted_price=Decimal('0'),
+                    notes=ln.get('notes', ''),
+                )
+
+        return JsonResponse({'success': True, 'id': rfq.id,
+                             'redirect': f'/purchases/rfq/{rfq.id}/'})
+
+    context = {'suppliers': suppliers, 'stocks': stocks, 'items': items,
+               'today': str(timezone.now().date())}
+    return render(request, 'purchases/rfq_form.html', context)
+
+
+@login_required
+@require_permission('view_purchases')
+def rfq_detail(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    rfq = get_object_or_404(
+        PurchaseRFQ.objects.select_related('supplier', 'stock')
+        .prefetch_related('lines__item__unit'),
+        tenant=tenant, pk=pk
+    )
+    return render(request, 'purchases/rfq_detail.html', {'rfq': rfq})
+
+
+@login_required
+@require_permission('add_purchases')
+@require_POST
+def rfq_send_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    try:
+        rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        if rfq.status != 'draft':
+            return JsonResponse({'success': False, 'message': 'يمكن إرسال المسودات فقط'}, status=400)
+        rfq.status = 'sent'
+        rfq.save(update_fields=['status', 'updated_at'])
+        return JsonResponse({'success': True, 'message': 'تم تحديث الحالة إلى مُرسَل'})
+    except PurchaseRFQ.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+
+
+@login_required
+@require_permission('add_purchases')
+def rfq_receive_ajax(request, pk):
+    """Mark as received and save quoted prices from lines."""
+    if request.method != 'POST':
+        from django.http import HttpResponseNotAllowed
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        if rfq.status not in ('sent', 'draft'):
+            return JsonResponse({'success': False, 'message': 'الحالة الحالية لا تسمح بهذا الإجراء'}, status=400)
+
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            data = {}
+
+        prices = data.get('prices', {})  # {line_id: quoted_price}
+        with transaction.atomic():
+            for line_id, price_val in prices.items():
+                try:
+                    price = Decimal(str(price_val))
+                    line = PurchaseRFQLine.objects.get(pk=int(line_id), rfq=rfq)
+                    line.quoted_price = price
+                    line.save()
+                except (PurchaseRFQLine.DoesNotExist, InvalidOperation):
+                    pass
+            rfq.status = 'received'
+            rfq.save(update_fields=['status', 'updated_at'])
+            rfq.recalculate_total()
+
+        return JsonResponse({'success': True, 'message': 'تم تسجيل أسعار المورد'})
+    except PurchaseRFQ.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+
+
+@login_required
+@require_permission('add_purchases')
+@require_POST
+def rfq_accept_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    try:
+        rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        if rfq.status not in ('received', 'sent', 'draft'):
+            return JsonResponse({'success': False, 'message': 'الحالة لا تسمح بالقبول'}, status=400)
+        rfq.status = 'accepted'
+        rfq.save(update_fields=['status', 'updated_at'])
+        return JsonResponse({'success': True, 'message': 'تم قبول عرض الأسعار'})
+    except PurchaseRFQ.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+
+
+@login_required
+@require_permission('add_purchases')
+@require_POST
+def rfq_reject_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    try:
+        rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        if rfq.status in ('converted', 'cancelled'):
+            return JsonResponse({'success': False, 'message': 'لا يمكن رفض هذا الطلب'}, status=400)
+        rfq.status = 'rejected'
+        rfq.save(update_fields=['status', 'updated_at'])
+        return JsonResponse({'success': True, 'message': 'تم رفض عرض الأسعار'})
+    except PurchaseRFQ.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+
+
+@login_required
+@require_permission('add_purchases')
+@require_POST
+def rfq_cancel_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    try:
+        rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        if rfq.status == 'converted':
+            return JsonResponse({'success': False, 'message': 'لا يمكن إلغاء طلب محوَّل'}, status=400)
+        rfq.status = 'cancelled'
+        rfq.save(update_fields=['status', 'updated_at'])
+        return JsonResponse({'success': True})
+    except PurchaseRFQ.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+
+
+@login_required
+@require_permission('add_purchases')
+@require_POST
+def rfq_convert_ajax(request, pk):
+    """Convert accepted RFQ to a purchase invoice (draft)."""
+    tenant = _ensure_tenant(request)
+    try:
+        rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        if rfq.status not in ('accepted', 'received'):
+            return JsonResponse({'success': False, 'message': 'يجب قبول عرض الأسعار أولاً'}, status=400)
+
+        with transaction.atomic():
+            invoice = PurchaseInvoice.objects.create(
+                tenant=tenant,
+                supplier=rfq.supplier,
+                stock=rfq.stock,
+                invoice_date=timezone.now().date(),
+                payment_method='credit',
+                status='draft',
+                notes=f'محوَّل من {rfq.rfq_number}',
+            )
+            from apps.purchases.models import PurchaseInvoiceLine
+            for ln in rfq.lines.select_related('item'):
+                PurchaseInvoiceLine.objects.create(
+                    tenant=tenant,
+                    invoice=invoice,
+                    item=ln.item,
+                    quantity=ln.requested_quantity,
+                    unit_cost=ln.quoted_price,
+                    line_total=ln.line_total,
+                )
+            invoice.grand_total = rfq.grand_total
+            invoice.save(update_fields=['grand_total', 'updated_at'])
+
+            rfq.status = 'converted'
+            rfq.converted_invoice = invoice
+            rfq.save(update_fields=['status', 'converted_invoice', 'updated_at'])
+
+        return JsonResponse({'success': True,
+                             'redirect': reverse('purchases:order_detail', args=[invoice.id])})
+    except PurchaseRFQ.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)

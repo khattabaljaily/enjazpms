@@ -1,0 +1,243 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/inv_detail.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="doc-hero" data-status="{{ rfq.status }}">
+    <div class="doc-hero-inner">
+        <div class="doc-hero-left">
+            <div class="doc-hero-icon" style="background:var(--primary)">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div>
+                <div class="doc-hero-number">{{ rfq.rfq_number }}</div>
+                <div class="doc-hero-meta">
+                    <span class="doc-hero-meta-item"><i class="fas fa-calendar-day"></i>{{ rfq.rfq_date }}</span>
+                    {% if rfq.supplier %}
+                    <span class="doc-hero-meta-item"><i class="fas fa-truck"></i>{{ rfq.supplier.name }}</span>
+                    {% endif %}
+                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ rfq.stock.name }}</span>
+                </div>
+                <div class="doc-pills">
+                    {% if rfq.status == 'draft' %}
+                    <span class="doc-pill doc-pill--draft"><i class="fas fa-pencil"></i> مسودة</span>
+                    {% elif rfq.status == 'sent' %}
+                    <span class="doc-pill" style="background:rgba(13,202,240,.15);color:#0097a7"><i class="fas fa-paper-plane"></i> مُرسَل</span>
+                    {% elif rfq.status == 'received' %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-inbox"></i> استُلم الرد</span>
+                    {% elif rfq.status == 'accepted' %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> مقبول</span>
+                    {% elif rfq.status == 'rejected' %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-times-circle"></i> مرفوض</span>
+                    {% elif rfq.status == 'converted' %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-file-invoice"></i> محوَّل لأمر شراء</span>
+                    {% elif rfq.status == 'cancelled' %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-ban"></i> ملغى</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="doc-hero-actions">
+            <a href="{% url 'purchases:rfq_list' %}" class="cx-btn-secondary">
+                <i class="fas fa-arrow-right"></i><span>العودة</span>
+            </a>
+            {% if rfq.status == 'draft' %}
+            <button class="cx-btn-secondary" onclick="doAction('send', 'إرسال الطلب للمورد؟')">
+                <i class="fas fa-paper-plane"></i><span>إرسال</span>
+            </button>
+            {% endif %}
+            {% if rfq.status == 'draft' or rfq.status == 'sent' %}
+            <button class="cx-btn-add" onclick="showReceiveModal()" id="btnReceive">
+                <i class="fas fa-inbox"></i><span>تسجيل رد المورد</span>
+            </button>
+            {% endif %}
+            {% if rfq.status == 'received' %}
+            <button class="cx-btn-add" onclick="doAction('accept', 'قبول عرض الأسعار؟')">
+                <i class="fas fa-check"></i><span>قبول</span>
+            </button>
+            <button class="cx-btn-secondary" onclick="doAction('reject', 'رفض عرض الأسعار؟')" style="color:var(--danger)">
+                <i class="fas fa-times"></i><span>رفض</span>
+            </button>
+            {% endif %}
+            {% if rfq.status == 'accepted' %}
+            <button class="cx-btn-add" style="background:var(--success)" onclick="doAction('convert', 'تحويل إلى أمر شراء مسودة؟')">
+                <i class="fas fa-file-invoice"></i><span>تحويل لأمر شراء</span>
+            </button>
+            {% endif %}
+            {% if rfq.status != 'converted' and rfq.status != 'cancelled' %}
+            <button class="cx-btn-secondary" onclick="doAction('cancel', 'إلغاء الطلب؟')" style="color:var(--danger)">
+                <i class="fas fa-ban"></i><span>إلغاء</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if rfq.converted_invoice %}
+<div class="alert alert-success mt-2">
+    <i class="fas fa-file-invoice me-2"></i>
+    تم تحويل هذا الطلب إلى أمر الشراء
+    <a href="{% url 'purchases:order_detail' rfq.converted_invoice.pk %}" class="alert-link">
+        {{ rfq.converted_invoice.invoice_number }}
+    </a>
+</div>
+{% endif %}
+
+<div class="row g-3 mt-1">
+    <div class="col-md-5">
+        <div class="cx-panel p-4">
+            <h5 class="fw-semibold mb-3"><i class="fas fa-info-circle me-2 text-primary"></i>تفاصيل الطلب</h5>
+            <table class="table table-sm">
+                <tr><th class="w-40">رقم الطلب</th><td><strong>{{ rfq.rfq_number }}</strong></td></tr>
+                <tr><th>التاريخ</th><td>{{ rfq.rfq_date }}</td></tr>
+                {% if rfq.expiry_date %}
+                <tr><th>تاريخ الانتهاء</th><td>{{ rfq.expiry_date }}</td></tr>
+                {% endif %}
+                <tr><th>المورد</th><td>{{ rfq.supplier.name|default:"—" }}</td></tr>
+                <tr><th>المخزن</th><td>{{ rfq.stock.name }}</td></tr>
+                {% if rfq.grand_total %}
+                <tr><th>الإجمالي</th><td><strong>{{ rfq.grand_total|floatformat:2|intcomma }}</strong></td></tr>
+                {% endif %}
+                {% if rfq.notes %}
+                <tr><th>ملاحظات</th><td>{{ rfq.notes }}</td></tr>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Lines -->
+<div class="cx-panel mt-3">
+    <div class="cx-panel-header p-4 pb-2">
+        <h5 class="fw-semibold mb-0"><i class="fas fa-list me-2 text-primary"></i>البنود ({{ rfq.lines.count }})</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="cx-table">
+            <thead>
+                <tr>
+                    <th>#</th><th>المنتج</th><th>رمز</th><th>الوحدة</th>
+                    <th class="text-end">الكمية المطلوبة</th>
+                    <th class="text-end">السعر المقتبَس</th>
+                    <th class="text-end">الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ln in rfq.lines.all %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ ln.item.name }}</strong></td>
+                    <td><code>{{ ln.item.sku|default:"—" }}</code></td>
+                    <td>{{ ln.item.unit.name|default:"—" }}</td>
+                    <td class="text-end">{{ ln.requested_quantity|floatformat:"-2" }}</td>
+                    <td class="text-end" id="price-{{ ln.id }}">
+                        {% if ln.quoted_price %}{{ ln.quoted_price|floatformat:2|intcomma }}{% else %}—{% endif %}
+                    </td>
+                    <td class="text-end">{{ ln.line_total|floatformat:2|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% if rfq.grand_total %}
+            <tfoot>
+                <tr class="fw-bold">
+                    <td colspan="6" class="text-end">الإجمالي</td>
+                    <td class="text-end">{{ rfq.grand_total|floatformat:2|intcomma }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- Receive modal -->
+<div class="modal fade" id="receiveModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-inbox me-2"></i>تسجيل رد المورد — إدخال الأسعار</h5>
+            </div>
+            <div class="modal-body">
+                <table class="table">
+                    <thead><tr><th>المنتج</th><th>الكمية</th><th>السعر المقتبَس</th></tr></thead>
+                    <tbody>
+                        {% for ln in rfq.lines.all %}
+                        <tr>
+                            <td>{{ ln.item.name }}</td>
+                            <td>{{ ln.requested_quantity|floatformat:"-2" }}</td>
+                            <td>
+                                <input type="number" class="cx-input" step="0.01" min="0"
+                                    id="price_{{ ln.id }}"
+                                    value="{{ ln.quoted_price|floatformat:'2' }}"
+                                    style="width:130px">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="cx-btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button class="cx-btn-add" id="btnReceiveOk">
+                    <i class="fas fa-save me-1"></i> حفظ الأسعار وتحديث الحالة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+
+function doAction(action, msg) {
+    if (!confirm(msg)) return;
+    fetch(`/purchases/rfq/{{ rfq.pk }}/${action}/`, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF },
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            if (d.redirect) window.location = d.redirect;
+            else location.reload();
+        } else showToast('error', d.message);
+    });
+}
+
+function showReceiveModal() {
+    new bootstrap.Modal(document.getElementById('receiveModal')).show();
+}
+
+document.getElementById('btnReceiveOk')?.addEventListener('click', async function () {
+    const prices = {};
+    {% for ln in rfq.lines.all %}
+    prices[{{ ln.id }}] = parseFloat(document.getElementById('price_{{ ln.id }}').value) || 0;
+    {% endfor %}
+
+    this.disabled = true;
+    const r = await fetch("{% url 'purchases:rfq_receive' rfq.pk %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ prices }),
+    });
+    const d = await r.json();
+    if (d.success) location.reload();
+    else showToast('error', d.message);
+});
+
+function showToast(type, msg) {
+    const t = document.createElement('div');
+    t.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed top-0 start-50 translate-middle-x mt-3 shadow`;
+    t.style.zIndex = 9999; t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+</script>
+{% endblock %}

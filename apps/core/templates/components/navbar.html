@@ -23,10 +23,26 @@
             </button>
 
             <!-- Notifications -->
-            <button class="navbar-icon-btn" aria-label="الإشعارات">
-                <i class="fas fa-bell"></i>
-                <span class="navbar-badge">3</span>
-            </button>
+            <div class="dropdown" id="notifDropdown">
+                <button class="navbar-icon-btn" data-bs-toggle="dropdown" data-bs-display="static" aria-label="الإشعارات">
+                    <i class="fas fa-bell"></i>
+                    <span class="navbar-badge d-none" id="notifBadge">0</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end notif-menu" style="min-width:340px;max-width:380px;">
+                    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                        <strong>الإشعارات</strong>
+                        <button class="btn btn-sm btn-link p-0 text-muted" id="btnMarkAllRead" onclick="markAllRead()">
+                            تعليم الكل كمقروء
+                        </button>
+                    </div>
+                    <div id="notifList" style="max-height:360px;overflow-y:auto;">
+                        <div class="text-center text-muted py-3" id="notifEmpty">لا إشعارات جديدة</div>
+                    </div>
+                    <div class="border-top text-center py-2">
+                        <a href="/notifications/" class="text-primary small">عرض جميع الإشعارات</a>
+                    </div>
+                </div>
+            </div>
 
             <div class="navbar-sep"></div>
 
@@ -99,4 +115,68 @@ function toggleTheme() {
         });
     }
 })();
+
+// ── Notifications ──────────────────────────────────────
+async function loadNotifications() {
+    try {
+        const r = await fetch('/notifications/api/');
+        const d = await r.json();
+        const badge = document.getElementById('notifBadge');
+        const list  = document.getElementById('notifList');
+        const empty = document.getElementById('notifEmpty');
+
+        if (d.unread > 0) {
+            badge.textContent = d.unread > 99 ? '99+' : d.unread;
+            badge.classList.remove('d-none');
+        } else {
+            badge.classList.add('d-none');
+        }
+
+        if (!d.items.length) {
+            list.innerHTML = '<div class="text-center text-muted py-3">لا إشعارات جديدة</div>';
+            return;
+        }
+
+        const PRIORITY_COLOR = { high: 'danger', medium: 'warning', low: 'secondary' };
+
+        list.innerHTML = d.items.map(n => `
+            <a href="${n.link || '#'}" class="dropdown-item d-flex gap-2 py-2 border-bottom ${n.is_read ? '' : 'bg-opacity-5 bg-primary'}"
+               onclick="markRead(${n.id}, event)" style="white-space:normal">
+                <span class="mt-1"><i class="fas ${n.icon}"></i></span>
+                <div class="flex-fill">
+                    <div class="fw-semibold" style="font-size:.85rem">${n.title}</div>
+                    <div class="text-muted" style="font-size:.78rem">${n.message}</div>
+                    <div class="text-muted" style="font-size:.72rem">${n.time}</div>
+                </div>
+                ${!n.is_read ? `<span class="align-self-start badge bg-${PRIORITY_COLOR[n.priority]||'secondary'}" style="font-size:.65rem">●</span>` : ''}
+            </a>
+        `).join('');
+    } catch (e) { /* silent fail */ }
+}
+
+async function markRead(id, event) {
+    await fetch(`/notifications/api/${id}/read/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    });
+}
+
+async function markAllRead() {
+    await fetch('/notifications/api/read-all/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    });
+    document.getElementById('notifBadge').classList.add('d-none');
+    loadNotifications();
+}
+
+function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+
+// Load on dropdown open + poll every 2 minutes
+document.getElementById('notifDropdown')?.addEventListener('show.bs.dropdown', loadNotifications);
+loadNotifications();
+setInterval(loadNotifications, 120000);
 </script>

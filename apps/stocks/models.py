@@ -194,3 +194,170 @@ class StockQuantity(TenantMixin):
             tenant=tenant, item=item
         ).aggregate(total=Sum('quantity'))
         return result['total'] or 0
+
+
+# ============================================
+# STOCK TRANSFER (تحويل بين المخازن)
+# ============================================
+
+class StockTransfer(TenantMixin):
+    STATUS_CHOICES = (
+        ('draft',     'مسودة'),
+        ('confirmed', 'مؤكد'),
+        ('cancelled', 'ملغي'),
+    )
+
+    transfer_number = models.CharField('رقم التحويل', max_length=30, blank=True)
+    transfer_date   = models.DateField('تاريخ التحويل')
+    from_stock      = models.ForeignKey(
+        Stock, on_delete=models.PROTECT,
+        related_name='transfers_out', verbose_name='من مخزن'
+    )
+    to_stock        = models.ForeignKey(
+        Stock, on_delete=models.PROTECT,
+        related_name='transfers_in', verbose_name='إلى مخزن'
+    )
+    status          = models.CharField('الحالة', max_length=12, choices=STATUS_CHOICES, default='draft')
+    notes           = models.TextField('ملاحظات', blank=True)
+
+    class Meta:
+        db_table = 'stock_transfers'
+        verbose_name = 'تحويل مخزون'
+        verbose_name_plural = 'تحويلات المخزون'
+        ordering = ['-transfer_date', '-id']
+        indexes = [
+            models.Index(fields=['tenant', 'status']),
+            models.Index(fields=['tenant', '-transfer_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.transfer_number} ({self.from_stock} → {self.to_stock})"
+
+    def save(self, *args, **kwargs):
+        if not self.transfer_number:
+            last = (
+                StockTransfer.objects.filter(tenant=self.tenant)
+                .exclude(transfer_number='')
+                .order_by('-id').first()
+            )
+            next_num = 1
+            if last and last.transfer_number.startswith('TRF-'):
+                try:
+                    next_num = int(last.transfer_number.split('-')[-1]) + 1
+                except ValueError:
+                    pass
+            self.transfer_number = f"TRF-{next_num:05d}"
+        super().save(*args, **kwargs)
+
+    @property
+    def total_lines(self):
+        return self.lines.count()
+
+
+class StockTransferLine(TenantMixin):
+    transfer = models.ForeignKey(
+        StockTransfer, on_delete=models.CASCADE,
+        related_name='lines', verbose_name='التحويل'
+    )
+    item     = models.ForeignKey(
+        'items.Item', on_delete=models.PROTECT,
+        related_name='transfer_lines', verbose_name='المنتج'
+    )
+    quantity = models.DecimalField('الكمية', max_digits=12, decimal_places=4)
+    notes    = models.TextField('ملاحظات', blank=True)
+
+    class Meta:
+        db_table = 'stock_transfer_lines'
+        verbose_name = 'بند تحويل'
+        verbose_name_plural = 'بنود التحويل'
+
+    def __str__(self):
+        return f"{self.item.name} × {self.quantity}"
+
+
+# ============================================
+# STOCKTAKE / INVENTORY COUNT (جرد المخزون)
+# ============================================
+
+class Stocktake(TenantMixin):
+    """
+    جلسة جرد مخزون.
+    - draft:     جاري تسجيل الأعداد الفعلية
+    - confirmed: تم تطبيق الفروقات على المخزون
+    - cancelled: ألغيت الجلسة بدون تطبيق
+    """
+    STATUS_CHOICES = (
+        ('draft',     'جاري الجرد'),
+        ('confirmed', 'مكتمل'),
+        ('cancelled', 'ملغي'),
+    )
+
+    stocktake_number = models.CharField('رقم الجرد', max_length=30, blank=True)
+    stocktake_date   = models.DateField('تاريخ الجرد')
+    stock            = models.ForeignKey(
+        Stock, on_delete=models.PROTECT,
+        related_name='stocktakes', verbose_name='المخزن'
+    )
+    status           = models.CharField('الحالة', max_length=12, choices=STATUS_CHOICES, default='draft')
+    notes            = models.TextField('ملاحظات', blank=True)
+
+    class Meta:
+        db_table = 'stocktakes'
+        verbose_name = 'جرد مخزون'
+        verbose_name_plural = 'جرد المخزون'
+        ordering = ['-stocktake_date', '-id']
+        indexes = [
+            models.Index(fields=['tenant', 'status']),
+            models.Index(fields=['tenant', '-stocktake_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.stocktake_number} — {self.stock.name}"
+
+    def save(self, *args, **kwargs):
+        if not self.stocktake_number:
+            last = (
+                Stocktake.objects.filter(tenant=self.tenant)
+                .exclude(stocktake_number='')
+                .order_by('-id').first()
+            )
+            next_num = 1
+            if last and last.stocktake_number.startswith('INV-'):
+                try:
+                    next_num = int(last.stocktake_number.split('-')[-1]) + 1
+                except ValueError:
+                    pass
+            self.stocktake_number = f"INV-{next_num:05d}"
+        super().save(*args, **kwargs)
+
+
+class StocktakeLine(TenantMixin):
+    stocktake        = models.ForeignKey(
+        Stocktake, on_delete=models.CASCADE,
+        related_name='lines', verbose_name='الجرد'
+    )
+    item             = models.ForeignKey(
+        'items.Item', on_delete=models.PROTECT,
+        related_name='stocktake_lines', verbose_name='المنتج'
+    )
+    system_quantity  = models.DecimalField(
+        'كمية النظام', max_digits=12, decimal_places=4, default=0,
+        help_text='الكمية في النظام عند بدء الجرد'
+    )
+    counted_quantity = models.DecimalField(
+        'الكمية المعدودة', max_digits=12, decimal_places=4, default=0
+    )
+    notes            = models.TextField('ملاحظات', blank=True)
+
+    class Meta:
+        db_table = 'stocktake_lines'
+        verbose_name = 'بند جرد'
+        verbose_name_plural = 'بنود الجرد'
+        unique_together = [('stocktake', 'item')]
+
+    def __str__(self):
+        return f"{self.item.name}: {self.system_quantity} → {self.counted_quantity}"
+
+    @property
+    def difference(self):
+        return self.counted_quantity - self.system_quantity

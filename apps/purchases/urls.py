@@ -22,6 +22,18 @@ urlpatterns = [
     path('returns/<int:pk>/confirm/', views.return_confirm_ajax, name='return_confirm'),
     path('returns/<int:pk>/cancel/', views.return_cancel_ajax, name='return_cancel'),
 
+    # RFQ
+    path('rfq/', views.rfq_list, name='rfq_list'),
+    path('rfq/api/', views.rfq_table_api, name='rfq_api'),
+    path('rfq/create/', views.rfq_create, name='rfq_create'),
+    path('rfq/<int:pk>/', views.rfq_detail, name='rfq_detail'),
+    path('rfq/<int:pk>/send/', views.rfq_send_ajax, name='rfq_send'),
+    path('rfq/<int:pk>/receive/', views.rfq_receive_ajax, name='rfq_receive'),
+    path('rfq/<int:pk>/accept/', views.rfq_accept_ajax, name='rfq_accept'),
+    path('rfq/<int:pk>/reject/', views.rfq_reject_ajax, name='rfq_reject'),
+    path('rfq/<int:pk>/cancel/', views.rfq_cancel_ajax, name='rfq_cancel'),
+    path('rfq/<int:pk>/convert/', views.rfq_convert_ajax, name='rfq_convert'),
+
     # Reports
     path('reports/', include('apps.purchases.reports_urls')),
 ]

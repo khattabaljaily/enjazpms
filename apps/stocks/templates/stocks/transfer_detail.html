@@ -1,0 +1,200 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/inv_detail.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- Hero -->
+<div class="doc-hero" data-status="{{ transfer.status }}">
+    <div class="doc-hero-inner">
+        <div class="doc-hero-left">
+            <div class="doc-hero-icon" style="background:var(--warning)">
+                <i class="fas fa-arrows-left-right"></i>
+            </div>
+            <div>
+                <div class="doc-hero-number">{{ transfer.transfer_number }}</div>
+                <div class="doc-hero-meta">
+                    <span class="doc-hero-meta-item"><i class="fas fa-calendar-day"></i>{{ transfer.transfer_date }}</span>
+                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ transfer.from_stock.name }}</span>
+                    <span class="doc-hero-meta-item"><i class="fas fa-arrow-left"></i></span>
+                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ transfer.to_stock.name }}</span>
+                </div>
+                <div class="doc-pills">
+                    {% if transfer.status == 'draft' %}
+                    <span class="doc-pill doc-pill--draft"><i class="fas fa-pencil"></i> مسودة</span>
+                    {% elif transfer.status == 'confirmed' %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> مؤكد</span>
+                    {% elif transfer.status == 'cancelled' %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-ban"></i> ملغي</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="doc-hero-actions">
+            <a href="{% url 'stocks:transfer_list' %}" class="cx-btn-secondary">
+                <i class="fas fa-arrow-right"></i><span>العودة</span>
+            </a>
+            {% if transfer.status == 'draft' %}
+            <button class="cx-btn-add" onclick="doConfirm()">
+                <i class="fas fa-check"></i><span>تأكيد التحويل</span>
+            </button>
+            <button class="cx-btn-danger" onclick="doDelete()">
+                <i class="fas fa-trash"></i><span>حذف</span>
+            </button>
+            {% elif transfer.status == 'confirmed' %}
+            <button class="cx-btn-secondary" onclick="doCancel()" style="color:var(--danger)">
+                <i class="fas fa-ban"></i><span>إلغاء</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Transfer Info -->
+<div class="row g-3 mt-1">
+    <div class="col-md-6">
+        <div class="cx-panel p-4">
+            <h5 class="fw-semibold mb-3"><i class="fas fa-info-circle me-2 text-primary"></i>تفاصيل التحويل</h5>
+            <table class="table table-sm">
+                <tr><th class="w-40">رقم التحويل</th><td><strong>{{ transfer.transfer_number }}</strong></td></tr>
+                <tr><th>التاريخ</th><td>{{ transfer.transfer_date }}</td></tr>
+                <tr><th>من مخزن</th><td>{{ transfer.from_stock.name }}</td></tr>
+                <tr><th>إلى مخزن</th><td>{{ transfer.to_stock.name }}</td></tr>
+                <tr><th>الحالة</th>
+                    <td>
+                        {% if transfer.status == 'draft' %}
+                            <span class="badge bg-secondary">مسودة</span>
+                        {% elif transfer.status == 'confirmed' %}
+                            <span class="badge bg-success">مؤكد</span>
+                        {% else %}
+                            <span class="badge bg-danger">ملغي</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if transfer.notes %}
+                <tr><th>ملاحظات</th><td>{{ transfer.notes }}</td></tr>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Lines -->
+<div class="cx-panel mt-3">
+    <div class="cx-panel-header p-4 pb-2">
+        <h5 class="fw-semibold mb-0"><i class="fas fa-list me-2 text-warning"></i>البنود ({{ transfer.lines.count }})</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="cx-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>المنتج</th>
+                    <th>رمز المنتج</th>
+                    <th>الوحدة</th>
+                    <th class="text-end">الكمية</th>
+                    {% if transfer.notes %}<th>ملاحظات</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for ln in transfer.lines.all %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ ln.item.name }}</strong></td>
+                    <td><code>{{ ln.item.sku|default:"—" }}</code></td>
+                    <td>{{ ln.item.unit.name|default:"—" }}</td>
+                    <td class="text-end"><strong>{{ ln.quantity|floatformat:"-2" }}</strong></td>
+                    {% if transfer.notes %}<td>{{ ln.notes|default:"—" }}</td>{% endif %}
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-3">لا توجد بنود</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- Confirm modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">تأكيد التحويل</h5></div>
+            <div class="modal-body">
+                <p>سيتم خصم الكميات من <strong>{{ transfer.from_stock.name }}</strong> وإضافتها إلى <strong>{{ transfer.to_stock.name }}</strong>.</p>
+                <p class="text-muted">هذا الإجراء يمكن التراجع عنه لاحقاً.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="cx-btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button class="cx-btn-add" id="btnConfirmOk"><i class="fas fa-check me-1"></i>تأكيد</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+const CONFIRM_URL = "{% url 'stocks:transfer_confirm' transfer.pk %}";
+const CANCEL_URL  = "{% url 'stocks:transfer_cancel' transfer.pk %}";
+const DELETE_URL  = "{% url 'stocks:transfer_delete' transfer.pk %}";
+const LIST_URL    = "{% url 'stocks:transfer_list' %}";
+
+function doConfirm() {
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    modal.show();
+    document.getElementById('btnConfirmOk').onclick = async function () {
+        this.disabled = true;
+        const r = await fetch(CONFIRM_URL, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF },
+        });
+        const d = await r.json();
+        modal.hide();
+        if (d.success) location.reload();
+        else showToast('error', d.message);
+    };
+}
+
+async function doCancel() {
+    if (!confirm('هل أنت متأكد من إلغاء هذا التحويل؟ سيتم عكس الكميات.')) return;
+    const r = await fetch(CANCEL_URL, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF },
+    });
+    const d = await r.json();
+    if (d.success) location.reload();
+    else showToast('error', d.message);
+}
+
+async function doDelete() {
+    if (!confirm('حذف هذه المسودة نهائياً؟')) return;
+    const r = await fetch(DELETE_URL, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF },
+    });
+    const d = await r.json();
+    if (d.success) {
+        window.location = LIST_URL;
+    } else {
+        showToast('error', d.message);
+    }
+}
+
+function showToast(type, msg) {
+    const t = document.createElement('div');
+    t.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed top-0 start-50 translate-middle-x mt-3 shadow`;
+    t.style.zIndex = 9999;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+</script>
+{% endblock %}

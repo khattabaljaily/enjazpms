@@ -1,0 +1,230 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/sales_invoice_form.css' %}?v=1.0">
+<style>
+.rfq-lines-table th, .rfq-lines-table td { vertical-align: middle; }
+.rfq-lines-table .qty-input { width: 110px; }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:var(--primary)">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">طلب عرض أسعار جديد</h1>
+                <p class="cx-hero-desc">إرسال طلب استفسار عن الأسعار للمورد</p>
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-layer-group"></i>
+            <strong id="lineCountBadge">0</strong><span>بند</span>
+        </span>
+    </div>
+</div>
+
+<div class="row g-3">
+
+    <!-- Header panel -->
+    <div class="col-lg-4">
+        <div class="cx-panel p-4 mb-3">
+            <div class="cx-panel-header mb-3">
+                <h3 class="cx-panel-title"><i class="fas fa-info-circle me-2"></i>بيانات الطلب</h3>
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">المورد</label>
+                <select id="supplierId" class="cx-input">
+                    <option value="">— بدون مورد محدد —</option>
+                    {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">المخزن <span class="text-danger">*</span></label>
+                <select id="stockId" class="cx-input">
+                    <option value="">— اختر —</option>
+                    {% for s in stocks %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">تاريخ الطلب</label>
+                <input type="date" id="rfqDate" class="cx-input" value="{{ today }}">
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">تاريخ الانتهاء</label>
+                <input type="date" id="rfqExpiry" class="cx-input">
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">ملاحظات</label>
+                <textarea id="rfqNotes" class="cx-input" rows="2"></textarea>
+            </div>
+        </div>
+
+        <div class="cx-panel p-4">
+            <div class="cx-panel-header mb-3">
+                <h3 class="cx-panel-title"><i class="fas fa-search me-2"></i>إضافة منتج</h3>
+            </div>
+            <div class="mb-2">
+                <input type="text" id="itemSearch" class="cx-input" placeholder="ابحث باسم المنتج أو الرمز…">
+            </div>
+            <div id="itemResults" class="list-group" style="max-height:260px;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- Lines panel -->
+    <div class="col-lg-8">
+        <div class="cx-panel p-4">
+            <div class="cx-panel-header mb-3">
+                <h3 class="cx-panel-title"><i class="fas fa-list me-2"></i>بنود الطلب</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="cx-table table rfq-lines-table w-100">
+                    <thead>
+                        <tr><th>المنتج</th><th>الوحدة</th><th>الكمية المطلوبة</th><th></th></tr>
+                    </thead>
+                    <tbody id="linesBody">
+                        <tr id="emptyRow">
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                ابحث عن منتج وأضفه
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4 gap-2">
+                <a href="{% url 'purchases:rfq_list' %}" class="cx-btn-secondary">إلغاء</a>
+                <button id="btnSave" class="cx-btn-add">
+                    <i class="fas fa-save me-1"></i> حفظ كمسودة
+                </button>
+                <button id="btnSaveSend" class="cx-btn-add" style="background:var(--info)">
+                    <i class="fas fa-paper-plane me-1"></i> حفظ وإرسال
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ITEMS_API = "{% url 'sales:stock_items_api' %}";
+const SAVE_URL  = "{% url 'purchases:rfq_create' %}";
+const CSRF      = "{{ csrf_token }}";
+
+let lines = {};
+let searchTimeout;
+
+function renderLines() {
+    const tbody = document.getElementById('linesBody');
+    const empty = document.getElementById('emptyRow');
+    const ids = Object.keys(lines);
+    document.getElementById('lineCountBadge').textContent = ids.length;
+
+    if (!ids.length) { tbody.innerHTML = ''; tbody.appendChild(empty); return; }
+    empty.remove();
+
+    tbody.innerHTML = ids.map(id => {
+        const ln = lines[id];
+        return `<tr>
+            <td><strong>${ln.name}</strong></td>
+            <td>${ln.unit || '—'}</td>
+            <td><input type="number" class="cx-input qty-input" step="0.0001" min="0.0001"
+                value="${ln.quantity}" onchange="updateQty('${id}', this.value)"></td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="removeLine('${id}')">
+                <i class="fas fa-trash"></i></button></td>
+        </tr>`;
+    }).join('');
+}
+
+function updateQty(id, val) { lines[id].quantity = parseFloat(val) || 0; renderLines(); }
+function removeLine(id) { delete lines[id]; renderLines(); }
+
+function addLine(item) {
+    if (lines[item.id]) { lines[item.id].quantity += 1; }
+    else { lines[item.id] = { ...item, quantity: 1 }; }
+    renderLines();
+    document.getElementById('itemSearch').value = '';
+    document.getElementById('itemResults').innerHTML = '';
+}
+
+document.getElementById('itemSearch').addEventListener('input', function () {
+    clearTimeout(searchTimeout);
+    const q = this.value.trim();
+    if (!q) { document.getElementById('itemResults').innerHTML = ''; return; }
+    searchTimeout = setTimeout(() => {
+        const stockId = document.getElementById('stockId').value;
+        let url = `/sales/api/stock-items/?q=${encodeURIComponent(q)}`;
+        if (stockId) url += `&stock_id=${stockId}`;
+        fetch(url).then(r => r.json()).then(data => {
+            const arr = data.items || data;
+            const container = document.getElementById('itemResults');
+            if (!arr.length) { container.innerHTML = '<div class="list-group-item text-muted">لا نتائج</div>'; return; }
+            container.innerHTML = arr.map(item =>
+                `<button class="list-group-item list-group-item-action d-flex justify-content-between"
+                    onclick='addLine(${JSON.stringify({id:item.id,name:item.name,unit:item.unit||"",sku:item.sku||""})})'>
+                    <span>${item.name} <small class="text-muted">${item.sku||""}</small></span>
+                    <small class="text-muted">${item.unit||""}</small>
+                </button>`
+            ).join('');
+        });
+    }, 280);
+});
+
+async function saveRFQ(autoSend) {
+    const stockId  = document.getElementById('stockId').value;
+    const linesArr = Object.keys(lines).map(id => ({
+        item_id: parseInt(id), quantity: lines[id].quantity, notes: '',
+    }));
+    if (!stockId) { showToast('error', 'يرجى تحديد المخزن'); return; }
+    if (!linesArr.length) { showToast('error', 'أضف بنداً على الأقل'); return; }
+
+    const r = await fetch(SAVE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({
+            supplier_id: document.getElementById('supplierId').value,
+            stock_id: stockId,
+            rfq_date: document.getElementById('rfqDate').value,
+            expiry_date: document.getElementById('rfqExpiry').value,
+            notes: document.getElementById('rfqNotes').value,
+            lines: linesArr,
+        }),
+    });
+    const d = await r.json();
+    if (!d.success) { showToast('error', d.message || 'خطأ'); return; }
+
+    if (autoSend) {
+        await fetch(`/purchases/rfq/${d.id}/send/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF },
+        });
+    }
+    window.location = d.redirect;
+}
+
+document.getElementById('btnSave').addEventListener('click', () => saveRFQ(false));
+document.getElementById('btnSaveSend').addEventListener('click', () => saveRFQ(true));
+
+function showToast(type, msg) {
+    const t = document.createElement('div');
+    t.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed top-0 start-50 translate-middle-x mt-3 shadow`;
+    t.style.zIndex = 9999; t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+</script>
+{% endblock %}

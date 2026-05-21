@@ -313,3 +313,127 @@ class PurchaseReturnLine(TenantMixin):
         verbose_name = 'بند مرتجع شراء'
         verbose_name_plural = 'بنود مرتجعات الشراء'
         ordering = ['id']
+
+
+# ============================================================
+# PURCHASE RFQ  (طلب عرض أسعار شراء)
+# ============================================================
+
+class PurchaseRFQ(TenantMixin):
+    """
+    Request for Quotation — طلب عرض أسعار للموردين.
+
+    دورة الحياة:
+      draft → sent → received → accepted → converted (تحوّل لأمر شراء)
+                              ↘ rejected
+           ↘ cancelled
+    """
+
+    STATUS_CHOICES = (
+        ('draft',     'مسودة'),
+        ('sent',      'مُرسَل للمورد'),
+        ('received',  'استُلم الرد'),
+        ('accepted',  'مقبول'),
+        ('rejected',  'مرفوض'),
+        ('converted', 'مُحوَّل لأمر شراء'),
+        ('cancelled', 'ملغى'),
+    )
+
+    rfq_number   = models.CharField('رقم الطلب', max_length=20, blank=True)
+    rfq_date     = models.DateField('تاريخ الطلب')
+    expiry_date  = models.DateField('تاريخ الانتهاء', null=True, blank=True)
+
+    supplier = models.ForeignKey(
+        'suppliers.Supplier',
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='purchase_rfqs',
+        verbose_name='المورد'
+    )
+    stock = models.ForeignKey(
+        'stocks.Stock',
+        on_delete=models.PROTECT,
+        related_name='purchase_rfqs',
+        verbose_name='المخزن'
+    )
+
+    status = models.CharField('الحالة', max_length=12, choices=STATUS_CHOICES, default='draft')
+    notes  = models.TextField('ملاحظات', blank=True)
+    terms  = models.TextField('الشروط والأحكام', blank=True)
+
+    grand_total = models.DecimalField(
+        'الإجمالي المقتبَس', max_digits=14, decimal_places=2, default=0
+    )
+
+    converted_invoice = models.OneToOneField(
+        PurchaseInvoice,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='source_rfq',
+        verbose_name='أمر الشراء المُحوَّل'
+    )
+
+    class Meta:
+        db_table = 'purchase_rfqs'
+        verbose_name = 'طلب عرض أسعار'
+        verbose_name_plural = 'طلبات عروض الأسعار'
+        ordering = ['-rfq_date', '-id']
+        indexes = [
+            models.Index(fields=['tenant', 'status']),
+            models.Index(fields=['tenant', '-rfq_date']),
+        ]
+
+    def __str__(self):
+        return self.rfq_number
+
+    def save(self, *args, **kwargs):
+        if not self.rfq_number:
+            last = (
+                PurchaseRFQ.objects.filter(tenant=self.tenant)
+                .exclude(rfq_number='')
+                .order_by('-id').first()
+            )
+            next_num = 1
+            if last and last.rfq_number.startswith('RFQ-'):
+                try:
+                    next_num = int(last.rfq_number.split('-')[-1]) + 1
+                except ValueError:
+                    pass
+            self.rfq_number = f"RFQ-{next_num:05d}"
+        super().save(*args, **kwargs)
+
+    def recalculate_total(self):
+        total = sum(ln.line_total for ln in self.lines.all())
+        self.grand_total = total
+        self.save(update_fields=['grand_total', 'updated_at'])
+
+
+class PurchaseRFQLine(TenantMixin):
+    rfq      = models.ForeignKey(
+        PurchaseRFQ, on_delete=models.CASCADE,
+        related_name='lines', verbose_name='طلب العرض'
+    )
+    item     = models.ForeignKey(
+        'items.Item', on_delete=models.PROTECT,
+        related_name='rfq_lines', verbose_name='المنتج'
+    )
+    requested_quantity = models.DecimalField('الكمية المطلوبة', max_digits=12, decimal_places=4)
+    quoted_price       = models.DecimalField(
+        'السعر المقتبَس', max_digits=14, decimal_places=2, default=0,
+        help_text='يُملأ عند استلام رد المورد'
+    )
+    line_total         = models.DecimalField('إجمالي السطر', max_digits=14, decimal_places=2, default=0)
+    notes              = models.TextField('ملاحظات', blank=True)
+
+    class Meta:
+        db_table = 'purchase_rfq_lines'
+        verbose_name = 'بند طلب عرض'
+        verbose_name_plural = 'بنود طلب العرض'
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.item.name} × {self.requested_quantity}"
+
+    def save(self, *args, **kwargs):
+        self.line_total = (self.quoted_price or Decimal('0')) * self.requested_quantity
+        super().save(*args, **kwargs)

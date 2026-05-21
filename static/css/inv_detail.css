@@ -27,6 +27,7 @@
 .doc-hero[data-status="returned"]           { --doc-accent: #f59e0b; }
 .doc-hero[data-status="partially_returned"] { --doc-accent: #f59e0b; }
 .doc-hero[data-status="sent"]               { --doc-accent: #3b82f6; }
+.doc-hero[data-status="received"]           { --doc-accent: #6366f1; }
 .doc-hero[data-status="accepted"]           { --doc-accent: #22c55e; }
 .doc-hero[data-status="rejected"]           { --doc-accent: #ef4444; }
 .doc-hero[data-status="converted"]          { --doc-accent: #8b5cf6; }

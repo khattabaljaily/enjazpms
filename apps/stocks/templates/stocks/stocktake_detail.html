@@ -1,0 +1,293 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/inv_detail.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.0">
+<style>
+.diff-positive { color: var(--success); font-weight: 600; }
+.diff-negative { color: var(--danger); font-weight: 600; }
+.diff-zero     { color: var(--text-muted); }
+.qty-counted   { width: 110px; }
+.count-row.has-diff td { background: rgba(var(--warning-rgb, 240,173,78), .08); }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="doc-hero" data-status="{{ stocktake.status }}">
+    <div class="doc-hero-inner">
+        <div class="doc-hero-left">
+            <div class="doc-hero-icon" style="background:var(--info)">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div>
+                <div class="doc-hero-number">{{ stocktake.stocktake_number }}</div>
+                <div class="doc-hero-meta">
+                    <span class="doc-hero-meta-item"><i class="fas fa-calendar-day"></i>{{ stocktake.stocktake_date }}</span>
+                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ stocktake.stock.name }}</span>
+                </div>
+                <div class="doc-pills">
+                    {% if stocktake.status == 'draft' %}
+                    <span class="doc-pill" style="background:rgba(240,173,78,.15);color:#b07d00"><i class="fas fa-spinner"></i> جاري الجرد</span>
+                    {% elif stocktake.status == 'confirmed' %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> مكتمل</span>
+                    {% else %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-ban"></i> ملغي</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="doc-hero-actions">
+            <a href="{% url 'stocks:stocktake_list' %}" class="cx-btn-secondary">
+                <i class="fas fa-arrow-right"></i><span>العودة</span>
+            </a>
+            {% if stocktake.status == 'draft' %}
+            <button class="cx-btn-secondary" id="btnSaveCounts">
+                <i class="fas fa-floppy-disk"></i><span>حفظ الأعداد</span>
+            </button>
+            <button class="cx-btn-add" onclick="doConfirm()">
+                <i class="fas fa-check"></i><span>تأكيد وتطبيق</span>
+            </button>
+            <button class="cx-btn-danger" onclick="doCancel()">
+                <i class="fas fa-ban"></i><span>إلغاء</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Summary bar -->
+<div class="cx-stats-inline mt-2">
+    <span class="cx-stat-badge cx-stat-badge--primary">
+        <i class="fas fa-list"></i>
+        <strong>{{ stocktake.lines.count }}</strong><span>صنف</span>
+    </span>
+    <span class="cx-stat-badge cx-stat-badge--success" id="matchBadge">
+        <i class="fas fa-check"></i>
+        <strong id="matchCount">—</strong><span>مطابق</span>
+    </span>
+    <span class="cx-stat-badge cx-stat-badge--warning" id="diffBadge">
+        <i class="fas fa-exclamation"></i>
+        <strong id="diffCount">—</strong><span>فرق</span>
+    </span>
+</div>
+
+<!-- Count table -->
+<div class="cx-panel mt-3">
+    <div class="cx-panel-header p-4 pb-2 d-flex justify-content-between align-items-center">
+        <h5 class="fw-semibold mb-0"><i class="fas fa-list me-2 text-info"></i>بنود الجرد</h5>
+        <input type="text" id="lineSearch" class="cx-input w-auto" placeholder="بحث…" style="max-width:220px">
+    </div>
+    <div class="table-responsive">
+        <table class="cx-table" id="countTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>المنتج</th>
+                    <th>الوحدة</th>
+                    <th class="text-end">كمية النظام</th>
+                    <th class="text-end">الكمية المعدودة</th>
+                    <th class="text-end">الفرق</th>
+                    {% if stocktake.status == 'draft' %}<th></th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for ln in stocktake.lines.all %}
+                <tr class="count-row{% if ln.difference != 0 %} has-diff{% endif %}"
+                    data-line-id="{{ ln.id }}"
+                    data-item-name="{{ ln.item.name|lower }}"
+                    data-system="{{ ln.system_quantity }}"
+                    data-counted="{{ ln.counted_quantity }}">
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ ln.item.name }}</strong><br><small class="text-muted">{{ ln.item.sku|default:"" }}</small></td>
+                    <td>{{ ln.item.unit.name|default:"—" }}</td>
+                    <td class="text-end">{{ ln.system_quantity|floatformat:"-2" }}</td>
+                    <td class="text-end">
+                        {% if stocktake.status == 'draft' %}
+                        <input type="number" class="cx-input qty-counted"
+                               step="0.0001" min="0"
+                               value="{{ ln.counted_quantity|floatformat:'-4' }}"
+                               onchange="onCountChange(this, {{ ln.id }})">
+                        {% else %}
+                        {{ ln.counted_quantity|floatformat:"-2" }}
+                        {% endif %}
+                    </td>
+                    <td class="text-end diff-cell">
+                        {% with diff=ln.difference %}
+                        {% if diff > 0 %}<span class="diff-positive">+{{ diff|floatformat:"-2" }}</span>
+                        {% elif diff < 0 %}<span class="diff-negative">{{ diff|floatformat:"-2" }}</span>
+                        {% else %}<span class="diff-zero">—</span>{% endif %}
+                        {% endwith %}
+                    </td>
+                    {% if stocktake.status == 'draft' %}
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary"
+                            onclick="resetLine(this, {{ ln.system_quantity }}, {{ ln.id }})">
+                            <i class="fas fa-rotate-left"></i>
+                        </button>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- Confirm modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">تأكيد الجرد وتطبيق الفروقات</h5></div>
+            <div class="modal-body">
+                <p>سيتم تطبيق جميع الفروقات على كميات مخزن <strong>{{ stocktake.stock.name }}</strong>.</p>
+                <p id="diffSummary" class="text-muted"></p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-triangle-exclamation me-2"></i>
+                    هذا الإجراء لا يمكن التراجع عنه.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cx-btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button class="cx-btn-add" id="btnConfirmOk"><i class="fas fa-check me-1"></i>تأكيد وتطبيق</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF          = "{{ csrf_token }}";
+const SAVE_URL      = "{% url 'stocks:stocktake_save_counts' stocktake.pk %}";
+const CONFIRM_URL   = "{% url 'stocks:stocktake_confirm' stocktake.pk %}";
+const CANCEL_URL    = "{% url 'stocks:stocktake_cancel' stocktake.pk %}";
+const isDraft       = "{{ stocktake.status }}" === "draft";
+
+// Track unsaved changes
+let pendingCounts = {};
+
+function onCountChange(input, lineId) {
+    const row = input.closest('tr');
+    const sys = parseFloat(row.dataset.system);
+    const cnt = parseFloat(input.value) || 0;
+    const diff = cnt - sys;
+    const diffCell = row.querySelector('.diff-cell');
+    if (diff > 0) {
+        diffCell.innerHTML = `<span class="diff-positive">+${diff.toFixed(2)}</span>`;
+        row.classList.add('has-diff');
+    } else if (diff < 0) {
+        diffCell.innerHTML = `<span class="diff-negative">${diff.toFixed(2)}</span>`;
+        row.classList.add('has-diff');
+    } else {
+        diffCell.innerHTML = '<span class="diff-zero">—</span>';
+        row.classList.remove('has-diff');
+    }
+    pendingCounts[lineId] = cnt;
+    updateSummary();
+}
+
+function resetLine(btn, sysQty, lineId) {
+    const row = btn.closest('tr');
+    const input = row.querySelector('.qty-counted');
+    input.value = sysQty;
+    onCountChange(input, lineId);
+}
+
+function updateSummary() {
+    const rows = document.querySelectorAll('.count-row');
+    let match = 0, diff = 0;
+    rows.forEach(r => r.classList.contains('has-diff') ? diff++ : match++);
+    document.getElementById('matchCount').textContent = match;
+    document.getElementById('diffCount').textContent  = diff;
+}
+
+document.getElementById('btnSaveCounts')?.addEventListener('click', async function () {
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> حفظ…';
+
+    // Collect all current values
+    const counts = {};
+    document.querySelectorAll('.count-row').forEach(row => {
+        const input = row.querySelector('.qty-counted');
+        if (input) counts[row.dataset.lineId] = parseFloat(input.value) || 0;
+    });
+
+    const r = await fetch(SAVE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ counts }),
+    });
+    const d = await r.json();
+    this.disabled = false;
+    this.innerHTML = '<i class="fas fa-floppy-disk me-1"></i> حفظ الأعداد';
+    showToast(d.success ? 'success' : 'error', d.success ? 'تم حفظ الأعداد' : d.message);
+    pendingCounts = {};
+});
+
+function doConfirm() {
+    const diffRows = document.querySelectorAll('.count-row.has-diff').length;
+    document.getElementById('diffSummary').textContent =
+        `عدد الأصناف ذات فروقات: ${diffRows}`;
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+    document.getElementById('btnConfirmOk').onclick = async function () {
+        this.disabled = true;
+
+        // Save first
+        const counts = {};
+        document.querySelectorAll('.count-row').forEach(row => {
+            const input = row.querySelector('.qty-counted');
+            if (input) counts[row.dataset.lineId] = parseFloat(input.value) || 0;
+        });
+        await fetch(SAVE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ counts }),
+        });
+
+        const r = await fetch(CONFIRM_URL, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF },
+        });
+        const d = await r.json();
+        if (d.success) location.reload();
+        else showToast('error', d.message);
+    };
+}
+
+async function doCancel() {
+    if (!confirm('إلغاء جلسة الجرد بدون تطبيق؟')) return;
+    const r = await fetch(CANCEL_URL, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF },
+    });
+    const d = await r.json();
+    if (d.success) location.reload();
+    else showToast('error', d.message);
+}
+
+// Search filter
+document.getElementById('lineSearch')?.addEventListener('input', function () {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.count-row').forEach(row => {
+        row.style.display = row.dataset.itemName.includes(q) ? '' : 'none';
+    });
+});
+
+updateSummary();
+
+function showToast(type, msg) {
+    const t = document.createElement('div');
+    t.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed top-0 start-50 translate-middle-x mt-3 shadow`;
+    t.style.zIndex = 9999;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+</script>
+{% endblock %}

@@ -2209,3 +2209,193 @@ def sales_by_payment_method_report_export(request):
     writer.writerow(['إجمالي المحصل', report['summary']['total_paid']])
     writer.writerow(['المتبقي', report['summary']['outstanding']])
     return response
+
+
+# ═══════════════════════════════════════════════════════════════
+#   نقطة البيع  (POS)
+# ═══════════════════════════════════════════════════════════════
+
+@login_required
+@require_permission('add_sales')
+def pos_view(request):
+    """صفحة نقطة البيع الرئيسية."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    stocks = Stock.objects.filter(tenant=tenant, is_active=True).order_by('-is_default', 'name')
+    default_stock = stocks.filter(is_default=True).first() or stocks.first()
+
+    from apps.items.models import Category
+    categories = Category.objects.filter(tenant=tenant, parent=None).order_by('display_order', 'name')
+    customers = Customer.objects.filter(tenant=tenant, is_active=True).order_by('name').values('id', 'name')
+
+    return render(request, 'sales/pos.html', {
+        'stocks': stocks,
+        'default_stock': default_stock,
+        'categories': categories,
+        'customers': list(customers),
+        'section': 'pos',
+    })
+
+
+@login_required
+@require_permission('view_items')
+def pos_items_api(request):
+    """يُعيد قائمة المنتجات مع الكميات للـ POS."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    stock_id = request.GET.get('stock_id')
+    category_id = request.GET.get('category_id') or None
+    search = (request.GET.get('q') or '').strip()
+
+    qs = Item.objects.filter(tenant=tenant, is_active=True).select_related('unit', 'category')
+
+    if category_id:
+        from apps.items.models import Category
+        try:
+            cat = Category.objects.get(id=category_id, tenant=tenant)
+            child_ids = list(cat.children.values_list('id', flat=True))
+            cat_ids = [cat.id] + child_ids
+            qs = qs.filter(category_id__in=cat_ids)
+        except Category.DoesNotExist:
+            pass
+
+    if search:
+        qs = qs.filter(
+            Q(name__icontains=search) |
+            Q(sku__icontains=search) |
+            Q(barcode__icontains=search)
+        )
+
+    qs = list(qs.order_by('name')[:80])
+    item_ids = [item.id for item in qs]
+
+    stock_qty_map = {}
+    if stock_id and item_ids:
+        sqqs = StockQuantity.objects.filter(
+            tenant=tenant, stock_id=stock_id, item_id__in=item_ids
+        ).values('item_id', 'quantity', 'reserved_quantity')
+        for sq in sqqs:
+            available = float((sq['quantity'] or 0) - (sq['reserved_quantity'] or 0))
+            stock_qty_map[sq['item_id']] = {
+                'quantity': sq['quantity'],
+                'reserved_quantity': sq['reserved_quantity'],
+                'available_quantity': available,
+            }
+
+    items = []
+    for item in qs:
+        sq = stock_qty_map.get(item.id, {})
+        image_url = item.image.url if item.image else None
+        items.append({
+            'id': item.id,
+            'name': item.name,
+            'sku': item.sku,
+            'barcode': item.barcode,
+            'category': item.category.name if item.category else '',
+            'selling_price': str(item.selling_price or 0),
+            'cost_price': str(item.cost_price or 0),
+            'tax_rate': str(item.tax_rate or 0),
+            'unit': item.unit.name if item.unit else '',
+            'item_type': item.item_type,
+            'is_service': item.item_type == 'service',
+            'available_qty': float(sq.get('available_quantity', 0)) if sq else None,
+            'image_url': image_url,
+        })
+
+    return JsonResponse({'items': items})
+
+
+@login_required
+@require_permission('add_sales')
+@require_POST
+def pos_checkout_api(request):
+    """
+    ينشئ فاتورة مؤكدة مباشرةً من سلة POS ويُسجِّل الدفعة.
+    يُعيد {success, invoice_number, invoice_id}.
+    """
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    try:
+        body = json.loads(request.body)
+    except (ValueError, KeyError):
+        return _json_error('بيانات غير صالحة')
+
+    lines_raw = body.get('lines', [])
+    if not lines_raw:
+        return _json_error('لا توجد منتجات في السلة')
+
+    stock_id = body.get('stock_id')
+    if not stock_id:
+        return _json_error('المخزن مطلوب')
+
+    try:
+        stock = Stock.objects.get(id=stock_id, tenant=tenant)
+    except Stock.DoesNotExist:
+        return _json_error('المخزن غير موجود')
+
+    payment_method = body.get('payment_method', 'cash')
+    cash_amount = Decimal(str(body.get('cash_amount', 0) or 0))
+    bank_amount = Decimal(str(body.get('bank_amount', 0) or 0))
+    bank_reference = body.get('bank_reference', '')
+    customer_id = body.get('customer_id') or None
+    discount_type = body.get('discount_type', 'fixed')
+    discount_value = Decimal(str(body.get('discount_value', 0) or 0))
+    notes = body.get('notes', '')
+
+    lines_data = []
+    for ln in lines_raw:
+        lines_data.append({
+            'item_id': ln['item_id'],
+            'quantity': ln['quantity'],
+            'unit_price': ln['unit_price'],
+            'discount_percent': ln.get('discount_percent', 0),
+            'tax_rate': ln.get('tax_rate', 0),
+            'cost_price_snapshot': ln.get('cost_price', 0),
+        })
+
+    invoice_data = {
+        'invoice_date': timezone.now().date(),
+        'payment_method': payment_method,
+        'invoice_discount_type': discount_type,
+        'invoice_discount_value': discount_value,
+        'cash_amount': cash_amount,
+        'bank_amount': bank_amount,
+        'bank_reference': bank_reference,
+        'notes': notes,
+        'customer_id': customer_id,
+    }
+    if customer_id:
+        invoice_data['due_date'] = timezone.now().date()
+
+    try:
+        with transaction.atomic():
+            invoice = build_invoice_from_post(tenant, stock, invoice_data, lines_data, request.user)
+            confirm_sale_invoice(invoice, request.user)
+
+            if payment_method == 'credit' and customer_id and cash_amount + bank_amount > 0:
+                partial = cash_amount + bank_amount
+                if partial > 0:
+                    record_customer_payment(
+                        invoice=invoice,
+                        amount=partial,
+                        method='cash' if cash_amount >= bank_amount else 'bank',
+                        date=timezone.now().date(),
+                        reference=bank_reference,
+                        user=request.user,
+                    )
+
+    except Exception as exc:
+        return _json_error(str(exc))
+
+    return JsonResponse({
+        'success': True,
+        'invoice_number': invoice.invoice_number,
+        'invoice_id': invoice.id,
+        'grand_total': str(invoice.grand_total),
+    })

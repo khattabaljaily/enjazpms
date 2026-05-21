@@ -1,0 +1,286 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.0">
+<style>
+.tf-lines-table th, .tf-lines-table td { vertical-align: middle; }
+.tf-lines-table .qty-input { width: 110px; }
+.tf-avail { font-size: .8rem; color: var(--text-muted); }
+.tf-avail.low { color: var(--danger); font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:var(--warning)">
+                <i class="fas fa-arrows-left-right"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">تحويل مخزون جديد</h1>
+                <p class="cx-hero-desc">نقل المنتجات من مخزن إلى آخر</p>
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-layer-group"></i>
+            <strong id="lineCountBadge">0</strong><span>بند</span>
+        </span>
+    </div>
+</div>
+
+<div class="row g-3">
+
+    <!-- Header panel -->
+    <div class="col-lg-4">
+        <div class="cx-panel p-4 mb-3">
+            <div class="cx-panel-header mb-3">
+                <h3 class="cx-panel-title"><i class="fas fa-info-circle me-2"></i>بيانات التحويل</h3>
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">من مخزن <span class="text-danger">*</span></label>
+                <select id="fromStock" class="cx-input">
+                    <option value="">— اختر —</option>
+                    {% for s in stocks %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">إلى مخزن <span class="text-danger">*</span></label>
+                <select id="toStock" class="cx-input">
+                    <option value="">— اختر —</option>
+                    {% for s in stocks %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">تاريخ التحويل</label>
+                <input type="date" id="transferDate" class="cx-input" value="{{ today }}">
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">ملاحظات</label>
+                <textarea id="transferNotes" class="cx-input" rows="3"></textarea>
+            </div>
+        </div>
+
+        <div class="cx-panel p-4">
+            <div class="cx-panel-header mb-3">
+                <h3 class="cx-panel-title"><i class="fas fa-search me-2"></i>إضافة منتج</h3>
+            </div>
+            <div class="mb-2">
+                <input type="text" id="itemSearch" class="cx-input" placeholder="ابحث باسم المنتج أو الرمز…">
+            </div>
+            <div id="itemResults" class="list-group" style="max-height:260px;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- Lines panel -->
+    <div class="col-lg-8">
+        <div class="cx-panel p-4">
+            <div class="cx-panel-header mb-3">
+                <h3 class="cx-panel-title"><i class="fas fa-list me-2"></i>بنود التحويل</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="cx-table table tf-lines-table w-100">
+                    <thead>
+                        <tr>
+                            <th>المنتج</th>
+                            <th>الوحدة</th>
+                            <th>متاح</th>
+                            <th>الكمية</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="linesBody">
+                        <tr id="emptyRow">
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                ابحث عن منتج وأضفه للقائمة
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4 gap-2">
+                <a href="{% url 'stocks:transfer_list' %}" class="cx-btn-secondary">إلغاء</a>
+                <button id="btnSave" class="cx-btn-add">
+                    <i class="fas fa-save me-1"></i> حفظ كمسودة
+                </button>
+                <button id="btnSaveConfirm" class="cx-btn-add" style="background:var(--success)">
+                    <i class="fas fa-check me-1"></i> حفظ وتأكيد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ITEMS_API = "{% url 'stocks:transfer_items_api' %}";
+const SAVE_API  = "{% url 'stocks:transfer_create' %}";
+const CSRF      = "{{ csrf_token }}";
+
+let lines = {};   // item_id → {name, unit, available_qty, quantity}
+let searchTimeout;
+
+function renderLines() {
+    const tbody = document.getElementById('linesBody');
+    const empty = document.getElementById('emptyRow');
+    const ids = Object.keys(lines);
+    document.getElementById('lineCountBadge').textContent = ids.length;
+
+    if (!ids.length) {
+        tbody.innerHTML = '';
+        tbody.appendChild(empty);
+        return;
+    }
+    empty.remove();
+
+    tbody.innerHTML = ids.map(id => {
+        const ln = lines[id];
+        const availClass = ln.available_qty < ln.quantity ? 'low' : '';
+        return `<tr id="line-${id}">
+            <td><strong>${ln.name}</strong></td>
+            <td>${ln.unit}</td>
+            <td><span class="tf-avail ${availClass}">${ln.available_qty.toFixed(2)}</span></td>
+            <td>
+                <input type="number" class="cx-input qty-input" step="0.0001" min="0.0001"
+                    value="${ln.quantity}"
+                    onchange="updateQty('${id}', this.value)">
+            </td>
+            <td>
+                <button class="cx-btn-sm btn btn-outline-danger btn-sm" onclick="removeLine('${id}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function updateQty(id, val) {
+    lines[id].quantity = parseFloat(val) || 0;
+    renderLines();
+}
+
+function removeLine(id) {
+    delete lines[id];
+    renderLines();
+}
+
+function addLine(item) {
+    if (lines[item.id]) {
+        lines[item.id].quantity += 1;
+    } else {
+        lines[item.id] = { ...item, quantity: 1 };
+    }
+    renderLines();
+    document.getElementById('itemSearch').value = '';
+    document.getElementById('itemResults').innerHTML = '';
+}
+
+document.getElementById('fromStock').addEventListener('change', function () {
+    // refresh available quantities
+    Object.keys(lines).forEach(id => { lines[id].available_qty = 0; });
+    renderLines();
+    if (document.getElementById('itemSearch').value.trim()) {
+        searchItems(document.getElementById('itemSearch').value.trim());
+    }
+});
+
+document.getElementById('itemSearch').addEventListener('input', function () {
+    clearTimeout(searchTimeout);
+    const q = this.value.trim();
+    if (!q) { document.getElementById('itemResults').innerHTML = ''; return; }
+    searchTimeout = setTimeout(() => searchItems(q), 280);
+});
+
+function searchItems(q) {
+    const stockId = document.getElementById('fromStock').value;
+    let url = `${ITEMS_API}?q=${encodeURIComponent(q)}`;
+    if (stockId) url += `&stock_id=${stockId}`;
+
+    fetch(url).then(r => r.json()).then(data => {
+        const container = document.getElementById('itemResults');
+        if (!data.items.length) {
+            container.innerHTML = '<div class="list-group-item text-muted">لا نتائج</div>';
+            return;
+        }
+        container.innerHTML = data.items.map(item =>
+            `<button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                onclick='addLine(${JSON.stringify(item)})'>
+                <span>${item.name} <small class="text-muted">${item.sku}</small></span>
+                <span class="badge bg-secondary">${item.available_qty.toFixed(2)} ${item.unit}</span>
+            </button>`
+        ).join('');
+    });
+}
+
+async function saveTransfer(autoConfirm) {
+    const fromId  = document.getElementById('fromStock').value;
+    const toId    = document.getElementById('toStock').value;
+    const tdate   = document.getElementById('transferDate').value;
+    const notes   = document.getElementById('transferNotes').value;
+    const linesArr = Object.keys(lines).map(id => ({
+        item_id: parseInt(id),
+        quantity: lines[id].quantity,
+        notes: '',
+    }));
+
+    if (!fromId || !toId) {
+        showToast('error', 'يرجى تحديد المخزن المرسِل والمستلِم');
+        return;
+    }
+    if (!linesArr.length) {
+        showToast('error', 'أضف بنداً واحداً على الأقل');
+        return;
+    }
+
+    const resp = await fetch(SAVE_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ from_stock: fromId, to_stock: toId, transfer_date: tdate, notes, lines: linesArr }),
+    });
+    const data = await resp.json();
+    if (!data.success) {
+        showToast('error', data.message || 'خطأ في الحفظ');
+        return;
+    }
+
+    if (autoConfirm) {
+        const cr = await fetch(`/stocks/transfers/${data.id}/confirm/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+        });
+        const cd = await cr.json();
+        if (!cd.success) {
+            showToast('error', cd.message);
+            window.location = data.redirect;
+            return;
+        }
+    }
+    window.location = data.redirect;
+}
+
+document.getElementById('btnSave').addEventListener('click', () => saveTransfer(false));
+document.getElementById('btnSaveConfirm').addEventListener('click', () => saveTransfer(true));
+
+function showToast(type, msg) {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed top-0 start-50 translate-middle-x mt-3 shadow`;
+    toast.style.zIndex = 9999;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+}
+</script>
+{% endblock %}
