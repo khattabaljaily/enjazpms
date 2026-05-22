@@ -34,7 +34,7 @@
     <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=2.0">
     
     <!-- Shared UI Components CSS -->
-    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=1.0">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=1.1">
 
     <!-- Auth Pages CSS -->
     <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=2.0">
@@ -48,6 +48,11 @@
     <!-- Page content goes here -->
     {% endblock %}
     
+    <!-- Global Spinner -->
+    <div id="global-spinner" aria-hidden="true" role="status">
+        <div class="global-spinner__ring"></div>
+    </div>
+
     <!-- jQuery 3.7 -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     
@@ -59,7 +64,7 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     
     <!-- Custom JS -->
-    <script src="{% static 'js/main.js' %}?v=3.7"></script>
+    <script src="{% static 'js/main.js' %}?v=3.8"></script>
 
     <!-- Inject print date for report letterhead (no-op on non-report pages) -->
     <script>

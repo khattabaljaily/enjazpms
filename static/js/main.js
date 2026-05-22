@@ -80,6 +80,65 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+// ─── Global Page Spinner ───────────────────────────────────────────────────
+const GSpinner = (function () {
+    var _el = null;
+    var _count = 0;
+    var _safety = null;
+
+    function _getEl() { return _el || (_el = document.getElementById('global-spinner')); }
+
+    function _doHide() {
+        var s = _getEl();
+        if (s) s.classList.remove('active');
+    }
+
+    function show() {
+        _count++;
+        var s = _getEl();
+        if (s) s.classList.add('active');
+        clearTimeout(_safety);
+        _safety = setTimeout(forceHide, 15000);
+    }
+
+    function hide() {
+        _count = Math.max(0, _count - 1);
+        if (_count === 0) { clearTimeout(_safety); _doHide(); }
+    }
+
+    function forceHide() {
+        clearTimeout(_safety);
+        _count = 0;
+        _doHide();
+    }
+
+    return { show: show, hide: hide, forceHide: forceHide };
+})();
+
+// pageshow fires on both normal load AND bfcache restore (back/forward).
+// This is the fix for "spinner stays active after navigating back".
+window.addEventListener('pageshow', function () { GSpinner.forceHide(); });
+window.addEventListener('load',     function () { GSpinner.forceHide(); });
+
+// Show on navigation link clicks — skip anchors, modals, new tabs, downloads.
+document.addEventListener('click', function (e) {
+    var link = e.target.closest('a[href]');
+    if (!link) return;
+    var href = link.getAttribute('href') || '';
+    if (!href || href === '#' || /^(javascript:|mailto:|tel:|#)/i.test(href)) return;
+    if (link.target === '_blank') return;
+    if (link.hasAttribute('data-bs-toggle') || link.hasAttribute('data-bs-dismiss')) return;
+    if (link.hasAttribute('download') || link.hasAttribute('data-no-spinner')) return;
+    GSpinner.show();
+}, true);
+
+// Show on page-navigation form submissions only (not AJAX forms).
+// Bubble phase runs AFTER jQuery's e.preventDefault() on AJAX forms,
+// so defaultPrevented === true for those and we skip them.
+document.addEventListener('submit', function (e) {
+    if (!e.defaultPrevented) GSpinner.show();
+});
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -469,6 +528,13 @@ const EnjazIMS = {
         });
     }
 };
+
+// jQuery AJAX hooks for GSpinner + backwards-compat alias
+$(document)
+    .on('ajaxStart', function () { GSpinner.show(); })
+    .on('ajaxStop',  function () { GSpinner.hide(); });
+
+window.GlobalSpinner = GSpinner;
 
 // DataTable default configuration (Arabic)
 $.extend(true, $.fn.dataTable.defaults, {
