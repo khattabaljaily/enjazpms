@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import HttpResponseNotAllowed, HttpResponse, JsonResponse
+from django.views.decorators.http import require_POST
 from django.shortcuts import redirect, render
 
 from apps.accounts.decorators import require_permission
@@ -401,19 +402,21 @@ def item_search_api(request):
         min_chars = int(request.GET.get('min_chars', 2))
     except (TypeError, ValueError):
         min_chars = 2
-    min_chars = max(1, min(min_chars, 5))
+    min_chars = max(0, min(min_chars, 5))
 
     if len(q) < min_chars:
         return JsonResponse({'results': []})
 
-    qs = Item.objects.for_tenant(tenant).filter(
-        is_active=True,
-        is_sellable=True
-    ).filter(
-        Q(name__icontains=q) |
-        Q(barcode__icontains=q) |
-        Q(sku__icontains=q)
-    ).select_related('unit', 'purchase_unit')[:15]
+    limit = 100 if not q else 15
+    base_qs = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
+    if q:
+        qs = base_qs.filter(
+            Q(name__icontains=q) |
+            Q(barcode__icontains=q) |
+            Q(sku__icontains=q)
+        ).select_related('unit', 'purchase_unit')[:limit]
+    else:
+        qs = base_qs.order_by('name').select_related('unit', 'purchase_unit')[:limit]
 
     results = []
     for item in qs:
@@ -488,6 +491,21 @@ def category_table_api(request):
         'draw': draw, 'recordsTotal': records_total,
         'recordsFiltered': records_filtered, 'data': data,
     })
+
+
+@login_required
+@require_permission('view_categories')
+def category_options_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    cats = (
+        Category.objects.for_tenant(tenant)
+        .filter(is_active=True)
+        .order_by('display_order', 'name')
+        .values('id', 'name')
+    )
+    return JsonResponse({'success': True, 'categories': list(cats)})
 
 
 @login_required
@@ -623,6 +641,21 @@ def unit_table_api(request):
         'draw': draw, 'recordsTotal': records_total,
         'recordsFiltered': records_filtered, 'data': data,
     })
+
+
+@login_required
+@require_permission('view_units')
+def unit_options_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    units = (
+        Unit.objects.for_tenant(tenant)
+        .filter(is_active=True)
+        .order_by('name')
+        .values('id', 'name')
+    )
+    return JsonResponse({'success': True, 'units': list(units)})
 
 
 @login_required
@@ -1043,6 +1076,8 @@ def bom_recipe_detail(request, pk):
                     unit=unit,
                     notes=notes,
                 )
+                recipe.item.cost_price = recipe.total_cost
+                recipe.item.save(update_fields=['cost_price'])
                 return JsonResponse({'success': True, 'id': line.id, 'message': 'تم إضافة المكوّن'})
             except Exception as e:
                 return JsonResponse({'success': False, 'message': str(e)}, status=400)
@@ -1052,6 +1087,8 @@ def bom_recipe_detail(request, pk):
             try:
                 line = BOMLine.objects.get(pk=line_id, recipe=recipe, tenant=tenant)
                 line.delete()
+                recipe.item.cost_price = recipe.total_cost
+                recipe.item.save(update_fields=['cost_price'])
                 return JsonResponse({'success': True, 'message': 'تم حذف المكوّن'})
             except BOMLine.DoesNotExist:
                 return JsonResponse({'success': False, 'message': 'المكوّن غير موجود'}, status=404)
@@ -1060,12 +1097,10 @@ def bom_recipe_detail(request, pk):
 
     lines = recipe.lines.select_related('component', 'unit').order_by('id')
     units = Unit.objects.filter(tenant=tenant, is_active=True)
-    items_qs = Item.objects.filter(tenant=tenant, is_active=True).exclude(pk=recipe.item.pk)
     return render(request, 'items/bom_detail.html', {
         'recipe': recipe,
         'lines': lines,
         'units': units,
-        'items': items_qs,
     })
 
 
@@ -1103,6 +1138,22 @@ def bom_recipe_create_ajax(request):
         updated_by=request.user,
     )
     return JsonResponse({'success': True, 'id': recipe.pk, 'message': 'تم إنشاء الوصفة'})
+
+
+@login_required
+@require_permission('delete_items')
+@require_POST
+def bom_recipe_delete_ajax(request, pk):
+    """حذف وصفة تصنيع (AJAX POST)."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    try:
+        recipe = BOMRecipe.objects.get(pk=pk, tenant=tenant)
+        recipe.delete()
+        return JsonResponse({'success': True, 'message': 'تم حذف الوصفة بنجاح'})
+    except BOMRecipe.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الوصفة غير موجودة'}, status=404)
 
 
 # ============================================================

@@ -66,7 +66,7 @@
     <div class="cx-kpi-row">
         <div class="cx-kpi-card">
             <div class="cx-kpi-label">إجمالي قيمة العروض</div>
-            <div class="cx-kpi-value text-primary">{{ stats.grand_total_sum|floatformat:"2u"|default:0|intcomma }}</div>
+            <div class="cx-kpi-value text-primary">{{ stats.grand_total_sum|money }}</div>
         </div>
         <div class="cx-kpi-card">
             <div class="cx-kpi-label">العروض المقبولة</div>

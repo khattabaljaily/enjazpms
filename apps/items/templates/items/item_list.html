@@ -192,7 +192,7 @@
 
                         {# ── ٣: المخزون ── #}
                         <div class="cx-form-group-label">
-                            <span class="cx-form-group-icon"><i class="fas fa-warehouse"></i></span> إعدادات المخزون
+                            <span class="cx-form-group-icon"><i class="fas fa-warehouse"></i></span> حدود المخزن
                         </div>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
@@ -205,10 +205,10 @@
                             </div>
                         </div>
 
-                        {# ── ٤: خيارات التتبع — تظهر فقط للأنواع التجارية التي تدعمها ── #}
+                        {# ── ٤: خيارات متقدمة — تظهر فقط للأنواع التجارية التي تدعمها ── #}
                         {% if tenant_capabilities.has_expiry_dates or tenant_capabilities.has_batch_numbers or tenant_capabilities.has_serial_numbers or tenant_capabilities.has_variants %}
                         <div class="cx-form-group-label">
-                            <span class="cx-form-group-icon"><i class="fas fa-sliders"></i></span> خيارات التتبع
+                            <span class="cx-form-group-icon"><i class="fas fa-sliders"></i></span> خيارات متقدمة
                         </div>
                         <div class="row g-3 mb-4">
                             {% if tenant_capabilities.has_expiry_dates %}
@@ -234,7 +234,7 @@
                                             <i class="fas fa-layer-group text-warning me-1"></i>
                                             {{ item_form.track_batch.label }}
                                         </span>
-                                        <span class="cx-toggle-desc">تتبع أرقام دُفعات الإنتاج أو الاستيراد</span>
+                                        <span class="cx-toggle-desc">تتبع أرقام الدفعات لهذا المنتج</span>
                                     </div>
                                     {{ item_form.track_batch }}
                                     <div class="cx-toggle-switch"></div>
@@ -264,7 +264,7 @@
                                             <i class="fas fa-palette text-primary me-1"></i>
                                             {{ item_form.has_variants.label }}
                                         </span>
-                                        <span class="cx-toggle-desc">ألوان ومقاسات وتشكيلات متعددة</span>
+                                        <span class="cx-toggle-desc">ألوان وأحجام ومقاسات مختلفة</span>
                                     </div>
                                     {{ item_form.has_variants }}
                                     <div class="cx-toggle-switch"></div>
@@ -274,9 +274,9 @@
                         </div>
                         {% endif %}
 
-                        {# ── ٥: تفاصيل وحالة ── #}
+                        {# ── ٥: معلومات إضافية ── #}
                         <div class="cx-form-group-label">
-                            <span class="cx-form-group-icon"><i class="fas fa-list-check"></i></span> تفاصيل وحالة
+                            <span class="cx-form-group-icon"><i class="fas fa-list-check"></i></span> معلومات إضافية
                         </div>
                         <div class="row g-3">
                             <div class="col-12">
@@ -455,7 +455,7 @@
                         <div class="cx-info-card" id="viewTrackRow">
                             <div class="cx-info-card-icon" style="background:#f0fdf4"><i class="fas fa-list-check" style="color:#10b981"></i></div>
                             <div class="cx-info-card-content">
-                                <span class="cx-info-card-label">خيارات التتبع</span>
+                                <span class="cx-info-card-label">خيارات متقدمة</span>
                                 <span class="cx-info-card-value" id="viewItemTracking"></span>
                             </div>
                         </div>
@@ -909,7 +909,7 @@
                     : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>';
                 $('#viewItemStatus').html(statusHtml);
 
-                // خيارات التتبع
+                // خيارات متقدمة
                 let tracking = [];
                 if (d.track_expiry)  tracking.push('تتبع الانتهاء');
                 if (d.track_batch)   tracking.push('تتبع الدفعات');

@@ -533,7 +533,8 @@ def tenant_settings_update_api(request):
 @require_permission('view_tenant_settings')
 def subscription_info(request):
     """معلومات الاشتراك"""
-    tenant = request.tenant
+    from .models import Tenant
+    tenant = Tenant.objects.select_related('business_type').get(pk=request.tenant.pk) if request.tenant else None
     days_remaining = tenant.days_until_expiry() if tenant else None
     is_valid = tenant.is_subscription_valid() if tenant else False
 

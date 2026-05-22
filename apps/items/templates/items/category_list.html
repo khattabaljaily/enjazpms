@@ -198,11 +198,12 @@
 <script>
 (function() {
     'use strict';
-    const urlTable  = "{% url 'items:category_table_api' %}";
-    const urlCreate = "{% url 'items:category_create_api' %}";
-    const urlDetail = "{% url 'items:category_detail_api' 0 %}";
-    const urlUpdate = "{% url 'items:category_update_api' 0 %}";
-    const urlDelete = "{% url 'items:category_delete_api' 0 %}";
+    const urlTable   = "{% url 'items:category_table_api' %}";
+    const urlCreate  = "{% url 'items:category_create_api' %}";
+    const urlDetail  = "{% url 'items:category_detail_api' 0 %}";
+    const urlUpdate  = "{% url 'items:category_update_api' 0 %}";
+    const urlDelete  = "{% url 'items:category_delete_api' 0 %}";
+    const urlOptions = "{% url 'items:category_options_api' %}";
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
     ['categoryModal','deleteCategoryModal','importCategoriesModal'].forEach(function(id) {
@@ -242,7 +243,7 @@
                 <div class="cx-category-card-meta">
                     <div>
                         <span class="cx-category-card-meta-label">الرئيسي</span>
-                        <strong class="cx-category-card-meta-value">${r.parent === '-' ? 'جذر' : r.parent}</strong>
+                        <strong class="cx-category-card-meta-value">${r.parent === '-' ? 'رئيسي' : r.parent}</strong>
                     </div>
                     <div>
                         <span class="cx-category-card-meta-label">الترتيب</span>
@@ -273,7 +274,7 @@
                 return `<span><i class="fas ${r.icon} me-2 text-muted"></i><strong>${r.name}</strong></span>`;
             }},
             { data: 'full_path', render: p => `<span class="text-muted" style="font-size:0.875rem">${p}</span>` },
-            { data: 'parent', render: p => p === '-' ? `<span class="cxr-empty">جذر</span>` : `<span>${p}</span>` },
+            { data: 'parent', render: p => p === '-' ? `<span class="cxr-empty">رئيسي</span>` : `<span>${p}</span>` },
             { data: 'display_order' },
             { data: 'is_active', render: a => a
                 ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
@@ -293,10 +294,23 @@
         searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
     });
 
+    function refreshParentSelect(selectedId) {
+        $.getJSON(urlOptions, function(resp) {
+            if (!resp.success) return;
+            const $sel = $('#id_parent');
+            const current = selectedId !== undefined ? selectedId : $sel.val();
+            $sel.find('option:not(:first)').remove();
+            resp.categories.forEach(function(c) {
+                $sel.append(new Option(c.name, c.id, false, String(c.id) === String(current)));
+            });
+        });
+    }
+
     function resetForm() { $form[0].reset(); $idInput.val(''); $('#id_is_active').prop('checked', true); EnjazIMS.clearFormErrors($form); }
 
     $('#btnOpenCreateCategory').on('click', function() {
         resetForm();
+        refreshParentSelect(null);
         $('#categoryModalTitle').text('إضافة تصنيف جديد');
         $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
         categoryModal.show();
@@ -309,11 +323,11 @@
             const d = resp.data;
             $idInput.val(d.id);
             $('#id_name').val(d.name || '');
-            $('#id_parent').val(d.parent || '');
             $('#id_icon').val(d.icon || 'fa-tag');
             $('#id_description').val(d.description || '');
             $('#id_display_order').val(d.display_order || 0);
             $('#id_is_active').prop('checked', !!d.is_active);
+            refreshParentSelect(d.parent || null);
             $('#categoryModalTitle').text('تعديل التصنيف');
             $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
             categoryModal.show();
@@ -330,7 +344,7 @@
         $.ajax({ url, method: 'POST', data: $form.serialize(),
             success: function(resp) {
                 EnjazIMS.hideLoading($submitBtn, orig);
-                if (resp.success) { categoryModal.hide(); dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); return; }
+                if (resp.success) { categoryModal.hide(); dt.ajax.reload(null, false); refreshParentSelect(null); EnjazIMS.toast(resp.message, 'success'); return; }
                 EnjazIMS.showFormError($form, resp.message);
             },
             error: function(xhr) {
@@ -352,7 +366,7 @@
         if (!id) return;
         $.ajax({ url: apiUrl(urlDelete, id), method: 'POST', success: function(resp) {
             deleteModal.hide();
-            if (resp.success) { dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); }
+            if (resp.success) { dt.ajax.reload(null, false); refreshParentSelect(null); EnjazIMS.toast(resp.message, 'success'); }
             else EnjazIMS.toast(resp.message, 'error');
         }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
     });

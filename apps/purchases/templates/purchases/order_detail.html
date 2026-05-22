@@ -152,9 +152,9 @@
                             {% if line.item.sku %}<div class="doc-line-sku">{{ line.item.sku }}</div>{% endif %}
                         </td>
                         <td class="text-center fw-bold">{{ line.quantity|floatformat:"-3u" }}</td>
-                        <td class="text-end">{{ line.unit_cost|floatformat:"2u"|default:0|intcomma }}</td>
-                        <td class="text-end text-muted">{{ line.tax_amount|floatformat:"2u"|default:0|intcomma }}</td>
-                        <td class="text-end doc-line-total">{{ line.line_total|floatformat:"2u"|default:0|intcomma }}</td>
+                        <td class="text-end">{{ line.unit_cost|money }}</td>
+                        <td class="text-end text-muted">{{ line.tax_amount|money }}</td>
+                        <td class="text-end doc-line-total">{{ line.line_total|money }}</td>
                     </tr>
                     {% empty %}
                     <tr><td colspan="6" class="text-center text-muted py-4">لا توجد بنود</td></tr>
@@ -172,15 +172,15 @@
         <div class="doc-totals-body">
             <div class="doc-trow">
                 <span class="doc-trow-lbl">المجموع الفرعي</span>
-                <span class="doc-trow-val">{{ invoice.subtotal|floatformat:"2u"|default:0|intcomma }}</span>
+                <span class="doc-trow-val">{{ invoice.subtotal|money }}</span>
             </div>
             <div class="doc-trow">
                 <span class="doc-trow-lbl">الضريبة</span>
-                <span class="doc-trow-val">{{ invoice.tax_amount|floatformat:"2u"|default:0|intcomma }}</span>
+                <span class="doc-trow-val">{{ invoice.tax_amount|money }}</span>
             </div>
             <div class="doc-grand">
                 <span class="doc-grand-lbl">الإجمالي النهائي</span>
-                <span class="doc-grand-val">{{ invoice.grand_total|floatformat:"2u"|default:0|intcomma }}</span>
+                <span class="doc-grand-val">{{ invoice.grand_total|money }}</span>
             </div>
             <div class="doc-trow">
                 <span class="doc-trow-lbl">طريقة الدفع</span>

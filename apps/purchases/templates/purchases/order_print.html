@@ -70,9 +70,9 @@
                 <td>{{ forloop.counter }}</td>
                 <td>{{ line.item.name }}</td>
                 <td>{{ line.quantity|floatformat:"-3u" }}</td>
-                <td>{{ line.unit_cost|floatformat:"2u"|default:0|intcomma}}</td>
-                <td>{{ line.tax_amount|floatformat:"2u"|default:0|intcomma}}</td>
-                <td><strong>{{ line.line_total|floatformat:"2u"|default:0|intcomma}}</strong></td>
+                <td>{{ line.unit_cost|money}}</td>
+                <td>{{ line.tax_amount|money}}</td>
+                <td><strong>{{ line.line_total|money}}</strong></td>
               </tr>
               {% endfor %}
             </tbody>

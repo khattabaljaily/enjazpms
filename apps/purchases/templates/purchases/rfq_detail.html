@@ -104,7 +104,7 @@
                 <tr><th>المورد</th><td>{{ rfq.supplier.name|default:"—" }}</td></tr>
                 <tr><th>المخزن</th><td>{{ rfq.stock.name }}</td></tr>
                 {% if rfq.grand_total %}
-                <tr><th>الإجمالي</th><td><strong>{{ rfq.grand_total|floatformat:2|intcomma }}</strong></td></tr>
+                <tr><th>الإجمالي</th><td><strong>{{ rfq.grand_total|money }}</strong></td></tr>
                 {% endif %}
                 {% if rfq.notes %}
                 <tr><th>ملاحظات</th><td>{{ rfq.notes }}</td></tr>
@@ -138,9 +138,9 @@
                     <td>{{ ln.item.unit.name|default:"—" }}</td>
                     <td class="text-end">{{ ln.requested_quantity|floatformat:"-2" }}</td>
                     <td class="text-end" id="price-{{ ln.id }}">
-                        {% if ln.quoted_price %}{{ ln.quoted_price|floatformat:2|intcomma }}{% else %}—{% endif %}
+                        {% if ln.quoted_price %}{{ ln.quoted_price|money }}{% else %}—{% endif %}
                     </td>
-                    <td class="text-end">{{ ln.line_total|floatformat:2|intcomma }}</td>
+                    <td class="text-end">{{ ln.line_total|money }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -148,7 +148,7 @@
             <tfoot>
                 <tr class="fw-bold">
                     <td colspan="6" class="text-end">الإجمالي</td>
-                    <td class="text-end">{{ rfq.grand_total|floatformat:2|intcomma }}</td>
+                    <td class="text-end">{{ rfq.grand_total|money }}</td>
                 </tr>
             </tfoot>
             {% endif %}

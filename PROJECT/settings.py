@@ -100,7 +100,7 @@ TEMPLATES = [
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'APP_DIRS': True,
         'OPTIONS': {
-            'builtins': ['apps.core.templatetags.permission_tags'],
+            'builtins': ['apps.core.templatetags.permission_tags', 'apps.core.templatetags.number_format'],
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',

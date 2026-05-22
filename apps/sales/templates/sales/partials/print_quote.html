@@ -61,8 +61,8 @@
                     <td class="col-product">{{ line.item.name }}</td>
                     <td class="col-qty">{{ line.quantity|floatformat:"-3u" }}</td>
                     <td class="col-price">{{ line.unit_price|money }}</td>
-                    <td class="col-discount">{{ line.discount_percent|floatformat:"2u"|default:0|intcomma}}</td>
-                    <td class="col-tax">{{ line.tax_rate|floatformat:"2u"|default:0|intcomma}}</td>
+                    <td class="col-discount">{{ line.discount_percent|money}}</td>
+                    <td class="col-tax">{{ line.tax_rate|money}}</td>
                     <td class="col-total">{{ line.line_total|money }}</td>
                 </tr>
                 {% endfor %}

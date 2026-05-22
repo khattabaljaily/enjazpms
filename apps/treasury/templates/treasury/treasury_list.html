@@ -346,7 +346,7 @@
                 ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشطة</span>'
                 : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوفة</span>';
             const defaultBadge = r.is_system_default
-                ? '<span class="cx-treasury-card-badge cx-treasury-card-badge--system">افتراضية نظامية</span>'
+                ? '<span class="cx-treasury-card-badge cx-treasury-card-badge--system">خزينة النظام</span>'
                 : r.is_default
                 ? '<span class="cx-treasury-card-badge cx-treasury-card-badge--default">افتراضية</span>'
                 : '';
@@ -401,7 +401,7 @@
             { data: 'code' },
             { data: 'current_balance', className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
             { data: 'is_active', render: v => v ? '<span class="cx-badge cx-badge--success">نشطة</span>' : '<span class="cx-badge cx-badge--muted">موقوفة</span>' },
-            { data: 'is_default', render: (v, _, row) => row.is_system_default ? '<span class="cx-badge cx-badge--info">افتراضية نظامية</span>' : (v ? '<span class="cx-badge cx-badge--primary">افتراضية</span>' : '—') },
+            { data: 'is_default', render: (v, _, row) => row.is_system_default ? '<span class="cx-badge cx-badge--info">خزينة النظام</span>' : (v ? '<span class="cx-badge cx-badge--primary">افتراضية</span>' : '—') },
             {
                 data: null,
                 orderable: false,

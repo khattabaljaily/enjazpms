@@ -28,6 +28,8 @@
                 <div class="doc-pills">
                     {% if invoice.status == 'draft' %}
                     <span class="doc-pill doc-pill--draft"><i class="fas fa-pencil"></i> مسودة</span>
+                    {% elif invoice.status == 'pending_delivery' %}
+                    <span class="doc-pill doc-pill--pending"><i class="fas fa-clock"></i> قيد التسليم</span>
                     {% elif invoice.status == 'confirmed' %}
                     <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> مؤكدة</span>
                     {% elif invoice.status == 'cancelled' %}
@@ -58,6 +60,11 @@
             {% if can_confirm %}
             <button class="cx-btn-add" onclick="doConfirm()">
                 <i class="fas fa-check"></i><span>تأكيد</span>
+            </button>
+            {% endif %}
+            {% if can_deliver %}
+            <button class="cx-btn-add" onclick="doDeliver()">
+                <i class="fas fa-truck"></i><span>تسليم</span>
             </button>
             {% endif %}
             {% if can_cancel %}
@@ -175,10 +182,10 @@
                             <div class="doc-line-sku">{{ line.item.sku }}</div>
                         </td>
                         <td class="text-center fw-600">{{ line.quantity|floatformat:"-3u" }}</td>
-                        <td class="text-end">{{ line.unit_price|floatformat:"2u"|default:0|intcomma }}</td>
+                        <td class="text-end">{{ line.unit_price|money }}</td>
                         <td class="text-center text-muted">{{ line.discount_percent|floatformat:"2u"|default:0 }}%</td>
                         <td class="text-center text-muted">{{ line.tax_rate|floatformat:"2u"|default:0 }}%</td>
-                        <td class="text-end doc-line-total">{{ line.line_total|floatformat:"2u"|default:0|intcomma }}</td>
+                        <td class="text-end doc-line-total">{{ line.line_total|money }}</td>
                         {% if invoice.status != 'draft' %}
                         <td class="text-center">
                             {% if line.returned_quantity > 0 %}
@@ -215,7 +222,7 @@
                     <td>{{ p.payment_date }}</td>
                     <td>{{ p.get_payment_method_display }}</td>
                     <td class="text-end fw-bold {% if p.amount < 0 %}text-danger{% else %}text-success{% endif %}">
-                        {{ p.amount|floatformat:"2u"|default:0|intcomma }}
+                        {{ p.amount|money }}
                     </td>
                     <td style="color:var(--text-tertiary)">{{ p.reference_number|default:"—" }}</td>
                 </tr>
@@ -247,7 +254,7 @@
                 <tr>
                     <td class="fw-bold">{{ r.return_number }}</td>
                     <td>{{ r.return_date }}</td>
-                    <td class="text-end fw-bold" style="color:#d97706">{{ r.total_returned|floatformat:"2u"|default:0|intcomma }}</td>
+                    <td class="text-end fw-bold" style="color:#d97706">{{ r.total_returned|money }}</td>
                     <td>{{ r.get_refund_method_display }}</td>
                     <td><a href="{% url 'sales:return_detail' r.pk %}" class="cx-btn-icon"><i class="fas fa-eye"></i></a></td>
                 </tr>
@@ -266,28 +273,28 @@
         <div class="doc-totals-body">
             <div class="doc-trow">
                 <span class="doc-trow-lbl">المجموع الفرعي</span>
-                <span class="doc-trow-val">{{ invoice.subtotal|floatformat:"2u"|default:0|intcomma }}</span>
+                <span class="doc-trow-val">{{ invoice.subtotal|money }}</span>
             </div>
             <div class="doc-trow">
                 <span class="doc-trow-lbl">الخصم</span>
-                <span class="doc-trow-val doc-trow-val--red">- {{ invoice.invoice_discount_amount|floatformat:"2u"|default:0|intcomma }}</span>
+                <span class="doc-trow-val doc-trow-val--red">- {{ invoice.invoice_discount_amount|money }}</span>
             </div>
             <div class="doc-trow">
                 <span class="doc-trow-lbl">الضريبة</span>
-                <span class="doc-trow-val">{{ invoice.tax_amount|floatformat:"2u"|default:0|intcomma }}</span>
+                <span class="doc-trow-val">{{ invoice.tax_amount|money }}</span>
             </div>
             <div class="doc-grand">
                 <span class="doc-grand-lbl">الإجمالي النهائي</span>
-                <span class="doc-grand-val">{{ invoice.grand_total|floatformat:"2u"|default:0|intcomma }}</span>
+                <span class="doc-grand-val">{{ invoice.grand_total|money }}</span>
             </div>
             <div class="doc-trow">
                 <span class="doc-trow-lbl">المدفوع</span>
-                <span class="doc-trow-val doc-trow-val--green">{{ invoice.paid_amount|floatformat:"2u"|default:0|intcomma }}</span>
+                <span class="doc-trow-val doc-trow-val--green">{{ invoice.paid_amount|money }}</span>
             </div>
             <div class="doc-trow">
                 <span class="doc-trow-lbl">المتبقي</span>
                 <span class="doc-trow-val {% if invoice.remaining_amount > 0 %}doc-trow-val--red{% else %}doc-trow-val--green{% endif %}">
-                    {{ invoice.remaining_amount|floatformat:"2u"|default:0|intcomma }}
+                    {{ invoice.remaining_amount|money }}
                 </span>
             </div>
             {% if invoice.remaining_amount <= 0 %}
@@ -471,6 +478,21 @@ function submitInvoiceDecision() {
         submitBtn.innerHTML = originalHtml;
     });
 }
+
+{% if can_deliver %}
+function doDeliver() {
+    openInvoiceDecisionModal({
+        title: 'تسليم الفاتورة',
+        message: 'سيتم تسليم البضاعة وخصم الكميات من المخزون. هل تريد المتابعة؟',
+        confirmLabel: 'تأكيد التسليم',
+        confirmClass: 'cx-btn-add',
+        run: () => fetch(`/sales/${INVOICE_ID}/deliver/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF }
+        })
+    });
+}
+{% endif %}
 
 {% if can_cancel %}
 function doCancel() { document.getElementById('cancelModalBackdrop').classList.remove('sales-field-hidden'); }

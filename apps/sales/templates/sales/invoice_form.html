@@ -114,6 +114,15 @@
                         </select>
                     </div>
 
+                    <!-- نوع التسليم -->
+                    <div class="col-md-4">
+                        <label class="cx-label">نوع التسليم</label>
+                        <select id="deliveryType" name="delivery_type" class="cx-input">
+                            <option value="immediate" {% if not invoice or invoice.delivery_type == 'immediate' %}selected{% endif %}>تسليم فوري</option>
+                            <option value="deferred" {% if invoice and invoice.delivery_type == 'deferred' %}selected{% endif %}>تسليم لاحق</option>
+                        </select>
+                    </div>
+
                     <!-- تاريخ الاستحقاق (للآجل) -->
                     <div class="col-md-4 sales-field-hidden" id="dueDateWrap">
                         <label class="cx-label">تاريخ الاستحقاق</label>
@@ -703,6 +712,7 @@ function submitForm(action) {
         invoice_date: document.getElementById('invoiceDate').value,
         due_date: document.getElementById('dueDate').value || null,
         payment_method: document.getElementById('paymentMethod').value,
+        delivery_type: document.getElementById('deliveryType').value,
         invoice_discount_type: document.getElementById('discountType').value,
         invoice_discount_value: EnjazIMS.parseNumber(document.getElementById('discountValue').value || 0).toFixed(2),
         cash_amount: EnjazIMS.parseNumber(document.getElementById('cashAmount')?.value || 0).toFixed(2),

@@ -154,11 +154,12 @@
 <script>
 (function() {
     'use strict';
-    const urlTable  = "{% url 'items:unit_table_api' %}";
-    const urlCreate = "{% url 'items:unit_create_api' %}";
-    const urlDetail = "{% url 'items:unit_detail_api' 0 %}";
-    const urlUpdate = "{% url 'items:unit_update_api' 0 %}";
-    const urlDelete = "{% url 'items:unit_delete_api' 0 %}";
+    const urlTable   = "{% url 'items:unit_table_api' %}";
+    const urlCreate  = "{% url 'items:unit_create_api' %}";
+    const urlDetail  = "{% url 'items:unit_detail_api' 0 %}";
+    const urlUpdate  = "{% url 'items:unit_update_api' 0 %}";
+    const urlDelete  = "{% url 'items:unit_delete_api' 0 %}";
+    const urlOptions = "{% url 'items:unit_options_api' %}";
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
     ['unitModal','deleteUnitModal'].forEach(function(id) {
@@ -249,10 +250,23 @@
         searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
     });
 
+    function refreshBaseUnitSelect(selectedId) {
+        $.getJSON(urlOptions, function(resp) {
+            if (!resp.success) return;
+            const $sel = $('#id_base_unit');
+            const current = selectedId !== undefined ? selectedId : $sel.val();
+            $sel.find('option:not(:first)').remove();
+            resp.units.forEach(function(u) {
+                $sel.append(new Option(u.name, u.id, false, String(u.id) === String(current)));
+            });
+        });
+    }
+
     function resetForm() { $form[0].reset(); $idInput.val(''); $('#id_is_active').prop('checked', true); EnjazIMS.clearFormErrors($form); }
 
     $('#btnOpenCreateUnit').on('click', function() {
         resetForm();
+        refreshBaseUnitSelect(null);
         $('#unitModalTitle').text('إضافة وحدة قياس');
         $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
         unitModal.show();
@@ -266,9 +280,9 @@
             $idInput.val(d.id);
             $('#id_name').val(d.name || '');
             $('#id_abbreviation').val(d.abbreviation || '');
-            $('#id_base_unit').val(d.base_unit || '');
             $('#id_conversion_factor').val(d.conversion_factor || '1');
             $('#id_is_active').prop('checked', !!d.is_active);
+            refreshBaseUnitSelect(d.base_unit || null);
             $('#unitModalTitle').text('تعديل وحدة القياس');
             $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
             unitModal.show();
@@ -285,7 +299,7 @@
         $.ajax({ url, method: 'POST', data: $form.serialize(),
             success: function(resp) {
                 EnjazIMS.hideLoading($submitBtn, orig);
-                if (resp.success) { unitModal.hide(); dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); return; }
+                if (resp.success) { unitModal.hide(); dt.ajax.reload(null, false); refreshBaseUnitSelect(null); EnjazIMS.toast(resp.message, 'success'); return; }
                 EnjazIMS.showFormError($form, resp.message);
             },
             error: function(xhr) {
@@ -307,7 +321,7 @@
         if (!id) return;
         $.ajax({ url: apiUrl(urlDelete, id), method: 'POST', success: function(resp) {
             deleteModal.hide();
-            if (resp.success) { dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); }
+            if (resp.success) { dt.ajax.reload(null, false); refreshBaseUnitSelect(null); EnjazIMS.toast(resp.message, 'success'); }
             else EnjazIMS.toast(resp.message, 'error');
         }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
     });

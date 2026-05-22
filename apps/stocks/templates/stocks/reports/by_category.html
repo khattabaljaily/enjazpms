@@ -81,7 +81,7 @@
                                 </span>
                                 {% else %}—{% endif %}
                             </td>
-                            <td class="text-end text-muted">{{ category.total_value|floatformat:2 }}</td>
+                            <td class="text-end text-muted">{{ category.total_value|money }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

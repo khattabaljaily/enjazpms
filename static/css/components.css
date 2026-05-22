@@ -187,6 +187,12 @@
     color: #f59e0b;
 }
 
+.cx-stat-badge--pending {
+    background: rgba(234,179,8,0.08);
+    border-color: rgba(234,179,8,0.2);
+    color: #a16207;
+}
+
 .cx-stat-badge--danger {
     background: rgba(239,68,68,0.08);
     border-color: rgba(239,68,68,0.2);

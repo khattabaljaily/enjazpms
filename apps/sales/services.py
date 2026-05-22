@@ -83,6 +83,29 @@ def _is_stock_tracked_item(item):
     return getattr(item, 'item_type', None) != 'service'
 
 
+def _reserve_stock(tenant, stock, item, qty, variant=None):
+    """يزيد reserved_quantity بدون خصم فعلي من الكمية. يتحقق من الكمية المتاحة."""
+    if not _is_stock_tracked_item(item):
+        return
+    sq = _get_stock_qty(tenant, stock, item)
+    if sq.available_quantity < qty:
+        raise ValueError(
+            f"الكمية المتاحة لـ «{item.name}» في «{stock.name}» "
+            f"هي {_fmt_decimal(sq.available_quantity)} فقط، والمطلوب {_fmt_decimal(qty)}."
+        )
+    sq.reserved_quantity += qty
+    sq.save(update_fields=['reserved_quantity', 'updated_at'])
+
+
+def _release_reservation(tenant, stock, item, qty, variant=None):
+    """يحرر حجز سابق (ينقص reserved_quantity)."""
+    if not _is_stock_tracked_item(item):
+        return
+    sq = _get_stock_qty(tenant, stock, item)
+    sq.reserved_quantity = max(Decimal('0'), sq.reserved_quantity - qty)
+    sq.save(update_fields=['reserved_quantity', 'updated_at'])
+
+
 def _deduct_stock(tenant, stock, item, qty, unit_cost, invoice, variant=None):
     """
     يخصم qty من المخزون ويُسجِّل حركة sale_out.
@@ -311,18 +334,22 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
     if not lines:
         raise ValueError("لا يمكن تأكيد فاتورة فارغة (لا توجد بنود).")
 
-    # ── 1. خصم المخزون ──────────────────────────────────
+    # ── 1. تأثير المخزون ────────────────────────────────
+    deferred = invoice.delivery_type == 'deferred'
     for line in lines:
         qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
-        _deduct_stock(
-            tenant=tenant,
-            stock=invoice.stock,
-            item=line.item,
-            qty=qty_base,
-            unit_cost=line.cost_price_snapshot,
-            invoice=invoice,
-            variant=line.variant,
-        )
+        if deferred:
+            _reserve_stock(
+                tenant=tenant, stock=invoice.stock,
+                item=line.item, qty=qty_base, variant=line.variant,
+            )
+        else:
+            _deduct_stock(
+                tenant=tenant, stock=invoice.stock,
+                item=line.item, qty=qty_base,
+                unit_cost=line.cost_price_snapshot,
+                invoice=invoice, variant=line.variant,
+            )
 
     # ── 2. تسجيل الدفع ──────────────────────────────────
     pm = invoice.payment_method
@@ -376,12 +403,73 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
             )
 
     # ── 3. تحديث الحالة ─────────────────────────────────
-    invoice.status = 'confirmed'
+    invoice.status = 'pending_delivery' if deferred else 'confirmed'
     try:
         invoice.confirmed_by = user
     except Exception:
         pass
     invoice.save(update_fields=['status', 'confirmed_by', 'updated_at'])
+    return invoice
+
+
+# ─────────────────────────────────────────────
+#   DELIVER SALE INVOICE  (تسليم مؤجل)
+# ─────────────────────────────────────────────
+
+@transaction.atomic
+def deliver_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
+    """
+    تنفيذ تسليم فاتورة قيد التسليم (deferred).
+
+    الخطوات:
+      1. التحقق: pending_delivery فقط
+      2. لكل بند: خصم الكمية الفعلية + تحرير الحجز + تسجيل StockMovement
+      3. تحديث الحالة إلى confirmed + تسجيل delivered_at/by
+    """
+    if invoice.status != 'pending_delivery':
+        raise ValueError(
+            f"لا يمكن تسليم فاتورة بحالة «{invoice.get_status_display()}»."
+        )
+
+    tenant = invoice.tenant
+    lines = list(invoice.lines.select_related('item', 'variant'))
+
+    for line in lines:
+        qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
+        if not _is_stock_tracked_item(line.item):
+            continue
+        sq = _get_stock_qty(tenant, invoice.stock, line.item)
+        # الكمية الفعلية يجب أن تكفي (لا يُفترض أن تكون أقل لأنها محجوزة)
+        if sq.quantity < qty_base:
+            raise ValueError(
+                f"الكمية الفعلية لـ «{line.item.name}» في «{invoice.stock.name}» "
+                f"هي {_fmt_decimal(sq.quantity)} فقط، والمطلوب {_fmt_decimal(qty_base)}."
+            )
+        sq.quantity -= qty_base
+        sq.reserved_quantity = max(Decimal('0'), sq.reserved_quantity - qty_base)
+        sq.save(update_fields=['quantity', 'reserved_quantity', 'updated_at'])
+        StockMovement.objects.create(
+            tenant=tenant,
+            item=line.item,
+            variant=line.variant,
+            stock=invoice.stock,
+            movement_type='sale_out',
+            direction='out',
+            quantity=qty_base,
+            unit_cost=line.cost_price_snapshot,
+            movement_date=timezone.now().date(),
+            reference_type='sale_invoice',
+            reference_id=invoice.id,
+            balance_after=sq.quantity,
+        )
+
+    invoice.status = 'confirmed'
+    invoice.delivered_at = timezone.now()
+    try:
+        invoice.delivered_by = user
+    except Exception:
+        pass
+    invoice.save(update_fields=['status', 'delivered_at', 'delivered_by', 'updated_at'])
     return invoice
 
 
@@ -401,16 +489,26 @@ def cancel_sale_invoice(invoice: SaleInvoice, user, reason: str = '') -> SaleInv
       4. حذف قيود CustomerLedger المرتبطة
       5. تحديث الحالة إلى cancelled
     """
-    if invoice.status not in ('confirmed',):
+    if invoice.status not in ('confirmed', 'pending_delivery'):
         raise ValueError(
             f"لا يمكن إلغاء فاتورة بحالة «{invoice.get_status_display()}»."
-            " يمكن إلغاء الفواتير المؤكدة فقط."
+            " يمكن إلغاء الفواتير المؤكدة وقيد التسليم فقط."
         )
 
     tenant = invoice.tenant
 
-    # عكس المخزون
-    _reverse_stock_movements(tenant, invoice)
+    if invoice.status == 'pending_delivery':
+        # حرر الحجوزات فقط (لم يُخصم مخزون بعد)
+        lines = list(invoice.lines.select_related('item', 'variant'))
+        for line in lines:
+            qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
+            _release_reservation(
+                tenant=tenant, stock=invoice.stock,
+                item=line.item, qty=qty_base, variant=line.variant,
+            )
+    else:
+        # عكس المخزون (الحالة الاعتيادية)
+        _reverse_stock_movements(tenant, invoice)
 
     # عكس الدفعات
     _reverse_payments(tenant, invoice)
@@ -843,6 +941,7 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
         invoice_date=data['invoice_date'],
         due_date=data.get('due_date'),
         payment_method=data.get('payment_method', 'cash'),
+        delivery_type=data.get('delivery_type', 'immediate'),
         invoice_discount_type=data.get('invoice_discount_type', 'percent'),
         invoice_discount_value=Decimal(str(data.get('invoice_discount_value', 0))),
         cash_amount=Decimal(str(data.get('cash_amount', 0))),

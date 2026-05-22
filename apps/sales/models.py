@@ -44,10 +44,16 @@ class SaleInvoice(TenantMixin):
 
     STATUS_CHOICES = (
         ('draft',               'مسودة'),
+        ('pending_delivery',    'قيد التسليم'),
         ('confirmed',           'مؤكدة'),
         ('cancelled',           'ملغاة'),
         ('returned',            'مرتجعة كلياً'),
         ('partially_returned',  'مرتجعة جزئياً'),
+    )
+
+    DELIVERY_TYPE_CHOICES = (
+        ('immediate', 'تسليم فوري'),
+        ('deferred',  'تسليم لاحق'),
     )
 
     PAYMENT_CHOICES = (
@@ -98,6 +104,10 @@ class SaleInvoice(TenantMixin):
     status = models.CharField(
         'الحالة', max_length=25,
         choices=STATUS_CHOICES, default='draft'
+    )
+    delivery_type = models.CharField(
+        'نوع التسليم', max_length=10,
+        choices=DELIVERY_TYPE_CHOICES, default='immediate'
     )
     payment_method = models.CharField(
         'طريقة الدفع', max_length=10,
@@ -157,6 +167,13 @@ class SaleInvoice(TenantMixin):
     )
     cancelled_at = models.DateTimeField('وقت الإلغاء', null=True, blank=True)
     cancellation_reason = models.TextField('سبب الإلغاء', blank=True)
+    delivered_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='delivered_invoices',
+        verbose_name='سُلِّمت بواسطة'
+    )
+    delivered_at = models.DateTimeField('وقت التسليم', null=True, blank=True)
 
     class Meta:
         db_table = 'sale_invoices'

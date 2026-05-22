@@ -155,8 +155,8 @@
                                 <td class="fw-bold">{{ item.customer_name }}</td>
                                 <td class="text-center">{{ item.invoice_count }}</td>
                                 <td class="text-end text-muted">{{ item.total_quantity }}</td>
-                                <td class="text-end fw-bold" style="color:#667eea">{{ item.total_amount|floatformat:"2u"|default:0|intcomma }}</td>
-                                <td class="text-end text-muted">{{ item.avg_invoice_amount|floatformat:"2u"|default:0|intcomma }}</td>
+                                <td class="text-end fw-bold" style="color:#667eea">{{ item.total_amount|money }}</td>
+                                <td class="text-end text-muted">{{ item.avg_invoice_amount|money }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>

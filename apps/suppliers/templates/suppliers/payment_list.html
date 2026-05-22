@@ -26,13 +26,13 @@
                 <i class="fas fa-list"></i><strong>{{ stats.total }}</strong><span>عدد الدفعات</span>
             </span>
             <span class="cx-stat-badge cx-stat-badge--success">
-                <i class="fas fa-coins"></i><strong>{{ stats.cash_amount|floatformat:"2u"|default:0|intcomma}}</strong><span>نقداً</span>
+                <i class="fas fa-coins"></i><strong>{{ stats.cash_amount|money}}</strong><span>نقداً</span>
             </span>
             <span class="cx-stat-badge cx-stat-badge--info">
-                <i class="fas fa-building-columns"></i><strong>{{ stats.bank_amount|floatformat:"2u"|default:0|intcomma}}</strong><span>بنكي</span>
+                <i class="fas fa-building-columns"></i><strong>{{ stats.bank_amount|money}}</strong><span>بنكي</span>
             </span>
             <span class="cx-stat-badge cx-stat-badge--warning">
-                <i class="fas fa-money-bill-wave"></i><strong>{{ stats.total_amount|floatformat:"2u"|default:0|intcomma}}</strong><span>الإجمالي</span>
+                <i class="fas fa-money-bill-wave"></i><strong>{{ stats.total_amount|money}}</strong><span>الإجمالي</span>
             </span>
         </div>
     </div>

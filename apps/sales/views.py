@@ -57,6 +57,7 @@ from .services import (
     cancel_sale_return,
     confirm_sale_invoice,
     confirm_sale_return,
+    deliver_sale_invoice,
     edit_confirmed_invoice,
     record_customer_payment,
     build_quote_from_post,
@@ -145,6 +146,7 @@ def invoice_list(request):
     qs = SaleInvoice.objects.for_tenant(tenant)
     total = qs.count()
     confirmed = qs.filter(status='confirmed').count()
+    pending_delivery = qs.filter(status='pending_delivery').count()
     draft = qs.filter(status='draft').count()
     cancelled = qs.filter(status='cancelled').count()
     returned = qs.filter(status__in=['returned', 'partially_returned']).count()
@@ -167,6 +169,7 @@ def invoice_list(request):
         'stats': {
             'total': total,
             'confirmed': confirmed,
+            'pending_delivery': pending_delivery,
             'draft': draft,
             'cancelled': cancelled,
             'returned': returned,
@@ -233,6 +236,7 @@ def invoice_table_api(request):
 
     STATUS_LABELS = {
         'draft': ('مسودة', 'secondary'),
+        'pending_delivery': ('قيد التسليم', 'pending'),
         'confirmed': ('مؤكدة', 'success'),
         'cancelled': ('ملغاة', 'danger'),
         'returned': ('مرتجعة', 'warning'),
@@ -481,6 +485,8 @@ def _process_invoice_post(request, tenant, invoice):
                         invoice.due_date = header.get('due_date') or None
                     if 'payment_method' in header:
                         invoice.payment_method = header.get('payment_method') or invoice.payment_method
+                    if 'delivery_type' in header:
+                        invoice.delivery_type = header.get('delivery_type') or invoice.delivery_type
                     if 'invoice_discount_type' in header:
                         invoice.invoice_discount_type = header.get('invoice_discount_type') or invoice.invoice_discount_type
                     if 'invoice_discount_value' in header:
@@ -543,7 +549,8 @@ def invoice_detail(request, pk):
         'can_confirm': invoice.status == 'draft',
         'can_delete_draft': invoice.status == 'draft',
         'can_edit': invoice.status in ('draft', 'confirmed'),
-        'can_cancel': invoice.status == 'confirmed',
+        'can_cancel': invoice.status in ('confirmed', 'pending_delivery'),
+        'can_deliver': invoice.status == 'pending_delivery',
         'can_return': invoice.status in ('confirmed', 'partially_returned'),
         'can_pay': (
             invoice.status in ('confirmed', 'partially_returned')
@@ -620,6 +627,21 @@ def invoice_cancel_ajax(request, pk):
     try:
         cancel_sale_invoice(invoice, request.user, reason)
         return _json_ok(msg='تم إلغاء الفاتورة')
+    except ValueError as e:
+        return _json_error(str(e))
+
+
+@login_required
+@require_permission('change_sales')
+@require_POST
+def invoice_deliver_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+    invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
+    try:
+        deliver_sale_invoice(invoice, request.user)
+        return _json_ok(msg='تم تسليم الفاتورة بنجاح')
     except ValueError as e:
         return _json_error(str(e))
 

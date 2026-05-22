@@ -44,6 +44,11 @@
             <strong>{{ stats.confirmed }}</strong>
             <span>مؤكدة</span>
         </span>
+        <span class="cx-stat-badge cx-stat-badge--pending">
+            <i class="fas fa-clock"></i>
+            <strong>{{ stats.pending_delivery }}</strong>
+            <span>قيد التسليم</span>
+        </span>
         <span class="cx-stat-badge cx-stat-badge--muted">
             <i class="fas fa-pencil"></i>
             <strong>{{ stats.draft }}</strong>
@@ -65,15 +70,15 @@
     <div class="cx-kpi-row">
         <div class="cx-kpi-card">
             <div class="cx-kpi-label">إجمالي المبيعات المؤكدة</div>
-            <div class="cx-kpi-value text-success">{{ stats.grand_total_sum|floatformat:"2u"|default:0|intcomma }}</div>
+            <div class="cx-kpi-value text-success">{{ stats.grand_total_sum|money }}</div>
         </div>
         <div class="cx-kpi-card">
             <div class="cx-kpi-label">إجمالي المحصَّل</div>
-            <div class="cx-kpi-value text-primary">{{ stats.paid_total|floatformat:"2u"|default:0|intcomma}}</div>
+            <div class="cx-kpi-value text-primary">{{ stats.paid_total|money}}</div>
         </div>
         <div class="cx-kpi-card cx-kpi-card--warning">
             <div class="cx-kpi-label">المتبقي (ذمم)</div>
-            <div class="cx-kpi-value text-warning">{{ stats.unpaid_total|floatformat:"2u"|default:0|intcomma}}</div>
+            <div class="cx-kpi-value text-warning">{{ stats.unpaid_total|money}}</div>
         </div>
     </div>
 </div>
@@ -90,6 +95,7 @@
             <select id="filterStatus" class="cx-select-sm">
                 <option value="">كل الحالات</option>
                 <option value="draft">مسودة</option>
+                <option value="pending_delivery">قيد التسليم</option>
                 <option value="confirmed">مؤكدة</option>
                 <option value="cancelled">ملغاة</option>
                 <option value="returned">مرتجعة</option>
@@ -267,6 +273,7 @@ function renderMobileInvoiceCards(rows) {
 
     const statusBadgeMap = {
         draft: 'muted',
+        pending_delivery: 'pending',
         confirmed: 'success',
         cancelled: 'danger',
         returned: 'warning',
@@ -348,6 +355,7 @@ function initTable() {
 
     const statusBadgeMap = {
         draft: 'muted',
+        pending_delivery: 'pending',
         confirmed: 'success',
         cancelled: 'danger',
         returned: 'warning',

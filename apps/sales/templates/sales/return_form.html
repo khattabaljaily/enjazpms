@@ -92,7 +92,7 @@
                                data-max="{{ line.returnable_quantity|unlocalize }}"
                                oninput="updateReturnTotal(this)">
                     </td>
-                    <td class="ret-unit-price text-end" data-value="{{ line.unit_price|unlocalize }}">{{ line.unit_price|floatformat:"2u"|default:0|intcomma}}</td>
+                    <td class="ret-unit-price text-end" data-value="{{ line.unit_price|unlocalize }}">{{ line.unit_price|money}}</td>
                     <td class="ret-line-total text-end" data-total="0">0.00</td>
                 </tr>
                 {% empty %}

@@ -69,9 +69,9 @@
                     <td class="col-sn">{{ forloop.counter }}</td>
                     <td class="col-product">{{ line.item.name }}</td>
                     <td class="col-qty">{{ line.quantity|floatformat:"-3u" }}</td>
-                    <td class="col-price">{{ line.unit_cost|floatformat:"2u"|default:0|intcomma}}</td>
-                    <td class="col-tax">{{ line.tax_amount|floatformat:"2u"|default:0|intcomma}}</td>
-                    <td class="col-total">{{ line.line_total|floatformat:"2u"|default:0|intcomma}}</td>
+                    <td class="col-price">{{ line.unit_cost|money}}</td>
+                    <td class="col-tax">{{ line.tax_amount|money}}</td>
+                    <td class="col-total">{{ line.line_total|money}}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -82,24 +82,24 @@
         <div class="print-totals">
             <div class="print-total-row">
                 <span>المجموع الفرعي</span>
-                <span>{{ invoice.subtotal|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>{{ invoice.subtotal|money}}</span>
             </div>
             <div class="print-total-row tax-row">
                 <span>قيمة الضريبة</span>
-                <span>{{ invoice.tax_amount|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>{{ invoice.tax_amount|money}}</span>
             </div>
             <div class="print-total-row print-total-row--grand">
                 <span>الإجمالي النهائي</span>
-                <span>{{ invoice.grand_total|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>{{ invoice.grand_total|money}}</span>
             </div>
             {% if invoice.payment_method == 'mixed' %}
             <div class="print-total-row">
                 <span>مدفوع نقداً</span>
-                <span>{{ invoice.cash_amount|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>{{ invoice.cash_amount|money}}</span>
             </div>
             <div class="print-total-row">
                 <span>مدفوع بنكياً</span>
-                <span>{{ invoice.bank_amount|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>{{ invoice.bank_amount|money}}</span>
             </div>
             {% endif %}
         </div>

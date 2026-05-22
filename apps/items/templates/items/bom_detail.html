@@ -11,147 +11,200 @@
 {% block content %}
 <div class="cx-scene">
 
-<!-- Hero -->
-<div class="doc-hero">
+<!-- ══ HERO ══════════════════════════════════════════════════ -->
+<div class="doc-hero" data-status="{% if recipe.is_active %}confirmed{% else %}cancelled{% endif %}">
     <div class="doc-hero-inner">
         <div class="doc-hero-left">
             <a href="{% url 'items:bom_list' %}" class="doc-back-btn">
                 <i class="fas fa-arrow-right"></i>
             </a>
-            <div class="doc-hero-icon" style="background:var(--indigo)">
-                <i class="fas fa-flask"></i>
-            </div>
+            <div class="doc-hero-icon"><i class="fas fa-flask"></i></div>
             <div>
-                <h1 class="doc-hero-number">{{ recipe.item.name }}</h1>
-                <p class="doc-hero-meta">{{ recipe.item.sku }}</p>
-            </div>
-        </div>
-        <div class="doc-hero-right">
-            <span class="doc-pill {% if recipe.is_active %}doc-pill--confirmed{% else %}doc-pill--cancelled{% endif %}">
-                {% if recipe.is_active %}نشط{% else %}غير نشط{% endif %}
-            </span>
-        </div>
-    </div>
-</div>
-
-<div class="row g-3">
-    <!-- Recipe Info Card -->
-    <div class="col-md-4">
-        <div class="cx-panel p-3 h-100">
-            <h6 class="cx-panel-title mb-3"><i class="fas fa-info-circle me-2 text-muted"></i>معلومات الوصفة</h6>
-            <table class="table table-sm table-borderless">
-                <tr><th class="text-muted">المنتج النهائي</th><td>{{ recipe.item.name }}</td></tr>
-                <tr><th class="text-muted">SKU</th><td>{{ recipe.item.sku }}</td></tr>
-                <tr><th class="text-muted">سعر التكلفة الحالي</th><td>{{ recipe.item.cost_price|floatformat:2 }}</td></tr>
-                <tr><th class="text-muted">إجمالي تكلفة الوصفة</th><td><strong>{{ recipe.total_cost|floatformat:2 }}</strong></td></tr>
-                {% if recipe.notes %}
-                <tr><th class="text-muted">ملاحظات</th><td>{{ recipe.notes }}</td></tr>
-                {% endif %}
-            </table>
-        </div>
-    </div>
-
-    <!-- Components Table -->
-    <div class="col-md-8">
-        <div class="cx-panel">
-            <div class="cx-panel-header d-flex justify-content-between align-items-center p-3">
-                <h6 class="cx-panel-title mb-0"><i class="fas fa-list me-2 text-muted"></i>المكوّنات ({{ lines|length }})</h6>
-                <button class="cx-btn-add btn-sm" onclick="openAddLineModal()">
-                    <i class="fas fa-plus me-1"></i> إضافة مكوّن
-                </button>
-            </div>
-            <div class="table-responsive">
-                <table class="cx-table table" id="linesTable">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>المكوّن</th>
-                            <th>SKU</th>
-                            <th>الكمية</th>
-                            <th>الوحدة</th>
-                            <th>سعر التكلفة</th>
-                            <th>الإجمالي</th>
-                            <th>ملاحظات</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="linesTbody">
-                        {% for line in lines %}
-                        <tr id="line-row-{{ line.id }}">
-                            <td>{{ forloop.counter }}</td>
-                            <td>{{ line.component.name }}</td>
-                            <td><code>{{ line.component.sku }}</code></td>
-                            <td>{{ line.quantity|floatformat:4 }}</td>
-                            <td>{{ line.unit.name|default:"-" }}</td>
-                            <td>{{ line.component.cost_price|floatformat:2 }}</td>
-                            <td>{{ line.component.cost_price|floatformat:2 }}</td>
-                            <td>{{ line.notes|default:"-" }}</td>
-                            <td>
-                                <button class="cxr-act cxr-act--danger" title="حذف"
-                                    onclick="deleteLine({{ line.id }})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr id="empty-row">
-                            <td colspan="9" class="text-center text-muted py-4">
-                                لا توجد مكوّنات. أضف المكوّنات الأولى.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-</div>
-
-<!-- Modal: Add Line -->
-<div class="modal fade" id="addLineModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">إضافة مكوّن</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">المكوّن (المنتج)</label>
-                    <select id="lineComponent" class="cx-input">
-                        <option value="">-- اختر مكوّناً --</option>
-                        {% for item in items %}
-                        <option value="{{ item.id }}" data-cost="{{ item.cost_price }}">{{ item.name }} ({{ item.sku }})</option>
-                        {% endfor %}
-                    </select>
+                <div class="doc-hero-number">{{ recipe.item.name }}</div>
+                <div class="doc-hero-meta">
+                    <span class="doc-hero-meta-item"><i class="fas fa-barcode"></i>{{ recipe.item.sku }}</span>
+                    <span class="doc-hero-meta-item"><i class="fas fa-cubes"></i>{{ lines|length }} مكوّن</span>
                 </div>
-                <div class="row g-2">
-                    <div class="col-6">
-                        <label class="form-label">الكمية</label>
-                        <input type="number" id="lineQty" class="cx-input" value="1" step="0.0001" min="0.0001">
+                <div class="doc-pills">
+                    {% if recipe.is_active %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> نشطة</span>
+                    {% else %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-ban"></i> غير نشطة</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="doc-hero-actions">
+            <button class="cx-btn-add" onclick="openAddLineModal()">
+                <i class="fas fa-plus"></i><span>إضافة مكوّن</span>
+            </button>
+            <button class="cx-btn-danger" onclick="openDeleteModal()">
+                <i class="fas fa-trash"></i><span>حذف الوصفة</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ INFO CARDS ═════════════════════════════════════════════ -->
+<div class="doc-cards">
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--indigo"><i class="fas fa-box"></i></div>
+        <div class="doc-card-body">
+            <div class="doc-card-label">المنتج النهائي</div>
+            <div class="doc-card-value">{{ recipe.item.name }}</div>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--indigo"><i class="fas fa-coins"></i></div>
+        <div class="doc-card-body">
+            <div class="doc-card-label">تكلفة الوصفة</div>
+            <div class="doc-card-value">{{ recipe.total_cost|money }}</div>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--indigo"><i class="fas fa-tag"></i></div>
+        <div class="doc-card-body">
+            <div class="doc-card-label">سعر التكلفة الحالي</div>
+            <div class="doc-card-value">{{ recipe.item.cost_price|money }}</div>
+        </div>
+    </div>
+    <div class="doc-card">
+        <div class="doc-card-icon doc-card-icon--indigo"><i class="fas fa-list-ol"></i></div>
+        <div class="doc-card-body">
+            <div class="doc-card-label">عدد المكوّنات</div>
+            <div class="doc-card-value">{{ lines|length }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ COMPONENTS TABLE ═══════════════════════════════════════ -->
+<div class="doc-panel">
+    <div class="doc-panel-head">
+        <span class="doc-panel-title"><i class="fas fa-list-ol"></i> المكوّنات</span>
+        <span class="doc-panel-badge">{{ lines|length }} مكوّن</span>
+    </div>
+    <div class="table-responsive">
+        <table class="doc-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>المكوّن</th>
+                    <th class="text-center">الكمية</th>
+                    <th class="text-end">سعر التكلفة</th>
+                    <th class="text-end">الإجمالي</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="linesTbody">
+                {% for line in lines %}
+                <tr id="line-row-{{ line.id }}">
+                    <td style="color:var(--text-tertiary);font-size:.75rem;font-weight:600">{{ forloop.counter }}</td>
+                    <td>
+                        <div class="doc-line-name">{{ line.component.name }}</div>
+                        <div class="doc-line-sku">
+                            {{ line.component.sku }}
+                            {% if line.unit %}<span class="ms-2">· {{ line.unit.name }}</span>{% endif %}
+                            {% if line.notes %}<span class="ms-2 text-muted">· {{ line.notes }}</span>{% endif %}
+                        </div>
+                    </td>
+                    <td class="text-center fw-bold">{{ line.quantity|floatformat:"-4" }}</td>
+                    <td class="text-end">{{ line.component.cost_price|money }}</td>
+                    <td class="text-end doc-line-total">{{ line.line_total|money }}</td>
+                    <td>
+                        <div class="cxr-actions">
+                            <button class="cxr-act cxr-act--del" title="حذف" onclick="deleteLine({{ line.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr id="empty-row">
+                    <td colspan="6" class="text-center text-muted py-5">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block opacity-25"></i>
+                        لا توجد مكوّنات — أضف المكوّن الأول بالضغط على "إضافة مكوّن"
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if recipe.notes %}
+    <div class="p-3 border-top" style="font-size:.875rem;color:var(--text-secondary)">
+        <i class="fas fa-sticky-note me-1"></i> {{ recipe.notes }}
+    </div>
+    {% endif %}
+</div>
+
+</div>
+
+<!-- ══ MODAL: إضافة مكوّن ════════════════════════════════════ -->
+<div class="modal fade" id="addLineModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-main">
+                <div class="cx-modal-header">
+                    <h5 class="cx-modal-title"><i class="fas fa-plus-circle me-2"></i>إضافة مكوّن</h5>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cx-modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="cx-label">المكوّن <sup class="cx-required">*</sup></label>
+                            <div style="position:relative">
+                                <input type="text" id="lineComponentSearch" class="cx-input" placeholder="ابحث باسم المنتج أو SKU…" autocomplete="off">
+                                <div id="lineComponentResults" style="display:none;position:absolute;z-index:9999;background:var(--surface);border:1px solid var(--border-color);border-radius:10px;max-height:220px;overflow-y:auto;width:100%;box-shadow:0 8px 24px rgba(0,0,0,.12);top:calc(100% + 4px)"></div>
+                            </div>
+                            <input type="hidden" id="lineComponent">
+                            <div id="lineComponentSelected" class="mt-1" style="font-size:.82rem;color:var(--primary)"></div>
+                        </div>
+                        <div class="col-6">
+                            <label class="cx-label">الكمية <sup class="cx-required">*</sup></label>
+                            <input type="number" id="lineQty" class="cx-input" value="1" step="0.0001" min="0.0001">
+                        </div>
+                        <div class="col-6">
+                            <label class="cx-label">الوحدة</label>
+                            <select id="lineUnit" class="cx-input">
+                                <option value="">— لا وحدة —</option>
+                                {% for unit in units %}
+                                <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label">ملاحظات</label>
+                            <input type="text" id="lineNotes" class="cx-input" placeholder="اختياري">
+                        </div>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label">الوحدة (اختياري)</label>
-                        <select id="lineUnit" class="cx-input">
-                            <option value="">-- لا وحدة --</option>
-                            {% for unit in units %}
-                            <option value="{{ unit.id }}">{{ unit.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+                    <div id="addLineError" class="alert alert-danger d-none mt-3"></div>
                 </div>
-                <div class="mb-3 mt-2">
-                    <label class="form-label">ملاحظات</label>
-                    <input type="text" id="lineNotes" class="cx-input">
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="cx-btn-primary" id="addLineBtn" onclick="doAddLine()">
+                        <i class="fas fa-plus me-1"></i> إضافة
+                    </button>
                 </div>
-                <div id="addLineError" class="alert alert-danger d-none"></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="cx-btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="cx-btn-add" onclick="doAddLine()">
-                    <i class="fas fa-plus me-1"></i> إضافة
+        </div>
+    </div>
+</div>
+
+<!-- ══ MODAL: حذف الوصفة ══════════════════════════════════════ -->
+<div class="modal fade" id="deleteRecipeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+                <h5 class="cx-delete-title">حذف الوصفة؟</h5>
+                <p class="cx-delete-desc">
+                    سيتم حذف وصفة <strong>{{ recipe.item.name }}</strong> وجميع مكوّناتها ({{ lines|length }} مكوّن).<br>
+                    لا يمكن التراجع عن هذا الإجراء.
+                </p>
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteRecipeBtn">
+                    <i class="fas fa-trash me-1"></i> نعم، احذف
                 </button>
             </div>
         </div>
@@ -162,15 +215,62 @@
 {% block extra_js %}
 <script>
 const RECIPE_DETAIL_URL = "{% url 'items:bom_detail' recipe.id %}";
-const CSRF_TOKEN = "{{ csrf_token }}";
+const RECIPE_DELETE_URL  = "{% url 'items:bom_delete' recipe.id %}";
+const ITEM_SEARCH_URL    = "{% url 'items:search_api' %}";
+const BOM_LIST_URL       = "{% url 'items:bom_list' %}";
+const CSRF_TOKEN         = "{{ csrf_token }}";
 
+/* ── Component search ─────────────────────────────────────── */
+let compSearchTimer;
+$('#lineComponentSearch').on('input', function() {
+    clearTimeout(compSearchTimer);
+    const q = $(this).val().trim();
+    if (!q) { $('#lineComponentResults').hide(); return; }
+    compSearchTimer = setTimeout(function() {
+        $.getJSON(ITEM_SEARCH_URL + '?q=' + encodeURIComponent(q) + '&min_chars=1', function(data) {
+            const results = data.results || [];
+            if (!results.length) {
+                $('#lineComponentResults').html('<div style="padding:.6rem .75rem;color:var(--text-secondary);font-size:.85rem">لا توجد نتائج</div>').show();
+                return;
+            }
+            const html = results.map(r =>
+                `<div class="bom-comp-result" data-id="${r.id}" data-name="${r.name}"
+                      style="padding:.55rem .75rem;cursor:pointer;border-bottom:1px solid var(--border-light);transition:background .15s"
+                      onmouseenter="this.style.background='var(--bg-secondary)'" onmouseleave="this.style.background=''">
+                    <strong style="font-size:.9rem">${r.name}</strong>
+                    <span style="font-size:.78rem;color:var(--text-secondary);margin-right:.4rem">${r.sku || ''}</span>
+                </div>`
+            ).join('');
+            $('#lineComponentResults').html(html).show();
+        });
+    }, 250);
+});
+
+$(document).on('click', '.bom-comp-result', function() {
+    const id = $(this).data('id'), name = $(this).data('name');
+    $('#lineComponent').val(id);
+    $('#lineComponentSearch').val(name);
+    $('#lineComponentSelected').html('<i class="fas fa-check-circle me-1"></i>' + name);
+    $('#lineComponentResults').hide();
+});
+
+$(document).on('click', function(e) {
+    if (!$(e.target).closest('#lineComponentSearch, #lineComponentResults').length)
+        $('#lineComponentResults').hide();
+});
+
+/* ── Add line modal ───────────────────────────────────────── */
 function openAddLineModal() {
     $('#addLineError').addClass('d-none');
     $('#lineComponent').val('');
+    $('#lineComponentSearch').val('');
+    $('#lineComponentSelected').html('');
+    $('#lineComponentResults').hide();
     $('#lineQty').val('1');
     $('#lineUnit').val('');
     $('#lineNotes').val('');
     new bootstrap.Modal(document.getElementById('addLineModal')).show();
+    setTimeout(() => $('#lineComponentSearch').trigger('focus'), 300);
 }
 
 function doAddLine() {
@@ -179,28 +279,21 @@ function doAddLine() {
     const unitId = $('#lineUnit').val();
     const notes = $('#lineNotes').val();
 
-    if (!componentId) {
-        $('#addLineError').removeClass('d-none').text('يرجى اختيار مكوّن');
-        return;
-    }
-    if (!qty || parseFloat(qty) <= 0) {
-        $('#addLineError').removeClass('d-none').text('يرجى إدخال كمية صالحة');
-        return;
-    }
+    if (!componentId) { $('#addLineError').removeClass('d-none').text('يرجى اختيار مكوّن'); return; }
+    if (!qty || parseFloat(qty) <= 0) { $('#addLineError').removeClass('d-none').text('يرجى إدخال كمية صالحة'); return; }
+
+    const $btn = $('#addLineBtn');
+    const orig = $btn.html();
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>جاري الإضافة…');
 
     $.ajax({
         url: RECIPE_DETAIL_URL,
         method: 'POST',
         contentType: 'application/json',
         headers: { 'X-CSRFToken': CSRF_TOKEN },
-        data: JSON.stringify({
-            action: 'add_line',
-            component_id: componentId,
-            quantity: qty,
-            unit_id: unitId || null,
-            notes: notes
-        }),
+        data: JSON.stringify({ action: 'add_line', component_id: componentId, quantity: qty, unit_id: unitId || null, notes }),
         success: function(res) {
+            $btn.prop('disabled', false).html(orig);
             if (res.success) {
                 bootstrap.Modal.getInstance(document.getElementById('addLineModal')).hide();
                 location.reload();
@@ -209,11 +302,13 @@ function doAddLine() {
             }
         },
         error: function(xhr) {
+            $btn.prop('disabled', false).html(orig);
             $('#addLineError').removeClass('d-none').text(xhr.responseJSON?.message || 'حدث خطأ');
         }
     });
 }
 
+/* ── Delete line ──────────────────────────────────────────── */
 async function deleteLine(lineId) {
     const ok = await EnjazIMS.confirmAction('هل تريد حذف هذا المكوّن؟', 'حذف مكوّن');
     if (!ok) return;
@@ -226,21 +321,52 @@ async function deleteLine(lineId) {
         success: function(res) {
             if (res.success) {
                 $(`#line-row-${lineId}`).remove();
-                if ($('#linesTbody tr').length === 0) {
-                    $('#linesTbody').append(`
+                if (!$('#linesTbody tr:not(#empty-row)').length) {
+                    $('#linesTbody').html(`
                         <tr id="empty-row">
-                            <td colspan="9" class="text-center text-muted py-4">لا توجد مكوّنات.</td>
-                        </tr>
-                    `);
+                            <td colspan="6" class="text-center text-muted py-5">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block opacity-25"></i>
+                                لا توجد مكوّنات.
+                            </td>
+                        </tr>`);
                 }
+                EnjazIMS.toast('تم حذف المكوّن', 'success');
             } else {
                 EnjazIMS.toast(res.message, 'error');
             }
         },
-        error: function(xhr) {
-            EnjazIMS.toast(xhr.responseJSON?.message || 'حدث خطأ', 'error');
-        }
+        error: function(xhr) { EnjazIMS.toast(xhr.responseJSON?.message || 'حدث خطأ', 'error'); }
     });
 }
+
+/* ── Delete recipe ────────────────────────────────────────── */
+const deleteRecipeModal = new bootstrap.Modal(document.getElementById('deleteRecipeModal'));
+
+function openDeleteModal() { deleteRecipeModal.show(); }
+
+$('#confirmDeleteRecipeBtn').on('click', function() {
+    const $btn = $(this);
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>جاري الحذف…');
+    $.ajax({
+        url: RECIPE_DELETE_URL,
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        success: function(res) {
+            if (res.success) {
+                sessionStorage.setItem('__enjazFlash', JSON.stringify({ message: res.message, type: 'success' }));
+                window.location.href = BOM_LIST_URL;
+            } else {
+                EnjazIMS.toast(res.message, 'error');
+                $btn.prop('disabled', false).html('<i class="fas fa-trash me-1"></i> نعم، احذف');
+                deleteRecipeModal.hide();
+            }
+        },
+        error: function(xhr) {
+            EnjazIMS.toast(xhr.responseJSON?.message || 'حدث خطأ', 'error');
+            $btn.prop('disabled', false).html('<i class="fas fa-trash me-1"></i> نعم، احذف');
+            deleteRecipeModal.hide();
+        }
+    });
+});
 </script>
 {% endblock %}

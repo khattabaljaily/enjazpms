@@ -74,10 +74,10 @@
                     <td class="col-sn">{{ forloop.counter }}</td>
                     <td class="col-product">{{ line.item.name }}</td>
                     <td class="col-qty">{{ line.quantity|floatformat:"-3u" }}</td>
-                    <td class="col-price">{{ line.unit_price|floatformat:"2u"|default:0|intcomma}}</td>
-                    <td class="col-discount">{{ line.discount_percent|floatformat:"2u"|default:0|intcomma}}%</td>
-                    <td class="col-tax">{{ line.tax_rate|floatformat:"2u"|default:0|intcomma}}%</td>
-                    <td class="col-total">{{ line.line_total|floatformat:"2u"|default:0|intcomma}}</td>
+                    <td class="col-price">{{ line.unit_price|money}}</td>
+                    <td class="col-discount">{{ line.discount_percent|money}}%</td>
+                    <td class="col-tax">{{ line.tax_rate|money}}%</td>
+                    <td class="col-total">{{ line.line_total|money}}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -89,27 +89,27 @@
         <div class="print-totals">
             <div class="print-total-row">
                 <span>المجموع الفرعي</span>
-                <span>{{ invoice.subtotal|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>{{ invoice.subtotal|money}}</span>
             </div>
             <div class="print-total-row discount-row">
                 <span>الخصم على الفاتورة</span>
-                <span>- {{ invoice.invoice_discount_amount|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>- {{ invoice.invoice_discount_amount|money}}</span>
             </div>
             <div class="print-total-row tax-row">
                 <span>قيمة الضريبة المضافة</span>
-                <span>{{ invoice.tax_amount|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>{{ invoice.tax_amount|money}}</span>
             </div>
             <div class="print-total-row print-total-row--grand">
                 <span>الإجمالي النهائي</span>
-                <span>{{ invoice.grand_total|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>{{ invoice.grand_total|money}}</span>
             </div>
             <div class="print-total-row paid-row">
                 <span>المدفوع</span>
-                <span>{{ invoice.paid_amount|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>{{ invoice.paid_amount|money}}</span>
             </div>
             <div class="print-total-row remaining-row">
                 <span>المتبقي</span>
-                <span>{{ invoice.remaining_amount|floatformat:"2u"|default:0|intcomma}}</span>
+                <span>{{ invoice.remaining_amount|money}}</span>
             </div>
         </div>
     </div>

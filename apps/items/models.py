@@ -349,6 +349,10 @@ class BOMLine(TenantMixin):
         verbose_name = 'مكوّن وصفة'
         verbose_name_plural = 'مكوّنات الوصفات'
 
+    @property
+    def line_total(self):
+        return self.quantity * self.component.cost_price
+
     def __str__(self):
         return f"{self.component.name} × {self.quantity}"
 
