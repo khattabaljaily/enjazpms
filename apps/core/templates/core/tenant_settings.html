@@ -6,7 +6,7 @@
 {% block page_description %}تعديل بيانات النشاط التجاري والإعدادات الأساسية وحفظها مباشرة{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/tenant_settings.css' %}?v=2.0">
+<link rel="stylesheet" href="{% static 'css/tenant_settings.css' %}?v=3.0">
 {% endblock %}
 
 {% block breadcrumb_items %}
@@ -45,21 +45,37 @@
                     </div>
                 </div>
             </div>
-            <div class="ts-hero__right d-none d-md-flex">
-                <div class="ts-hero-stat">
-                    <div class="ts-hero-stat__icon"><i class="fas fa-coins"></i></div>
-                    <div>
-                        <div class="ts-hero-stat__val">{{ current_tenant.currency|default:"SDG" }}</div>
-                        <div class="ts-hero-stat__lbl">العملة</div>
-                    </div>
-                </div>
-                <div class="ts-hero-stat">
-                    <div class="ts-hero-stat__icon"><i class="fas fa-city"></i></div>
-                    <div>
-                        <div class="ts-hero-stat__val">{{ current_tenant.city|default:"-" }}</div>
-                        <div class="ts-hero-stat__lbl">المدينة</div>
-                    </div>
-                </div>
+        </div>
+    </div>
+
+    <!-- ─── Stats Strip ────────────────────────────────────────── -->
+    <div class="ts-stats">
+        <div class="ts-stat">
+            <div class="ts-stat__icon ts-stat__icon--indigo"><i class="fas fa-user-shield"></i></div>
+            <div class="ts-stat__info">
+                <div class="ts-stat__label">حالة الحساب</div>
+                <div class="ts-stat__value">{% if current_tenant.is_active %}نشط{% else %}غير نشط{% endif %}</div>
+            </div>
+        </div>
+        <div class="ts-stat">
+            <div class="ts-stat__icon ts-stat__icon--violet"><i class="fas fa-coins"></i></div>
+            <div class="ts-stat__info">
+                <div class="ts-stat__label">العملة</div>
+                <div class="ts-stat__value">{{ current_tenant.currency|default:"SDG" }}</div>
+            </div>
+        </div>
+        <div class="ts-stat">
+            <div class="ts-stat__icon ts-stat__icon--teal"><i class="fas fa-city"></i></div>
+            <div class="ts-stat__info">
+                <div class="ts-stat__label">المدينة</div>
+                <div class="ts-stat__value">{{ current_tenant.city|default:"-" }}</div>
+            </div>
+        </div>
+        <div class="ts-stat">
+            <div class="ts-stat__icon ts-stat__icon--amber"><i class="fas fa-tag"></i></div>
+            <div class="ts-stat__info">
+                <div class="ts-stat__label">الباقة</div>
+                <div class="ts-stat__value">{{ current_tenant.get_version_type_display|default:"-" }}</div>
             </div>
         </div>
     </div>
@@ -69,7 +85,7 @@
 
         <!-- Business Data -->
         <div class="col-lg-6 d-flex">
-            <div class="ts-card w-100">
+            <div class="ts-card ts-card--business w-100">
                 <div class="ts-card__header">
                     <div class="ts-card__icon ts-card__icon--blue">
                         <i class="fas fa-store"></i>
@@ -154,7 +170,7 @@
 
         <!-- System Settings -->
         <div class="col-lg-6 d-flex">
-            <div class="ts-card w-100">
+            <div class="ts-card ts-card--system w-100">
                 <div class="ts-card__header">
                     <div class="ts-card__icon ts-card__icon--green">
                         <i class="fas fa-sliders-h"></i>

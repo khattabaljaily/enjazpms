@@ -15,7 +15,7 @@
     overflow: hidden;
     background: linear-gradient(135deg, #6366f1 0%, #4338ca 55%, #7c3aed 100%);
     box-shadow: 0 8px 32px rgba(99, 102, 241, 0.28), 0 2px 8px rgba(67, 56, 202, 0.15);
-    padding: 1.75rem 2rem;
+    padding: 0.75rem 1.2rem;
 }
 
 .sub-hero__orb {
