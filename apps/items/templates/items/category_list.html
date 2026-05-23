@@ -356,7 +356,7 @@
         });
     });
 
-    $('#categoriesTable').on('click', '.js-delete-category', function() {
+    $(document).on('click', '.js-delete-category', function() {
         $('#deleteCategoryId').val($(this).data('id'));
         $('#deleteCategoryName').text($(this).data('name'));
         deleteModal.show();
@@ -370,7 +370,7 @@
             else EnjazIMS.toast(resp.message, 'error');
         }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
     });
-    $('#categoriesTable').on('click', '.js-edit-category', function() { openEdit($(this).data('id')); });
+    $(document).on('click', '.js-edit-category', function() { openEdit($(this).data('id')); });
 
     /* ── Import ──────────────────────────────────────────────── */
     const importCategoriesModal = new bootstrap.Modal(document.getElementById('importCategoriesModal'));

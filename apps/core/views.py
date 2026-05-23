@@ -941,7 +941,25 @@ def _delete_tenant_data(tenant):
         )
         from apps.expenses.models import Expense
         from apps.treasury.models import TreasuryMovement
+        from apps.stocks.models import (
+            StocktakeLine, Stocktake,
+            StockTransferLine, StockTransfer,
+            ManufacturingOrder,
+        )
+        from apps.purchases.models import PurchaseRFQLine, PurchaseRFQ
+        from apps.items.models import BOMRecipe
 
+        # --- stock sub-documents (all PROTECT Stock or Item) ---
+        StocktakeLine.objects.filter(**t).delete()
+        Stocktake.objects.filter(**t).delete()
+        StockTransferLine.objects.filter(**t).delete()
+        StockTransfer.objects.filter(**t).delete()
+        ManufacturingOrder.objects.filter(**t).delete()
+        # --- purchase RFQ (PROTECT Stock / Item) ---
+        PurchaseRFQLine.objects.filter(**t).delete()
+        PurchaseRFQ.objects.filter(**t).delete()
+        # --- BOM (BOMRecipe cascades to BOMLine which PROTECT Item) ---
+        BOMRecipe.objects.filter(**t).delete()
         SaleReturnLine.objects.filter(**t).delete()
         SaleReturn.objects.filter(**t).delete()
         PurchaseReturnLine.objects.filter(**t).delete()

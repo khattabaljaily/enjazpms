@@ -756,7 +756,6 @@
     .page-head-subtitle { font-size: 0.78rem; }
     .page-head-actions  { flex-wrap: wrap; }
     .dashboard-body { padding: 0.5rem 0.6rem 0.6rem; }
-    .sidebar { width: 100vw; right: -100vw; }
     .sidebar.show { right: 0; }
 }
 

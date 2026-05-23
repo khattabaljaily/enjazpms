@@ -1150,6 +1150,10 @@
 [data-theme="dark"] .pos-payment    { background: var(--surface); }
 [data-theme="dark"] .pos-success-box { background: var(--surface); }
 
+/* ── Mobile Tabs (hidden on desktop) ────────────────────── */
+
+.pos-mobile-tabs { display: none; }
+
 /* ── Scrollbar ───────────────────────────────────────────── */
 
 .pos-grid-wrap::-webkit-scrollbar,
@@ -1174,26 +1178,107 @@
 }
 
 @media (max-width: 699px) {
+    /* ── Tab bar ── */
+    .pos-mobile-tabs {
+        display: flex;
+        flex-shrink: 0;
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border-color);
+        z-index: 10;
+    }
+
+    .pos-tab-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .4rem;
+        padding: .6rem .5rem;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -1px;
+        color: var(--text-tertiary);
+        font-family: inherit;
+        font-size: .82rem;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: color .15s, border-color .15s;
+    }
+
+    .pos-tab-btn.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+    }
+
+    .pos-tab-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 5px;
+        background: var(--primary);
+        color: #fff;
+        border-radius: 10px;
+        font-size: .68rem;
+        font-weight: 700;
+    }
+
+    .pos-tab-badge.zero { background: var(--border-color); color: var(--text-tertiary); }
+
+    /* ── Root ── */
     .pos-root {
         flex-direction: column;
         height: 100dvh;
+        overflow: hidden;
     }
 
+    /* ── Panels: each fills remaining height when active ── */
     .pos-products {
-        flex: 0 0 auto;
-        height: 55dvh;
+        flex: 1 1 0;
+        min-height: 0;
         border-left: none;
-        border-bottom: 2px solid var(--primary);
+        border-bottom: none;
     }
 
     .pos-cart {
         width: 100%;
         flex: 1 1 0;
         min-height: 0;
-        box-shadow: 0 -4px 16px rgba(0,0,0,.1);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        box-shadow: none;
         border-right: none;
     }
 
+    /* Hidden tab panel */
+    .pos-tab-hidden { display: none !important; }
+
+    /* ── Cart internals: parent handles scroll ── */
+    .pos-cart-head {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        padding: .55rem .75rem .45rem;
+    }
+
+    .pos-cart-items {
+        flex: none;
+        overflow-y: visible;
+        padding: .3rem .4rem;
+    }
+
+    .pos-payment {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        padding: .45rem .75rem .5rem;
+        box-shadow: 0 -4px 12px rgba(0,0,0,.08);
+    }
+
+    /* ── Compact spacing ── */
     .pos-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: .45rem; }
     .pos-grid-wrap { padding: .5rem .6rem; }
 
@@ -1205,15 +1290,18 @@
     .pos-topbar { padding: .48rem .65rem; gap: .5rem; min-height: 48px; }
     .pos-home-btn span { display: none; }
 
-    .pos-cats { padding: .42rem .65rem; }
-    .pos-cart-head { padding: .55rem .75rem .45rem; }
-    .pos-totals    { padding: .45rem .75rem .35rem; }
-    .pos-payment   { padding: .45rem .75rem .5rem; }
+    .pos-cats     { padding: .42rem .65rem; }
+    .pos-totals   { padding: .45rem .75rem .35rem; }
     .pos-notes-wrap { padding: .3rem .75rem; }
-    .pos-cart-items { padding: .3rem .4rem; }
 
     .pos-ci-qty-btn { width: 24px; height: 24px; }
     .pos-checkout-btn { padding: .72rem; font-size: .9rem; }
+}
+
+/* Ensure both panels always show on desktop even if JS set tab-hidden during mobile */
+@media (min-width: 700px) {
+    .pos-products,
+    .pos-cart { display: flex !important; }
 }
 
 @media (max-width: 379px) {

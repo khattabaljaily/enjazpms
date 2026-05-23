@@ -378,7 +378,15 @@ def item_delete_api(request, pk):
         return JsonResponse({'success': False, 'message': 'المنتج غير موجود'}, status=404)
 
     name = item.name
-    item.delete()
+    try:
+        # BOMLine.component uses PROTECT; safe to remove before deletion
+        # (BOM lines are recipe definitions, not transactional records)
+        item.used_in_bom.all().delete()
+        item.delete()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error('item_delete_api error pk=%s: %s', pk, e, exc_info=True)
+        return JsonResponse({'success': False, 'message': 'تعذر الحذف: المنتج مرتبط بسجلات لا يمكن حذفها (فواتير، تحويلات، جرد)'}, status=400)
     return JsonResponse({'success': True, 'message': f'تم حذف المنتج "{name}" بنجاح'})
 
 

@@ -311,7 +311,7 @@
         });
     });
 
-    $('#unitsTable').on('click', '.js-delete-unit', function() {
+    $(document).on('click', '.js-delete-unit', function() {
         $('#deleteUnitId').val($(this).data('id'));
         $('#deleteUnitName').text($(this).data('name'));
         deleteModal.show();
@@ -325,7 +325,7 @@
             else EnjazIMS.toast(resp.message, 'error');
         }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
     });
-    $('#unitsTable').on('click', '.js-edit-unit', function() { openEdit($(this).data('id')); });
+    $(document).on('click', '.js-edit-unit', function() { openEdit($(this).data('id')); });
 })();
 </script>
 {% endblock %}
