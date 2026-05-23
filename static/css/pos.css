@@ -98,16 +98,18 @@
 
 .pos-search input {
     width: 100%;
-    padding: .52rem .9rem .52rem 2.5rem;
+    height: 36px;
+    padding: 0 .9rem 0 2.5rem;
     border: 1.5px solid rgba(255,255,255,.25);
     border-radius: var(--radius-full);
     background: rgba(255,255,255,.15);
     color: #fff;
     font-family: inherit;
-    font-size: .88rem;
+    font-size: .83rem;
     direction: rtl;
     transition: border-color .15s, background .15s, box-shadow .15s;
     backdrop-filter: blur(4px);
+    box-sizing: border-box;
 }
 
 .pos-search input::placeholder { color: rgba(255,255,255,.6); }
@@ -131,17 +133,19 @@
 }
 
 .pos-stock-select {
-    padding: .42rem .6rem .42rem 2rem;
+    height: 36px;
+    padding: 0 .6rem 0 2rem;
     border: 1.5px solid rgba(255,255,255,.25);
     border-radius: var(--radius-md);
     background: rgba(255,255,255,.15);
     color: #fff;
     font-family: inherit;
-    font-size: .8rem;
+    font-size: .83rem;
     direction: rtl;
     transition: border-color .15s;
     max-width: 140px;
     backdrop-filter: blur(4px);
+    box-sizing: border-box;
 }
 
 .pos-stock-select option { background: var(--bg-card); color: var(--text-primary); }
@@ -151,18 +155,20 @@
     display: flex;
     align-items: center;
     gap: .3rem;
-    padding: .42rem .75rem;
+    height: 36px;
+    padding: 0 .75rem;
     border: 1.5px solid rgba(255,255,255,.25);
     border-radius: var(--radius-md);
     background: rgba(255,255,255,.12);
     color: rgba(255,255,255,.85);
     font-family: inherit;
-    font-size: .8rem;
+    font-size: .83rem;
     cursor: pointer;
     text-decoration: none;
     transition: all .15s;
     white-space: nowrap;
     flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .pos-home-btn:hover {
