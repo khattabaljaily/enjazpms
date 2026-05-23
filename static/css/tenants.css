@@ -3,6 +3,39 @@
    Tenant-specific styles only. Generic UI lives in components.css.
    ============================================================ */
 
+/* ══ PAGINATION ══════════════════════════════════════════════ */
+.tn-dt-bottom .pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin: 0;
+}
+
+.tn-dt-bottom .pagination .page-item .page-link {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 8px;
+    min-width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.65rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-secondary);
+    transition: all 0.15s;
+}
+
+.tn-dt-bottom .pagination .page-item.active .page-link,
+.tn-dt-bottom .pagination .page-item .page-link:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
 /* ══ FORM MODAL SIZE ═════════════════════════════════════════ */
 /* Create/edit form is wider than the default cx-modal-dialog  */
 .tn-form-modal-dialog { max-width: 860px; }

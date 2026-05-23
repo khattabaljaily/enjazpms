@@ -1335,6 +1335,21 @@ table.dataTable thead th.sorting_desc::before { content: "\f0dd" !important; opa
     flex-wrap: wrap;
 }
 
+/* Reset Bootstrap RTL connected-border negative margins and add gap globally */
+.dataTables_wrapper .pagination {
+    gap: 0.3rem !important;
+}
+
+.dataTables_wrapper .pagination .page-item .page-link {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 8px !important;
+}
+
+div.dataTables_wrapper div.dataTables_paginate {
+    margin: 15px !important;
+}
+
 .cx-panel .dataTables_wrapper .pagination .page-item .page-link {
     display: inline-flex !important;
     align-items: center !important;
