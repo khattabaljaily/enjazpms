@@ -2,8 +2,29 @@
 Notification generation services.
 Called from views or management commands.
 """
+from datetime import timedelta
+from django.db.models import Q
 from django.utils import timezone
 from .models import Notification
+
+_RESEND_DAYS = 7  # re-alert after this many days if condition still exists
+
+
+def _already_notified(tenant, notification_type, link):
+    """
+    Skip creation if:
+      - an unread notification already exists for this condition, OR
+      - any notification (read or not) was created within the last _RESEND_DAYS.
+    This prevents duplicates on server restart and respects the user's read action.
+    """
+    since = timezone.now() - timedelta(days=_RESEND_DAYS)
+    return Notification.objects.filter(
+        tenant=tenant,
+        notification_type=notification_type,
+        link=link,
+    ).filter(
+        Q(is_read=False) | Q(created_at__gte=since)
+    ).exists()
 
 
 def generate_low_stock_notifications(tenant):
@@ -23,13 +44,8 @@ def generate_low_stock_notifications(tenant):
         if sq.quantity > threshold:
             continue
 
-        already = Notification.objects.filter(
-            tenant=tenant,
-            notification_type='low_stock',
-            is_read=False,
-            link=f'/stocks/quantities/?item={sq.item_id}&stock={sq.stock_id}',
-        ).exists()
-        if already:
+        if _already_notified(tenant, 'low_stock',
+                             f'/stocks/quantities/?item={sq.item_id}&stock={sq.stock_id}'):
             continue
 
         Notification.objects.create(
@@ -62,13 +78,7 @@ def generate_overdue_invoice_notifications(tenant):
 
     count = 0
     for inv in overdue:
-        already = Notification.objects.filter(
-            tenant=tenant,
-            notification_type='overdue_invoice',
-            is_read=False,
-            link=f'/sales/{inv.id}/',
-        ).exists()
-        if already:
+        if _already_notified(tenant, 'overdue_invoice', f'/sales/{inv.id}/'):
             continue
 
         Notification.objects.create(
@@ -105,13 +115,7 @@ def generate_rfq_expiry_notifications(tenant):
 
     count = 0
     for rfq in expiring:
-        already = Notification.objects.filter(
-            tenant=tenant,
-            notification_type='rfq_expiry',
-            is_read=False,
-            link=f'/purchases/rfq/{rfq.id}/',
-        ).exists()
-        if already:
+        if _already_notified(tenant, 'rfq_expiry', f'/purchases/rfq/{rfq.id}/'):
             continue
 
         days_left = (rfq.expiry_date - today).days
