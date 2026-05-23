@@ -27,7 +27,6 @@
 
 #qtyTable .qty-badge,
 #qtyTable .cx-badge {
-    display: inline-flex;
     justify-content: flex-start;
     text-align: right !important;
 }
