@@ -1,5 +1,6 @@
 import json
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
@@ -11,6 +12,19 @@ from .services import (
     generate_rfq_expiry_notifications,
 )
 
+_GEN_THROTTLE = 900  # seconds between auto-generations per tenant
+
+
+def _maybe_generate(tenant):
+    """Run all generators at most once every 15 minutes per tenant."""
+    key = f'notif_gen_{tenant.pk}'
+    if cache.get(key):
+        return
+    cache.set(key, 1, _GEN_THROTTLE)
+    generate_low_stock_notifications(tenant)
+    generate_overdue_invoice_notifications(tenant)
+    generate_rfq_expiry_notifications(tenant)
+
 
 def _tenant(request):
     return getattr(request, 'tenant', None)
@@ -21,6 +35,8 @@ def notification_list(request):
     tenant = _tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+
+    _maybe_generate(tenant)
 
     notifications = Notification.objects.filter(tenant=tenant).order_by('-created_at')[:100]
     unread_count  = Notification.objects.filter(tenant=tenant, is_read=False).count()
@@ -37,6 +53,8 @@ def notification_api(request):
     tenant = _tenant(request)
     if not tenant:
         return JsonResponse({'unread': 0, 'items': []})
+
+    _maybe_generate(tenant)
 
     unread = Notification.objects.filter(tenant=tenant, is_read=False).count()
     recent = Notification.objects.filter(tenant=tenant).order_by('-created_at')[:8]

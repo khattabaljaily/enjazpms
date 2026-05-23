@@ -529,6 +529,8 @@ const EnjazIMS = {
     }
 };
 
+window.EnjazIMS = EnjazIMS;
+
 // jQuery AJAX hooks for GSpinner + backwards-compat alias
 $(document)
     .on('ajaxStart', function () { GSpinner.show(); })

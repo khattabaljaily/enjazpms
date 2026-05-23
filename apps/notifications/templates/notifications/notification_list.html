@@ -2,7 +2,115 @@
 {% load static %}{% load humanize %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<style>
+/* ══ NOTIFICATION PAGE ═══════════════════════════════════════ */
+.ntf-list { display: flex; flex-direction: column; }
+
+.ntf-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.1rem 1.4rem;
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.12s;
+    position: relative;
+}
+.ntf-item:last-child { border-bottom: none; }
+.ntf-item:hover { background: var(--bg-secondary); }
+
+/* Unread: indigo left-border accent */
+.ntf-item--unread::before {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--primary);
+    border-radius: 0 4px 4px 0;
+}
+
+/* Icon circle */
+.ntf-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.ntf-icon--warning  { background: rgba(245,158,11,0.12);  color: #f59e0b; }
+.ntf-icon--danger   { background: rgba(239,68,68,0.12);   color: #ef4444; }
+.ntf-icon--info     { background: rgba(59,130,246,0.12);  color: #3b82f6; }
+.ntf-icon--success  { background: rgba(16,185,129,0.12);  color: #10b981; }
+.ntf-icon--muted    { background: rgba(107,114,128,0.10); color: #6b7280; }
+
+/* Body */
+.ntf-body  { flex: 1; min-width: 0; }
+.ntf-head  { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.25rem; flex-wrap: wrap; }
+.ntf-title { font-size: 0.88rem; font-weight: 700; color: var(--text-primary); }
+.ntf-time  { font-size: 0.72rem; color: var(--text-tertiary); white-space: nowrap; flex-shrink: 0; }
+.ntf-msg   { font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 0.35rem; line-height: 1.55; }
+.ntf-link  {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.75rem; font-weight: 600; color: var(--primary);
+    text-decoration: none;
+}
+.ntf-link:hover { text-decoration: underline; }
+
+/* Side actions */
+.ntf-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.ntf-priority {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 50px;
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+.ntf-priority--high   { background: rgba(239,68,68,0.1);  color: #ef4444; }
+.ntf-priority--medium { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.ntf-priority--low    { background: rgba(107,114,128,0.1);color: #6b7280; }
+
+.ntf-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    flex-shrink: 0;
+}
+
+.ntf-read-btn {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-tertiary);
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+}
+.ntf-read-btn:hover { border-color: #10b981; color: #10b981; background: rgba(16,185,129,0.07); }
+
+/* Empty state */
+.ntf-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 1rem;
+    color: var(--text-tertiary);
+    gap: 0.75rem;
+}
+.ntf-empty i { font-size: 2.5rem; opacity: 0.3; }
+.ntf-empty p { font-size: 0.9rem; margin: 0; }
+</style>
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -10,12 +118,11 @@
 {% block content %}
 <div class="cx-scene">
 
+<!-- ══ HERO ════════════════════════════════════════════════ -->
 <div class="cx-hero">
     <div class="cx-hero-inner">
         <div class="cx-hero-left">
-            <div class="cx-hero-icon-wrap">
-                <i class="fas fa-bell"></i>
-            </div>
+            <div class="cx-hero-icon-wrap"><i class="fas fa-bell"></i></div>
             <div>
                 <h1 class="cx-hero-title">الإشعارات</h1>
                 <p class="cx-hero-desc">متابعة التنبيهات والأحداث المهمة</p>
@@ -24,82 +131,75 @@
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
                 <button class="cx-btn-secondary" id="btnGenerate">
-                    <i class="fas fa-rotate me-1"></i> فحص الإشعارات
+                    <i class="fas fa-rotate"></i><span>فحص الآن</span>
                 </button>
                 <button class="cx-btn-secondary" id="btnMarkAll">
-                    <i class="fas fa-check-double me-1"></i> تعليم الكل كمقروء
+                    <i class="fas fa-check-double"></i><span>تعليم الكل كمقروء</span>
                 </button>
             </div>
         </div>
     </div>
-
     <div class="cx-stats-inline">
         <span class="cx-stat-badge cx-stat-badge--danger">
-            <i class="fas fa-bell"></i>
+            <i class="fas fa-circle-dot"></i>
             <strong>{{ unread_count }}</strong><span>غير مقروء</span>
         </span>
-        <span class="cx-stat-badge cx-stat-badge--primary">
+        <span class="cx-stat-badge cx-stat-badge--muted">
             <i class="fas fa-list"></i>
             <strong>{{ notifications|length }}</strong><span>إجمالي</span>
         </span>
     </div>
 </div>
 
+<!-- ══ LIST ════════════════════════════════════════════════ -->
 <div class="cx-panel">
-    <div class="list-group list-group-flush" id="notifFullList">
+    <div class="ntf-list" id="notifFullList">
         {% for n in notifications %}
-        <div class="list-group-item list-group-item-action d-flex gap-3 py-3
-             {% if not n.is_read %}bg-opacity-5 bg-primary{% endif %}"
-             id="notif-{{ n.id }}">
 
-            <div class="mt-1">
-                {% if n.notification_type == 'low_stock' %}
-                    <i class="fas fa-triangle-exclamation fa-lg text-warning"></i>
-                {% elif n.notification_type == 'overdue_invoice' %}
-                    <i class="fas fa-file-invoice-dollar fa-lg text-danger"></i>
-                {% elif n.notification_type == 'rfq_expiry' %}
-                    <i class="fas fa-clock fa-lg text-info"></i>
-                {% elif n.notification_type == 'transfer_done' %}
-                    <i class="fas fa-arrows-left-right fa-lg text-success"></i>
-                {% elif n.notification_type == 'stocktake_done' %}
-                    <i class="fas fa-clipboard-check fa-lg text-success"></i>
-                {% else %}
-                    <i class="fas fa-bell fa-lg text-secondary"></i>
-                {% endif %}
+        <div class="ntf-item {% if not n.is_read %}ntf-item--unread{% endif %}" id="notif-{{ n.id }}">
+            <div class="ntf-icon
+                {% if n.notification_type == 'low_stock' %}ntf-icon--warning
+                {% elif n.notification_type == 'overdue_invoice' %}ntf-icon--danger
+                {% elif n.notification_type == 'rfq_expiry' %}ntf-icon--info
+                {% elif n.notification_type == 'transfer_done' or n.notification_type == 'stocktake_done' %}ntf-icon--success
+                {% else %}ntf-icon--muted{% endif %}">
+                <i class="fas
+                    {% if n.notification_type == 'low_stock' %}fa-triangle-exclamation
+                    {% elif n.notification_type == 'overdue_invoice' %}fa-file-invoice-dollar
+                    {% elif n.notification_type == 'rfq_expiry' %}fa-clock
+                    {% elif n.notification_type == 'transfer_done' %}fa-arrows-left-right
+                    {% elif n.notification_type == 'stocktake_done' %}fa-clipboard-check
+                    {% else %}fa-bell{% endif %}"></i>
             </div>
-
-            <div class="flex-fill">
-                <div class="d-flex justify-content-between align-items-start">
-                    <strong class="{% if not n.is_read %}text-primary{% endif %}">{{ n.title }}</strong>
-                    <small class="text-muted ms-3 text-nowrap">{{ n.created_at|naturaltime }}</small>
+            <div class="ntf-body">
+                <div class="ntf-head">
+                    <span class="ntf-title">{{ n.title }}</span>
+                    <span class="ntf-time"><i class="fas fa-clock" style="font-size:.65rem;margin-left:.25rem"></i>{{ n.created_at|naturaltime }}</span>
                 </div>
-                <p class="mb-1 text-muted">{{ n.message }}</p>
+                <p class="ntf-msg">{{ n.message }}</p>
                 {% if n.link %}
-                <a href="{{ n.link }}" class="small text-primary" onclick="markOneRead({{ n.id }})">
-                    <i class="fas fa-external-link-alt me-1"></i>عرض التفاصيل
+                <a href="{{ n.link }}" class="ntf-link" onclick="markOneRead({{ n.id }})">
+                    <i class="fas fa-arrow-left" style="font-size:.65rem"></i>عرض التفاصيل
                 </a>
                 {% endif %}
             </div>
-
-            <div class="d-flex flex-column align-items-end gap-1">
-                {% if n.priority == 'high' %}
-                <span class="badge bg-danger">عالية</span>
-                {% elif n.priority == 'medium' %}
-                <span class="badge bg-warning text-dark">متوسطة</span>
-                {% else %}
-                <span class="badge bg-secondary">منخفضة</span>
-                {% endif %}
+            <div class="ntf-side">
+                <span class="ntf-priority ntf-priority--{{ n.priority }}">
+                    {% if n.priority == 'high' %}عالية{% elif n.priority == 'medium' %}متوسطة{% else %}منخفضة{% endif %}
+                </span>
                 {% if not n.is_read %}
-                <button class="btn btn-sm btn-outline-secondary" onclick="markOneRead({{ n.id }}, this)">
+                <div class="ntf-dot"></div>
+                <button class="ntf-read-btn" title="تعليم كمقروء" onclick="markOneRead({{ n.id }}, this)">
                     <i class="fas fa-check"></i>
                 </button>
                 {% endif %}
             </div>
         </div>
+
         {% empty %}
-        <div class="text-center text-muted py-5">
-            <i class="fas fa-bell-slash fa-3x mb-3 d-block opacity-30"></i>
-            لا توجد إشعارات
+        <div class="ntf-empty">
+            <i class="fas fa-bell-slash"></i>
+            <p>لا توجد إشعارات حتى الآن</p>
         </div>
         {% endfor %}
     </div>
@@ -118,12 +218,19 @@ async function markOneRead(id, btn) {
     });
     const row = document.getElementById(`notif-${id}`);
     if (row) {
-        row.classList.remove('bg-opacity-5', 'bg-primary');
+        row.classList.remove('ntf-item--unread');
+        row.querySelector('.ntf-dot')?.remove();
         if (btn) btn.remove();
+    }
+    const badge = document.querySelector('.cx-stat-badge--danger strong');
+    if (badge) {
+        const v = parseInt(badge.textContent) - 1;
+        badge.textContent = Math.max(0, v);
     }
 }
 
 document.getElementById('btnMarkAll').addEventListener('click', async function () {
+    this.disabled = true;
     await fetch('/notifications/api/read-all/', {
         method: 'POST', headers: { 'X-CSRFToken': CSRF },
     });
@@ -132,21 +239,20 @@ document.getElementById('btnMarkAll').addEventListener('click', async function (
 
 document.getElementById('btnGenerate').addEventListener('click', async function () {
     this.disabled = true;
-    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الفحص…';
-    const r = await fetch('/notifications/api/generate/', {
-        method: 'POST', headers: { 'X-CSRFToken': CSRF },
-    });
-    const d = await r.json();
-    this.disabled = false;
-    this.innerHTML = '<i class="fas fa-rotate me-1"></i> فحص الإشعارات';
-    if (d.success) {
-        const msg = d.total > 0 ? `تم إنشاء ${d.total} إشعار جديد` : 'لا توجد إشعارات جديدة';
-        const toast = document.createElement('div');
-        toast.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 shadow';
-        toast.style.zIndex = 9999;
-        toast.textContent = msg;
-        document.body.appendChild(toast);
-        setTimeout(() => { toast.remove(); if (d.total > 0) location.reload(); }, 2000);
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>جاري الفحص…</span>';
+    try {
+        const r = await fetch('/notifications/api/generate/', {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF },
+        });
+        const d = await r.json();
+        if (d.success) {
+            const msg = d.total > 0 ? `تم إنشاء ${d.total} إشعار جديد` : 'لا توجد إشعارات جديدة';
+            if (window.EnjazIMS) EnjazIMS.toast(msg, d.total > 0 ? 'success' : 'info');
+            if (d.total > 0) setTimeout(() => location.reload(), 900);
+        }
+    } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-rotate"></i><span>فحص الآن</span>';
     }
 });
 </script>

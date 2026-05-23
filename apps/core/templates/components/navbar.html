@@ -29,17 +29,17 @@
                     <span class="navbar-badge d-none" id="notifBadge">0</span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end notif-menu" style="min-width:340px;max-width:380px;">
-                    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-                        <strong>الإشعارات</strong>
-                        <button class="btn btn-sm btn-link p-0 text-muted" id="btnMarkAllRead" onclick="markAllRead()">
+                    <div class="notif-menu-head">
+                        <span class="notif-menu-head-title">الإشعارات</span>
+                        <button class="notif-menu-mark-all" id="btnMarkAllRead" onclick="markAllRead()">
                             تعليم الكل كمقروء
                         </button>
                     </div>
-                    <div id="notifList" style="max-height:360px;overflow-y:auto;">
-                        <div class="text-center text-muted py-3" id="notifEmpty">لا إشعارات جديدة</div>
+                    <div class="notif-drop-list" id="notifList">
+                        <div class="notif-drop-empty"><i class="fas fa-bell-slash"></i>لا إشعارات جديدة</div>
                     </div>
-                    <div class="border-top text-center py-2">
-                        <a href="/notifications/" class="text-primary small">عرض جميع الإشعارات</a>
+                    <div class="notif-menu-footer">
+                        <a href="/notifications/">عرض جميع الإشعارات <i class="fas fa-arrow-left" style="font-size:.65rem"></i></a>
                     </div>
                 </div>
             </div>
@@ -117,40 +117,48 @@ function toggleTheme() {
 })();
 
 // ── Notifications ──────────────────────────────────────
+const NOTIF_ICON_STYLE = {
+    'fa-triangle-exclamation': { bg: 'rgba(245,158,11,0.12)',  color: '#f59e0b' },
+    'fa-file-invoice-dollar':  { bg: 'rgba(239,68,68,0.12)',   color: '#ef4444' },
+    'fa-clock':                { bg: 'rgba(59,130,246,0.12)',  color: '#3b82f6' },
+    'fa-arrows-left-right':    { bg: 'rgba(16,185,129,0.12)',  color: '#10b981' },
+    'fa-clipboard-check':      { bg: 'rgba(16,185,129,0.12)',  color: '#10b981' },
+    'fa-bell':                 { bg: 'rgba(107,114,128,0.10)', color: '#6b7280' },
+};
+
 async function loadNotifications() {
     try {
         const r = await fetch('/notifications/api/');
         const d = await r.json();
         const badge = document.getElementById('notifBadge');
         const list  = document.getElementById('notifList');
-        const empty = document.getElementById('notifEmpty');
 
-        if (d.unread > 0) {
-            badge.textContent = d.unread > 99 ? '99+' : d.unread;
-            badge.classList.remove('d-none');
-        } else {
-            badge.classList.add('d-none');
-        }
+        badge.textContent = d.unread > 99 ? '99+' : d.unread;
+        badge.classList.toggle('d-none', !d.unread);
 
         if (!d.items.length) {
-            list.innerHTML = '<div class="text-center text-muted py-3">لا إشعارات جديدة</div>';
+            list.innerHTML = '<div class="notif-drop-empty"><i class="fas fa-bell-slash"></i>لا إشعارات جديدة</div>';
             return;
         }
 
-        const PRIORITY_COLOR = { high: 'danger', medium: 'warning', low: 'secondary' };
-
-        list.innerHTML = d.items.map(n => `
-            <a href="${n.link || '#'}" class="dropdown-item d-flex gap-2 py-2 border-bottom ${n.is_read ? '' : 'bg-opacity-5 bg-primary'}"
-               onclick="markRead(${n.id}, event)" style="white-space:normal">
-                <span class="mt-1"><i class="fas ${n.icon}"></i></span>
-                <div class="flex-fill">
-                    <div class="fw-semibold" style="font-size:.85rem">${n.title}</div>
-                    <div class="text-muted" style="font-size:.78rem">${n.message}</div>
-                    <div class="text-muted" style="font-size:.72rem">${n.time}</div>
+        list.innerHTML = d.items.map(n => {
+            const iconName = (n.icon || 'fa-bell').split(' ')[0];
+            const style = NOTIF_ICON_STYLE[iconName] || NOTIF_ICON_STYLE['fa-bell'];
+            return `
+            <a href="${n.link || '/notifications/'}"
+               class="notif-drop-item${n.is_read ? '' : ' notif-drop-item--unread'}"
+               onclick="markRead(${n.id}, event)">
+                <div class="notif-drop-icon" style="background:${style.bg};color:${style.color}">
+                    <i class="fas ${iconName}"></i>
                 </div>
-                ${!n.is_read ? `<span class="align-self-start badge bg-${PRIORITY_COLOR[n.priority]||'secondary'}" style="font-size:.65rem">●</span>` : ''}
-            </a>
-        `).join('');
+                <div class="notif-drop-body">
+                    <div class="notif-drop-title">${n.title}</div>
+                    <div class="notif-drop-msg">${n.message}</div>
+                    <div class="notif-drop-time">${n.time}</div>
+                </div>
+                ${!n.is_read ? '<div class="notif-drop-dot"></div>' : ''}
+            </a>`;
+        }).join('');
     } catch (e) { /* silent fail */ }
 }
 

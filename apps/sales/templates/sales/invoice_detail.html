@@ -469,7 +469,8 @@ function submitInvoiceDecision() {
             }
             location.reload();
         } else {
-            showAlert(data.message, 'danger');
+            closeInvoiceDecisionModal();
+            showAlert(data.message || 'فشلت العملية', 'danger');
         }
     })
     .catch(() => showAlert('حدث خطأ في الاتصال', 'danger'))
