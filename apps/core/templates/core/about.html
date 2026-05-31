@@ -36,16 +36,16 @@
         <div class="ab-container">
             <div class="ab-hero__inner">
                 <span class="ab-hero__badge">
-                    <i class="fas fa-star"></i>
-                    نظام عربي لإدارة التجارة والمخزون
+                    <i class="fas fa-robot"></i>
+                    مدعوم بذكاء اصطناعي — نظام متكامل لإدارة التجارة والمخزون
                 </span>
                 <h1 class="ab-hero__title">
                     إنجاز يحول الإدارة اليومية<br>
-                    <span class="ab-hero__accent">إلى تجربة أسرع وأكثر أماناً</span>
+                    <span class="ab-hero__accent">إلى تجربة أسرع وأكثر ذكاءً</span>
                 </h1>
                 <p class="ab-hero__sub">
-                    واجهة عربية سهلة ومتكاملة لإدارة المخزون والمبيعات والمشتريات والعملاء،
-                    مع تحكم كامل بالمتاجر والفروع في مكان واحد.
+                    واجهة سهلة ومتكاملة لإدارة المخزون والمبيعات والمشتريات والعملاء،
+                    مدعومة بمساعد ذكاء اصطناعي يحلل بياناتك ويجيب على أسئلتك بلغتك.
                 </p>
                 <div class="ab-hero__actions">
                     <a href="{% url 'accounts:register_step1' %}" class="ab-btn ab-btn--white ab-btn--lg">
@@ -59,7 +59,7 @@
                     <span><i class="fas fa-shield-alt"></i> حماية البيانات أولويتنا</span>
                     <span><i class="fas fa-headset"></i> دعم فني مستمر</span>
                     <span><i class="fas fa-sync"></i> تحديثات متواصلة</span>
-                    <span><i class="fas fa-globe"></i> تجربة مخصصة للعالم العربي</span>
+                    <span><i class="fas fa-globe"></i> دعم متعدد اللغات قريباً</span>
                 </div>
             </div>
         </div>
@@ -87,6 +87,11 @@
                 <div class="ab-stat">
                     <div class="ab-stat__num">24/7</div>
                     <div class="ab-stat__label">دعم فني فوري</div>
+                </div>
+                <div class="ab-stat__divider"></div>
+                <div class="ab-stat">
+                    <div class="ab-stat__num ab-stat__num--ai"><i class="fas fa-robot"></i> AI</div>
+                    <div class="ab-stat__label">مساعد ذكي مدمج</div>
                 </div>
             </div>
         </div>
@@ -120,7 +125,7 @@
                         <i class="fas fa-puzzle-piece"></i>
                     </div>
                     <h4 class="ab-why-card__title">مرونة لكل الأنشطة</h4>
-                    <p class="ab-why-card__text">من سوق صغير إلى سلسلة فروع، النظام يتكيف مع احتياجاتك ويراعي خصائص السوق العربي.</p>
+                    <p class="ab-why-card__text">من سوق صغير إلى سلسلة فروع، النظام يتكيف مع احتياجاتك وطبيعة نشاطك التجاري.</p>
                 </div>
                 <div class="ab-why-card">
                     <div class="ab-why-card__icon ab-why-card__icon--amber">
@@ -212,6 +217,88 @@
                     <div>
                         <div class="ab-feature__name">دعم متعدد الفروع</div>
                         <p class="ab-feature__text">إدارة فروع ومخازن متعددة مع تقارير مركزية لكل موقع.</p>
+                    </div>
+                </div>
+                <div class="ab-feature ab-feature--ai">
+                    <div class="ab-feature__icon" style="background:#eef2ff;color:#6366f1">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <div class="ab-feature__name">
+                            مساعد ذكاء اصطناعي
+                            <span class="ab-feature__new">جديد</span>
+                        </div>
+                        <p class="ab-feature__text">اسأل عن مبيعاتك ومخزونك بلغتك واحصل على تحليل فوري من AI.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── AI Section ──────────────────────────────────────────── -->
+    <section class="ab-ai">
+        <div class="ab-ai__orb ab-ai__orb--1"></div>
+        <div class="ab-ai__orb ab-ai__orb--2"></div>
+        <div class="ab-container">
+            <div class="ab-ai__inner">
+                <div class="ab-ai__head">
+                    <span class="ab-ai__kicker">
+                        <i class="fas fa-robot"></i> ذكاء اصطناعي مدمج
+                        <span class="ab-ai__new-badge">جديد</span>
+                    </span>
+                    <h2 class="ab-ai__title">مساعد أعمال ذكي<br>يفهم بياناتك ويتحدث بلغتك</h2>
+                    <p class="ab-ai__desc">مساعد AI متكامل يقرأ أرقامك الحقيقية من قاعدة البيانات ويجيب على أسئلتك بلحظات.</p>
+                </div>
+
+                <div class="ab-ai-grid">
+
+                    <div class="ab-ai-card ab-ai-card--featured">
+                        <div class="ab-ai-card__glow"></div>
+                        <div class="ab-ai-card__icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <h4 class="ab-ai-card__title">محادثة مباشرة مع بياناتك</h4>
+                        <p class="ab-ai-card__text">زر عائم على كل صفحة في النظام يتيح لك طرح أسئلة مثل: "ما أكثر المنتجات مبيعاً؟" أو "من أكبر المدينين؟" والحصول على إجابة دقيقة من بياناتك الفعلية.</p>
+                        <div class="ab-ai-card__demo">
+                            <div class="ab-ai-demo-msg ab-ai-demo-msg--user">ما هي أكثر المنتجات مبيعاً هذا الشهر؟</div>
+                            <div class="ab-ai-demo-msg ab-ai-demo-msg--ai">
+                                <i class="fas fa-robot"></i>
+                                أكثر المنتجات مبيعاً هذا الشهر هو هونر ماجيك 8 برو بـ 5 وحدات وإيراد 20 مليون ج.س، يليه ساعة هواوي ووتش 4 برو بـ 3 وحدات.
+                            </div>
+                        </div>
+                        <ul class="ab-ai-card__tags">
+                            <li><i class="fas fa-check-circle"></i> يقرأ بيانات المبيعات والمخزون</li>
+                            <li><i class="fas fa-check-circle"></i> إجابات بعملتك المحددة</li>
+                            <li><i class="fas fa-check-circle"></i> تاريخ محادثة محفوظ</li>
+                        </ul>
+                    </div>
+
+                    <div class="ab-ai-cards-col">
+
+                        <div class="ab-ai-card">
+                            <div class="ab-ai-card__icon ab-ai-card__icon--sm">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h4 class="ab-ai-card__title">تقرير صحة الأعمال اليومي</h4>
+                            <p class="ab-ai-card__text">بنقرة واحدة يولّد AI تقريراً يومياً يتضمن أبرز إنجاز، أبرز تحذير، وتوصية عملية فورية مبنية على بياناتك الحقيقية.</p>
+                            <div class="ab-ai-card__badge-row">
+                                <span class="ab-ai-badge">تحليل فوري</span>
+                                <span class="ab-ai-badge">توصيات عملية</span>
+                            </div>
+                        </div>
+
+                        <div class="ab-ai-card">
+                            <div class="ab-ai-card__icon ab-ai-card__icon--sm ab-ai-card__icon--amber">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <h4 class="ab-ai-card__title">تحليل ذكي للتنبيهات</h4>
+                            <p class="ab-ai-card__text">عند ظهور تنبيه مخزون منخفض أو فاتورة متأخرة، يُضيف AI تحليلاً محسّناً يشمل السياق الكامل وخطوة علاجية محددة.</p>
+                            <div class="ab-ai-card__badge-row">
+                                <span class="ab-ai-badge ab-ai-badge--amber">مخزون منخفض</span>
+                                <span class="ab-ai-badge ab-ai-badge--amber">فواتير متأخرة</span>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>

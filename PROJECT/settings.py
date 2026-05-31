@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'apps.notifications',
     'django.contrib.humanize',
     'apps.portal',
+    'apps.ai',
 ]
 
 MIDDLEWARE = [

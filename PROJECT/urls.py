@@ -24,6 +24,7 @@ urlpatterns = [
     path('expenses/', include('apps.expenses.urls')),
     path('notifications/', include('apps.notifications.urls')),
     path('portal/', include('apps.portal.urls')),
+    path('ai/', include('apps.ai.urls')),
 ]
 
 # Serve media files in development

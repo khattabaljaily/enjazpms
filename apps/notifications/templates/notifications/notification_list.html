@@ -98,6 +98,34 @@
 }
 .ntf-read-btn:hover { border-color: #10b981; color: #10b981; background: rgba(16,185,129,0.07); }
 
+/* AI Analysis */
+.ntf-ai-btn {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.73rem; font-weight: 600;
+    color: #6366f1;
+    background: rgba(99,102,241,0.08);
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 6px;
+    padding: 3px 9px;
+    cursor: pointer;
+    margin-top: 0.35rem;
+    transition: background 0.15s;
+}
+.ntf-ai-btn:hover { background: rgba(99,102,241,0.16); }
+
+.ntf-ai-result {
+    margin-top: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    background: rgba(99,102,241,0.06);
+    border-right: 3px solid #6366f1;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    display: none;
+}
+
 /* Empty state */
 .ntf-empty {
     display: flex;
@@ -177,11 +205,19 @@
                     <span class="ntf-time"><i class="fas fa-clock" style="font-size:.65rem;margin-left:.25rem"></i>{{ n.created_at|naturaltime }}</span>
                 </div>
                 <p class="ntf-msg">{{ n.message }}</p>
-                {% if n.link %}
-                <a href="{{ n.link }}" class="ntf-link" onclick="markOneRead({{ n.id }})">
-                    <i class="fas fa-arrow-left" style="font-size:.65rem"></i>عرض التفاصيل
-                </a>
-                {% endif %}
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    {% if n.link %}
+                    <a href="{{ n.link }}" class="ntf-link" onclick="markOneRead({{ n.id }})">
+                        <i class="fas fa-arrow-left" style="font-size:.65rem"></i>عرض التفاصيل
+                    </a>
+                    {% endif %}
+                    {% if n.notification_type in 'low_stock,overdue_invoice,rfq_expiry' %}
+                    <button class="ntf-ai-btn" onclick="aiAnalyze({{ n.id }}, this)">
+                        <i class="fa-solid fa-robot"></i> تحليل ذكي
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="ntf-ai-result" id="ai-result-{{ n.id }}"></div>
             </div>
             <div class="ntf-side">
                 <span class="ntf-priority ntf-priority--{{ n.priority }}">
@@ -236,6 +272,28 @@ document.getElementById('btnMarkAll').addEventListener('click', async function (
     });
     location.reload();
 });
+
+async function aiAnalyze(id, btn) {
+    const resultEl = document.getElementById(`ai-result-${id}`);
+    if (resultEl.style.display === 'block') {
+        resultEl.style.display = 'none';
+        return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحليل...';
+    try {
+        const r = await fetch(`/notifications/api/${id}/ai-analyze/`);
+        const d = await r.json();
+        resultEl.textContent = d.analysis || 'لا يوجد تحليل.';
+        resultEl.style.display = 'block';
+    } catch {
+        resultEl.textContent = 'تعذّر التحليل.';
+        resultEl.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-robot"></i> تحليل ذكي';
+    }
+}
 
 document.getElementById('btnGenerate').addEventListener('click', async function () {
     this.disabled = true;

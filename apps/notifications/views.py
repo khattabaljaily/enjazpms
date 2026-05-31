@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 
 from .models import Notification
 from .services import (
@@ -121,3 +121,32 @@ def generate_notifications_ajax(request):
         },
         'total': low_stock + overdue + rfq_exp,
     })
+
+
+@login_required
+@require_GET
+def ai_analyze_notification(request, pk):
+    """
+    GET /notifications/api/<pk>/ai-analyze/
+    Returns AI enrichment for a single notification.
+    Cached for 1 hour so repeated clicks don't cost API tokens.
+    """
+    tenant = _tenant(request)
+    if not tenant:
+        return JsonResponse({'error': 'no tenant'}, status=403)
+
+    notif = Notification.objects.filter(tenant=tenant, pk=pk).first()
+    if not notif:
+        return JsonResponse({'error': 'not found'}, status=404)
+
+    cache_key = f'ai_notif_{pk}'
+    analysis = cache.get(cache_key)
+    if not analysis:
+        try:
+            from apps.ai.services import enrich_notification
+            analysis = enrich_notification(notif.notification_type, notif.message, tenant)
+        except Exception:
+            analysis = 'تعذّر إجراء التحليل الذكي في الوقت الحالي.'
+        cache.set(cache_key, analysis, 3600)
+
+    return JsonResponse({'analysis': analysis})

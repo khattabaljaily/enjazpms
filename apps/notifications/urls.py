@@ -9,4 +9,5 @@ urlpatterns = [
     path('api/<int:pk>/read/', views.mark_read_ajax, name='mark_read'),
     path('api/read-all/', views.mark_all_read_ajax, name='mark_all_read'),
     path('api/generate/', views.generate_notifications_ajax, name='generate'),
+    path('api/<int:pk>/ai-analyze/', views.ai_analyze_notification, name='ai_analyze'),
 ]
