@@ -74,6 +74,7 @@ class ActiveTenantMiddleware:
             '/media/',
             '/subscription-expired/',
             '/no-tenant/',
+            '/store/',
         ]
     
     def __call__(self, request):

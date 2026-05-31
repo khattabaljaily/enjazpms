@@ -67,3 +67,14 @@ def create_tenant_defaults(sender, instance, created, **kwargs):
     # Capabilities derived from business type
     caps = TenantCapabilities.from_business_type(instance)
     caps.save()
+
+    # Default online store (disabled until tenant activates it)
+    from apps.store.models import StoreSettings, DEFAULT_HOURS
+    StoreSettings.objects.get_or_create(
+        tenant=instance,
+        defaults={
+            'display_name':  instance.name,
+            'is_enabled':    False,
+            'working_hours': DEFAULT_HOURS.copy(),
+        },
+    )

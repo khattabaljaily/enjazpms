@@ -376,6 +376,15 @@
                 النشاط التجاري
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link{% if 'store' in request.path %} active{% endif %}" href="{% url 'store:manage_settings' %}">
+                <span class="nav-icon" style="background:linear-gradient(135deg,#6366f1,#7c3aed);color:#fff;"><i class="fas fa-store"></i></span>
+                المتجر الإلكتروني
+                {% if store_pending_count %}
+                <span style="margin-right:auto;background:#ef4444;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:.62rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;">{{ store_pending_count }}</span>
+                {% endif %}
+            </a>
+        </li>
     </ul>
     {% endif %}
 

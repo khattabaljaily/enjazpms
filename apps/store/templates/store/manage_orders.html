@@ -1,0 +1,157 @@
+{% extends "layouts/dashboard.html" %}
+{% load static humanize %}
+
+{% block title %}طلبات المتجر الإلكتروني{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/store_manage_orders.css' %}?v=1.0">
+{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+  <div class="cx-hero-inner">
+    <div class="cx-hero-left">
+      <div class="cx-hero-icon-wrap"><i class="fas fa-inbox"></i></div>
+      <div>
+        <h1 class="cx-hero-title">طلبات المتجر</h1>
+        <p class="cx-hero-desc">مراجعة واعتماد الطلبات الواردة من المتجر الإلكتروني</p>
+      </div>
+    </div>
+    <div class="cx-hero-right">
+      <div class="cx-hero-actions">
+        <a href="{% url 'store:manage_settings' %}" class="cx-btn-secondary">
+          <i class="fas fa-cog"></i><span>إعدادات المتجر</span>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="cx-stats-inline">
+    <a href="?status=pending" class="cx-stat-badge {% if status_filter == 'pending' %}cx-stat-badge--danger{% else %}cx-stat-badge--muted{% endif %}" style="text-decoration:none;">
+      <i class="fas fa-clock"></i>
+      <strong>{{ counts.pending }}</strong><span>في الانتظار</span>
+    </a>
+    <a href="?status=approved" class="cx-stat-badge {% if status_filter == 'approved' %}cx-stat-badge--success{% else %}cx-stat-badge--muted{% endif %}" style="text-decoration:none;">
+      <i class="fas fa-check-circle"></i>
+      <strong>{{ counts.approved }}</strong><span>مقبول</span>
+    </a>
+    <a href="?status=rejected" class="cx-stat-badge {% if status_filter == 'rejected' %}cx-stat-badge--warning{% else %}cx-stat-badge--muted{% endif %}" style="text-decoration:none;">
+      <i class="fas fa-times-circle"></i>
+      <strong>{{ counts.rejected }}</strong><span>مرفوض</span>
+    </a>
+  </div>
+</div>
+
+<div class="cx-panel">
+  <div class="cx-table-wrap">
+    <table class="cx-table" id="ordersTable">
+      <thead>
+        <tr>
+          <th>رقم الطلب</th>
+          <th>العميل</th>
+          <th>الهاتف</th>
+          <th>المبلغ</th>
+          <th>الدفع</th>
+          <th>التاريخ</th>
+          <th>الحالة</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        <tr id="order-row-{{ order.pk }}">
+          <td><strong>{{ order.order_number }}</strong></td>
+          <td>{{ order.customer_name }}</td>
+          <td><a href="tel:{{ order.customer_phone }}">{{ order.customer_phone }}</a></td>
+          <td><strong>{{ order.total_amount|floatformat:0|intcomma }}</strong></td>
+          <td>
+            {% if order.payment_method == 'bank' %}
+            <span class="badge" style="background:#eff6ff;color:#1d4ed8;">تحويل بنكي</span>
+            {% else %}
+            <span class="badge" style="background:#fef3c7;color:#92400e;">آجل</span>
+            {% endif %}
+          </td>
+          <td>{{ order.created_at|naturaltime }}</td>
+          <td>
+            {% if order.status == 'pending' %}
+            <span class="badge" style="background:#fef9c3;color:#854d0e;">في الانتظار</span>
+            {% elif order.status == 'approved' %}
+            <span class="badge" style="background:#dcfce7;color:#166534;">مقبول</span>
+            {% else %}
+            <span class="badge" style="background:#fee2e2;color:#991b1b;">مرفوض</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+              <a href="{% url 'store:manage_order_detail' pk=order.pk %}" class="cx-action-btn cx-action-btn--view" title="تفاصيل">
+                <i class="fas fa-eye"></i>
+              </a>
+              {% if order.status == 'pending' %}
+              <button class="cx-action-btn" style="background:#dcfce7;color:#166534;border:none;border-radius:7px;width:30px;height:30px;cursor:pointer;"
+                      onclick="approveOrder({{ order.pk }})" title="قبول وإنشاء فاتورة">
+                <i class="fas fa-check"></i>
+              </button>
+              <button class="cx-action-btn" style="background:#fee2e2;color:#991b1b;border:none;border-radius:7px;width:30px;height:30px;cursor:pointer;"
+                      onclick="rejectOrder({{ order.pk }})" title="رفض">
+                <i class="fas fa-times"></i>
+              </button>
+              {% elif order.status == 'approved' and order.sale_invoice %}
+              <a href="/sales/{{ order.sale_invoice.pk }}/" class="cx-action-btn" style="background:#eff6ff;color:#1d4ed8;" title="عرض الفاتورة">
+                <i class="fas fa-file-invoice"></i>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center py-4 text-muted">
+          <i class="fas fa-inbox" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.4;"></i>
+          لا توجد طلبات
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+
+async function approveOrder(pk) {
+  if (!confirm('قبول هذا الطلب وإنشاء فاتورة مسودة؟')) return;
+  try {
+    const r = await fetch(`/store/manage/orders/${pk}/approve/`, {
+      method: 'POST', headers: { 'X-CSRFToken': CSRF }
+    });
+    const d = await r.json();
+    if (d.success) {
+      if (window.EnjazIMS) EnjazIMS.toast(d.message, 'success');
+      setTimeout(() => location.reload(), 900);
+    } else {
+      alert('خطأ: ' + (d.error || 'حدث خطأ'));
+    }
+  } catch(e) { alert('خطأ في الاتصال'); }
+}
+
+async function rejectOrder(pk) {
+  if (!confirm('هل أنت متأكد من رفض هذا الطلب؟')) return;
+  try {
+    const r = await fetch(`/store/manage/orders/${pk}/reject/`, {
+      method: 'POST', headers: { 'X-CSRFToken': CSRF }
+    });
+    const d = await r.json();
+    if (d.success) {
+      if (window.EnjazIMS) EnjazIMS.toast('تم رفض الطلب', 'warning');
+      setTimeout(() => location.reload(), 700);
+    }
+  } catch(e) { alert('خطأ في الاتصال'); }
+}
+</script>
+{% endblock %}

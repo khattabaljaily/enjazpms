@@ -1,0 +1,105 @@
+/* ============================================================
+   EnjazIMS — Store Manage Orders & Order Detail
+   ============================================================ */
+
+/* Stat badge success color (not in base components) */
+.cx-stat-badge--success {
+    background: rgba(16,185,129,.1);
+    color: #059669;
+    border-color: rgba(16,185,129,.25);
+}
+.cx-stat-badge--warning {
+    background: rgba(245,158,11,.1);
+    color: #d97706;
+    border-color: rgba(245,158,11,.25);
+}
+
+/* Filter badges as links */
+a.cx-stat-badge { text-decoration: none; transition: opacity .15s; }
+a.cx-stat-badge:hover { opacity: .8; }
+
+/* Status badges in table */
+.st-order-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .25rem .75rem;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.st-order-badge--pending  { background: #fef9c3; color: #854d0e; }
+.st-order-badge--approved { background: #dcfce7; color: #166534; }
+.st-order-badge--rejected { background: #fee2e2; color: #991b1b; }
+
+.st-pay-badge--bank   { background: #eff6ff; color: #1d4ed8; }
+.st-pay-badge--credit { background: #fef3c7; color: #92400e; }
+
+[data-theme="dark"] .st-order-badge--pending  { background: rgba(245,158,11,.18); color: #fbbf24; }
+[data-theme="dark"] .st-order-badge--approved { background: rgba(16,185,129,.18); color: #34d399; }
+[data-theme="dark"] .st-order-badge--rejected { background: rgba(239,68,68,.18);  color: #f87171; }
+[data-theme="dark"] .st-pay-badge--bank       { background: rgba(59,130,246,.18); color: #60a5fa; }
+[data-theme="dark"] .st-pay-badge--credit     { background: rgba(245,158,11,.18); color: #fbbf24; }
+
+/* Action buttons */
+.st-action-approve {
+    background: #dcfce7;
+    color: #166534;
+    border: none;
+    border-radius: 7px;
+    width: 30px; height: 30px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .8rem;
+    transition: background .15s;
+}
+.st-action-approve:hover { background: #bbf7d0; }
+
+.st-action-reject {
+    background: #fee2e2;
+    color: #991b1b;
+    border: none;
+    border-radius: 7px;
+    width: 30px; height: 30px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .8rem;
+    transition: background .15s;
+}
+.st-action-reject:hover { background: #fecaca; }
+
+.st-action-invoice {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 7px;
+    width: 30px; height: 30px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .8rem;
+    text-decoration: none;
+    transition: background .15s;
+}
+.st-action-invoice:hover { background: #dbeafe; color: #1d4ed8; }
+
+[data-theme="dark"] .st-action-approve { background: rgba(16,185,129,.18); color: #34d399; }
+[data-theme="dark"] .st-action-reject  { background: rgba(239,68,68,.18);  color: #f87171; }
+[data-theme="dark"] .st-action-invoice { background: rgba(59,130,246,.18); color: #60a5fa; }
+
+/* Order detail sidebar panels */
+.st-detail-row {
+    display: flex;
+    align-items: baseline;
+    gap: .75rem;
+    padding: .5rem 0;
+    border-bottom: 1px solid var(--border-light, #f3f4f6);
+    font-size: .875rem;
+}
+.st-detail-row:last-child { border-bottom: none; }
+.st-detail-label { color: var(--text-secondary, #64748b); flex-shrink: 0; min-width: 80px; }
+.st-detail-value { font-weight: 600; color: var(--text-primary, #1e293b); }
+
+/* Table footer total row */
+tfoot td {
+    background: var(--surface-alt, #f8fafc);
+    font-weight: 800;
+}

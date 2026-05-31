@@ -14,6 +14,7 @@ class Notification(TenantMixin):
         ('rfq_expiry',       'انتهاء صلاحية طلب السعر'),
         ('transfer_done',    'اكتمال تحويل مخزون'),
         ('stocktake_done',   'اكتمال جرد مخزون'),
+        ('online_order',     'طلب جديد من المتجر'),
         ('general',          'إشعار عام'),
     )
 

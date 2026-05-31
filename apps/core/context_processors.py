@@ -31,6 +31,14 @@ def tenant_context(request):
             caps.save()
             context['tenant_capabilities'] = caps
 
+        try:
+            from apps.store.models import OnlineOrder
+            context['store_pending_count'] = OnlineOrder.objects.filter(
+                tenant=tenant, status='pending'
+            ).count()
+        except Exception:
+            context['store_pending_count'] = 0
+
     return context
 
 

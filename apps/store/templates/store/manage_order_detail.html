@@ -1,0 +1,143 @@
+{% extends "layouts/dashboard.html" %}
+{% load static humanize %}
+
+{% block title %}تفاصيل الطلب {{ order.order_number }}{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/store_manage_orders.css' %}?v=1.0">
+{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+  <div class="cx-hero-inner">
+    <div class="cx-hero-left">
+      <div class="cx-hero-icon-wrap"><i class="fas fa-file-alt"></i></div>
+      <div>
+        <h1 class="cx-hero-title">{{ order.order_number }}</h1>
+        <p class="cx-hero-desc">{{ order.created_at|naturaltime }} — {{ order.customer_name }}</p>
+      </div>
+    </div>
+    <div class="cx-hero-right">
+      <div class="cx-hero-actions">
+        <a href="{% url 'store:manage_orders' %}" class="cx-btn-secondary">
+          <i class="fas fa-arrow-right"></i><span>العودة</span>
+        </a>
+        {% if order.status == 'pending' %}
+        <button class="cx-btn-primary" onclick="approveOrder({{ order.pk }})">
+          <i class="fas fa-check"></i><span>قبول وإنشاء فاتورة</span>
+        </button>
+        <button class="cx-btn-secondary" style="color:#ef4444;" onclick="rejectOrder({{ order.pk }})">
+          <i class="fas fa-times"></i><span>رفض</span>
+        </button>
+        {% elif order.status == 'approved' and order.sale_invoice %}
+        <a href="/sales/{{ order.sale_invoice.pk }}/" class="cx-btn-primary">
+          <i class="fas fa-file-invoice"></i><span>عرض الفاتورة</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:1.25rem;">
+
+  <!-- Order lines -->
+  <div class="cx-panel">
+    <div class="cx-panel-head"><i class="fas fa-list"></i> المنتجات المطلوبة</div>
+    <div class="cx-table-wrap">
+      <table class="cx-table">
+        <thead>
+          <tr><th>المنتج</th><th>السعر</th><th>الكمية</th><th>الإجمالي</th></tr>
+        </thead>
+        <tbody>
+          {% for line in lines %}
+          <tr>
+            <td><strong>{{ line.item_name }}</strong></td>
+            <td>{{ line.unit_price|floatformat:0|intcomma }}</td>
+            <td>{{ line.quantity|floatformat:0 }}</td>
+            <td><strong>{{ line.line_total|floatformat:0|intcomma }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="text-align:left;font-weight:700;padding:.75rem 1rem;">الإجمالي</td>
+            <td style="font-weight:800;font-size:1rem;color:#6366f1;padding:.75rem 1rem;">
+              {{ order.total_amount|floatformat:0|intcomma }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Customer info sidebar -->
+  <div style="display:flex;flex-direction:column;gap:1.25rem;">
+    <div class="cx-panel">
+      <div class="cx-panel-head"><i class="fas fa-user"></i> بيانات العميل</div>
+      <div style="padding:1rem;">
+        <div class="mb-2"><strong>الاسم:</strong> {{ order.customer_name }}</div>
+        <div class="mb-2"><strong>الهاتف:</strong> <a href="tel:{{ order.customer_phone }}">{{ order.customer_phone }}</a></div>
+        {% if order.customer_address %}<div class="mb-2"><strong>العنوان:</strong> {{ order.customer_address }}</div>{% endif %}
+        {% if order.customer_notes %}<div class="mb-2"><strong>ملاحظات:</strong> {{ order.customer_notes }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="cx-panel">
+      <div class="cx-panel-head"><i class="fas fa-info-circle"></i> حالة الطلب</div>
+      <div style="padding:1rem;">
+        <div class="mb-2">
+          <strong>الحالة:</strong>
+          {% if order.status == 'pending' %}
+          <span class="badge" style="background:#fef9c3;color:#854d0e;">في الانتظار</span>
+          {% elif order.status == 'approved' %}
+          <span class="badge" style="background:#dcfce7;color:#166534;">مقبول</span>
+          {% else %}
+          <span class="badge" style="background:#fee2e2;color:#991b1b;">مرفوض</span>
+          {% endif %}
+        </div>
+        <div class="mb-2">
+          <strong>طريقة الدفع:</strong>
+          {% if order.payment_method == 'bank' %}<span class="badge" style="background:#eff6ff;color:#1d4ed8;">تحويل بنكي</span>
+          {% else %}<span class="badge" style="background:#fef3c7;color:#92400e;">آجل</span>{% endif %}
+        </div>
+        {% if order.sale_invoice %}
+        <div class="mb-2"><strong>الفاتورة:</strong>
+          <a href="/sales/{{ order.sale_invoice.pk }}/" style="color:#6366f1;">{{ order.sale_invoice.invoice_number }}</a>
+        </div>
+        {% endif %}
+        <div class="text-muted" style="font-size:.8rem;">{{ order.created_at|naturaltime }}</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+async function approveOrder(pk) {
+  if (!confirm('قبول هذا الطلب وإنشاء فاتورة مسودة؟')) return;
+  const r = await fetch(`/store/manage/orders/${pk}/approve/`, {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF }
+  });
+  const d = await r.json();
+  if (d.success) { window.location.href = d.invoice_url; }
+  else alert('خطأ: ' + (d.error || 'حدث خطأ'));
+}
+async function rejectOrder(pk) {
+  if (!confirm('رفض هذا الطلب؟')) return;
+  const r = await fetch(`/store/manage/orders/${pk}/reject/`, {
+    method: 'POST', headers: { 'X-CSRFToken': CSRF }
+  });
+  const d = await r.json();
+  if (d.success) location.reload();
+}
+</script>
+{% endblock %}

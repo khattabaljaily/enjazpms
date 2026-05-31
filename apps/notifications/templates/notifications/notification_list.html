@@ -190,6 +190,7 @@
                 {% elif n.notification_type == 'overdue_invoice' %}ntf-icon--danger
                 {% elif n.notification_type == 'rfq_expiry' %}ntf-icon--info
                 {% elif n.notification_type == 'transfer_done' or n.notification_type == 'stocktake_done' %}ntf-icon--success
+                {% elif n.notification_type == 'online_order' %}ntf-icon--info
                 {% else %}ntf-icon--muted{% endif %}">
                 <i class="fas
                     {% if n.notification_type == 'low_stock' %}fa-triangle-exclamation
@@ -197,6 +198,7 @@
                     {% elif n.notification_type == 'rfq_expiry' %}fa-clock
                     {% elif n.notification_type == 'transfer_done' %}fa-arrows-left-right
                     {% elif n.notification_type == 'stocktake_done' %}fa-clipboard-check
+                    {% elif n.notification_type == 'online_order' %}fa-store
                     {% else %}fa-bell{% endif %}"></i>
             </div>
             <div class="ntf-body">

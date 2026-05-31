@@ -1,0 +1,140 @@
+/* ============================================================
+   EnjazIMS — Store Order Confirmation (Public)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+    font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    color: #1e293b;
+    margin: 0;
+}
+
+.confirm-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.1);
+    padding: 2.5rem 2rem;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+}
+
+/* ── Success icon ──────────────────────────────────────── */
+.confirm-icon {
+    width: 76px;
+    height: 76px;
+    background: #dcfce7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+    font-size: 2.1rem;
+    color: #16a34a;
+    box-shadow: 0 0 0 8px rgba(34,197,94,.1);
+    animation: conf-pop .4s ease-out;
+}
+@keyframes conf-pop {
+    0%   { transform: scale(.5); opacity: 0; }
+    80%  { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.confirm-title { font-size: 1.5rem; font-weight: 800; margin-bottom: .5rem; color: #111827; }
+.confirm-sub { color: #64748b; font-size: .9rem; margin-bottom: 1.5rem; line-height: 1.65; }
+
+.confirm-num {
+    display: inline-block;
+    background: var(--brand);
+    color: #fff;
+    border-radius: 10px;
+    padding: .45rem 1.4rem;
+    font-weight: 800;
+    font-size: 1.05rem;
+    margin-bottom: 1.5rem;
+    letter-spacing: .03em;
+    box-shadow: 0 3px 12px rgba(0,0,0,.18);
+}
+
+/* ── Details block ─────────────────────────────────────── */
+.confirm-details {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    padding: 1rem 1.1rem;
+    text-align: right;
+    margin-bottom: 1.25rem;
+}
+.confirm-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .45rem 0;
+    font-size: .85rem;
+    border-bottom: 1px solid #f1f5f9;
+    gap: 1rem;
+}
+.confirm-row:last-child { border-bottom: none; font-weight: 800; font-size: .9rem; }
+.confirm-row-label { color: #64748b; flex-shrink: 0; }
+.confirm-row span:last-child { font-weight: 600; color: #1e293b; text-align: left; }
+.confirm-row:last-child span:last-child { color: var(--brand); font-size: 1rem; }
+
+/* ── Info boxes ────────────────────────────────────────── */
+.confirm-bank {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 11px;
+    padding: .85rem 1rem;
+    font-size: .82rem;
+    color: #166534;
+    margin-bottom: 1.1rem;
+    text-align: right;
+    line-height: 1.65;
+}
+.confirm-delivery {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 11px;
+    padding: .85rem 1rem;
+    font-size: .82rem;
+    color: #1d4ed8;
+    margin-bottom: 1.25rem;
+    text-align: right;
+    line-height: 1.65;
+}
+
+/* ── Actions ───────────────────────────────────────────── */
+.confirm-actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+.confirm-btn {
+    padding: .65rem 1.4rem;
+    border-radius: 11px;
+    font-size: .875rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    transition: opacity .15s, transform .1s;
+    font-family: inherit;
+}
+.confirm-btn--primary { background: var(--brand); color: #fff; box-shadow: 0 3px 12px rgba(0,0,0,.15); }
+.confirm-btn--primary:hover { opacity: .9; color: #fff; transform: translateY(-1px); }
+.confirm-btn--ghost { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.confirm-btn--ghost:hover { background: #e2e8f0; color: #1e293b; }
+
+@media (max-width: 480px) {
+    .confirm-card { padding: 2rem 1.25rem; border-radius: 18px; }
+    .confirm-actions { flex-direction: column; }
+    .confirm-btn { justify-content: center; }
+}

@@ -1,0 +1,72 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تأكيد الطلب — {{ store.display_name }}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/store_order_confirm.css' %}?v=1.0">
+<style>:root { --brand: {{ store.accent_color }}; }</style>
+</head>
+<body>
+
+<div class="confirm-card">
+  <div class="confirm-icon"><i class="fas fa-check"></i></div>
+  <div class="confirm-title">تم استلام طلبك!</div>
+  <p class="confirm-sub">سيتم مراجعة طلبك من قبل المتجر والتواصل معك قريباً.</p>
+  <div class="confirm-num">{{ order.order_number }}</div>
+
+  <div class="confirm-details">
+    <div class="confirm-row">
+      <span class="confirm-row-label">الاسم</span>
+      <span>{{ order.customer_name }}</span>
+    </div>
+    <div class="confirm-row">
+      <span class="confirm-row-label">الهاتف</span>
+      <span>{{ order.customer_phone }}</span>
+    </div>
+    <div class="confirm-row">
+      <span class="confirm-row-label">طريقة الدفع</span>
+      <span>{{ order.get_payment_method_display }}</span>
+    </div>
+    {% for line in order.lines.all %}
+    <div class="confirm-row">
+      <span class="confirm-row-label">{{ line.item_name }} × {{ line.quantity|floatformat:0 }}</span>
+      <span>{{ line.line_total|floatformat:0 }}</span>
+    </div>
+    {% endfor %}
+    <div class="confirm-row">
+      <span class="confirm-row-label">الإجمالي</span>
+      <span>{{ order.total_amount|floatformat:0 }} {{ store.tenant.currency }}</span>
+    </div>
+  </div>
+
+  {% if store.bank_details and order.payment_method == 'bank' %}
+  <div class="confirm-bank">
+    <strong><i class="fas fa-university" style="margin-left:.4rem;"></i>بيانات التحويل البنكي:</strong><br>
+    {{ store.bank_details }}
+  </div>
+  {% endif %}
+
+  {% if store.delivery_message %}
+  <div class="confirm-delivery">
+    <i class="fas fa-truck" style="margin-left:.4rem;"></i>{{ store.delivery_message }}
+  </div>
+  {% endif %}
+
+  <div class="confirm-actions">
+    <a href="{% url 'store:storefront' slug=store.slug %}" class="confirm-btn confirm-btn--primary">
+      <i class="fas fa-store"></i> متابعة التسوق
+    </a>
+    {% if store.whatsapp %}
+    <a href="https://wa.me/{{ store.whatsapp }}?text=طلبي+رقم+{{ order.order_number }}" target="_blank" class="confirm-btn confirm-btn--ghost">
+      <i class="fab fa-whatsapp" style="color:#25d366;"></i> تواصل معنا
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+</body>
+</html>

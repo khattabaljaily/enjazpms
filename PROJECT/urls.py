@@ -25,6 +25,7 @@ urlpatterns = [
     path('notifications/', include('apps.notifications.urls')),
     path('portal/', include('apps.portal.urls')),
     path('ai/', include('apps.ai.urls')),
+    path('store/', include('apps.store.urls')),
 ]
 
 # Serve media files in development

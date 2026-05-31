@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'apps.portal',
     'apps.ai',
+    'apps.store',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إتمام الطلب — {{ store.display_name }}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/store_checkout.css' %}?v=1.0">
+<style>:root { --brand: {{ store.accent_color }}; }</style>
+</head>
+<body>
+
+<div class="st-topbar">
+  <a href="{% url 'store:cart' slug=store.slug %}"><i class="fas fa-arrow-right"></i> العودة للسلة</a>
+  <span class="st-topbar__name">{{ store.display_name }}</span>
+</div>
+
+<form method="post" id="checkoutForm">
+{% csrf_token %}
+<div class="st-wrap">
+
+  <!-- Customer info + payment -->
+  <div>
+    <div class="st-panel" style="margin-bottom:1.25rem;">
+      <h6><i class="fas fa-user-circle"></i> بياناتك</h6>
+
+      <div class="st-field">
+        <label class="st-label">الاسم الكامل *</label>
+        <input class="st-input {% if errors.name %}error{% endif %}" type="text" name="name"
+               value="{{ post.name|default:'' }}" placeholder="محمد أحمد" required>
+        {% if errors.name %}<div class="st-error-msg"><i class="fas fa-exclamation-circle"></i> {{ errors.name }}</div>{% endif %}
+      </div>
+
+      <div class="st-field">
+        <label class="st-label">رقم الهاتف *</label>
+        <input class="st-input {% if errors.phone %}error{% endif %}" type="tel" name="phone"
+               value="{{ post.phone|default:'' }}" placeholder="0912345678" required>
+        {% if errors.phone %}<div class="st-error-msg"><i class="fas fa-exclamation-circle"></i> {{ errors.phone }}</div>{% endif %}
+      </div>
+
+      <div class="st-field">
+        <label class="st-label">العنوان (اختياري)</label>
+        <input class="st-input" type="text" name="address" value="{{ post.address|default:'' }}" placeholder="الحي، الشارع...">
+      </div>
+
+      <div class="st-field" style="margin-bottom:0;">
+        <label class="st-label">ملاحظات (اختياري)</label>
+        <textarea class="st-input" name="notes" rows="2" placeholder="أي تفاصيل إضافية...">{{ post.notes|default:'' }}</textarea>
+      </div>
+    </div>
+
+    <div class="st-panel">
+      <h6><i class="fas fa-credit-card"></i> طريقة الدفع</h6>
+      <div class="pm-options">
+
+        <label class="pm-option {% if post.payment_method == 'bank' or not post.payment_method %}selected{% endif %}">
+          <input type="radio" name="payment_method" value="bank"
+                 {% if post.payment_method == 'bank' or not post.payment_method %}checked{% endif %}>
+          <div>
+            <div class="pm-option-label"><i class="fas fa-university" style="margin-left:.35rem;color:var(--brand);"></i> تحويل بنكي</div>
+            <div class="pm-option-desc">تحويل مبلغ الطلب ثم إرسال الإيصال</div>
+            {% if store.bank_details %}
+            <div class="pm-bank-details {% if post.payment_method == 'bank' or not post.payment_method %}show{% endif %}" id="bankDetails">{{ store.bank_details }}</div>
+            {% endif %}
+          </div>
+        </label>
+
+        <label class="pm-option {% if post.payment_method == 'credit' %}selected{% endif %}">
+          <input type="radio" name="payment_method" value="credit" {% if post.payment_method == 'credit' %}checked{% endif %}>
+          <div>
+            <div class="pm-option-label"><i class="fas fa-file-invoice-dollar" style="margin-left:.35rem;color:#d97706;"></i> آجل (على الحساب)</div>
+            <div class="pm-option-desc">الدفع لاحقاً عند الاستلام</div>
+          </div>
+        </label>
+
+      </div>
+      {% if errors.payment_method %}<div class="st-error-msg mt-2">{{ errors.payment_method }}</div>{% endif %}
+    </div>
+  </div>
+
+  <!-- Order summary -->
+  <div>
+    <div class="st-panel" style="position:sticky;top:1rem;">
+      <h6><i class="fas fa-receipt"></i> ملخص الطلب</h6>
+      {% for row in cart_items %}
+      <div class="order-line">
+        <span>{{ row.item.name }} × {{ row.qty|floatformat:0 }}</span>
+        <span style="font-weight:700;white-space:nowrap;">{{ row.line_total|floatformat:0 }}</span>
+      </div>
+      {% endfor %}
+      <div class="order-total">
+        <span>الإجمالي</span>
+        <span>{{ subtotal|floatformat:0 }} {{ store.tenant.currency }}</span>
+      </div>
+      {% if errors.min_order %}
+      <div class="st-error-msg" style="margin-top:.75rem;"><i class="fas fa-exclamation-circle"></i> {{ errors.min_order }}</div>
+      {% endif %}
+      <button type="submit" class="st-submit-btn" id="submitBtn">
+        <i class="fas fa-check-circle"></i> تأكيد الطلب
+      </button>
+    </div>
+  </div>
+
+</div>
+</form>
+
+<script>
+document.querySelectorAll('input[name=payment_method]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    document.querySelectorAll('.pm-option').forEach(l => l.classList.remove('selected'));
+    this.closest('.pm-option').classList.add('selected');
+    const bd = document.getElementById('bankDetails');
+    if (bd) bd.classList.toggle('show', this.value === 'bank');
+  });
+});
+document.getElementById('checkoutForm').addEventListener('submit', function() {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+});
+</script>
+</body>
+</html>

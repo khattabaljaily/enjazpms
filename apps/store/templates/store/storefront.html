@@ -1,0 +1,159 @@
+{% load static store_tags %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ store.display_name }}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/store_storefront.css' %}?v=1.0">
+<style>:root { --brand: {{ store.accent_color }}; }</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="st-header">
+  <div class="st-header-inner">
+    <a href="{% url 'store:storefront' slug=store.slug %}" class="st-logo">
+      {% if store.cover_image %}<img src="{{ store.cover_image.url }}" alt="">{% endif %}
+      {{ store.display_name }}
+    </a>
+    <a href="{% url 'store:cart' slug=store.slug %}" class="st-cart-btn">
+      <i class="fas fa-shopping-cart"></i>
+      <span>السلة</span>
+      {% if cart_count > 0 %}<span class="st-cart-badge">{{ cart_count }}</span>{% endif %}
+    </a>
+  </div>
+  <div class="st-search-bar">
+    <form class="st-search-inner" method="get">
+      <input class="st-search-input" type="search" name="q" value="{{ search }}" placeholder="ابحث عن منتج...">
+      <button type="submit" class="st-search-btn"><i class="fas fa-search"></i></button>
+    </form>
+  </div>
+</header>
+
+<!-- Hero -->
+{% if not search %}
+<section class="st-hero">
+  <div class="st-hero__name">{{ store.display_name }}</div>
+  {% if store.description %}<p class="st-hero__desc">{{ store.description }}</p>{% endif %}
+</section>
+{% endif %}
+
+<!-- Open/Closed Banner -->
+{% if status.is_open %}
+<div class="st-status-banner st-status-banner--open">
+  <div class="st-status-banner__inner">
+    <div class="st-status-dot"></div>
+    <div>
+      <span class="st-status-banner__label">مفتوح الآن</span>
+      {% if status.message %}<span class="st-status-banner__msg">— {{ status.message }}</span>{% endif %}
+    </div>
+    {% if status.today_hours %}<span class="st-status-banner__hours"><i class="fas fa-clock"></i> {{ status.today_hours }}</span>{% endif %}
+  </div>
+</div>
+{% else %}
+<div class="st-status-banner st-status-banner--closed">
+  <div class="st-status-shutter">
+    <div class="shutter-line"></div><div class="shutter-line"></div>
+    <div class="shutter-line"></div><div class="shutter-line"></div>
+  </div>
+  <div class="st-status-banner__inner">
+    <div class="st-closed-icon"><i class="fas fa-lock"></i></div>
+    <div>
+      <span class="st-status-banner__label">مغلق حالياً</span>
+      {% if status.message %}<div class="st-status-banner__msg">{{ status.message }}</div>{% endif %}
+    </div>
+    {% if status.next_open %}<span class="st-status-banner__next"><i class="fas fa-calendar-clock"></i> {{ status.next_open }}</span>{% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Categories -->
+{% if categories %}
+<div class="st-cats">
+  <a href="{% url 'store:storefront' slug=store.slug %}" class="st-cat-btn {% if not category_id %}active{% endif %}">الكل</a>
+  {% for cat in categories %}
+  <a href="?cat={{ cat.id }}" class="st-cat-btn {% if category_id == cat.id|stringformat:'s' %}active{% endif %}">{{ cat.name }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Products -->
+<div class="st-products">
+  {% for item in products %}
+  <div class="st-card">
+    <div class="st-card__img">
+      {% if item.image %}<img src="{{ item.image.url }}" alt="{{ item.name }}">
+      {% else %}<i class="fas fa-box st-card__img-placeholder"></i>{% endif %}
+    </div>
+    <div class="st-card__body">
+      <div class="st-card__name">{{ item.name }}</div>
+      {% if item.category %}<div class="st-card__cat">{{ item.category.name }}</div>{% endif %}
+      {% if store.show_prices %}
+      <div class="st-card__price">{{ item.selling_price|floatformat:0 }} {{ store.tenant.currency }}</div>
+      {% endif %}
+      {% if store.show_stock_quantity %}
+        {% with qty=stock_qty_map|get_qty:item.id %}
+        <div class="st-card__qty">
+          {% if qty and qty > 0 %}
+            <span class="st-qty-badge st-qty-badge--available">متوفر: {{ qty|floatformat:0 }}</span>
+          {% else %}
+            <span class="st-qty-badge st-qty-badge--low">نافد</span>
+          {% endif %}
+        </div>
+        {% endwith %}
+      {% endif %}
+      <div class="st-card__footer">
+        <form method="post" action="{% url 'store:cart_add' slug=store.slug %}" class="add-to-cart-form">
+          {% csrf_token %}
+          <input type="hidden" name="item_id" value="{{ item.id }}">
+          <input type="hidden" name="qty" value="1">
+          <button type="submit" class="st-add-btn">
+            <i class="fas fa-cart-plus"></i> أضف للسلة
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="st-empty">
+    <i class="fas fa-box-open"></i>
+    <p>لا توجد منتجات متاحة حالياً</p>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="st-toast" id="stToast">✓ تمت الإضافة إلى السلة</div>
+
+<footer class="st-footer">
+  {{ store.display_name }} — جميع الحقوق محفوظة
+  {% if store.whatsapp %}
+  &nbsp;·&nbsp;
+  <a href="https://wa.me/{{ store.whatsapp }}" target="_blank" style="color:#25d366;">
+    <i class="fab fa-whatsapp"></i> تواصل معنا
+  </a>
+  {% endif %}
+</footer>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+const CSRF = '{{ csrf_token }}';
+$('.add-to-cart-form').on('submit', function(e) {
+  e.preventDefault();
+  $.post(this.action, $(this).serialize())
+    .done(function(d) {
+      const badge = $('.st-cart-badge');
+      if (d.cart_count > 0) {
+        if (badge.length) badge.text(d.cart_count);
+        else $('.st-cart-btn').append(`<span class="st-cart-badge">${d.cart_count}</span>`);
+      }
+      const toast = $('#stToast');
+      toast.addClass('show');
+      setTimeout(() => toast.removeClass('show'), 2000);
+    });
+});
+</script>
+</body>
+</html>
