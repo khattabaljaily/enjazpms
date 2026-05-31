@@ -20,6 +20,11 @@ from apps.treasury.models import TreasuryMovement
 from apps.expenses.models import Expense
 
 
+def about(request):
+    """صفحة عن النظام - About page, accessible بدون تسجيل دخول"""
+    return render(request, 'core/about.html')
+
+
 @login_required
 def dashboard(request):
     """الصفحة الرئيسية - Dashboard"""

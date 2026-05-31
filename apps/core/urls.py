@@ -16,6 +16,7 @@ urlpatterns = [
     path('settings/tenant/api/update/', views.tenant_settings_update_api, name='tenant_settings_update_api'),
     path('subscription/', views.subscription_info, name='subscription'),
     path('pricing/', views.pricing, name='pricing'),
+    path('about/', views.about, name='about'),
 
     # Tenant management (superuser)
     path('tenants/', views.tenant_list, name='tenant_list'),

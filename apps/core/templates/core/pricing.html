@@ -17,6 +17,7 @@
             <span>إنجاز</span>
         </a>
         <div class="pr-topbar__links">
+            <a href="{% url 'core:about' %}" class="pr-topbar__link">عن النظام</a>
             <a href="{% url 'accounts:login' %}" class="pr-topbar__link">تسجيل الدخول</a>
             <a href="{% url 'accounts:register_step1' %}" class="pr-topbar__cta">ابدأ مجاناً</a>
         </div>
@@ -206,6 +207,7 @@
             <div class="pr-footer__inner">
                 <span class="pr-footer__copy">إنجاز &copy; 2025 — نظام إدارة المخزون</span>
                 <div class="pr-footer__links">
+                    <a href="{% url 'core:about' %}">عن النظام</a>
                     <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>
                     <a href="{% url 'accounts:register_step1' %}">إنشاء حساب</a>
                 </div>

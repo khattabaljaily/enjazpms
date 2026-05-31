@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}عن النظام | إنجاز{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/about.css' %}?v=2.0">
+{% endblock %}
+
+{% block body %}
+<div class="ab-page">
+
+    <!-- ─── Top Bar ───────────────────────────────────────────── -->
+    <nav class="ab-topbar">
+        <a href="/" class="ab-topbar__brand">
+            <img src="{% static 'img/logo/logo-6547bd.png' %}" alt="إنجاز" height="32">
+            <span>إنجاز</span>
+        </a>
+        <div class="ab-topbar__links">
+            <a href="{% url 'core:pricing' %}" class="ab-topbar__link">الأسعار</a>
+            <a href="{% url 'accounts:login' %}" class="ab-topbar__link">تسجيل الدخول</a>
+            <a href="{% url 'accounts:register_step1' %}" class="ab-topbar__cta">
+                <i class="fas fa-rocket"></i> ابدأ مجاناً
+            </a>
+        </div>
+    </nav>
+
+    <!-- ─── Hero ──────────────────────────────────────────────── -->
+    <section class="ab-hero">
+        <div class="ab-hero__bg">
+            <div class="ab-hero__grid"></div>
+            <div class="ab-hero__orb ab-hero__orb--1"></div>
+            <div class="ab-hero__orb ab-hero__orb--2"></div>
+            <div class="ab-hero__orb ab-hero__orb--3"></div>
+        </div>
+        <div class="ab-container">
+            <div class="ab-hero__inner">
+                <span class="ab-hero__badge">
+                    <i class="fas fa-star"></i>
+                    نظام عربي لإدارة التجارة والمخزون
+                </span>
+                <h1 class="ab-hero__title">
+                    إنجاز يحول الإدارة اليومية<br>
+                    <span class="ab-hero__accent">إلى تجربة أسرع وأكثر أماناً</span>
+                </h1>
+                <p class="ab-hero__sub">
+                    واجهة عربية سهلة ومتكاملة لإدارة المخزون والمبيعات والمشتريات والعملاء،
+                    مع تحكم كامل بالمتاجر والفروع في مكان واحد.
+                </p>
+                <div class="ab-hero__actions">
+                    <a href="{% url 'accounts:register_step1' %}" class="ab-btn ab-btn--white ab-btn--lg">
+                        <i class="fas fa-rocket"></i> ابدأ مجاناً الآن
+                    </a>
+                    <a href="{% url 'core:pricing' %}" class="ab-btn ab-btn--ghost ab-btn--lg">
+                        عرض الأسعار <i class="fas fa-arrow-left"></i>
+                    </a>
+                </div>
+                <div class="ab-hero__trust">
+                    <span><i class="fas fa-shield-alt"></i> حماية البيانات أولويتنا</span>
+                    <span><i class="fas fa-headset"></i> دعم فني مستمر</span>
+                    <span><i class="fas fa-sync"></i> تحديثات متواصلة</span>
+                    <span><i class="fas fa-globe"></i> تجربة مخصصة للعالم العربي</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Stats ─────────────────────────────────────────────── -->
+    <section class="ab-stats">
+        <div class="ab-container">
+            <div class="ab-stats__inner">
+                <div class="ab-stat">
+                    <div class="ab-stat__num">10+</div>
+                    <div class="ab-stat__label">قطاعات تجارية مدعومة</div>
+                </div>
+                <div class="ab-stat__divider"></div>
+                <div class="ab-stat">
+                    <div class="ab-stat__num">99.9%</div>
+                    <div class="ab-stat__label">توافر النظام</div>
+                </div>
+                <div class="ab-stat__divider"></div>
+                <div class="ab-stat">
+                    <div class="ab-stat__num">يومي</div>
+                    <div class="ab-stat__label">نسخ احتياطي تلقائي</div>
+                </div>
+                <div class="ab-stat__divider"></div>
+                <div class="ab-stat">
+                    <div class="ab-stat__num">24/7</div>
+                    <div class="ab-stat__label">دعم فني فوري</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Why Section ───────────────────────────────────────── -->
+    <section class="ab-section ab-section--white">
+        <div class="ab-container">
+            <div class="ab-section__head">
+                <span class="ab-section__kicker"><i class="fas fa-bolt"></i> لماذا إنجاز؟</span>
+                <h2 class="ab-section__title">الاختيار الذكي لأصحاب الأعمال</h2>
+                <p class="ab-section__desc">نقدم نظاماً عملياً يجمع بين البساطة والقوة، ليناسب نموك التجاري ويزيد من مرونتك التشغيلية.</p>
+            </div>
+            <div class="ab-why-grid">
+                <div class="ab-why-card">
+                    <div class="ab-why-card__icon ab-why-card__icon--indigo">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h4 class="ab-why-card__title">وفّر وقتك</h4>
+                    <p class="ab-why-card__text">اجمع عمليات السحب والتسعير والفواتير في واجهة واحدة دون تكرار.</p>
+                </div>
+                <div class="ab-why-card">
+                    <div class="ab-why-card__icon ab-why-card__icon--violet">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h4 class="ab-why-card__title">تحكم كامل</h4>
+                    <p class="ab-why-card__text">تابع أداء الجرد، المبيعات والمشتريات، واحصل على بيانات دقيقة لحظة بلحظة.</p>
+                </div>
+                <div class="ab-why-card">
+                    <div class="ab-why-card__icon ab-why-card__icon--teal">
+                        <i class="fas fa-puzzle-piece"></i>
+                    </div>
+                    <h4 class="ab-why-card__title">مرونة لكل الأنشطة</h4>
+                    <p class="ab-why-card__text">من سوق صغير إلى سلسلة فروع، النظام يتكيف مع احتياجاتك ويراعي خصائص السوق العربي.</p>
+                </div>
+                <div class="ab-why-card">
+                    <div class="ab-why-card__icon ab-why-card__icon--amber">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h4 class="ab-why-card__title">دعم فني متاح</h4>
+                    <p class="ab-why-card__text">فريق دعم متخصص يساعدك على حل المشاكل بسرعة واستمرار التشغيل دون توقف.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Features Grid ─────────────────────────────────────── -->
+    <section class="ab-section ab-section--gray">
+        <div class="ab-container">
+            <div class="ab-section__head">
+                <span class="ab-section__kicker"><i class="fas fa-cubes"></i> الميزات</span>
+                <h2 class="ab-section__title">مميزات النظام الشاملة</h2>
+                <p class="ab-section__desc">كل ما تحتاجه لإدارة نشاطك التجاري من مكان واحد.</p>
+            </div>
+            <div class="ab-features-grid">
+                <div class="ab-feature">
+                    <div class="ab-feature__icon" style="background:#eef2ff;color:#6366f1">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                    <div>
+                        <div class="ab-feature__name">إدارة المخزون والمخازن</div>
+                        <p class="ab-feature__text">تتبّع الكميات، مواقع التخزين، وتنبيهات المخزون المنخفض فورياً.</p>
+                    </div>
+                </div>
+                <div class="ab-feature">
+                    <div class="ab-feature__icon" style="background:#fef3c7;color:#d97706">
+                        <i class="fas fa-cash-register"></i>
+                    </div>
+                    <div>
+                        <div class="ab-feature__name">المبيعات ونقطة البيع</div>
+                        <p class="ab-feature__text">فاتورة سريعة، مدفوعات متعددة، وتجربة مبيعات سلسة للعملاء.</p>
+                    </div>
+                </div>
+                <div class="ab-feature">
+                    <div class="ab-feature__icon" style="background:#f0fdfa;color:#0d9488">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <div>
+                        <div class="ab-feature__name">المشتريات والموردين</div>
+                        <p class="ab-feature__text">إدارة أوامر الشراء واستلام السلع مع متابعة حالة الموردين.</p>
+                    </div>
+                </div>
+                <div class="ab-feature">
+                    <div class="ab-feature__icon" style="background:#fff1f2;color:#e11d48">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div>
+                        <div class="ab-feature__name">إدارة العملاء والمديونيات</div>
+                        <p class="ab-feature__text">سجل عملاء متكامل، دفعات آجلة، وتنبيهات للمديونيات المستحقة.</p>
+                    </div>
+                </div>
+                <div class="ab-feature">
+                    <div class="ab-feature__icon" style="background:#eff6ff;color:#2563eb">
+                        <i class="fas fa-laptop"></i>
+                    </div>
+                    <div>
+                        <div class="ab-feature__name">بوابة العميل الإلكترونية</div>
+                        <p class="ab-feature__text">واجهة طلبات ودفع مخصصة للعملاء لتعزيز تجربة البيع.</p>
+                    </div>
+                </div>
+                <div class="ab-feature">
+                    <div class="ab-feature__icon" style="background:#fdf4ff;color:#a21caf">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div>
+                        <div class="ab-feature__name">التقارير المالية</div>
+                        <p class="ab-feature__text">عرض ربح وخسارة، ضريبة، ومؤشرات أداء مالية لحظة بلحظة.</p>
+                    </div>
+                </div>
+                <div class="ab-feature">
+                    <div class="ab-feature__icon" style="background:#f5f3ff;color:#7c3aed">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div>
+                        <div class="ab-feature__name">إدارة المستخدمين والصلاحيات</div>
+                        <p class="ab-feature__text">منح صلاحيات دقيقة لكل دور وإدارة آمنة لمستويات الوصول.</p>
+                    </div>
+                </div>
+                <div class="ab-feature">
+                    <div class="ab-feature__icon" style="background:#ecfdf5;color:#059669">
+                        <i class="fas fa-city"></i>
+                    </div>
+                    <div>
+                        <div class="ab-feature__name">دعم متعدد الفروع</div>
+                        <p class="ab-feature__text">إدارة فروع ومخازن متعددة مع تقارير مركزية لكل موقع.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Security Section ──────────────────────────────────── -->
+    <section class="ab-security">
+        <div class="ab-security__orb ab-security__orb--1"></div>
+        <div class="ab-security__orb ab-security__orb--2"></div>
+        <div class="ab-container">
+            <div class="ab-security__inner">
+                <div class="ab-security__head">
+                    <span class="ab-security__kicker"><i class="fas fa-shield-alt"></i> الحماية والأمان</span>
+                    <h2 class="ab-security__title">بياناتك في أيدٍ أمينة</h2>
+                    <p class="ab-security__desc">نلتزم بأعلى معايير الحماية والخصوصية لبياناتك وبيانات عملائك.</p>
+                </div>
+                <div class="ab-security-grid">
+                    <div class="ab-sec-card">
+                        <div class="ab-sec-card__icon ab-sec-card__icon--green">
+                            <i class="fas fa-globe-europe"></i>
+                        </div>
+                        <h5 class="ab-sec-card__title">أداء قوي على خوادم أوروبية</h5>
+                        <p class="ab-sec-card__text">تشغيل سريع ومستقر من بنية أوروبية موثوقة، لتدفق أعمال بدون توقف.</p>
+                    </div>
+                    <div class="ab-sec-card">
+                        <div class="ab-sec-card__icon ab-sec-card__icon--indigo">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <h5 class="ab-sec-card__title">نسخ احتياطي يومي</h5>
+                        <p class="ab-sec-card__text">نسخ احتياطي تلقائي يومي لحماية بياناتك من أي طارئ.</p>
+                    </div>
+                    <div class="ab-sec-card">
+                        <div class="ab-sec-card__icon ab-sec-card__icon--blue">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <h5 class="ab-sec-card__title">تشفير HTTPS / SSL</h5>
+                        <p class="ab-sec-card__text">جميع البيانات مشفرة أثناء الإرسال والاستقبال.</p>
+                    </div>
+                    <div class="ab-sec-card">
+                        <div class="ab-sec-card__icon ab-sec-card__icon--amber">
+                            <i class="fas fa-user-lock"></i>
+                        </div>
+                        <h5 class="ab-sec-card__title">عزل كامل للبيانات</h5>
+                        <p class="ab-sec-card__text">عزل تام بين بيانات كل مشترك لضمان الخصوصية الكاملة.</p>
+                    </div>
+                    <div class="ab-sec-card">
+                        <div class="ab-sec-card__icon ab-sec-card__icon--violet">
+                            <i class="fas fa-key"></i>
+                        </div>
+                        <h5 class="ab-sec-card__title">صلاحيات متعددة المستويات</h5>
+                        <p class="ab-sec-card__text">حماية بكلمة مرور وصلاحيات دقيقة لكل مستخدم.</p>
+                    </div>
+                    <div class="ab-sec-card">
+                        <div class="ab-sec-card__icon ab-sec-card__icon--teal">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <h5 class="ab-sec-card__title">مراقبة مستمرة 24/7</h5>
+                        <p class="ab-sec-card__text">مراقبة على مدار الساعة لضمان التوافر والأداء.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Support ────────────────────────────────────────────── -->
+    <section class="ab-support">
+        <div class="ab-container">
+            <div class="ab-support__box">
+                <div class="ab-support__icon">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <h3 class="ab-support__title">فريق الدعم جاهز لخدمتك</h3>
+                <p class="ab-support__text">اتصل بنا بسهولة عبر واتساب أو البريد الإلكتروني لتلقي المساعدة السريعة والدعم الفني الموجَّه.</p>
+                <div class="ab-support__contacts">
+                    <a href="https://wa.me/249110100110" class="ab-contact-btn ab-contact-btn--whatsapp">
+                        <i class="fab fa-whatsapp"></i> تواصل عبر واتساب
+                    </a>
+                    <a href="mailto:support@enjaztechnology.com" class="ab-contact-btn ab-contact-btn--email">
+                        <i class="fas fa-envelope"></i> راسلنا بالبريد
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── CTA ────────────────────────────────────────────────── -->
+    <section class="ab-cta">
+        <div class="ab-cta__orb ab-cta__orb--1"></div>
+        <div class="ab-cta__orb ab-cta__orb--2"></div>
+        <div class="ab-container">
+            <div class="ab-cta__inner">
+                <h2 class="ab-cta__title">هل أنت مستعد لتحويل إدارة عملك؟</h2>
+                <p class="ab-cta__text">جرب إنجاز الآن وتمتع بإدارة سريعة وشفافة لمخزونك ومبيعاتك وعملياتك اليومية.</p>
+                <a href="{% url 'accounts:register_step1' %}" class="ab-btn ab-btn--white ab-btn--lg">
+                    <i class="fas fa-rocket"></i> انطلق مع إنجاز مجاناً
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── Footer ────────────────────────────────────────────── -->
+    <footer class="ab-footer">
+        <div class="ab-container">
+            <div class="ab-footer__inner">
+                <span class="ab-footer__copy">إنجاز &copy; 2025 — نظام إدارة المخزون</span>
+                <div class="ab-footer__links">
+                    <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>
+                    <a href="{% url 'accounts:register_step1' %}">إنشاء حساب</a>
+                    <a href="{% url 'core:pricing' %}">الأسعار</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+</div>
+{% endblock %}
