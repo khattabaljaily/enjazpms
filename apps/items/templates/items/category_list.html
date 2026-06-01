@@ -1,9 +1,75 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
-{% load humanize %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/items.css' %}?v=1.0">
+<style>
+/* ── Category type toggle ─────────────────────────────────── */
+.cat-type-row {
+  display: flex;
+  gap: .75rem;
+  margin-bottom: 1.25rem;
+}
+.cat-type-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  padding: .75rem 1rem;
+  border: 2px solid var(--border-light, #e5e7eb);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  background: var(--surface-alt, #f9fafb);
+  transition: border-color .15s, background .15s, color .15s;
+  user-select: none;
+}
+.cat-type-btn input[type=radio] { display: none; }
+.cat-type-btn.active {
+  border-color: var(--indigo-500, #6366f1);
+  background: var(--indigo-50, #eef2ff);
+  color: var(--indigo-700, #4338ca);
+}
+.cat-type-btn i { font-size: 1.1rem; }
+
+/* ── Parent reveal ────────────────────────────────────────── */
+#parentRow {
+  background: var(--surface-alt, #f9fafb);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 10px;
+  padding: .85rem 1rem;
+  margin-bottom: 1.1rem;
+}
+
+/* ── Advanced toggle ──────────────────────────────────────── */
+.cat-advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text-muted, #9ca3af);
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: .3rem 0;
+  margin-bottom: .75rem;
+  width: 100%;
+  text-align: right;
+}
+.cat-advanced-toggle:hover { color: var(--text-secondary, #6b7280); }
+#advancedFields { display: none; }
+#advancedFields.open { display: block; }
+
+/* ── Type badge in table ──────────────────────────────────── */
+.cat-badge-main { background: #eef2ff; color: #4338ca; border-radius: 20px; padding: .18rem .65rem; font-size: .68rem; font-weight: 700; }
+.cat-badge-sub  { background: #f0fdf4; color: #166534; border-radius: 20px; padding: .18rem .65rem; font-size: .68rem; font-weight: 700; }
+[data-theme="dark"] .cat-badge-main { background: rgba(99,102,241,.18); color: #a5b4fc; }
+[data-theme="dark"] .cat-badge-sub  { background: rgba(16,185,129,.18); color: #6ee7b7; }
+</style>
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -12,405 +78,429 @@
 <div class="cx-scene">
 
 <div class="cx-hero">
-    <div class="cx-hero-inner">
-        <div class="cx-hero-left">
-            <div class="cx-hero-icon-wrap">
-                <i class="fas fa-tags"></i>
-            </div>
-            <div>
-                <h1 class="cx-hero-title">التصنيفات</h1>
-                <p class="cx-hero-desc">تصنيفات المنتجات الهرمية</p>
-            </div>
-        </div>
-        <div class="cx-hero-right">
-            <div class="cx-hero-actions">
-                <a href="{% url 'items:list' %}" class="cx-btn-secondary">
-                    <i class="fas fa-arrow-right"></i>
-                    <span>المنتجات</span>
-                </a>
-                <a href="{% url 'items:category_export_api' %}" class="cx-btn-secondary">
-                    <i class="fas fa-file-export"></i>
-                    <span>تصدير</span>
-                </a>
-                <button type="button" class="cx-btn-secondary" id="btnOpenImportCategories">
-                    <i class="fas fa-file-import"></i>
-                    <span>استيراد</span>
-                </button>
-                <button type="button" class="cx-btn-add" id="btnOpenCreateCategory">
-                    <i class="fas fa-plus"></i>
-                    <span>إضافة تصنيف</span>
-                </button>
-            </div>
-        </div>
+  <div class="cx-hero-inner">
+    <div class="cx-hero-left">
+      <div class="cx-hero-icon-wrap"><i class="fas fa-tags"></i></div>
+      <div>
+        <h1 class="cx-hero-title">التصنيفات</h1>
+        <p class="cx-hero-desc">تنظيم المنتجات ضمن تصنيفات رئيسية وفرعية</p>
+      </div>
     </div>
-    <div class="cx-stats-inline">
-        <span class="cx-stat-badge cx-stat-badge--primary">
-            <i class="fas fa-tags"></i>
-            <strong>{{ stats.total }}</strong>
-            <span>تصنيف</span>
-        </span>
-        <span class="cx-stat-badge cx-stat-badge--success">
-            <i class="fas fa-sitemap"></i>
-            <strong>{{ stats.root_count }}</strong>
-            <span>رئيسي</span>
-        </span>
+    <div class="cx-hero-right">
+      <div class="cx-hero-actions">
+        <a href="{% url 'items:list' %}" class="cx-btn-secondary">
+          <i class="fas fa-arrow-right"></i><span>المنتجات</span>
+        </a>
+        <a href="{% url 'items:category_export_api' %}" class="cx-btn-secondary">
+          <i class="fas fa-file-export"></i><span>تصدير</span>
+        </a>
+        <button type="button" class="cx-btn-secondary" id="btnOpenImportCategories">
+          <i class="fas fa-file-import"></i><span>استيراد</span>
+        </button>
+        <button type="button" class="cx-btn-add" id="btnOpenCreateCategory">
+          <i class="fas fa-plus"></i><span>إضافة تصنيف</span>
+        </button>
+      </div>
     </div>
+  </div>
+  <div class="cx-stats-inline">
+    <span class="cx-stat-badge cx-stat-badge--primary">
+      <i class="fas fa-tags"></i>
+      <strong>{{ stats.total }}</strong><span>تصنيف</span>
+    </span>
+    <span class="cx-stat-badge cx-stat-badge--success">
+      <i class="fas fa-folder"></i>
+      <strong>{{ stats.root_count }}</strong><span>رئيسي</span>
+    </span>
+  </div>
 </div>
 
 <div class="cx-panel">
-    <div class="cx-toolbar">
-        <div class="cx-toolbar-search">
-            <i class="fas fa-search cx-toolbar-search-icon"></i>
-            <input type="text" id="categorySearchInput" class="cx-search-input" placeholder="ابحث باسم التصنيف...">
-        </div>
+  <div class="cx-toolbar">
+    <div class="cx-toolbar-search">
+      <i class="fas fa-search cx-toolbar-search-icon"></i>
+      <input type="text" id="categorySearchInput" class="cx-search-input" placeholder="ابحث باسم التصنيف...">
     </div>
-    <div class="table-responsive cx-table-wrap">
-        <table id="categoriesTable" class="cx-table">
-            <thead>
-                <tr>
-                    <th>التصنيف</th>
-                    <th>المسار الكامل</th>
-                    <th>التصنيف الرئيسي</th>
-                    <th>الترتيب</th>
-                    <th>الحالة</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-    <div id="categoriesCardsMobile" class="categories-mobile-card-list d-none p-3" aria-live="polite"></div>
-</div>
+  </div>
+  <div class="cx-table-wrap">
+    <table id="categoriesTable" class="cx-table">
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>النوع</th>
+          <th>ينتمي إلى</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 </div>
 
-<!-- ADD/EDIT MODAL -->
+</div>
+
+<!-- ── ADD / EDIT MODAL ────────────────────────────────────── -->
 <div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered cx-modal-dialog">
-        <div class="modal-content cx-modal">
-            <form id="categoryForm" novalidate>
-                {% csrf_token %}
-                <input type="hidden" id="categoryId" value="">
-                <div class="cx-modal-main">
-                    <div class="cx-modal-header">
-                        <h5 class="cx-modal-title" id="categoryModalTitle">إضافة تصنيف جديد</h5>
-                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div class="cx-modal-body">
-                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="cx-label" for="id_name">{{ form.name.label }} <sup class="cx-required">*</sup></label>
-                                {{ form.name }}
-                            </div>
-                            <div class="col-md-6">
-                                <label class="cx-label" for="id_parent">{{ form.parent.label }}</label>
-                                {{ form.parent }}
-                            </div>
-                            <div class="col-md-4">
-                                <label class="cx-label" for="id_icon">{{ form.icon.label }}</label>
-                                {{ form.icon }}
-                            </div>
-                            <div class="col-md-4">
-                                <label class="cx-label" for="id_display_order">{{ form.display_order.label }}</label>
-                                {{ form.display_order }}
-                            </div>
-                            <div class="col-md-4 d-flex align-items-end">
-                                <label class="cx-toggle-card w-100" for="id_is_active">
-                                    <div class="cx-toggle-info">
-                                        <span class="cx-toggle-title">{{ form.is_active.label }}</span>
-                                    </div>
-                                    {{ form.is_active }}
-                                    <div class="cx-toggle-switch"></div>
-                                </label>
-                            </div>
-                            <div class="col-12">
-                                <label class="cx-label" for="id_description">{{ form.description.label }}</label>
-                                {{ form.description }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="cx-modal-footer">
-                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
-                        <button type="submit" class="cx-btn-primary" id="categorySubmitBtn">
-                            <i class="fas fa-check me-1"></i> حفظ
-                        </button>
-                    </div>
+  <div class="modal-dialog modal-dialog-centered cx-modal-dialog" style="max-width:480px">
+    <div class="modal-content cx-modal">
+      <form id="categoryForm" novalidate>
+        {% csrf_token %}
+        <input type="hidden" id="categoryId" value="">
+        <div class="cx-modal-main">
+
+          <div class="cx-modal-header">
+            <h5 class="cx-modal-title" id="categoryModalTitle">إضافة تصنيف</h5>
+            <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+          </div>
+
+          <div class="cx-modal-body">
+            <div class="alert alert-danger d-none js-form-errors mb-3"></div>
+
+            {# ── Type selector ── #}
+            <div class="cat-type-row">
+              <label class="cat-type-btn active" id="btnTypeMain">
+                <input type="radio" name="cat_type" value="main" checked>
+                <i class="fas fa-folder"></i> رئيسي
+              </label>
+              <label class="cat-type-btn" id="btnTypeSub">
+                <input type="radio" name="cat_type" value="sub">
+                <i class="fas fa-folder-open"></i> فرعي
+              </label>
+            </div>
+
+            {# ── Parent (visible only when فرعي) ── #}
+            <div id="parentRow" class="d-none">
+              <label class="cx-label">ينتمي إلى <sup class="cx-required">*</sup></label>
+              {{ form.parent }}
+            </div>
+
+            {# ── Name ── #}
+            <div class="mb-3">
+              <label class="cx-label" for="id_name">الاسم <sup class="cx-required">*</sup></label>
+              {{ form.name }}
+            </div>
+
+            {# ── Active toggle ── #}
+            <label class="cx-toggle-card w-100 mb-3" for="id_is_active">
+              <div class="cx-toggle-info">
+                <span class="cx-toggle-title">نشط</span>
+                <span class="cx-toggle-desc">يظهر في المتجر وقوائم المنتجات</span>
+              </div>
+              {{ form.is_active }}
+              <div class="cx-toggle-switch"></div>
+            </label>
+
+            {# ── Advanced options (collapsed) ── #}
+            <button type="button" class="cat-advanced-toggle" id="advancedToggleBtn">
+              <i class="fas fa-chevron-left" id="advancedArrow"></i>
+              خيارات إضافية (أيقونة، ترتيب، وصف)
+            </button>
+            <div id="advancedFields">
+              <div class="row g-3">
+                <div class="col-6">
+                  <label class="cx-label" for="id_icon">أيقونة</label>
+                  {{ form.icon }}
                 </div>
-            </form>
+                <div class="col-6">
+                  <label class="cx-label" for="id_display_order">ترتيب العرض</label>
+                  {{ form.display_order }}
+                </div>
+                <div class="col-12">
+                  <label class="cx-label" for="id_description">وصف</label>
+                  {{ form.description }}
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+            <button type="submit" class="cx-btn-primary" id="categorySubmitBtn">
+              <i class="fas fa-check me-1"></i> حفظ
+            </button>
+          </div>
+
         </div>
+      </form>
     </div>
+  </div>
 </div>
 
-<!-- IMPORT MODAL -->
+<!-- ── IMPORT MODAL ───────────────────────────────────────── -->
 <div class="modal fade" id="importCategoriesModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered cx-modal-dialog" style="max-width:480px">
-        <div class="modal-content cx-modal">
-            <div class="cx-modal-main">
-                <div class="cx-modal-header">
-                    <h5 class="cx-modal-title"><i class="fas fa-file-import me-2"></i>استيراد تصنيفات</h5>
-                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="cx-modal-body">
-                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" style="font-size:.875rem">
-                        <i class="fas fa-circle-info mt-1"></i>
-                        <div>
-                            ارفع ملف CSV أو Excel يحتوي على بيانات التصنيفات.
-                            <a href="{% url 'items:category_template_api' %}" class="fw-bold">تحميل النموذج</a>
-                        </div>
-                    </div>
-                    <div id="importCategoriesResult" class="d-none mb-3"></div>
-                    <div class="mb-3">
-                        <label class="cx-label" for="importCategoriesFile">اختر الملف <sup class="cx-required">*</sup></label>
-                        <input type="file" class="form-control" id="importCategoriesFile" accept=".csv,.xlsx,.xls">
-                    </div>
-                </div>
-                <div class="cx-modal-footer">
-                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
-                    <button type="button" class="cx-btn-primary" id="confirmImportCategoriesBtn">
-                        <i class="fas fa-upload me-1"></i> استيراد
-                    </button>
-                </div>
-            </div>
+  <div class="modal-dialog modal-dialog-centered cx-modal-dialog" style="max-width:460px">
+    <div class="modal-content cx-modal">
+      <div class="cx-modal-main">
+        <div class="cx-modal-header">
+          <h5 class="cx-modal-title"><i class="fas fa-file-import me-2"></i>استيراد تصنيفات</h5>
+          <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
         </div>
+        <div class="cx-modal-body">
+          <div class="alert alert-info d-flex align-items-start gap-2 mb-3" style="font-size:.875rem">
+            <i class="fas fa-circle-info mt-1"></i>
+            <div>ارفع ملف CSV أو Excel بأسماء التصنيفات. <a href="{% url 'items:category_template_api' %}" class="fw-bold">تحميل النموذج</a></div>
+          </div>
+          <div id="importCategoriesResult" class="d-none mb-3"></div>
+          <div>
+            <label class="cx-label" for="importCategoriesFile">اختر الملف <sup class="cx-required">*</sup></label>
+            <input type="file" class="form-control" id="importCategoriesFile" accept=".csv,.xlsx,.xls">
+          </div>
+        </div>
+        <div class="cx-modal-footer">
+          <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+          <button type="button" class="cx-btn-primary" id="confirmImportCategoriesBtn">
+            <i class="fas fa-upload me-1"></i> استيراد
+          </button>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- DELETE MODAL -->
+<!-- ── DELETE MODAL ───────────────────────────────────────── -->
 <div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
-        <div class="modal-content cx-delete-modal">
-            <div class="cx-delete-body">
-                <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
-                <h5 class="cx-delete-title">حذف التصنيف؟</h5>
-                <p class="cx-delete-desc">ستقوم بحذف تصنيف <strong id="deleteCategoryName"></strong>.<br>لا يمكن التراجع.</p>
-                <input type="hidden" id="deleteCategoryId" value="">
-            </div>
-            <div class="cx-delete-footer">
-                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="cx-btn-danger" id="confirmDeleteCategoryBtn">نعم، احذف</button>
-            </div>
-        </div>
+  <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+    <div class="modal-content cx-delete-modal">
+      <div class="cx-delete-body">
+        <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+        <h5 class="cx-delete-title">حذف التصنيف؟</h5>
+        <p class="cx-delete-desc">سيتم حذف <strong id="deleteCategoryName"></strong> نهائياً. لا يمكن التراجع.</p>
+        <input type="hidden" id="deleteCategoryId" value="">
+      </div>
+      <div class="cx-delete-footer">
+        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="cx-btn-danger" id="confirmDeleteCategoryBtn">نعم، احذف</button>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-(function() {
-    'use strict';
-    const urlTable   = "{% url 'items:category_table_api' %}";
-    const urlCreate  = "{% url 'items:category_create_api' %}";
-    const urlDetail  = "{% url 'items:category_detail_api' 0 %}";
-    const urlUpdate  = "{% url 'items:category_update_api' 0 %}";
-    const urlDelete  = "{% url 'items:category_delete_api' 0 %}";
-    const urlOptions = "{% url 'items:category_options_api' %}";
-    function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+(function () {
+  'use strict';
 
-    ['categoryModal','deleteCategoryModal','importCategoriesModal'].forEach(function(id) {
-        const el = document.getElementById(id);
-        if (el && el.parentElement !== document.body) document.body.appendChild(el);
+  const urlTable   = "{% url 'items:category_table_api' %}";
+  const urlCreate  = "{% url 'items:category_create_api' %}";
+  const urlDetail  = "{% url 'items:category_detail_api' 0 %}";
+  const urlUpdate  = "{% url 'items:category_update_api' 0 %}";
+  const urlDelete  = "{% url 'items:category_delete_api' 0 %}";
+  const urlOptions = "{% url 'items:category_options_api' %}";
+  function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+
+  ['categoryModal','deleteCategoryModal','importCategoriesModal'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el && el.parentElement !== document.body) document.body.appendChild(el);
+  });
+
+  const categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+  const deleteModal   = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+  const $form         = $('#categoryForm');
+  const $submitBtn    = $('#categorySubmitBtn');
+  const $idInput      = $('#categoryId');
+
+  /* ── DataTable ──────────────────────────────────────────── */
+  const dt = $('#categoriesTable').DataTable({
+    processing: true, serverSide: true,
+    dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
+    pageLength: 50,
+    language: { emptyTable:'لا توجد تصنيفات', zeroRecords:'لا توجد نتائج', paginate:{next:'التالي',previous:'السابق'}, processing:'جاري التحميل...' },
+    ajax: { url: urlTable },
+    columns: [
+      { data: null, render: function(_, __, r) {
+          return `<strong><i class="fas ${r.icon || 'fa-tag'} me-2 text-muted"></i>${r.name}</strong>`;
+      }},
+      { data: null, render: function(_, __, r) {
+          return r.parent && r.parent !== '-'
+            ? '<span class="cat-badge-sub">فرعي</span>'
+            : '<span class="cat-badge-main">رئيسي</span>';
+      }},
+      { data: 'parent', render: function(p) {
+          return p && p !== '-' ? `<span>${p}</span>` : '<span class="cxr-empty">—</span>';
+      }},
+      { data: 'is_active', render: function(a) {
+          return a
+            ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+            : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>';
+      }},
+      { data: null, orderable: false, searchable: false, render: function(_, __, r) {
+          return `<div class="cxr-actions">
+            <button class="cxr-act js-edit-category" data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+            <button class="cxr-act cxr-act--del js-delete-category" data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>
+          </div>`;
+      }}
+    ]
+  });
+
+  $('#categorySearchInput').on('input', function() {
+    clearTimeout(this._t);
+    this._t = setTimeout(() => dt.search(this.value).draw(), 350);
+  });
+
+  /* ── Type toggle (رئيسي / فرعي) ────────────────────────── */
+  function setType(type) {
+    const isMain = type === 'main';
+    $('#btnTypeMain').toggleClass('active', isMain);
+    $('#btnTypeSub').toggleClass('active', !isMain);
+    $('#btnTypeMain input').prop('checked', isMain);
+    $('#btnTypeSub input').prop('checked', !isMain);
+    $('#parentRow').toggleClass('d-none', isMain);
+    if (isMain) $('#id_parent').val('');
+  }
+
+  $('#btnTypeMain, #btnTypeSub').on('click', function() {
+    setType($(this).find('input').val());
+  });
+
+  /* ── Advanced toggle ────────────────────────────────────── */
+  $('#advancedToggleBtn').on('click', function() {
+    const $fields = $('#advancedFields');
+    const open = $fields.toggleClass('open').hasClass('open');
+    $('#advancedArrow').css('transform', open ? 'rotate(-90deg)' : '');
+  });
+
+  /* ── Parent select refresh ───────────────────────────────── */
+  function refreshParentSelect(selectedId) {
+    $.getJSON(urlOptions, function(resp) {
+      if (!resp.success) return;
+      const $sel = $('#id_parent');
+      const current = selectedId !== undefined ? selectedId : $sel.val();
+      $sel.find('option:not(:first)').remove();
+      resp.categories.forEach(function(c) {
+        $sel.append(new Option(c.name, c.id, false, String(c.id) === String(current)));
+      });
     });
+  }
 
-    const categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
-    const deleteModal   = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
-    const $form = $('#categoryForm');
-    const $submitBtn = $('#categorySubmitBtn');
-    const $idInput = $('#categoryId');
+  /* ── Reset form ─────────────────────────────────────────── */
+  function resetForm() {
+    $form[0].reset();
+    $idInput.val('');
+    $('#id_is_active').prop('checked', true);
+    $('#advancedFields').removeClass('open');
+    $('#advancedArrow').css('transform', '');
+    EnjazIMS.clearFormErrors($form);
+    setType('main');
+  }
 
-    /* ── Mobile card renderer ───────────────────────────────── */
-    function renderMobileCategoryCards(rows) {
-        const $cards = $('#categoriesCardsMobile');
-        if (!$cards.length) return;
+  /* ── Open create ─────────────────────────────────────────── */
+  $('#btnOpenCreateCategory').on('click', function() {
+    resetForm();
+    refreshParentSelect(null);
+    $('#categoryModalTitle').text('إضافة تصنيف');
+    $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
+    categoryModal.show();
+  });
 
-        if (!rows || !rows.length) {
-            $cards.html('<div class="cx-empty-state">لا توجد تصنيفات للعرض</div>');
-            return;
-        }
-
-        const cardsHtml = rows.map(function (r) {
-            const status = r.is_active
-                ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
-                : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوف</span>';
-
-            return `<article class="cx-category-card">
-                <div class="cx-category-card-head">
-                    <div class="cx-category-card-title-wrap">
-                        <h2 class="cx-category-card-title"><i class="fas ${r.icon} me-2 text-muted"></i>${r.name || '—'}</h2>
-                        <p class="cx-category-card-path">${r.full_path || '—'}</p>
-                    </div>
-                    ${status}
-                </div>
-                <div class="cx-category-card-meta">
-                    <div>
-                        <span class="cx-category-card-meta-label">الرئيسي</span>
-                        <strong class="cx-category-card-meta-value">${r.parent === '-' ? 'رئيسي' : r.parent}</strong>
-                    </div>
-                    <div>
-                        <span class="cx-category-card-meta-label">الترتيب</span>
-                        <strong class="cx-category-card-meta-value">${r.display_order || '0'}</strong>
-                    </div>
-                </div>
-                <div class="cx-category-card-actions">
-                    <button class="cxr-act js-edit-category" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
-                    <button class="cxr-act cxr-act--del js-delete-category" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
-                </div>
-            </article>`;
-        }).join('');
-
-        $cards.html(cardsHtml);
-    }
-
-    const dt = $('#categoriesTable').DataTable({
-        processing: true, serverSide: true,
-        dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
-        pageLength: 50,
-        language: { emptyTable:'لا توجد تصنيفات', zeroRecords:'لا توجد نتائج', paginate:{next:'التالي',previous:'السابق'}, processing:'جاري التحميل...' },
-        ajax: { url: urlTable },
-        drawCallback: function () {
-            renderMobileCategoryCards(dt.rows({ page: 'current' }).data().toArray());
-        },
-        columns: [
-            { data: null, render: function(_, __, r) {
-                return `<span><i class="fas ${r.icon} me-2 text-muted"></i><strong>${r.name}</strong></span>`;
-            }},
-            { data: 'full_path', render: p => `<span class="text-muted" style="font-size:0.875rem">${p}</span>` },
-            { data: 'parent', render: p => p === '-' ? `<span class="cxr-empty">رئيسي</span>` : `<span>${p}</span>` },
-            { data: 'display_order' },
-            { data: 'is_active', render: a => a
-                ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
-                : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>` },
-            { data: null, orderable: false, searchable: false, render: function(_, __, r) {
-                return `<div class="cxr-actions">
-                    <button class="cxr-act js-edit-category" data-id="${r.id}"><i class="fas fa-pen-to-square"></i></button>
-                    <button class="cxr-act cxr-act--del js-delete-category" data-id="${r.id}" data-name="${r.name}"><i class="fas fa-trash"></i></button>
-                </div>`;
-            }}
-        ]
-    });
-
-    let searchTimer;
-    $('#categorySearchInput').on('input', function() {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
-    });
-
-    function refreshParentSelect(selectedId) {
-        $.getJSON(urlOptions, function(resp) {
-            if (!resp.success) return;
-            const $sel = $('#id_parent');
-            const current = selectedId !== undefined ? selectedId : $sel.val();
-            $sel.find('option:not(:first)').remove();
-            resp.categories.forEach(function(c) {
-                $sel.append(new Option(c.name, c.id, false, String(c.id) === String(current)));
-            });
-        });
-    }
-
-    function resetForm() { $form[0].reset(); $idInput.val(''); $('#id_is_active').prop('checked', true); EnjazIMS.clearFormErrors($form); }
-
-    $('#btnOpenCreateCategory').on('click', function() {
-        resetForm();
+  /* ── Open edit ───────────────────────────────────────────── */
+  function openEdit(id) {
+    resetForm();
+    $.ajax({ url: apiUrl(urlDetail, id), method: 'GET', success: function(resp) {
+      if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
+      const d = resp.data;
+      $idInput.val(d.id);
+      $('#id_name').val(d.name || '');
+      $('#id_icon').val(d.icon || 'fa-tag');
+      $('#id_description').val(d.description || '');
+      $('#id_display_order').val(d.display_order || 0);
+      $('#id_is_active').prop('checked', !!d.is_active);
+      if (d.parent) {
+        refreshParentSelect(d.parent);
+        setType('sub');
+      } else {
         refreshParentSelect(null);
-        $('#categoryModalTitle').text('إضافة تصنيف جديد');
-        $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
-        categoryModal.show();
-    });
+        setType('main');
+      }
+      $('#categoryModalTitle').text('تعديل التصنيف');
+      $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
+      categoryModal.show();
+    }, error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }});
+  }
 
-    function openEdit(id) {
-        resetForm();
-        $.ajax({ url: apiUrl(urlDetail, id), method: 'GET', success: function(resp) {
-            if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
-            const d = resp.data;
-            $idInput.val(d.id);
-            $('#id_name').val(d.name || '');
-            $('#id_icon').val(d.icon || 'fa-tag');
-            $('#id_description').val(d.description || '');
-            $('#id_display_order').val(d.display_order || 0);
-            $('#id_is_active').prop('checked', !!d.is_active);
-            refreshParentSelect(d.parent || null);
-            $('#categoryModalTitle').text('تعديل التصنيف');
-            $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
-            categoryModal.show();
-        }, error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }});
-    }
-
-    $form.on('submit', function(e) {
-        e.preventDefault();
-        EnjazIMS.clearFormErrors($form);
-        const id = $idInput.val();
-        const url = id ? apiUrl(urlUpdate, id) : urlCreate;
-        const orig = $submitBtn.html();
-        EnjazIMS.showLoading($submitBtn);
-        $.ajax({ url, method: 'POST', data: $form.serialize(),
-            success: function(resp) {
-                EnjazIMS.hideLoading($submitBtn, orig);
-                if (resp.success) { categoryModal.hide(); dt.ajax.reload(null, false); refreshParentSelect(null); EnjazIMS.toast(resp.message, 'success'); return; }
-                EnjazIMS.showFormError($form, resp.message);
-            },
-            error: function(xhr) {
-                EnjazIMS.hideLoading($submitBtn, orig);
-                const r = xhr.responseJSON || {};
-                if (r.errors) EnjazIMS.renderFieldErrors($form, r.errors);
-                EnjazIMS.showFormError($form, r.message || 'حدث خطأ');
-            }
-        });
+  /* ── Submit ─────────────────────────────────────────────── */
+  $form.on('submit', function(e) {
+    e.preventDefault();
+    EnjazIMS.clearFormErrors($form);
+    const id  = $idInput.val();
+    const url = id ? apiUrl(urlUpdate, id) : urlCreate;
+    const orig = $submitBtn.html();
+    EnjazIMS.showLoading($submitBtn);
+    $.ajax({ url, method: 'POST', data: $form.serialize(),
+      success: function(resp) {
+        EnjazIMS.hideLoading($submitBtn, orig);
+        if (resp.success) {
+          categoryModal.hide();
+          dt.ajax.reload(null, false);
+          refreshParentSelect(null);
+          EnjazIMS.toast(resp.message, 'success');
+        } else {
+          EnjazIMS.showFormError($form, resp.message);
+        }
+      },
+      error: function(xhr) {
+        EnjazIMS.hideLoading($submitBtn, orig);
+        const r = xhr.responseJSON || {};
+        if (r.errors) EnjazIMS.renderFieldErrors($form, r.errors);
+        EnjazIMS.showFormError($form, r.message || 'حدث خطأ');
+      }
     });
+  });
 
-    $(document).on('click', '.js-delete-category', function() {
-        $('#deleteCategoryId').val($(this).data('id'));
-        $('#deleteCategoryName').text($(this).data('name'));
-        deleteModal.show();
-    });
-    $('#confirmDeleteCategoryBtn').on('click', function() {
-        const id = $('#deleteCategoryId').val();
-        if (!id) return;
-        $.ajax({ url: apiUrl(urlDelete, id), method: 'POST', success: function(resp) {
-            deleteModal.hide();
-            if (resp.success) { dt.ajax.reload(null, false); refreshParentSelect(null); EnjazIMS.toast(resp.message, 'success'); }
-            else EnjazIMS.toast(resp.message, 'error');
-        }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
-    });
-    $(document).on('click', '.js-edit-category', function() { openEdit($(this).data('id')); });
+  /* ── Delete ─────────────────────────────────────────────── */
+  $(document).on('click', '.js-delete-category', function() {
+    $('#deleteCategoryId').val($(this).data('id'));
+    $('#deleteCategoryName').text($(this).data('name'));
+    deleteModal.show();
+  });
+  $('#confirmDeleteCategoryBtn').on('click', function() {
+    const id = $('#deleteCategoryId').val();
+    if (!id) return;
+    $.ajax({ url: apiUrl(urlDelete, id), method: 'POST', success: function(resp) {
+      deleteModal.hide();
+      if (resp.success) { dt.ajax.reload(null, false); refreshParentSelect(null); EnjazIMS.toast(resp.message, 'success'); }
+      else EnjazIMS.toast(resp.message, 'error');
+    }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
+  });
+  $(document).on('click', '.js-edit-category', function() { openEdit($(this).data('id')); });
 
-    /* ── Import ──────────────────────────────────────────────── */
-    const importCategoriesModal = new bootstrap.Modal(document.getElementById('importCategoriesModal'));
-
-    $('#btnOpenImportCategories').on('click', function () {
-        $('#importCategoriesFile').val('');
-        $('#importCategoriesResult').addClass('d-none').html('');
-        importCategoriesModal.show();
+  /* ── Import ─────────────────────────────────────────────── */
+  const importModal = new bootstrap.Modal(document.getElementById('importCategoriesModal'));
+  $('#btnOpenImportCategories').on('click', function() {
+    $('#importCategoriesFile').val('');
+    $('#importCategoriesResult').addClass('d-none').html('');
+    importModal.show();
+  });
+  $('#confirmImportCategoriesBtn').on('click', function() {
+    const file = $('#importCategoriesFile')[0].files[0];
+    if (!file) { EnjazIMS.toast('اختر ملفاً أولاً', 'error'); return; }
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').first().val());
+    const $btn = $(this);
+    EnjazIMS.showLoading($btn);
+    $.ajax({
+      url: "{% url 'items:category_import_api' %}", method: 'POST',
+      data: fd, processData: false, contentType: false,
+      success: function(resp) {
+        EnjazIMS.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
+        const cls = resp.success ? 'alert-success' : 'alert-danger';
+        let html = `<div class="alert ${cls} mb-0">${resp.message}</div>`;
+        if (resp.errors && resp.errors.length) {
+          html += '<ul class="mt-2 mb-0 small text-danger">' + resp.errors.map(function(e){ return `<li>${e}</li>`; }).join('') + '</ul>';
+        }
+        $('#importCategoriesResult').removeClass('d-none').html(html);
+        if (resp.success && resp.imported > 0) dt.ajax.reload(null, false);
+      },
+      error: function() {
+        EnjazIMS.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
+        EnjazIMS.toast('حدث خطأ أثناء الاستيراد', 'error');
+      }
     });
+  });
 
-    $('#confirmImportCategoriesBtn').on('click', function () {
-        const file = $('#importCategoriesFile')[0].files[0];
-        if (!file) { EnjazIMS.toast('الرجاء اختيار ملف', 'error'); return; }
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').first().val());
-        const $btn = $(this);
-        EnjazIMS.showLoading($btn);
-        $.ajax({
-            url: "{% url 'items:category_import_api' %}",
-            method: 'POST',
-            data: fd,
-            processData: false,
-            contentType: false,
-            success: function (resp) {
-                EnjazIMS.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
-                const cls = resp.success ? 'alert-success' : 'alert-danger';
-                let html = `<div class="alert ${cls} mb-0">${resp.message}</div>`;
-                if (resp.errors && resp.errors.length) {
-                    html += '<ul class="mt-2 mb-0 small text-danger">' + resp.errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
-                }
-                $('#importCategoriesResult').removeClass('d-none').html(html);
-                if (resp.success && resp.imported > 0) dt.ajax.reload(null, false);
-            },
-            error: function () {
-                EnjazIMS.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
-                EnjazIMS.toast('حدث خطأ أثناء الاستيراد', 'error');
-            }
-        });
-    });
 })();
 </script>
 {% endblock %}
