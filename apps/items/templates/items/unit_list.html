@@ -168,14 +168,14 @@
               <label class="unit-type-btn active" id="btnTypeStandalone">
                 <input type="radio" name="unit_type" value="standalone" checked>
                 <i class="fas fa-cube"></i>
-                مستقلة
-                <small>مثل: قطعة، كيلو، لتر</small>
+                وحدة عادية
+                <small>قطعة · كيلو · لتر</small>
               </label>
               <label class="unit-type-btn" id="btnTypeDerived">
                 <input type="radio" name="unit_type" value="derived">
                 <i class="fas fa-cubes"></i>
-                مشتقة
-                <small>مثل: كرتون = 12 قطعة</small>
+                عبوة أو مجموعة
+                <small>كرتون · كيس · حزمة</small>
               </label>
             </div>
 
@@ -201,7 +201,7 @@
             <div id="derivedRow" class="d-none">
               <div class="derived-title">
                 <i class="fas fa-link"></i>
-                العلاقة مع الوحدة الأصغر
+                هذه العبوة تحتوي على كم وحدة؟
               </div>
               <div class="row g-3">
                 <div class="col-7">
@@ -307,8 +307,8 @@
       { data: 'abbreviation', render: a => a === '-' ? '<span class="cxr-empty">—</span>' : `<code class="cxr-code">${a}</code>` },
       { data: null, render: function(_, __, r) {
           return r.base_unit && r.base_unit !== '-'
-            ? '<span class="unit-badge-derived">مشتقة</span>'
-            : '<span class="unit-badge-standalone">مستقلة</span>';
+            ? '<span class="unit-badge-derived">عبوة</span>'
+            : '<span class="unit-badge-standalone">عادية</span>';
       }},
       { data: null, render: function(_, __, r) {
           if (!r.base_unit || r.base_unit === '-') return '<span class="cxr-empty">—</span>';
