@@ -225,6 +225,8 @@
 .ab-hero__badge {
     display: inline-flex;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 0.45rem;
     background: rgba(255,255,255,0.15);
     border: 1px solid rgba(255,255,255,0.28);
@@ -816,26 +818,161 @@
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
+
+/* ─ Tablets ≤768px ─────────────────────────────── */
 @media (max-width: 768px) {
-    .ab-hero { padding: 4rem 0 3.5rem; }
-    .ab-hero__trust { gap: 1rem; }
-    .ab-stats__inner { flex-direction: column; align-items: center; }
-    .ab-stat__divider { width: 80px; height: 1px; align-self: auto; margin: 0; }
-    .ab-stat { padding: 1.25rem 2rem; min-width: 0; }
-    .ab-section { padding: 4rem 0; }
-    .ab-security { padding: 4rem 0; }
+    .ab-hero { padding: 3.5rem 0 3rem; }
+    .ab-hero__trust { gap: 0.75rem 1.25rem; }
+
+    /* Stats: 2-col card grid — dividers removed, each stat gets its own card */
+    .ab-stats { background: var(--ab-surface-gray); }
+    .ab-stats__inner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.65rem;
+        padding: 1.25rem 0;
+    }
+    .ab-stat__divider { display: none; }
+    .ab-stat {
+        background: var(--ab-surface);
+        border: 1.5px solid var(--ab-border);
+        border-radius: var(--ab-radius-md);
+        padding: 1.35rem 1rem;
+        min-width: 0;
+        text-align: center;
+        box-shadow: var(--ab-shadow-sm);
+    }
+    /* 5th stat (last child) spans both columns */
+    .ab-stat:last-child { grid-column: 1 / -1; }
+
+    .ab-section { padding: 3.5rem 0; }
+    .ab-security { padding: 3.5rem 0; }
+    .ab-store { padding: 3.5rem 0; }
+    .ab-ai { padding: 3.5rem 0; }
+    .ab-support { padding: 3.5rem 0; }
     .ab-support__box { padding: 2rem 1.5rem; }
-    .ab-cta { padding: 4rem 0; }
+    .ab-cta { padding: 3.5rem 0; }
     .ab-footer__inner { justify-content: center; text-align: center; }
     .ab-footer__links { justify-content: center; }
 }
 
-@media (max-width: 480px) {
+/* ─ Hide nav links early — topbar gets cramped at 640px ─ */
+@media (max-width: 640px) {
     .ab-topbar__link { display: none; }
-    .ab-hero__trust span:nth-child(n+3) { display: none; }
+}
+
+/* ─ Mobile ≤480px ──────────────────────────────── */
+@media (max-width: 480px) {
+    .ab-container { padding: 0 1rem; }
+
+    /* Topbar */
+    .ab-topbar { padding: 0.7rem 1rem; }
+    .ab-topbar__cta { font-size: 0.78rem; padding: 0.45rem 0.9rem; }
+
+    /* Hero */
+    .ab-hide-mobile { display: none; }
+    .ab-hero { padding: 2.75rem 0 2.5rem; }
+    .ab-hero__badge {
+        font-size: 0.7rem;
+        padding: 0.4rem 0.9rem;
+        border-radius: 14px;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.5;
+        max-width: calc(100% - 1rem);
+    }
+    /* Stack hero buttons full-width */
+    .ab-hero__actions { flex-direction: column; align-items: stretch; gap: 0.65rem; padding: 0 0.5rem; }
+    .ab-btn--lg { width: 100%; justify-content: center; }
+    /* Show all 5 trust items as pill chips in a 2-column grid */
+    .ab-hero__trust {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        max-width: 340px;
+        margin: 0 auto;
+    }
+    .ab-hero__trust span {
+        font-size: 0.74rem;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.22);
+        border-radius: 999px;
+        padding: 0.32rem 0.7rem;
+        backdrop-filter: blur(6px);
+        justify-content: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    /* 5th trust item spans full row */
+    .ab-hero__trust span:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+        justify-content: center;
+    }
+
+    /* Sections */
+    .ab-section { padding: 2.75rem 0; }
+    .ab-section__head { margin-bottom: 2rem; }
+    .ab-security { padding: 2.75rem 0; }
+    .ab-cta { padding: 2.75rem 0; }
+    .ab-support { padding: 2.75rem 0; }
+    .ab-store { padding: 2.75rem 0; }
+    .ab-ai { padding: 2.75rem 0; }
+    .ab-ai__head { margin-bottom: 2rem; }
+
+    /* Grids — all single column on small phones */
     .ab-why-grid { grid-template-columns: 1fr; }
-    .ab-features-grid { grid-template-columns: 1fr 1fr; }
+    .ab-features-grid { grid-template-columns: 1fr; }
     .ab-security-grid { grid-template-columns: 1fr; }
+
+    /* Why cards — horizontal layout on single column with accent border */
+    .ab-why-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.25rem 1.1rem;
+        border-inline-start: 3px solid var(--ab-brand);
+    }
+    .ab-why-card__icon { flex-shrink: 0; margin-bottom: 0; }
+
+    /* Stats — single column on very narrow screens handled below */
+    .ab-stat { padding: 1rem 1rem; }
+
+    /* Store list items — each as a bordered card row */
+    .ab-store__list li {
+        background: var(--ab-surface-gray);
+        border: 1px solid var(--ab-border);
+        border-radius: 10px;
+        padding: 0.6rem 0.85rem;
+    }
+
+    /* Feature cards — better spacing on single column */
+    .ab-feature { padding: 1.1rem 1rem; gap: 0.85rem; }
+    .ab-feature__icon { flex-shrink: 0; }
+
+    /* Store mockup */
+    .ab-store__mockup { width: 100%; }
+    .ab-mockup-phone { width: 100%; max-width: 300px; box-sizing: border-box; }
+
+    /* Support contacts stack vertically */
+    .ab-support__box { padding: 1.75rem 1.25rem; }
+    .ab-support__contacts { flex-direction: column; align-items: stretch; gap: 0.6rem; }
+    .ab-contact-btn { justify-content: center; }
+
+    /* Footer */
+    .ab-footer__links { gap: 1rem; flex-wrap: wrap; }
+}
+
+/* ─ Very small phones ≤360px ───────────────────── */
+@media (max-width: 360px) {
+    /* Stats: single column when 2-col is too cramped */
+    .ab-stats__inner { grid-template-columns: 1fr; }
+
+    .ab-topbar__cta { font-size: 0.72rem; padding: 0.38rem 0.65rem; }
+    .ab-hero__sub { font-size: 0.88rem; }
+    .ab-btn--lg { font-size: 0.875rem; }
+    .ab-cta__title { font-size: 1.7rem; }
+    .ab-mockup-phone { font-size: 0.9em; }
 }
 
 /* ── Dark mode ───────────────────────────────────────────── */
@@ -844,7 +981,9 @@
 [data-theme="dark"] .ab-topbar__brand      { color: #f1f5f9; }
 [data-theme="dark"] .ab-topbar__link       { color: #94a3b8; }
 [data-theme="dark"] .ab-topbar__link:hover { color: #a5b4fc; background: rgba(165,180,252,0.08); }
-[data-theme="dark"] .ab-stats              { background: #1e293b; border-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .ab-stats              { background: #0f172a; border-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .ab-stat              { background: #1e293b; border-color: rgba(255,255,255,0.07); }
+[data-theme="dark"] .ab-store__list li    { background: #1e293b; border-color: rgba(255,255,255,0.07); }
 [data-theme="dark"] .ab-section--white     { background: #1e293b; }
 [data-theme="dark"] .ab-section--gray      { background: #162032; }
 [data-theme="dark"] .ab-section__title     { color: #f1f5f9; }
@@ -1127,6 +1266,13 @@
 @media (max-width: 900px) {
     .ab-store__inner { grid-template-columns: 1fr; }
     .ab-store__mockup { display: flex; justify-content: center; }
+    /* Center the text side when stacked */
+    .ab-store__text { text-align: center; }
+    .ab-store__kicker { margin-inline: auto; }
+    .ab-store__cta { margin-inline: auto; }
+    /* Keep list item icon+text aligned naturally — only center the list block */
+    .ab-store__list { align-items: center; }
+    .ab-store__list li { text-align: start; width: 100%; }
 }
 
 /* Text side */
