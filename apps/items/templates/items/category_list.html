@@ -44,6 +44,25 @@
   margin-bottom: 1.1rem;
 }
 
+/* ── Optional label & hint ───────────────────────────────── */
+.cx-label-opt {
+  font-size: .68rem;
+  font-weight: 500;
+  color: var(--text-muted, #9ca3af);
+  background: var(--surface-alt, #f3f4f6);
+  border-radius: 4px;
+  padding: .1rem .45rem;
+  margin-right: .4rem;
+  vertical-align: middle;
+}
+.cx-field-hint {
+  font-size: .75rem;
+  color: var(--text-muted, #9ca3af);
+  margin-top: .3rem;
+  line-height: 1.5;
+}
+[data-theme="dark"] .cx-label-opt { background: rgba(255,255,255,.08); color: #9ca3af; }
+
 /* ── Advanced toggle ──────────────────────────────────────── */
 .cat-advanced-toggle {
   display: flex;
@@ -194,21 +213,34 @@
             {# ── Advanced options (collapsed) ── #}
             <button type="button" class="cat-advanced-toggle" id="advancedToggleBtn">
               <i class="fas fa-chevron-left" id="advancedArrow"></i>
-              خيارات إضافية (أيقونة، ترتيب، وصف)
+              خيارات إضافية
+              <span style="font-weight:400;color:var(--text-muted,#9ca3af);margin-right:.25rem;">— كلها اختيارية</span>
             </button>
             <div id="advancedFields">
               <div class="row g-3">
-                <div class="col-6">
-                  <label class="cx-label" for="id_icon">أيقونة</label>
+                <div class="col-12 col-sm-6">
+                  <label class="cx-label" for="id_icon">
+                    أيقونة
+                    <span class="cx-label-opt">اختياري</span>
+                  </label>
                   {{ form.icon }}
+                  <div class="cx-field-hint">{{ form.icon.help_text }}</div>
                 </div>
-                <div class="col-6">
-                  <label class="cx-label" for="id_display_order">ترتيب العرض</label>
+                <div class="col-12 col-sm-6">
+                  <label class="cx-label" for="id_display_order">
+                    ترتيب العرض
+                    <span class="cx-label-opt">اختياري</span>
+                  </label>
                   {{ form.display_order }}
+                  <div class="cx-field-hint">{{ form.display_order.help_text }}</div>
                 </div>
                 <div class="col-12">
-                  <label class="cx-label" for="id_description">وصف</label>
+                  <label class="cx-label" for="id_description">
+                    وصف
+                    <span class="cx-label-opt">اختياري</span>
+                  </label>
                   {{ form.description }}
+                  <div class="cx-field-hint">{{ form.description.help_text }}</div>
                 </div>
               </div>
             </div>

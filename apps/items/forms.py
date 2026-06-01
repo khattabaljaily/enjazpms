@@ -17,10 +17,15 @@ class CategoryForm(forms.ModelForm):
         labels = {
             'name': 'اسم التصنيف',
             'parent': 'التصنيف الرئيسي',
-            'icon': 'الأيقونة (FontAwesome)',
-            'description': 'الوصف',
+            'icon': 'أيقونة',
+            'description': 'وصف',
             'display_order': 'ترتيب العرض',
             'is_active': 'نشط',
+        }
+        help_texts = {
+            'icon': 'رمز FontAwesome يظهر بجانب اسم التصنيف — مثال: fa-mobile أو fa-pills. اتركه فارغاً للأيقونة الافتراضية.',
+            'display_order': 'رقم يحدد موضع التصنيف في القوائم — الأصغر يظهر أولاً. اتركه 0 للترتيب التلقائي.',
+            'description': 'ملاحظة أو توضيح داخلي للتصنيف — لا يظهر للعملاء.',
         }
 
     def __init__(self, *args, tenant=None, **kwargs):
