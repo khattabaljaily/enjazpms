@@ -45,18 +45,23 @@ class UnitForm(forms.ModelForm):
         model = Unit
         fields = ['name', 'abbreviation', 'base_unit', 'conversion_factor', 'is_active']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: كرتون'}),
-            'abbreviation': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: CTN'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: قطعة، كرتون، كيلو'}),
+            'abbreviation': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: قط، CTN، كغ'}),
             'base_unit': forms.Select(attrs={'class': 'form-select'}),
-            'conversion_factor': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
+            'conversion_factor': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '1', 'placeholder': 'مثال: 12'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
             'name': 'اسم الوحدة',
-            'abbreviation': 'الاختصار',
-            'base_unit': 'الوحدة الأساسية',
-            'conversion_factor': 'عامل التحويل',
+            'abbreviation': 'رمز مختصر',
+            'base_unit': 'تُحسب بالنسبة لـ',
+            'conversion_factor': 'الكمية المعادلة',
             'is_active': 'نشط',
+        }
+        help_texts = {
+            'abbreviation': 'يظهر في الفواتير بدل الاسم الكامل — اختياري.',
+            'base_unit': 'اختر الوحدة الأصغر التي تتكون منها هذه الوحدة.',
+            'conversion_factor': 'كم وحدة أصغر تساوي هذه الوحدة؟ مثال: الكرتون = 12 قطعة → أدخل 12.',
         }
 
     def __init__(self, *args, tenant=None, **kwargs):
