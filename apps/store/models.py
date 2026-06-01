@@ -95,11 +95,11 @@ class StoreSettings(TenantMixin):
     )
     open_message   = models.CharField(
         'رسالة المفتوح', max_length=200, blank=True,
-        default='أهلاً! نحن مفتوحون الآن. يسعدنا خدمتك.'
+        default='مرحباً بك .. المتجر مفتوح الآن'
     )
     closed_message = models.CharField(
         'رسالة المغلق', max_length=200, blank=True,
-        default='المتجر مغلق حالياً. يمكنك تصفح المنتجات وسنتواصل معك لاحقاً.'
+        default='المتجر مغلق حالياً.'
     )
     working_hours  = models.JSONField(
         'ساعات العمل', default=dict, blank=True
@@ -144,24 +144,26 @@ class StoreSettings(TenantMixin):
         """
         if self.status_override == 'open':
             return {
-                'is_open':    True,
-                'label':      'مفتوح الآن',
-                'message':    self.open_message,
-                'next_open':  None,
+                'is_open':     True,
+                'label':       'مفتوح',
+                'mode':        'open',
+                'message':     self.open_message,
+                'next_open':   None,
                 'today_hours': None,
-                'override':   True,
+                'override':    True,
             }
         if self.status_override == 'closed':
             return {
-                'is_open':    False,
-                'label':      'مغلق حالياً',
-                'message':    self.closed_message,
-                'next_open':  self._next_open_str(),
+                'is_open':     False,
+                'label':       'مغلق',
+                'mode':        'closed',
+                'message':     self.closed_message,
+                'next_open':   None,
                 'today_hours': None,
-                'override':   True,
+                'override':    True,
             }
 
-        # Auto mode — check working hours
+        # Auto mode — check working hours schedule
         now      = timezone.localtime()
         day_name = _WEEKDAY_TO_NAME[now.weekday()]
         day_info = self.get_hours_for_day(day_name)
@@ -169,21 +171,23 @@ class StoreSettings(TenantMixin):
 
         if day_info.get('enabled') and day_info['open'] <= now_str <= day_info['close']:
             return {
-                'is_open':    True,
-                'label':      'مفتوح الآن',
-                'message':    self.open_message,
-                'next_open':  None,
+                'is_open':     True,
+                'label':       'مفتوح',
+                'mode':        'schedule',
+                'message':     self.open_message,
+                'next_open':   None,
                 'today_hours': f"{day_info['open']} – {day_info['close']}",
-                'override':   False,
+                'override':    False,
             }
 
         return {
-            'is_open':    False,
-            'label':      'مغلق حالياً',
-            'message':    self.closed_message,
-            'next_open':  self._next_open_str(now),
+            'is_open':     False,
+            'label':       'مغلق',
+            'mode':        'schedule',
+            'message':     self.closed_message,
+            'next_open':   self._next_open_str(now),
             'today_hours': f"{day_info['open']} – {day_info['close']}" if day_info.get('enabled') else None,
-            'override':   False,
+            'override':    False,
         }
 
     def _next_open_str(self, now=None) -> str:

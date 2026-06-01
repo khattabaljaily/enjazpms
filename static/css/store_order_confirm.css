@@ -83,10 +83,13 @@ body {
     border-bottom: 1px solid #f1f5f9;
     gap: 1rem;
 }
-.confirm-row:last-child { border-bottom: none; font-weight: 800; font-size: .9rem; }
+.confirm-row:last-child { border-bottom: none; }
+.confirm-row--total { font-weight: 800; font-size: .9rem; }
+.confirm-row--total .confirm-row-label { color: #1e293b; }
+.confirm-row--total span:last-child { color: var(--brand); font-size: 1rem; }
 .confirm-row-label { color: #64748b; flex-shrink: 0; }
+.confirm-row-qty { color: #94a3b8; font-size: .78rem; }
 .confirm-row span:last-child { font-weight: 600; color: #1e293b; text-align: left; }
-.confirm-row:last-child span:last-child { color: var(--brand); font-size: 1rem; }
 
 /* ── Info boxes ────────────────────────────────────────── */
 .confirm-bank {

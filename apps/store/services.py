@@ -189,7 +189,6 @@ def approve_order(order: OnlineOrder) -> 'SaleInvoice':
             tenant     = tenant,
             invoice    = invoice,
             item       = line.item,
-            stock      = stock,
             quantity   = line.quantity,
             unit_price = line.unit_price,
         )

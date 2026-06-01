@@ -85,6 +85,19 @@ a.cx-stat-badge:hover { opacity: .8; }
 [data-theme="dark"] .st-action-reject  { background: rgba(239,68,68,.18);  color: #f87171; }
 [data-theme="dark"] .st-action-invoice { background: rgba(59,130,246,.18); color: #60a5fa; }
 
+/* Order detail grid layout */
+.st-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1.25rem;
+    align-items: start;
+}
+.st-detail-sidebar { display: flex; flex-direction: column; gap: 1.1rem; }
+@media (max-width: 768px) {
+    .st-detail-grid { grid-template-columns: 1fr; }
+    .st-detail-sidebar { order: -1; }
+}
+
 /* Order detail sidebar panels */
 .st-detail-row {
     display: flex;

@@ -99,14 +99,28 @@
     {% if store.is_enabled %}
     <div class="st-live-indicator {% if status.is_open %}st-live-indicator--open{% else %}st-live-indicator--closed{% endif %}" id="liveIndicator">
       <span class="st-live-dot"></span>
-      <span class="st-live-label" id="liveLabel">{% if status.is_open %}مفتوح الآن{% else %}مغلق حالياً{% endif %}</span>
+      <span class="st-live-label" id="liveLabel">
+        {% if store.status_override == 'open' %}مفتوح
+        {% elif store.status_override == 'closed' %}مغلق
+        {% elif status.is_open %}مفتوح — جدول
+        {% else %}مغلق — جدول{% endif %}
+      </span>
       {% if status.next_open %}<span class="st-live-sub">{{ status.next_open }}</span>
       {% elif status.today_hours %}<span class="st-live-sub">{{ status.today_hours }}</span>{% endif %}
     </div>
     {% else %}
     <div class="st-live-indicator st-live-indicator--closed" id="liveIndicator">
       <span class="st-live-dot"></span>
-      <span class="st-live-label" id="liveLabel">{% if store.status_override == 'open' %}مفتوح دائماً{% elif store.status_override == 'closed' %}مغلق دائماً{% elif status.is_open %}مفتوح حسب الجدول{% else %}مغلق حسب الجدول{% endif %}</span>
+      <span class="st-live-label" id="liveLabel">
+        {% if store.status_override == 'open' %}مفتوح
+        {% elif store.status_override == 'closed' %}مغلق
+        {% elif status.is_open %}مفتوح — جدول
+        {% else %}مغلق — جدول{% endif %}
+      </span>
+    </div>
+    <div style="margin-top:.6rem;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);border-radius:8px;padding:.55rem .9rem;font-size:.8rem;color:#fbbf24;display:flex;align-items:center;gap:.5rem;">
+      <i class="fas fa-exclamation-triangle"></i>
+      المتجر غير مفعّل للعامة — فعّله من خلال "تفعيل المتجر للعامة" أدناه ثم احفظ.
     </div>
     {% endif %}
 
@@ -127,7 +141,7 @@
   {# Inline script — defined immediately after the buttons it controls #}
   <script>
   (function() {
-    var autoLabel = '{% if status.is_open %}مفتوح حسب الجدول{% else %}مغلق حسب الجدول{% endif %}';
+    var autoLabel = '{% if status.is_open %}مفتوح — جدول{% else %}مغلق — جدول{% endif %}';
     var autoCls   = '{% if status.is_open %}st-live-indicator--open{% else %}st-live-indicator--closed{% endif %}';
 
     document.getElementById('modePills').addEventListener('click', function(e) {
@@ -150,10 +164,10 @@
       if (!ind || !lbl) return;
       if (value === 'open') {
         ind.className = 'st-live-indicator st-live-indicator--open';
-        lbl.textContent = 'مفتوح دائماً';
+        lbl.textContent = 'مفتوح';
       } else if (value === 'closed') {
         ind.className = 'st-live-indicator st-live-indicator--closed';
-        lbl.textContent = 'مغلق دائماً';
+        lbl.textContent = 'مغلق';
       } else {
         ind.className = 'st-live-indicator ' + autoCls;
         lbl.textContent = autoLabel;
@@ -168,7 +182,7 @@
       </label>
       <input class="st-msg-input" type="text" name="open_message"
              value="{{ store.open_message }}" maxlength="200"
-             placeholder="أهلاً! نحن مفتوحون الآن...">
+             placeholder="أهلاً! المتجر مفتوح الآن...">
     </div>
     <div class="st-msg-field">
       <label class="st-msg-label st-msg-label--closed">

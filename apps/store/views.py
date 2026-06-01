@@ -34,30 +34,72 @@ def _get_store(slug: str, require_enabled: bool = True):
     return store
 
 
+def _store_closed_response(store, status):
+    from django.http import HttpResponse
+    # Only show next-open chip in auto mode (schedule-based), not when manually forced closed
+    next_open_html = ''
+    if status.get('next_open') and not status.get('override'):
+        next_open_html = f'<p class="next"><i class="fas fa-clock"></i> {status["next_open"]}</p>'
+    wa_html = (
+        f'<a href="https://wa.me/{store.whatsapp}" class="wa-link">'
+        f'<i class="fab fa-whatsapp"></i> تواصل معنا</a>'
+        if store.whatsapp else ''
+    )
+    label = 'مغلق'
+    html = f"""<!DOCTYPE html><html lang="ar" dir="rtl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{store.display_name}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root{{--brand:{store.accent_color};}}
+*{{box-sizing:border-box;margin:0;padding:0;}}
+body{{font-family:'Cairo','Segoe UI',sans-serif;background:#0f172a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;}}
+.box{{text-align:center;max-width:380px;}}
+.store-icon{{font-size:3.5rem;margin-bottom:1.5rem;line-height:1;}}
+h2{{font-size:1.55rem;font-weight:900;margin-bottom:.6rem;letter-spacing:-.01em;}}
+.badge-closed{{display:inline-flex;align-items:center;gap:.5rem;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.28);color:#fca5a5;border-radius:30px;padding:.42rem 1.1rem;font-size:.8rem;font-weight:700;margin-bottom:1.5rem;}}
+.next{{display:inline-flex;align-items:center;gap:.5rem;color:#fbbf24;font-size:.85rem;font-weight:600;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:.5rem 1rem;margin-bottom:1.5rem;}}
+.wa-link{{display:inline-flex;align-items:center;gap:.45rem;color:#4ade80;font-weight:700;text-decoration:none;font-size:.9rem;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);padding:.5rem 1.2rem;border-radius:10px;}}
+</style></head><body>
+<div class="box">
+  <div class="store-icon">🔒</div>
+  <div class="badge-closed"><i class="fas fa-lock"></i> {label}</div>
+  <h2>{store.display_name}</h2>
+  {next_open_html}
+  {wa_html}
+</div></body></html>"""
+    return HttpResponse(html, status=200)
+
+
 def _store_disabled_response(store):
     from django.shortcuts import render as _render
     from django.http import HttpResponse
     html = f"""<!DOCTYPE html><html lang="ar" dir="rtl">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{store.display_name}</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 :root{{--brand:{store.accent_color};}}
-body{{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;}}
-.box{{text-align:center;max-width:420px;}}
-.icon{{font-size:3.5rem;margin-bottom:1.5rem;opacity:.7;}}
-h2{{font-size:1.6rem;font-weight:800;margin-bottom:.75rem;}}
-p{{color:#94a3b8;font-size:.95rem;line-height:1.7;}}
-.badge-closed{{display:inline-flex;align-items:center;gap:.5rem;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);
-color:#fca5a5;border-radius:30px;padding:.4rem 1.1rem;font-size:.82rem;font-weight:700;margin-bottom:1.5rem;}}
+*{{box-sizing:border-box;margin:0;padding:0;}}
+body{{font-family:'Cairo','Segoe UI',sans-serif;background:#0f172a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;}}
+.box{{text-align:center;max-width:400px;}}
+.store-icon{{font-size:3.5rem;margin-bottom:1.5rem;line-height:1;}}
+h2{{font-size:1.55rem;font-weight:900;margin-bottom:.6rem;letter-spacing:-.01em;}}
+.sub{{color:#94a3b8;font-size:.9rem;line-height:1.75;margin-bottom:1.75rem;}}
+.badge-closed{{display:inline-flex;align-items:center;gap:.5rem;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.28);color:#fca5a5;border-radius:30px;padding:.42rem 1.1rem;font-size:.8rem;font-weight:700;margin-bottom:1.5rem;}}
+.wa-link{{display:inline-flex;align-items:center;gap:.45rem;color:#4ade80;font-weight:700;text-decoration:none;font-size:.9rem;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);padding:.5rem 1.2rem;border-radius:10px;transition:background .15s;}}
+.wa-link:hover{{background:rgba(74,222,128,.18);}}
 </style></head><body>
 <div class="box">
-  <div class="icon">🏪</div>
+  <div class="store-icon">🏪</div>
   <div class="badge-closed"><i class="fas fa-lock"></i> المتجر غير متاح حالياً</div>
   <h2>{store.display_name}</h2>
-  <p>هذا المتجر غير متاح للعرض في الوقت الحالي.<br>يرجى المحاولة لاحقاً.</p>
-  {'<p><a href="https://wa.me/'+store.whatsapp+'" style="color:#25d366;font-weight:700;"><i class="fab fa-whatsapp"></i> تواصل معنا</a></p>' if store.whatsapp else ''}
+  <p class="sub">هذا المتجر غير متاح للعرض في الوقت الحالي.<br>يرجى المحاولة لاحقاً.</p>
+  {'<a href="https://wa.me/'+store.whatsapp+'" class="wa-link"><i class="fab fa-whatsapp"></i> تواصل معنا</a>' if store.whatsapp else ''}
 </div></body></html>"""
     return HttpResponse(html, status=503)
 
@@ -93,6 +135,9 @@ def storefront(request, slug):
     store = _get_store(slug)
     if getattr(store, '_disabled', False):
         return _store_disabled_response(store)
+    status = store.get_status()
+    if not status['is_open']:
+        return _store_closed_response(store, status)
     products = _get_products(store)
 
     search = request.GET.get('q', '').strip()
@@ -147,6 +192,11 @@ def cart_add_view(request, slug):
     store = _get_store(slug)
     if getattr(store, '_disabled', False):
         return _store_disabled_response(store)
+    status = store.get_status()
+    if not status['is_open']:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'المتجر مغلق حالياً'}, status=403)
+        return _store_closed_response(store, status)
     item_id = request.POST.get('item_id')
     qty     = float(request.POST.get('qty', 1))
     cart_add(request, slug, int(item_id), qty)
@@ -194,6 +244,9 @@ def checkout_view(request, slug):
     store = _get_store(slug)
     if getattr(store, '_disabled', False):
         return _store_disabled_response(store)
+    status = store.get_status()
+    if not status['is_open']:
+        return _store_closed_response(store, status)
     cart       = get_cart(request, slug)
     cart_items = get_cart_items(slug, cart)
 
@@ -291,6 +344,9 @@ def manage_settings(request):
         store.bank_details      = request.POST.get('bank_details', '').strip()
         store.delivery_message  = request.POST.get('delivery_message', '').strip()
         store.status_override   = request.POST.get('status_override', 'auto')
+        # "always open" implies the store should be publicly accessible
+        if store.status_override == 'open':
+            store.is_enabled = True
         store.open_message      = request.POST.get('open_message', '').strip()
         store.closed_message    = request.POST.get('closed_message', '').strip()
 
