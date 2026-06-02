@@ -1,0 +1,24 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Category Tree Demo</title>
+  <link rel="stylesheet" href="{% static 'components/category-tree/category-tree.css' %}">
+  <style>body{display:flex;align-items:flex-start;justify-content:center;padding:28px;background:#f3f7fb}</style>
+</head>
+<body>
+  <div class="category-tree" id="demo-tree" data-json='[
+    {"name":"Electronics","children":[{"name":"Computers","children":[{"name":"Laptops"},{"name":"Desktops"}]},{"name":"Phones"}]},
+    {"name":"Home","children":[{"name":"Furniture"},{"name":"Kitchen","children":[{"name":"Cookware"}]}]},
+    {"name":"Services"}
+  ]'></div>
+
+  <script src="{% static 'components/category-tree/category-tree.js' %}"></script>
+  <script>
+    // optional: access API
+    // CategoryTree.init(document.getElementById('demo-tree'));
+  </script>
+</body>
+</html>

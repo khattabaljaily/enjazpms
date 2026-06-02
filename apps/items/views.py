@@ -567,12 +567,10 @@ def category_options_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    cats = (
-        Category.objects.for_tenant(tenant)
-        .filter(is_active=True)
-        .order_by('display_order', 'name')
-        .values('id', 'name')
-    )
+    qs = Category.objects.for_tenant(tenant).order_by('display_order', 'name')
+    if request.GET.get('all') != '1':
+        qs = qs.filter(is_active=True)
+    cats = qs.values('id', 'name', 'parent_id', 'icon', 'is_active', 'display_order')
     return JsonResponse({'success': True, 'categories': list(cats)})
 
 

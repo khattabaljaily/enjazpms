@@ -691,12 +691,13 @@
 (function () {
     'use strict';
 
-    const urlTable  = "{% url 'items:table_api' %}";
-    const urlCreate = "{% url 'items:create_api' %}";
-    const urlDetail = "{% url 'items:detail_api' 0 %}";
-    const urlTransactions = "{% url 'items:transactions_api' 0 %}";
-    const urlUpdate = "{% url 'items:update_api' 0 %}";
-    const urlDelete = "{% url 'items:delete_api' 0 %}";
+    const urlTable       = "{% url 'items:table_api' %}";
+    const urlCreate      = "{% url 'items:create_api' %}";
+    const urlDetail      = "{% url 'items:detail_api' 0 %}";
+    const urlTransactions= "{% url 'items:transactions_api' 0 %}";
+    const urlUpdate      = "{% url 'items:update_api' 0 %}";
+    const urlDelete      = "{% url 'items:delete_api' 0 %}";
+    const urlCatOptions  = "{% url 'items:category_options_api' %}";
     const CAP = {
         hasExpiryDates:  {{ tenant_capabilities.has_expiry_dates|yesno:"true,false" }},
         hasBatchNumbers: {{ tenant_capabilities.has_batch_numbers|yesno:"true,false" }},
@@ -1366,6 +1367,41 @@
             }
         });
     });
+
+    /* ── Category select: tree-indented ────────────────────── */
+    (function initCategoryTreeSelect() {
+        $.getJSON(urlCatOptions, function(resp) {
+            if (!resp.success || !resp.categories) return;
+            const cats   = resp.categories;
+            const byId   = {};
+            cats.forEach(c => { byId[c.id] = c; });
+
+            const childMap = {};
+            cats.forEach(c => { childMap[c.id] = []; });
+            cats.forEach(c => {
+                if (c.parent_id && childMap[c.parent_id]) childMap[c.parent_id].push(c);
+            });
+
+            const roots = cats.filter(c => !c.parent_id || !byId[c.parent_id]);
+            const sf    = (a, b) => (a.display_order - b.display_order) || a.name.localeCompare(b.name, 'ar');
+            roots.sort(sf);
+            Object.values(childMap).forEach(arr => arr.sort(sf));
+
+            const $sel   = $('#id_category');
+            const selVal = $sel.val();
+            $sel.find('option:not(:first)').remove();
+
+            function addOpts(nodes, depth) {
+                nodes.forEach(function(c) {
+                    const prefix   = depth > 0 ? '—'.repeat(depth) + ' ' : '';
+                    const selected = String(c.id) === String(selVal);
+                    $sel.append(new Option(prefix + c.name, c.id, false, selected));
+                    addOpts(childMap[c.id] || [], depth + 1);
+                });
+            }
+            addOpts(roots, 0);
+        });
+    })();
 
 })();
 </script>

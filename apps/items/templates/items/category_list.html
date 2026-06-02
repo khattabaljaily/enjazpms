@@ -4,90 +4,303 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/items.css' %}?v=1.0">
 <style>
-/* ── Category type toggle ─────────────────────────────────── */
-.cat-type-row {
-  display: flex;
-  gap: .75rem;
-  margin-bottom: 1.25rem;
-}
-.cat-type-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .55rem;
-  padding: .75rem 1rem;
-  border: 2px solid var(--border-light, #e5e7eb);
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: .875rem;
-  font-weight: 600;
-  color: var(--text-secondary, #6b7280);
-  background: var(--surface-alt, #f9fafb);
-  transition: border-color .15s, background .15s, color .15s;
-  user-select: none;
-}
-.cat-type-btn input[type=radio] { display: none; }
-.cat-type-btn.active {
-  border-color: var(--indigo-500, #6366f1);
-  background: var(--indigo-50, #eef2ff);
-  color: var(--indigo-700, #4338ca);
-}
-.cat-type-btn i { font-size: 1.1rem; }
+/* ═══════════════════════════════════════════════════════════
+   CATEGORY PAGE
+═══════════════════════════════════════════════════════════ */
 
-/* ── Parent reveal ────────────────────────────────────────── */
-#parentRow {
-  background: var(--surface-alt, #f9fafb);
-  border: 1px solid var(--border-light, #e5e7eb);
-  border-radius: 10px;
-  padding: .85rem 1rem;
-  margin-bottom: 1.1rem;
+/* ── Type toggle ─────────────────────────────────────────── */
+.cat-type-row { display:flex; gap:.75rem; margin-bottom:1.25rem; }
+.cat-type-btn {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:.55rem;
+  padding:.75rem 1rem;
+  border:2px solid var(--border-light,#e5e7eb); border-radius:12px;
+  cursor:pointer; font-size:.875rem; font-weight:600;
+  color:var(--text-secondary,#6b7280);
+  background:var(--surface-alt,#f9fafb);
+  transition:border-color .15s,background .15s,color .15s;
+  user-select:none;
+}
+.cat-type-btn input[type=radio]{ display:none; }
+.cat-type-btn.active{
+  border-color:var(--indigo-500,#6366f1);
+  background:var(--indigo-50,#eef2ff);
+  color:var(--indigo-700,#4338ca);
+}
+.cat-type-btn i{ font-size:1.1rem; }
+
+/* ── Parent row ──────────────────────────────────────────── */
+#parentRow{
+  background:var(--surface-alt,#f9fafb);
+  border:1px solid var(--border-light,#e5e7eb);
+  border-radius:10px; padding:.85rem 1rem; margin-bottom:1.1rem;
 }
 
 /* ── Optional label & hint ───────────────────────────────── */
-.cx-label-opt {
-  font-size: .68rem;
-  font-weight: 500;
-  color: var(--text-muted, #9ca3af);
-  background: var(--surface-alt, #f3f4f6);
-  border-radius: 4px;
-  padding: .1rem .45rem;
-  margin-right: .4rem;
-  vertical-align: middle;
+.cx-label-opt{
+  font-size:.68rem; font-weight:500;
+  color:var(--text-muted,#9ca3af);
+  background:var(--surface-alt,#f3f4f6);
+  border-radius:4px; padding:.1rem .45rem;
+  margin-right:.4rem; vertical-align:middle;
 }
-.cx-field-hint {
-  font-size: .75rem;
-  color: var(--text-muted, #9ca3af);
-  margin-top: .3rem;
-  line-height: 1.5;
-}
-[data-theme="dark"] .cx-label-opt { background: rgba(255,255,255,.08); color: #9ca3af; }
+.cx-field-hint{ font-size:.75rem; color:var(--text-muted,#9ca3af); margin-top:.3rem; line-height:1.5; }
+[data-theme="dark"] .cx-label-opt{ background:rgba(255,255,255,.08); color:#9ca3af; }
 
-/* ── Advanced toggle ──────────────────────────────────────── */
-.cat-advanced-toggle {
-  display: flex;
-  align-items: center;
-  gap: .45rem;
-  font-size: .78rem;
-  font-weight: 600;
-  color: var(--text-muted, #9ca3af);
-  cursor: pointer;
-  border: none;
-  background: none;
-  padding: .3rem 0;
-  margin-bottom: .75rem;
-  width: 100%;
-  text-align: right;
+/* ── Advanced toggle ─────────────────────────────────────── */
+.cat-advanced-toggle{
+  display:flex; align-items:center; gap:.45rem;
+  font-size:.78rem; font-weight:600;
+  color:var(--text-muted,#9ca3af);
+  cursor:pointer; border:none; background:none;
+  padding:.3rem 0; margin-bottom:.75rem;
+  width:100%; text-align:right;
 }
-.cat-advanced-toggle:hover { color: var(--text-secondary, #6b7280); }
-#advancedFields { display: none; }
-#advancedFields.open { display: block; }
+.cat-advanced-toggle:hover{ color:var(--text-secondary,#6b7280); }
+#advancedFields{ display:none; }
+#advancedFields.open{ display:block; }
 
-/* ── Type badge in table ──────────────────────────────────── */
-.cat-badge-main { background: #eef2ff; color: #4338ca; border-radius: 20px; padding: .18rem .65rem; font-size: .68rem; font-weight: 700; }
-.cat-badge-sub  { background: #f0fdf4; color: #166534; border-radius: 20px; padding: .18rem .65rem; font-size: .68rem; font-weight: 700; }
-[data-theme="dark"] .cat-badge-main { background: rgba(99,102,241,.18); color: #a5b4fc; }
-[data-theme="dark"] .cat-badge-sub  { background: rgba(16,185,129,.18); color: #6ee7b7; }
+/* ══════════════════════════════════════════════════════════
+   DESKTOP TREE
+══════════════════════════════════════════════════════════ */
+.cat-tree-row--root > td{ padding-top:.85rem; padding-bottom:.85rem; }
+.cat-tree-row--child > td{ padding-top:.6rem; padding-bottom:.6rem; }
+.cat-tree-row--child{ background:rgba(99,102,241,.015); }
+[data-theme="dark"] .cat-tree-row--child{ background:rgba(99,102,241,.045); }
+
+/* Name cell */
+.cat-name-cell{ display:flex; align-items:center; gap:.5rem; min-width:0; }
+
+/* Toggle chevron */
+.cat-tree-toggle{
+  width:1.5rem; height:1.5rem;
+  display:flex; align-items:center; justify-content:center;
+  border:none; background:none; cursor:pointer;
+  border-radius:6px; flex-shrink:0; padding:0;
+  color:var(--text-muted,#9ca3af);
+  transition:background .12s,color .12s;
+}
+.cat-tree-toggle:hover{ background:var(--indigo-50,#eef2ff); color:var(--indigo-600,#4f46e5); }
+.cat-tree-toggle--leaf{ pointer-events:none; visibility:hidden; }
+.cat-toggle-icon{ font-size:.6rem; transition:transform .2s; }
+.cat-tree-row--root[data-expanded="0"] .cat-toggle-icon{ transform:rotate(-90deg); }
+
+/* Root icon box */
+.cat-root-icon-box{
+  width:2rem; height:2rem;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:8px;
+  background:var(--indigo-50,#eef2ff);
+  color:var(--indigo-600,#4f46e5);
+  font-size:.85rem; flex-shrink:0;
+}
+[data-theme="dark"] .cat-root-icon-box{ background:rgba(99,102,241,.2); color:#a5b4fc; }
+
+/* Child icon box */
+.cat-child-icon-box{
+  width:1.6rem; height:1.6rem;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:6px;
+  background:var(--surface-alt,#f3f4f6);
+  border:1px solid var(--border-light,#e5e7eb);
+  color:var(--text-muted,#9ca3af);
+  font-size:.72rem; flex-shrink:0;
+}
+[data-theme="dark"] .cat-child-icon-box{
+  background:rgba(255,255,255,.06);
+  border-color:rgba(255,255,255,.1);
+  color:rgba(255,255,255,.4);
+}
+
+/* Tree indent & branch line */
+.cat-tree-indent{ display:inline-block; width:2.2rem; flex-shrink:0; }
+.cat-tree-branch-wrap{
+  position:relative; width:1.1rem; align-self:stretch; flex-shrink:0;
+}
+.cat-tree-branch-wrap::before{
+  content:''; position:absolute;
+  right:55%; top:0; bottom:50%;
+  border-right:1.5px solid var(--border-medium,#d1d5db);
+}
+.cat-tree-branch-wrap::after{
+  content:''; position:absolute;
+  right:55%; left:0; top:50%;
+  border-top:1.5px solid var(--border-medium,#d1d5db);
+}
+[data-theme="dark"] .cat-tree-branch-wrap::before,
+[data-theme="dark"] .cat-tree-branch-wrap::after{ border-color:rgba(255,255,255,.15); }
+
+/* Name text */
+.cat-name-text{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cat-tree-row--root .cat-name-text{ font-weight:700; font-size:.9rem; color:var(--text-primary,#111827); }
+.cat-tree-row--child .cat-name-text{ font-weight:600; font-size:.85rem; color:var(--text-secondary,#374151); }
+[data-theme="dark"] .cat-tree-row--root .cat-name-text,
+[data-theme="dark"] .cat-tree-row--child .cat-name-text{ color:var(--text-primary,#e5e7eb); }
+
+/* Badges */
+.cat-badge-main{ background:#eef2ff; color:#4338ca; border-radius:20px; padding:.15rem .6rem; font-size:.65rem; font-weight:700; white-space:nowrap; flex-shrink:0; }
+.cat-badge-sub { background:#f0fdf4; color:#166534; border-radius:20px; padding:.15rem .6rem; font-size:.65rem; font-weight:700; white-space:nowrap; flex-shrink:0; }
+[data-theme="dark"] .cat-badge-main{ background:rgba(99,102,241,.2); color:#a5b4fc; }
+[data-theme="dark"] .cat-badge-sub { background:rgba(16,185,129,.2); color:#6ee7b7; }
+
+/* Children count badge */
+.cat-children-count{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:1.25rem; height:1.25rem;
+  background:var(--indigo-100,#e0e7ff);
+  color:var(--indigo-700,#4338ca);
+  border-radius:999px; font-size:.63rem; font-weight:700;
+  padding:0 .3rem; flex-shrink:0;
+}
+[data-theme="dark"] .cat-children-count{ background:rgba(99,102,241,.25); color:#a5b4fc; }
+
+/* Hidden rows */
+.cat-row-hidden{ display:none !important; }
+@keyframes cat-row-in{ from{opacity:0;transform:translateY(-3px)} to{opacity:1;transform:translateY(0)} }
+.cat-tree-row--child:not(.cat-row-hidden){ animation:cat-row-in .15s ease; }
+
+/* Tree controls */
+.cat-tree-controls{ display:flex; align-items:center; gap:.4rem; }
+.cat-tree-ctrl-btn{
+  border:1px solid var(--border-light,#e5e7eb);
+  background:var(--surface-alt,#f9fafb);
+  color:var(--text-secondary,#6b7280);
+  border-radius:8px; padding:.32rem .7rem;
+  font-size:.74rem; font-weight:600; cursor:pointer;
+  display:flex; align-items:center; gap:.3rem;
+  transition:all .12s;
+}
+.cat-tree-ctrl-btn:hover{
+  border-color:var(--indigo-400,#818cf8);
+  color:var(--indigo-600,#4f46e5);
+  background:var(--indigo-50,#eef2ff);
+}
+@media(max-width:768px){ .cat-tree-controls{ display:none !important; } }
+
+/* Loading skeleton */
+.cat-skel td{ padding:.8rem 1rem; }
+.cat-skel-bar{
+  border-radius:6px;
+  background:linear-gradient(90deg,var(--border-light,#e5e7eb) 25%,var(--surface-alt,#f9fafb) 50%,var(--border-light,#e5e7eb) 75%);
+  background-size:200% 100%;
+  animation:cat-shimmer 1.5s infinite;
+}
+@keyframes cat-shimmer{ 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ══════════════════════════════════════════════════════════
+   MOBILE ACCORDION TREE
+══════════════════════════════════════════════════════════ */
+#categoryCardsMobile{ display:none; }
+
+.cat-mobile-node{
+  border:1px solid var(--border-light,#e5e7eb);
+  border-radius:14px; overflow:hidden;
+  background:var(--bg-card,#fff);
+  box-shadow:0 2px 8px rgba(15,23,42,.04);
+  transition:box-shadow .15s;
+}
+.cat-mobile-node:hover{ box-shadow:0 4px 16px rgba(15,23,42,.08); }
+[data-theme="dark"] .cat-mobile-node{
+  background:var(--surface,#1e2028);
+  border-color:var(--border-color,rgba(255,255,255,.1));
+}
+
+.cat-mobile-root-row{
+  display:flex; align-items:center; gap:.65rem;
+  padding:.875rem 1rem;
+  cursor:pointer; user-select:none;
+  transition:background .12s;
+}
+.cat-mobile-root-row.no-children{ cursor:default; }
+.cat-mobile-root-row:not(.no-children):active{ background:rgba(99,102,241,.06); }
+[data-theme="dark"] .cat-mobile-root-row:not(.no-children):active{ background:rgba(99,102,241,.1); }
+
+.cat-mobile-icon-box{
+  width:2.2rem; height:2.2rem;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:10px;
+  background:var(--indigo-50,#eef2ff);
+  color:var(--indigo-600,#4f46e5);
+  font-size:.9rem; flex-shrink:0;
+}
+[data-theme="dark"] .cat-mobile-icon-box{ background:rgba(99,102,241,.2); color:#a5b4fc; }
+
+.cat-mobile-root-info{ flex:1; min-width:0; }
+.cat-mobile-root-name{
+  font-weight:700; font-size:.92rem;
+  color:var(--text-primary,#111827);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.cat-mobile-root-sub{
+  font-size:.72rem; color:var(--text-muted,#9ca3af); margin-top:.12rem;
+}
+[data-theme="dark"] .cat-mobile-root-name{ color:var(--text-primary,#e5e7eb); }
+
+.cat-mobile-root-right{ display:flex; align-items:center; gap:.4rem; flex-shrink:0; }
+.cat-mobile-acc-arrow{
+  font-size:.65rem; color:var(--text-muted,#9ca3af);
+  transition:transform .22s;
+}
+.cat-mobile-node.open .cat-mobile-acc-arrow{ transform:rotate(-180deg); }
+
+/* Improve touch targets and spacing for mobile action buttons and accordion arrow */
+.cat-mobile-root-right .cxr-act{ padding:.45rem; margin-left:.28rem; }
+.cat-mobile-acc-btn{ border:none; background:transparent; padding:.5rem; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; margin-left:.35rem }
+.cat-mobile-acc-btn:active{ background:rgba(2,6,23,.04); }
+.cat-mobile-acc-btn .cat-mobile-acc-arrow{ font-size:.9rem }
+
+.cat-mobile-children{ display:none; border-top:1px solid var(--border-light,#e5e7eb); }
+.cat-mobile-node.open .cat-mobile-children{ display:block; }
+[data-theme="dark"] .cat-mobile-children{ border-top-color:rgba(255,255,255,.07); }
+
+.cat-mobile-child-item{
+  display:flex; align-items:center; gap:.6rem;
+  padding:.65rem 1rem .65rem 1.25rem;
+  border-bottom:1px solid var(--border-light,#e5e7eb);
+  background:var(--surface-alt,#f9fafb);
+  transition:background .1s;
+}
+.cat-mobile-child-item:last-child{ border-bottom:none; }
+[data-theme="dark"] .cat-mobile-child-item{
+  background:rgba(255,255,255,.025);
+  border-bottom-color:rgba(255,255,255,.06);
+}
+
+.cat-mobile-child-dot{
+  width:.35rem; height:.35rem;
+  border-radius:50%;
+  background:var(--border-medium,#d1d5db);
+  flex-shrink:0;
+}
+
+.cat-mobile-child-icon{
+  width:1.6rem; height:1.6rem;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:7px;
+  background:var(--bg-card,#fff);
+  border:1px solid var(--border-light,#e5e7eb);
+  color:var(--text-muted,#9ca3af);
+  font-size:.7rem; flex-shrink:0;
+}
+[data-theme="dark"] .cat-mobile-child-icon{
+  background:rgba(255,255,255,.06);
+  border-color:rgba(255,255,255,.1);
+  color:rgba(255,255,255,.4);
+}
+
+.cat-mobile-child-info{ flex:1; min-width:0; }
+.cat-mobile-child-name{
+  font-weight:600; font-size:.84rem;
+  color:var(--text-secondary,#374151);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+[data-theme="dark"] .cat-mobile-child-name{ color:var(--text-primary,#e5e7eb); }
+.cat-mobile-child-actions{ display:flex; align-items:center; gap:.25rem; flex-shrink:0; }
+
+/* Hide status column (desktop) and subcategory count badges everywhere */
+#categoriesTable th:nth-child(2), #categoriesTable td:nth-child(2) { display: none !important; }
+.cat-children-count, .cxr-status { display: none !important; }
+/* Remove main/sub badges */
+.cat-badge-main, .cat-badge-sub { display: none !important; }
 </style>
 {% endblock %}
 
@@ -131,6 +344,10 @@
       <i class="fas fa-folder"></i>
       <strong>{{ stats.root_count }}</strong><span>رئيسي</span>
     </span>
+    <span class="cx-stat-badge cx-stat-badge--info">
+      <i class="fas fa-check-circle"></i>
+      <strong>{{ stats.active }}</strong><span>نشط</span>
+    </span>
   </div>
 </div>
 
@@ -140,21 +357,39 @@
       <i class="fas fa-search cx-toolbar-search-icon"></i>
       <input type="text" id="categorySearchInput" class="cx-search-input" placeholder="ابحث باسم التصنيف...">
     </div>
+    <div class="cat-tree-controls" id="treeControls" style="display:none">
+      <button type="button" class="cat-tree-ctrl-btn" id="btnExpandAll">
+        <i class="fas fa-angle-double-down"></i><span>توسيع الكل</span>
+      </button>
+      <button type="button" class="cat-tree-ctrl-btn" id="btnCollapseAll">
+        <i class="fas fa-angle-double-up"></i><span>طي الكل</span>
+      </button>
+    </div>
   </div>
+
+  
+
+  {# Desktop tree table #}
   <div class="cx-table-wrap">
     <table id="categoriesTable" class="cx-table">
       <thead>
         <tr>
-          <th>الاسم</th>
-          <th>النوع</th>
-          <th>ينتمي إلى</th>
+          <th>التصنيف</th>
           <th>الحالة</th>
           <th></th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="categoriesTbody">
+        <tr class="cat-skel"><td><div class="cat-skel-bar" style="height:.85rem;width:55%"></div></td><td><div class="cat-skel-bar" style="height:.85rem;width:50px"></div></td><td></td></tr>
+        <tr class="cat-skel"><td><div class="cat-skel-bar" style="height:.75rem;width:38%;margin-right:2rem"></div></td><td><div class="cat-skel-bar" style="height:.75rem;width:40px"></div></td><td></td></tr>
+        <tr class="cat-skel"><td><div class="cat-skel-bar" style="height:.75rem;width:30%;margin-right:2rem"></div></td><td><div class="cat-skel-bar" style="height:.75rem;width:50px"></div></td><td></td></tr>
+        <tr class="cat-skel"><td><div class="cat-skel-bar" style="height:.85rem;width:48%"></div></td><td><div class="cat-skel-bar" style="height:.85rem;width:55px"></div></td><td></td></tr>
+      </tbody>
     </table>
   </div>
+
+  {# Mobile accordion tree #}
+  <div id="categoryCardsMobile" class="categories-mobile-card-list"></div>
 </div>
 
 </div>
@@ -176,7 +411,6 @@
           <div class="cx-modal-body">
             <div class="alert alert-danger d-none js-form-errors mb-3"></div>
 
-            {# ── Type selector ── #}
             <div class="cat-type-row">
               <label class="cat-type-btn active" id="btnTypeMain">
                 <input type="radio" name="cat_type" value="main" checked>
@@ -188,19 +422,16 @@
               </label>
             </div>
 
-            {# ── Parent (visible only when فرعي) ── #}
             <div id="parentRow" class="d-none">
               <label class="cx-label">ينتمي إلى <sup class="cx-required">*</sup></label>
               {{ form.parent }}
             </div>
 
-            {# ── Name ── #}
             <div class="mb-3">
               <label class="cx-label" for="id_name">الاسم <sup class="cx-required">*</sup></label>
               {{ form.name }}
             </div>
 
-            {# ── Active toggle ── #}
             <label class="cx-toggle-card w-100 mb-3" for="id_is_active">
               <div class="cx-toggle-info">
                 <span class="cx-toggle-title">نشط</span>
@@ -210,7 +441,6 @@
               <div class="cx-toggle-switch"></div>
             </label>
 
-            {# ── Advanced options (collapsed) ── #}
             <button type="button" class="cat-advanced-toggle" id="advancedToggleBtn">
               <i class="fas fa-chevron-left" id="advancedArrow"></i>
               خيارات إضافية
@@ -219,32 +449,22 @@
             <div id="advancedFields">
               <div class="row g-3">
                 <div class="col-12 col-sm-6">
-                  <label class="cx-label" for="id_icon">
-                    أيقونة
-                    <span class="cx-label-opt">اختياري</span>
-                  </label>
+                  <label class="cx-label" for="id_icon">أيقونة <span class="cx-label-opt">اختياري</span></label>
                   {{ form.icon }}
                   <div class="cx-field-hint">{{ form.icon.help_text }}</div>
                 </div>
                 <div class="col-12 col-sm-6">
-                  <label class="cx-label" for="id_display_order">
-                    ترتيب العرض
-                    <span class="cx-label-opt">اختياري</span>
-                  </label>
+                  <label class="cx-label" for="id_display_order">ترتيب العرض <span class="cx-label-opt">اختياري</span></label>
                   {{ form.display_order }}
                   <div class="cx-field-hint">{{ form.display_order.help_text }}</div>
                 </div>
                 <div class="col-12">
-                  <label class="cx-label" for="id_description">
-                    وصف
-                    <span class="cx-label-opt">اختياري</span>
-                  </label>
+                  <label class="cx-label" for="id_description">وصف <span class="cx-label-opt">اختياري</span></label>
                   {{ form.description }}
                   <div class="cx-field-hint">{{ form.description.help_text }}</div>
                 </div>
               </div>
             </div>
-
           </div>
 
           <div class="cx-modal-footer">
@@ -315,7 +535,6 @@
 (function () {
   'use strict';
 
-  const urlTable   = "{% url 'items:category_table_api' %}";
   const urlCreate  = "{% url 'items:category_create_api' %}";
   const urlDetail  = "{% url 'items:category_detail_api' 0 %}";
   const urlUpdate  = "{% url 'items:category_update_api' 0 %}";
@@ -334,45 +553,234 @@
   const $submitBtn    = $('#categorySubmitBtn');
   const $idInput      = $('#categoryId');
 
-  /* ── DataTable ──────────────────────────────────────────── */
-  const dt = $('#categoriesTable').DataTable({
-    processing: true, serverSide: true,
-    dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
-    pageLength: 50,
-    language: { emptyTable:'لا توجد تصنيفات', zeroRecords:'لا توجد نتائج', paginate:{next:'التالي',previous:'السابق'}, processing:'جاري التحميل...' },
-    ajax: { url: urlTable },
-    columns: [
-      { data: null, render: function(_, __, r) {
-          return `<strong><i class="fas ${r.icon || 'fa-tag'} me-2 text-muted"></i>${r.name}</strong>`;
-      }},
-      { data: null, render: function(_, __, r) {
-          return r.parent && r.parent !== '-'
-            ? '<span class="cat-badge-sub">فرعي</span>'
-            : '<span class="cat-badge-main">رئيسي</span>';
-      }},
-      { data: 'parent', render: function(p) {
-          return p && p !== '-' ? `<span>${p}</span>` : '<span class="cxr-empty">—</span>';
-      }},
-      { data: 'is_active', render: function(a) {
-          return a
-            ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
-            : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>';
-      }},
-      { data: null, orderable: false, searchable: false, render: function(_, __, r) {
-          return `<div class="cxr-actions">
-            <button class="cxr-act js-edit-category" data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
-            <button class="cxr-act cxr-act--del js-delete-category" data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>
-          </div>`;
-      }}
-    ]
-  });
+  /* ── Data store ──────────────────────────────────────────── */
+  let allCats = [];
+  let catById = {};
 
+  /* ── Tree helpers ────────────────────────────────────────── */
+  function buildChildMap(cats) {
+    const m = {};
+    cats.forEach(c => { m[c.id] = []; });
+    cats.forEach(c => { if (c.parent_id && m[c.parent_id]) m[c.parent_id].push(c); });
+    return m;
+  }
+
+  function sortFn(a, b) {
+    return (a.display_order - b.display_order) || a.name.localeCompare(b.name, 'ar');
+  }
+
+  function flattenTree(cats, search) {
+    const childMap = buildChildMap(cats);
+    const roots    = cats.filter(c => !c.parent_id || !catById[c.parent_id]);
+    roots.sort(sortFn);
+    Object.values(childMap).forEach(arr => arr.sort(sortFn));
+
+    const flat = [];
+    const lc   = search ? search.toLowerCase() : '';
+
+    if (lc) {
+      cats.forEach(c => {
+        if (c.name.toLowerCase().includes(lc)) {
+          flat.push({
+            ...c, depth: 0,
+            parentName: c.parent_id && catById[c.parent_id] ? catById[c.parent_id].name : null,
+            childCount: (childMap[c.id] || []).length
+          });
+        }
+      });
+    } else {
+      function traverse(node, depth) {
+        const kids = childMap[node.id] || [];
+        flat.push({
+          ...node, depth,
+          parentName: node.parent_id && catById[node.parent_id] ? catById[node.parent_id].name : null,
+          childCount: kids.length
+        });
+        kids.forEach(child => traverse(child, depth + 1));
+      }
+      roots.forEach(r => traverse(r, 0));
+    }
+    return flat;
+  }
+
+  /* ── Desktop tree row ────────────────────────────────────── */
+  function renderRow(c) {
+    const isRoot = c.depth === 0;
+    const icon   = c.icon || (isRoot ? 'fa-folder' : 'fa-tag');
+
+    let nameInner;
+    if (isRoot) {
+      const hasKids   = (c.childCount || 0) > 0;
+      const toggleBtn = hasKids
+        ? `<button class="cat-tree-toggle js-tree-toggle" data-id="${c.id}" title="${hasKids ? 'طي / توسيع' : ''}"><i class="fas fa-chevron-down cat-toggle-icon"></i></button>`
+        : `<span class="cat-tree-toggle cat-tree-toggle--leaf"><i class="fas fa-chevron-down cat-toggle-icon"></i></span>`;
+      const kidsBadge = hasKids ? `<span class="cat-children-count">${c.childCount}</span>` : '';
+      nameInner = `${toggleBtn}
+        <div class="cat-root-icon-box"><i class="fas ${icon}"></i></div>
+        <span class="cat-name-text">${c.name}</span>
+        ${kidsBadge}
+        <span class="cat-badge-main">رئيسي</span>`;
+    } else {
+      nameInner = `<span class="cat-tree-indent"></span>
+        <span class="cat-tree-branch-wrap"></span>
+        <div class="cat-child-icon-box"><i class="fas ${icon}"></i></div>
+        <span class="cat-name-text">${c.name}</span>
+        <span class="cat-badge-sub">فرعي</span>`;
+    }
+
+    const status = c.is_active
+      ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+      : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>';
+
+    return `<tr class="cat-tree-row ${isRoot ? 'cat-tree-row--root' : 'cat-tree-row--child'}" data-id="${c.id}" ${isRoot ? 'data-expanded="1"' : `data-parent-id="${c.parent_id}"`}>
+      <td><div class="cat-name-cell">${nameInner}</div></td>
+      <td>${status}</td>
+      <td><div class="cxr-actions">
+        <button class="cxr-act js-edit-category" data-id="${c.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+        <button class="cxr-act cxr-act--del js-delete-category" data-id="${c.id}" data-name="${c.name}" title="حذف"><i class="fas fa-trash"></i></button>
+      </div></td>
+    </tr>`;
+  }
+
+  /* ── Mobile accordion node ───────────────────────────────── */
+  function renderMobileNode(root, children) {
+    const icon    = root.icon || 'fa-folder';
+    const hasKids = children.length > 0;
+
+    const status = root.is_active
+      ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+      : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>';
+
+    const kidsBadge  = hasKids ? `<span class="cat-children-count">${children.length}</span>` : '';
+    const accArrow   = hasKids ? '<button class="cat-mobile-acc-btn js-acc-arrow" type="button" aria-label="توسيع/طي"><i class="fas fa-chevron-down cat-mobile-acc-arrow"></i></button>' : '';
+    const subText    = hasKids
+      ? `${children.length} تصنيف فرعي`
+      : 'تصنيف رئيسي';
+
+    const childrenHtml = children.map(child => {
+      const cIcon   = child.icon || 'fa-tag';
+      const cStatus = child.is_active
+        ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+        : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>';
+      return `<div class="cat-mobile-child-item">
+        <span class="cat-mobile-child-dot"></span>
+        <div class="cat-mobile-child-icon"><i class="fas ${cIcon}"></i></div>
+        <div class="cat-mobile-child-info">
+          <div class="cat-mobile-child-name">${child.name}</div>
+          <div style="margin-top:.15rem">${cStatus}</div>
+        </div>
+        <div class="cat-mobile-child-actions">
+          <button class="cxr-act js-edit-category" data-id="${child.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+          <button class="cxr-act cxr-act--del js-delete-category" data-id="${child.id}" data-name="${child.name}" title="حذف"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="cat-mobile-node">
+      <div class="cat-mobile-root-row ${hasKids ? 'js-mobile-acc-toggle' : 'no-children'}">
+        <div class="cat-mobile-icon-box"><i class="fas ${icon}"></i></div>
+        <div class="cat-mobile-root-info">
+          <div class="cat-mobile-root-name">${root.name}</div>
+          <div class="cat-mobile-root-sub">${subText}</div>
+        </div>
+        <div class="cat-mobile-root-right">
+          ${status}
+          ${kidsBadge}
+          <button class="cxr-act js-edit-category" data-id="${root.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+          <button class="cxr-act cxr-act--del js-delete-category" data-id="${root.id}" data-name="${root.name}" title="حذف"><i class="fas fa-trash"></i></button>
+          ${accArrow}
+        </div>
+      </div>
+      ${hasKids ? `<div class="cat-mobile-children">${childrenHtml}</div>` : ''}
+    </div>`;
+  }
+
+  /* ── Render ──────────────────────────────────────────────── */
+  function renderTable(search) {
+    const tbody  = document.getElementById('categoriesTbody');
+    const mobile = document.getElementById('categoryCardsMobile');
+    const flat   = flattenTree(allCats, search);
+    const empty  = search ? 'لا توجد نتائج' : 'لا توجد تصنيفات';
+
+    if (!flat.length) {
+      const emptyHtml = `<i class="fas fa-tags d-block mb-2" style="font-size:1.5rem;opacity:.25"></i>${empty}`;
+      tbody.innerHTML  = `<tr><td colspan="3" class="text-center text-muted py-5">${emptyHtml}</td></tr>`;
+      mobile.innerHTML = `<div class="text-center text-muted py-5">${emptyHtml}</div>`;
+      $('#treeControls').hide();
+      return;
+    }
+
+    tbody.innerHTML = flat.map(renderRow).join('');
+
+    // Show expand/collapse controls only when there are collapsible nodes (desktop only)
+    const hasCollapsible = !search && flat.some(c => c.depth === 0 && c.childCount > 0);
+    $('#treeControls').toggle(hasCollapsible);
+
+    // Mobile accordion
+    if (search) {
+      mobile.innerHTML = flat.map(c => renderMobileNode(c, [])).join('');
+    } else {
+      const cMap  = buildChildMap(allCats);
+      const roots = allCats.filter(c => !c.parent_id || !catById[c.parent_id]);
+      roots.sort(sortFn);
+      mobile.innerHTML = roots.map(r => {
+        const kids = (cMap[r.id] || []).slice().sort(sortFn);
+        return renderMobileNode(r, kids);
+      }).join('');
+    }
+  }
+
+  function loadCategories(callback) {
+    $.getJSON(urlOptions + '?all=1', function(resp) {
+      if (!resp.success) return;
+      allCats = resp.categories;
+      catById = {};
+      allCats.forEach(c => { catById[c.id] = c; });
+      renderTable($('#categorySearchInput').val().trim());
+      if (callback) callback();
+    });
+  }
+
+  /* ── Search ──────────────────────────────────────────────── */
   $('#categorySearchInput').on('input', function() {
     clearTimeout(this._t);
-    this._t = setTimeout(() => dt.search(this.value).draw(), 350);
+    this._t = setTimeout(() => renderTable(this.value.trim()), 200);
   });
 
-  /* ── Type toggle (رئيسي / فرعي) ────────────────────────── */
+  /* ── Desktop tree toggle ─────────────────────────────────── */
+  $(document).on('click', '.js-tree-toggle', function(e) {
+    e.stopPropagation();
+    const id       = $(this).data('id');
+    const $root    = $(`tr.cat-tree-row--root[data-id="${id}"]`);
+    const expanded = $root.attr('data-expanded') === '1';
+    $root.attr('data-expanded', expanded ? '0' : '1');
+    $(`tr.cat-tree-row--child[data-parent-id="${id}"]`).toggleClass('cat-row-hidden', expanded);
+  });
+
+  /* ── Expand / Collapse All ───────────────────────────────── */
+  $('#btnExpandAll').on('click', function() {
+    $('tr.cat-tree-row--root').attr('data-expanded', '1');
+    $('tr.cat-tree-row--child').removeClass('cat-row-hidden');
+  });
+  $('#btnCollapseAll').on('click', function() {
+    $('tr.cat-tree-row--root').attr('data-expanded', '0');
+    $('tr.cat-tree-row--child').addClass('cat-row-hidden');
+  });
+
+  /* ── Mobile accordion toggle ─────────────────────────────── */
+  $(document).on('click', '.js-mobile-acc-toggle', function(e) {
+    if ($(e.target).closest('.cxr-act').length) return;
+    if ($(e.target).closest('.js-acc-arrow').length) return; // arrow has its own handler
+    $(this).closest('.cat-mobile-node').toggleClass('open');
+  });
+
+  // Explicit arrow button handler (stops propagation so nearby buttons aren't triggered)
+  $(document).on('click', '.js-acc-arrow', function(e) {
+    e.stopPropagation();
+    $(this).closest('.cat-mobile-node').toggleClass('open');
+  });
+
+  /* ── Type toggle ─────────────────────────────────────────── */
   function setType(type) {
     const isMain = type === 'main';
     $('#btnTypeMain').toggleClass('active', isMain);
@@ -382,32 +790,45 @@
     $('#parentRow').toggleClass('d-none', isMain);
     if (isMain) $('#id_parent').val('');
   }
+  $('#btnTypeMain, #btnTypeSub').on('click', function() { setType($(this).find('input').val()); });
 
-  $('#btnTypeMain, #btnTypeSub').on('click', function() {
-    setType($(this).find('input').val());
-  });
-
-  /* ── Advanced toggle ────────────────────────────────────── */
+  /* ── Advanced toggle ─────────────────────────────────────── */
   $('#advancedToggleBtn').on('click', function() {
-    const $fields = $('#advancedFields');
-    const open = $fields.toggleClass('open').hasClass('open');
+    const open = $('#advancedFields').toggleClass('open').hasClass('open');
     $('#advancedArrow').css('transform', open ? 'rotate(-90deg)' : '');
   });
 
-  /* ── Parent select refresh ───────────────────────────────── */
+  /* ── Parent select — root categories only ───────────────── */
   function refreshParentSelect(selectedId) {
-    $.getJSON(urlOptions, function(resp) {
-      if (!resp.success) return;
+    function build() {
+      const activeCats = allCats.filter(c => c.is_active);
+      const roots      = activeCats.filter(c => !c.parent_id || !catById[c.parent_id] || !catById[c.parent_id].is_active);
+      roots.sort(sortFn);
+
       const $sel = $('#id_parent');
-      const current = selectedId !== undefined ? selectedId : $sel.val();
       $sel.find('option:not(:first)').remove();
-      resp.categories.forEach(function(c) {
-        $sel.append(new Option(c.name, c.id, false, String(c.id) === String(current)));
+
+      roots.forEach(function(c) {
+        const selected = String(c.id) === String(selectedId);
+        $sel.append(new Option(c.name, c.id, false, selected));
       });
-    });
+    }
+
+    if (!allCats.length) {
+      $.getJSON(urlOptions + '?all=1', function(resp) {
+        if (resp.success) {
+          allCats = resp.categories;
+          catById = {};
+          allCats.forEach(c => { catById[c.id] = c; });
+        }
+        build();
+      });
+    } else {
+      build();
+    }
   }
 
-  /* ── Reset form ─────────────────────────────────────────── */
+  /* ── Form helpers ────────────────────────────────────────── */
   function resetForm() {
     $form[0].reset();
     $idInput.val('');
@@ -430,34 +851,37 @@
   /* ── Open edit ───────────────────────────────────────────── */
   function openEdit(id) {
     resetForm();
-    $.ajax({ url: apiUrl(urlDetail, id), method: 'GET', success: function(resp) {
-      if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
-      const d = resp.data;
-      $idInput.val(d.id);
-      $('#id_name').val(d.name || '');
-      $('#id_icon').val(d.icon || 'fa-tag');
-      $('#id_description').val(d.description || '');
-      $('#id_display_order').val(d.display_order || 0);
-      $('#id_is_active').prop('checked', !!d.is_active);
-      if (d.parent) {
-        refreshParentSelect(d.parent);
-        setType('sub');
-      } else {
-        refreshParentSelect(null);
-        setType('main');
-      }
-      $('#categoryModalTitle').text('تعديل التصنيف');
-      $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
-      categoryModal.show();
-    }, error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }});
+    $.ajax({ url: apiUrl(urlDetail, id), method: 'GET',
+      success: function(resp) {
+        if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
+        const d = resp.data;
+        $idInput.val(d.id);
+        $('#id_name').val(d.name || '');
+        $('#id_icon').val(d.icon || 'fa-tag');
+        $('#id_description').val(d.description || '');
+        $('#id_display_order').val(d.display_order || 0);
+        $('#id_is_active').prop('checked', !!d.is_active);
+        if (d.parent) {
+          refreshParentSelect(d.parent);
+          setType('sub');
+        } else {
+          refreshParentSelect(null);
+          setType('main');
+        }
+        $('#categoryModalTitle').text('تعديل التصنيف');
+        $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
+        categoryModal.show();
+      },
+      error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+    });
   }
 
-  /* ── Submit ─────────────────────────────────────────────── */
+  /* ── Submit ──────────────────────────────────────────────── */
   $form.on('submit', function(e) {
     e.preventDefault();
     EnjazIMS.clearFormErrors($form);
-    const id  = $idInput.val();
-    const url = id ? apiUrl(urlUpdate, id) : urlCreate;
+    const id   = $idInput.val();
+    const url  = id ? apiUrl(urlUpdate, id) : urlCreate;
     const orig = $submitBtn.html();
     EnjazIMS.showLoading($submitBtn);
     $.ajax({ url, method: 'POST', data: $form.serialize(),
@@ -465,8 +889,7 @@
         EnjazIMS.hideLoading($submitBtn, orig);
         if (resp.success) {
           categoryModal.hide();
-          dt.ajax.reload(null, false);
-          refreshParentSelect(null);
+          loadCategories();
           EnjazIMS.toast(resp.message, 'success');
         } else {
           EnjazIMS.showFormError($form, resp.message);
@@ -481,7 +904,7 @@
     });
   });
 
-  /* ── Delete ─────────────────────────────────────────────── */
+  /* ── Delete ──────────────────────────────────────────────── */
   $(document).on('click', '.js-delete-category', function() {
     $('#deleteCategoryId').val($(this).data('id'));
     $('#deleteCategoryName').text($(this).data('name'));
@@ -490,15 +913,18 @@
   $('#confirmDeleteCategoryBtn').on('click', function() {
     const id = $('#deleteCategoryId').val();
     if (!id) return;
-    $.ajax({ url: apiUrl(urlDelete, id), method: 'POST', success: function(resp) {
-      deleteModal.hide();
-      if (resp.success) { dt.ajax.reload(null, false); refreshParentSelect(null); EnjazIMS.toast(resp.message, 'success'); }
-      else EnjazIMS.toast(resp.message, 'error');
-    }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
+    $.ajax({ url: apiUrl(urlDelete, id), method: 'POST',
+      success: function(resp) {
+        deleteModal.hide();
+        if (resp.success) { loadCategories(); EnjazIMS.toast(resp.message, 'success'); }
+        else EnjazIMS.toast(resp.message, 'error');
+      },
+      error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }
+    });
   });
   $(document).on('click', '.js-edit-category', function() { openEdit($(this).data('id')); });
 
-  /* ── Import ─────────────────────────────────────────────── */
+  /* ── Import ──────────────────────────────────────────────── */
   const importModal = new bootstrap.Modal(document.getElementById('importCategoriesModal'));
   $('#btnOpenImportCategories').on('click', function() {
     $('#importCategoriesFile').val('');
@@ -521,10 +947,10 @@
         const cls = resp.success ? 'alert-success' : 'alert-danger';
         let html = `<div class="alert ${cls} mb-0">${resp.message}</div>`;
         if (resp.errors && resp.errors.length) {
-          html += '<ul class="mt-2 mb-0 small text-danger">' + resp.errors.map(function(e){ return `<li>${e}</li>`; }).join('') + '</ul>';
+          html += '<ul class="mt-2 mb-0 small text-danger">' + resp.errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
         }
         $('#importCategoriesResult').removeClass('d-none').html(html);
-        if (resp.success && resp.imported > 0) dt.ajax.reload(null, false);
+        if (resp.success && resp.imported > 0) loadCategories();
       },
       error: function() {
         EnjazIMS.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
@@ -532,6 +958,9 @@
       }
     });
   });
+
+  /* ── Initial load ────────────────────────────────────────── */
+  loadCategories();
 
 })();
 </script>
