@@ -126,7 +126,8 @@ def item_table_api(request):
     status_filter = request.GET.get('status', '').strip()
     category_id = request.GET.get('category', '').strip()
 
-    qs = Item.objects.for_tenant(tenant).select_related('category', 'unit')
+    from .models import ItemUnit
+    qs = Item.objects.for_tenant(tenant).select_related('category').prefetch_related('item_units')
     records_total = qs.count()
 
     if status_filter == 'active':
@@ -161,6 +162,14 @@ def item_table_api(request):
 
     qs = qs.order_by(order_field)[start:start + length]
 
+    def _unit_label(item):
+        units = list(item.item_units.order_by('factor'))
+        if not units:
+            return item.base_unit_name or '-'
+        if len(units) == 1:
+            return units[0].name
+        return '-'   # multi-unit: show — per user request
+
     data = [
         {
             'id': item.id,
@@ -169,7 +178,8 @@ def item_table_api(request):
             'item_type': item.item_type,
             'barcode': item.barcode or '-',
             'category': item.category.name if item.category else '-',
-            'unit': str(item.unit) if item.unit else '-',
+            'unit': _unit_label(item),
+            'has_multiple_units': item.has_multiple_units,
             'cost_price': str(item.cost_price),
             'selling_price': str(item.selling_price),
             'track_expiry': item.track_expiry,
@@ -186,6 +196,45 @@ def item_table_api(request):
         'recordsFiltered': records_filtered,
         'data': data,
     })
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+def _save_item_units(item, units_json_str, tenant):
+    """Parse units_json and sync ItemUnit records for this item."""
+    import json
+    from decimal import Decimal, InvalidOperation
+    from .models import ItemUnit
+
+    if not units_json_str:
+        return
+
+    try:
+        units_data = json.loads(units_json_str)
+    except (ValueError, TypeError):
+        return
+
+    if not isinstance(units_data, list) or not units_data:
+        return
+
+    # Delete old and recreate
+    ItemUnit.objects.filter(item=item).delete()
+
+    has_multiple = len(units_data) > 1
+    for row in units_data:
+        name = str(row.get('name', '')).strip()
+        if not name:
+            continue
+        try:
+            factor = Decimal(str(row.get('factor', 1)))
+        except InvalidOperation:
+            factor = Decimal('1')
+        ItemUnit.objects.create(tenant=tenant, item=item, name=name, factor=factor)
+
+    item.has_multiple_units = has_multiple
+    item.save(update_fields=['has_multiple_units'])
 
 
 # ============================================================
@@ -209,7 +258,7 @@ def item_create_api(request):
         item.created_by = request.user
         item.updated_by = request.user
         item.save()
-        # بعد الـ save يُطلق الـ signal الذي يُنشئ StockQuantity تلقائياً
+        _save_item_units(item, request.POST.get('units_json', ''), tenant)
         return JsonResponse({'success': True, 'message': 'تم إضافة المنتج بنجاح', 'id': item.id})
 
     return JsonResponse({
@@ -235,6 +284,7 @@ def item_detail_api(request, pk):
     except Item.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المنتج غير موجود'}, status=404)
 
+    iu_list = list(item.item_units.order_by('factor').values('id', 'name', 'factor'))
     return JsonResponse({
         'success': True,
         'data': {
@@ -261,6 +311,11 @@ def item_detail_api(request, pk):
             'is_active': item.is_active,
             'is_sellable': item.is_sellable,
             'is_purchasable': item.is_purchasable,
+            'has_multiple_units': item.has_multiple_units,
+            'item_units': [
+                {'id': u['id'], 'name': u['name'], 'factor': str(u['factor'])}
+                for u in iu_list
+            ],
         },
     })
 
@@ -349,6 +404,7 @@ def item_update_api(request, pk):
         updated = form.save(commit=False)
         updated.updated_by = request.user
         updated.save()
+        _save_item_units(item, request.POST.get('units_json', ''), tenant)
         return JsonResponse({'success': True, 'message': 'تم تحديث المنتج بنجاح'})
 
     return JsonResponse({
@@ -415,6 +471,7 @@ def item_search_api(request):
     if len(q) < min_chars:
         return JsonResponse({'results': []})
 
+    from .models import ItemUnit as ItemUnitModel
     limit = 100 if not q else 15
     base_qs = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
     if q:
@@ -422,20 +479,25 @@ def item_search_api(request):
             Q(name__icontains=q) |
             Q(barcode__icontains=q) |
             Q(sku__icontains=q)
-        ).select_related('unit', 'purchase_unit')[:limit]
+        ).prefetch_related('item_units')[:limit]
     else:
-        qs = base_qs.order_by('name').select_related('unit', 'purchase_unit')[:limit]
+        qs = base_qs.order_by('name').prefetch_related('item_units')[:limit]
 
     results = []
     for item in qs:
-        pu = item.purchase_unit
-        u  = item.unit
-        # Build unit options: each entry = {id, name, factor}
-        units = []
-        if u:
-            units.append({'id': u.id, 'name': str(u), 'factor': '1'})
-        if pu and pu.id != (u.id if u else None):
-            units.append({'id': pu.id, 'name': str(pu), 'factor': str(pu.conversion_factor)})
+        # Use per-product ItemUnit if defined, else fall back to legacy unit/purchase_unit
+        iu_qs = list(item.item_units.order_by('factor'))
+        if iu_qs:
+            units    = [{'id': iu.id, 'name': iu.name, 'factor': str(iu.factor)} for iu in iu_qs]
+            base_iu  = iu_qs[0]
+            unit_id   = base_iu.id
+            unit_name = base_iu.name
+            unit_factor = '1'
+        else:
+            units = []
+            unit_id   = None
+            unit_name = ''
+            unit_factor = '1'
 
         results.append({
             'id': item.id,
@@ -444,11 +506,9 @@ def item_search_api(request):
             'barcode': item.barcode,
             'cost_price': str(item.cost_price),
             'selling_price': str(item.selling_price),
-            'unit_id': u.id if u else None,
-            'unit_name': str(u) if u else '',
-            'purchase_unit_id': pu.id if pu else (u.id if u else None),
-            'purchase_unit_name': str(pu) if pu else (str(u) if u else ''),
-            'purchase_unit_factor': str(pu.conversion_factor) if pu else '1',
+            'unit_id': unit_id,
+            'unit_name': unit_name,
+            'unit_factor': unit_factor,
             'units': units,
             'track_expiry': item.track_expiry,
             'track_batch': item.track_batch,
@@ -783,7 +843,7 @@ def item_export_api(request):
         'تتبع الصلاحية', 'تتبع الدفعات', 'تتبع السيريال', 'متغيرات',
         'للبيع', 'للشراء', 'نشط',
     ])
-    qs = Item.objects.for_tenant(tenant).select_related('category', 'unit', 'purchase_unit').order_by('name')
+    qs = Item.objects.for_tenant(tenant).select_related('category').prefetch_related('item_units').order_by('name')
     for item in qs:
         writer.writerow([
             item.name,
@@ -791,8 +851,8 @@ def item_export_api(request):
             item.sku or '',
             item.barcode or '',
             item.category.name if item.category else '',
-            item.unit.name if item.unit else '',
-            item.purchase_unit.name if item.purchase_unit else '',
+            item.base_unit_name,
+            '',
             item.cost_price,
             item.selling_price,
             item.min_selling_price,
@@ -1177,6 +1237,15 @@ def item_meta_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
     from django.shortcuts import get_object_or_404
     item = get_object_or_404(Item, pk=pk, tenant=tenant)
+    iu_qs = list(item.item_units.order_by('factor'))
+    if iu_qs:
+        units     = [{'id': u.id, 'name': u.name, 'factor': str(u.factor)} for u in iu_qs]
+        unit_id   = iu_qs[0].id
+        unit_name = iu_qs[0].name
+    else:
+        units     = []
+        unit_id   = None
+        unit_name = item.base_unit_name
     return JsonResponse({
         'id': item.id,
         'name': item.name,
@@ -1185,11 +1254,9 @@ def item_meta_api(request, pk):
         'track_serial': item.track_serial,
         'cost_price': str(item.cost_price),
         'selling_price': str(item.selling_price),
-        'unit_id': item.unit_id,
-        'unit_name': str(item.unit) if item.unit else '',
-        'purchase_unit_id': item.purchase_unit_id,
-        'purchase_unit_name': str(item.purchase_unit) if item.purchase_unit else '',
-        'purchase_unit_factor': str(item.purchase_unit.conversion_factor) if item.purchase_unit else '1',
+        'unit_id': unit_id,
+        'unit_name': unit_name,
+        'units': units,
     })
 
 

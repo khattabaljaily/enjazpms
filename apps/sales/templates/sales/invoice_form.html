@@ -181,6 +181,7 @@
                             <tr>
                                 <th class="sales-th-product">المنتج</th>
                                 <th class="sales-th-qty">الكمية</th>
+                                <th class="sales-th-unit">الوحدة</th>
                                 <th class="sales-th-price">سعر الوحدة</th>
                                 <th class="sales-th-discount">خصم %</th>
                                 <th class="sales-th-tax">ضريبة %</th>
@@ -516,24 +517,24 @@ function addLineToTable(lineData) {
         const opts = units.map(u =>
             `<option value="${u.id}" data-factor="${u.factor}" ${String(u.id) === String(lineData.unit_id) ? 'selected' : ''}>${u.name}</option>`
         ).join('');
-        unitHtml = `<div class="mt-1"><select class="cx-input cx-input--xs line-unit-sel" id="unit-sel-${id}" onchange="onUnitChange(${id})">${opts}</select></div>`;
+        unitHtml = `<select class="cx-input cx-input--xs line-unit-sel inv-unit-sel" id="unit-sel-${id}" onchange="onUnitChange(${id})">${opts}</select>`;
     } else if (units.length === 1) {
-        unitHtml = `<div class="mt-1"><span class="badge bg-secondary">${units[0].name}</span></div>`;
+        unitHtml = `<span class="inv-unit-badge">${units[0].name}</span>`;
     } else if (lineData.unit_name) {
-        unitHtml = `<div class="mt-1"><span class="badge bg-secondary">${lineData.unit_name}</span></div>`;
+        unitHtml = `<span class="inv-unit-badge">${lineData.unit_name}</span>`;
     }
 
     row.innerHTML = `
         <td>
             <div class="sales-line-item-name">${lineData.item_name}</div>
             <div class="sales-line-item-sku">${lineData.item_sku || ''}</div>
-            ${unitHtml}
             ${trackingHtml}
         </td>
         <td>
             <input type="text" inputmode="decimal" class="cx-input cx-input--sm line-qty inv-num-field" id="qty-${id}"
                    value="${qty}" oninput="updateLine(${id})">
         </td>
+        <td class="inv-unit-cell" id="unit-cell-${id}">${unitHtml}</td>
         <td>
             <input type="text" inputmode="decimal" class="cx-input cx-input--sm line-price inv-num-field" id="price-${id}"
                    value="${price}" oninput="updateLine(${id})">
@@ -571,8 +572,19 @@ function onUnitChange(id) {
     if (!sel) return;
     const opt = sel.options[sel.selectedIndex];
     const row = document.getElementById(`line-${id}`);
+    const oldFactor = parseFloat(row.dataset.unitFactor) || 1;
+    const newFactor = parseFloat(opt.dataset.factor) || 1;
+    // Auto-adjust price: keep base price consistent across unit switches
+    if (oldFactor !== newFactor) {
+        const priceInput = document.getElementById(`price-${id}`);
+        const currentPrice = EnjazIMS.parseNumber(priceInput.value) || 0;
+        if (currentPrice > 0) {
+            priceInput.value = ((currentPrice / oldFactor) * newFactor).toFixed(2);
+        }
+    }
     row.dataset.unitId = sel.value;
-    row.dataset.unitFactor = opt.dataset.factor || '1';
+    row.dataset.unitFactor = newFactor;
+    updateLine(id);
 }
 
 function calcLineTotal(qty, price, discPct, taxRate) {

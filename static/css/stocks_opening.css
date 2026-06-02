@@ -78,17 +78,27 @@
     color: #3b82f6;
 }
 
+.opening-help--unit-note {
+    background: rgba(16, 185, 129, 0.08);
+    color: #065f46;
+    margin-top: -.4rem;
+}
+
+.opening-help--unit-note i {
+    color: #059669;
+}
+
 .opening-input-wrap {
-    position: relative;
-    max-width: 190px;
-    margin-inline-start: auto;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    justify-content: flex-end;
 }
 
 .opening-qty-input {
-    max-width: 100%;
-    text-align: left;
+    width: 120px !important;
+    text-align: center;
     direction: ltr;
-    padding-left: 3.1rem;
     border: 2px solid #d7dfed !important;
     border-radius: 12px !important;
     background: var(--surface) !important;
@@ -98,16 +108,6 @@
 .opening-qty-input:focus {
     border-color: #3b82f6 !important;
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16) !important;
-}
-
-.opening-input-unit {
-    position: absolute;
-    left: 0.65rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.72rem;
-    color: var(--text-tertiary);
-    pointer-events: none;
 }
 
 .opening-qty-input--changed {
@@ -332,4 +332,13 @@
         color: var(--text-tertiary, #6b7280);
         font-weight: 500;
     }
+}
+
+.opening-qty-input--changed {
+    border-color: var(--warning) !important;
+    background: rgba(245, 158, 11, 0.08) !important;
+}
+
+#openingTable .inv-unit-badge {
+    font-size: .72rem;
 }

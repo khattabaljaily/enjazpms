@@ -576,7 +576,7 @@ class PurchasesReportGenerator:
         for line in base_lines:
             iid = line.item_id
             agg[iid]['item_name'] = line.item.name
-            agg[iid]['unit'] = line.item.unit.name if line.item.unit else ''
+            agg[iid]['unit'] = line.item.base_unit_name
             cost = float(line.unit_cost or 0)
             agg[iid]['prices'].append(cost)
             agg[iid]['total_qty'] += line.quantity or Decimal('0')

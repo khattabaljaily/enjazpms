@@ -5,6 +5,86 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/items.css' %}?v=1.0">
+<style>
+/* ── Unit type toggle ─────────────────────────────────────── */
+.unit-type-row { display:flex; gap:.75rem; }
+.unit-type-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:.2rem; padding:.7rem; border:2px solid var(--border-light,#e5e7eb);
+  border-radius:12px; cursor:pointer; font-size:.82rem; font-weight:600;
+  color:var(--text-secondary,#6b7280); background:var(--surface-alt,#f9fafb);
+  transition:border-color .15s, background .15s, color .15s; user-select:none;
+}
+.unit-type-btn input[type=radio] { display:none; }
+.unit-type-btn i { font-size:1.1rem; }
+.unit-type-btn small { font-size:.68rem; font-weight:400; opacity:.7; }
+.unit-type-btn.active {
+  border-color:var(--indigo-500,#6366f1);
+  background:var(--indigo-50,#eef2ff);
+  color:var(--indigo-700,#4338ca);
+}
+/* ── Unit pair rows ───────────────────────────────────────── */
+.unit-pair {
+  display: flex;
+  align-items: flex-end;
+  gap: .55rem;
+  margin-bottom: .6rem;
+}
+.unit-pair__grp { display: flex; flex-direction: column; }
+.unit-pair__grp--name { flex: 1; min-width: 0; }
+.unit-pair__grp--count,
+.unit-pair__grp--prev { flex-shrink: 0; }
+.unit-pair__lbl {
+  font-size: .68rem; font-weight: 600;
+  color: var(--text-muted, #9ca3af);
+  margin-bottom: .22rem;
+  white-space: nowrap;
+}
+.unit-pair__prev-badge {
+  display: inline-flex; align-items: center;
+  height: 38px; padding: 0 .75rem;
+  background: #eef2ff; color: #4338ca;
+  border: 1px solid #c7d2fe; border-radius: .375rem;
+  font-size: .82rem; font-weight: 700;
+  white-space: nowrap;
+}
+.unit-pair__eq {
+  font-size: 1rem; font-weight: 800;
+  color: var(--text-muted, #9ca3af);
+  padding-bottom: .45rem; flex-shrink: 0;
+}
+/* Counter */
+.unit-counter {
+  display: flex; align-items: stretch;
+  border: 1px solid #ced4da; border-radius: .375rem;
+  overflow: hidden; height: 38px;
+}
+.unit-counter__btn {
+  width: 30px; border: none; background: #f8f9fa;
+  font-size: .95rem; font-weight: 700; cursor: pointer;
+  color: #495057; transition: background .12s, color .12s;
+}
+.unit-counter__btn:hover { background: #e9ecef; color: #4338ca; }
+.unit-counter__val {
+  width: 46px; border: none;
+  border-left: 1px solid #ced4da; border-right: 1px solid #ced4da;
+  text-align: center; font-size: .9rem; font-weight: 700;
+  background: #fff; color: #212529; padding: 0;
+}
+.unit-pair__remove {
+  background: none; border: none; color: #94a3b8;
+  cursor: pointer; padding: .4rem .5rem; border-radius: 7px;
+  font-size: .8rem; flex-shrink: 0; align-self: flex-end;
+  transition: color .15s, background .15s;
+  margin-bottom: .05rem;
+}
+.unit-pair__remove:hover { color: #ef4444; background: #fee2e2; }
+[data-theme="dark"] .unit-pair__prev-badge { background: rgba(99,102,241,.18); color: #a5b4fc; border-color: rgba(99,102,241,.3); }
+[data-theme="dark"] .unit-counter { border-color: rgba(255,255,255,.15); }
+[data-theme="dark"] .unit-counter__btn { background: rgba(255,255,255,.07); color: #e2e8f0; }
+[data-theme="dark"] .unit-counter__btn:hover { background: rgba(99,102,241,.18); color: #a5b4fc; }
+[data-theme="dark"] .unit-counter__val { background: rgba(255,255,255,.05); color: #f1f5f9; border-color: rgba(255,255,255,.1); }
+</style>
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -158,22 +238,64 @@
                                 {{ item_form.sku }}
                             </div>
                             <div class="col-md-3">
-                                <label class="cx-label" for="id_unit">{{ item_form.unit.label }}</label>
-                                {{ item_form.unit }}
-                            </div>
-                            <div class="col-md-3">
-                                <label class="cx-label" for="id_purchase_unit">{{ item_form.purchase_unit.label }}</label>
-                                {{ item_form.purchase_unit }}
-                            </div>
-                            <div class="col-md-3">
                                 <label class="cx-label" for="id_tax_rate">{{ item_form.tax_rate.label }}</label>
                                 {{ item_form.tax_rate }}
                             </div>
                         </div>
 
+                        {# ── وحدات المنتج ── #}
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-icon"><i class="fas fa-ruler"></i></span>
+                            الوحدات
+                        </div>
+                        <div class="mb-4">
+                            {# Toggle: single vs multiple #}
+                            <div class="unit-type-row mb-3">
+                                <label class="unit-type-btn active" id="btnUnitSingle">
+                                    <input type="radio" name="item_unit_mode" value="single" checked>
+                                    <i class="fas fa-cube"></i>
+                                    وحدة واحدة
+                                    <small>مثال: قطعة فقط</small>
+                                </label>
+                                <label class="unit-type-btn" id="btnUnitMultiple">
+                                    <input type="radio" name="item_unit_mode" value="multiple">
+                                    <i class="fas fa-cubes"></i>
+                                    وحدات متعددة
+                                    <small>مثال: حبة + كرتون</small>
+                                </label>
+                            </div>
+
+                            {# Single unit row #}
+                            <div id="singleUnitRow" class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="cx-label">اسم الوحدة</label>
+                                    <input type="text" class="form-control" id="singleUnitName" placeholder="مثال: قطعة، كيلو، لتر، متر">
+                                </div>
+                            </div>
+
+                            {# Multi-unit builder #}
+                            <div id="multiUnitRow" class="d-none">
+                                <div id="unitRowsContainer"></div>
+                                <button type="button" class="cx-btn-secondary mt-2" id="btnAddUnitRow" style="font-size:.8rem;">
+                                    <i class="fas fa-plus"></i> إضافة وحدة أكبر
+                                </button>
+                                <div class="cx-field-hint mt-2" style="font-size:.75rem;color:var(--text-muted,#9ca3af);">
+                                    <i class="fas fa-info-circle"></i>
+                                    أدخل الوحدات من الأصغر إلى الأكبر — الأولى هي الوحدة الأساسية (الأصغر دائماً = 1)
+                                </div>
+                            </div>
+
+                            {# Hidden field sent to server #}
+                            <input type="hidden" id="units_json" name="units_json" value="">
+                        </div>
+
                         {# ── ٢: التسعير ── #}
                         <div class="cx-form-group-label">
-                            <span class="cx-form-group-icon"><i class="fas fa-tag"></i></span> التسعير
+                            <span class="cx-form-group-icon"><i class="fas fa-tag"></i></span>
+                            التسعير
+                            <span style="font-weight:400;font-size:.75rem;color:var(--text-muted,#9ca3af);margin-right:.5rem;">
+                                — الأسعار للوحدة: <strong id="pricingUnitLabel" style="color:var(--text-secondary,#6b7280);">—</strong>
+                            </span>
                         </div>
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
@@ -759,12 +881,220 @@
     });
 
     /* ── Reset form ────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════════
+       UNIT MANAGER — inline per-product unit definition
+       ══════════════════════════════════════════════════════════ */
+    var unitRows = [];   // [{name, factor}] ordered smallest→largest
+
+    function escUnitHtml(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function renderUnitRows() {
+        var container = document.getElementById('unitRowsContainer');
+        if (!container) return;
+        container.innerHTML = '';
+
+        unitRows.forEach(function(row, idx) {
+            var div = document.createElement('div');
+            div.className = 'unit-row';
+
+            if (idx === 0) {
+                // Base unit — single labelled field
+                div.className = 'unit-pair';
+                div.innerHTML =
+                    '<div class="unit-pair__grp unit-pair__grp--name">' +
+                    '  <div class="unit-pair__lbl">اسم الوحدة الأصغر</div>' +
+                    '  <input type="text" class="form-control" ' +
+                    '         placeholder="مثال: حبة، كيلو، متر" ' +
+                    '         value="' + escUnitHtml(row.name) + '" data-idx="0" data-field="name">' +
+                    '</div>';
+            } else {
+                var prev = unitRows[idx - 1];
+                var rawCount = (prev.factor > 0) ? parseFloat(row.factor) / parseFloat(prev.factor) : 1;
+                var count = (rawCount > 0) ? Math.round(rawCount) : 1;
+                div.className = 'unit-pair';
+                div.innerHTML =
+                    // Larger unit name (LEFT — الأكبر first)
+                    '<div class="unit-pair__grp unit-pair__grp--name">' +
+                    '  <div class="unit-pair__lbl">اسم الوحدة الأكبر</div>' +
+                    '  <input type="text" class="form-control" ' +
+                    '         placeholder="مثال: كرتون، طرد" ' +
+                    '         value="' + escUnitHtml(row.name) + '" data-idx="' + idx + '" data-field="name">' +
+                    '</div>' +
+                    // = sign
+                    '<span class="unit-pair__eq">=</span>' +
+                    // Count counter
+                    '<div class="unit-pair__grp unit-pair__grp--count">' +
+                    '  <div class="unit-pair__lbl">الكمية</div>' +
+                    '  <div class="unit-counter">' +
+                    '    <button type="button" class="unit-counter__btn" data-idx="' + idx + '" data-action="dec">−</button>' +
+                    '    <input type="text" inputmode="numeric" class="unit-counter__val" ' +
+                    '           value="' + count + '" data-idx="' + idx + '" data-field="count">' +
+                    '    <button type="button" class="unit-counter__btn" data-idx="' + idx + '" data-action="inc">+</button>' +
+                    '  </div>' +
+                    '</div>' +
+                    // Smaller unit badge (RIGHT — الأصغر last)
+                    '<div class="unit-pair__grp unit-pair__grp--prev">' +
+                    '  <div class="unit-pair__lbl">الأصغر</div>' +
+                    '  <span class="unit-pair__prev-badge" data-prev-idx="' + (idx-1) + '">' + escUnitHtml(prev.name || '—') + '</span>' +
+                    '</div>' +
+                    // Remove button
+                    '<button type="button" class="unit-pair__remove" data-idx="' + idx + '" title="حذف">' +
+                    '  <i class="fas fa-times"></i>' +
+                    '</button>';
+            }
+            container.appendChild(div);
+        });
+
+        // Name inputs
+        container.querySelectorAll('[data-field="name"]').forEach(function(inp) {
+            inp.addEventListener('input', function() {
+                unitRows[parseInt(this.dataset.idx)].name = this.value;
+                refreshRowLabels();
+                updateUnitsJson();
+            });
+        });
+        // Count text inputs
+        container.querySelectorAll('[data-field="count"]').forEach(function(inp) {
+            inp.addEventListener('input', function() {
+                var v = parseInt(this.value) || 1;
+                if (v < 1) { v = 1; this.value = 1; }
+                syncFactors();
+                updateUnitsJson();
+            });
+        });
+        // +/- counter buttons
+        container.querySelectorAll('.unit-counter__btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var i   = parseInt(this.dataset.idx);
+                var inp = container.querySelector('[data-field="count"][data-idx="' + i + '"]');
+                if (!inp) return;
+                var v = parseInt(inp.value) || 1;
+                v = this.dataset.action === 'inc' ? v + 1 : Math.max(1, v - 1);
+                inp.value = v;
+                syncFactors();
+                updateUnitsJson();
+            });
+        });
+        // Remove buttons
+        container.querySelectorAll('.unit-pair__remove').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                unitRows.splice(parseInt(this.dataset.idx), 1);
+                renderUnitRows();
+                updateUnitsJson();
+            });
+        });
+
+        // Show/hide add button based on limit
+        var addBtn = document.getElementById('btnAddUnitRow');
+        if (addBtn) addBtn.style.display = unitRows.length >= 2 ? 'none' : '';
+    }
+
+    function refreshRowLabels() {
+        document.querySelectorAll('#unitRowsContainer .unit-pair__prev-badge').forEach(function(span) {
+            var prevIdx = parseInt(span.dataset.prevIdx);
+            if (!isNaN(prevIdx)) span.textContent = unitRows[prevIdx].name || '—';
+        });
+    }
+
+    function syncFactors() {
+        // Recalculate cumulative factors from count inputs
+        var countInputs = document.querySelectorAll('#unitRowsContainer [data-field="count"]');
+        var cumFactor = 1;
+        unitRows[0].factor = 1;
+        countInputs.forEach(function(inp, i) {
+            var count = parseFloat(inp.value) || 1;
+            cumFactor = cumFactor * count;
+            unitRows[i + 1].factor = cumFactor;
+        });
+    }
+
+    function updateUnitsJson() {
+        var valid = unitRows.filter(function(r) { return r.name.trim(); });
+        document.getElementById('units_json').value = JSON.stringify(
+            valid.map(function(r) { return { name: r.name.trim(), factor: r.factor }; })
+        );
+        updatePricingLabel();
+    }
+
+    function setUnitMode(mode) {
+        var isSingle = mode === 'single';
+        document.getElementById('btnUnitSingle').classList.toggle('active', isSingle);
+        document.getElementById('btnUnitMultiple').classList.toggle('active', !isSingle);
+        document.getElementById('btnUnitSingle').querySelector('input').checked = isSingle;
+        document.getElementById('btnUnitMultiple').querySelector('input').checked = !isSingle;
+        document.getElementById('singleUnitRow').classList.toggle('d-none', !isSingle);
+        document.getElementById('multiUnitRow').classList.toggle('d-none', isSingle);
+        if (isSingle) {
+            unitRows = [{ name: '', factor: 1 }];
+        }
+        updateUnitsJson();
+    }
+
+    function loadUnitsFromData(itemUnits) {
+        if (!itemUnits || itemUnits.length === 0) {
+            setUnitMode('single');
+            return;
+        }
+        if (itemUnits.length === 1) {
+            setUnitMode('single');
+            document.getElementById('singleUnitName').value = itemUnits[0].name;
+            unitRows = [{ name: itemUnits[0].name, factor: 1 }];
+        } else {
+            // Multiple units — sort by factor
+            itemUnits.sort(function(a, b) { return parseFloat(a.factor) - parseFloat(b.factor); });
+            unitRows = itemUnits.map(function(u) { return { name: u.name, factor: parseFloat(u.factor) }; });
+            setUnitMode('multiple');
+            renderUnitRows();
+        }
+        updateUnitsJson();
+    }
+
+    // Toggle listeners
+    document.getElementById('btnUnitSingle').addEventListener('click', function() { setUnitMode('single'); renderUnitRows(); });
+    document.getElementById('btnUnitMultiple').addEventListener('click', function() {
+        if (unitRows.length < 2) unitRows.push({ name: '', factor: 1 });
+        setUnitMode('multiple');
+        renderUnitRows();
+    });
+
+    // Single unit name change
+    document.getElementById('singleUnitName').addEventListener('input', function() {
+        unitRows[0] = { name: this.value, factor: 1 };
+        updateUnitsJson();
+    });
+
+    // Add unit row button — max 2 units (base + one derived)
+    document.getElementById('btnAddUnitRow').addEventListener('click', function() {
+        if (unitRows.length >= 2) return;
+        unitRows.push({ name: '', factor: 1 });
+        renderUnitRows();
+        updateUnitsJson();
+    });
+
+    // Init
+    unitRows = [{ name: '', factor: 1 }];
+    setUnitMode('single');
+
+    /* ── Pricing unit label — shows which unit prices refer to ─ */
+    function updatePricingLabel() {
+        var lbl = document.getElementById('pricingUnitLabel');
+        if (!lbl) return;
+        var base = unitRows.length > 0 ? unitRows[0].name : '';
+        lbl.textContent = base || '—';
+    }
+
     function resetForm() {
         $form[0].reset();
         $idInput.val('');
         $('#id_is_active').prop('checked', true);
         $('#id_is_sellable').prop('checked', true);
         $('#id_is_purchasable').prop('checked', true);
+        unitRows = [{ name: '', factor: 1 }];
+        setUnitMode('single');
+        document.getElementById('singleUnitName').value = '';
+        updateUnitsJson();
         EnjazIMS.clearFormErrors($form);
     }
 
@@ -791,8 +1121,11 @@
                 $('#id_barcode').val(d.barcode || '');
                 $('#id_item_type').val(d.item_type || '');
                 $('#id_category').val(d.category || '');
-                $('#id_unit').val(d.unit || '');
-                $('#id_purchase_unit').val(d.purchase_unit || '');
+                // Load units from ItemUnit data
+                loadUnitsFromData(d.item_units || []);
+                if (d.item_units && d.item_units.length === 1) {
+                    document.getElementById('singleUnitName').value = d.item_units[0].name;
+                }
                 $('#id_cost_price').val(EnjazIMS.parseNumber(d.cost_price).toFixed(2));
                 $('#id_selling_price').val(EnjazIMS.parseNumber(d.selling_price).toFixed(2));
                 $('#id_min_selling_price').val(EnjazIMS.parseNumber(d.min_selling_price).toFixed(2));

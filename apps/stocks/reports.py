@@ -78,7 +78,7 @@ class StocksReportGenerator:
         """تقرير المخزن حسب المنتج"""
         items = Item.objects.filter(
             tenant=self.tenant
-        ).prefetch_related('stock_quantities')
+        ).prefetch_related('stock_quantities', 'item_units')
 
         data = []
         for item in items:
@@ -99,7 +99,7 @@ class StocksReportGenerator:
             data.append({
                 'item_id': item.id,
                 'item_name': item.name,
-                'item_unit': item.unit or 'وحدة',
+                'item_unit': item.base_unit_name or 'وحدة',
                 'total_quantity': float(total_qty),
                 'total_reserved': float(total_reserved),
                 'total_available': float(total_available),
@@ -220,7 +220,7 @@ class StocksReportGenerator:
             tenant=self.tenant,
             movement_date__gte=self.start_date,
             movement_date__lte=self.end_date,
-        ).select_related('item', 'stock').order_by('movement_date', 'id')
+        ).select_related('item', 'stock').prefetch_related('item__item_units').order_by('movement_date', 'id')
 
         if item_id:
             movements = movements.filter(item_id=item_id)
@@ -238,6 +238,7 @@ class StocksReportGenerator:
             data.append({
                 'movement_date': m.movement_date,
                 'item_name': m.item.name,
+                'item_unit': m.item.base_unit_name,
                 'stock_name': m.stock.name,
                 'movement_type': m.get_movement_type_display(),
                 'movement_type_key': m.movement_type,
@@ -271,14 +272,14 @@ class StocksReportGenerator:
         quantities = StockQuantity.objects.filter(
             tenant=self.tenant,
             min_quantity__gt=0,
-        ).select_related('item', 'stock', 'item__unit').order_by('item__name', 'stock__name')
+        ).select_related('item', 'stock').prefetch_related('item__item_units').order_by('item__name', 'stock__name')
 
         data = []
         for sq in quantities:
             if sq.is_low_stock:
                 data.append({
                     'item_name': sq.item.name,
-                    'item_unit': sq.item.unit.name if sq.item.unit else '',
+                    'item_unit': sq.item.base_unit_name,
                     'stock_name': sq.stock.name,
                     'quantity': format_number(float(sq.quantity), 2),
                     'available': format_number(float(sq.available_quantity), 2),
@@ -301,7 +302,7 @@ class StocksReportGenerator:
         quantities = StockQuantity.objects.filter(
             tenant=self.tenant,
             quantity__gt=0,
-        ).select_related('item', 'item__unit', 'item__category', 'stock')
+        ).select_related('item', 'item__category', 'stock').prefetch_related('item__item_units')
 
         category_data = {}
         grand_total_qty = Decimal('0')
@@ -313,7 +314,7 @@ class StocksReportGenerator:
             if iid not in item_agg:
                 item_agg[iid] = {
                     'item_name': sq.item.name,
-                    'item_unit': sq.item.unit.name if sq.item.unit else '',
+                    'item_unit': sq.item.base_unit_name,
                     'category_name': sq.item.category.name if sq.item.category else 'غير مصنف',
                     'category_id': sq.item.category_id,
                     'cost_price': float(sq.item.cost_price or 0),
@@ -375,7 +376,7 @@ class StocksReportGenerator:
         quantities = StockQuantity.objects.filter(
             tenant=self.tenant,
             quantity__gt=0,
-        ).select_related('item', 'item__unit', 'item__category', 'stock')
+        ).select_related('item', 'item__category', 'stock').prefetch_related('item__item_units')
 
         moving_item_ids = set(
             StockMovement.objects.filter(
@@ -394,7 +395,7 @@ class StocksReportGenerator:
             if iid not in item_agg:
                 item_agg[iid] = {
                     'item_name': sq.item.name,
-                    'item_unit': sq.item.unit.name if sq.item.unit else '',
+                    'item_unit': sq.item.base_unit_name,
                     'category_name': sq.item.category.name if sq.item.category else 'غير مصنف',
                     'cost_price': float(sq.item.cost_price or 0),
                     'total_qty': Decimal('0'),

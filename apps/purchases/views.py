@@ -15,7 +15,7 @@ from django.views.decorators.http import require_POST
 
 from apps.items.models import Item
 from apps.purchases.models import PurchaseInvoice, PurchaseReturn, PurchaseReturnLine, PurchaseRFQ, PurchaseRFQLine
-from apps.purchases.services import build_purchase_from_post, cancel_purchase_return, confirm_purchase_invoice, confirm_purchase_return
+from apps.purchases.services import build_purchase_from_post, cancel_purchase_invoice, cancel_purchase_return, confirm_purchase_invoice, confirm_purchase_return, edit_confirmed_purchase_invoice
 from apps.stocks.models import Stock
 from apps.suppliers.models import Supplier
 
@@ -205,7 +205,14 @@ def order_edit(request, pk):
         return _process_order_post(request, tenant, invoice=invoice)
 
     existing_lines = []
-    for line in invoice.lines.select_related('item'):
+    for line in invoice.lines.select_related('item').prefetch_related('item__item_units'):
+        iu_qs = list(line.item.item_units.order_by('factor'))
+        units = [{'id': iu.id, 'name': iu.name, 'factor': str(iu.factor)} for iu in iu_qs]
+        # match saved unit_factor to find the right ItemUnit
+        unit_id = ''
+        if iu_qs:
+            matched = next((iu for iu in iu_qs if abs(float(iu.factor) - float(line.unit_factor or 1)) < 0.0001), iu_qs[0])
+            unit_id = matched.id
         existing_lines.append({
             'item_id': line.item_id,
             'item_name': line.item.name,
@@ -213,6 +220,9 @@ def order_edit(request, pk):
             'quantity': str(line.quantity),
             'unit_cost': str(line.unit_cost),
             'tax_rate': str(line.tax_rate),
+            'units': units,
+            'unit_id': unit_id,
+            'unit_factor': str(line.unit_factor or 1),
             'batch_number': line.batch_number or '',
             'serial_number': line.serial_number or '',
             'expiry_date': line.expiry_date.isoformat() if line.expiry_date else '',
@@ -358,7 +368,11 @@ def order_detail(request, pk):
         pk=pk,
         tenant=tenant,
     )
-    lines = invoice.lines.select_related('item').all()
+    lines = list(invoice.lines.select_related('item').prefetch_related('item__item_units').all())
+    for ln in lines:
+        iu_list = list(ln.item.item_units.order_by('factor'))
+        matched = next((u for u in iu_list if abs(float(u.factor) - float(ln.unit_factor or 1)) < 0.0001), iu_list[0] if iu_list else None)
+        ln.unit_display = matched.name if matched else ln.item.base_unit_name
     can_return = invoice.status in ('confirmed', 'partially_returned') and any(
         (l.returnable_quantity or Decimal('0')) > 0 for l in lines
     )

@@ -80,7 +80,7 @@ class ItemForm(forms.ModelForm):
         model = Item
         fields = [
             'name', 'name_en', 'sku', 'barcode', 'item_type',
-            'category', 'unit', 'purchase_unit',
+            'category',
             'cost_price', 'selling_price', 'min_selling_price', 'tax_rate',
             'min_quantity', 'max_quantity',
             'track_expiry', 'track_batch', 'track_serial', 'has_variants',
@@ -93,8 +93,6 @@ class ItemForm(forms.ModelForm):
             'barcode': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'امسح أو أدخل الباركود'}),
             'item_type': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
-            'unit': forms.Select(attrs={'class': 'form-select'}),
-            'purchase_unit': forms.Select(attrs={'class': 'form-select'}),
             'cost_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'selling_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'min_selling_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -118,8 +116,6 @@ class ItemForm(forms.ModelForm):
             'barcode': 'الباركود',
             'item_type': 'نوع الصنف',
             'category': 'التصنيف',
-            'unit': 'وحدة البيع',
-            'purchase_unit': 'وحدة الشراء',
             'cost_price': 'سعر التكلفة',
             'selling_price': 'سعر البيع',
             'min_selling_price': 'الحد الأدنى للبيع',
@@ -154,13 +150,8 @@ class ItemForm(forms.ModelForm):
             self.fields['category'].queryset = Category.objects.filter(
                 tenant=tenant, is_active=True
             )
-            unit_qs = Unit.objects.filter(tenant=tenant, is_active=True)
-            self.fields['unit'].queryset = unit_qs
-            self.fields['purchase_unit'].queryset = unit_qs
         else:
             self.fields['category'].queryset = Category.objects.none()
-            self.fields['unit'].queryset = Unit.objects.none()
-            self.fields['purchase_unit'].queryset = Unit.objects.none()
 
 
 class ItemVariantForm(forms.ModelForm):

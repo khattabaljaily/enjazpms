@@ -133,6 +133,7 @@
                             <tr>
                                 <th class="sales-th-product">المنتج</th>
                                 <th class="sales-th-qty">الكمية</th>
+                                <th class="sales-th-unit">الوحدة</th>
                                 <th class="sales-th-price">سعر الوحدة</th>
                                 <th class="sales-th-discount">خصم %</th>
                                 <th class="sales-th-tax">ضريبة %</th>
@@ -356,6 +357,9 @@ function selectItem(itemId) {
                 unit_price: item.selling_price,
                 discount_percent: '0',
                 tax_rate: item.tax_rate,
+                unit_id: item.unit_id || '',
+                unit_factor: item.unit_factor || '1',
+                units: item.units || [],
             });
             closeItemSearch();
         });
@@ -373,17 +377,35 @@ function addLineToTable(lineData) {
     const tax = EnjazIMS.parseNumber(lineData.tax_rate) || 0;
     const lineTotal = calcLineTotal(qty, price, disc, tax);
 
+    const units = lineData.units || [];
+    let unitHtml = '';
+    if (units.length > 1) {
+        const opts = units.map(u =>
+            `<option value="${u.id}" data-factor="${u.factor}" ${String(u.id) === String(lineData.unit_id) ? 'selected' : ''}>${u.name}</option>`
+        ).join('');
+        unitHtml = `<select class="cx-input cx-input--xs inv-unit-sel" id="unit-sel-${id}" onchange="onUnitChange(${id})">${opts}</select>`;
+    } else if (units.length === 1) {
+        unitHtml = `<span class="inv-unit-badge">${units[0].name}</span>`;
+    } else if (lineData.unit_name) {
+        unitHtml = `<span class="inv-unit-badge">${lineData.unit_name}</span>`;
+    }
+
     const row = document.createElement('tr');
     row.id = `line-${id}`;
     row.dataset.itemId = lineData.item_id;
     row.dataset.variantId = lineData.variant_id || '';
+    row.dataset.unitId = lineData.unit_id || '';
+    row.dataset.unitFactor = lineData.unit_factor || '1';
     row.innerHTML = `
         <td>
             <div class="sales-line-item-name">${lineData.item_name}</div>
             <div class="sales-line-item-sku">${lineData.item_sku || ''}</div>
         </td>
-        <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-qty inv-num-field" id="qty-${id}"
-               value="${qty}" oninput="updateLine(${id})"></td>
+        <td>
+            <input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-qty inv-num-field" id="qty-${id}"
+                   value="${qty}" oninput="updateLine(${id})">
+        </td>
+        <td class="inv-unit-cell" id="unit-cell-${id}">${unitHtml}</td>
         <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-price inv-num-field" id="price-${id}"
                value="${price}" oninput="updateLine(${id})"></td>
         <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-pct inv-num-field" id="disc-${id}"
@@ -399,6 +421,23 @@ function addLineToTable(lineData) {
     tbody.appendChild(row);
     updateLineCount();
     recalcTotals();
+}
+
+function onUnitChange(id) {
+    const sel = document.getElementById(`unit-sel-${id}`);
+    if (!sel) return;
+    const opt = sel.options[sel.selectedIndex];
+    const row = document.getElementById(`line-${id}`);
+    const oldFactor = parseFloat(row.dataset.unitFactor) || 1;
+    const newFactor = parseFloat(opt.dataset.factor) || 1;
+    if (oldFactor !== newFactor) {
+        const priceInput = document.getElementById(`price-${id}`);
+        const currentPrice = EnjazIMS.parseNumber(priceInput.value) || 0;
+        if (currentPrice > 0) priceInput.value = ((currentPrice / oldFactor) * newFactor).toFixed(2);
+    }
+    row.dataset.unitId = sel.value;
+    row.dataset.unitFactor = newFactor;
+    updateLine(id);
 }
 
 function calcLineTotal(qty, price, discPct, taxRate) {

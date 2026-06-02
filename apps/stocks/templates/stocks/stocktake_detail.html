@@ -98,15 +98,27 @@
             </thead>
             <tbody>
                 {% for ln in stocktake.lines.all %}
+                {% with iu_list=ln.item.item_units.all %}
                 <tr class="count-row{% if ln.difference != 0 %} has-diff{% endif %}"
                     data-line-id="{{ ln.id }}"
                     data-item-name="{{ ln.item.name|lower }}"
                     data-system="{{ ln.system_quantity }}"
-                    data-counted="{{ ln.counted_quantity }}">
+                    data-counted="{{ ln.counted_quantity }}"
+                    data-factor="1">
                     <td>{{ forloop.counter }}</td>
                     <td><strong>{{ ln.item.name }}</strong><br><small class="text-muted">{{ ln.item.sku|default:"" }}</small></td>
-                    <td>{{ ln.item.unit.name|default:"—" }}</td>
-                    <td class="text-end">{{ ln.system_quantity|floatformat:"-2" }}</td>
+                    <td>
+                        {% if iu_list|length > 1 %}
+                        <select class="cx-input cx-input--xs st-unit-sel" onchange="onUnitChange(this)">
+                            {% for iu in iu_list %}
+                            <option value="{{ iu.id }}" data-factor="{{ iu.factor }}">{{ iu.name }}</option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
+                        {{ ln.item.base_unit_name|default:"—" }}
+                        {% endif %}
+                    </td>
+                    <td class="text-end st-sys-qty">{{ ln.system_quantity|floatformat:"-4" }}</td>
                     <td class="text-end">
                         {% if stocktake.status == 'draft' %}
                         <input type="number" class="cx-input qty-counted"
@@ -133,6 +145,7 @@
                     </td>
                     {% endif %}
                 </tr>
+                {% endwith %}
                 {% endfor %}
             </tbody>
         </table>
@@ -174,30 +187,52 @@ const isDraft       = "{{ stocktake.status }}" === "draft";
 // Track unsaved changes
 let pendingCounts = {};
 
+function onUnitChange(sel) {
+    const row = sel.closest('tr');
+    const factor = parseFloat(sel.options[sel.selectedIndex].dataset.factor) || 1;
+    row.dataset.factor = factor;
+    const sysBase = parseFloat(row.dataset.system) || 0;
+    const cntBase = parseFloat(row.dataset.counted) || 0;
+    // Update displayed system qty
+    row.querySelector('.st-sys-qty').textContent = (sysBase / factor).toFixed(4).replace(/\.?0+$/, '');
+    // Update counted input
+    const input = row.querySelector('.qty-counted');
+    if (input) {
+        input.value = (cntBase / factor).toFixed(4).replace(/\.?0+$/, '');
+        onCountChange(input, parseInt(row.dataset.lineId));
+    }
+}
+
 function onCountChange(input, lineId) {
     const row = input.closest('tr');
-    const sys = parseFloat(row.dataset.system);
-    const cnt = parseFloat(input.value) || 0;
-    const diff = cnt - sys;
+    const factor = parseFloat(row.dataset.factor) || 1;
+    const sysBase = parseFloat(row.dataset.system) || 0;
+    const cntInUnit = parseFloat(input.value) || 0;
+    const cntBase = cntInUnit * factor;
+    const diffBase = cntBase - sysBase;
+    const diffInUnit = diffBase / factor;
     const diffCell = row.querySelector('.diff-cell');
-    if (diff > 0) {
-        diffCell.innerHTML = `<span class="diff-positive">+${diff.toFixed(2)}</span>`;
+    if (diffBase > 0) {
+        diffCell.innerHTML = `<span class="diff-positive">+${diffInUnit.toFixed(4).replace(/\.?0+$/, '')}</span>`;
         row.classList.add('has-diff');
-    } else if (diff < 0) {
-        diffCell.innerHTML = `<span class="diff-negative">${diff.toFixed(2)}</span>`;
+    } else if (diffBase < 0) {
+        diffCell.innerHTML = `<span class="diff-negative">${diffInUnit.toFixed(4).replace(/\.?0+$/, '')}</span>`;
         row.classList.add('has-diff');
     } else {
         diffCell.innerHTML = '<span class="diff-zero">—</span>';
         row.classList.remove('has-diff');
     }
-    pendingCounts[lineId] = cnt;
+    pendingCounts[lineId] = cntBase;  // always store in base units
+    row.dataset.counted = cntBase;
     updateSummary();
 }
 
 function resetLine(btn, sysQty, lineId) {
     const row = btn.closest('tr');
+    const factor = parseFloat(row.dataset.factor) || 1;
     const input = row.querySelector('.qty-counted');
-    input.value = sysQty;
+    input.value = (parseFloat(sysQty) / factor).toFixed(4).replace(/\.?0+$/, '');
+    row.dataset.counted = sysQty;
     onCountChange(input, lineId);
 }
 
@@ -213,11 +248,12 @@ document.getElementById('btnSaveCounts')?.addEventListener('click', async functi
     this.disabled = true;
     this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> حفظ…';
 
-    // Collect all current values
+    // Collect all values in base units
     const counts = {};
     document.querySelectorAll('.count-row').forEach(row => {
+        const factor = parseFloat(row.dataset.factor) || 1;
         const input = row.querySelector('.qty-counted');
-        if (input) counts[row.dataset.lineId] = parseFloat(input.value) || 0;
+        if (input) counts[row.dataset.lineId] = (parseFloat(input.value) || 0) * factor;
     });
 
     const r = await fetch(SAVE_URL, {
@@ -240,11 +276,12 @@ function doConfirm() {
     document.getElementById('btnConfirmOk').onclick = async function () {
         this.disabled = true;
 
-        // Save first
+        // Save first — convert to base units
         const counts = {};
         document.querySelectorAll('.count-row').forEach(row => {
+            const factor = parseFloat(row.dataset.factor) || 1;
             const input = row.querySelector('.qty-counted');
-            if (input) counts[row.dataset.lineId] = parseFloat(input.value) || 0;
+            if (input) counts[row.dataset.lineId] = (parseFloat(input.value) || 0) * factor;
         });
         await fetch(SAVE_URL, {
             method: 'POST',

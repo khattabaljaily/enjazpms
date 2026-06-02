@@ -130,8 +130,18 @@ const ITEMS_API = "{% url 'stocks:transfer_items_api' %}";
 const SAVE_API  = "{% url 'stocks:transfer_create' %}";
 const CSRF      = "{{ csrf_token }}";
 
-let lines = {};   // item_id → {name, unit, available_qty, quantity}
+let lines = {};   // item_id → {name, units, unit_id, unit_factor, available_qty, quantity_in_unit}
 let searchTimeout;
+
+function buildUnitSel(itemId, units, selectedFactor) {
+    if (!units || units.length <= 1) {
+        return `<span class="inv-unit-badge">${units && units[0] ? units[0].name : '—'}</span>`;
+    }
+    const opts = units.map(u =>
+        `<option value="${u.id}" data-factor="${u.factor}" ${parseFloat(u.factor) === selectedFactor ? 'selected' : ''}>${u.name}</option>`
+    ).join('');
+    return `<select class="cx-input cx-input--xs inv-unit-sel tf-unit-sel" data-item-id="${itemId}" onchange="onTransferUnitChange('${itemId}', this)">${opts}</select>`;
+}
 
 function renderLines() {
     const tbody = document.getElementById('linesBody');
@@ -148,14 +158,18 @@ function renderLines() {
 
     tbody.innerHTML = ids.map(id => {
         const ln = lines[id];
-        const availClass = ln.available_qty < ln.quantity ? 'low' : '';
+        const availBase = ln.available_qty || 0;
+        const factor = ln.unit_factor || 1;
+        const availInUnit = (availBase / factor).toFixed(4).replace(/\.?0+$/, '');
+        const qtyInUnit = ln.quantity_in_unit != null ? ln.quantity_in_unit : 1;
+        const availClass = (qtyInUnit * factor) > availBase ? 'low' : '';
         return `<tr id="line-${id}">
-            <td><strong>${ln.name}</strong></td>
-            <td>${ln.unit}</td>
-            <td><span class="tf-avail ${availClass}">${ln.available_qty.toFixed(2)}</span></td>
+            <td><strong>${ln.name}</strong><br><small class="text-muted">${ln.sku || ''}</small></td>
+            <td>${buildUnitSel(id, ln.units, factor)}</td>
+            <td><span class="tf-avail ${availClass}">${availInUnit}</span></td>
             <td>
                 <input type="number" class="cx-input qty-input" step="0.0001" min="0.0001"
-                    value="${ln.quantity}"
+                    value="${qtyInUnit}"
                     onchange="updateQty('${id}', this.value)">
             </td>
             <td>
@@ -167,9 +181,16 @@ function renderLines() {
     }).join('');
 }
 
+function onTransferUnitChange(itemId, sel) {
+    const factor = parseFloat(sel.options[sel.selectedIndex].dataset.factor) || 1;
+    lines[itemId].unit_factor = factor;
+    const row = sel.closest('tr');
+    const availBase = lines[itemId].available_qty || 0;
+    row.querySelector('.tf-avail').textContent = (availBase / factor).toFixed(4).replace(/\.?0+$/, '');
+}
+
 function updateQty(id, val) {
-    lines[id].quantity = parseFloat(val) || 0;
-    renderLines();
+    lines[id].quantity_in_unit = parseFloat(val) || 0;
 }
 
 function removeLine(id) {
@@ -178,12 +199,15 @@ function removeLine(id) {
 }
 
 function addLine(item) {
+    const units = item.units || [];
+    const factor = units.length ? parseFloat(units[0].factor) : 1;
     if (lines[item.id]) {
-        lines[item.id].quantity += 1;
+        lines[item.id].quantity_in_unit += 1;
+        renderLines();
     } else {
-        lines[item.id] = { ...item, quantity: 1 };
+        lines[item.id] = { ...item, unit_factor: factor, quantity_in_unit: 1 };
+        renderLines();
     }
-    renderLines();
     document.getElementById('itemSearch').value = '';
     document.getElementById('itemResults').innerHTML = '';
 }
@@ -230,11 +254,12 @@ async function saveTransfer(autoConfirm) {
     const toId    = document.getElementById('toStock').value;
     const tdate   = document.getElementById('transferDate').value;
     const notes   = document.getElementById('transferNotes').value;
-    const linesArr = Object.keys(lines).map(id => ({
-        item_id: parseInt(id),
-        quantity: lines[id].quantity,
-        notes: '',
-    }));
+    const linesArr = Object.keys(lines).map(id => {
+        const ln = lines[id];
+        const factor = ln.unit_factor || 1;
+        const qtyBase = (ln.quantity_in_unit || 0) * factor;
+        return { item_id: parseInt(id), quantity: qtyBase, notes: '' };
+    });
 
     if (!fromId || !toId) {
         showToast('error', 'يرجى تحديد المخزن المرسِل والمستلِم');

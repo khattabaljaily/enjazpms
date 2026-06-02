@@ -73,6 +73,10 @@
         <i class="fas fa-circle-info"></i>
         <span>عدّل حقل <strong>الكمية الافتتاحية الجديدة</strong> ثم اضغط <strong>حفظ التعديلات</strong> (الزر العلوي أو السفلي).</span>
     </div>
+    <div class="opening-help opening-help--unit-note">
+        <i class="fas fa-ruler"></i>
+        <span>جميع الكميات تُعرض وتُحفظ بـ <strong>الوحدة الأساسية</strong> (الأصغر) للصنف.</span>
+    </div>
 
     <div class="table-responsive cx-table-wrap">
         <table id="openingTable" class="cx-table">
@@ -112,8 +116,8 @@
     'use strict';
 
     const TABLE_API = "{% url 'stocks:opening_table_api' %}";
-    const SAVE_API = "{% url 'stocks:opening_save_api' %}";
-    const changedMap = new Map();
+    const SAVE_API  = "{% url 'stocks:opening_save_api' %}";
+    const changedMap = new Map(); // item_id → new base-unit qty
 
     const stockSelect = document.getElementById('openingStockSelect');
     const saveBtns = [
@@ -121,23 +125,37 @@
         document.getElementById('btnSaveOpeningBottom')
     ].filter(Boolean);
 
+    function baseUnitName(row) {
+        const units = row.units || [];
+        return units.length ? units[0].name : '—';
+    }
+
+    function fmtQty(baseQty, row) {
+        return `${EnjazIMS.formatQuantity(baseQty)} <span class="inv-unit-badge">${baseUnitName(row)}</span>`;
+    }
+
+    function buildInput(row) {
+        const baseQty = parseFloat(row.current_qty_raw || row.current_qty) || 0;
+        const changed = changedMap.get(String(row.item_id));
+        const value   = changed !== undefined ? changed : baseQty;
+        const unit    = baseUnitName(row);
+        return `<div class="opening-input-wrap">
+            <input type="number" class="cx-input cx-input--sm opening-qty-input"
+                data-item-id="${row.item_id}"
+                data-original="${baseQty}"
+                value="${value}" min="0" step="0.0001">
+            <span class="inv-unit-badge opening-input-unit-badge">${unit}</span>
+        </div>`;
+    }
+
     /* ── Mobile card renderer ───────────────────────────────── */
     function renderMobileOpeningCards(rows) {
         const $cards = $('#openingCardsMobile');
         if (!$cards.length) return;
-
-        if (!rows || !rows.length) {
-            $cards.html('<div class="cx-empty-state">لا توجد منتجات للعرض</div>');
-            return;
-        }
-
-        const cardsHtml = rows.map(function (r) {
-            const changed = changedMap.get(String(r.item_id));
-            const currentQty = EnjazIMS.formatQuantity(r.current_qty);
-            const availableQty = EnjazIMS.formatQuantity(r.available_qty);
-            const inputValue = changed ? EnjazIMS.parseNumber(changed.quantity).toFixed(2) : EnjazIMS.parseNumber(r.current_qty).toFixed(2);
-            const isChanged = changed !== undefined;
-
+        if (!rows || !rows.length) { $cards.html('<div class="cx-empty-state">لا توجد منتجات للعرض</div>'); return; }
+        $cards.html(rows.map(r => {
+            const baseQty   = parseFloat(r.current_qty_raw || r.current_qty) || 0;
+            const isChanged = changedMap.has(String(r.item_id));
             return `<article class="cx-opening-card">
                 <div class="cx-opening-card-head">
                     <div class="cx-opening-card-title-wrap">
@@ -152,63 +170,40 @@
                 <div class="cx-opening-card-meta">
                     <div>
                         <span class="cx-opening-card-meta-label">الكمية الحالية</span>
-                        <strong class="cx-opening-card-meta-value">${currentQty}</strong>
+                        <strong class="cx-opening-card-meta-value">${fmtQty(baseQty, r)}</strong>
                     </div>
                     <div>
                         <span class="cx-opening-card-meta-label">المتاحة</span>
-                        <strong class="cx-opening-card-meta-value">${availableQty}</strong>
+                        <strong class="cx-opening-card-meta-value">${fmtQty(parseFloat(r.available_qty) || 0, r)}</strong>
                     </div>
                 </div>
                 <div class="cx-opening-card-input">
-                    <label class="cx-opening-card-input-label">الكمية الافتتاحية</label>
-                    <div class="cx-opening-card-input-wrap">
-                        <input type="number" class="cx-input cx-input--sm opening-qty-input" data-item-id="${r.item_id}" data-original="${EnjazIMS.parseNumber(r.current_qty).toFixed(2)}" value="${inputValue}" min="0" step="0.01" ${isChanged ? 'class="cx-input cx-input--sm opening-qty-input opening-qty-input--changed"' : 'class="cx-input cx-input--sm opening-qty-input"'}>
-                        <span class="cx-opening-card-input-unit">وحدة</span>
-                    </div>
+                    <label class="cx-opening-card-input-label">الكمية الافتتاحية الجديدة</label>
+                    ${buildInput(r)}
                 </div>
             </article>`;
-        }).join('');
-
-        $cards.html(cardsHtml);
+        }).join(''));
     }
 
     const dt = $('#openingTable').DataTable({
-        processing: true,
-        serverSide: true,
-        pageLength: 25,
+        processing: true, serverSide: true, pageLength: 25,
         dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
         language: {
-            emptyTable: 'لا توجد منتجات',
-            info: 'عرض _START_ إلى _END_ من _TOTAL_',
-            infoEmpty: 'لا توجد بيانات',
-            zeroRecords: 'لا توجد نتائج مطابقة',
-            paginate: { next: 'التالي', previous: 'السابق' },
-            processing: 'جاري التحميل...'
+            emptyTable: 'لا توجد منتجات', info: 'عرض _START_ إلى _END_ من _TOTAL_',
+            infoEmpty: 'لا توجد بيانات', zeroRecords: 'لا توجد نتائج مطابقة',
+            paginate: { next: 'التالي', previous: 'السابق' }, processing: 'جاري التحميل...'
         },
-        ajax: {
-            url: TABLE_API,
-            data: function (d) {
-                d.stock_id = stockSelect.value;
-            }
-        },
+        ajax: { url: TABLE_API, data: d => { d.stock_id = stockSelect.value; } },
         columns: [
             { data: 'item_name' },
-            { data: 'sku', render: v => `<code class="cxr-code">${v || '—'}</code>` },
+            { data: 'sku',     render: v => `<code class="cxr-code">${v || '—'}</code>` },
             { data: 'barcode', render: v => `<code class="cxr-code">${v || '—'}</code>` },
-            { data: 'current_qty', className: 'text-end', render: v => EnjazIMS.formatQuantity(v) },
-            { data: 'available_qty', className: 'text-end', render: v => EnjazIMS.formatQuantity(v) },
-            {
-                data: null,
-                orderable: false,
-                searchable: false,
-                render: function (_, __, row) {
-                    const changed = changedMap.get(String(row.item_id));
-                    const value = changed ? EnjazIMS.parseNumber(changed.quantity).toFixed(2) : EnjazIMS.parseNumber(row.current_qty).toFixed(2);
-                    return `<div class="opening-input-wrap">
-                        <input type="number" class="cx-input cx-input--sm opening-qty-input" data-item-id="${row.item_id}" data-original="${EnjazIMS.parseNumber(row.current_qty).toFixed(2)}" value="${value}" min="0" step="0.01">
-                    </div>`;
-                }
-            }
+            { data: 'current_qty',  className: 'text-end',
+              render: (v, _, row) => fmtQty(parseFloat(row.current_qty_raw || v) || 0, row) },
+            { data: 'available_qty', className: 'text-end',
+              render: (v, _, row) => fmtQty(parseFloat(v) || 0, row) },
+            { data: null, orderable: false, searchable: false,
+              render: (_, __, row) => buildInput(row) }
         ],
         drawCallback: function () {
             renderMobileOpeningCards(dt.rows({ page: 'current' }).data().toArray());
@@ -220,42 +215,21 @@
         document.getElementById('openingChangedCount').textContent = count;
         const bottom = document.getElementById('openingChangedCountBottom');
         if (bottom) bottom.textContent = count;
-
         const bar = document.getElementById('openingSavebar');
         if (bar) bar.classList.toggle('opening-savebar--active', changedMap.size > 0);
     }
 
     function showToast(message, type = 'success') {
-        // Try centralized EnjazIMS.toast first
-        if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
-            EnjazIMS.toast(message, type);
-            return;
-        }
-        // Fallback: inject a self-contained floating alert
-        const colorMap = {
-            success: { bg: '#dcfce7', color: '#166534', border: '#86efac', icon: 'fa-check-circle' },
-            error:   { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5', icon: 'fa-exclamation-circle' },
-            warning: { bg: '#fef3c7', color: '#92400e', border: '#fcd34d', icon: 'fa-exclamation-triangle' },
-            info:    { bg: '#dbeafe', color: '#1e3a8a', border: '#93c5fd', icon: 'fa-info-circle' },
-        };
-        const c = colorMap[type] || colorMap.info;
+        if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') { EnjazIMS.toast(message, type); return; }
+        const c = { success:{bg:'#dcfce7',color:'#166534',border:'#86efac',icon:'fa-check-circle'}, error:{bg:'#fee2e2',color:'#991b1b',border:'#fca5a5',icon:'fa-exclamation-circle'}, warning:{bg:'#fef3c7',color:'#92400e',border:'#fcd34d',icon:'fa-exclamation-triangle'}, info:{bg:'#dbeafe',color:'#1e3a8a',border:'#93c5fd',icon:'fa-info-circle'} }[type] || {};
         const div = document.createElement('div');
-        div.style.cssText = `
-            position:fixed; top:80px; left:50%; transform:translateX(-50%);
-            z-index:99999; min-width:300px; max-width:520px;
-            background:${c.bg}; color:${c.color}; border:1px solid ${c.border};
-            border-radius:12px; padding:0.85rem 1.1rem;
-            font-family:'Cairo',sans-serif; font-size:0.9rem; font-weight:600;
-            box-shadow:0 6px 24px rgba(0,0,0,0.14); display:flex; align-items:center; gap:0.6rem;
-        `;
+        div.style.cssText = `position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:99999;min-width:300px;max-width:520px;background:${c.bg};color:${c.color};border:1px solid ${c.border};border-radius:12px;padding:.85rem 1.1rem;font-family:'Cairo',sans-serif;font-size:.9rem;font-weight:600;box-shadow:0 6px 24px rgba(0,0,0,.14);display:flex;align-items:center;gap:.6rem;`;
         div.innerHTML = `<i class="fas ${c.icon}"></i><span>${message}</span>`;
         document.body.appendChild(div);
         setTimeout(() => div.remove(), 4500);
     }
 
-    $('#openingSearchInput').on('input', function () {
-        dt.search($(this).val()).draw();
-    });
+    $('#openingSearchInput').on('input', function () { dt.search($(this).val()).draw(); });
 
     stockSelect.addEventListener('change', function () {
         changedMap.clear();
@@ -263,87 +237,51 @@
         dt.ajax.reload();
     });
 
-    $('#openingTable').on('input', '.opening-qty-input', function () {
-        const itemId = String(this.dataset.itemId);
-        const originalNum = Number(this.dataset.original || 0);
-        const rawVal = this.value;
-        const nextNum = Number(rawVal === '' ? 0 : rawVal);
+    $('#openingTable, #openingCardsMobile').on('input', '.opening-qty-input', function () {
+        const itemId   = String(this.dataset.itemId);
+        const original = parseFloat(this.dataset.original || 0);
+        const newVal   = parseFloat(this.value);
 
-        if (!Number.isFinite(nextNum)) {
-            return;
-        }
+        if (newVal < 0) { this.value = 0; showToast('لا يمكن إدخال كمية سالبة', 'error'); return; }
 
-        if (nextNum < 0) {
-            this.value = this.dataset.original;
-            showToast('لا يمكن إدخال كمية سالبة', 'error');
-            return;
-        }
-
-        const normalized = nextNum.toFixed(2);
-        const normalizedOriginal = originalNum.toFixed(2);
-
-        if (normalized === normalizedOriginal) {
+        if (Math.abs(newVal - original) < 0.00005) {
             changedMap.delete(itemId);
             this.classList.remove('opening-qty-input--changed');
         } else {
-            changedMap.set(itemId, { item_id: Number(itemId), quantity: normalized });
+            changedMap.set(itemId, parseFloat(newVal.toFixed(4)));
             this.classList.add('opening-qty-input--changed');
         }
         refreshChangedCount();
     });
 
-    function setSavingState(isSaving) {
-        saveBtns.forEach((btn) => {
+    function setSavingState(on) {
+        saveBtns.forEach(btn => {
             if (!btn) return;
-            if (isSaving) {
-                btn.dataset.originalHtml = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>جاري الحفظ...</span>';
-            } else {
-                btn.disabled = false;
-                if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
-            }
+            if (on) { btn.dataset.orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>جاري الحفظ...</span>'; }
+            else { btn.disabled = false; if (btn.dataset.orig) btn.innerHTML = btn.dataset.orig; }
         });
     }
 
     function saveChanges() {
-        if (!stockSelect.value) {
-            showToast('يرجى اختيار المخزن أولاً', 'warning');
-            return;
-        }
-        if (!changedMap.size) {
-            showToast('لا توجد تعديلات للحفظ', 'info');
-            return;
-        }
-
+        if (!stockSelect.value) { showToast('يرجى اختيار المخزن أولاً', 'warning'); return; }
+        if (!changedMap.size)   { showToast('لا توجد تعديلات للحفظ', 'info'); return; }
         setSavingState(true);
-
         fetch(SAVE_API, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2] || ''
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2] || '' },
             body: JSON.stringify({
                 stock_id: stockSelect.value,
-                rows: Array.from(changedMap.values())
+                rows: Array.from(changedMap.entries()).map(([item_id, quantity]) => ({ item_id: Number(item_id), quantity }))
             })
         })
         .then(r => r.json())
         .then(data => {
-            if (!data.success) {
-                showToast(data.message || 'تعذر الحفظ', 'error');
-                return;
-            }
-            changedMap.clear();
-            refreshChangedCount();
-            dt.ajax.reload(null, false);
+            if (!data.success) { showToast(data.message || 'تعذر الحفظ', 'error'); return; }
+            changedMap.clear(); refreshChangedCount(); dt.ajax.reload(null, false);
             showToast(data.message || 'تم حفظ التعديلات', 'success');
         })
         .catch(() => showToast('حدث خطأ في الاتصال', 'error'))
-        .finally(() => {
-            setSavingState(false);
-        });
+        .finally(() => setSavingState(false));
     }
 
     saveBtns.forEach(btn => btn.addEventListener('click', saveChanges));

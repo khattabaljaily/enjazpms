@@ -383,18 +383,23 @@ def opening_balance_table_api(request):
         )
 
     filtered = qs.count()
+    qs = qs.select_related('item').prefetch_related('item__item_units')
     qs = qs.order_by('item__name')[start:start + length]
 
     data = []
     for sq in qs:
+        iu_list = list(sq.item.item_units.order_by('factor'))
+        units = [{'id': u.id, 'name': u.name, 'factor': str(u.factor)} for u in iu_list]
         data.append({
             'item_id': sq.item_id,
             'item_name': sq.item.name,
             'sku': sq.item.sku or '—',
             'barcode': sq.item.barcode or '—',
             'current_qty': fmt_qty(sq.quantity),
+            'current_qty_raw': str(sq.quantity or Decimal('0')),
             'reserved_qty': fmt_qty(sq.reserved_quantity),
             'available_qty': fmt_qty(sq.available_quantity),
+            'units': units,
         })
 
     return JsonResponse({
@@ -534,7 +539,7 @@ def stock_quantities_table_api(request):
         tenant=tenant,
         item__is_active=True,
         item__item_type__in=['product', 'raw_material', 'semi_finished'],
-    ).select_related('item', 'stock')
+    ).select_related('item', 'stock').prefetch_related('item__item_units')
 
     if stock_id:
         qs = qs.filter(stock_id=stock_id)
@@ -565,6 +570,7 @@ def stock_quantities_table_api(request):
             'sku': sq.item.sku or '—',
             'barcode': sq.item.barcode or '—',
             'stock_name': sq.stock.name,
+            'unit': sq.item.base_unit_name or '—',
             'quantity': fmt(sq.quantity),
             'reserved': fmt(sq.reserved_quantity),
             'available': fmt(sq.available_quantity),
@@ -1230,14 +1236,15 @@ def transfer_items_api(request):
     stock_id = request.GET.get('stock_id')
     search   = request.GET.get('q', '').strip()
 
-    from apps.items.models import Item
+    from apps.items.models import Item, ItemUnit
     qs = Item.objects.for_tenant(tenant).filter(
         is_active=True, item_type__in=['product', 'material']
     )
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(sku__icontains=search))
 
-    qs = list(qs.order_by('name')[:60])
+    qs = list(qs.prefetch_related('item_units').order_by('name')[:60])
+
     item_ids = [i.id for i in qs]
 
     qty_map = {}
@@ -1248,13 +1255,22 @@ def transfer_items_api(request):
             avail = float((sq['quantity'] or 0) - (sq['reserved_quantity'] or 0))
             qty_map[sq['item_id']] = avail
 
+    def _base_unit_name(item):
+        units = list(item.item_units.order_by('factor'))
+        if units:
+            return units[0].name
+        return item.base_unit_name
+
     data = []
     for item in qs:
+        iu_list = list(item.item_units.order_by('factor'))
+        units = [{'id': u.id, 'name': u.name, 'factor': str(u.factor)} for u in iu_list]
         data.append({
             'id': item.id,
             'name': item.name,
             'sku': item.sku or '',
-            'unit': item.unit.name if item.unit else '',
+            'unit': _base_unit_name(item),
+            'units': units,
             'available_qty': qty_map.get(item.id, 0),
         })
 
@@ -1401,7 +1417,7 @@ def stocktake_detail(request, pk):
         stocktake = (
             Stocktake.objects.for_tenant(tenant)
             .select_related('stock')
-            .prefetch_related('lines__item__unit')
+            .prefetch_related('lines__item__item_units')
             .get(pk=pk)
         )
     except Stocktake.DoesNotExist:

@@ -301,7 +301,11 @@ function renderGrid(items) {
              data-price="${item.selling_price}"
              data-tax="${item.tax_rate}"
              data-cost="${item.cost_price}"
-             data-name="${escHtml(item.name)}">
+             data-name="${escHtml(item.name)}"
+             data-units="${escHtml(JSON.stringify(item.units || []))}"
+             data-unit-id="${item.unit_id || ''}"
+             data-unit-factor="${item.unit_factor || 1}"
+             data-unit-name="${escHtml(item.unit_name || '')}">
             <div class="pos-item-card-add"><i class="fas fa-plus"></i></div>
             ${img}
             <div class="pos-item-name">${escHtml(item.name)}</div>
@@ -323,12 +327,18 @@ function addToCart(card) {
     const tax   = parseFloat(card.dataset.tax)   || 0;
     const cost  = parseFloat(card.dataset.cost)  || 0;
     const name  = card.dataset.name;
+    let units = [];
+    try { units = JSON.parse(card.dataset.units || '[]'); } catch(e) {}
+    const unit_id     = card.dataset.unitId || '';
+    const unit_factor = parseFloat(card.dataset.unitFactor) || 1;
+    const unit_name   = card.dataset.unitName || '';
 
     const existing = cart.find(c => c.item_id === id);
     if (existing) {
         existing.qty += 1;
     } else {
-        cart.push({ item_id: id, name, qty: 1, unit_price: price, discount_percent: 0, tax_rate: tax, cost_price: cost });
+        cart.push({ item_id: id, name, qty: 1, unit_price: price, discount_percent: 0, tax_rate: tax, cost_price: cost,
+                    unit_id, unit_factor, unit_name, units });
     }
 
     // Flash card
@@ -395,12 +405,13 @@ function renderCart() {
         <div class="pos-cart-item${isNew ? ' flash' : ''}" data-idx="${i}">
             <div class="pos-ci-info">
                 <div class="pos-ci-name">${escHtml(line.name)}</div>
-                <div class="pos-ci-price">${fmt(line.unit_price)} / وحدة</div>
+                <div class="pos-ci-price">${fmt(line.unit_price)} / ${escHtml(line.unit_name || 'وحدة')}</div>
             </div>
             <div class="pos-ci-controls">
                 <button class="pos-ci-qty-btn" data-action="dec" data-idx="${i}">−</button>
                 <input class="pos-ci-qty" type="number" value="${line.qty}" min="0.001" step="1" data-idx="${i}">
                 <button class="pos-ci-qty-btn" data-action="inc" data-idx="${i}">+</button>
+                ${line.units && line.units.length > 1 ? `<select class="cx-input cx-input--xs pos-unit-sel" data-idx="${i}">${line.units.map(u => `<option value="${u.id}" data-factor="${u.factor}" data-name="${escHtml(u.name)}" ${String(u.id) === String(line.unit_id) ? 'selected' : ''}>${u.name}</option>`).join('')}</select>` : ''}
             </div>
             <div class="pos-ci-total">${fmt(lineTotal)}</div>
             <button class="pos-ci-remove" data-idx="${i}" title="حذف"><i class="fas fa-times"></i></button>
@@ -415,6 +426,20 @@ function renderCart() {
         inp.addEventListener('change', () => setQty(+inp.dataset.idx, inp.value)));
     $cartItems.querySelectorAll('.pos-ci-remove').forEach(b =>
         b.addEventListener('click', () => removeFromCart(+b.dataset.idx)));
+    $cartItems.querySelectorAll('.pos-unit-sel').forEach(sel =>
+        sel.addEventListener('change', function() {
+            const idx = +this.dataset.idx;
+            const opt = this.options[this.selectedIndex];
+            const newFactor = parseFloat(opt.dataset.factor) || 1;
+            const oldFactor = cart[idx].unit_factor || 1;
+            if (oldFactor !== newFactor && cart[idx].unit_price > 0) {
+                cart[idx].unit_price = (cart[idx].unit_price / oldFactor) * newFactor;
+            }
+            cart[idx].unit_id = this.value;
+            cart[idx].unit_factor = newFactor;
+            cart[idx].unit_name = opt.dataset.name || '';
+            renderCart();
+        }));
 
     updateTotals();
 }
@@ -564,6 +589,8 @@ $checkoutBtn.addEventListener('click', async () => {
             discount_percent: c.discount_percent,
             tax_rate:         c.tax_rate,
             cost_price:       c.cost_price,
+            unit_id:          c.unit_id || null,
+            unit_factor:      c.unit_factor || 1,
         })),
     };
 

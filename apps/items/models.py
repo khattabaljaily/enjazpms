@@ -168,6 +168,7 @@ class Item(TenantMixin):
         related_name='purchase_items',
         verbose_name='وحدة الشراء'
     )
+    has_multiple_units = models.BooleanField('وحدات متعددة', default=False)
 
     # ------ التسعير ------
     cost_price = models.DecimalField(
@@ -235,6 +236,17 @@ class Item(TenantMixin):
 
     def __str__(self):
         return self.name
+
+    @property
+    def base_unit_name(self) -> str:
+        """Returns the smallest unit name from ItemUnit, falls back to legacy unit FK."""
+        try:
+            iu = self.item_units.order_by('factor').first()
+            if iu:
+                return iu.name
+        except Exception:
+            pass
+        return self.unit.name if self.unit else ''
 
     def save(self, *args, **kwargs):
         # توليد SKU تلقائي إذا لم يُحدَّد
@@ -404,3 +416,38 @@ class ItemBatch(TenantMixin):
         if self.expiry_date:
             return (self.expiry_date - timezone.now().date()).days
         return None
+
+
+# ============================================
+# ITEM UNIT (وحدات المنتج)
+# ============================================
+
+class ItemUnit(TenantMixin):
+    """
+    وحدات قياس مرتبطة بمنتج محدد.
+    كل وحدة لها عامل تحويل بالنسبة للوحدة الأصغر (factor=1).
+    مثال: حبة=1، كرتون=12، طرد=144
+    """
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name='item_units',
+        verbose_name='المنتج'
+    )
+    name = models.CharField('اسم الوحدة', max_length=50)
+    factor = models.DecimalField(
+        'العامل', max_digits=10, decimal_places=4, default=1,
+        help_text='الكمية بالنسبة للوحدة الأصغر — الوحدة الأصغر دائماً = 1'
+    )
+
+    class Meta:
+        db_table      = 'item_product_units'
+        ordering      = ['factor']
+        verbose_name  = 'وحدة المنتج'
+        unique_together = [('item', 'name')]
+        indexes = [
+            models.Index(fields=['tenant', 'item']),
+        ]
+
+    def __str__(self):
+        return self.name

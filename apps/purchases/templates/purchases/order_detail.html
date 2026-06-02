@@ -138,6 +138,7 @@
                         <th>#</th>
                         <th>المنتج</th>
                         <th class="text-center">الكمية</th>
+                        <th class="text-center">الوحدة</th>
                         <th class="text-end">سعر الشراء</th>
                         <th class="text-end">الضريبة</th>
                         <th class="text-end">الإجمالي</th>
@@ -152,12 +153,13 @@
                             {% if line.item.sku %}<div class="doc-line-sku">{{ line.item.sku }}</div>{% endif %}
                         </td>
                         <td class="text-center fw-bold">{{ line.quantity|floatformat:"-3u" }}</td>
+                        <td class="text-center text-muted">{{ line.unit_display|default:"—" }}</td>
                         <td class="text-end">{{ line.unit_cost|money }}</td>
                         <td class="text-end text-muted">{{ line.tax_amount|money }}</td>
                         <td class="text-end doc-line-total">{{ line.line_total|money }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center text-muted py-4">لا توجد بنود</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted py-4">لا توجد بنود</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

@@ -106,6 +106,7 @@
                                 <tr>
                                     <th class="sales-th-product">المنتج</th>
                                     <th class="sales-th-qty">الكمية</th>
+                                    <th class="sales-th-unit">الوحدة</th>
                                     <th class="sales-th-price">سعر الشراء</th>
                                     <th class="sales-th-tax">ضريبة %</th>
                                     <th class="sales-th-total">الإجمالي</th>
@@ -232,8 +233,8 @@ function searchItems() {
                          data-sku="${item.sku || ''}"
                          data-cost="${parseFloat(item.cost_price || 0)}"
                          data-units='${JSON.stringify(item.units || [])}'
-                         data-purchase-unit-id="${item.purchase_unit_id || ''}"
-                         data-purchase-unit-factor="${item.purchase_unit_factor || '1'}"
+                         data-unit-id="${item.unit_id || ''}"
+                         data-unit-factor="${item.unit_factor || '1'}"
                          data-track-batch="${item.track_batch ? '1' : ''}"
                          data-track-serial="${item.track_serial ? '1' : ''}"
                          data-track-expiry="${item.track_expiry ? '1' : ''}">
@@ -243,7 +244,7 @@ function searchItems() {
                         </div>
                         <div class="sale-item-result__meta">
                             <div class="sale-item-result__price">${EnjazIMS.formatMoney(item.cost_price || 0)}</div>
-                            ${item.purchase_unit_name ? `<div style="font-size:.72rem;color:var(--text-tertiary)">${item.purchase_unit_name}</div>` : ''}
+                            ${item.unit_name ? `<div style="font-size:.72rem;color:var(--text-tertiary)">${item.unit_name}</div>` : ''}
                         </div>
                     </div>
                 `).join('') : '<div class="text-muted text-center py-3">لا توجد نتائج</div>';
@@ -259,16 +260,16 @@ function addLine(itemId, itemName, itemSku, suggestedCost, opts = {}) {
 
     // Unit selector
     const units = opts.units || [];
-    const defaultUnitId = opts.unit_id || opts.purchase_unit_id || '';
-    const defaultFactor  = parseFloat(opts.unit_factor || opts.purchase_unit_factor || 1);
+    const defaultUnitId = opts.unit_id || '';
+    const defaultFactor  = parseFloat(opts.unit_factor || 1);
     let unitHtml = '';
     if (units.length > 1) {
         const opts_html = units.map(u =>
             `<option value="${u.id}" data-factor="${u.factor}" ${String(u.id) === String(defaultUnitId) ? 'selected' : ''}>${u.name}</option>`
         ).join('');
-        unitHtml = `<select class="cx-input cx-input--xs mt-1" id="unit-sel-${id}" onchange="onUnitChange(${id})">${opts_html}</select>`;
+        unitHtml = `<select class="cx-input cx-input--xs inv-unit-sel" id="unit-sel-${id}" onchange="onUnitChange(${id})">${opts_html}</select>`;
     } else if (units.length === 1) {
-        unitHtml = `<span class="badge bg-light text-secondary mt-1" style="font-size:.72rem">${units[0].name}</span>`;
+        unitHtml = `<span class="inv-unit-badge">${units[0].name}</span>`;
     }
 
     // Per-item tracking (uses item flags when available, falls back to tenant CAP)
@@ -294,8 +295,8 @@ function addLine(itemId, itemName, itemSku, suggestedCost, opts = {}) {
         <td><div class="sales-line-item-name">${itemName}</div><div class="sales-line-item-sku">${itemSku || ''}</div>${trackingHtml}</td>
         <td>
             <input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.qty || 1)}" class="cx-input cx-input--sm inv-num-field" id="qty-${id}" oninput="recalc()">
-            ${unitHtml}
         </td>
+        <td class="inv-unit-cell" id="unit-cell-${id}">${unitHtml}</td>
         <td><input type="text" inputmode="decimal" value="${suggestedCost || 0}" class="cx-input cx-input--sm inv-num-field" id="cost-${id}" oninput="recalc()"></td>
         <td><input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.tax_rate || 0)}" class="cx-input cx-input--sm inv-num-field" id="tax-${id}" oninput="recalc()"></td>
         <td class="text-end" id="total-${id}">${EnjazIMS.formatMoney(0)}</td>
@@ -312,8 +313,18 @@ function onUnitChange(id) {
     if (!sel) return;
     const opt = sel.options[sel.selectedIndex];
     const row = document.getElementById(`line-${id}`);
-    row.dataset.unitFactor = opt.dataset.factor || 1;
+    const oldFactor = parseFloat(row.dataset.unitFactor) || 1;
+    const newFactor = parseFloat(opt.dataset.factor) || 1;
+    if (oldFactor !== newFactor) {
+        const costInput = document.getElementById(`cost-${id}`);
+        if (costInput) {
+            const currentCost = EnjazIMS.parseNumber(costInput.value) || 0;
+            if (currentCost > 0) costInput.value = ((currentCost / oldFactor) * newFactor).toFixed(2);
+        }
+    }
+    row.dataset.unitFactor = newFactor;
     row.dataset.unitId = sel.value;
+    recalc();
 }
 
 function removeLine(id) {
@@ -472,10 +483,8 @@ function submitOrder(action) {
             Number(card.dataset.cost || 0),
             {
                 units,
-                unit_id: card.dataset.purchaseUnitId || '',
-                unit_factor: parseFloat(card.dataset.purchaseUnitFactor || 1),
-                purchase_unit_id: card.dataset.purchaseUnitId || '',
-                purchase_unit_factor: parseFloat(card.dataset.purchaseUnitFactor || 1),
+                unit_id: card.dataset.unitId || '',
+                unit_factor: parseFloat(card.dataset.unitFactor || 1),
                 track_batch:  card.dataset.trackBatch  === '1',
                 track_serial: card.dataset.trackSerial === '1',
                 track_expiry: card.dataset.trackExpiry === '1',
@@ -493,6 +502,9 @@ function submitOrder(action) {
                 {
                     qty: line.quantity,
                     tax_rate: line.tax_rate,
+                    units: line.units || [],
+                    unit_id: line.unit_id || '',
+                    unit_factor: line.unit_factor || '1',
                     batch_number: line.batch_number || '',
                     serial_number: line.serial_number || '',
                     expiry_date: line.expiry_date || '',

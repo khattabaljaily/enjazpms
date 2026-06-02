@@ -135,7 +135,7 @@
                     <td>{{ forloop.counter }}</td>
                     <td><strong>{{ ln.item.name }}</strong></td>
                     <td><code>{{ ln.item.sku|default:"—" }}</code></td>
-                    <td>{{ ln.item.unit.name|default:"—" }}</td>
+                    <td>{{ ln.item.base_unit_name|default:"—" }}</td>
                     <td class="text-end">{{ ln.requested_quantity|floatformat:"-2" }}</td>
                     <td class="text-end" id="price-{{ ln.id }}">
                         {% if ln.quoted_price %}{{ ln.quoted_price|money }}{% else %}—{% endif %}

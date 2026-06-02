@@ -78,6 +78,11 @@
         </div>
     </div>
 
+    <div class="opening-help opening-help--unit-note">
+        <i class="fas fa-ruler"></i>
+        <span>جميع الكميات تُعرض بـ <strong>الوحدة الأساسية</strong> (الأصغر) للصنف.</span>
+    </div>
+
     <div class="table-responsive cx-table-wrap">
         <table id="qtyTable" class="cx-table">
             <thead>
@@ -86,6 +91,7 @@
                     <th>SKU</th>
                     <th>الباركود</th>
                     <th>المخزن</th>
+                    <th class="text-center">الوحدة</th>
                     <th class="text-end">الكمية الإجمالية</th>
                     <th class="text-end">المحجوزة</th>
                     <th class="text-end">المتاحة</th>
@@ -151,6 +157,10 @@
                         <strong class="cx-qty-card-meta-value">${r.stock_name || '—'}</strong>
                     </div>
                     <div>
+                        <span class="cx-qty-card-meta-label">الوحدة</span>
+                        <strong class="cx-qty-card-meta-value">${r.unit || '—'}</strong>
+                    </div>
+                    <div>
                         <span class="cx-qty-card-meta-label">الكمية الإجمالية</span>
                         <strong class="cx-qty-card-meta-value">${qty}</strong>
                     </div>
@@ -198,6 +208,7 @@
             { data: 'sku',      render: v => `<code class="cxr-code">${v}</code>` },
             { data: 'barcode',  render: v => `<code class="cxr-code">${v}</code>` },
             { data: 'stock_name' },
+            { data: 'unit', className: 'text-center', render: v => `<span class="inv-unit-badge">${v || '—'}</span>` },
             { data: 'quantity',  className: 'text-end qty-num', render: v => EnjazIMS.formatQuantity(v) },
             { data: 'reserved',  className: 'text-end qty-num qty-reserved', render: v => EnjazIMS.formatQuantity(v) },
             { data: 'available', className: 'text-end qty-num', render: function(v, _, row) {

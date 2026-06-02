@@ -340,13 +340,16 @@ def invoice_edit(request, pk):
         return redirect('sales:invoice_edit', pk=pk)
 
     existing_lines = []
-    for line in invoice.lines.select_related('item', 'variant', 'unit'):
-        base_unit = line.item.unit
-        units = []
-        if base_unit:
-            units.append({'id': base_unit.id, 'name': str(base_unit), 'factor': '1'})
-            for sub in base_unit.sub_units.filter(is_active=True, tenant=tenant):
-                units.append({'id': sub.id, 'name': str(sub), 'factor': str(sub.conversion_factor)})
+    for line in invoice.lines.select_related('item', 'variant').prefetch_related('item__item_units'):
+        iu_list = list(line.item.item_units.order_by('factor'))
+        units = [{'id': u.id, 'name': u.name, 'factor': str(u.factor)} for u in iu_list]
+        unit_id = ''
+        if iu_list:
+            matched = next(
+                (u for u in iu_list if abs(float(u.factor) - float(line.unit_factor or 1)) < 0.0001),
+                iu_list[0]
+            )
+            unit_id = matched.id
         existing_lines.append({
             'item_id': line.item_id,
             'item_name': line.item.name,
@@ -361,8 +364,8 @@ def invoice_edit(request, pk):
             'serial_number': line.serial_number,
             'expiry_date': line.expiry_date.isoformat() if line.expiry_date else '',
             'line_total': str(line.line_total),
-            'unit_id': line.unit_id or (base_unit.id if base_unit else None),
-            'unit_name': str(line.unit) if line.unit else (str(base_unit) if base_unit else ''),
+            'unit_id': unit_id,
+            'unit_name': iu_list[0].name if iu_list else '',
             'unit_factor': str(line.unit_factor) if line.unit_factor else '1',
             'units': units,
             'track_batch': line.item.track_batch,
@@ -537,7 +540,11 @@ def invoice_detail(request, pk):
         SaleInvoice.objects.select_related('customer', 'stock', 'confirmed_by', 'cancelled_by'),
         pk=pk, tenant=tenant,
     )
-    lines = invoice.lines.select_related('item', 'variant').all()
+    lines = list(invoice.lines.select_related('item', 'variant').prefetch_related('item__item_units').all())
+    for ln in lines:
+        iu_list = list(ln.item.item_units.order_by('factor'))
+        matched = next((u for u in iu_list if abs(float(u.factor) - float(ln.unit_factor or 1)) < 0.0001), iu_list[0] if iu_list else None)
+        ln.unit_display = matched.name if matched else ln.item.base_unit_name
     payments = invoice.payments.all()
     returns = invoice.sale_returns.filter(status='confirmed').select_related('confirmed_by')
 
@@ -984,12 +991,10 @@ def item_info_api(request):
                 'selling_price': str(v.selling_price or item.selling_price),
             })
 
-    base_unit = item.unit
-    units = []
-    if base_unit:
-        units.append({'id': base_unit.id, 'name': str(base_unit), 'factor': '1'})
-        for sub in base_unit.sub_units.filter(is_active=True, tenant=tenant):
-            units.append({'id': sub.id, 'name': str(sub), 'factor': str(sub.conversion_factor)})
+    iu_qs = list(item.item_units.order_by('factor'))
+    units = [{'id': u.id, 'name': u.name, 'factor': str(u.factor)} for u in iu_qs]
+    base_unit_id   = iu_qs[0].id   if iu_qs else None
+    base_unit_name = iu_qs[0].name if iu_qs else ''
 
     return JsonResponse({
         'success': True,
@@ -1009,8 +1014,8 @@ def item_info_api(request):
             'is_service': is_service,
             'available_qty': available_qty,
             'variants': variants,
-            'unit_id': base_unit.id if base_unit else None,
-            'unit_name': str(base_unit) if base_unit else '',
+            'unit_id': base_unit_id,
+            'unit_name': base_unit_name,
             'unit_factor': '1',
             'units': units,
         }
@@ -1303,10 +1308,13 @@ def quote_edit(request, pk):
         return _json_ok({'redirect': f'/sales/quotes/{quote.pk}/'}, 'تم تحديث عرض السعر')
 
     lines_json = []
-    for ql in quote.quote_lines.select_related('item', 'variant').all():
+    for ql in quote.quote_lines.select_related('item', 'variant').prefetch_related('item__item_units').all():
+        iu_list = list(ql.item.item_units.order_by('factor'))
+        units = [{'id': u.id, 'name': u.name, 'factor': str(u.factor)} for u in iu_list]
         lines_json.append({
             'item_id': ql.item_id,
             'item_name': ql.item.name,
+            'item_sku': ql.item.sku or '',
             'variant_id': ql.variant_id,
             'variant_name': str(ql.variant) if ql.variant else '',
             'quantity': str(ql.quantity),
@@ -1314,6 +1322,10 @@ def quote_edit(request, pk):
             'discount_percent': str(ql.discount_percent),
             'tax_rate': str(ql.tax_rate),
             'line_total': str(ql.line_total),
+            'units': units,
+            'unit_id': iu_list[0].id if iu_list else '',
+            'unit_name': iu_list[0].name if iu_list else '',
+            'unit_factor': '1',
         })
 
     return render(request, 'sales/quote_form.html', {
@@ -1336,7 +1348,10 @@ def quote_detail(request, pk):
         SaleQuote.objects.select_related('customer', 'stock', 'converted_invoice', 'converted_by'),
         pk=pk, tenant=tenant
     )
-    lines = quote.quote_lines.select_related('item', 'variant').all()
+    lines = list(quote.quote_lines.select_related('item', 'variant').prefetch_related('item__item_units').all())
+    for ln in lines:
+        iu_list = list(ln.item.item_units.order_by('factor'))
+        ln.unit_display = iu_list[0].name if iu_list else ln.item.base_unit_name
 
     return render(request, 'sales/quote_detail.html', {
         'quote': quote,
@@ -2347,7 +2362,7 @@ def pos_items_api(request):
             'selling_price': str(item.selling_price or 0),
             'cost_price': str(item.cost_price or 0),
             'tax_rate': str(item.tax_rate or 0),
-            'unit': item.unit.name if item.unit else '',
+            'unit': item.base_unit_name,
             'item_type': item.item_type,
             'is_service': item.item_type == 'service',
             'available_qty': float(sq.get('available_quantity', 0)) if sq else None,

@@ -767,3 +767,31 @@
         letter-spacing: 0.04em;
     }
 }
+
+/* ── Unit note ─────────────────────────────────────────────── */
+.rpt-unit-note {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    margin-bottom: .75rem;
+    padding: .35rem .75rem;
+    background: rgba(16, 185, 129, 0.08);
+    color: #065f46;
+    border-radius: 8px;
+    font-size: .78rem;
+    font-weight: 600;
+}
+
+.rpt-unit-note i {
+    color: #059669;
+    font-size: .75rem;
+}
+
+.rpt-unit-note--mixed {
+    background: rgba(245, 158, 11, 0.08);
+    color: #92400e;
+}
+
+.rpt-unit-note--mixed i {
+    color: #d97706;
+}

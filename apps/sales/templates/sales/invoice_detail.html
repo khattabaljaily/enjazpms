@@ -165,6 +165,7 @@
                         <th>#</th>
                         <th>المنتج</th>
                         <th class="text-center">الكمية</th>
+                        <th class="text-center">الوحدة</th>
                         <th class="text-end">سعر الوحدة</th>
                         <th class="text-center">خصم</th>
                         <th class="text-center">ضريبة</th>
@@ -182,6 +183,7 @@
                             <div class="doc-line-sku">{{ line.item.sku }}</div>
                         </td>
                         <td class="text-center fw-600">{{ line.quantity|floatformat:"-3u" }}</td>
+                        <td class="text-center text-muted">{{ line.unit_display|default:"—" }}</td>
                         <td class="text-end">{{ line.unit_price|money }}</td>
                         <td class="text-center text-muted">{{ line.discount_percent|floatformat:"2u"|default:0 }}%</td>
                         <td class="text-center text-muted">{{ line.tax_rate|floatformat:"2u"|default:0 }}%</td>

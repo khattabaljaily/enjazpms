@@ -156,7 +156,7 @@
                                     </span>
                                 </td>
                                 <td class="fw-bold">{{ item.item_name }}</td>
-                                <td class="text-center text-muted">{{ item.unit }}</td>
+                                <td class="text-center text-muted">{{ item.base_unit_name|default:"—" }}</td>
                                 <td class="text-end">{{ item.quantity_sold }}</td>
                                 <td class="text-end fw-bold" style="color:#667eea">{{ item.total_amount }}</td>
                                 <td class="text-end text-muted">{{ item.avg_unit_price }}</td>

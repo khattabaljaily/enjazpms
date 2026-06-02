@@ -568,7 +568,7 @@ class SalesReportGenerator:
         for line in base_lines:
             iid = line.item_id
             agg[iid]['item_name'] = line.item.name
-            agg[iid]['unit'] = line.item.unit.name if line.item.unit else ''
+            agg[iid]['unit'] = line.item.base_unit_name
             agg[iid]['cost_price'] = line.item.cost_price or Decimal('0')
             qty = line.quantity or Decimal('0')
             price = line.unit_price or Decimal('0')
