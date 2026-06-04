@@ -133,6 +133,13 @@ const CSRF      = "{{ csrf_token }}";
 let lines = {};   // item_id → {name, units, unit_id, unit_factor, available_qty, quantity_in_unit}
 let searchTimeout;
 
+const EMPTY_ROW_HTML = `<tr id="emptyRow">
+    <td colspan="5" class="text-center text-muted py-4">
+        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+        ابحث عن منتج وأضفه للقائمة
+    </td>
+</tr>`;
+
 function buildUnitSel(itemId, units, selectedFactor) {
     if (!units || units.length <= 1) {
         return `<span class="inv-unit-badge">${units && units[0] ? units[0].name : '—'}</span>`;
@@ -145,16 +152,13 @@ function buildUnitSel(itemId, units, selectedFactor) {
 
 function renderLines() {
     const tbody = document.getElementById('linesBody');
-    const empty = document.getElementById('emptyRow');
     const ids = Object.keys(lines);
     document.getElementById('lineCountBadge').textContent = ids.length;
 
     if (!ids.length) {
-        tbody.innerHTML = '';
-        tbody.appendChild(empty);
+        tbody.innerHTML = EMPTY_ROW_HTML;
         return;
     }
-    empty.remove();
 
     tbody.innerHTML = ids.map(id => {
         const ln = lines[id];
@@ -263,6 +267,10 @@ async function saveTransfer(autoConfirm) {
 
     if (!fromId || !toId) {
         showToast('error', 'يرجى تحديد المخزن المرسِل والمستلِم');
+        return;
+    }
+    if (fromId === toId) {
+        showToast('error', 'لا يمكن التحويل من مخزن إلى نفسه — يرجى اختيار مخزن مستلِم مختلف');
         return;
     }
     if (!linesArr.length) {

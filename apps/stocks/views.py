@@ -535,48 +535,103 @@ def stock_quantities_table_api(request):
     length = int(request.GET.get('length', 25))
     search_value = request.GET.get('search[value]', '').strip()
 
-    qs = StockQuantity.objects.filter(
-        tenant=tenant,
-        item__is_active=True,
-        item__item_type__in=['product', 'raw_material', 'semi_finished'],
-    ).select_related('item', 'stock').prefetch_related('item__item_units')
-
-    if stock_id:
-        qs = qs.filter(stock_id=stock_id)
-
-    total = qs.count()
-
-    if search_value:
-        qs = qs.filter(
-            Q(item__name__icontains=search_value)
-            | Q(item__sku__icontains=search_value)
-            | Q(item__barcode__icontains=search_value)
-            | Q(stock__name__icontains=search_value)
-        )
-
-    filtered = qs.count()
-    qs = qs.order_by('stock__name', 'item__name')[start:start + length]
-
     def fmt(v):
         return str((v or Decimal('0')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
-    data = []
-    for sq in qs:
-        threshold = sq.min_quantity or sq.item.min_quantity
-        is_low = threshold > 0 and sq.quantity <= threshold
-        is_zero = sq.quantity == Decimal('0')
-        data.append({
-            'item_name': sq.item.name,
-            'sku': sq.item.sku or '—',
-            'barcode': sq.item.barcode or '—',
-            'stock_name': sq.stock.name,
-            'unit': sq.item.base_unit_name or '—',
-            'quantity': fmt(sq.quantity),
-            'reserved': fmt(sq.reserved_quantity),
-            'available': fmt(sq.available_quantity),
-            'is_low': is_low,
-            'is_zero': is_zero,
-        })
+    if stock_id:
+        # ── مخزن محدد ──────────────────────────────────────────────────
+        qs = StockQuantity.objects.filter(
+            tenant=tenant,
+            item__is_active=True,
+            item__item_type__in=['product', 'raw_material', 'semi_finished'],
+            stock_id=stock_id,
+        ).select_related('item', 'stock').prefetch_related('item__item_units')
+
+        total = qs.count()
+
+        if search_value:
+            qs = qs.filter(
+                Q(item__name__icontains=search_value)
+                | Q(item__sku__icontains=search_value)
+                | Q(item__barcode__icontains=search_value)
+            )
+
+        filtered = qs.count()
+        qs = qs.order_by('item__name')[start:start + length]
+
+        data = []
+        for sq in qs:
+            threshold = sq.min_quantity or sq.item.min_quantity
+            is_low = threshold > 0 and sq.quantity <= threshold
+            is_zero = sq.quantity == Decimal('0')
+            data.append({
+                'item_name': sq.item.name,
+                'sku': sq.item.sku or '—',
+                'barcode': sq.item.barcode or '—',
+                'stock_name': sq.stock.name,
+                'unit': sq.item.base_unit_name or '—',
+                'quantity': fmt(sq.quantity),
+                'reserved': fmt(sq.reserved_quantity),
+                'available': fmt(sq.available_quantity),
+                'is_low': is_low,
+                'is_zero': is_zero,
+            })
+
+    else:
+        # ── كل المخازن: تجميع الكميات لكل صنف ────────────────────────
+        from django.db.models import Sum
+        from apps.items.models import Item as ItemModel
+
+        agg_qs = (
+            StockQuantity.objects
+            .filter(tenant=tenant, item__is_active=True,
+                    item__item_type__in=['product', 'raw_material', 'semi_finished'])
+            .values('item_id')
+            .annotate(
+                total_quantity=Sum('quantity'),
+                total_reserved=Sum('reserved_quantity'),
+            )
+        )
+
+        if search_value:
+            agg_qs = agg_qs.filter(
+                Q(item__name__icontains=search_value)
+                | Q(item__sku__icontains=search_value)
+                | Q(item__barcode__icontains=search_value)
+            )
+
+        total = filtered = agg_qs.count()
+        agg_page = list(agg_qs.order_by('item__name')[start:start + length])
+
+        item_ids = [r['item_id'] for r in agg_page]
+        items_map = {
+            item.id: item
+            for item in ItemModel.objects.filter(id__in=item_ids).prefetch_related('item_units')
+        }
+
+        data = []
+        for row in agg_page:
+            item = items_map.get(row['item_id'])
+            if not item:
+                continue
+            qty = row['total_quantity'] or Decimal('0')
+            reserved = row['total_reserved'] or Decimal('0')
+            available = qty - reserved
+            threshold = item.min_quantity or Decimal('0')
+            is_low = threshold > 0 and qty <= threshold
+            is_zero = qty == Decimal('0')
+            data.append({
+                'item_name': item.name,
+                'sku': item.sku or '—',
+                'barcode': item.barcode or '—',
+                'stock_name': 'إجمالي كل المخازن',
+                'unit': item.base_unit_name or '—',
+                'quantity': fmt(qty),
+                'reserved': fmt(reserved),
+                'available': fmt(available),
+                'is_low': is_low,
+                'is_zero': is_zero,
+            })
 
     return JsonResponse({
         'draw': draw,
@@ -1121,7 +1176,8 @@ def transfer_create(request):
             errors['lines'] = ['أضف بنداً واحداً على الأقل']
 
         if errors:
-            return JsonResponse({'success': False, 'errors': errors}, status=400)
+            first_msg = next(iter(errors.values()))[0]
+            return JsonResponse({'success': False, 'message': first_msg, 'errors': errors}, status=400)
 
         try:
             from_stock = Stock.objects.for_tenant(tenant).get(pk=from_id)

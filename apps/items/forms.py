@@ -137,9 +137,7 @@ class ItemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         # Filter item_type choices based on capabilities
-        allowed_types = ['product']
-        if capabilities is None or capabilities.has_services:
-            allowed_types.append('service')
+        allowed_types = ['product', 'service']
         if capabilities is None or capabilities.has_manufacturing:
             allowed_types.extend(['raw_material', 'semi_finished'])
         self.fields['item_type'].choices = [
