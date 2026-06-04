@@ -221,6 +221,21 @@
     box-shadow: 0 2px 8px rgba(99,102,241,.3);
 }
 
+.pos-cat-btn--service {
+    border-color: var(--teal, #0d9488);
+    color: var(--teal, #0d9488);
+}
+.pos-cat-btn--service:hover {
+    background: rgba(13,148,136,.06);
+    border-color: var(--teal, #0d9488);
+    color: var(--teal, #0d9488);
+}
+.pos-cat-btn--service.active {
+    background: var(--teal, #0d9488);
+    border-color: var(--teal, #0d9488);
+    box-shadow: 0 2px 8px rgba(13,148,136,.3);
+}
+
 /* ── Product Grid ────────────────────────────────────────── */
 
 .pos-grid-wrap {

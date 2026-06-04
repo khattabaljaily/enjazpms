@@ -69,7 +69,7 @@
               <tr>
                 <td>{{ forloop.counter }}</td>
                 <td>{{ line.item.name }}</td>
-                <td>{{ line.quantity|floatformat:"-3u" }}</td>
+                <td>{{ line.quantity|floatformat:"-2" }}</td>
                 <td>{{ line.unit_cost|money}}</td>
                 <td>{{ line.tax_amount|money}}</td>
                 <td><strong>{{ line.line_total|money}}</strong></td>

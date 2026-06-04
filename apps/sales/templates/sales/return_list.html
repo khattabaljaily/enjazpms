@@ -399,7 +399,7 @@ function openReturnModal(row, refundMethodMap) {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${line.item_name}</td>
-                        <td>${line.returned_quantity}</td>
+                        <td>${EnjazIMS.formatQuantity(line.returned_quantity)}</td>
                         <td>${num(line.unit_price)}</td>
                         <td><strong>${num(line.line_total)}</strong></td>
                     `;

@@ -164,7 +164,7 @@ function renderLines() {
         const ln = lines[id];
         const availBase = ln.available_qty || 0;
         const factor = ln.unit_factor || 1;
-        const availInUnit = (availBase / factor).toFixed(4).replace(/\.?0+$/, '');
+        const availInUnit = (availBase / factor).toFixed(2).replace(/\.?0+$/, '');
         const qtyInUnit = ln.quantity_in_unit != null ? ln.quantity_in_unit : 1;
         const availClass = (qtyInUnit * factor) > availBase ? 'low' : '';
         return `<tr id="line-${id}">
@@ -190,7 +190,7 @@ function onTransferUnitChange(itemId, sel) {
     lines[itemId].unit_factor = factor;
     const row = sel.closest('tr');
     const availBase = lines[itemId].available_qty || 0;
-    row.querySelector('.tf-avail').textContent = (availBase / factor).toFixed(4).replace(/\.?0+$/, '');
+    row.querySelector('.tf-avail').textContent = (availBase / factor).toFixed(2).replace(/\.?0+$/, '');
 }
 
 function updateQty(id, val) {
@@ -247,7 +247,7 @@ function searchItems(q) {
             `<button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
                 onclick='addLine(${JSON.stringify(item)})'>
                 <span>${item.name} <small class="text-muted">${item.sku}</small></span>
-                <span class="badge bg-secondary">${item.available_qty.toFixed(2)} ${item.unit}</span>
+                <span class="badge bg-secondary">${EnjazIMS.formatQuantity(item.available_qty)} ${item.unit}</span>
             </button>`
         ).join('');
     });

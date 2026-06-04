@@ -87,8 +87,8 @@
           </td>
           <td class="text-end">{{ line.quantity|floatformat:"-2" }}</td>
           <td class="hide-mobile text-end">{{ line.unit_price|money_fmt }}</td>
-          <td class="hide-mobile text-end">{% if line.discount_percent %}{{ line.discount_percent|floatformat:1 }}%{% else %}—{% endif %}</td>
-          <td class="hide-mobile text-end">{% if line.tax_rate %}{{ line.tax_rate|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td class="hide-mobile text-end">{% if line.discount_percent %}{{ line.discount_percent|floatformat:"-1" }}%{% else %}—{% endif %}</td>
+          <td class="hide-mobile text-end">{% if line.tax_rate %}{{ line.tax_rate|floatformat:"-1" }}%{% else %}—{% endif %}</td>
           <td class="text-end"><strong>{{ line.line_total|money_fmt }}</strong></td>
         </tr>
         {% endfor %}

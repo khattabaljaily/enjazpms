@@ -194,11 +194,11 @@ function onUnitChange(sel) {
     const sysBase = parseFloat(row.dataset.system) || 0;
     const cntBase = parseFloat(row.dataset.counted) || 0;
     // Update displayed system qty
-    row.querySelector('.st-sys-qty').textContent = (sysBase / factor).toFixed(4).replace(/\.?0+$/, '');
+    row.querySelector('.st-sys-qty').textContent = (sysBase / factor).toFixed(2).replace(/\.?0+$/, '');
     // Update counted input
     const input = row.querySelector('.qty-counted');
     if (input) {
-        input.value = (cntBase / factor).toFixed(4).replace(/\.?0+$/, '');
+        input.value = (cntBase / factor).toFixed(2).replace(/\.?0+$/, '');
         onCountChange(input, parseInt(row.dataset.lineId));
     }
 }
@@ -213,10 +213,10 @@ function onCountChange(input, lineId) {
     const diffInUnit = diffBase / factor;
     const diffCell = row.querySelector('.diff-cell');
     if (diffBase > 0) {
-        diffCell.innerHTML = `<span class="diff-positive">+${diffInUnit.toFixed(4).replace(/\.?0+$/, '')}</span>`;
+        diffCell.innerHTML = `<span class="diff-positive">+${diffInUnit.toFixed(2).replace(/\.?0+$/, '')}</span>`;
         row.classList.add('has-diff');
     } else if (diffBase < 0) {
-        diffCell.innerHTML = `<span class="diff-negative">${diffInUnit.toFixed(4).replace(/\.?0+$/, '')}</span>`;
+        diffCell.innerHTML = `<span class="diff-negative">${diffInUnit.toFixed(2).replace(/\.?0+$/, '')}</span>`;
         row.classList.add('has-diff');
     } else {
         diffCell.innerHTML = '<span class="diff-zero">—</span>';
@@ -231,7 +231,7 @@ function resetLine(btn, sysQty, lineId) {
     const row = btn.closest('tr');
     const factor = parseFloat(row.dataset.factor) || 1;
     const input = row.querySelector('.qty-counted');
-    input.value = (parseFloat(sysQty) / factor).toFixed(4).replace(/\.?0+$/, '');
+    input.value = (parseFloat(sysQty) / factor).toFixed(2).replace(/\.?0+$/, '');
     row.dataset.counted = sysQty;
     onCountChange(input, lineId);
 }

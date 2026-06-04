@@ -107,7 +107,7 @@
                             {% if line.notes %}<span class="ms-2 text-muted">· {{ line.notes }}</span>{% endif %}
                         </div>
                     </td>
-                    <td class="text-center fw-bold">{{ line.quantity|floatformat:"-4" }}</td>
+                    <td class="text-center fw-bold">{{ line.quantity|floatformat:"-2" }}</td>
                     <td class="text-end">{{ line.component.cost_price|money }}</td>
                     <td class="text-end doc-line-total">{{ line.line_total|money }}</td>
                     <td>

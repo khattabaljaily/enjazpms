@@ -186,8 +186,8 @@
                         <td class="text-center js-quote-qty" data-value="{{ line.quantity|unlocalize }}">{{ line.quantity|floatformat:"-3u" }}</td>
                         <td class="text-center text-muted">{{ line.unit_display|default:"—" }}</td>
                         <td class="text-end">{{ line.unit_price|money }}</td>
-                        <td class="text-center text-muted js-quote-percent" data-value="{{ line.discount_percent|unlocalize }}">{{ line.discount_percent|floatformat:"2u"|default:0 }}%</td>
-                        <td class="text-center text-muted js-quote-percent" data-value="{{ line.tax_rate|unlocalize }}">{{ line.tax_rate|floatformat:"2u"|default:0 }}%</td>
+                        <td class="text-center text-muted js-quote-percent" data-value="{{ line.discount_percent|unlocalize }}">{{ line.discount_percent|floatformat:"-2"|default:0 }}%</td>
+                        <td class="text-center text-muted js-quote-percent" data-value="{{ line.tax_rate|unlocalize }}">{{ line.tax_rate|floatformat:"-2"|default:0 }}%</td>
                         <td class="text-end doc-line-total">{{ line.line_total|money }}</td>
                     </tr>
                     {% endfor %}
@@ -461,7 +461,7 @@ function formatQuoteNumbers() {
     if (!window.EnjazIMS) return false;
     document.querySelectorAll('.js-quote-percent').forEach((el) => {
         const value = EnjazIMS.parseNumber(el.dataset.value || 0);
-        el.textContent = `${value.toFixed(2)}%`;
+        el.textContent = `${EnjazIMS.formatQuantity(value, 2)}%`;
     });
     return true;
 }

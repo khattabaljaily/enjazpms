@@ -182,16 +182,16 @@
                             {% if line.variant %}<div class="doc-line-sku">{{ line.variant }}</div>{% endif %}
                             <div class="doc-line-sku">{{ line.item.sku }}</div>
                         </td>
-                        <td class="text-center fw-600">{{ line.quantity|floatformat:"-3u" }}</td>
+                        <td class="text-center fw-600">{{ line.quantity|floatformat:"-2" }}</td>
                         <td class="text-center text-muted">{{ line.unit_display|default:"—" }}</td>
                         <td class="text-end">{{ line.unit_price|money }}</td>
-                        <td class="text-center text-muted">{{ line.discount_percent|floatformat:"2u"|default:0 }}%</td>
-                        <td class="text-center text-muted">{{ line.tax_rate|floatformat:"2u"|default:0 }}%</td>
+                        <td class="text-center text-muted">{{ line.discount_percent|floatformat:"-2"|default:0 }}%</td>
+                        <td class="text-center text-muted">{{ line.tax_rate|floatformat:"-2"|default:0 }}%</td>
                         <td class="text-end doc-line-total">{{ line.line_total|money }}</td>
                         {% if invoice.status != 'draft' %}
                         <td class="text-center">
                             {% if line.returned_quantity > 0 %}
-                            <span class="doc-ret-badge">{{ line.returned_quantity|floatformat:"-3u" }}</span>
+                            <span class="doc-ret-badge">{{ line.returned_quantity|floatformat:"-2" }}</span>
                             {% else %}—{% endif %}
                         </td>
                         {% endif %}

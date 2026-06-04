@@ -2312,9 +2312,13 @@ def pos_items_api(request):
 
     stock_id = request.GET.get('stock_id')
     category_id = request.GET.get('category_id') or None
+    item_type = request.GET.get('item_type') or None
     search = (request.GET.get('q') or '').strip()
 
     qs = Item.objects.filter(tenant=tenant, is_active=True).select_related('unit', 'category')
+
+    if item_type:
+        qs = qs.filter(item_type=item_type)
 
     if category_id:
         from apps.items.models import Category

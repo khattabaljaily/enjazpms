@@ -110,7 +110,7 @@
                                 <td class="fw-bold" style="color:#4facfe">{{ row.invoice_number }}</td>
                                 <td class="text-muted">{{ row.invoice_date|date:"Y-m-d" }}</td>
                                 <td>{{ row.supplier_name }}</td>
-                                <td class="text-end text-muted">{{ row.quantity }}</td>
+                                <td class="text-end text-muted">{{ row.quantity|floatformat:"-2" }}</td>
                                 <td class="text-end text-muted">{{ row.unit_cost }}</td>
                                 <td class="text-end fw-bold">{{ row.line_total }}</td>
                             </tr>

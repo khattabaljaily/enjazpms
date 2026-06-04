@@ -64,7 +64,7 @@
                             </td>
                             <td class="text-center text-muted">{{ row.item_unit }}</td>
                             <td class="text-muted">{{ row.stock_name }}</td>
-                            <td class="text-center">{{ row.quantity }}</td>
+                            <td class="text-center">{{ row.quantity|floatformat:"-2" }}</td>
                             <td class="text-center fw-bold" style="color:#ef4444;">{{ row.available }}</td>
                             <td class="text-center text-muted">{{ row.min_quantity }}</td>
                             <td class="text-center fw-bold" style="color:#ef4444;">

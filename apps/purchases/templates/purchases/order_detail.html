@@ -152,7 +152,7 @@
                             <div class="doc-line-name">{{ line.item.name }}</div>
                             {% if line.item.sku %}<div class="doc-line-sku">{{ line.item.sku }}</div>{% endif %}
                         </td>
-                        <td class="text-center fw-bold">{{ line.quantity|floatformat:"-3u" }}</td>
+                        <td class="text-center fw-bold">{{ line.quantity|floatformat:"-2" }}</td>
                         <td class="text-center text-muted">{{ line.unit_display|default:"—" }}</td>
                         <td class="text-end">{{ line.unit_cost|money }}</td>
                         <td class="text-end text-muted">{{ line.tax_amount|money }}</td>

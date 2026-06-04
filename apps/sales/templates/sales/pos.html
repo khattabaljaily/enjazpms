@@ -61,6 +61,9 @@
             {% for cat in categories %}
             <button class="pos-cat-btn" data-cat="{{ cat.id }}">{{ cat.name }}</button>
             {% endfor %}
+            <button class="pos-cat-btn pos-cat-btn--service" data-cat="__services__">
+                <i class="fas fa-concierge-bell"></i> خدمات
+            </button>
         </div>
 
         <div class="pos-grid-wrap">
@@ -262,7 +265,11 @@ function loadItems(catId, query) {
     query = query || '';
     $grid.innerHTML = '<div class="pos-loading"><div class="pos-spinner"></div> جار التحميل…</div>';
     const params = new URLSearchParams({ stock_id: $stock.value, q: query });
-    if (catId) params.set('category_id', catId);
+    if (catId === '__services__') {
+        params.set('item_type', 'service');
+    } else if (catId) {
+        params.set('category_id', catId);
+    }
 
     fetch(ITEMS_URL + '?' + params)
         .then(r => r.json())

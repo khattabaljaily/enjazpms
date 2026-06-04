@@ -59,7 +59,7 @@
             <table class="table table-sm table-borderless">
                 <tr><th class="text-muted">المنتج النهائي</th><td>{{ order.recipe.item.name }}</td></tr>
                 <tr><th class="text-muted">الوصفة</th><td>{{ order.recipe }}</td></tr>
-                <tr><th class="text-muted">الكمية المنتجة</th><td><strong>{{ order.quantity|floatformat:4 }}</strong></td></tr>
+                <tr><th class="text-muted">الكمية المنتجة</th><td><strong>{{ order.quantity|floatformat:"-2" }}</strong></td></tr>
                 <tr><th class="text-muted">المخزن</th><td>{{ order.stock.name }}</td></tr>
                 <tr><th class="text-muted">التاريخ</th><td>{{ order.order_date }}</td></tr>
                 <tr><th class="text-muted">التكلفة الكلية</th><td><strong>{{ order.cost|money }}</strong></td></tr>
@@ -96,8 +96,8 @@
                             <td>{{ forloop.counter }}</td>
                             <td>{{ line.component.name }}</td>
                             <td><code>{{ line.component.sku }}</code></td>
-                            <td>{{ line.quantity|floatformat:4 }}</td>
-                            <td><strong>{{ line.quantity|floatformat:4 }}</strong> × {{ order.quantity|floatformat:4 }}</td>
+                            <td>{{ line.quantity|floatformat:"-2" }}</td>
+                            <td><strong>{{ line.quantity|floatformat:"-2" }}</strong> × {{ order.quantity|floatformat:"-2" }}</td>
                             <td>{{ line.unit.name|default:"-" }}</td>
                             <td>{{ line.component.cost_price|money }}</td>
                             <td>{{ line.component.cost_price|money }}</td>

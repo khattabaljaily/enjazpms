@@ -70,7 +70,7 @@
             <div class="db-kpi-lbl">فواتير آجلة غير مسددة</div>
             <span class="db-kpi-tag {% if stats.pending_invoices %}db-kpi-tag--down{% else %}db-kpi-tag--up{% endif %}">
                 <i class="fas {% if stats.pending_invoices %}fa-exclamation{% else %}fa-check{% endif %}"></i>
-                {% if stats.pending_invoices %}تحتاج متابعة{% else %}لا يوجد متأخر{% endif %}
+                {% if stats.pending_invoices %}تحتاج متابعة{% else %}لا توجد{% endif %}
             </span>
         </div>
     </div>
@@ -129,7 +129,7 @@
             <div class="db-panel-head">
                 <h3 class="db-panel-title">
                     <i class="fas fa-chart-area" style="color:#6366f1;"></i>
-                    مسار المبيعات الأسبوعية
+                    المبيعات الأسبوعية
                 </h3>
                 <span class="db-panel-meta">7 أيام</span>
             </div>

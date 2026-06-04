@@ -438,7 +438,7 @@ const EnjazIMS = {
     },
 
     // Quantity format: 3 | 3.5 | 3.125 (without forcing two money decimals)
-    formatQuantity: function(quantity, maxDecimals = 3) {
+    formatQuantity: function(quantity, maxDecimals = 2) {
         const n = this.parseNumber(quantity);
         return n.toLocaleString('en-US', {
             minimumFractionDigits: 0,
