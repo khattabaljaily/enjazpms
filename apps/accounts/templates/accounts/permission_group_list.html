@@ -1,133 +1,265 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
-{% load humanize %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/users.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/permissions_management.css' %}?v=3.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
 
 {% block content %}
 <div class="cx-scene">
-    <div class="cx-hero">
-        <div class="cx-hero-inner">
-            <div class="cx-hero-left">
-                <div class="cx-hero-icon-wrap"><i class="fas fa-users-cog"></i></div>
-                <div>
-                    <h1 class="cx-hero-title">المجموعات والصلاحيات</h1>
-                    <p class="cx-hero-desc">إدارة مجموعات الصلاحيات وتحديدها حسب الأقسام</p>
-                </div>
-            </div>
-            <div class="cx-hero-right">
-                <div class="cx-hero-actions">
-                    <button type="button" class="cx-btn-add" id="btnOpenCreateGroup">
-                        <i class="fas fa-plus"></i>
-                        <span>إضافة مجموعة</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="cx-panel">
-        <div class="cx-toolbar">
+  {# ════════════════ PAGE HERO ════════════════ #}
+  <div class="cx-hero pm-hero">
+    <div class="cx-hero-inner">
+      <div class="cx-hero-left">
+        <div class="cx-hero-icon-wrap"><i class="fas fa-shield-halved"></i></div>
+        <div>
+          <h1 class="cx-hero-title">إدارة الصلاحيات</h1>
+          <p class="cx-hero-desc">حدّد ما يستطيع كل دور الوصول إليه داخل النظام</p>
+        </div>
+      </div>
+      <div class="cx-hero-right">
+        <div class="cx-hero-actions">
+          <button class="cx-btn-add" id="btnNewGroup">
+            <i class="fas fa-plus"></i> مجموعة جديدة
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ════════════════ SPLIT LAYOUT ════════════════ #}
+  <div class="pm-split">
+
+    {# ── Sidebar ── #}
+    <aside class="pm-sidebar cx-panel">
+      <div class="pm-sidebar-head">
+        <div class="pm-sidebar-search">
+          <i class="fas fa-search pm-sidebar-search-icon"></i>
+          <input type="text" id="sidebarSearch" class="pm-sidebar-search-input" placeholder="ابحث عن مجموعة…" autocomplete="off">
+        </div>
+        <button class="pm-sidebar-add-btn" id="btnNewGroupSidebar" type="button" title="إضافة مجموعة">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+      <div class="pm-group-list" id="groupList">
+        <div class="pm-list-placeholder">
+          <span class="pm-spinner"></span>
+          <span>جارٍ التحميل…</span>
+        </div>
+      </div>
+    </aside>
+
+    {# ── Main Panel ── #}
+    <div class="pm-main">
+
+      {# Empty / Welcome state #}
+      <div class="pm-empty cx-panel" id="pmEmpty">
+        <div class="pm-empty-art">
+          <div class="pm-empty-ring pm-empty-ring--outer"></div>
+          <div class="pm-empty-ring pm-empty-ring--inner"></div>
+          <div class="pm-empty-icon-wrap"><i class="fas fa-shield-halved"></i></div>
+        </div>
+        <h3 class="pm-empty-title">اختر مجموعة لتعديل صلاحياتها</h3>
+        <p class="pm-empty-body">حدّد مجموعة من القائمة لعرض الصلاحيات المرتبطة بها،<br>أو أنشئ مجموعة جديدة للبدء.</p>
+        <button class="cx-btn-add" id="btnNewGroupEmpty">
+          <i class="fas fa-plus"></i> إنشاء أول مجموعة
+        </button>
+      </div>
+
+      {# Editor — shown after selecting a group #}
+      <div class="pm-editor" id="pmEditor" style="display:none;">
+
+        {# ① Unsaved-changes bar — ALWAYS first, slides in when dirty #}
+        <div class="pm-dirty-bar" id="pmDirtyBar">
+          <div class="pm-dirty-bar-inner">
+            <div class="pm-dirty-info">
+              <i class="fas fa-circle-exclamation"></i>
+              <span>لديك تغييرات غير محفوظة</span>
+            </div>
+            <div class="pm-dirty-actions">
+              <button class="cx-btn-ghost pm-dirty-btn-ghost" id="btnDiscard">تجاهل</button>
+              <button class="cx-btn-primary pm-btn-save" id="btnSave">
+                <i class="fas fa-floppy-disk"></i> حفظ التغييرات
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {# ② Editor header card #}
+        <div class="pm-editor-header cx-panel">
+          <div class="pm-editor-header-top">
+            <div class="pm-editor-identity">
+              <div class="pm-editor-avatar" id="editorAvatar">–</div>
+              <div class="pm-editor-title-block">
+                <div class="pm-editor-name-row">
+                  <input type="text" id="editorNameInput" class="pm-name-input" placeholder="اسم المجموعة" autocomplete="off">
+                  <label class="cx-toggle-card pm-active-toggle" for="editorIsActive" title="تفعيل / تعطيل المجموعة">
+                    <div class="cx-toggle-info">
+                      <span class="cx-toggle-title pm-toggle-title" id="editorIsActiveLabel">نشط</span>
+                    </div>
+                    <input type="checkbox" id="editorIsActive" checked>
+                    <div class="cx-toggle-switch"></div>
+                  </label>
+                </div>
+                <input type="text" id="editorDescInput" class="pm-desc-input" placeholder="وصف اختياري للمجموعة…" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="pm-editor-kpi-row">
+              <div class="pm-kpi-chip pm-kpi-chip--perm">
+                <i class="fas fa-lock"></i>
+                <div class="pm-kpi-text">
+                  <span class="pm-kpi-nums"><span id="enabledCount">0</span>/<span id="totalCount">0</span></span>
+                  <span class="pm-kpi-label">صلاحية مفعّلة</span>
+                </div>
+              </div>
+              <button class="pm-kpi-chip pm-kpi-chip--members pm-members-btn" id="btnOpenMembers" type="button" title="إدارة الأعضاء">
+                <i class="fas fa-users"></i>
+                <div class="pm-kpi-text">
+                  <span class="pm-kpi-nums" id="editorMemberCount">0</span>
+                  <span class="pm-kpi-label">أعضاء</span>
+                </div>
+                <i class="fas fa-pen-to-square pm-members-edit-icon"></i>
+              </button>
+              <button class="cx-btn-secondary pm-btn-del" id="btnDeleteGroup" type="button">
+                <i class="fas fa-trash-alt"></i> <span>حذف</span>
+              </button>
+            </div>
+          </div>
+
+          {# Progress bar #}
+          <div class="pm-perm-progress">
+            <div class="pm-perm-progress-fill" id="permProgressFill" style="width:0%"></div>
+          </div>
+        </div>
+
+        {# ③ Permissions panel #}
+        <div class="pm-perms-wrap cx-panel">
+          <div class="pm-perms-toolbar">
+            <div class="pm-perms-toolbar-start">
+              <i class="fas fa-lock-open pm-perms-icon"></i>
+              <span class="pm-perms-title">الصلاحيات</span>
+            </div>
+            <div class="pm-perms-toolbar-end">
+              <div class="pm-search-wrap">
+                <i class="fas fa-search pm-search-icon"></i>
+                <input type="text" id="permSearch" class="pm-search-input" placeholder="ابحث في الصلاحيات…">
+              </div>
+              <div class="pm-ctrl-btns">
+                <button class="cx-btn-secondary pm-ctrl-btn" id="btnSelectAll" type="button"><i class="fas fa-check-double"></i> <span>تحديد الكل</span></button>
+                <button class="cx-btn-secondary pm-ctrl-btn pm-ctrl-btn--clear" id="btnClearAll" type="button"><i class="fas fa-times"></i> <span>مسح الكل</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div id="permSections" class="pm-sections"></div>
+          <div id="pmNoResults" class="pm-no-results" style="display:none;">
+            <i class="fas fa-magnifying-glass"></i>
+            <p>لا توجد صلاحيات مطابقة لبحثك</p>
+          </div>
+        </div>
+
+      </div>{# /pm-editor #}
+    </div>{# /pm-main #}
+  </div>{# /pm-split #}
+</div>{# /cx-scene #}
+
+{# ════════════════ Members Modal ════════════════ #}
+<div class="modal fade" id="membersModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:500px">
+    <div class="modal-content cx-modal">
+      <div class="cx-modal-main">
+        <div class="cx-modal-header">
+          <div>
+            <h5 class="cx-modal-title"><i class="fas fa-users text-primary me-2"></i> أعضاء المجموعة</h5>
+            <p class="cx-modal-subtitle">اختر المستخدمين الذين ينتمون لهذه المجموعة</p>
+          </div>
+          <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="cx-modal-body" style="padding:1.25rem 1.5rem;">
+          <div class="pm-members-search-wrap mb-3">
             <div class="cx-toolbar-search">
-                <i class="fas fa-search cx-toolbar-search-icon"></i>
-                <input type="text" id="groupSearchInput" class="cx-search-input" placeholder="ابحث باسم المجموعة...">
+              <i class="fas fa-search cx-toolbar-search-icon"></i>
+              <input type="text" id="membersSearch" class="cx-search-input" placeholder="ابحث عن مستخدم…" autocomplete="off">
             </div>
+          </div>
+          <div class="pm-members-summary mb-2">
+            <span class="cx-stat-badge cx-stat-badge--primary">
+              <i class="fas fa-user-check"></i>
+              <strong id="membersSelectedCount">0</strong>
+              <span>محدد</span>
+            </span>
+            <button type="button" class="pm-members-clear-all cx-btn-ghost" id="btnMembersClearAll" style="font-size:.78rem;padding:.3rem .75rem;">
+              إلغاء تحديد الكل
+            </button>
+          </div>
+          <div class="pm-members-list" id="membersList"></div>
         </div>
-
-        <div class="table-responsive cx-table-wrap">
-            <table id="groupsTable" class="cx-table">
-                <thead>
-                    <tr>
-                        <th>اسم المجموعة</th>
-                        <th>عدد الأعضاء</th>
-                        <th>عدد الصلاحيات</th>
-                        <th>الحالة</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+        <div class="cx-modal-footer">
+          <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+          <button type="button" class="cx-btn-primary" id="btnSaveMembers">
+            <i class="fas fa-check me-1"></i> تأكيد الأعضاء
+          </button>
         </div>
-        <div id="groupsCardsMobile" class="users-mobile-card-list d-none p-3" aria-live="polite"></div>
+      </div>
     </div>
+  </div>
 </div>
 
-<div class="modal fade" id="groupModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered cx-modal-dialog">
-        <div class="modal-content cx-modal">
-            <form id="groupForm" novalidate>
-                {% csrf_token %}
-                <input type="hidden" id="groupId" value="">
-
-                <div class="cx-modal-main">
-                    <div class="cx-modal-header">
-                        <div>
-                            <h5 class="cx-modal-title" id="groupModalTitle">إضافة مجموعة جديدة</h5>
-                        </div>
-                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-
-                    <div class="cx-modal-body">
-                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
-
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <label class="cx-label" for="groupName">اسم المجموعة <sup class="cx-required">*</sup></label>
-                                <input type="text" id="groupName" name="name" class="form-control" placeholder="اسم المجموعة">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="cx-label" for="groupIsActive">نشط</label>
-                                <div class="form-check form-switch mt-2">
-                                    <input class="form-check-input" type="checkbox" id="groupIsActive" name="is_active" checked>
-                                    <label class="form-check-label" for="groupIsActive">تفعيل المجموعة</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="cx-label" for="groupDescription">الوصف</label>
-                            <textarea id="groupDescription" name="description" class="form-control" rows="2" placeholder="وصف المجموعة"></textarea>
-                        </div>
-
-                        <div class="cx-form-group-label mb-3">
-                            <span class="cx-form-group-icon"><i class="fas fa-users"></i></span> الأعضاء
-                        </div>
-                        <div class="mb-4">
-                            <label class="cx-label" for="groupUsers">اختر المستخدمين</label>
-                            <select id="groupUsers" name="users[]" class="form-select" multiple size="5">
-                            </select>
-                            <small class="text-muted">يمكنك اختيار عدة مستخدمين بالضغط على Ctrl (أو Cmd على Mac)</small>
-                        </div>
-
-                        <div class="cx-form-group-label mb-3">
-                            <span class="cx-form-group-icon"><i class="fas fa-lock"></i></span> صلاحيات المجموعة
-                        </div>
-                        <div id="permissionSchemaAccordion" class="accordion"></div>
-                    </div>
-
-                    <div class="cx-modal-footer">
-                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
-                        <button type="submit" class="cx-btn-primary" id="groupSubmitBtn">
-                            <i class="fas fa-check me-1"></i> حفظ المجموعة
-                        </button>
-                    </div>
-                </div>
-            </form>
+{# ════════════════ Create Group Modal ════════════════ #}
+<div class="modal fade" id="createGroupModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:480px">
+    <div class="modal-content cx-modal">
+      <form id="createGroupForm" novalidate>
+        {% csrf_token %}
+        <div class="cx-modal-main">
+          <div class="cx-modal-header">
+            <div>
+              <h5 class="cx-modal-title"><i class="fas fa-shield-halved text-primary me-2"></i> مجموعة صلاحيات جديدة</h5>
+              <p class="cx-modal-subtitle">ستتمكن من ضبط الصلاحيات بعد الإنشاء مباشرة</p>
+            </div>
+            <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="cx-modal-body">
+            <div class="alert alert-danger d-none js-form-errors mb-3"></div>
+            <div class="mb-3">
+              <label class="cx-label" for="newGroupName">اسم المجموعة <sup class="cx-required">*</sup></label>
+              <input type="text" id="newGroupName" class="form-control" placeholder="مثال: موظف مبيعات، مشرف مخازن…">
+            </div>
+            <div class="mb-3">
+              <label class="cx-label" for="newGroupDesc">الوصف (اختياري)</label>
+              <textarea id="newGroupDesc" class="form-control" rows="2" placeholder="اكتب وصفاً مختصراً لدور هذه المجموعة"></textarea>
+            </div>
+            <label class="cx-toggle-card" for="newGroupActive">
+              <div class="cx-toggle-info">
+                <span class="cx-toggle-title">تفعيل المجموعة فور الإنشاء</span>
+                <span class="cx-toggle-desc">يمكن تغيير هذا لاحقاً من صفحة الصلاحيات</span>
+              </div>
+              <input type="checkbox" id="newGroupActive" checked>
+              <div class="cx-toggle-switch"></div>
+            </label>
+          </div>
+          <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+            <button type="submit" class="cx-btn-primary" id="createGroupSubmit">
+              <i class="fas fa-plus me-1"></i> إنشاء المجموعة
+            </button>
+          </div>
         </div>
+      </form>
     </div>
+  </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    window.PERMISSION_SCHEMA = {{ permission_schema|safe }};
-    window.USERS_LIST = {{ users|safe }};
+  window.PERMISSION_SCHEMA = {{ permission_schema|safe }};
+  window.USERS_LIST = {{ users|safe }};
 </script>
-<script src="{% static 'js/permission_groups.js' %}?v=1.0"></script>
+<script src="{% static 'js/permission_groups.js' %}?v=3.0"></script>
 {% endblock %}

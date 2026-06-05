@@ -446,65 +446,19 @@ def permission_group_update_api(request, pk):
 
 
 @login_required
-# @require_permission('delete_permissiongroups')  # Temporarily disabled for debugging
+@require_permission('delete_permissiongroups')
 def permission_group_delete_api(request, pk):
-    print(f"\n=== DELETE GROUP DEBUG ===")
-    print(f"User: {request.user.username}")
-    print(f"Method: {request.method}")
-    print(f"Group ID: {pk}")
-    print(f"CSRF Token present: {'X-CSRFToken' in request.headers}")
-    print(f"XMLHttpRequest header: {request.headers.get('X-Requested-With')}")
-    
     tenant = _ensure_tenant(request)
-    print(f"Tenant: {tenant}")
-    
     if not tenant:
-        print(f"ERROR: No tenant found")
         return _json_error('لا يوجد نشاط تجاري')
-    
     if request.method != 'POST':
-        print(f"ERROR: Method not POST")
         return _json_error('الطريقة غير مسموحة', status=405)
 
-    try:
-        group = get_object_or_404(PermissionGroup.objects.filter(tenant=tenant), pk=pk)
-        print(f"Group found: {group.name}")
-        
-        group.delete()
-        print(f"SUCCESS: Group {pk} deleted")
-        print(f"=== END DELETE DEBUG ===\n")
-        return _json_ok(None, 'تم حذف المجموعة بنجاح')
-    except Exception as e:
-        print(f"ERROR during delete: {str(e)}")
-        print(f"=== END DELETE DEBUG ===\n")
-        return _json_error(f'خطأ أثناء الحذف: {str(e)}')
+    group = get_object_or_404(PermissionGroup.objects.filter(tenant=tenant), pk=pk)
+    group.delete()
+    return _json_ok(None, 'تم حذف المجموعة بنجاح')
 
 
-@login_required
-def debug_user_permissions(request):
-    """Endpoint للتصحيح: عرض صلاحيات المستخدم الحالي والمجموعات المرتبطة به"""
-    user = request.user
-    tenant = request.tenant
-    
-    user_groups = list(user.permission_groups.filter(is_active=True).values('id', 'name', 'permissions'))
-    all_user_permissions = {}
-    
-    for group in user.permission_groups.filter(is_active=True):
-        all_user_permissions.update({
-            perm: True for perm in group.get_permission_keys()
-        })
-    
-    return _json_ok({
-        'user_id': user.id,
-        'username': user.username,
-        'is_tenant_admin': user.is_tenant_admin,
-        'is_superuser': user.is_superuser,
-        'tenant_id': tenant.id if tenant else None,
-        'groups': user_groups,
-        'all_permissions': all_user_permissions,
-        'total_permissions': len(all_user_permissions),
-        'test_permission_view_quotes': user.has_perm_key('view_quotes'),
-    })
 
 
 def register_step1(request):

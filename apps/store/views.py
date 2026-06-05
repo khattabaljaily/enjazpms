@@ -13,6 +13,7 @@ from django.contrib import messages
 from django.db.models import Q
 
 from .models import OnlineOrder, StoreSettings
+from apps.accounts.decorators import require_permission
 from .services import (
     approve_order, cart_add, cart_clear, cart_remove,
     cart_update, get_cart, get_cart_items, place_order, reject_order,
@@ -320,6 +321,7 @@ def order_confirm_view(request, slug, token):
 # ══════════════════════════════════════════════════════════════
 
 @login_required
+@require_permission('view_store_settings')
 def manage_settings(request):
     from .models import DAYS_AR, DAYS_ORDER, DEFAULT_HOURS
     tenant = request.tenant
@@ -389,6 +391,7 @@ def manage_settings(request):
 # ══════════════════════════════════════════════════════════════
 
 @login_required
+@require_permission('view_store_orders')
 def manage_orders(request):
     tenant = request.tenant
     if not tenant:
@@ -418,6 +421,7 @@ def manage_orders(request):
 # ══════════════════════════════════════════════════════════════
 
 @login_required
+@require_permission('view_store_orders')
 def manage_order_detail(request, pk):
     tenant = request.tenant
     order  = get_object_or_404(OnlineOrder, pk=pk, tenant=tenant)
@@ -433,6 +437,7 @@ def manage_order_detail(request, pk):
 # ══════════════════════════════════════════════════════════════
 
 @login_required
+@require_permission('manage_store_orders')
 @require_POST
 def manage_order_approve(request, pk):
     tenant = request.tenant
@@ -450,6 +455,7 @@ def manage_order_approve(request, pk):
 
 
 @login_required
+@require_permission('manage_store_orders')
 @require_POST
 def manage_order_reject(request, pk):
     tenant = request.tenant

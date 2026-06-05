@@ -4,6 +4,7 @@ from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST, require_GET
+from apps.accounts.decorators import require_permission
 
 from .models import Notification
 from .services import (
@@ -31,6 +32,7 @@ def _tenant(request):
 
 
 @login_required
+@require_permission('view_notifications')
 def notification_list(request):
     tenant = _tenant(request)
     if not tenant:
@@ -101,6 +103,7 @@ def mark_all_read_ajax(request):
 
 
 @login_required
+@require_permission('generate_notifications')
 @require_POST
 def generate_notifications_ajax(request):
     """Manually trigger notification generation (can be called from UI or cron)."""
@@ -124,6 +127,7 @@ def generate_notifications_ajax(request):
 
 
 @login_required
+@require_permission('view_ai_insights')
 @require_GET
 def ai_analyze_notification(request, pk):
     """

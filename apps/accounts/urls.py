@@ -46,7 +46,4 @@ urlpatterns = [
     path('groups/api/<int:pk>/detail/', views.permission_group_detail_api, name='permission_group_detail_api'),
     path('groups/api/<int:pk>/update/', views.permission_group_update_api, name='permission_group_update_api'),
     path('groups/api/<int:pk>/delete/', views.permission_group_delete_api, name='permission_group_delete_api'),
-
-    # Debug
-    path('api/debug/permissions/', views.debug_user_permissions, name='debug_user_permissions'),
 ]

@@ -7,6 +7,7 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth.decorators import login_required
+from apps.accounts.decorators import require_permission
 
 from .services import chat, generate_daily_insights
 
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 @login_required
+@require_permission('use_ai_chat')
 @require_POST
 def chat_api(request):
     """
@@ -49,6 +51,7 @@ def chat_api(request):
 
 
 @login_required
+@require_permission('view_ai_insights')
 @require_GET
 def insights_api(request):
     """
