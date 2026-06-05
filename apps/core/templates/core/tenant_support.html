@@ -1,0 +1,312 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% block page_title %}الدعم الفني{% endblock %}
+{% block page_description %}تواصل مع فريق دعم إنجاز وتتبع طلباتك{% endblock %}
+
+{% block extra_css %}
+<style>
+.ts-wrapper { display:flex; flex-direction:column; gap:1rem; }
+
+/* Hero */
+.ts-hero {
+    position:relative; overflow:hidden; border-radius:20px;
+    background:linear-gradient(135deg,#0c4a6e 0%,#0369a1 60%,#0ea5e9 100%);
+    padding:.75rem 1.2rem; box-shadow:0 8px 32px rgba(14,165,233,.2);
+}
+.ts-hero__orb {
+    position:absolute; border-radius:50%; pointer-events:none;
+    top:-50%; right:-5%; width:280px; height:280px;
+    background:rgba(255,255,255,.06);
+}
+.ts-hero__inner {
+    position:relative; z-index:1; display:flex;
+    align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+}
+.ts-hero__left { display:flex; align-items:center; gap:1rem; }
+.ts-hero__icon {
+    width:48px; height:48px; border-radius:14px;
+    background:rgba(255,255,255,.15); display:flex; align-items:center;
+    justify-content:center; font-size:1.4rem; color:#fff;
+}
+.ts-hero__title { color:#fff; font-size:1.2rem; font-weight:700; margin:0; }
+.ts-hero__desc  { color:rgba(255,255,255,.75); font-size:.8rem; margin:0; }
+.ts-stats { display:flex; gap:.5rem; flex-wrap:wrap; }
+.ts-stat {
+    padding:.3rem .9rem; border-radius:30px; font-size:.75rem; font-weight:600;
+    display:flex; align-items:center; gap:.35rem;
+}
+.ts-stat--all    { background:rgba(255,255,255,.15); color:#fff; }
+.ts-stat--open   { background:rgba(254,226,226,.2);  color:#fecaca; }
+.ts-stat--prog   { background:rgba(254,243,199,.2);  color:#fde68a; }
+.ts-stat--closed { background:rgba(209,250,229,.15); color:#a7f3d0; }
+
+/* Topbar */
+.ts-topbar {
+    display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;
+}
+.ts-select {
+    border:1px solid var(--border-color,#e2e8f0); border-radius:10px;
+    padding:.4rem .75rem; font-size:.82rem; background:var(--input-bg,#f8fafc);
+    color:var(--text-main,#1e293b); outline:none; cursor:pointer;
+}
+.ts-btn {
+    padding:.45rem 1.1rem; border-radius:10px; font-size:.82rem; font-weight:600;
+    border:none; cursor:pointer; transition:.15s; text-decoration:none;
+    display:inline-flex; align-items:center; gap:.4rem;
+}
+.ts-btn--primary { background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff; }
+.ts-btn--primary:hover { opacity:.9; }
+
+/* Table */
+.ts-table-wrap {
+    background:var(--card-bg,#fff); border-radius:16px; overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+}
+.ts-table { width:100%; border-collapse:collapse; font-size:.84rem; }
+.ts-table thead th {
+    background:var(--table-head-bg,#f8fafc); color:var(--text-muted,#64748b);
+    font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;
+    padding:.65rem 1rem; text-align:right; border-bottom:1px solid var(--border-color,#e2e8f0);
+    white-space:nowrap;
+}
+.ts-table tbody tr { transition:background .12s; }
+.ts-table tbody tr:hover { background:var(--hover-bg,#f8fafc); }
+.ts-table tbody td {
+    padding:.7rem 1rem; border-bottom:1px solid var(--border-color,#e2e8f0);
+    color:var(--text-main,#1e293b); vertical-align:middle;
+}
+.ts-table tbody tr:last-child td { border-bottom:none; }
+
+.badge-status {
+    display:inline-flex; align-items:center; gap:.3rem;
+    padding:.2rem .6rem; border-radius:20px; font-size:.72rem; font-weight:600;
+}
+.badge-status--open       { background:#fef2f2; color:#dc2626; }
+.badge-status--in_progress{ background:#fffbeb; color:#d97706; }
+.badge-status--resolved   { background:#f0fdf4; color:#16a34a; }
+.badge-status--closed     { background:#f1f5f9; color:#64748b; }
+
+.ts-empty {
+    text-align:center; padding:3rem 1rem; color:var(--text-muted,#64748b);
+}
+.ts-empty__icon  { font-size:2.5rem; margin-bottom:.75rem; opacity:.4; }
+.ts-empty__title { font-size:1rem; font-weight:600; margin:.5rem 0 .25rem; }
+.ts-empty__text  { font-size:.82rem; margin-bottom:1.25rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ts-wrapper">
+
+    <!-- Hero -->
+    <div class="ts-hero">
+        <div class="ts-hero__orb"></div>
+        <div class="ts-hero__inner">
+            <div class="ts-hero__left">
+                <div class="ts-hero__icon"><i class="fas fa-headset"></i></div>
+                <div>
+                    <div class="ts-hero__title">الدعم الفني</div>
+                    <div class="ts-hero__desc">تواصل مع فريق إنجاز وتتبع طلبات الدعم الخاصة بك</div>
+                </div>
+            </div>
+            <div class="ts-stats">
+                <span class="ts-stat ts-stat--all"><i class="fas fa-ticket"></i>{{ counts.all }}</span>
+                <span class="ts-stat ts-stat--open"><i class="fas fa-circle-exclamation"></i>{{ counts.open }} مفتوحة</span>
+                <span class="ts-stat ts-stat--prog"><i class="fas fa-spinner"></i>{{ counts.in_progress }} قيد المعالجة</span>
+                <span class="ts-stat ts-stat--closed"><i class="fas fa-circle-check"></i>{{ counts.closed }} مغلقة</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Topbar -->
+    <div class="ts-topbar">
+        <form method="get">
+            <select name="status" class="ts-select" onchange="this.form.submit()">
+                <option value="">كل الحالات</option>
+                <option value="open" {% if status_filter == 'open' %}selected{% endif %}>مفتوحة</option>
+                <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>قيد المعالجة</option>
+                <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>محلولة</option>
+                <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>مغلقة</option>
+            </select>
+        </form>
+        <button type="button" class="ts-btn ts-btn--primary" id="btnNewTicket" data-bs-toggle="modal" data-bs-target="#newTicketModal">
+            <i class="fas fa-plus"></i> تذكرة دعم جديدة
+        </button>
+    </div>
+
+    <!-- Table -->
+    <div class="ts-table-wrap">
+        {% if tickets %}
+        <table class="ts-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>الموضوع</th>
+                    <th>التصنيف</th>
+                    <th>الحالة</th>
+                    <th>التاريخ</th>
+                    <th>آخر رد</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr>
+                    <td style="color:var(--text-muted,#64748b);font-size:.75rem;">#{{ ticket.pk }}</td>
+                    <td style="font-weight:600;">{{ ticket.subject|truncatechars:70 }}</td>
+                    <td style="color:var(--text-muted,#64748b);">{{ ticket.get_category_display }}</td>
+                    <td><span class="badge-status badge-status--{{ ticket.status }}">{{ ticket.get_status_display }}</span></td>
+                    <td style="color:var(--text-muted,#64748b);font-size:.78rem;white-space:nowrap;">{{ ticket.created_at|date:"Y/m/d H:i" }}</td>
+                    <td style="color:var(--text-muted,#64748b);font-size:.78rem;white-space:nowrap;">
+                        {% if ticket.last_reply_at %}{{ ticket.last_reply_at|date:"Y/m/d H:i" }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'core:tenant_support_detail' ticket.pk %}" class="ts-btn ts-btn--primary" style="padding:.3rem .7rem;font-size:.75rem;">
+                            <i class="fas fa-eye me-1"></i>عرض
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="ts-empty">
+            <div class="ts-empty__icon"><i class="fas fa-headset"></i></div>
+            <div class="ts-empty__title">لا توجد تذاكر دعم</div>
+            <div class="ts-empty__text">لم ترسل أي طلب دعم بعد. يمكنك فتح تذكرة جديدة للتواصل مع فريق إنجاز.</div>
+            <button type="button" class="ts-btn ts-btn--primary" data-bs-toggle="modal" data-bs-target="#newTicketModal">
+                <i class="fas fa-plus"></i> فتح تذكرة جديدة
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ══════════════ NEW TICKET MODAL ══════════════ -->
+<div class="modal fade" id="newTicketModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-modal-dialog--xl">
+        <div class="modal-content cx-modal">
+            <form id="newTicketForm" novalidate>
+                {% csrf_token %}
+
+                <div class="cx-modal-header">
+                    <div>
+                        <h5 class="cx-modal-title">تذكرة دعم جديدة</h5>
+                        <p class="cx-modal-subtitle">صف مشكلتك وسيتواصل معك الفريق في أقرب وقت</p>
+                    </div>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="cx-modal-body">
+                    <div class="alert alert-danger d-none js-ticket-errors mb-3"></div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="cx-label" for="ticketSubject">الموضوع <sup class="cx-required">*</sup></label>
+                            <input type="text" id="ticketSubject" name="subject" class="form-control"
+                                   placeholder="مثال: خطأ عند إنشاء فاتورة المبيعات" maxlength="300" autocomplete="off">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label" for="ticketCategory">التصنيف</label>
+                            <select id="ticketCategory" name="category" class="form-select">
+                                <option value="technical">مشكلة تقنية</option>
+                                <option value="billing">الفاتورة والاشتراك</option>
+                                <option value="feature">طلب ميزة</option>
+                                <option value="account">الحساب والمستخدمين</option>
+                                <option value="other" selected>أخرى</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label" for="ticketPriority">الأولوية</label>
+                            <select id="ticketPriority" name="priority" class="form-select">
+                                <option value="low">منخفضة</option>
+                                <option value="medium" selected>متوسطة</option>
+                                <option value="high">عالية</option>
+                                <option value="urgent">عاجلة</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label" for="ticketDescription">وصف المشكلة <sup class="cx-required">*</sup></label>
+                            <textarea id="ticketDescription" name="description" class="form-control"
+                                      rows="5" placeholder="اشرح المشكلة بالتفصيل…"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="cx-btn-primary" id="ticketSubmitBtn">
+                        <i class="fas fa-paper-plane me-1"></i> إرسال التذكرة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const modal    = new bootstrap.Modal(document.getElementById('newTicketModal'));
+    const $form    = document.getElementById('newTicketForm');
+    const $submitBtn = document.getElementById('ticketSubmitBtn');
+    const $errors  = $form.querySelector('.js-ticket-errors');
+    const createUrl = "{% url 'core:tenant_support_create' %}";
+
+    /* Move modal to body to avoid stacking context issues */
+    const modalEl = document.getElementById('newTicketModal');
+    if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+
+    /* Reset on close */
+    modalEl.addEventListener('hidden.bs.modal', function () {
+        $form.reset();
+        $errors.classList.add('d-none');
+        $errors.textContent = '';
+        $submitBtn.disabled = false;
+        $submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> إرسال التذكرة';
+    });
+
+    $form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        $errors.classList.add('d-none');
+        $submitBtn.disabled = true;
+        $submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جارٍ الإرسال…';
+
+        const data = new FormData($form);
+
+        try {
+            const res = await fetch(createUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
+                body: data,
+            });
+            const json = await res.json();
+
+            if (json.ok) {
+                window.location.href = json.redirect;
+            } else {
+                const msgs = json.errors
+                    ? Object.values(json.errors).join('<br>')
+                    : (json.error || 'حدث خطأ، يرجى المحاولة مجدداً');
+                $errors.innerHTML = msgs;
+                $errors.classList.remove('d-none');
+                $submitBtn.disabled = false;
+                $submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> إرسال التذكرة';
+            }
+        } catch (_) {
+            $errors.textContent = 'حدث خطأ في الاتصال، يرجى المحاولة مجدداً';
+            $errors.classList.remove('d-none');
+            $submitBtn.disabled = false;
+            $submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> إرسال التذكرة';
+        }
+    });
+})();
+</script>
+{% endblock %}

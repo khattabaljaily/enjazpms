@@ -1,0 +1,219 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% block page_title %}تذكرة #{{ ticket.pk }}{% endblock %}
+{% block page_description %}{{ ticket.subject }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.sup-detail { display:flex; flex-direction:column; gap:1rem; max-width:860px; }
+
+/* Header card */
+.sup-hdr {
+    background:var(--card-bg,#fff); border-radius:16px; padding:1.25rem 1.5rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+    display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+}
+.sup-hdr__left { display:flex; flex-direction:column; gap:.5rem; }
+.sup-hdr__id { font-size:.75rem; color:var(--text-muted,#64748b); font-weight:600; }
+.sup-hdr__subject { font-size:1.1rem; font-weight:700; color:var(--text-main,#1e293b); }
+.sup-hdr__meta { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; }
+.sup-hdr__right { display:flex; flex-direction:column; align-items:flex-end; gap:.5rem; }
+
+/* Badges */
+.badge-status, .badge-priority {
+    display:inline-flex; align-items:center; gap:.3rem;
+    padding:.25rem .7rem; border-radius:20px; font-size:.75rem; font-weight:600;
+}
+.badge-status--open       { background:#fef2f2; color:#dc2626; }
+.badge-status--in_progress{ background:#fffbeb; color:#d97706; }
+.badge-status--resolved   { background:#f0fdf4; color:#16a34a; }
+.badge-status--closed     { background:#f1f5f9; color:#64748b; }
+.badge-priority--urgent   { background:#fef2f2; color:#dc2626; }
+.badge-priority--high     { background:#fff7ed; color:#ea580c; }
+.badge-priority--medium   { background:#fffbeb; color:#d97706; }
+.badge-priority--low      { background:#f0fdf4; color:#16a34a; }
+
+.meta-pill {
+    display:inline-flex; align-items:center; gap:.35rem;
+    background:var(--hover-bg,#f1f5f9); padding:.2rem .6rem;
+    border-radius:20px; font-size:.75rem; color:var(--text-muted,#64748b);
+}
+
+/* Thread */
+.sup-thread {
+    background:var(--card-bg,#fff); border-radius:16px; overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+}
+.sup-thread__header {
+    padding:.75rem 1.25rem; border-bottom:1px solid var(--border-color,#e2e8f0);
+    font-size:.8rem; font-weight:600; color:var(--text-muted,#64748b);
+    display:flex; align-items:center; gap:.5rem;
+}
+.sup-thread__body { display:flex; flex-direction:column; gap:0; }
+
+/* Messages */
+.sup-msg { padding:1rem 1.25rem; display:flex; gap:.85rem; align-items:flex-start; }
+.sup-msg + .sup-msg { border-top:1px solid var(--border-color,#e2e8f0); }
+.sup-msg--admin { justify-content:flex-start; }
+.sup-msg--tenant { justify-content:flex-end; flex-direction:row-reverse; }
+.sup-msg__avatar {
+    width:34px; height:34px; border-radius:50%; font-size:.75rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.sup-msg__avatar--admin { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; }
+.sup-msg__avatar--tenant { background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff; }
+.sup-msg__content { flex:1; min-width:0; max-width:75%; background:var(--input-bg,#f8fafc); border-radius:18px; padding:1rem; box-shadow:0 1px 2px rgba(15,23,42,.05); }
+.sup-msg--admin .sup-msg__content { background:rgba(99,102,241,.08); }
+.sup-msg--tenant .sup-msg__content { background:rgba(14,165,233,.12); }
+.sup-msg__meta { display:flex; align-items:center; gap:.5rem; margin-bottom:.35rem; flex-wrap:wrap; }
+.sup-msg__name { font-size:.82rem; font-weight:700; color:var(--text-main,#1e293b); }
+.sup-msg__role {
+    font-size:.68rem; font-weight:600; padding:.1rem .45rem; border-radius:10px;
+}
+.sup-msg__role--admin { background:#ede9fe; color:#7c3aed; }
+.sup-msg__role--tenant { background:#e0f2fe; color:#0284c7; }
+.sup-msg__time { font-size:.72rem; color:var(--text-muted,#94a3b8); margin-right:auto; }
+.sup-msg__body { font-size:.84rem; color:var(--text-main,#374151); line-height:1.6; white-space:pre-wrap; }
+
+/* Reply box */
+.sup-reply {
+    background:var(--card-bg,#fff); border-radius:16px; padding:1.25rem 1.5rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+}
+.sup-reply__title {
+    font-size:.85rem; font-weight:700; color:var(--text-main,#1e293b);
+    margin-bottom:.85rem; display:flex; align-items:center; gap:.5rem;
+}
+.sup-reply__title i { color:#6366f1; }
+.sup-reply__textarea {
+    width:100%; border:1px solid var(--border-color,#e2e8f0); border-radius:10px;
+    padding:.7rem 1rem; font-size:.84rem; line-height:1.6;
+    background:var(--input-bg,#f8fafc); color:var(--text-main,#1e293b);
+    resize:vertical; min-height:100px; outline:none; font-family:inherit;
+    transition:border-color .15s;
+}
+.sup-reply__textarea:focus { border-color:#6366f1; }
+.sup-reply__footer { display:flex; align-items:center; gap:.75rem; margin-top:.75rem; flex-wrap:wrap; }
+.sup-reply__status-label { font-size:.78rem; color:var(--text-muted,#64748b); }
+.sup-select {
+    border:1px solid var(--border-color,#e2e8f0); border-radius:10px;
+    padding:.4rem .75rem; font-size:.82rem; background:var(--input-bg,#f8fafc);
+    color:var(--text-main,#1e293b); outline:none; cursor:pointer;
+}
+.sup-btn {
+    padding:.5rem 1.2rem; border-radius:10px; font-size:.82rem; font-weight:600;
+    border:none; cursor:pointer; transition:.15s; text-decoration:none; display:inline-flex; align-items:center; gap:.4rem;
+}
+.sup-btn--primary { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; }
+.sup-btn--primary:hover { opacity:.9; }
+.sup-btn--outline {
+    background:transparent; border:1px solid var(--border-color,#e2e8f0);
+    color:var(--text-muted,#64748b);
+}
+.sup-btn--outline:hover { background:var(--hover-bg,#f1f5f9); }
+
+/* Closed notice */
+.sup-closed-notice {
+    background:var(--hover-bg,#f1f5f9); border-radius:12px;
+    padding:.85rem 1.25rem; font-size:.82rem; color:var(--text-muted,#64748b);
+    display:flex; align-items:center; gap:.6rem;
+    border:1px solid var(--border-color,#e2e8f0);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sup-detail">
+
+    <!-- Back link -->
+    <div>
+        <a href="{% url 'core:admin_support' %}" class="sup-btn sup-btn--outline" style="font-size:.78rem;padding:.35rem .85rem;">
+            <i class="fas fa-arrow-right"></i> العودة للتذاكر
+        </a>
+    </div>
+
+    <!-- Header card -->
+    <div class="sup-hdr">
+        <div class="sup-hdr__left">
+            <div class="sup-hdr__id">تذكرة #{{ ticket.pk }}</div>
+            <div class="sup-hdr__subject">{{ ticket.subject }}</div>
+            <div class="sup-hdr__meta">
+                <span class="meta-pill"><i class="fas fa-building" style="font-size:.65rem;"></i>{{ ticket.tenant.name }}</span>
+                <span class="meta-pill"><i class="fas fa-tag" style="font-size:.65rem;"></i>{{ ticket.get_category_display }}</span>
+                <span class="meta-pill"><i class="fas fa-calendar" style="font-size:.65rem;"></i>{{ ticket.created_at|date:"Y/m/d H:i" }}</span>
+                {% if ticket.assigned_to %}
+                <span class="meta-pill"><i class="fas fa-user-check" style="font-size:.65rem;"></i>{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.username }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="sup-hdr__right">
+            <span class="badge-status badge-status--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+            <span class="badge-priority badge-priority--{{ ticket.priority }}">{{ ticket.get_priority_display }}</span>
+        </div>
+    </div>
+
+    <!-- Message thread -->
+    <div class="sup-thread">
+        <div class="sup-thread__header">
+            <i class="fas fa-comments" style="color:#6366f1;"></i>
+            المحادثة ({{ ticket_messages|length }} رسالة)
+        </div>
+        <div class="sup-thread__body">
+            {% for msg in ticket_messages %}
+            <div class="sup-msg {% if msg.sender_type == 'admin' %}sup-msg--admin{% else %}sup-msg--tenant{% endif %}">
+                <div class="sup-msg__avatar sup-msg__avatar--{{ msg.sender_type }}">
+                    {{ msg.sender.get_full_name|slice:':1'|default:msg.sender.username|slice:':1'|upper }}
+                </div>
+                <div class="sup-msg__content">
+                    <div class="sup-msg__meta">
+                        <span class="sup-msg__name">{{ msg.sender.get_full_name|default:msg.sender.username }}</span>
+                        <span class="sup-msg__role sup-msg__role--{{ msg.sender_type }}">
+                            {% if msg.sender_type == 'admin' %}مشرف النظام{% else %}العميل{% endif %}
+                        </span>
+                        <span class="sup-msg__time">{{ msg.created_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+                    <div class="sup-msg__body">{{ msg.body }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <div style="padding:2rem;text-align:center;color:var(--text-muted,#94a3b8);font-size:.84rem;">لا توجد رسائل</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Reply form -->
+    {% if ticket.is_open %}
+    <div class="sup-reply">
+        <div class="sup-reply__title"><i class="fas fa-reply"></i> رد على التذكرة</div>
+        <form method="post">
+            {% csrf_token %}
+            <textarea name="body" class="sup-reply__textarea" placeholder="اكتب ردك هنا…" required></textarea>
+            <div class="sup-reply__footer">
+                <span class="sup-reply__status-label">تغيير الحالة إلى:</span>
+                <select name="status" class="sup-select">
+                    <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>قيد المعالجة</option>
+                    <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>مفتوحة</option>
+                    <option value="resolved">محلولة</option>
+                    <option value="closed">مغلقة</option>
+                </select>
+                <button type="submit" class="sup-btn sup-btn--primary"><i class="fas fa-paper-plane"></i> إرسال الرد</button>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="sup-closed-notice">
+        <i class="fas fa-lock"></i>
+        هذه التذكرة {{ ticket.get_status_display }} — لا يمكن إضافة ردود جديدة.
+        <form method="post" style="margin-right:auto;">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="open">
+            <input type="hidden" name="body" value="">
+            <button type="submit" class="sup-btn sup-btn--outline" style="font-size:.75rem;padding:.3rem .75rem;">
+                <i class="fas fa-lock-open"></i> إعادة فتح
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -173,6 +173,9 @@ const EnjazIMS = {
     
     // Show app toast notification (non-Bootstrap)
     toast: function(message, type = 'success') {
+        if (typeof message === 'object' && message !== null) {
+            message = message.message || message.error || JSON.stringify(message);
+        }
         const typeMap = {
             error: 'error',
             danger: 'error',

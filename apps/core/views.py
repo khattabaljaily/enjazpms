@@ -13,7 +13,8 @@ from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, Dec
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
 
-from .models import Settings, Tenant, BusinessType
+from .models import Settings, Tenant, BusinessType, SupportTicket, SupportMessage
+from apps.notifications.models import Notification
 from .forms import TenantForm
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
 from apps.treasury.models import TreasuryMovement
@@ -344,7 +345,7 @@ def admin_dashboard(request):
         'single_store_clients': single_store_clients,
         'multi_stock_clients': multi_stock_clients,
         'multi_branch_clients': multi_branch_clients,
-        'pending_support': 12,
+        'pending_support': SupportTicket.objects.filter(status__in=['open', 'in_progress']).count(),
         'backup_ready': max(active_clients, 0),
         'monthly_revenue': 0,
         'plan_distribution_json': json.dumps([
@@ -386,7 +387,182 @@ def admin_user_create(request):
 def admin_support(request):
     if not request.user.is_superuser:
         return redirect('core:no_permission')
-    return render(request, 'core/admin_support.html', {})
+
+    status_filter = request.GET.get('status', '')
+    priority_filter = request.GET.get('priority', '')
+    search_q = request.GET.get('q', '').strip()
+
+    tickets = SupportTicket.objects.select_related('tenant', 'created_by').order_by('-created_at')
+
+    if status_filter:
+        tickets = tickets.filter(status=status_filter)
+    if priority_filter:
+        tickets = tickets.filter(priority=priority_filter)
+    if search_q:
+        tickets = tickets.filter(
+            Q(subject__icontains=search_q) | Q(tenant__name__icontains=search_q)
+        )
+
+    counts = {
+        'all': SupportTicket.objects.count(),
+        'open': SupportTicket.objects.filter(status='open').count(),
+        'in_progress': SupportTicket.objects.filter(status='in_progress').count(),
+        'resolved': SupportTicket.objects.filter(status='resolved').count(),
+        'closed': SupportTicket.objects.filter(status='closed').count(),
+    }
+
+    return render(request, 'core/admin_support.html', {
+        'tickets': tickets,
+        'counts': counts,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'search_q': search_q,
+    })
+
+
+@login_required
+def admin_support_detail(request, pk):
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+
+    ticket = get_object_or_404(SupportTicket.objects.select_related('tenant', 'created_by'), pk=pk)
+    ticket_messages = ticket.messages.select_related('sender').order_by('created_at')
+
+    if request.method == 'POST':
+        body = request.POST.get('body', '').strip()
+        new_status = request.POST.get('status', ticket.status)
+        if body:
+            SupportMessage.objects.create(
+                ticket=ticket,
+                sender=request.user,
+                sender_type='admin',
+                body=body,
+            )
+            from django.utils import timezone
+            ticket.last_reply_at = timezone.now()
+            Notification.objects.create(
+                tenant=ticket.tenant,
+                notification_type='general',
+                priority='high',
+                title=f'رد جديد على تذكرتك #{ticket.pk}',
+                message=(
+                    f'فريق الدعم الفني رد على التذكرة "{ticket.subject}". '
+                    'افتح التذكرة للاطلاع على الرد.'
+                ),
+                link=f'/support/{ticket.pk}/',
+            )
+        ticket.status = new_status
+        if new_status == 'closed':
+            from django.utils import timezone
+            ticket.closed_at = timezone.now()
+        ticket.assigned_to = request.user
+        ticket.save()
+        return redirect('core:admin_support_detail', pk=pk)
+
+    return render(request, 'core/admin_support_detail.html', {
+        'ticket': ticket,
+        'ticket_messages': ticket_messages,
+    })
+
+
+@login_required
+def tenant_support(request):
+    """قائمة تذاكر الدعم الخاصة بالمستأجر"""
+    if not request.tenant:
+        return redirect('core:no_tenant')
+
+    status_filter = request.GET.get('status', '')
+    tickets = SupportTicket.objects.filter(tenant=request.tenant).select_related('created_by').order_by('-created_at')
+    if status_filter:
+        tickets = tickets.filter(status=status_filter)
+
+    counts = {
+        'all': SupportTicket.objects.filter(tenant=request.tenant).count(),
+        'open': SupportTicket.objects.filter(tenant=request.tenant, status='open').count(),
+        'in_progress': SupportTicket.objects.filter(tenant=request.tenant, status='in_progress').count(),
+        'closed': SupportTicket.objects.filter(tenant=request.tenant, status__in=['resolved', 'closed']).count(),
+    }
+
+    return render(request, 'core/tenant_support.html', {
+        'tickets': tickets,
+        'counts': counts,
+        'status_filter': status_filter,
+    })
+
+
+@login_required
+def tenant_support_create(request):
+    """إنشاء تذكرة دعم جديدة — يدعم AJAX وإعادة التوجيه العادية"""
+    if not request.tenant:
+        return JsonResponse({'ok': False, 'error': 'no_tenant'}, status=400)
+
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    subject = request.POST.get('subject', '').strip()
+    description = request.POST.get('description', '').strip()
+    category = request.POST.get('category', 'other')
+    priority = request.POST.get('priority', 'medium')
+
+    errors = {}
+    if not subject:
+        errors['subject'] = 'الموضوع مطلوب'
+    if not description:
+        errors['description'] = 'الوصف مطلوب'
+
+    if errors:
+        return JsonResponse({'ok': False, 'errors': errors}, status=400)
+
+    ticket = SupportTicket.objects.create(
+        tenant=request.tenant,
+        created_by=request.user,
+        subject=subject,
+        description=description,
+        category=category,
+        priority=priority,
+        status='open',
+    )
+    SupportMessage.objects.create(
+        ticket=ticket,
+        sender=request.user,
+        sender_type='tenant',
+        body=description,
+    )
+
+    from django.urls import reverse
+    return JsonResponse({'ok': True, 'redirect': reverse('core:tenant_support_detail', args=[ticket.pk])})
+
+
+@login_required
+def tenant_support_detail(request, pk):
+    """تفاصيل تذكرة الدعم للمستأجر"""
+    if not request.tenant:
+        return redirect('core:no_tenant')
+
+    ticket = get_object_or_404(
+        SupportTicket.objects.select_related('tenant', 'created_by'),
+        pk=pk, tenant=request.tenant
+    )
+    ticket_messages = ticket.messages.select_related('sender').order_by('created_at')
+
+    if request.method == 'POST' and ticket.is_open():
+        body = request.POST.get('body', '').strip()
+        if body:
+            SupportMessage.objects.create(
+                ticket=ticket,
+                sender=request.user,
+                sender_type='tenant',
+                body=body,
+            )
+            from django.utils import timezone
+            ticket.last_reply_at = timezone.now()
+            ticket.save(update_fields=['last_reply_at', 'updated_at'])
+        return redirect('core:tenant_support_detail', pk=pk)
+
+    return render(request, 'core/tenant_support_detail.html', {
+        'ticket': ticket,
+        'ticket_messages': ticket_messages,
+    })
 
 
 @login_required

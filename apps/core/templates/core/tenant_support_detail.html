@@ -1,0 +1,185 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% block page_title %}تذكرة #{{ ticket.pk }}{% endblock %}
+{% block page_description %}{{ ticket.subject }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.tsd-wrapper { display:flex; flex-direction:column; gap:1rem; max-width:860px; }
+
+/* Header */
+.tsd-hdr {
+    background:var(--card-bg,#fff); border-radius:16px; padding:1.25rem 1.5rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+    display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+}
+.tsd-hdr__left { display:flex; flex-direction:column; gap:.5rem; }
+.tsd-hdr__id   { font-size:.75rem; color:var(--text-muted,#64748b); font-weight:600; }
+.tsd-hdr__subject { font-size:1.1rem; font-weight:700; color:var(--text-main,#1e293b); }
+.tsd-hdr__meta { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; }
+.tsd-hdr__right { display:flex; flex-direction:column; align-items:flex-end; gap:.5rem; }
+
+.badge-status {
+    display:inline-flex; align-items:center; gap:.3rem;
+    padding:.25rem .7rem; border-radius:20px; font-size:.75rem; font-weight:600;
+}
+.badge-status--open       { background:#fef2f2; color:#dc2626; }
+.badge-status--in_progress{ background:#fffbeb; color:#d97706; }
+.badge-status--resolved   { background:#f0fdf4; color:#16a34a; }
+.badge-status--closed     { background:#f1f5f9; color:#64748b; }
+
+.meta-pill {
+    display:inline-flex; align-items:center; gap:.35rem;
+    background:var(--hover-bg,#f1f5f9); padding:.2rem .6rem;
+    border-radius:20px; font-size:.75rem; color:var(--text-muted,#64748b);
+}
+
+/* Thread */
+.tsd-thread {
+    background:var(--card-bg,#fff); border-radius:16px; overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+}
+.tsd-thread__header {
+    padding:.75rem 1.25rem; border-bottom:1px solid var(--border-color,#e2e8f0);
+    font-size:.8rem; font-weight:600; color:var(--text-muted,#64748b);
+    display:flex; align-items:center; gap:.5rem;
+}
+.tsd-msg { padding:1rem 1.25rem; display:flex; gap:.85rem; align-items:flex-start; }
+.tsd-msg + .tsd-msg { border-top:1px solid var(--border-color,#e2e8f0); }
+.tsd-msg--admin { justify-content:flex-start; }
+.tsd-msg--tenant { justify-content:flex-end; flex-direction:row-reverse; }
+.tsd-msg__avatar {
+    width:34px; height:34px; border-radius:50%; font-size:.75rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.tsd-msg__avatar--admin  { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; }
+.tsd-msg__avatar--tenant { background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff; }
+.tsd-msg__content { flex:1; min-width:0; max-width:75%; background:var(--input-bg,#f8fafc); border-radius:18px; padding:1rem; box-shadow:0 1px 2px rgba(15,23,42,.05); }
+.tsd-msg--admin .tsd-msg__content { background:rgba(99,102,241,.08); }
+.tsd-msg--tenant .tsd-msg__content { background:rgba(14,165,233,.12); }
+.tsd-msg__meta {
+    display:flex; align-items:center; gap:.5rem; margin-bottom:.35rem; flex-wrap:wrap;
+}
+.tsd-msg__name { font-size:.82rem; font-weight:700; color:var(--text-main,#1e293b); }
+.tsd-msg__role {
+    font-size:.68rem; font-weight:600; padding:.1rem .45rem; border-radius:10px;
+}
+.tsd-msg__role--admin  { background:#ede9fe; color:#7c3aed; }
+.tsd-msg__role--tenant { background:#e0f2fe; color:#0284c7; }
+.tsd-msg__time { font-size:.72rem; color:var(--text-muted,#94a3b8); margin-right:auto; }
+.tsd-msg__body { font-size:.84rem; color:var(--text-main,#374151); line-height:1.6; white-space:pre-wrap; }
+
+/* Reply */
+.tsd-reply {
+    background:var(--card-bg,#fff); border-radius:16px; padding:1.25rem 1.5rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+}
+.tsd-reply__title {
+    font-size:.85rem; font-weight:700; color:var(--text-main,#1e293b);
+    margin-bottom:.85rem; display:flex; align-items:center; gap:.5rem;
+}
+.tsd-reply__title i { color:#0ea5e9; }
+.tsd-textarea {
+    width:100%; border:1px solid var(--border-color,#e2e8f0); border-radius:10px;
+    padding:.7rem 1rem; font-size:.84rem; line-height:1.6;
+    background:var(--input-bg,#f8fafc); color:var(--text-main,#1e293b);
+    resize:vertical; min-height:100px; outline:none; font-family:inherit;
+    transition:border-color .15s;
+}
+.tsd-textarea:focus { border-color:#0ea5e9; }
+.tsd-reply__footer { margin-top:.75rem; }
+.tsd-btn {
+    padding:.5rem 1.2rem; border-radius:10px; font-size:.82rem; font-weight:600;
+    border:none; cursor:pointer; transition:.15s; text-decoration:none;
+    display:inline-flex; align-items:center; gap:.4rem;
+}
+.tsd-btn--primary { background:linear-gradient(135deg,#0ea5e9,#0284c7); color:#fff; }
+.tsd-btn--primary:hover { opacity:.9; }
+.tsd-btn--outline { background:transparent; border:1px solid var(--border-color,#e2e8f0); color:var(--text-muted,#64748b); }
+.tsd-btn--outline:hover { background:var(--hover-bg,#f1f5f9); }
+
+.tsd-closed-notice {
+    background:var(--hover-bg,#f1f5f9); border-radius:12px;
+    padding:.85rem 1.25rem; font-size:.82rem; color:var(--text-muted,#64748b);
+    display:flex; align-items:center; gap:.6rem;
+    border:1px solid var(--border-color,#e2e8f0);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tsd-wrapper">
+
+    <div>
+        <a href="{% url 'core:tenant_support' %}" class="tsd-btn tsd-btn--outline" style="font-size:.78rem;padding:.35rem .85rem;">
+            <i class="fas fa-arrow-right"></i> العودة للتذاكر
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="tsd-hdr">
+        <div class="tsd-hdr__left">
+            <div class="tsd-hdr__id">تذكرة #{{ ticket.pk }}</div>
+            <div class="tsd-hdr__subject">{{ ticket.subject }}</div>
+            <div class="tsd-hdr__meta">
+                <span class="meta-pill"><i class="fas fa-tag" style="font-size:.65rem;"></i>{{ ticket.get_category_display }}</span>
+                <span class="meta-pill"><i class="fas fa-calendar" style="font-size:.65rem;"></i>{{ ticket.created_at|date:"Y/m/d H:i" }}</span>
+            </div>
+        </div>
+        <div class="tsd-hdr__right">
+            <span class="badge-status badge-status--{{ ticket.status }}">{{ ticket.get_status_display }}</span>
+        </div>
+    </div>
+
+    <!-- Thread -->
+    <div class="tsd-thread">
+        <div class="tsd-thread__header">
+            <i class="fas fa-comments" style="color:#0ea5e9;"></i>
+            المحادثة ({{ ticket_messages|length }} رسالة)
+        </div>
+        {% for msg in ticket_messages %}
+        <div class="tsd-msg {% if msg.sender_type == 'admin' %}tsd-msg--admin{% else %}tsd-msg--tenant{% endif %}">
+            <div class="tsd-msg__avatar tsd-msg__avatar--{{ msg.sender_type }}">
+                {{ msg.sender.get_full_name|slice:':1'|default:msg.sender.username|slice:':1'|upper }}
+            </div>
+            <div class="tsd-msg__content">
+                <div class="tsd-msg__meta">
+                    <span class="tsd-msg__name">
+                        {% if msg.sender_type == 'admin' %}فريق إنجاز{% else %}{{ msg.sender.get_full_name|default:msg.sender.username }}{% endif %}
+                    </span>
+                    <span class="tsd-msg__role tsd-msg__role--{{ msg.sender_type }}">
+                        {% if msg.sender_type == 'admin' %}الدعم الفني{% else %}أنت{% endif %}
+                    </span>
+                    <span class="tsd-msg__time">{{ msg.created_at|date:"Y/m/d H:i" }}</span>
+                </div>
+                <div class="tsd-msg__body">{{ msg.body }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <div style="padding:2rem;text-align:center;color:var(--text-muted,#94a3b8);font-size:.84rem;">لا توجد رسائل</div>
+        {% endfor %}
+    </div>
+
+    <!-- Reply form / closed notice -->
+    {% if ticket.is_open %}
+    <div class="tsd-reply">
+        <div class="tsd-reply__title"><i class="fas fa-reply"></i> إضافة رد</div>
+        <form method="post">
+            {% csrf_token %}
+            <textarea name="body" class="tsd-textarea" placeholder="اكتب ردك أو استفسارك…" required></textarea>
+            <div class="tsd-reply__footer">
+                <button type="submit" class="tsd-btn tsd-btn--primary">
+                    <i class="fas fa-paper-plane"></i> إرسال
+                </button>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="tsd-closed-notice">
+        <i class="fas fa-lock"></i>
+        هذه التذكرة {{ ticket.get_status_display }} — لا يمكن إضافة ردود جديدة.
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -27,23 +27,29 @@ urlpatterns = [
     path('tenants/api/<int:pk>/delete/', views.tenant_delete_api, name='tenant_delete_api'),
     path('tenants/api/<int:pk>/suspend/', views.tenant_suspend_api, name='tenant_suspend_api'),
 
-    # Admin — Users
-    path('admin/users/', views.admin_users, name='admin_users'),
-    path('admin/users/create/', views.admin_user_create, name='admin_user_create'),
+    # System — Users (superuser)
+    path('system/users/', views.admin_users, name='admin_users'),
+    path('system/users/create/', views.admin_user_create, name='admin_user_create'),
 
-    # Admin — Support
-    path('admin/support/', views.admin_support, name='admin_support'),
+    # System — Support
+    path('system/support/', views.admin_support, name='admin_support'),
+    path('system/support/<int:pk>/', views.admin_support_detail, name='admin_support_detail'),
 
-    # Admin — Reports
-    path('admin/reports/subscriptions/', views.admin_report_subscriptions, name='admin_report_subscriptions'),
-    path('admin/reports/revenue/', views.admin_report_revenue, name='admin_report_revenue'),
-    path('admin/reports/activity/', views.admin_report_activity, name='admin_report_activity'),
+    # Tenant — Support
+    path('support/', views.tenant_support, name='tenant_support'),
+    path('support/new/', views.tenant_support_create, name='tenant_support_create'),
+    path('support/<int:pk>/', views.tenant_support_detail, name='tenant_support_detail'),
 
-    # Admin — System
-    path('admin/audit-log/', views.admin_audit_log, name='admin_audit_log'),
-    path('admin/settings/', views.admin_settings, name='admin_settings'),
+    # System — Reports
+    path('system/reports/subscriptions/', views.admin_report_subscriptions, name='admin_report_subscriptions'),
+    path('system/reports/revenue/', views.admin_report_revenue, name='admin_report_revenue'),
+    path('system/reports/activity/', views.admin_report_activity, name='admin_report_activity'),
 
-    # Admin — Backup & Training
-    path('admin/backup/', views.admin_backup, name='admin_backup'),
-    path('admin/training/', views.admin_training, name='admin_training'),
+    # System — Audit & Settings
+    path('system/audit-log/', views.admin_audit_log, name='admin_audit_log'),
+    path('system/settings/', views.admin_settings, name='admin_settings'),
+
+    # System — Backup & Training
+    path('system/backup/', views.admin_backup, name='admin_backup'),
+    path('system/training/', views.admin_training, name='admin_training'),
 ]

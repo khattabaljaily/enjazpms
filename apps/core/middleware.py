@@ -41,6 +41,11 @@ class TenantMiddleware:
                     '/settings/',
                     '/static/',
                     '/media/',
+                    '/system/',
+                    '/support/',
+                    '/about/',
+                    '/notifications/',
+                    '/ai/',
                 ]
                 if not any(request.path.startswith(path) for path in safe_paths):
                     return redirect(admin_dashboard_path)

@@ -56,14 +56,14 @@
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item has-submenu">
-            <a class="nav-link nav-link-toggle" href="#">
+            <a class="nav-link nav-link-toggle{% if 'admin/support' in request.path %} submenu-active{% endif %}" href="#">
                 <span class="nav-icon"><i class="fas fa-headset"></i></span>
                 الدعم الفني
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
-                <li><a href="#" class="nav-sublink"><i class="fas fa-ticket me-2"></i>كل التذاكر</a></li>
-                <li><a href="#" class="nav-sublink"><i class="fas fa-circle-exclamation me-2"></i>التذاكر المفتوحة</a></li>
+                <li><a href="{% url 'core:admin_support' %}" class="nav-sublink{% if request.resolver_match.url_name == 'admin_support' %} active{% endif %}"><i class="fas fa-ticket me-2"></i>كل التذاكر</a></li>
+                <li><a href="{% url 'core:admin_support' %}?status=open" class="nav-sublink"><i class="fas fa-circle-exclamation me-2"></i>التذاكر المفتوحة</a></li>
             </ul>
         </li>
     </ul>
@@ -386,6 +386,17 @@
         </li>
     </ul>
     {% endif %}
+
+    <!-- الدعم الفني (للمستأجرين) -->
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link{% if 'support' in request.path %} active{% endif %}" href="{% url 'core:tenant_support' %}">
+                <span class="nav-icon" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;"><i class="fas fa-headset"></i></span>
+                الدعم الفني
+            </a>
+        </li>
+    </ul>
 
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
