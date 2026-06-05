@@ -104,6 +104,27 @@
     display:flex; align-items:center; gap:.6rem;
     border:1px solid var(--border-color,#e2e8f0);
 }
+
+@media (max-width: 768px) {
+    .tsd-hdr,
+    .tsd-thread,
+    .tsd-reply,
+    .tsd-btn,
+    .tsd-hdr__meta,
+    .tsd-msg__content {
+        width:100%;
+    }
+    .tsd-hdr { padding:1rem; }
+    .tsd-hdr__left { width:100%; }
+    .tsd-hdr__meta { flex-direction:column; align-items:flex-start; }
+    .tsd-thread__header { padding:.85rem 1rem; }
+    .tsd-msg { padding:.85rem 1rem; }
+    .tsd-msg__content { max-width:100%; }
+    .tsd-reply { padding:1rem; }
+    .tsd-textarea { min-height:120px; }
+    .tsd-reply__footer { flex-direction:column; align-items:stretch; }
+    .tsd-btn { width:100%; justify-content:center; }
+}
 </style>
 {% endblock %}
 

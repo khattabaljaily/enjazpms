@@ -66,17 +66,21 @@
     --surface: #ffffff;
     --surface-hover: #f9fafb;
     --bg-card: #ffffff;
+    --card-bg: var(--bg-card);
     --card-border-color: #e5e7eb;
-    
+
     /* Border */
     --border-color: #e5e7eb;
     --border-light: #f3f4f6;
-    
+
     --text-primary: #111827;
     --text-secondary: #374151;
     --text-tertiary: #6b7280;
+    --text-main: #1e293b;
     --text-inverse: #ffffff;
-    
+    --input-bg: #f8fafc;
+    --hover-bg: #f1f5f9;
+
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -129,8 +133,9 @@
     --surface: #1e293b;
     --surface-hover: #334155;
     --bg-card: var(--surface);
+    --card-bg: var(--bg-card);
     --card-border-color: var(--border-color);
-    
+
     /* Border */
     --border-color: #334155;
     --border-light: #475569;
@@ -139,7 +144,10 @@
     --text-primary: #f8fafc;
     --text-secondary: #cbd5e1;
     --text-tertiary: #94a3b8;
+    --text-main: #f8fafc;
     --text-inverse: #0f172a;
+    --input-bg: #334155;
+    --hover-bg: #334155;
     
     /* Shadows (subtle in dark mode) */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
