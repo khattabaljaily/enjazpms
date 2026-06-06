@@ -59,7 +59,7 @@ class User(AbstractUser):
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
-        verbose_name='العميل',
+        verbose_name='المشترك',
         related_name='users',
         null=True,  # NULL للـ Superuser الذي لا يتبع tenant
         blank=True
@@ -131,7 +131,7 @@ class PermissionGroup(models.Model):
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
-        verbose_name='العميل',
+        verbose_name='المشترك',
         related_name='permission_groups'
     )
     

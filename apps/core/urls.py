@@ -49,7 +49,14 @@ urlpatterns = [
     path('system/audit-log/', views.admin_audit_log, name='admin_audit_log'),
     path('system/settings/', views.admin_settings, name='admin_settings'),
 
-    # System — Backup & Training
+    # System — Backup
     path('system/backup/', views.admin_backup, name='admin_backup'),
+    path('system/backup/<slug:tenant_slug>/', views.admin_backup_detail, name='admin_backup_detail'),
+    path('system/backup/<slug:tenant_slug>/create/', views.admin_backup_create_api, name='admin_backup_create_api'),
+    path('system/backup/restore/<int:backup_id>/', views.admin_backup_restore_api, name='admin_backup_restore_api'),
+    path('system/backup/delete/<int:backup_id>/', views.admin_backup_delete_api, name='admin_backup_delete_api'),
+    path('system/backup/download/<int:backup_id>/', views.admin_backup_download, name='admin_backup_download'),
+
+    # System — Training
     path('system/training/', views.admin_training, name='admin_training'),
 ]

@@ -1,7 +1,7 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
 {% block page_title %}الدعم الفني{% endblock %}
-{% block page_description %}إدارة تذاكر الدعم الفني الواردة من العملاء{% endblock %}
+{% block page_description %}إدارة تذاكر الدعم الفني الواردة من المشتركين{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -184,7 +184,7 @@
     }
     .sup-table tbody td[data-label="الموضوع"],
     .sup-table tbody td[data-label="الإجراء"],
-    .sup-table tbody td[data-label="العميل"] {
+    .sup-table tbody td[data-label="المشترك"] {
         grid-column: span 2;
     }
     .sup-table tbody td[data-label="الموضوع"] {
@@ -195,7 +195,7 @@
         display:block;
         line-height:1.4;
     }
-    .sup-table tbody td[data-label="العميل"] .tenant-pill {
+    .sup-table tbody td[data-label="المشترك"] .tenant-pill {
         width:100%;
         justify-content:flex-end;
         text-align:right;
@@ -251,7 +251,7 @@
                 <div class="sup-hero__icon"><i class="fas fa-headset"></i></div>
                 <div>
                     <div class="sup-hero__title">الدعم الفني</div>
-                    <div class="sup-hero__desc">إدارة جميع تذاكر الدعم الواردة من العملاء</div>
+                    <div class="sup-hero__desc">إدارة جميع تذاكر الدعم الواردة من المشتركين</div>
                 </div>
             </div>
             <div class="sup-stats">
@@ -269,7 +269,7 @@
         <form method="get" style="display:contents;">
             <div class="sup-search">
                 <i class="fas fa-search" style="color:var(--text-muted,#94a3b8);font-size:.8rem;"></i>
-                <input type="text" name="q" value="{{ search_q }}" placeholder="بحث بالموضوع أو اسم العميل…">
+                <input type="text" name="q" value="{{ search_q }}" placeholder="بحث بالموضوع أو اسم المشترك…">
             </div>
             <div class="sup-filter-group">
                 <select name="status" class="sup-select">
@@ -302,7 +302,7 @@
                 <tr>
                     <th>#</th>
                     <th>الموضوع</th>
-                    <th>العميل</th>
+                    <th>المشترك</th>
                     <th>التصنيف</th>
                     <th>الأولوية</th>
                     <th>الحالة</th>
@@ -320,7 +320,7 @@
                             {{ ticket.subject|truncatechars:60 }}
                         </a>
                     </td>
-                    <td data-label="العميل">
+                    <td data-label="المشترك">
                         <span class="tenant-pill">
                             <i class="fas fa-building" style="font-size:.65rem;"></i>
                             {{ ticket.tenant.name }}
@@ -359,7 +359,7 @@
             <div class="sup-empty__icon"><i class="fas fa-ticket"></i></div>
             <div class="sup-empty__title">لا توجد تذاكر</div>
             <div class="sup-empty__text">
-                {% if status_filter or priority_filter or search_q %}لا توجد نتائج تطابق معايير البحث{% else %}لم يرسل أي عميل تذكرة دعم بعد{% endif %}
+                {% if status_filter or priority_filter or search_q %}لا توجد نتائج تطابق معايير البحث{% else %}لم يرسل أي مشترك تذكرة دعم بعد{% endif %}
             </div>
         </div>
         {% endif %}

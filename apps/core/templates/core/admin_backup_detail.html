@@ -1,0 +1,336 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/backup.css' %}?v=1.1">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════════════════════ BREADCRUMB ════════════════════════ -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb" style="font-family:'Cairo',sans-serif; font-size:.84rem;">
+        <li class="breadcrumb-item">
+            <a href="{% url 'core:admin_backup' %}" style="color:var(--primary); text-decoration:none;">
+                <i class="fas fa-database me-1"></i>النسخ الاحتياطي
+            </a>
+        </li>
+        <li class="breadcrumb-item active" style="color:var(--text-secondary);">{{ tenant.name }}</li>
+    </ol>
+</nav>
+
+<!-- ══════════════════════════ TENANT HEADER ═════════════════════ -->
+<div class="bk-tenant-header">
+    <div class="bk-tenant-header__avatar">{{ tenant.name|slice:":1" }}</div>
+    <div class="bk-tenant-header__info">
+        <div class="bk-tenant-header__name">{{ tenant.name }}</div>
+        <div class="bk-tenant-header__meta">
+            <code>{{ tenant.slug }}</code>
+            &nbsp;·&nbsp; {{ tenant.get_subscription_plan_display }}
+            &nbsp;·&nbsp; {{ backups.count }} نسخة احتياطية
+            &nbsp;·&nbsp; {{ total_size|filesizeformat }}
+        </div>
+    </div>
+    <button class="cx-btn-primary" id="btnNewBackup">
+        <i class="fas fa-plus"></i>
+        نسخة احتياطية جديدة
+    </button>
+</div>
+
+<!-- ══════════════════════════ BACKUPS TABLE ═════════════════════ -->
+<div class="cx-panel">
+    {% if backups %}
+    <div class="cx-table-wrap">
+        <table class="cx-table" id="backupTable">
+            <thead>
+                <tr>
+                    <th style="width:3rem">#</th>
+                    <th>اسم الملف</th>
+                    <th style="width:9rem">النوع</th>
+                    <th style="width:6rem">الحجم</th>
+                    <th style="width:8rem">الحالة</th>
+                    <th style="width:10rem">التاريخ</th>
+                    <th style="width:8rem"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for backup in backups %}
+                <tr id="row-{{ backup.id }}" class="{% if not backup.file_exists %}bk-row--missing{% endif %}">
+
+                    <td data-label="#" style="color:var(--text-tertiary); font-size:.76rem; font-family:monospace">
+                        {{ backup.id }}
+                    </td>
+
+                    <td data-label="اسم الملف">
+                        <span class="bk-filename">{{ backup.filename }}</span>
+                        {% if not backup.file_exists %}
+                        <span class="ms-2" style="color:#ef4444; font-size:.7rem">
+                            <i class="fas fa-exclamation-triangle"></i> الملف مفقود
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <td data-label="النوع">
+                        <span class="bk-type bk-type--{{ backup.backup_type }}"
+                              {% if backup.backup_type == 'pre_restore' %}title="أُنشئت تلقائياً قبل تنفيذ عملية استعادة — يمكن استخدامها للتراجع عن الاستعادة"{% endif %}>
+                            {% if backup.backup_type == 'manual' %}
+                                <i class="fas fa-hand-pointer"></i>
+                            {% elif backup.backup_type == 'auto' %}
+                                <i class="fas fa-robot"></i>
+                            {% else %}
+                                <i class="fas fa-shield-alt"></i>
+                            {% endif %}
+                            {{ backup.get_backup_type_display }}
+                        </span>
+                        {% if backup.backup_type == 'pre_restore' %}
+                        <div style="font-size:.7rem; color:var(--text-tertiary); margin-top:.2rem">
+                            حماية تلقائية قبل الاستعادة
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <td data-label="الحجم" class="bk-size">{{ backup.file_size_display }}</td>
+
+                    <td data-label="الحالة">
+                        <span class="bk-status bk-status--{{ backup.status }}">
+                            {% if backup.status == 'completed' %}
+                                <i class="fas fa-check-circle"></i>
+                            {% elif backup.status == 'failed' %}
+                                <i class="fas fa-times-circle"></i>
+                            {% else %}
+                                <i class="fas fa-spinner fa-spin"></i>
+                            {% endif %}
+                            {{ backup.get_status_display }}
+                        </span>
+                    </td>
+
+                    <td data-label="التاريخ" class="bk-date">{{ backup.created_at|date:"Y-m-d H:i" }}</td>
+
+                    <td data-label="الإجراءات">
+                        <div class="d-flex gap-2 justify-content-end">
+                            {% if backup.status == 'completed' and backup.file_exists %}
+                            <a href="{% url 'core:admin_backup_download' backup.id %}"
+                               class="bk-icon-btn bk-icon-btn--secondary" title="تنزيل"
+                               data-no-spinner>
+                                <i class="fas fa-download"></i>
+                            </a>
+                            <button class="bk-icon-btn bk-icon-btn--warning bk-btn-restore"
+                                    data-id="{{ backup.id }}"
+                                    data-filename="{{ backup.filename }}"
+                                    title="استعادة">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                            {% endif %}
+                            <button class="bk-icon-btn bk-icon-btn--danger bk-btn-delete"
+                                    data-id="{{ backup.id }}"
+                                    data-filename="{{ backup.filename }}"
+                                    title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div class="bk-empty">
+        <div class="bk-empty__icon"><i class="fas fa-database"></i></div>
+        <p class="bk-empty__title">لا توجد نسخ احتياطية لهذا المشترك بعد</p>
+        <p class="bk-empty__desc">اضغط على الزر أدناه لإنشاء أول نسخة احتياطية</p>
+        <button class="cx-btn-primary mt-3" id="btnNewBackupEmpty">
+            <i class="fas fa-plus"></i> إنشاء أول نسخة احتياطية
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+</div><!-- /cx-scene -->
+
+<!-- ══════════════════════════ RESTORE MODAL ═════════════════════ -->
+<div class="modal fade" id="restoreModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
+        <div class="modal-content cx-confirm-modal">
+            <div class="cx-confirm-body">
+                <div class="cx-confirm-icon">
+                    <i class="fas fa-undo"></i>
+                </div>
+                <h5 class="cx-confirm-title">تأكيد الاستعادة</h5>
+                <p class="cx-confirm-desc">
+                    سيتم إنشاء نسخة احتياطية تلقائية من الوضع الحالي
+                    قبل تنفيذ الاستعادة، ثم استبدال بيانات المشترك بالنسخة:
+                    <br>
+                    <strong id="restoreFilename" style="font-family:monospace; font-size:.8rem; word-break:break-all; display:block; margin-top:.5rem; padding:.35rem .6rem; background:var(--bg-secondary); border-radius:6px; border:1px solid var(--border-color)"></strong>
+                </p>
+            </div>
+            <div class="cx-confirm-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-warning" id="btnConfirmRestore">
+                    <i class="fas fa-undo"></i> تأكيد الاستعادة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ DELETE MODAL ══════════════════════ -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
+        <div class="modal-content cx-confirm-modal">
+            <div class="cx-confirm-body">
+                <div class="cx-confirm-icon cx-confirm-icon--danger">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <h5 class="cx-confirm-title">حذف النسخة الاحتياطية؟</h5>
+                <p class="cx-confirm-desc">
+                    ستقوم بحذف الملف:
+                    <br>
+                    <strong id="deleteFilename" style="font-family:monospace; font-size:.8rem; word-break:break-all; display:block; margin-top:.5rem; padding:.35rem .6rem; background:var(--bg-secondary); border-radius:6px; border:1px solid var(--border-color)"></strong>
+                    <br>
+                    <span class="text-danger" style="font-size:.82rem">لا يمكن التراجع عن هذا الإجراء.</span>
+                </p>
+            </div>
+            <div class="cx-confirm-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="btnConfirmDelete">
+                    <i class="fas fa-trash"></i> نعم، احذف
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ TOAST ══════════════════════════════ -->
+<div id="bkToast" class="position-fixed bottom-0 start-50 translate-middle-x mb-4"
+     style="z-index:9999; display:none; min-width:300px">
+    <div id="bkToastBody" class="alert mb-0 shadow text-center fw-bold" role="alert"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TENANT_SLUG = '{{ tenant.slug }}';
+const CSRF = '{{ csrf_token }}';
+const URLS = {
+    create:  `/system/backup/${TENANT_SLUG}/create/`,
+    restore: (id) => `/system/backup/restore/${id}/`,
+    delete:  (id) => `/system/backup/delete/${id}/`,
+};
+
+/* ── toast ── */
+function showToast(msg, ok = true) {
+    const el   = document.getElementById('bkToast');
+    const body = document.getElementById('bkToastBody');
+    body.className = `alert mb-0 shadow text-center fw-bold alert-${ok ? 'success' : 'danger'}`;
+    body.textContent = msg;
+    el.style.display = '';
+    setTimeout(() => el.style.display = 'none', 4000);
+}
+
+/* ── new backup ── */
+async function doNewBackup(btn) {
+    const origHTML = btn.innerHTML;
+    btn.innerHTML = '<span class="bk-spinner"></span> جاري النسخ...';
+    btn.disabled = true;
+    try {
+        const resp = await fetch(URLS.create, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+        });
+        const data = await resp.json();
+        showToast(data.success ? `✓ ${data.message}` : (data.message || 'فشل النسخ الاحتياطي'), data.success);
+        if (data.success) setTimeout(() => location.reload(), 1500);
+    } catch {
+        showToast('حدث خطأ في الاتصال', false);
+    } finally {
+        btn.innerHTML = origHTML;
+        btn.disabled = false;
+    }
+}
+
+document.getElementById('btnNewBackup')?.addEventListener('click', function () { doNewBackup(this); });
+document.getElementById('btnNewBackupEmpty')?.addEventListener('click', function () { doNewBackup(this); });
+
+/* ── restore flow ── */
+let pendingRestoreId = null;
+const restoreModal = new bootstrap.Modal(document.getElementById('restoreModal'));
+
+document.querySelectorAll('.bk-btn-restore').forEach(btn => {
+    btn.addEventListener('click', function () {
+        pendingRestoreId = this.dataset.id;
+        document.getElementById('restoreFilename').textContent = this.dataset.filename;
+        restoreModal.show();
+    });
+});
+
+document.getElementById('btnConfirmRestore').addEventListener('click', async function () {
+    if (!pendingRestoreId) return;
+    const origHTML = this.innerHTML;
+    this.innerHTML = '<span class="bk-spinner"></span> جاري الاستعادة...';
+    this.disabled = true;
+    restoreModal.hide();
+    try {
+        const resp = await fetch(URLS.restore(pendingRestoreId), {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+        });
+        const data = await resp.json();
+        showToast(data.message, data.success);
+        if (data.success) setTimeout(() => location.reload(), 2000);
+    } catch {
+        showToast('حدث خطأ في الاتصال', false);
+    } finally {
+        this.innerHTML = origHTML;
+        this.disabled = false;
+        pendingRestoreId = null;
+    }
+});
+
+/* ── delete flow ── */
+let pendingDeleteId = null;
+const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+document.querySelectorAll('.bk-btn-delete').forEach(btn => {
+    btn.addEventListener('click', function () {
+        pendingDeleteId = this.dataset.id;
+        document.getElementById('deleteFilename').textContent = this.dataset.filename;
+        deleteModal.show();
+    });
+});
+
+document.getElementById('btnConfirmDelete').addEventListener('click', async function () {
+    if (!pendingDeleteId) return;
+    const id       = pendingDeleteId;
+    const origHTML = this.innerHTML;
+    this.innerHTML = '<span class="bk-spinner"></span> جاري الحذف...';
+    this.disabled  = true;
+    deleteModal.hide();
+    try {
+        const resp = await fetch(URLS.delete(id), {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+        });
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById(`row-${id}`)?.remove();
+            showToast(data.message);
+        } else {
+            showToast(data.message, false);
+        }
+    } catch {
+        showToast('حدث خطأ في الاتصال', false);
+    } finally {
+        this.innerHTML = origHTML;
+        this.disabled  = false;
+        pendingDeleteId = null;
+    }
+});
+</script>
+{% endblock %}

@@ -19,7 +19,7 @@ class UserAdmin(BaseUserAdmin):
         ('معلومات شخصية', {
             'fields': ('first_name', 'last_name', 'email', 'phone', 'avatar')
         }),
-        ('العميل والصلاحيات', {
+        ('المشترك والصلاحيات', {
             'fields': ('tenant', 'is_tenant_admin')
         }),
         ('صلاحيات النظام', {

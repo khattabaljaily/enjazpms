@@ -73,13 +73,13 @@ class BusinessType(models.Model):
 
 
 # ============================================
-# TENANT (العميل/النشاط التجاري)
+# TENANT (المشترك/النشاط التجاري)
 # ============================================
 
 class Tenant(models.Model):
     """
-    Tenant - العميل/النشاط التجاري
-    كل عميل له بياناته المنفصلة تماماً
+    Tenant - المشترك/النشاط التجاري
+    كل مشترك له بياناته المنفصلة تماماً
     """
     
     VERSION_TYPES = (
@@ -147,8 +147,8 @@ class Tenant(models.Model):
     
     class Meta:
         db_table = 'tenants'
-        verbose_name = 'عميل'
-        verbose_name_plural = 'العملاء'
+        verbose_name = 'مشترك'
+        verbose_name_plural = 'المشتركين'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['slug']),
@@ -205,7 +205,7 @@ class TenantCapabilities(models.Model):
     tenant = models.OneToOneField(
         Tenant,
         on_delete=models.CASCADE,
-        verbose_name='العميل',
+        verbose_name='المشترك',
         related_name='capabilities'
     )
 
@@ -261,7 +261,7 @@ class Settings(models.Model):
     tenant = models.OneToOneField(
         Tenant,
         on_delete=models.CASCADE,
-        verbose_name='العميل',
+        verbose_name='المشترك',
         related_name='settings'
     )
     
@@ -300,7 +300,7 @@ class Settings(models.Model):
     class Meta:
         db_table = 'tenant_settings'
         verbose_name = 'إعدادات'
-        verbose_name_plural = 'إعدادات العملاء'
+        verbose_name_plural = 'إعدادات المشتركين'
     
     def __str__(self):
         return f"إعدادات {self.tenant.name}"
@@ -319,7 +319,7 @@ class TenantMixin(models.Model):
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
-        verbose_name='العميل',
+        verbose_name='المشترك',
         db_index=True
     )
     
@@ -373,7 +373,7 @@ class ActivityLog(models.Model):
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
-        verbose_name='العميل',
+        verbose_name='المشترك',
         related_name='activity_logs'
     )
     user = models.ForeignKey(
@@ -415,7 +415,7 @@ class ActivityLog(models.Model):
 # ============================================
 
 class SupportTicket(models.Model):
-    """تذكرة دعم فني - من المستأجر إلى مشرف النظام"""
+    """تذكرة دعم فني - من المشترك إلى مشرف النظام"""
 
     STATUS_CHOICES = (
         ('open', 'مفتوحة'),
@@ -442,7 +442,7 @@ class SupportTicket(models.Model):
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
-        verbose_name='العميل',
+        verbose_name='المشترك',
         related_name='support_tickets'
     )
     created_by = models.ForeignKey(
@@ -494,7 +494,7 @@ class SupportMessage(models.Model):
     """رسالة ضمن تذكرة دعم"""
 
     SENDER_TYPE_CHOICES = (
-        ('tenant', 'العميل'),
+        ('tenant', 'المشترك'),
         ('admin', 'المشرف'),
     )
 
@@ -523,3 +523,62 @@ class SupportMessage(models.Model):
 
     def __str__(self):
         return f"رسالة في #{self.ticket_id} من {self.sender}"
+
+
+# ============================================
+# TENANT BACKUPS (النسخ الاحتياطية)
+# ============================================
+
+class TenantBackup(models.Model):
+    """نسخة احتياطية لبيانات مشترك معين"""
+
+    BACKUP_TYPES = (
+        ('manual', 'يدوي'),
+        ('auto', 'تلقائي'),
+        ('pre_restore', 'نسخة أمان'),
+    )
+
+    STATUS_CHOICES = (
+        ('completed', 'مكتمل'),
+        ('failed', 'فشل'),
+        ('in_progress', 'جاري'),
+    )
+
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='backups',
+        verbose_name='المشترك',
+    )
+    filename = models.CharField('اسم الملف', max_length=255)
+    file_path = models.CharField('مسار الملف', max_length=500)
+    file_size = models.BigIntegerField('الحجم بالبايت', default=0)
+    backup_type = models.CharField('نوع النسخة', max_length=20, choices=BACKUP_TYPES, default='manual')
+    status = models.CharField('الحالة', max_length=20, choices=STATUS_CHOICES, default='in_progress')
+    notes = models.TextField('ملاحظات', blank=True)
+    created_at = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True)
+
+    class Meta:
+        db_table = 'tenant_backups'
+        verbose_name = 'نسخة احتياطية'
+        verbose_name_plural = 'النسخ الاحتياطية'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.tenant.name} — {self.filename}"
+
+    @property
+    def file_size_display(self):
+        if self.status != 'completed':
+            return '—'
+        size = self.file_size
+        if size < 1024:
+            return f"{size} B"
+        elif size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        return f"{size / (1024 * 1024):.2f} MB"
+
+    @property
+    def file_exists(self):
+        from pathlib import Path
+        return Path(self.file_path).exists()

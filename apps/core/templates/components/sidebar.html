@@ -25,7 +25,7 @@
         </li>
     </ul>
 
-    <!-- المستأجرون والاشتراكات -->
+    <!-- المشتركون والاشتراكات -->
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item">
@@ -80,7 +80,7 @@
             <ul class="nav-submenu">
                 <li><a href="#" class="nav-sublink"><i class="fas fa-file-invoice me-2"></i>تقرير الاشتراكات</a></li>
                 <li><a href="#" class="nav-sublink"><i class="fas fa-chart-line me-2"></i>الإيرادات الشهرية</a></li>
-                <li><a href="#" class="nav-sublink"><i class="fas fa-chart-column me-2"></i>نشاط المستأجرين</a></li>
+                <li><a href="#" class="nav-sublink"><i class="fas fa-chart-column me-2"></i>نشاط المشتركين</a></li>
             </ul>
         </li>
     </ul>
@@ -89,7 +89,7 @@
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item">
-            <a class="nav-link{% if request.resolver_match.url_name == 'admin_backup' %} active{% endif %}" href="#">
+            <a class="nav-link{% if request.resolver_match.url_name == 'admin_backup' or request.resolver_match.url_name == 'admin_backup_detail' %} active{% endif %}" href="{% url 'core:admin_backup' %}">
                 <span class="nav-icon"><i class="fas fa-database"></i></span>
                 النسخ الاحتياطي
             </a>
@@ -387,7 +387,7 @@
     </ul>
     {% endif %}
 
-    <!-- الدعم الفني (للمستأجرين) -->
+    <!-- الدعم الفني (للمشتركين) -->
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item">

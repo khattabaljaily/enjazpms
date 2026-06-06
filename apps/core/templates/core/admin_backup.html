@@ -1,13 +1,251 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
+{% load humanize %}
 
-{% block page_title %}النسخ الاحتياطي{% endblock %}
-{% block page_description %}إدارة النسخ الاحتياطية لبيانات المستأجرين{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/backup.css' %}?v=1.1">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
 
 {% block content %}
-<div class="cx-coming-soon">
-    <div class="cx-coming-soon__icon"><i class="fas fa-database"></i></div>
-    <h3 class="cx-coming-soon__title">النسخ الاحتياطي للبيانات</h3>
-    <p class="cx-coming-soon__text">هذا القسم قيد التطوير</p>
+<div class="cx-scene">
+
+<!-- ══════════════════════════ PAGE HERO ══════════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-database"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">النسخ الاحتياطي</h1>
+                <p class="cx-hero-desc">إدارة النسخ الاحتياطية لبيانات جميع المشتركين</p>
+            </div>
+        </div>
+        <div class="cx-hero-actions" style="width:100%">
+            <button class="cx-btn-secondary bk-btn-backup-all" id="btnBackupAll">
+                <i class="fas fa-play-circle"></i>
+                نسخ احتياطي لجميع المشتركين
+            </button>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-building"></i>
+            <strong>{{ tenants_count }}</strong>
+            <span>مشترك</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-file-archive"></i>
+            <strong>{{ total_backups }}</strong>
+            <span>نسخة محفوظة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-hdd"></i>
+            <strong>{{ total_size_display }}</strong>
+            <span>حجم إجمالي</span>
+        </span>
+        {% if tenants_no_backup %}
+        <span class="cx-stat-badge cx-stat-badge--danger">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>{{ tenants_no_backup }}</strong>
+            <span>بدون نسخة</span>
+        </span>
+        {% endif %}
+    </div>
 </div>
+
+<!-- ══════════════════════════ CRON HINT ══════════════════════════ -->
+<div class="bk-cron-box mb-4">
+    <div>
+        <i class="fas fa-clock me-1" style="color:#6366f1"></i>
+        <strong>النسخ التلقائي:</strong>
+        أضف هذا السطر في <code style="display:inline; padding:0.1rem 0.35rem; font-size:0.75rem">crontab</code> لتشغيل النسخ الاحتياطي مرتين يومياً (6ص و 6م):
+    </div>
+    <code>0 6,18 * * * cd /path/to/EnjazIMS && python manage.py auto_backup_tenants >> /var/log/enjaz_backup.log 2>&1</code>
+</div>
+
+<!-- ══════════════════════════ PANEL ══════════════════════════════ -->
+<div class="cx-panel">
+
+    <!-- Toolbar -->
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="bkSearch" class="cx-search-input" placeholder="ابحث باسم المشترك...">
+        </div>
+    </div>
+
+    <!-- Tenant List -->
+    <div id="bkTenantList" style="padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.6rem;">
+        {% for row in tenant_rows %}
+        <div class="bk-tenant-row" data-name="{{ row.tenant.name|lower }}">
+
+            <div class="bk-avatar">{{ row.tenant.name|slice:":1" }}</div>
+
+            <div class="bk-tenant-info">
+                <div class="bk-tenant-name">{{ row.tenant.name }}</div>
+                <div class="bk-tenant-slug">{{ row.tenant.slug }}</div>
+            </div>
+
+            <div class="bk-meta">
+                <div class="bk-meta-item">
+                    <div class="bk-meta-value">{{ row.count }}</div>
+                    <div class="bk-meta-label">نسخة</div>
+                </div>
+                <div class="bk-meta-divider"></div>
+                <div class="bk-meta-item">
+                    <div class="bk-meta-value" style="font-size:.85rem">{{ row.total_size|filesizeformat }}</div>
+                    <div class="bk-meta-label">الحجم</div>
+                </div>
+            </div>
+
+            <div class="bk-last-backup {% if not row.latest %}bk-last-backup--none{% endif %}">
+                {% if row.latest %}
+                <i class="fas fa-clock"></i>
+                {{ row.latest.created_at|date:"Y-m-d H:i" }}
+                <span class="bk-type bk-type--{{ row.latest.backup_type }}"
+                      {% if row.latest.backup_type == 'pre_restore' %}title="أُنشئت تلقائياً قبل تنفيذ عملية استعادة"{% endif %}>
+                    {{ row.latest.get_backup_type_display }}
+                </span>
+                {% else %}
+                <i class="fas fa-exclamation-circle"></i>
+                لا توجد نسخ
+                {% endif %}
+            </div>
+
+            <div class="bk-actions">
+                <button class="bk-icon-btn bk-icon-btn--secondary bk-btn-quick-backup"
+                        data-slug="{{ row.tenant.slug }}"
+                        data-name="{{ row.tenant.name }}"
+                        title="نسخة احتياطية الآن">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <a href="{% url 'core:admin_backup_detail' row.tenant.slug %}"
+                   class="bk-icon-btn bk-icon-btn--primary" title="عرض النسخ">
+                    <i class="fas fa-list"></i>
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="bk-empty">
+            <div class="bk-empty__icon"><i class="fas fa-database"></i></div>
+            <p class="bk-empty__title">لا يوجد مشتركون حتى الآن</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</div><!-- /cx-panel -->
+</div><!-- /cx-scene -->
+
+<!-- ══════════════════════════ BACKUP ALL MODAL ═══════════════════ -->
+<div class="modal fade" id="backupAllModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
+        <div class="modal-content cx-confirm-modal">
+            <div class="cx-confirm-body">
+                <div class="cx-confirm-icon" style="background:rgba(16,185,129,0.1); color:#10b981">
+                    <i class="fas fa-play-circle"></i>
+                </div>
+                <h5 class="cx-confirm-title">نسخ احتياطي لجميع المشتركين؟</h5>
+                <p class="cx-confirm-desc">
+                    سيتم إنشاء نسخة احتياطية لكل المشتركين النشطين.
+                    قد تستغرق العملية بضع دقائق.
+                </p>
+            </div>
+            <div class="cx-confirm-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-success" id="btnConfirmBackupAll">
+                    <i class="fas fa-play-circle"></i> ابدأ النسخ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ TOAST ══════════════════════════════ -->
+<div id="bkToast" class="position-fixed bottom-0 start-50 translate-middle-x mb-4"
+     style="z-index:9999; display:none; min-width:300px">
+    <div id="bkToastBody" class="alert mb-0 shadow text-center fw-bold" role="alert"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+const URLS = {
+    createBackup: (slug) => `/system/backup/${slug}/create/`,
+};
+
+/* ── search ── */
+document.getElementById('bkSearch').addEventListener('input', function () {
+    const q = this.value.toLowerCase().trim();
+    document.querySelectorAll('.bk-tenant-row').forEach(row => {
+        row.style.display = q === '' || row.dataset.name.includes(q) ? '' : 'none';
+    });
+});
+
+/* ── toast ── */
+function showToast(msg, ok = true) {
+    const el   = document.getElementById('bkToast');
+    const body = document.getElementById('bkToastBody');
+    body.className = `alert mb-0 shadow text-center fw-bold alert-${ok ? 'success' : 'danger'}`;
+    body.textContent = msg;
+    el.style.display = '';
+    setTimeout(() => el.style.display = 'none', 3500);
+}
+
+/* ── single quick backup ── */
+document.querySelectorAll('.bk-btn-quick-backup').forEach(btn => {
+    btn.addEventListener('click', async function () {
+        const slug = this.dataset.slug;
+        const name = this.dataset.name;
+        const icon = this.querySelector('i');
+        icon.className = 'bk-spinner bk-spinner--dark';
+        this.disabled = true;
+        try {
+            const resp = await fetch(URLS.createBackup(slug), {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF },
+            });
+            const data = await resp.json();
+            showToast(data.success ? `✓ تم نسخ ${name} (${data.backup.size})` : (data.message || 'فشل النسخ'), data.success);
+            if (data.success) setTimeout(() => location.reload(), 1500);
+        } catch {
+            showToast('حدث خطأ في الاتصال', false);
+        } finally {
+            icon.className = 'fas fa-plus';
+            this.disabled = false;
+        }
+    });
+});
+
+/* ── backup all ── */
+const backupAllModal = new bootstrap.Modal(document.getElementById('backupAllModal'));
+
+document.getElementById('btnBackupAll').addEventListener('click', () => backupAllModal.show());
+
+document.getElementById('btnConfirmBackupAll').addEventListener('click', async function () {
+    const btns = [...document.querySelectorAll('.bk-btn-quick-backup')];
+    let ok = 0, fail = 0;
+    const origHTML = this.innerHTML;
+    this.innerHTML = '<span class="bk-spinner"></span> جاري النسخ...';
+    this.disabled = true;
+    backupAllModal.hide();
+    for (const btn of btns) {
+        try {
+            const resp = await fetch(URLS.createBackup(btn.dataset.slug), {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF },
+            });
+            (await resp.json()).success ? ok++ : fail++;
+        } catch { fail++; }
+    }
+    showToast(`اكتمل: ${ok} نجح، ${fail} فشل`, fail === 0);
+    this.innerHTML = origHTML;
+    this.disabled = false;
+    setTimeout(() => location.reload(), 2000);
+});
+</script>
 {% endblock %}

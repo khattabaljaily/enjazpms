@@ -13,7 +13,7 @@ from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, Dec
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
 
-from .models import Settings, Tenant, BusinessType, SupportTicket, SupportMessage
+from .models import Settings, Tenant, BusinessType, SupportTicket, SupportMessage, TenantBackup
 from apps.notifications.models import Notification
 from .forms import TenantForm
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
@@ -467,7 +467,7 @@ def admin_support_detail(request, pk):
 
 @login_required
 def tenant_support(request):
-    """قائمة تذاكر الدعم الخاصة بالمستأجر"""
+    """قائمة تذاكر الدعم الخاصة بالمشترك"""
     if not request.tenant:
         return redirect('core:no_tenant')
 
@@ -535,7 +535,7 @@ def tenant_support_create(request):
 
 @login_required
 def tenant_support_detail(request, pk):
-    """تفاصيل تذكرة الدعم للمستأجر"""
+    """تفاصيل تذكرة الدعم للمشترك"""
     if not request.tenant:
         return redirect('core:no_tenant')
 
@@ -602,9 +602,132 @@ def admin_settings(request):
 
 @login_required
 def admin_backup(request):
+    """لوحة النسخ الاحتياطي — قائمة جميع المشتركين مع إحصاء نسخهم"""
     if not request.user.is_superuser:
         return redirect('core:no_permission')
-    return render(request, 'core/admin_backup.html', {})
+
+    from .backup_service import get_tenant_backup_stats
+
+    tenants = Tenant.objects.order_by('name')
+    tenant_rows = []
+    total_backups = 0
+    total_size = 0
+
+    for tenant in tenants:
+        stats = get_tenant_backup_stats(tenant)
+        total_backups += stats['total']
+        total_size += stats['total_size']
+        tenant_rows.append({
+            'tenant': tenant,
+            'count': stats['total'],
+            'total_size': stats['total_size'],
+            'latest': stats['latest'],
+        })
+
+    def _fmt_size(size):
+        if size < 1024:
+            return f"{size} B"
+        if size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        return f"{size / (1024 * 1024):.2f} MB"
+
+    context = {
+        'tenant_rows': tenant_rows,
+        'total_backups': total_backups,
+        'total_size_display': _fmt_size(total_size),
+        'tenants_count': tenants.count(),
+        'tenants_no_backup': sum(1 for r in tenant_rows if r['count'] == 0),
+    }
+    return render(request, 'core/admin_backup.html', context)
+
+
+@login_required
+def admin_backup_detail(request, tenant_slug):
+    """تفاصيل النسخ الاحتياطية لمشترك محدد"""
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    tenant = get_object_or_404(Tenant, slug=tenant_slug)
+    backups = TenantBackup.objects.filter(tenant=tenant).order_by('-created_at')
+    context = {
+        'tenant': tenant,
+        'backups': backups,
+        'total_size': sum(b.file_size for b in backups if b.status == 'completed'),
+    }
+    return render(request, 'core/admin_backup_detail.html', context)
+
+
+@login_required
+@require_POST
+def admin_backup_create_api(request, tenant_slug):
+    """API: إنشاء نسخة احتياطية يدوية"""
+    err = _superuser_required(request)
+    if err:
+        return err
+    tenant = get_object_or_404(Tenant, slug=tenant_slug)
+    from .backup_service import create_backup
+    try:
+        record = create_backup(tenant, backup_type='manual')
+        if record.status == 'completed':
+            return JsonResponse({
+                'success': True,
+                'message': f'تم إنشاء النسخة الاحتياطية بنجاح ({record.file_size_display})',
+                'backup': {
+                    'id': record.id,
+                    'filename': record.filename,
+                    'size': record.file_size_display,
+                    'type': record.get_backup_type_display(),
+                    'created_at': record.created_at.strftime('%Y-%m-%d %H:%M'),
+                    'status': record.status,
+                },
+            })
+        return JsonResponse({'success': False, 'message': 'فشل إنشاء النسخة الاحتياطية'}, status=500)
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': str(exc)}, status=500)
+
+
+@login_required
+@require_POST
+def admin_backup_restore_api(request, backup_id):
+    """API: استعادة نسخة احتياطية"""
+    err = _superuser_required(request)
+    if err:
+        return err
+    from .backup_service import restore_backup
+    success, message = restore_backup(backup_id)
+    status_code = 200 if success else 500
+    return JsonResponse({'success': success, 'message': message}, status=status_code)
+
+
+@login_required
+@require_POST
+def admin_backup_delete_api(request, backup_id):
+    """API: حذف نسخة احتياطية"""
+    err = _superuser_required(request)
+    if err:
+        return err
+    from .backup_service import delete_backup
+    success, message = delete_backup(backup_id)
+    return JsonResponse({'success': success, 'message': message})
+
+
+@login_required
+def admin_backup_download(request, backup_id):
+    """تنزيل ملف النسخة الاحتياطية"""
+    if not request.user.is_superuser:
+        return redirect('core:no_permission')
+    from django.http import FileResponse, Http404
+    from pathlib import Path
+    backup = get_object_or_404(TenantBackup, pk=backup_id, status='completed')
+    file_path = Path(backup.file_path)
+    if not file_path.exists():
+        raise Http404("الملف غير موجود")
+    response = FileResponse(
+        open(file_path, 'rb'),
+        as_attachment=True,
+        filename=backup.filename,
+        content_type='application/sql',
+    )
+    return response
 
 
 @login_required
@@ -771,7 +894,7 @@ def _superuser_required(request):
 
 @login_required
 def tenant_list(request):
-    """قائمة العملاء (المستأجرين) - للمشرف فقط"""
+    """قائمة المشتركين (المشتركين) - للمشرف فقط"""
     if not request.user.is_superuser:
         return render(request, 'core/no_permission.html', status=403)
     business_types = BusinessType.objects.filter(is_active=True).order_by('display_order', 'name_ar')
@@ -790,7 +913,7 @@ def tenant_list(request):
 
 @login_required
 def tenant_table_api(request):
-    """API: جدول العملاء لـ DataTable"""
+    """API: جدول المشتركين لـ DataTable"""
     err = _superuser_required(request)
     if err:
         return err
@@ -849,7 +972,7 @@ def tenant_table_api(request):
             exp_label = f'منتهية منذ {abs(days)} يوم'
             exp_status = 'expired'
         elif days is not None and days <= 30:
-            exp_label = f'تنتهي خلال {days} يوم'
+            exp_label = f'ينتهي خلال {days} يوم'
             exp_status = 'soon'
         else:
             exp_label = t.subscription_expires.strftime('%Y-%m-%d') if t.subscription_expires else '—'
@@ -879,7 +1002,7 @@ def tenant_table_api(request):
 
 @login_required
 def tenant_create_api(request):
-    """API: إنشاء عميل جديد مع مستخدم مدير"""
+    """API: إنشاء مشترك جديد مع مستخدم مدير"""
     err = _superuser_required(request)
     if err:
         return err
@@ -951,14 +1074,14 @@ def tenant_create_api(request):
 
     return JsonResponse({
         'success': True,
-        'message': f'تم إنشاء العميل "{tenant.name}" ومدير النشاط "{username}" بنجاح',
+        'message': f'تم إنشاء المشترك "{tenant.name}" ومدير النشاط "{username}" بنجاح',
         'id': tenant.id,
     })
 
 
 @login_required
 def tenant_detail_api(request, pk):
-    """API: تفاصيل عميل"""
+    """API: تفاصيل مشترك"""
     err = _superuser_required(request)
     if err:
         return err
@@ -1019,7 +1142,7 @@ def tenant_detail_api(request, pk):
 
 @login_required
 def tenant_update_api(request, pk):
-    """API: تعديل بيانات عميل"""
+    """API: تعديل بيانات مشترك"""
     err = _superuser_required(request)
     if err:
         return err
@@ -1077,12 +1200,12 @@ def tenant_update_api(request, pk):
             defaults={'tax_enabled': tax_enabled, 'tax_value': tax_value},
         )
 
-    return JsonResponse({'success': True, 'message': 'تم تعديل بيانات العميل بنجاح'})
+    return JsonResponse({'success': True, 'message': 'تم تعديل بيانات المشترك بنجاح'})
 
 
 @login_required
 def tenant_delete_api(request, pk):
-    """API: حذف عميل"""
+    """API: حذف مشترك"""
     err = _superuser_required(request)
     if err:
         return err
@@ -1098,7 +1221,7 @@ def tenant_delete_api(request, pk):
         import logging
         logging.getLogger(__name__).error('tenant_delete_api error pk=%s: %s', pk, e, exc_info=True)
         return JsonResponse({'success': False, 'message': f'تعذر الحذف: {e}'}, status=400)
-    return JsonResponse({'success': True, 'message': f'تم حذف العميل "{name}" بنجاح'})
+    return JsonResponse({'success': True, 'message': f'تم حذف المشترك "{name}" بنجاح'})
 
 
 def _delete_tenant_data(tenant):
@@ -1167,7 +1290,7 @@ def _delete_tenant_data(tenant):
 
 @login_required
 def tenant_suspend_api(request, pk):
-    """API: تعليق / إلغاء تعليق عميل"""
+    """API: تعليق / إلغاء تعليق مشترك"""
     err = _superuser_required(request)
     if err:
         return err
@@ -1178,7 +1301,7 @@ def tenant_suspend_api(request, pk):
     tenant.is_active = not tenant.is_active
     tenant.save(update_fields=['is_active', 'updated_at'])
     action = 'تم تفعيل' if tenant.is_active else 'تم تعليق'
-    return JsonResponse({'success': True, 'message': f'{action} العميل "{tenant.name}" بنجاح', 'is_active': tenant.is_active})
+    return JsonResponse({'success': True, 'message': f'{action} المشترك "{tenant.name}" بنجاح', 'is_active': tenant.is_active})
 
 
 def pricing(request):

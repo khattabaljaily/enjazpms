@@ -202,7 +202,7 @@
                     <div class="sup-msg__meta">
                         <span class="sup-msg__name">{{ msg.sender.get_full_name|default:msg.sender.username }}</span>
                         <span class="sup-msg__role sup-msg__role--{{ msg.sender_type }}">
-                            {% if msg.sender_type == 'admin' %}مشرف النظام{% else %}العميل{% endif %}
+                            {% if msg.sender_type == 'admin' %}مشرف النظام{% else %}المشترك{% endif %}
                         </span>
                         <span class="sup-msg__time">{{ msg.created_at|date:"Y/m/d H:i" }}</span>
                     </div>

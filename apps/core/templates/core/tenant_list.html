@@ -20,7 +20,7 @@
             </div>
             <div>
                 <h1 class="cx-hero-title">إدارة الاشتراكات</h1>
-                <p class="cx-hero-desc">متابعة وإدارة اشتراكات العملاء وخطط الباقات</p>
+                <p class="cx-hero-desc">متابعة وإدارة اشتراكات المشتركين وخطط الباقات</p>
             </div>
         </div>
         <div class="cx-hero-actions">
@@ -86,7 +86,7 @@
         <table id="tenantsTable" class="cx-table">
             <thead>
                 <tr>
-                    <th>العميل</th>
+                    <th>المشترك</th>
                     <th>نوع النشاط</th>
                     <th>الباقة</th>
                     <th>النسخة</th>
@@ -453,7 +453,7 @@
                 <div class="cx-confirm-icon">
                     <i class="fas fa-pause-circle"></i>
                 </div>
-                <h5 class="cx-confirm-title" id="suspendModalTitle">تعليق العميل؟</h5>
+                <h5 class="cx-confirm-title" id="suspendModalTitle">تعليق المشترك؟</h5>
                 <p class="cx-confirm-desc">
                     ستقوم بتعليق <strong id="suspendTenantName"></strong>.
                     <br>لن يتمكن المستخدمون من الدخول حتى يتم إعادة تفعيله.
@@ -479,7 +479,7 @@
                 <div class="cx-confirm-icon cx-confirm-icon--danger">
                     <i class="fas fa-trash-alt"></i>
                 </div>
-                <h5 class="cx-confirm-title">حذف العميل نهائياً؟</h5>
+                <h5 class="cx-confirm-title">حذف المشترك نهائياً؟</h5>
                 <p class="cx-confirm-desc">
                     ستقوم بحذف <strong id="deleteTenantName"></strong> بشكل نهائي.
                     <br><strong class="text-danger">سيتم حذف جميع بياناته ولا يمكن التراجع.</strong>
@@ -867,10 +867,10 @@
         $('#suspendTenantName').text(name);
         $('#suspendTenantIsActive').val(isActive ? '1' : '0');
         if (isActive) {
-            $('#suspendModalTitle').text('تعليق العميل؟');
+            $('#suspendModalTitle').text('تعليق المشترك؟');
             $('#confirmSuspendBtn').html('تعليق').removeClass('cx-btn-success').addClass('cx-btn-warning');
         } else {
-            $('#suspendModalTitle').text('تفعيل العميل؟');
+            $('#suspendModalTitle').text('تفعيل المشترك؟');
             $('#confirmSuspendBtn').html('تفعيل').removeClass('cx-btn-warning').addClass('cx-btn-success');
         }
         suspendModal.show();

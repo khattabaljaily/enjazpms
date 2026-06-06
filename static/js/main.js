@@ -296,9 +296,9 @@ const EnjazIMS = {
         });
     },
     
-    // Confirm delete action
+    // Confirm delete action — returns a Promise (use with await)
     confirmDelete: function(message = 'هل أنت متأكد من الحذف؟') {
-        return confirm(message);
+        return EnjazIMS.confirmAction(message, 'تأكيد الحذف');
     },
 
     // Modal-based confirmation — returns a Promise that resolves true/false.
@@ -599,11 +599,13 @@ $(document).ready(function() {
         $(this).find('input:not([type=hidden]):first').focus();
     });
     
-    // Confirm delete buttons
-    $('.btn-delete').on('click', function(e) {
-        if (!EnjazIMS.confirmDelete()) {
-            e.preventDefault();
-            return false;
+    // Confirm delete buttons (non-AJAX links/forms only — AJAX handlers use their own modals)
+    $('.btn-delete').on('click', async function(e) {
+        e.preventDefault();
+        const href = $(this).attr('href') || $(this).data('href');
+        const confirmed = await EnjazIMS.confirmAction('هل أنت متأكد من الحذف؟', 'تأكيد الحذف');
+        if (confirmed && href) {
+            window.location.href = href;
         }
     });
     
