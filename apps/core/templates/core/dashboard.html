@@ -7,6 +7,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=2.0">
+<link rel="stylesheet" href="{% static 'css/ai_advices.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -30,6 +31,21 @@
             <span class="db-badge-val">{{ stats.pending_invoices|default:0 }}</span>
             <span class="db-badge-lbl">غير مسددة</span>
         </div>
+    </div>
+</div>
+
+<!-- AI Advices widget -->
+<div class="ai-adv-wrapper">
+    <div class="ai-adv-tab" role="heading" aria-level="3">
+        <i class="fas fa-lightbulb ai-adv-icon" aria-hidden="true"></i>
+        <span class="ai-adv-tab-text">نصائح ذكية</span>
+    </div>
+    <div id="aiAdvicesWidget" class="ai-advices" role="status" aria-live="polite">
+        <button class="ai-adv-btn" id="aiPrev" aria-label="السابق">‹</button>
+        <div class="ai-adv-content">
+            <div class="ai-adv-text" id="aiAdviceText">تحميل النصائح...</div>
+        </div>
+        <button class="ai-adv-btn" id="aiNext" aria-label="التالي">›</button>
     </div>
 </div>
 
@@ -528,4 +544,5 @@
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 })();
 </script>
+<script src="{% static 'js/ai_advices.js' %}"></script>
 {% endblock %}

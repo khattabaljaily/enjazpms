@@ -25,6 +25,17 @@
     </div>
     {% endif %}
 
+    <!-- ─── Impersonation Banner ──────────────────────────────── -->
+    {% if impersonating %}
+    <div class="pf-banner pf-banner--warning" role="alert" style="background:linear-gradient(90deg,#f59e0b,#d97706);color:#fff;font-weight:600;">
+        <i class="fas fa-user-secret me-1"></i>
+        <span>أنت تتصفح كـ <strong>{{ request.user.get_full_name|default:request.user.username }}</strong> — وضع انتحال الهوية</span>
+        <a href="{% url 'accounts:exit_impersonation' %}" class="ms-3 btn btn-sm" style="background:#fff;color:#d97706;font-weight:700;border-radius:6px;padding:2px 12px;">
+            <i class="fas fa-sign-out-alt me-1"></i>الخروج
+        </a>
+    </div>
+    {% endif %}
+
             {% block breadcrumb %}{% endblock %}
             
             <!-- Page Header -->

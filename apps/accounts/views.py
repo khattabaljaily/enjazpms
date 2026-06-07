@@ -770,6 +770,54 @@ def logout_view(request):
     return redirect('accounts:login')
 
 
+@require_POST
+@login_required
+def login_as_tenant_api(request, tenant_id):
+    """تسجيل الدخول كمدير مشترك (للمشرف العام فقط)"""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'غير مصرح'}, status=403)
+
+    password = request.POST.get('password', '')
+    if not request.user.check_password(password):
+        return JsonResponse({'success': False, 'message': 'كلمة مرور المشرف غير صحيحة'}, status=400)
+
+    from apps.core.models import Tenant
+    try:
+        tenant = Tenant.objects.get(pk=tenant_id)
+    except Tenant.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'المشترك غير موجود'}, status=404)
+
+    target_user = User.objects.filter(tenant=tenant, is_tenant_admin=True, is_active=True).first()
+    if target_user is None:
+        return JsonResponse({'success': False, 'message': 'لا يوجد مدير نشط لهذا المشترك'}, status=404)
+
+    impersonator_id = request.user.pk
+    target_user.backend = 'django.contrib.auth.backends.ModelBackend'
+    login(request, target_user)
+    request.session['_impersonator_id'] = impersonator_id
+
+    return JsonResponse({'success': True, 'redirect_url': reverse('core:dashboard')})
+
+
+@login_required
+def exit_impersonation(request):
+    """الخروج من وضع الانتحال والعودة لحساب المشرف"""
+    impersonator_id = request.session.get('_impersonator_id')
+    if not impersonator_id:
+        return redirect('core:dashboard')
+
+    try:
+        superuser = User.objects.get(pk=impersonator_id, is_superuser=True)
+    except User.DoesNotExist:
+        logout(request)
+        return redirect('accounts:login')
+
+    superuser.backend = 'django.contrib.auth.backends.ModelBackend'
+    login(request, superuser)
+
+    return redirect('core:admin_dashboard')
+
+
 @login_required
 def profile_view(request):
     """الملف الشخصي"""

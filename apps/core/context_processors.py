@@ -55,6 +55,12 @@ def app_context(request):
     }
 
 
+def impersonation_context(request):
+    """وضع انتحال الهوية — يُفعّل عندما يسجل المشرف دخوله كمستخدم آخر"""
+    impersonator_id = request.session.get('_impersonator_id') if hasattr(request, 'session') else None
+    return {'impersonating': bool(impersonator_id)}
+
+
 def platform_context(request):
     """إعدادات النظام — الإشعار العام ووضع الصيانة"""
     from django.core.cache import cache

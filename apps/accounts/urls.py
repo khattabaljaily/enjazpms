@@ -21,6 +21,8 @@ urlpatterns = [
     # Authentication
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    path('api/login-as/<int:tenant_id>/', views.login_as_tenant_api, name='login_as_tenant_api'),
+    path('exit-impersonation/', views.exit_impersonation, name='exit_impersonation'),
     
     # Password Reset
     path('password-reset/', views.password_reset_request, name='password_reset_request'),

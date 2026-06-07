@@ -113,6 +113,7 @@ TEMPLATES = [
                 'apps.core.context_processors.tenant_context',
                 'apps.core.context_processors.app_context',
                 'apps.core.context_processors.platform_context',
+                'apps.core.context_processors.impersonation_context',
             ],
         },
     },
