@@ -25,5 +25,23 @@
 .ai-advices .ai-adv-btn{ background:transparent; border:0; font-size:1.05rem; width:32px; height:32px; border-radius:6px; cursor:pointer; color:var(--text-primary); }
 .ai-advices .ai-adv-btn:hover{ background:rgba(0,0,0,.04); }
 .ai-advices .ai-adv-content{ flex:1; overflow:hidden; }
-.ai-advices .ai-adv-text{ font-weight:600; font-size:0.86rem; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; color:var(--text-primary); }
+.ai-advices .ai-adv-text{ font-weight:600; font-size:0.86rem; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; color:var(--text-primary); cursor:pointer; }
+.ai-advices .ai-adv-text:hover,
+.ai-advices .ai-adv-text:focus{ text-decoration:underline; }
 .ai-advices .ai-adv-source{ font-size:0.72rem; color:var(--text-tertiary); margin-left:.5rem; }
+
+.ai-adv-modal{ position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center; background:rgba(15,23,42,.55); padding:1rem; }
+.ai-adv-modal.is-open{ display:flex; }
+.ai-adv-modal-dialog{ position:relative; width:min(100%,440px); max-height:90vh; overflow:auto; background:var(--card-bg,#ffffff); border-radius:14px; padding:1.75rem 1.25rem 1rem; box-shadow:0 18px 50px rgba(15,23,42,.22); box-sizing:border-box; }
+.ai-adv-modal-close{ position:absolute; top:12px; right:12px; border:none; background:transparent; color:var(--text-tertiary); font-size:1.45rem; line-height:1; cursor:pointer; z-index:2; }
+.ai-adv-modal-close:hover{ color:var(--text-primary); }
+.ai-adv-modal-title{ margin:0; padding-right:2rem; font-size:1rem; font-weight:700; color:var(--text-primary); }
+.ai-adv-modal-title{ margin:0; font-size:1rem; font-weight:700; color:var(--text-primary); }
+.ai-adv-modal-body{ margin-top:0.9rem; font-size:0.96rem; line-height:1.7; white-space:pre-wrap; word-break:break-word; color:var(--text-secondary); }
+
+@media (max-width: 768px){
+  .ai-advices{ flex-wrap:wrap; gap:1rem; }
+  .ai-adv-content{ width:100%; }
+  .ai-adv-text{ white-space:normal; text-overflow:clip; overflow:visible; }
+}
+
