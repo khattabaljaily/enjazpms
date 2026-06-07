@@ -1,9 +1,9 @@
 """
 Tenant Backup Service
-Handles per-tenant mysqldump backup, restore, and cleanup.
+Pure-Python backup using Django's database connection (no mysqldump/mysql dependency).
 """
-import os
-import subprocess
+import datetime
+import decimal
 import logging
 from datetime import timedelta
 from pathlib import Path
@@ -28,37 +28,6 @@ def _backup_dir(tenant) -> Path:
     return d
 
 
-def _db_config() -> dict:
-    """Return raw DB config from secrets.json (via Django settings)."""
-    return settings.DATABASES['default']
-
-
-def _build_conn_args(db: dict) -> list[str]:
-    """
-    Build MySQL connection CLI args from the DB config.
-    Only adds --host / --port when they have actual values,
-    so local socket connections (empty HOST) work correctly.
-    """
-    args = [f'--user={db["USER"]}']
-    host = db.get('HOST', '').strip()
-    port = str(db.get('PORT', '')).strip()
-    if host:
-        args.append(f'--host={host}')
-    if port:
-        args.append(f'--port={port}')
-    return args
-
-
-def _mysql_env(db: dict) -> dict:
-    """
-    Pass password via MYSQL_PWD environment variable instead of --password=
-    so it doesn't appear in the process list.
-    """
-    env = os.environ.copy()
-    env['MYSQL_PWD'] = db.get('PASSWORD', '')
-    return env
-
-
 def _tenant_tables() -> list[str]:
     """Return all table names that have a tenant_id column."""
     with connection.cursor() as cursor:
@@ -70,72 +39,59 @@ def _tenant_tables() -> list[str]:
         return [row[0] for row in cursor.fetchall()]
 
 
-def _run_mysqldump(db: dict, extra_args: list, tables: list, out_path: Path) -> bool:
-    """Run mysqldump and append output to out_path. Returns True on success."""
-    cmd = (
-        ['mysqldump']
-        + _build_conn_args(db)
-        + [
-            '--no-create-info',
-            '--no-create-db',
-            '--skip-add-drop-table',
-            '--insert-ignore',
-            '--complete-insert',
-            '--single-transaction',
-            '--skip-lock-tables',
-        ]
-        + extra_args
-        + [db['NAME']]
-        + tables
-    )
-    try:
-        with out_path.open('ab') as f:
-            result = subprocess.run(
-                cmd,
-                stdout=f,
-                stderr=subprocess.PIPE,
-                env=_mysql_env(db),
-                timeout=300,
-            )
-        if result.returncode != 0:
-            logger.error("mysqldump error: %s", result.stderr.decode())
-            return False
-        return True
-    except Exception as exc:
-        logger.exception("mysqldump failed: %s", exc)
-        return False
+def _escape_value(value) -> str:
+    """Escape a Python value to a safe SQL literal."""
+    if value is None:
+        return 'NULL'
+    if isinstance(value, bool):
+        return '1' if value else '0'
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return repr(value)
+    if isinstance(value, decimal.Decimal):
+        return str(value)
+    if isinstance(value, datetime.datetime):
+        return f"'{value.strftime('%Y-%m-%d %H:%M:%S')}'"
+    if isinstance(value, datetime.date):
+        return f"'{value.strftime('%Y-%m-%d')}'"
+    if isinstance(value, datetime.time):
+        return f"'{value.strftime('%H:%M:%S')}'"
+    if isinstance(value, datetime.timedelta):
+        total_seconds = int(value.total_seconds())
+        h, rem = divmod(abs(total_seconds), 3600)
+        m, s = divmod(rem, 60)
+        return f"'{h:02d}:{m:02d}:{s:02d}'"
+    if isinstance(value, (bytes, bytearray)):
+        return f"X'{value.hex()}'"
+    s = str(value)
+    s = s.replace('\\', '\\\\')
+    s = s.replace("'", "\\'")
+    s = s.replace('\0', '\\0')
+    s = s.replace('\n', '\\n')
+    s = s.replace('\r', '\\r')
+    s = s.replace('\x1a', '\\Z')
+    return f"'{s}'"
 
 
-def _run_mysql(db: dict, sql: str | None = None, file_path: Path | None = None) -> tuple[bool, str]:
-    """
-    Run a mysql command with either inline SQL or a file.
-    Returns (success, error_message).
-    """
-    cmd = ['mysql'] + _build_conn_args(db) + [db['NAME']]
-    try:
-        if file_path:
-            with open(file_path, 'rb') as f:
-                result = subprocess.run(
-                    cmd,
-                    stdin=f,
-                    capture_output=True,
-                    env=_mysql_env(db),
-                    timeout=300,
-                )
-        else:
-            result = subprocess.run(
-                cmd,
-                input=sql.encode() if sql else b'',
-                capture_output=True,
-                env=_mysql_env(db),
-                timeout=120,
-            )
-        if result.returncode != 0:
-            return False, result.stderr.decode()
-        return True, ''
-    except Exception as exc:
-        logger.exception("mysql command failed: %s", exc)
-        return False, str(exc)
+def _rows_to_insert(table: str, cols: list[str], rows: list) -> str:
+    col_str = ', '.join(f'`{c}`' for c in cols)
+    parts = []
+    for row in rows:
+        vals = ', '.join(_escape_value(v) for v in row)
+        parts.append(f"INSERT IGNORE INTO `{table}` ({col_str}) VALUES ({vals});\n")
+    return ''.join(parts)
+
+
+def _dump_table_where(f, table: str, where_col: str, where_val) -> None:
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT * FROM `{table}` WHERE `{where_col}` = %s", [where_val])
+        rows = cursor.fetchall()
+        if rows:
+            cols = [d[0] for d in cursor.description]
+            f.write(f"-- {table}\n")
+            f.write(_rows_to_insert(table, cols, rows))
+            f.write('\n')
 
 
 def create_backup(tenant, backup_type: str = 'manual') -> 'TenantBackup':
@@ -155,40 +111,63 @@ def create_backup(tenant, backup_type: str = 'manual') -> 'TenantBackup':
         status='in_progress',
     )
 
-    db = _db_config()
+    try:
+        with file_path.open('w', encoding='utf-8') as f:
+            f.write("-- EnjazIMS Tenant Backup\n")
+            f.write(f"-- Tenant : {tenant.name} (id={tenant.id}, slug={tenant.slug})\n")
+            f.write(f"-- Created: {now.isoformat()}\n")
+            f.write(f"-- Type   : {backup_type}\n\n")
+            f.write("SET FOREIGN_KEY_CHECKS=0;\n\n")
 
-    # Header
-    with file_path.open('w', encoding='utf-8') as f:
-        f.write("-- EnjazIMS Tenant Backup\n")
-        f.write(f"-- Tenant : {tenant.name} (id={tenant.id}, slug={tenant.slug})\n")
-        f.write(f"-- DB Host: {db.get('HOST', 'socket') or 'socket'}\n")
-        f.write(f"-- DB Name: {db['NAME']}\n")
-        f.write(f"-- Created: {now.isoformat()}\n")
-        f.write(f"-- Type   : {backup_type}\n\n")
-        f.write("SET FOREIGN_KEY_CHECKS=0;\n\n")
+            # Tenant row itself
+            tenant_table = tenant.__class__._meta.db_table
+            _dump_table_where(f, tenant_table, 'id', tenant.id)
 
-    # 1. Backup the tenant row itself
-    tenant_table = tenant.__class__._meta.db_table
-    ok1 = _run_mysqldump(db, [f'--where=id={tenant.id}'], [tenant_table], file_path)
+            # All tenant-scoped tables (exclude backup metadata)
+            tables = [t for t in _tenant_tables() if t != 'tenant_backups']
+            for table in tables:
+                _dump_table_where(f, table, 'tenant_id', tenant.id)
 
-    # 2. Backup all tenant-scoped tables (exclude backup metadata — managed separately)
-    tables = [t for t in _tenant_tables() if t != 'tenant_backups']
-    ok2 = _run_mysqldump(db, [f'--where=tenant_id={tenant.id}'], tables, file_path)
+            f.write("SET FOREIGN_KEY_CHECKS=1;\n")
 
-    # Footer
-    with file_path.open('a', encoding='utf-8') as f:
-        f.write("\nSET FOREIGN_KEY_CHECKS=1;\n")
-
-    if ok1 and ok2 and file_path.exists():
         record.status = 'completed'
         record.file_size = file_path.stat().st_size
-    else:
+    except Exception as exc:
+        logger.exception("Backup failed for tenant %s: %s", tenant.slug, exc)
         record.status = 'failed'
         if file_path.exists():
             file_path.unlink()
 
     record.save()
     return record
+
+
+def _execute_sql_file(file_path: Path) -> tuple[bool, str]:
+    """Execute SQL statements from a backup file via Django's connection."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # Split on `;\n` — safe because our generator puts each statement on one line
+        raw_chunks = content.split(';\n')
+        statements = []
+        for chunk in raw_chunks:
+            lines = [
+                ln for ln in chunk.splitlines()
+                if ln.strip() and not ln.strip().startswith('--')
+            ]
+            stmt = '\n'.join(lines).strip()
+            if stmt:
+                statements.append(stmt)
+
+        with connection.cursor() as cursor:
+            for stmt in statements:
+                cursor.execute(stmt)
+
+        return True, ''
+    except Exception as exc:
+        logger.exception("SQL execution failed: %s", exc)
+        return False, str(exc)
 
 
 def restore_backup(backup_id: int) -> tuple[bool, str]:
@@ -217,8 +196,6 @@ def restore_backup(backup_id: int) -> tuple[bool, str]:
     if pre_record.status != 'completed':
         return False, "فشل إنشاء نسخة احتياطية قبل الاستعادة"
 
-    db = _db_config()
-    # Exclude tenant_backups — preserve backup history across restores
     tables = [t for t in _tenant_tables() if t != 'tenant_backups']
 
     # Purge orphaned records: in_progress (stuck) and failed with missing files
@@ -227,18 +204,20 @@ def restore_backup(backup_id: int) -> tuple[bool, str]:
         if not Path(r.file_path).exists():
             r.delete()
 
-    # Build DELETE SQL for all tenant tables + the tenant row itself
-    delete_parts = ["SET FOREIGN_KEY_CHECKS=0;\n"]
-    for table in tables:
-        delete_parts.append(f"DELETE FROM `{table}` WHERE tenant_id = {tenant.id};\n")
-    delete_parts.append(f"DELETE FROM `{tenant.__class__._meta.db_table}` WHERE id = {tenant.id};\n")
-    delete_parts.append("SET FOREIGN_KEY_CHECKS=1;\n")
+    # Delete current tenant data
+    try:
+        tenant_table = tenant.__class__._meta.db_table
+        with connection.cursor() as cursor:
+            cursor.execute("SET FOREIGN_KEY_CHECKS=0")
+            for table in tables:
+                cursor.execute(f"DELETE FROM `{table}` WHERE tenant_id = %s", [tenant.id])
+            cursor.execute(f"DELETE FROM `{tenant_table}` WHERE id = %s", [tenant.id])
+            cursor.execute("SET FOREIGN_KEY_CHECKS=1")
+    except Exception as exc:
+        logger.exception("Delete failed during restore for tenant %s: %s", tenant.slug, exc)
+        return False, f"فشل حذف البيانات الحالية: {exc}"
 
-    ok, err = _run_mysql(db, sql="".join(delete_parts))
-    if not ok:
-        return False, f"فشل حذف البيانات الحالية: {err}"
-
-    ok, err = _run_mysql(db, file_path=Path(backup.file_path))
+    ok, err = _execute_sql_file(Path(backup.file_path))
     if not ok:
         return False, f"فشل استيراد النسخة الاحتياطية: {err}"
 
