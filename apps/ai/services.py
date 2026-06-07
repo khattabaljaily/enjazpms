@@ -14,6 +14,8 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Sum, Count, Q, F
 
+from apps.core.constants import CURRENCY_AR
+
 logger = logging.getLogger(__name__)
 
 
@@ -184,7 +186,8 @@ _SYSTEM_PROMPT = """أنت مساعد أعمال ذكي متخصص في تحلي
 تعمل داخل نظام إدارة مخزون (EnjazIMS) لصاحب المحل.
 قواعد الرد الصارمة:
 - أجب دائماً بالعربية، بأسلوب مهني وموجز.
-- استخدم دائماً رمز العملة المُقدَّم في البيانات ولا تُبدّله بعملة أخرى.
+- استخدم دائماً رمز العملة العربي الموجود في البيانات ولا تُبدّله بعملة أخرى.
+- إذا كانت العملة معروفة برمز عربي مثل ج.س أو د.إ فاذكرها بدلاً من رمز العملة الإنجليزي.
 - اكتب النص بدون أي تنسيق Markdown: لا نجوم (**) ولا شرطات سفلية ولا علامات # للعناوين.
 - استخدم الأرقام والنقاط والعناوين النصية العادية فقط.
 - استند إلى الأرقام المُقدَّمة واستنتج منها بشكل منطقي.
@@ -196,21 +199,22 @@ _SYSTEM_PROMPT = """أنت مساعد أعمال ذكي متخصص في تحلي
 def _build_context_message(context: dict) -> str:
     """Format business context as a readable Arabic text block."""
     ctx = context
-    cur = ctx.get('currency', '')
+    cur = str(ctx.get('currency', '')).strip().upper()
+    cur_label = CURRENCY_AR.get(cur, cur)
     lines = [
-        f"📊 بيانات الأعمال ({ctx['period']}) — العملة: {cur}",
-        f"  • إيرادات الشهر: {ctx['monthly_revenue']:,.0f} {cur}",
-        f"  • إيرادات الأسبوع: {ctx['weekly_revenue']:,.0f} {cur}",
+        f"📊 بيانات الأعمال ({ctx['period']}) — العملة: {cur_label}",
+        f"  • إيرادات الشهر: {ctx['monthly_revenue']:,.0f} {cur_label}",
+        f"  • إيرادات الأسبوع: {ctx['weekly_revenue']:,.0f} {cur_label}",
         f"  • عدد الفواتير: {ctx['monthly_invoice_count']}",
-        f"  • مشتريات الشهر: {ctx['monthly_purchases']:,.0f} {cur}",
-        f"  • مصروفات الشهر: {ctx['monthly_expenses']:,.0f} {cur}",
-        f"  • إجمالي الربح: {ctx['gross_profit']:,.0f} {cur}",
+        f"  • مشتريات الشهر: {ctx['monthly_purchases']:,.0f} {cur_label}",
+        f"  • مصروفات الشهر: {ctx['monthly_expenses']:,.0f} {cur_label}",
+        f"  • إجمالي الربح: {ctx['gross_profit']:,.0f} {cur_label}",
     ]
 
     if ctx['top_selling_items']:
         lines.append("\n🏆 أكثر المنتجات مبيعاً:")
         for i in ctx['top_selling_items']:
-            lines.append(f"  • {i['name']}: {i['qty']:.0f} وحدة / {i['revenue']:,.0f} {cur}")
+            lines.append(f"  • {i['name']}: {i['qty']:.0f} وحدة / {i['revenue']:,.0f} {cur_label}")
 
     if ctx['low_stock_items']:
         lines.append("\n⚠️ منتجات تحت الحد الأدنى:")
@@ -220,7 +224,7 @@ def _build_context_message(context: dict) -> str:
     if ctx['top_debtors']:
         lines.append("\n💳 أعلى أرصدة العملاء:")
         for d in ctx['top_debtors']:
-            lines.append(f"  • {d['name']}: {d['balance']:,.0f} {cur}")
+            lines.append(f"  • {d['name']}: {d['balance']:,.0f} {cur_label}")
 
     return "\n".join(lines)
 
