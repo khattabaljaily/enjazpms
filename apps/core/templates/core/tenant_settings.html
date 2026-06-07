@@ -6,7 +6,7 @@
 {% block page_description %}تعديل بيانات النشاط التجاري والإعدادات الأساسية وحفظها مباشرة{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/tenant_settings.css' %}?v=3.0">
+<link rel="stylesheet" href="{% static 'css/tenant_settings.css' %}?v=3.1">
 {% endblock %}
 
 {% block breadcrumb_items %}
@@ -61,7 +61,7 @@
             <div class="ts-stat__icon ts-stat__icon--violet"><i class="fas fa-coins"></i></div>
             <div class="ts-stat__info">
                 <div class="ts-stat__label">العملة</div>
-                <div class="ts-stat__value">{{ current_tenant.currency|default:"SDG" }}</div>
+                <div class="ts-stat__value">{{ current_tenant.currency|default:"SDG"|currency_ar }}</div>
             </div>
         </div>
         <div class="ts-stat">
@@ -144,10 +144,14 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="ts-label">العملة</label>
+                            <label class="ts-label">العملة <small class="text-muted fw-normal">(تُضبط تلقائياً من البلد)</small></label>
                             <div class="ts-field">
                                 <span class="ts-field__icon"><i class="fas fa-coins"></i></span>
-                                <input class="form-control ts-input" name="currency" maxlength="3" value="{{ current_tenant.currency|default:'SDG' }}">
+                                <input id="currencyDisplay" class="form-control ts-input" readonly
+                                       value="{{ current_tenant.currency|default:'SDG'|currency_ar }} — {{ current_tenant.currency|default:'SDG' }}"
+                                       style="background:var(--surface-hover);cursor:default;">
+                                <input type="hidden" name="currency" id="currencyCode"
+                                       value="{{ current_tenant.currency|default:'SDG' }}">
                             </div>
                         </div>
                         <div class="col-12">
@@ -346,6 +350,8 @@ function saveSection(section, formId, btn) {
 }
 
 var COUNTRY_TIMEZONE_MAP = {{ country_timezone_map_json|safe }};
+var COUNTRY_CURRENCY_MAP = {{ country_currency_map_json|safe }};
+var CURRENCY_AR          = {{ currency_ar_json|safe }};
 
 function updateTenantTimezone() {
     var sel = document.getElementById('tenantCountrySelect');
@@ -353,9 +359,22 @@ function updateTenantTimezone() {
     if (sel && tz) tz.value = COUNTRY_TIMEZONE_MAP[sel.value] || COUNTRY_TIMEZONE_MAP['السودان'];
 }
 
+function updateTenantCurrency() {
+    var sel  = document.getElementById('tenantCountrySelect');
+    var code = sel ? COUNTRY_CURRENCY_MAP[sel.value] : null;
+    if (!code) return;
+    var display = document.getElementById('currencyDisplay');
+    var hidden  = document.getElementById('currencyCode');
+    if (display) display.value = (CURRENCY_AR[code] || code) + ' — ' + code;
+    if (hidden)  hidden.value  = code;
+}
+
 var countryEl = document.getElementById('tenantCountrySelect');
 if (countryEl) {
-    countryEl.addEventListener('change', updateTenantTimezone);
+    countryEl.addEventListener('change', function() {
+        updateTenantTimezone();
+        updateTenantCurrency();
+    });
     updateTenantTimezone();
 }
 

@@ -273,11 +273,22 @@
     padding-right: 2.35rem !important;
     border: 1px solid var(--border-color) !important;
     border-radius: 12px !important;
-    background: var(--surface) !important;
+    background-color: var(--surface) !important;
     font-size: 0.88rem !important;
     color: var(--text-primary) !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
     width: 100%;
+}
+
+select.ts-input {
+    padding-inline-end: 2rem !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236b7280' d='M5 7L0 2h10z'/%3E%3C/svg%3E") !important;
+    background-position: left 0.65rem center !important;
+    background-repeat: no-repeat !important;
+    background-size: 10px !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    cursor: pointer;
 }
 
 .ts-input:focus {
@@ -473,7 +484,7 @@
 }
 
 [data-theme="dark"] .ts-input {
-    background: rgba(255, 255, 255, 0.05) !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
     border-color: var(--border-color) !important;
     color: var(--text-primary) !important;
 }

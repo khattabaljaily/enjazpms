@@ -111,7 +111,7 @@
           {% if store.show_prices %}
           <div class="sf-card__price">
             {{ item.selling_price|format_price }}
-            <span class="sf-card__cur">{{ store.tenant.currency }}</span>
+            <span class="sf-card__cur">{{ store.tenant.currency|currency_ar }}</span>
           </div>
           {% endif %}
           {% if store.show_stock_quantity %}

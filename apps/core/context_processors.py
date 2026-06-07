@@ -53,3 +53,20 @@ def app_context(request):
         'app_description': 'نظام إدارة المخزون ونقاط البيع',
         'current_year': datetime.now().year,
     }
+
+
+def platform_context(request):
+    """إعدادات النظام — الإشعار العام ووضع الصيانة"""
+    from django.core.cache import cache
+    ps = cache.get('platform_settings_ctx')
+    if ps is None:
+        try:
+            from apps.core.models import PlatformSettings
+            obj = PlatformSettings.objects.filter(pk=1).values(
+                'announcement_active', 'announcement_text', 'announcement_type',
+            ).first()
+            ps = obj or {}
+            cache.set('platform_settings_ctx', ps, 120)
+        except Exception:
+            ps = {}
+    return {'platform_cfg': ps}

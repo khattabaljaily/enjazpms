@@ -23,7 +23,7 @@ from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
 
 from apps.core.models import Tenant, Settings
-from apps.core.constants import COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
+from apps.core.constants import COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, DEFAULT_COUNTRY, get_timezone_for_country
 from .models import PermissionGroup, User
 from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginForm, UserManagementForm, PasswordResetForm, SetPasswordForm
 from .permissions import get_permission_keys, get_permission_schema
@@ -522,6 +522,7 @@ def register_step2(request):
         return redirect('accounts:register_step1')
     
     country_timezone_map_json = json.dumps(COUNTRY_TIMEZONE_MAP, ensure_ascii=False)
+    country_currency_map_json = json.dumps(COUNTRY_CURRENCY_MAP, ensure_ascii=False)
     timezone_preview = get_timezone_for_country(DEFAULT_COUNTRY)
 
     if request.method == 'POST':
@@ -566,6 +567,7 @@ def register_step2(request):
         'step': 2,
         'total_steps': 3,
         'country_timezone_map_json': country_timezone_map_json,
+        'country_currency_map_json': country_currency_map_json,
         'timezone_preview': timezone_preview,
     })
 
@@ -670,11 +672,17 @@ def register_step3(request):
         session_data = request.session.get('reg_step2', {})
         initial_timezone = session_data.get('timezone', get_timezone_for_country(session_data.get('country', DEFAULT_COUNTRY)))
         form = Step3SettingsForm(initial={'timezone': initial_timezone})
-    
+
+    session_data = request.session.get('reg_step2', {})
+    session_country = session_data.get('country', DEFAULT_COUNTRY)
+    suggested_currency = COUNTRY_CURRENCY_MAP.get(session_country, 'SDG')
+
     return render(request, 'accounts/register_step3.html', {
         'form': form,
         'step': 3,
         'total_steps': 3,
+        'timezone_currency_map_json': json.dumps(TIMEZONE_CURRENCY_MAP, ensure_ascii=False),
+        'suggested_currency': suggested_currency,
     })
 
 

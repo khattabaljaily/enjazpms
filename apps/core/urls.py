@@ -48,6 +48,7 @@ urlpatterns = [
     # System — Audit & Settings
     path('system/audit-log/', views.admin_audit_log, name='admin_audit_log'),
     path('system/settings/', views.admin_settings, name='admin_settings'),
+    path('system/settings/api/update/', views.admin_settings_update_api, name='admin_settings_update_api'),
 
     # System — Backup
     path('system/backup/', views.admin_backup, name='admin_backup'),

@@ -71,7 +71,7 @@
           <tr>
             <td colspan="3" style="font-weight:700;padding:.75rem 1rem;">الإجمالي</td>
             <td style="font-weight:900;font-size:1rem;color:#6366f1;padding:.75rem 1rem;" dir="ltr">
-              {{ order.total_amount|format_price }} {{ order.tenant.currency }}
+              {{ order.total_amount|format_price }} {{ order.tenant.currency|currency_ar }}
             </td>
           </tr>
         </tfoot>

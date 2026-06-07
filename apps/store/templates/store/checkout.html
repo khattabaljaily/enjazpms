@@ -142,7 +142,7 @@
 
       <div class="sco-total">
         <span>الإجمالي</span>
-        <span>{{ subtotal|format_price }} {{ store.tenant.currency }}</span>
+        <span>{{ subtotal|format_price }} {{ store.tenant.currency|currency_ar }}</span>
       </div>
 
       {% if errors.min_order %}

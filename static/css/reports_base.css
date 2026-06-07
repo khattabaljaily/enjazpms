@@ -521,7 +521,7 @@
        Appears above the report title. Shows system name and the
        date the report was printed (set via data-print-date attr). */
     .printable-scene::before {
-        content: 'إنجاز IMS — نظام إدارة المخزون   ·   ' attr(data-print-date);
+        content: 'EnjazIMS — نظام إدارة المخزون   ·   ' attr(data-print-date);
         display: block !important;
         text-align: center;
         font-size: 8pt;

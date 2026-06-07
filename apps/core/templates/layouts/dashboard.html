@@ -3,15 +3,27 @@
 
 {% block body %}
 <div class="dashboard-shell mt-3 d-flex flex-column min-vh-100">
+
     <!-- Navbar -->
     {% include "components/navbar.html" %}
-    
+
     <div class="dashboard-body d-flex flex-grow-1">
         <!-- Sidebar -->
         {% include "components/sidebar.html" %}
-        
+
         <!-- Main Content -->
         <main class="dashboard-main flex-grow-1">
+
+    <!-- ─── Platform Announcement Banner ─────────────────────── -->
+    {% if platform_cfg.announcement_active and platform_cfg.announcement_text %}
+    <div class="pf-banner pf-banner--{{ platform_cfg.announcement_type }}" role="alert">
+        <i class="fas fa-bullhorn"></i>
+        <span>{{ platform_cfg.announcement_text }}</span>
+        <button class="pf-banner__close" onclick="this.parentElement.remove()" aria-label="إغلاق">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    {% endif %}
 
             {% block breadcrumb %}{% endblock %}
             

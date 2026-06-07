@@ -307,6 +307,65 @@ class Settings(models.Model):
 
 
 # ============================================
+# PLATFORM SETTINGS (إعدادات المنصة - Singleton)
+# ============================================
+
+class PlatformSettings(models.Model):
+    """إعدادات المنصة العامة — Singleton (سجل واحد فقط بـ pk=1)"""
+
+    ANNOUNCEMENT_TYPES = [
+        ('info',    'معلوماتي'),
+        ('warning', 'تحذير'),
+        ('success', 'نجاح'),
+        ('danger',  'خطر'),
+    ]
+
+    # ── هوية المنصة ─────────────────────────────
+    platform_name    = models.CharField('اسم المنصة', max_length=100, default='EnjazIMS')
+    platform_tagline = models.CharField('الشعار النصي', max_length=200, blank=True)
+    platform_logo    = models.ImageField('الشعار', upload_to='platform/', blank=True, null=True)
+    platform_favicon = models.ImageField('الأيقونة', upload_to='platform/', blank=True, null=True)
+    primary_color    = models.CharField('اللون الأساسي', max_length=7, default='#6366f1')
+    footer_text      = models.CharField('نص الفوتر', max_length=300, blank=True)
+
+    # ── وضع الصيانة ─────────────────────────────
+    maintenance_mode    = models.BooleanField('وضع الصيانة', default=False)
+    maintenance_message = models.TextField('رسالة الصيانة', blank=True,
+                                           default='النظام قيد الصيانة حالياً. سنعود قريباً.')
+
+    # ── الإشعار العام ───────────────────────────
+    announcement_active = models.BooleanField('تفعيل الإشعار', default=False)
+    announcement_text   = models.CharField('نص الإشعار', max_length=500, blank=True)
+    announcement_type   = models.CharField('نوع الإشعار', max_length=10,
+                                           choices=ANNOUNCEMENT_TYPES, default='info')
+
+    # ── الإعدادات الافتراضية للمشتركين الجدد ───
+    default_currency       = models.CharField('العملة الافتراضية', max_length=3, default='SDG')
+    default_timezone       = models.CharField('المنطقة الزمنية الافتراضية', max_length=50,
+                                              default='Africa/Khartoum')
+    default_tax_enabled    = models.BooleanField('تفعيل الضريبة افتراضياً', default=False)
+    default_tax_value      = models.DecimalField('نسبة الضريبة الافتراضية %',
+                                                 max_digits=5, decimal_places=2, default=0)
+    default_invoice_prefix = models.CharField('بادئة الفاتورة الافتراضية', max_length=10, default='INV')
+    default_trial_days     = models.IntegerField('أيام التجربة المجانية', default=14)
+
+    updated_at = models.DateTimeField('آخر تحديث', auto_now=True)
+
+    class Meta:
+        db_table = 'platform_settings'
+        verbose_name = 'إعدادات المنصة'
+        verbose_name_plural = 'إعدادات المنصة'
+
+    def __str__(self):
+        return 'إعدادات المنصة'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+# ============================================
 # TENANT MIXIN (للـ Models المشتركة)
 # ============================================
 

@@ -156,6 +156,11 @@
                             {{ form.country }}
                         </div>
                         <div class="col-md-6">
+                            <label class="cx-label" for="id_timezone">{{ form.timezone.label }}</label>
+                            {{ form.timezone }}
+                            <small class="text-muted">تُضبط تلقائياً حسب البلد</small>
+                        </div>
+                        <div class="col-md-6">
                             <label class="cx-label" for="id_address">{{ form.address.label }}</label>
                             {{ form.address }}
                         </div>
@@ -201,12 +206,11 @@
                             <label class="cx-label" for="id_max_branches">{{ form.max_branches.label }}</label>
                             {{ form.max_branches }}
                         </div>
-                        <div class="col-md-6">
-                            <label class="cx-label" for="id_timezone">{{ form.timezone.label }}</label>
-                            {{ form.timezone }}
-                        </div>
                         <div class="col-md-3">
-                            <label class="cx-label" for="id_currency">{{ form.currency.label }}</label>
+                            <label class="cx-label">العملة</label>
+                            <input type="text" id="currency_display" class="form-control"
+                                   readonly placeholder="تُضبط تلقائياً من البلد"
+                                   style="background:#f8fafc;cursor:default;">
                             {{ form.currency }}
                         </div>
                         <div class="col-md-3">
@@ -706,6 +710,8 @@
         $('#admin_username, #admin_password, #admin_password2').attr('required', 'required');
         $('#adminPassHint').addClass('d-none');
         $('.js-pass-required').show();
+        // ضبط timezone وcurrency بناءً على البلد الافتراضي المختار
+        $('#id_country').trigger('change');
         tenantModal.show();
     }
 
@@ -737,7 +743,7 @@
                 $('#id_max_stocks').val(d.max_stocks || 1);
                 $('#id_max_branches').val(d.max_branches || 1);
                 $('#id_timezone').val(d.timezone || '');
-                $('#id_currency').val(d.currency || '');
+                if (window._setCurrencyDisplay) window._setCurrencyDisplay(d.currency || '');
                 $('#id_is_active').prop('checked', !!d.is_active);
                 $('#id_is_demo').prop('checked', !!d.is_demo);
                 $('#id_tax_enabled').prop('checked', !!d.tax_enabled);
@@ -945,5 +951,34 @@
     });
 
 })();
+
+// ── Auto-fill timezone & currency from country ─────────────────
+(function () {
+    const CTZ      = {{ country_timezone_map_json|safe }};
+    const CCY      = {{ country_currency_map_json|safe }};
+    const CCY_AR   = {{ currency_ar_json|safe }};
+
+    function setCurrency(code) {
+        if (!code) return;
+        $('#id_currency').val(code);
+        $('#currency_display').val((CCY_AR[code] || code) + ' — ' + code);
+    }
+
+    function syncFromCountry() {
+        var country = $('#id_country').val();
+        var tz  = CTZ[country];
+        var cur = CCY[country];
+        if (tz)  $('#id_timezone').val(tz);
+        setCurrency(cur);
+    }
+
+    // expose so openEdit can call it after loading saved values
+    window._setCurrencyDisplay = setCurrency;
+
+    $(document).on('change', '#id_country', syncFromCountry);
+
+    // trigger once on modal open (new form)
+    $(document).on('click', '[data-action="open-create"]', syncFromCountry);
+}());
 </script>
 {% endblock %}

@@ -40,7 +40,7 @@
     {% endfor %}
     <div class="confirm-row confirm-row--total">
       <span class="confirm-row-label">الإجمالي</span>
-      <span dir="ltr">{{ order.total_amount|format_price }} {{ store.tenant.currency }}</span>
+      <span dir="ltr">{{ order.total_amount|format_price }} {{ store.tenant.currency|currency_ar }}</span>
     </div>
   </div>
 

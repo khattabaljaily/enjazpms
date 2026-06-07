@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from .models import Settings, Tenant, BusinessType, SupportTicket, SupportMessage, TenantBackup
 from apps.notifications.models import Notification
 from .forms import TenantForm
-from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, DEFAULT_COUNTRY, get_timezone_for_country
+from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country, CURRENCY_CHOICES
 from apps.treasury.models import TreasuryMovement
 from apps.expenses.models import Expense
 
@@ -597,7 +597,80 @@ def admin_audit_log(request):
 def admin_settings(request):
     if not request.user.is_superuser:
         return redirect('core:no_permission')
-    return render(request, 'core/admin_settings.html', {})
+    from .models import PlatformSettings
+    from .constants import COUNTRY_TIMEZONE_MAP
+    ps = PlatformSettings.get()
+    timezones = sorted(set(COUNTRY_TIMEZONE_MAP.values()))
+    return render(request, 'core/admin_settings.html', {
+        'ps': ps,
+        'currency_choices': CURRENCY_CHOICES,
+        'timezones': timezones,
+        'timezone_currency_map_json': json.dumps(TIMEZONE_CURRENCY_MAP, ensure_ascii=False),
+    })
+
+
+@login_required
+def admin_settings_update_api(request):
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'غير مصرح'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'طريقة غير مدعومة'}, status=405)
+
+    from .models import PlatformSettings
+    from django.core.cache import cache
+
+    ps = PlatformSettings.get()
+    section = request.POST.get('section', '')
+
+    if section == 'branding':
+        name = request.POST.get('platform_name', '').strip()
+        if name:
+            ps.platform_name = name
+        ps.platform_tagline = request.POST.get('platform_tagline', '').strip()
+        ps.primary_color    = request.POST.get('primary_color', ps.primary_color).strip()
+        ps.footer_text      = request.POST.get('footer_text', '').strip()
+        if 'platform_logo' in request.FILES:
+            ps.platform_logo = request.FILES['platform_logo']
+        if 'platform_favicon' in request.FILES:
+            ps.platform_favicon = request.FILES['platform_favicon']
+
+    elif section == 'maintenance':
+        ps.maintenance_mode    = request.POST.get('maintenance_mode') == 'true'
+        msg = request.POST.get('maintenance_message', '').strip()
+        if msg:
+            ps.maintenance_message = msg
+        cache.delete('platform_maintenance_mode')
+
+    elif section == 'announcement':
+        ps.announcement_active = request.POST.get('announcement_active') == 'true'
+        ps.announcement_text   = request.POST.get('announcement_text', '').strip()
+        ps.announcement_type   = request.POST.get('announcement_type', 'info')
+
+    elif section == 'defaults':
+        currency = request.POST.get('default_currency', '').strip()
+        if currency:
+            ps.default_currency = currency
+        tz = request.POST.get('default_timezone', '').strip()
+        if tz:
+            ps.default_timezone = tz
+        ps.default_tax_enabled    = request.POST.get('default_tax_enabled') == 'true'
+        try:
+            ps.default_tax_value  = float(request.POST.get('default_tax_value', 0))
+        except (ValueError, TypeError):
+            pass
+        prefix = request.POST.get('default_invoice_prefix', '').strip()
+        if prefix:
+            ps.default_invoice_prefix = prefix
+        try:
+            ps.default_trial_days = int(request.POST.get('default_trial_days', ps.default_trial_days))
+        except (ValueError, TypeError):
+            pass
+    else:
+        return JsonResponse({'success': False, 'error': 'قسم غير معروف'}, status=400)
+
+    ps.save()
+    cache.delete('platform_settings_ctx')
+    return JsonResponse({'success': True})
 
 
 @login_required
@@ -759,7 +832,10 @@ def tenant_settings(request):
     return render(request, 'core/tenant_settings.html', {
         'country_choices': COUNTRY_CHOICES,
         'country_timezone_map_json': json.dumps(COUNTRY_TIMEZONE_MAP, ensure_ascii=False),
+        'country_currency_map_json': json.dumps(COUNTRY_CURRENCY_MAP, ensure_ascii=False),
+        'currency_ar_json': json.dumps(CURRENCY_AR, ensure_ascii=False),
         'default_country': DEFAULT_COUNTRY,
+        'currency_choices': CURRENCY_CHOICES,
     })
 
 
@@ -907,6 +983,9 @@ def tenant_list(request):
         'form': TenantForm(),
         'business_types': business_types,
         'stats': {'total': total, 'active': active, 'suspended': suspended, 'expired': expired},
+        'country_timezone_map_json': json.dumps(COUNTRY_TIMEZONE_MAP, ensure_ascii=False),
+        'country_currency_map_json': json.dumps(COUNTRY_CURRENCY_MAP, ensure_ascii=False),
+        'currency_ar_json': json.dumps(CURRENCY_AR, ensure_ascii=False),
     }
     return render(request, 'core/tenant_list.html', context)
 

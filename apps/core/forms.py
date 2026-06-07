@@ -2,7 +2,7 @@ from django import forms
 from django.utils import timezone
 
 from .models import BusinessType, Tenant
-from .constants import COUNTRY_CHOICES
+from .constants import COUNTRY_CHOICES, CURRENCY_CHOICES, COUNTRY_TIMEZONE_MAP
 
 
 class TenantForm(forms.ModelForm):
@@ -39,8 +39,8 @@ class TenantForm(forms.ModelForm):
             'max_users': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'max_stocks': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'max_branches': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'timezone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Asia/Riyadh'}),
-            'currency': forms.TextInput(attrs={'class': 'form-control text-start', 'dir': 'ltr', 'placeholder': 'مثال: SDG', 'maxlength': '10'}),
+            'timezone': forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'placeholder': 'يتحدد تلقائياً من البلد'}),
+            'currency': forms.HiddenInput(),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_demo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }

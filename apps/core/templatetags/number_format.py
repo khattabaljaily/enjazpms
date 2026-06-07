@@ -1,8 +1,15 @@
 from decimal import Decimal, InvalidOperation
 
 from django import template
+from apps.core.constants import CURRENCY_AR
 
 register = template.Library()
+
+
+@register.filter(name='currency_ar')
+def currency_ar(code):
+    """Convert currency code to Arabic symbol. SDG → ج.س"""
+    return CURRENCY_AR.get(str(code).strip().upper(), code)
 
 
 @register.filter(name='qty')

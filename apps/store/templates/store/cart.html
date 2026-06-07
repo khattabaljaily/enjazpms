@@ -49,7 +49,7 @@
 
       <div class="sc-item__info">
         <div class="sc-item__name">{{ row.item.name }}</div>
-        <div class="sc-item__unit">{{ row.unit_price|format_price }} {{ store.tenant.currency }}</div>
+        <div class="sc-item__unit">{{ row.unit_price|format_price }} {{ store.tenant.currency|currency_ar }}</div>
       </div>
 
       <div class="sc-qty">
@@ -68,7 +68,7 @@
         </form>
       </div>
 
-      <div class="sc-item__total">{{ row.line_total|format_price }} <span>{{ store.tenant.currency }}</span></div>
+      <div class="sc-item__total">{{ row.line_total|format_price }} <span>{{ store.tenant.currency|currency_ar }}</span></div>
 
       <form method="post" action="{% url 'store:cart_remove' slug=store.slug %}">
         {% csrf_token %}
@@ -83,7 +83,7 @@
     <div class="sc-summary">
       <div class="sc-summary__total">
         الإجمالي:
-        <span>{{ subtotal|format_price }} {{ store.tenant.currency }}</span>
+        <span>{{ subtotal|format_price }} {{ store.tenant.currency|currency_ar }}</span>
       </div>
       <a href="{% url 'store:checkout' slug=store.slug %}" class="sc-checkout-btn">
         <i class="fas fa-credit-card"></i> إتمام الطلب

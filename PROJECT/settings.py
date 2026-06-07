@@ -91,6 +91,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.core.middleware.MaintenanceModeMiddleware',
     'apps.core.middleware.TenantMiddleware',
     'apps.core.middleware.ActiveTenantMiddleware',
 ]
@@ -111,6 +112,7 @@ TEMPLATES = [
 
                 'apps.core.context_processors.tenant_context',
                 'apps.core.context_processors.app_context',
+                'apps.core.context_processors.platform_context',
             ],
         },
     },

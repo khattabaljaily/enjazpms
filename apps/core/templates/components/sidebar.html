@@ -112,7 +112,7 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link{% if request.resolver_match.url_name == 'admin_settings' %} active{% endif %}" href="#">
+            <a class="nav-link{% if request.resolver_match.url_name == 'admin_settings' %} active{% endif %}" href="{% url 'core:admin_settings' %}">
                 <span class="nav-icon"><i class="fas fa-sliders"></i></span>
                 إعدادات النظام
             </a>

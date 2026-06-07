@@ -1,10 +1,334 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
+
 {% block page_title %}إعدادات النظام{% endblock %}
+{% block page_description %}إعدادات النظام العامة — هوية النظام، الصيانة، الإشعارات، الإعدادات الافتراضية{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_settings.css' %}?v=1.1">
+{% endblock %}
+
 {% block content %}
-<div class="cx-coming-soon">
-    <div class="cx-coming-soon__icon"><i class="fas fa-sliders"></i></div>
-    <h3 class="cx-coming-soon__title">إعدادات النظام</h3>
-    <p class="cx-coming-soon__text">هذا القسم قيد التطوير</p>
-</div>
+<div class="asy-wrapper">
+
+    <!-- ─── Hero ──────────────────────────────────────────────── -->
+    <div class="asy-hero">
+        <div class="asy-hero__orb asy-hero__orb--1"></div>
+        <div class="asy-hero__orb asy-hero__orb--2"></div>
+        <div class="asy-hero__inner">
+            <div class="asy-hero__left">
+                <div class="asy-hero__icon"><i class="fas fa-sliders-h"></i></div>
+                <div class="asy-hero__text">
+                    <div class="asy-hero__kicker">مشرف النظام</div>
+                    <h2 class="asy-hero__title">إعدادات النظام</h2>
+                    <p class="asy-hero__desc">تحكم في هوية النظام، وضع الصيانة، الإشعارات، والإعدادات الافتراضية للمشتركين الجدد.</p>
+                </div>
+            </div>
+            <div class="asy-hero__badges">
+                {% if ps.maintenance_mode %}
+                <span class="asy-badge asy-badge--danger"><i class="fas fa-tools"></i> وضع الصيانة مفعّل</span>
+                {% else %}
+                <span class="asy-badge asy-badge--green"><i class="fas fa-check-circle"></i> النظام يعمل</span>
+                {% endif %}
+                {% if ps.announcement_active %}
+                <span class="asy-badge asy-badge--amber"><i class="fas fa-bullhorn"></i> إشعار نشط</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Toast ─────────────────────────────────────────────── -->
+    <div id="asy-toast" class="asy-toast" role="alert" aria-live="polite"></div>
+
+    <!-- ─── Cards Grid ────────────────────────────────────────── -->
+    <div class="row g-3">
+
+        <!-- ══ وضع الصيانة ══════════════════════════════════ -->
+        <div class="col-lg-6 d-flex">
+            <div class="asy-card w-100">
+                <div class="asy-card__header">
+                    <div class="asy-card__icon asy-card__icon--red"><i class="fas fa-tools"></i></div>
+                    <div>
+                        <div class="asy-card__title">وضع الصيانة</div>
+                        <div class="asy-card__sub">عند التفعيل يُحوَّل جميع المستخدمين لصفحة الصيانة</div>
+                    </div>
+                </div>
+                <div class="asy-card__body">
+                    <div class="asy-maintenance-alert {% if ps.maintenance_mode %}asy-maintenance-alert--on{% endif %}">
+                        <i class="fas {% if ps.maintenance_mode %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+                        {% if ps.maintenance_mode %}
+                        وضع الصيانة مفعّل الآن — المستخدمون لا يستطيعون الدخول.
+                        {% else %}
+                        النظام يعمل بشكل طبيعي — تفعيل هذا الوضع سيوقف الوصول للجميع.
+                        {% endif %}
+                    </div>
+
+                    <form id="maintenanceForm" class="row g-3 mt-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="section" value="maintenance">
+
+                        <div class="col-12">
+                            <div class="asy-toggle-row">
+                                <div>
+                                    <div class="asy-toggle-label">تفعيل وضع الصيانة</div>
+                                    <div class="asy-toggle-sub">سيحجب الوصول عن جميع المستخدمين غير السوبر أدمن</div>
+                                </div>
+                                <label class="asy-toggle">
+                                    <input type="checkbox" id="maintenanceToggle" name="maintenance_mode"
+                                           {% if ps.maintenance_mode %}checked{% endif %}>
+                                    <span class="asy-toggle__slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="asy-label">رسالة الصيانة</label>
+                            <textarea name="maintenance_message" class="asy-input asy-textarea"
+                                      rows="3" placeholder="النظام قيد الصيانة حالياً. سنعود قريباً.">{{ ps.maintenance_message }}</textarea>
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="asy-btn asy-btn--danger">
+                                <i class="fas fa-save"></i> حفظ إعدادات الصيانة
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ الإشعار العام ════════════════════════════════ -->
+        <div class="col-lg-6 d-flex">
+            <div class="asy-card w-100">
+                <div class="asy-card__header">
+                    <div class="asy-card__icon asy-card__icon--amber"><i class="fas fa-bullhorn"></i></div>
+                    <div>
+                        <div class="asy-card__title">الإشعار العام للمنصة</div>
+                        <div class="asy-card__sub">شريط يظهر في لوحات جميع المشتركين</div>
+                    </div>
+                </div>
+                <div class="asy-card__body">
+                    <!-- معاينة الإشعار -->
+                    <div id="announcementPreview" class="asy-ann-preview asy-ann-preview--{{ ps.announcement_type }}"
+                         style="{% if not ps.announcement_active %}display:none{% endif %}">
+                        <i class="fas fa-bullhorn"></i>
+                        <span id="announcementPreviewText">{{ ps.announcement_text }}</span>
+                    </div>
+
+                    <form id="announcementForm" class="row g-3 mt-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="section" value="announcement">
+
+                        <div class="col-12">
+                            <div class="asy-toggle-row">
+                                <div>
+                                    <div class="asy-toggle-label">تفعيل الإشعار</div>
+                                    <div class="asy-toggle-sub">يظهر لجميع المشتركين في أعلى الصفحة</div>
+                                </div>
+                                <label class="asy-toggle">
+                                    <input type="checkbox" id="announcementToggle" name="announcement_active"
+                                           {% if ps.announcement_active %}checked{% endif %}>
+                                    <span class="asy-toggle__slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="asy-label">نص الإشعار</label>
+                            <input type="text" name="announcement_text" id="announcementText" class="asy-input"
+                                   value="{{ ps.announcement_text }}" placeholder="سيتوقف النظام للصيانة الساعة 2 صباحاً...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="asy-label">نوع الإشعار</label>
+                            <select name="announcement_type" id="announcementType" class="asy-select">
+                                <option value="info"    {% if ps.announcement_type == 'info'    %}selected{% endif %}>معلوماتي</option>
+                                <option value="warning" {% if ps.announcement_type == 'warning' %}selected{% endif %}>تحذير</option>
+                                <option value="success" {% if ps.announcement_type == 'success' %}selected{% endif %}>نجاح</option>
+                                <option value="danger"  {% if ps.announcement_type == 'danger'  %}selected{% endif %}>خطر</option>
+                            </select>
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="asy-btn asy-btn--amber">
+                                <i class="fas fa-save"></i> حفظ الإشعار
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ الإعدادات الافتراضية للمشتركين الجدد ══════════ -->
+        <div class="col-lg-6 d-flex">
+            <div class="asy-card w-100">
+                <div class="asy-card__header">
+                    <div class="asy-card__icon asy-card__icon--teal"><i class="fas fa-user-plus"></i></div>
+                    <div>
+                        <div class="asy-card__title">الإعدادات الافتراضية للمشتركين الجدد</div>
+                        <div class="asy-card__sub">تُطبَّق تلقائياً عند إنشاء حساب جديد</div>
+                    </div>
+                </div>
+                <div class="asy-card__body">
+                    <form id="defaultsForm" class="row g-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="section" value="defaults">
+
+                        <div class="col-md-6">
+                            <label class="asy-label">العملة الافتراضية</label>
+                            <select id="defaultCurrencySelect" name="default_currency" class="asy-select">
+                                {% for code, label in currency_choices %}
+                                <option value="{{ code }}" {% if ps.default_currency == code %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="asy-label">المنطقة الزمنية الافتراضية</label>
+                            <select id="defaultTimezoneSelect" name="default_timezone" class="asy-select">
+                                {% for tz in timezones %}
+                                <option value="{{ tz }}" {% if ps.default_timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="asy-label">بادئة الفاتورة الافتراضية</label>
+                            <input type="text" name="default_invoice_prefix" class="asy-input"
+                                   value="{{ ps.default_invoice_prefix }}" maxlength="10" placeholder="INV">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="asy-label">أيام التجربة المجانية</label>
+                            <input type="number" name="default_trial_days" class="asy-input"
+                                   value="{{ ps.default_trial_days }}" min="0" max="365">
+                        </div>
+                        <div class="col-12">
+                            <div class="asy-toggle-row">
+                                <div>
+                                    <div class="asy-toggle-label">تفعيل الضريبة افتراضياً</div>
+                                    <div class="asy-toggle-sub">ينطبق على المشتركين الجدد فقط</div>
+                                </div>
+                                <label class="asy-toggle">
+                                    <input type="checkbox" id="defaultTaxToggle" name="default_tax_enabled"
+                                           {% if ps.default_tax_enabled %}checked{% endif %}>
+                                    <span class="asy-toggle__slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12" id="taxValueWrap" {% if not ps.default_tax_enabled %}style="display:none"{% endif %}>
+                            <label class="asy-label">نسبة الضريبة الافتراضية %</label>
+                            <input type="number" name="default_tax_value" class="asy-input"
+                                   value="{{ ps.default_tax_value }}" min="0" max="100" step="0.01">
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="asy-btn asy-btn--teal">
+                                <i class="fas fa-save"></i> حفظ الإعدادات الافتراضية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /row -->
+</div><!-- /wrapper -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SAVE_URL = "{% url 'core:admin_settings_update_api' %}";
+const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+// ── Toast ─────────────────────────────────────────────────
+function showToast(msg, ok = true) {
+    const t = document.getElementById('asy-toast');
+    t.textContent = msg;
+    t.className = 'asy-toast asy-toast--' + (ok ? 'success' : 'error') + ' asy-toast--visible';
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => t.classList.remove('asy-toast--visible'), 3500);
+}
+
+// ── Generic AJAX form submit ───────────────────────────────
+function bindForm(formId, files = false) {
+    document.getElementById(formId).addEventListener('submit', async e => {
+        e.preventDefault();
+        const form = e.target;
+        const btn = form.querySelector('[type=submit]');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+        // Build FormData (supports files)
+        const data = new FormData(form);
+
+        // Inject toggle values that aren't checked
+        form.querySelectorAll('input[type=checkbox]').forEach(cb => {
+            data.set(cb.name, cb.checked ? 'true' : 'false');
+        });
+
+        try {
+            const res = await fetch(SAVE_URL, {
+                method: 'POST',
+                headers: {'X-CSRFToken': CSRF},
+                body: data,
+            });
+            const json = await res.json();
+            if (json.success) {
+                showToast('تم الحفظ بنجاح ✓');
+            } else {
+                showToast(json.error || 'حدث خطأ', false);
+            }
+        } catch {
+            showToast('تعذّر الاتصال بالخادم', false);
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = btn.dataset.origHtml || btn.innerHTML;
+    });
+}
+
+bindForm('maintenanceForm');
+bindForm('announcementForm');
+bindForm('defaultsForm');
+
+// Store original button labels
+document.querySelectorAll('.asy-btn[type=submit]').forEach(b => b.dataset.origHtml = b.innerHTML);
+
+// ── Announcement live preview ──────────────────────────────
+const annText   = document.getElementById('announcementText');
+const annType   = document.getElementById('announcementType');
+const annToggle = document.getElementById('announcementToggle');
+const annPrev   = document.getElementById('announcementPreview');
+const annPrevTxt = document.getElementById('announcementPreviewText');
+
+function updateAnnPreview() {
+    annPrev.style.display = annToggle.checked ? '' : 'none';
+    annPrevTxt.textContent = annText.value;
+    annPrev.className = 'asy-ann-preview asy-ann-preview--' + annType.value;
+}
+annText.addEventListener('input', updateAnnPreview);
+annType.addEventListener('change', updateAnnPreview);
+annToggle.addEventListener('change', updateAnnPreview);
+
+// ── Tax value row toggle ───────────────────────────────────
+const taxToggle = document.getElementById('defaultTaxToggle');
+const taxWrap   = document.getElementById('taxValueWrap');
+if (taxToggle && taxWrap) {
+    taxToggle.addEventListener('change', () => {
+        taxWrap.style.display = taxToggle.checked ? '' : 'none';
+    });
+}
+
+// ── File input label update ────────────────────────────────
+document.querySelectorAll('input[type=file]').forEach(fi => {
+    fi.addEventListener('change', () => {
+        const btn = fi.closest('.asy-file-btn');
+        if (btn && fi.files[0]) btn.querySelector('i').className = 'fas fa-check';
+    });
+});
+
+// ── Auto-select currency based on timezone ─────────────────────
+(function () {
+    const TZ_CURRENCY = {{ timezone_currency_map_json|safe }};
+    const tzSel  = document.getElementById('defaultTimezoneSelect');
+    const curSel = document.getElementById('defaultCurrencySelect');
+    if (!tzSel || !curSel) return;
+    tzSel.addEventListener('change', function () {
+        var code = TZ_CURRENCY[this.value];
+        if (code) curSel.value = code;
+    });
+}());
+</script>
 {% endblock %}

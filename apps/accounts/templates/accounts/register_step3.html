@@ -118,10 +118,11 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ── num_stocks toggle ─────────────────────────────────────
     const versionTypeField = document.querySelector('#{{ form.version_type.id_for_label }}');
     const numStocksField = document.querySelector('.js-num-stocks-field');
     const numStocksInput = document.querySelector('#{{ form.num_stocks.id_for_label }}');
-    
+
     function toggleNumStocksField() {
         const selectedValue = versionTypeField.value;
         if (selectedValue === 'multi_stock' || selectedValue === 'multi_branch') {
@@ -130,15 +131,31 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             numStocksField.style.display = 'none';
             numStocksInput.required = false;
-            numStocksInput.value = '1'; // Reset to 1 for single store
+            numStocksInput.value = '1';
         }
     }
-    
-    // Initial check
     toggleNumStocksField();
-    
-    // Listen for changes
     versionTypeField.addEventListener('change', toggleNumStocksField);
+
+    // ── Auto-select currency ──────────────────────────────────
+    const TZ_CURRENCY = {{ timezone_currency_map_json|safe }};
+    const tzSel  = document.querySelector('select[name="timezone"]');
+    const curSel = document.querySelector('select[name="currency"]');
+
+    function applyCurrency(code) {
+        if (code && curSel) curSel.value = code;
+    }
+
+    // Pre-select based on country chosen in step 2 (stored in sessionStorage)
+    const suggested = sessionStorage.getItem('reg_suggested_currency') || '{{ suggested_currency }}';
+    applyCurrency(suggested);
+
+    // Update when timezone changes
+    if (tzSel) {
+        tzSel.addEventListener('change', function () {
+            applyCurrency(TZ_CURRENCY[this.value]);
+        });
+    }
 });
 </script>
 {% endblock %}

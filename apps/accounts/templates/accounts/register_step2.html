@@ -110,6 +110,7 @@
 {% block extra_js %}
 <script>
     const COUNTRY_TIMEZONE_MAP = {{ country_timezone_map_json|safe }};
+    const COUNTRY_CURRENCY_MAP = {{ country_currency_map_json|safe }};
     const countrySelect = document.querySelector('select[name="country"]');
     const timezonePreview = document.getElementById('countryTimezonePreview');
 
@@ -120,9 +121,19 @@
         timezonePreview.value = timezone;
     }
 
+    function storeSuggestedCurrency() {
+        if (!countrySelect) return;
+        const code = COUNTRY_CURRENCY_MAP[countrySelect.value];
+        if (code) sessionStorage.setItem('reg_suggested_currency', code);
+    }
+
     if (countrySelect) {
-        countrySelect.addEventListener('change', updateTimezonePreview);
+        countrySelect.addEventListener('change', function () {
+            updateTimezonePreview();
+            storeSuggestedCurrency();
+        });
         updateTimezonePreview();
+        storeSuggestedCurrency();
     }
 </script>
 {% endblock %}
