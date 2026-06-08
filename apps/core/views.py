@@ -1733,6 +1733,8 @@ def tenant_create_api(request):
         return JsonResponse({'success': False, 'message': f'حدث خطأ: {e}'}, status=500)
 
     # Send admin notification email (non-blocking)
+    with open('/tmp/enjaz_email_debug.log', 'a') as _dbg:
+        _dbg.write(f'email block reached for tenant: {tenant.name}\n')
     try:
         from django.core.mail import EmailMessage
         from django.template.loader import render_to_string
@@ -1758,6 +1760,8 @@ def tenant_create_api(request):
     except Exception as _email_err:
         import logging
         logging.getLogger(__name__).error('tenant notification email failed: %s', _email_err, exc_info=True)
+        with open('/tmp/enjaz_email_debug.log', 'a') as _dbg:
+            _dbg.write(f'email FAILED: {_email_err}\n')
 
     return JsonResponse({
         'success': True,
