@@ -71,8 +71,11 @@
         </div>
         
         <div class="mb-3">
-            {{ form.currency.label_tag }}
-            {{ form.currency }}
+            <label class="form-label">العملة <small class="text-muted fw-normal">(تُضبط تلقائياً)</small></label>
+            <input id="currencyDisplay" class="form-control" readonly
+                   value="{{ suggested_currency }}"
+                   style="background:var(--bs-secondary-bg,#f8f9fa);cursor:default;">
+            <input type="hidden" name="currency" id="currencyCode" value="{{ suggested_currency }}">
             {% if form.currency.errors %}
             <div class="text-danger small js-field-errors" data-field="currency">{{ form.currency.errors }}</div>
             {% endif %}
@@ -139,11 +142,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ── Auto-select currency ──────────────────────────────────
     const TZ_CURRENCY = {{ timezone_currency_map_json|safe }};
-    const tzSel  = document.querySelector('select[name="timezone"]');
-    const curSel = document.querySelector('select[name="currency"]');
+    const CURRENCY_AR = {{ currency_ar_json|safe }};
+    const tzSel         = document.querySelector('select[name="timezone"]');
+    const curDisplay    = document.getElementById('currencyDisplay');
+    const curCode       = document.getElementById('currencyCode');
 
     function applyCurrency(code) {
-        if (code && curSel) curSel.value = code;
+        if (!code) return;
+        if (curDisplay) curDisplay.value = (CURRENCY_AR[code] || code) + ' — ' + code;
+        if (curCode)    curCode.value    = code;
     }
 
     // Pre-select based on country chosen in step 2 (stored in sessionStorage)

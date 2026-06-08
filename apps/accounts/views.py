@@ -23,7 +23,7 @@ from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
 
 from apps.core.models import Tenant, Settings
-from apps.core.constants import COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, DEFAULT_COUNTRY, get_timezone_for_country
+from apps.core.constants import COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country
 from .models import PermissionGroup, User
 from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginForm, UserManagementForm, PasswordResetForm, SetPasswordForm
 from .permissions import get_permission_keys, get_permission_schema
@@ -682,6 +682,7 @@ def register_step3(request):
         'step': 3,
         'total_steps': 3,
         'timezone_currency_map_json': json.dumps(TIMEZONE_CURRENCY_MAP, ensure_ascii=False),
+        'currency_ar_json': json.dumps(CURRENCY_AR, ensure_ascii=False),
         'suggested_currency': suggested_currency,
     })
 
