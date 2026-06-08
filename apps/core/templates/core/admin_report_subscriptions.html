@@ -1,10 +1,213 @@
 {% extends "layouts/dashboard.html" %}
-{% load static %}
+{% load static humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_reports.css' %}?v=1.1">
+{% endblock %}
+
 {% block page_title %}تقرير الاشتراكات{% endblock %}
+{% block page_description %}متابعة حالة اشتراكات جميع المشتركين وتواريخ الانتهاء{% endblock %}
+
 {% block content %}
-<div class="cx-coming-soon">
-    <div class="cx-coming-soon__icon"><i class="fas fa-file-invoice"></i></div>
-    <h3 class="cx-coming-soon__title">تقرير الاشتراكات</h3>
-    <p class="cx-coming-soon__text">هذا القسم قيد التطوير</p>
+<div class="rpt-scene">
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<div class="rpt-hero">
+    <div class="rpt-hero__orb rpt-hero__orb--1"></div>
+    <div class="rpt-hero__orb rpt-hero__orb--2"></div>
+    <div class="rpt-hero__inner">
+        <div class="rpt-hero__left">
+            <div class="rpt-hero__icon"><i class="fas fa-file-invoice"></i></div>
+            <div>
+                <div class="rpt-hero__kicker">تقارير النظام</div>
+                <h2 class="rpt-hero__title">تقرير الاشتراكات</h2>
+                <p class="rpt-hero__desc">{{ total }} مشترك — البيانات محدّثة لحظياً</p>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- ═══════════════ ALERT CARDS ═══════════════ -->
+<div class="rpt-alerts">
+    <div class="rpt-alert-card rpt-alert-card--danger">
+        <div class="rpt-alert-card__num">{{ expired }}</div>
+        <div class="rpt-alert-card__lbl">اشتراك منتهٍ</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-times-circle"></i></div>
+    </div>
+    <div class="rpt-alert-card rpt-alert-card--warning">
+        <div class="rpt-alert-card__num">{{ expiring_7 }}</div>
+        <div class="rpt-alert-card__lbl">ينتهي خلال 7 أيام</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-exclamation-triangle"></i></div>
+    </div>
+    <div class="rpt-alert-card rpt-alert-card--amber">
+        <div class="rpt-alert-card__num">{{ expiring_30 }}</div>
+        <div class="rpt-alert-card__lbl">ينتهي خلال 30 يوماً</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-clock"></i></div>
+    </div>
+    <div class="rpt-alert-card rpt-alert-card--muted">
+        <div class="rpt-alert-card__num">{{ suspended }}</div>
+        <div class="rpt-alert-card__lbl">موقوف</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-pause-circle"></i></div>
+    </div>
+    <div class="rpt-alert-card rpt-alert-card--indigo">
+        <div class="rpt-alert-card__num">{{ lifetime }}</div>
+        <div class="rpt-alert-card__lbl">مدى الحياة</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-infinity"></i></div>
+    </div>
+</div>
+
+<!-- ═══════════════ PLAN DISTRIBUTION ═══════════════ -->
+<div class="rpt-panels">
+    <div class="rpt-panel">
+        <div class="rpt-panel__hd">
+            <i class="fas fa-layer-group"></i>
+            <span>توزيع الباقات</span>
+        </div>
+        <div class="rpt-plan-grid">
+            {% for key, count in plan_counts.items %}
+            <div class="rpt-plan-item">
+                <span class="rpt-plan-badge rpt-plan-badge--{{ key }}">
+                    {% if key == 'trial' %}تجريبي
+                    {% elif key == 'basic' %}أساسي
+                    {% elif key == 'pro' %}احترافي
+                    {% elif key == 'enterprise' %}مؤسسات
+                    {% else %}{{ key }}{% endif %}
+                </span>
+                <span class="rpt-plan-count">{{ count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ TABLE / CARDS ═══════════════ -->
+<div class="rpt-panel">
+    <div class="rpt-panel__hd">
+        <i class="fas fa-table"></i>
+        <span>تفاصيل الاشتراكات</span>
+        <div class="rpt-search-wrap ms-auto">
+            <i class="fas fa-search rpt-search-icon"></i>
+            <input type="text" id="subSearchInput" class="rpt-search" placeholder="ابحث...">
+        </div>
+        <div class="rpt-filter-tabs" id="statusTabs">
+            <button class="rpt-ftab active" data-filter="">الكل</button>
+            <button class="rpt-ftab" data-filter="expired">منتهي</button>
+            <button class="rpt-ftab" data-filter="danger">حرج</button>
+            <button class="rpt-ftab" data-filter="warning">قريب</button>
+            <button class="rpt-ftab" data-filter="active">نشط</button>
+            <button class="rpt-ftab" data-filter="suspended">موقوف</button>
+        </div>
+    </div>
+
+    <!-- Desktop table -->
+    <div class="rpt-table-wrap">
+        <table class="rpt-table" id="subTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>المشترك</th>
+                    <th>الباقة</th>
+                    <th>النسخة</th>
+                    <th>تاريخ البدء</th>
+                    <th>تاريخ الانتهاء</th>
+                    <th>الحالة</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr data-status="{{ row.status_class }}" data-name="{{ row.name|lower }}">
+                    <td class="rpt-td--num">{{ forloop.counter }}</td>
+                    <td>
+                        <div class="rpt-tenant-name">{{ row.name }}</div>
+                        <div class="rpt-tenant-slug">{{ row.slug }}</div>
+                    </td>
+                    <td><span class="rpt-plan-badge rpt-plan-badge--{{ row.plan_key }}">{{ row.plan }}</span></td>
+                    <td class="rpt-td--muted">{{ row.version }}</td>
+                    <td class="rpt-td--date">{{ row.start }}</td>
+                    <td class="rpt-td--date">{{ row.expires }}</td>
+                    <td><span class="rpt-status rpt-status--{{ row.status_class }}">{{ row.status_label }}</span></td>
+                    <td>
+                        <a href="{% url 'core:tenant_list' %}?q={{ row.slug }}" class="rpt-action-btn" title="عرض">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="rpt-empty">لا توجد بيانات</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="rpt-mob-cards" id="subCards">
+        {% for row in rows %}
+        <div class="rpt-mob-card" data-status="{{ row.status_class }}" data-name="{{ row.name|lower }}">
+            <div class="rpt-mob-card__header">
+                <div class="rpt-mob-card__title">
+                    <div class="rpt-mob-card__name">{{ row.name }}</div>
+                    <div class="rpt-mob-card__slug">{{ row.slug }}</div>
+                </div>
+                <span class="rpt-status rpt-status--{{ row.status_class }}">{{ row.status_label }}</span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">الباقة</span>
+                <span class="rpt-mob-card__val"><span class="rpt-plan-badge rpt-plan-badge--{{ row.plan_key }}">{{ row.plan }}</span></span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">تاريخ البدء</span>
+                <span class="rpt-mob-card__val rpt-mob-card__val--muted">{{ row.start }}</span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">تاريخ الانتهاء</span>
+                <span class="rpt-mob-card__val rpt-mob-card__val--muted">{{ row.expires }}</span>
+            </div>
+            <div class="rpt-mob-card__actions">
+                <a href="{% url 'core:tenant_list' %}?q={{ row.slug }}" class="rpt-action-btn" title="عرض">
+                    <i class="fas fa-eye"></i> عرض
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div style="text-align:center;padding:1.5rem;color:#94a3b8;">لا توجد بيانات</div>
+        {% endfor %}
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+    const search = document.getElementById('subSearchInput');
+    const tabs   = document.querySelectorAll('.rpt-ftab');
+    const rows   = document.querySelectorAll('#subTable tbody tr[data-status]');
+    const cards  = document.querySelectorAll('#subCards .rpt-mob-card');
+    let activeFilter = '';
+
+    function applyFilters(){
+        const q = search.value.trim().toLowerCase();
+        function filterEl(el) {
+            const matchStatus = !activeFilter || el.dataset.status === activeFilter;
+            const matchSearch = !q || el.dataset.name.includes(q) || el.textContent.toLowerCase().includes(q);
+            el.style.display = (matchStatus && matchSearch) ? '' : 'none';
+        }
+        rows.forEach(filterEl);
+        cards.forEach(filterEl);
+    }
+
+    search.addEventListener('input', applyFilters);
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            activeFilter = tab.dataset.filter;
+            applyFilters();
+        });
+    });
+})();
+</script>
 {% endblock %}

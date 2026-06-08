@@ -1,10 +1,161 @@
 {% extends "layouts/dashboard.html" %}
-{% load static %}
-{% block page_title %}سجل النشاط{% endblock %}
+{% load static humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_reports.css' %}?v=1.1">
+{% endblock %}
+
+{% block page_title %}سجل المراجعة{% endblock %}
+{% block page_description %}سجل شامل لجميع العمليات عبر كل المشتركين{% endblock %}
+
 {% block content %}
-<div class="cx-coming-soon">
-    <div class="cx-coming-soon__icon"><i class="fas fa-clock-rotate-left"></i></div>
-    <h3 class="cx-coming-soon__title">سجل النشاط</h3>
-    <p class="cx-coming-soon__text">هذا القسم قيد التطوير</p>
+<div class="rpt-scene">
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<div class="rpt-hero">
+    <div class="rpt-hero__orb rpt-hero__orb--1"></div>
+    <div class="rpt-hero__orb rpt-hero__orb--2"></div>
+    <div class="rpt-hero__inner">
+        <div class="rpt-hero__left">
+            <div class="rpt-hero__icon"><i class="fas fa-clock-rotate-left"></i></div>
+            <div>
+                <div class="rpt-hero__kicker">أدوات النظام</div>
+                <h2 class="rpt-hero__title">سجل المراجعة</h2>
+                <p class="rpt-hero__desc">
+                    {% if total_count > 200 %}
+                    عرض أحدث 200 سجل من أصل {{ total_count|intcomma }} سجل
+                    {% else %}
+                    {{ total_count|intcomma }} سجل
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ FILTER FORM ═══════════════ -->
+<div class="rpt-panel">
+    <form method="get" class="rpt-filter-form">
+        <select name="tenant">
+            <option value="">— كل المشتركين —</option>
+            {% for t in tenants %}
+            <option value="{{ t.pk }}" {% if filters.tenant_id == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="action">
+            <option value="">— كل العمليات —</option>
+            {% for key, label in action_choices %}
+            <option value="{{ key }}" {% if filters.action == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="date" name="date_from" value="{{ filters.date_from }}" placeholder="من تاريخ">
+        <input type="date" name="date_to"   value="{{ filters.date_to }}"   placeholder="إلى تاريخ">
+
+        <input type="text" name="q" value="{{ filters.q }}" placeholder="بحث في الوصف / المستخدم...">
+
+        <button type="submit"><i class="fas fa-filter"></i> تطبيق</button>
+        <a href="{% url 'core:admin_audit_log' %}" style="padding:0.38rem 0.75rem;border-radius:8px;background:#f1f5f9;color:#64748b;font-size:0.83rem;font-weight:600;text-decoration:none;">
+            <i class="fas fa-times"></i> إعادة ضبط
+        </a>
+    </form>
+
+    <!-- Desktop table -->
+    <div class="rpt-table-wrap">
+        <table class="rpt-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>المشترك</th>
+                    <th>المستخدم</th>
+                    <th>العملية</th>
+                    <th>النموذج</th>
+                    <th>الوصف</th>
+                    <th>عنوان IP</th>
+                    <th>التاريخ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="rpt-td--num">{{ log.pk }}</td>
+                    <td>
+                        {% if log.tenant %}
+                        <div class="rpt-tenant-name">{{ log.tenant.name }}</div>
+                        {% else %}
+                        <span class="rpt-td--muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.user %}
+                        <div class="rpt-tenant-name" style="font-size:0.82rem;">{{ log.user.get_full_name|default:log.user.username }}</div>
+                        {% else %}
+                        <span class="rpt-td--muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="rpt-action-badge rpt-action-badge--{{ log.action }}">
+                            {{ log.get_action_display }}
+                        </span>
+                    </td>
+                    <td class="rpt-td--muted">{{ log.model_name|default:"—" }}</td>
+                    <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ log.description }}">
+                        {{ log.description }}
+                    </td>
+                    <td class="rpt-td--muted" style="direction:ltr;text-align:left;font-size:0.76rem;">
+                        {{ log.ip_address|default:"—" }}
+                    </td>
+                    <td class="rpt-td--date">{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="rpt-empty">لا توجد سجلات تطابق الفلاتر</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="rpt-mob-cards">
+        {% for log in logs %}
+        <div class="rpt-mob-card">
+            <div class="rpt-mob-card__header">
+                <span class="rpt-action-badge rpt-action-badge--{{ log.action }}">{{ log.get_action_display }}</span>
+                <span class="rpt-mob-card__val rpt-mob-card__val--muted" style="font-size:0.74rem;">{{ log.created_at|date:"m/d H:i" }}</span>
+            </div>
+            <div style="margin-bottom:0.5rem;font-size:0.82rem;color:#374151;line-height:1.4;">
+                {{ log.description|truncatechars:80 }}
+            </div>
+            {% if log.tenant %}
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">المشترك</span>
+                <span class="rpt-mob-card__val">{{ log.tenant.name }}</span>
+            </div>
+            {% endif %}
+            {% if log.user %}
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">المستخدم</span>
+                <span class="rpt-mob-card__val">{{ log.user.get_full_name|default:log.user.username }}</span>
+            </div>
+            {% endif %}
+            {% if log.model_name %}
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">النموذج</span>
+                <span class="rpt-mob-card__val rpt-mob-card__val--muted">{{ log.model_name }}</span>
+            </div>
+            {% endif %}
+            {% if log.ip_address %}
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">IP</span>
+                <span class="rpt-mob-card__val rpt-mob-card__val--muted" style="direction:ltr;font-family:monospace;font-size:0.76rem;">{{ log.ip_address }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div style="text-align:center;padding:1.5rem;color:#94a3b8;">لا توجد سجلات تطابق الفلاتر</div>
+        {% endfor %}
+    </div>
+</div>
+
 </div>
 {% endblock %}

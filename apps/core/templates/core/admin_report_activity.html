@@ -1,10 +1,318 @@
 {% extends "layouts/dashboard.html" %}
-{% load static %}
+{% load static humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_reports.css' %}?v=1.1">
+{% endblock %}
+
 {% block page_title %}نشاط المشتركين{% endblock %}
+{% block page_description %}تحليل نشاط المشتركين وسجلات تسجيل الدخول خلال آخر 30 يوماً{% endblock %}
+
 {% block content %}
-<div class="cx-coming-soon">
-    <div class="cx-coming-soon__icon"><i class="fas fa-chart-column"></i></div>
-    <h3 class="cx-coming-soon__title">نشاط المشتركين</h3>
-    <p class="cx-coming-soon__text">هذا القسم قيد التطوير</p>
+<div class="rpt-scene">
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<div class="rpt-hero">
+    <div class="rpt-hero__orb rpt-hero__orb--1"></div>
+    <div class="rpt-hero__orb rpt-hero__orb--2"></div>
+    <div class="rpt-hero__inner">
+        <div class="rpt-hero__left">
+            <div class="rpt-hero__icon"><i class="fas fa-chart-column"></i></div>
+            <div>
+                <div class="rpt-hero__kicker">تقارير النظام</div>
+                <h2 class="rpt-hero__title">نشاط المشتركين</h2>
+                <p class="rpt-hero__desc">آخر 30 يوماً — {{ month_ago|date:"Y-m-d" }} إلى {{ today|date:"Y-m-d" }}</p>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- ═══════════════ ALERT CARDS ═══════════════ -->
+<div class="rpt-alerts">
+    <div class="rpt-alert-card rpt-alert-card--danger">
+        <div class="rpt-alert-card__num">{{ inactive_count }}</div>
+        <div class="rpt-alert-card__lbl">غير نشطين (30 يوم)</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-user-slash"></i></div>
+    </div>
+    <div class="rpt-alert-card rpt-alert-card--indigo">
+        <div class="rpt-alert-card__num">{{ active_count }}</div>
+        <div class="rpt-alert-card__lbl">مشترك نشط (30 يوم)</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-users"></i></div>
+    </div>
+    <div class="rpt-alert-card rpt-alert-card--green">
+        <div class="rpt-alert-card__num">{{ recent_logins|length }}</div>
+        <div class="rpt-alert-card__lbl">آخر تسجيلات دخول</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-sign-in-alt"></i></div>
+    </div>
+</div>
+
+<!-- ═══════════════ CHARTS ═══════════════ -->
+<div class="rpt-panels">
+    <div class="rpt-panel" style="flex:2;">
+        <div class="rpt-panel__hd">
+            <i class="fas fa-chart-area"></i>
+            <span>النشاط اليومي (آخر 14 يوماً)</span>
+        </div>
+        <div class="rpt-chart-wrap">
+            <canvas id="dailyActivityChart"></canvas>
+        </div>
+    </div>
+    <div class="rpt-panel" style="flex:1;">
+        <div class="rpt-panel__hd">
+            <i class="fas fa-chart-donut"></i>
+            <span>توزيع العمليات</span>
+        </div>
+        <div class="rpt-chart-wrap">
+            <canvas id="actionDistChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ TOP ACTIVE + INACTIVE ═══════════════ -->
+<div class="rpt-panels">
+
+<!-- أكثر المشتركين نشاطاً -->
+<div class="rpt-panel" style="flex:1;">
+    <div class="rpt-panel__hd">
+        <i class="fas fa-fire"></i>
+        <span>أكثر المشتركين نشاطاً</span>
+    </div>
+
+    <div class="rpt-table-wrap">
+        <table class="rpt-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>المشترك</th>
+                    <th>عدد العمليات (30 يوم)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in tenant_activity %}
+                <tr>
+                    <td class="rpt-td--num">{{ forloop.counter }}</td>
+                    <td>
+                        <div class="rpt-tenant-name">{{ row.tenant__name }}</div>
+                        <div class="rpt-tenant-slug">{{ row.tenant__slug }}</div>
+                    </td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:0.6rem;">
+                            <div style="flex:1;height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;">
+                                <div style="height:100%;background:#6366f1;border-radius:3px;width:{{ row.total }}px;max-width:100%;"></div>
+                            </div>
+                            <strong style="color:#6366f1;min-width:32px;text-align:left;">{{ row.total }}</strong>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="rpt-empty">لا توجد بيانات نشاط</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="rpt-mob-cards">
+        {% for row in tenant_activity %}
+        <div class="rpt-mob-card">
+            <div class="rpt-mob-card__header">
+                <div class="rpt-mob-card__title">
+                    <div class="rpt-mob-card__name">{{ row.tenant__name }}</div>
+                    <div class="rpt-mob-card__slug">{{ row.tenant__slug }}</div>
+                </div>
+                <span class="rpt-mob-card__val rpt-mob-card__val--num" style="font-size:1.1rem;">{{ row.total }}</span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">عدد العمليات (30 يوم)</span>
+                <div style="flex:1;height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;margin:0 0.5rem;">
+                    <div style="height:100%;background:#6366f1;border-radius:3px;width:{{ row.total }}px;max-width:100%;"></div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div style="text-align:center;padding:1.5rem;color:#94a3b8;">لا توجد بيانات نشاط</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- مشتركون بدون نشاط -->
+{% if inactive_tenants %}
+<div class="rpt-panel" style="flex:1;">
+    <div class="rpt-panel__hd">
+        <i class="fas fa-user-clock"></i>
+        <span style="color:#dc2626;">مشتركون بدون نشاط (30 يوم)</span>
+    </div>
+
+    <div class="rpt-table-wrap">
+        <table class="rpt-table">
+            <thead>
+                <tr>
+                    <th>المشترك</th>
+                    <th>الباقة</th>
+                    <th>تاريخ الانتهاء</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in inactive_tenants %}
+                <tr>
+                    <td>
+                        <div class="rpt-tenant-name">{{ t.name }}</div>
+                        <div class="rpt-tenant-slug">{{ t.slug }}</div>
+                    </td>
+                    <td><span class="rpt-plan-badge rpt-plan-badge--{{ t.subscription_plan }}">{{ t.get_subscription_plan_display }}</span></td>
+                    <td class="rpt-td--date">{{ t.subscription_expires|default:"مدى الحياة" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="rpt-mob-cards">
+        {% for t in inactive_tenants %}
+        <div class="rpt-mob-card">
+            <div class="rpt-mob-card__header">
+                <div class="rpt-mob-card__title">
+                    <div class="rpt-mob-card__name">{{ t.name }}</div>
+                    <div class="rpt-mob-card__slug">{{ t.slug }}</div>
+                </div>
+                <span class="rpt-plan-badge rpt-plan-badge--{{ t.subscription_plan }}">{{ t.get_subscription_plan_display }}</span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">تاريخ الانتهاء</span>
+                <span class="rpt-mob-card__val rpt-mob-card__val--muted">{{ t.subscription_expires|default:"مدى الحياة" }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+</div>
+
+<!-- ═══════════════ RECENT LOGINS ═══════════════ -->
+<div class="rpt-panel">
+    <div class="rpt-panel__hd">
+        <i class="fas fa-sign-in-alt"></i>
+        <span>آخر تسجيلات الدخول</span>
+    </div>
+
+    <div class="rpt-table-wrap">
+        <table class="rpt-table">
+            <thead>
+                <tr>
+                    <th>المستخدم</th>
+                    <th>المشترك</th>
+                    <th>الوصف</th>
+                    <th>التاريخ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_logins %}
+                <tr>
+                    <td>
+                        <div class="rpt-tenant-name">{{ log.user.get_full_name|default:log.user.username }}</div>
+                        <div class="rpt-tenant-slug">{{ log.user.username }}</div>
+                    </td>
+                    <td>{{ log.tenant.name }}</td>
+                    <td class="rpt-td--muted">{{ log.description }}</td>
+                    <td class="rpt-td--date">{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="rpt-empty">لا توجد سجلات دخول</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="rpt-mob-cards">
+        {% for log in recent_logins %}
+        <div class="rpt-mob-card">
+            <div class="rpt-mob-card__header">
+                <div class="rpt-mob-card__title">
+                    <div class="rpt-mob-card__name">{{ log.user.get_full_name|default:log.user.username }}</div>
+                    <div class="rpt-mob-card__slug">{{ log.user.username }}</div>
+                </div>
+                <span class="rpt-mob-card__val rpt-mob-card__val--muted" style="font-size:0.75rem;">{{ log.created_at|date:"m/d H:i" }}</span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">المشترك</span>
+                <span class="rpt-mob-card__val">{{ log.tenant.name }}</span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">الوصف</span>
+                <span class="rpt-mob-card__val rpt-mob-card__val--muted">{{ log.description }}</span>
+            </div>
+        </div>
+        {% empty %}
+        <div style="text-align:center;padding:1.5rem;color:#94a3b8;">لا توجد سجلات دخول</div>
+        {% endfor %}
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+    // Daily activity line chart
+    const daCtx = document.getElementById('dailyActivityChart');
+    if (daCtx) {
+        new Chart(daCtx, {
+            type: 'line',
+            data: {
+                labels: {{ daily_labels_json|safe }},
+                datasets: [{
+                    label: 'عدد العمليات',
+                    data: {{ daily_counts_json|safe }},
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99,102,241,0.08)',
+                    borderWidth: 2,
+                    tension: 0.35,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#6366f1',
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // Action distribution doughnut
+    const adCtx = document.getElementById('actionDistChart');
+    if (adCtx) {
+        const actionData = [
+            {% for a in action_dist %}
+            { label: '{{ a.label }}', count: {{ a.count }}, key: '{{ a.key }}' },
+            {% endfor %}
+        ];
+        const colorMap = {
+            create: '#16a34a', update: '#2563eb', delete: '#dc2626',
+            login: '#6366f1', logout: '#94a3b8', export: '#d97706',
+            import: '#9333ea', view: '#0d9488'
+        };
+        new Chart(adCtx, {
+            type: 'doughnut',
+            data: {
+                labels: actionData.map(a => a.label),
+                datasets: [{
+                    data: actionData.map(a => a.count),
+                    backgroundColor: actionData.map(a => colorMap[a.key] || '#94a3b8'),
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+            }
+        });
+    }
+})();
+</script>
 {% endblock %}

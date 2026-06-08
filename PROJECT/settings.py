@@ -94,6 +94,7 @@ MIDDLEWARE = [
     'apps.core.middleware.MaintenanceModeMiddleware',
     'apps.core.middleware.TenantMiddleware',
     'apps.core.middleware.ActiveTenantMiddleware',
+    'apps.core.middleware.ActivityLogMiddleware',
 ]
 
 ROOT_URLCONF = 'PROJECT.urls'

@@ -9,6 +9,8 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         import apps.core.signals  # noqa: F401
+        from apps.core.signals import connect_activity_signals
+        connect_activity_signals()
         from apps.core.business_types_seed import sync_business_types
 
         def seed_business_types(sender, **kwargs):

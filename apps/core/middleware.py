@@ -63,7 +63,7 @@ class TenantMiddleware:
         
         # Get tenant from user
         if request.user.is_authenticated:
-            if request.user.is_superuser:
+            if request.user.is_superuser or getattr(request.user, 'is_platform_staff', False):
                 request.tenant = None
 
                 admin_dashboard_path = reverse('core:admin_dashboard')
@@ -135,4 +135,94 @@ class ActiveTenantMiddleware:
                 return redirect('/no-tenant/')
         
         response = self.get_response(request)
+        return response
+
+
+class ActivityLogMiddleware:
+    """
+    Logs write operations (POST/DELETE) on tenant API endpoints.
+    Only records successful responses (2xx). Runs async-safe via try/except.
+    """
+
+    # URL fragments → (action, model_name_ar)
+    _PATTERNS = [
+        ('/sales/invoices/',       'create',  'SaleInvoice',    'فاتورة مبيعات'),
+        ('/sales/returns/',        'create',  'SaleReturn',     'مرتجع مبيعات'),
+        ('/sales/quotes/',         'create',  'SaleQuote',      'عرض سعر'),
+        ('/purchases/orders/',     'create',  'PurchaseInvoice','فاتورة مشتريات'),
+        ('/purchases/returns/',    'create',  'PurchaseReturn', 'مرتجع مشتريات'),
+        ('/stocks/transfers/',     'create',  'StockTransfer',  'تحويل مخزون'),
+        ('/stocks/stocktakes/',    'create',  'StockTake',      'جرد مخزون'),
+        ('/items/',                'create',  'Item',           'صنف'),
+        ('/customers/',            'create',  'Customer',       'عميل'),
+        ('/suppliers/',            'create',  'Supplier',       'مورد'),
+        ('/expenses/',             'create',  'Expense',        'مصروف'),
+    ]
+
+    # Paths to skip entirely
+    _SKIP = ('/static/', '/media/', '/admin/', '/accounts/login', '/accounts/logout',
+             '/api/table/', '/api/detail/', '/reports/', '/notifications/')
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def _get_ip(self, request):
+        xff = request.META.get('HTTP_X_FORWARDED_FOR', '')
+        return xff.split(',')[0].strip() if xff else request.META.get('REMOTE_ADDR')
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        # Only log for authenticated tenant users on write requests
+        if request.method not in ('POST', 'DELETE', 'PUT', 'PATCH'):
+            return response
+        if not getattr(request, 'user', None) or not request.user.is_authenticated:
+            return response
+        if request.user.is_superuser:
+            return response
+
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            return response
+
+        # Skip non-200 and certain paths
+        if response.status_code not in (200, 201, 204):
+            return response
+        path = request.path
+        if any(path.startswith(s) for s in self._SKIP):
+            return response
+
+        # Match pattern
+        action, model_name, name_ar = None, '', ''
+        for fragment, act, mn, nar in self._PATTERNS:
+            if fragment in path:
+                action = act
+                model_name = mn
+                name_ar = nar
+                break
+
+        if not action:
+            return response
+
+        if request.method == 'DELETE':
+            action = 'delete'
+        elif request.method in ('PUT', 'PATCH'):
+            action = 'update'
+
+        verb = {'create': 'إنشاء', 'update': 'تعديل', 'delete': 'حذف'}.get(action, action)
+
+        try:
+            from apps.core.models import ActivityLog
+            ActivityLog.objects.create(
+                tenant=tenant,
+                user=request.user,
+                action=action,
+                model_name=model_name,
+                description=f'{verb} {name_ar}',
+                ip_address=self._get_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+            )
+        except Exception:
+            pass
+
         return response

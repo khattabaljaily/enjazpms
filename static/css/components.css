@@ -289,7 +289,12 @@
     border: 1px solid var(--border-color);
     border-radius: 12px;
     transition: all 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
 }
+/* Remove native clear button added by type="search" */
+.cx-search-input::-webkit-search-cancel-button,
+.cx-search-input::-webkit-search-decoration { display: none; }
 
 .cx-search-input:focus {
     outline: none;
@@ -542,6 +547,7 @@ table.cx-table thead th {
 .cxr-act--warn:hover   { background: rgba(245,158,11,0.1);  color: #f59e0b; }
 .cxr-act--del:hover    { background: rgba(239,68,68,0.1);   color: #ef4444; }
 .cxr-act--login:hover  { background: rgba(99,102,241,0.15); color: #6366f1; }
+.cxr-act--renew:hover  { background: rgba(16,185,129,0.12); color: #059669; }
 
 /* ══════════════════════════ MODAL ══════════════════════════ */
 .modal           { z-index: 1050 !important; }

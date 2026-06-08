@@ -1,13 +1,805 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
-
 {% block page_title %}إدارة المستخدمين{% endblock %}
-{% block page_description %}عرض وإدارة جميع مستخدمي النظام عبر كل المشتركين{% endblock %}
+{% block page_description %}عرض وإدارة مستخدمي المشتركين ومساعدي المنصة{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Layout ──────────────────────────────────────────── */
+.usr-wrapper { display:flex; flex-direction:column; gap:1rem; }
+
+/* ── Hero ────────────────────────────────────────────── */
+.usr-hero {
+    position:relative; overflow:hidden; border-radius:20px;
+    background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#312e81 100%);
+    padding:.75rem 1.2rem; box-shadow:0 8px 32px rgba(15,23,42,.28);
+}
+.usr-hero__orb {
+    position:absolute; border-radius:50%; pointer-events:none;
+    top:-45%; right:-4%; width:300px; height:300px;
+    background:rgba(99,102,241,.1);
+}
+.usr-hero__inner {
+    position:relative; z-index:1; display:flex;
+    align-items:center; justify-content:space-between; gap:1.5rem; flex-wrap:wrap;
+}
+.usr-hero__left { display:flex; align-items:center; gap:1rem; }
+.usr-hero__icon {
+    width:48px; height:48px; border-radius:14px;
+    background:rgba(99,102,241,.25); display:flex; align-items:center;
+    justify-content:center; font-size:1.4rem; color:#a5b4fc;
+}
+.usr-hero__title { color:#fff; font-size:1.25rem; font-weight:700; margin:0; }
+.usr-hero__desc  { color:#94a3b8; font-size:.8rem; margin:0; }
+
+/* ── Stats pills ─────────────────────────────────────── */
+.usr-stats { display:flex; gap:.5rem; flex-wrap:wrap; }
+.usr-stat {
+    padding:.3rem .9rem; border-radius:30px; font-size:.75rem; font-weight:600;
+    display:flex; align-items:center; gap:.35rem;
+}
+.usr-stat--all    { background:rgba(255,255,255,.1); color:#e2e8f0; }
+.usr-stat--active { background:rgba(34,197,94,.2);  color:#86efac; }
+.usr-stat--inactive { background:rgba(239,68,68,.2); color:#fca5a5; }
+.usr-stat--staff  { background:rgba(99,102,241,.25); color:#c7d2fe; }
+.usr-stat--never  { background:rgba(148,163,184,.15); color:#94a3b8; }
+
+/* ── Tabs ────────────────────────────────────────────── */
+.usr-tabs {
+    display:flex; gap:.5rem;
+    background:var(--card-bg,#fff); border-radius:14px;
+    padding:.5rem; box-shadow:0 2px 8px rgba(0,0,0,.05);
+    border:1px solid var(--border-color,#e2e8f0);
+}
+.usr-tab {
+    flex:1; padding:.55rem 1rem; border-radius:10px; font-size:.85rem;
+    font-weight:600; border:none; cursor:pointer; transition:.15s;
+    display:flex; align-items:center; justify-content:center; gap:.5rem;
+    background:transparent; color:var(--text-muted,#64748b);
+}
+.usr-tab.active {
+    background:linear-gradient(135deg,#6366f1,#4f46e5);
+    color:#fff; box-shadow:0 4px 12px rgba(99,102,241,.3);
+}
+.usr-tab:not(.active):hover { background:var(--hover-bg,#f1f5f9); }
+.usr-tab__badge {
+    font-size:.7rem; padding:.1rem .45rem; border-radius:20px;
+    background:rgba(255,255,255,.25);
+}
+.usr-tab:not(.active) .usr-tab__badge {
+    background:var(--hover-bg,#f1f5f9); color:var(--text-muted,#64748b);
+}
+
+/* ── Filters ─────────────────────────────────────────── */
+.usr-filters {
+    background:var(--card-bg,#fff); border-radius:14px;
+    padding:.75rem 1rem; display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+}
+.usr-filters form { display:contents; }
+.usr-search {
+    flex:1; min-width:180px; display:flex; align-items:center;
+    gap:.5rem; background:var(--input-bg,#f8fafc); border:1px solid var(--border-color,#e2e8f0);
+    border-radius:10px; padding:.4rem .75rem;
+}
+.usr-search input {
+    border:none; background:transparent; outline:none; width:100%;
+    font-size:.85rem; color:var(--text-main,#1e293b);
+}
+.usr-select {
+    border:1px solid var(--border-color,#e2e8f0); border-radius:10px;
+    padding:.4rem .75rem; padding-inline-end:2rem; font-size:.82rem;
+    background:var(--input-bg,#f8fafc); color:var(--text-main,#1e293b);
+    outline:none; cursor:pointer; appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%2364748b' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+    background-position:left 0.65rem center; background-repeat:no-repeat; background-size:.85rem;
+}
+.usr-btn {
+    padding:.45rem 1rem; border-radius:10px; font-size:.82rem; font-weight:600;
+    border:none; cursor:pointer; transition:.15s;
+}
+.usr-btn--primary { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; }
+.usr-btn--primary:hover { opacity:.9; }
+.usr-btn--outline { background:transparent; border:1px solid var(--border-color,#e2e8f0); color:var(--text-main,#1e293b); }
+.usr-btn--outline:hover { background:var(--hover-bg,#f1f5f9); }
+.usr-btn--green { background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; }
+.usr-btn--green:hover { opacity:.9; }
+.usr-btn--danger { background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; }
+
+/* ── Table ───────────────────────────────────────────── */
+.usr-table-wrap {
+    background:var(--card-bg,#fff); border-radius:16px; overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+    overflow-x:auto;
+}
+.usr-table { width:100%; min-width:680px; border-collapse:collapse; font-size:.84rem; }
+.usr-table thead th {
+    background:var(--table-head-bg,#f8fafc); color:var(--text-muted,#64748b);
+    font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;
+    padding:.65rem 1rem; text-align:right; border-bottom:1px solid var(--border-color,#e2e8f0);
+    white-space:nowrap;
+}
+.usr-table tbody tr { transition:background .12s; }
+.usr-table tbody tr:hover { background:var(--hover-bg,#f8fafc); }
+.usr-table tbody td {
+    padding:.7rem 1rem; border-bottom:1px solid var(--border-color,#e2e8f0);
+    color:var(--text-main,#1e293b); vertical-align:middle;
+}
+.usr-table tbody tr:last-child td { border-bottom:none; }
+
+/* ── Badges ──────────────────────────────────────────── */
+.usr-badge {
+    display:inline-flex; align-items:center; gap:.3rem;
+    padding:.2rem .6rem; border-radius:20px; font-size:.72rem; font-weight:600;
+}
+.usr-badge--active   { background:#f0fdf4; color:#16a34a; }
+.usr-badge--inactive { background:#fef2f2; color:#dc2626; }
+.usr-badge--admin    { background:#eff6ff; color:#2563eb; }
+.usr-badge--staff    { background:#f5f3ff; color:#7c3aed; }
+.usr-badge--super    { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; }
+.usr-badge--never    { background:#f1f5f9; color:#64748b; }
+
+/* ── Action icons ────────────────────────────────────── */
+.usr-actions { display:flex; align-items:center; gap:.4rem; }
+.usr-icon-btn {
+    width:30px; height:30px; border-radius:8px; border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:.8rem;
+    transition:.15s;
+}
+.usr-icon-btn--view   { background:#eff6ff; color:#2563eb; }
+.usr-icon-btn--toggle { background:#f0fdf4; color:#16a34a; }
+.usr-icon-btn--toggle.is-inactive { background:#fef2f2; color:#dc2626; }
+.usr-icon-btn--edit   { background:#f5f3ff; color:#7c3aed; }
+.usr-icon-btn:hover { filter:brightness(.9); }
+
+/* ── Avatar ──────────────────────────────────────────── */
+.usr-avatar {
+    width:32px; height:32px; border-radius:50%; display:inline-flex;
+    align-items:center; justify-content:center; font-size:.78rem; font-weight:700;
+    color:#fff; flex-shrink:0;
+}
+
+/* ── User cell ───────────────────────────────────────── */
+.usr-cell { display:flex; align-items:center; gap:.6rem; }
+.usr-cell__name { font-weight:600; font-size:.84rem; color:var(--text-main,#1e293b); }
+.usr-cell__sub  { font-size:.74rem; color:var(--text-muted,#64748b); }
+
+/* ── Tenant pill ─────────────────────────────────────── */
+.usr-tenant-pill {
+    display:inline-flex; align-items:center; gap:.35rem;
+    background:var(--hover-bg,#f1f5f9); padding:.15rem .6rem;
+    border-radius:20px; font-size:.74rem; color:var(--text-muted,#64748b);
+}
+
+/* ── Staff cards ─────────────────────────────────────── */
+.usr-staff-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1rem; }
+.usr-staff-card {
+    background:var(--card-bg,#fff); border-radius:16px;
+    border:1px solid var(--border-color,#e2e8f0); padding:1.25rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); transition:.15s;
+}
+.usr-staff-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.1); transform:translateY(-1px); }
+.usr-staff-card__header { display:flex; align-items:center; gap:.75rem; margin-bottom:1rem; }
+.usr-staff-card__info { flex:1; min-width:0; }
+.usr-staff-card__name { font-weight:700; font-size:.95rem; color:var(--text-main,#1e293b); }
+.usr-staff-card__user { font-size:.78rem; color:var(--text-muted,#64748b); }
+.usr-staff-card__perms { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1rem; }
+.usr-perm-chip {
+    display:inline-flex; align-items:center; gap:.3rem;
+    padding:.2rem .6rem; border-radius:20px; font-size:.72rem; font-weight:600;
+    background:#f5f3ff; color:#7c3aed;
+}
+.usr-perm-chip--off { background:#f1f5f9; color:#94a3b8; }
+.usr-staff-card__footer {
+    display:flex; justify-content:flex-end; gap:.5rem; padding-top:.75rem;
+    border-top:1px solid var(--border-color,#e2e8f0);
+}
+
+/* ── Add button bar ──────────────────────────────────── */
+.usr-add-bar {
+    display:flex; justify-content:flex-end;
+    background:var(--card-bg,#fff); border-radius:14px;
+    padding:.75rem 1rem; box-shadow:0 2px 8px rgba(0,0,0,.05);
+    border:1px solid var(--border-color,#e2e8f0);
+}
+
+/* ── Empty state ─────────────────────────────────────── */
+.usr-empty { text-align:center; padding:3rem 1rem; color:var(--text-muted,#64748b); }
+.usr-empty i { font-size:2.5rem; margin-bottom:.75rem; opacity:.4; }
+
+/* ── Pagination ──────────────────────────────────────── */
+.usr-pagination {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:1rem; flex-wrap:wrap; padding:.5rem 0;
+}
+.usr-page-info { font-size:.82rem; color:var(--text-muted,#64748b); }
+.usr-page-btns { display:flex; gap:.35rem; }
+.usr-page-btn {
+    padding:.3rem .65rem; border-radius:8px; font-size:.8rem; font-weight:600;
+    border:1px solid var(--border-color,#e2e8f0); cursor:pointer;
+    background:var(--card-bg,#fff); color:var(--text-main,#1e293b); transition:.12s;
+}
+.usr-page-btn:hover { background:var(--hover-bg,#f1f5f9); }
+.usr-page-btn.active { background:#6366f1; color:#fff; border-color:#6366f1; }
+.usr-page-btn:disabled { opacity:.4; cursor:default; }
+
+/* ── Modal ───────────────────────────────────────────── */
+.usr-modal-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+    z-index:1050; align-items:center; justify-content:center; padding:1rem;
+}
+.usr-modal-overlay.open { display:flex; }
+.usr-modal {
+    background:var(--card-bg,#fff); border-radius:20px; width:100%; max-width:520px;
+    box-shadow:0 20px 60px rgba(0,0,0,.2); max-height:90vh; overflow-y:auto;
+}
+.usr-modal__head {
+    padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color,#e2e8f0);
+    display:flex; align-items:center; justify-content:space-between;
+}
+.usr-modal__title { font-size:1rem; font-weight:700; color:var(--text-main,#1e293b); margin:0; }
+.usr-modal__close {
+    width:32px; height:32px; border-radius:8px; border:none; cursor:pointer;
+    background:var(--hover-bg,#f1f5f9); color:var(--text-muted,#64748b);
+    display:flex; align-items:center; justify-content:center;
+}
+.usr-modal__body { padding:1.5rem; display:flex; flex-direction:column; gap:1rem; }
+.usr-modal__foot {
+    padding:1rem 1.5rem; border-top:1px solid var(--border-color,#e2e8f0);
+    display:flex; justify-content:flex-end; gap:.75rem;
+}
+
+/* Form */
+.usr-form-row { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+.usr-form-group { display:flex; flex-direction:column; gap:.3rem; }
+.usr-form-label { font-size:.8rem; font-weight:600; color:var(--text-muted,#64748b); }
+.usr-form-input {
+    border:1px solid var(--border-color,#e2e8f0); border-radius:10px;
+    padding:.45rem .75rem; font-size:.85rem; color:var(--text-main,#1e293b);
+    background:var(--input-bg,#f8fafc); outline:none; transition:.15s;
+    width:100%;
+}
+.usr-form-input:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.12); }
+
+/* Permissions checklist */
+.usr-perm-list { display:flex; flex-direction:column; gap:.5rem; }
+.usr-perm-item {
+    display:flex; align-items:center; gap:.75rem;
+    padding:.6rem .75rem; border-radius:10px;
+    border:1px solid var(--border-color,#e2e8f0);
+    cursor:pointer; transition:.12s; user-select:none;
+}
+.usr-perm-item:hover { background:var(--hover-bg,#f1f5f9); }
+.usr-perm-item input[type=checkbox] { display:none; }
+.usr-perm-item__check {
+    width:20px; height:20px; border-radius:6px; flex-shrink:0;
+    border:2px solid #cbd5e1; display:flex; align-items:center; justify-content:center;
+    font-size:.7rem; color:#fff; transition:.12s;
+}
+.usr-perm-item.checked .usr-perm-item__check {
+    background:#6366f1; border-color:#6366f1;
+}
+.usr-perm-item__icon { width:28px; height:28px; border-radius:8px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:.8rem; }
+.usr-perm-item.checked .usr-perm-item__icon { background:#f5f3ff; color:#7c3aed; }
+.usr-perm-item__label { flex:1; font-size:.85rem; font-weight:500; color:var(--text-main,#1e293b); }
+
+/* Detail view card */
+.usr-detail-row { display:flex; gap:.75rem; padding:.5rem 0; border-bottom:1px solid var(--border-color,#f1f5f9); }
+.usr-detail-row:last-child { border-bottom:none; }
+.usr-detail-label { width:120px; font-size:.8rem; color:var(--text-muted,#64748b); flex-shrink:0; }
+.usr-detail-val { font-size:.85rem; font-weight:500; color:var(--text-main,#1e293b); }
+
+/* Toast */
+.usr-toast {
+    position:fixed; top:1.5rem; right:1.5rem; z-index:9999;
+    padding:.65rem 1.25rem; border-radius:12px; font-size:.85rem; font-weight:600;
+    box-shadow:0 4px 16px rgba(0,0,0,.15); display:none;
+    animation:toastIn .25s ease;
+}
+@keyframes toastIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
+.usr-toast--ok  { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+.usr-toast--err { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+
+/* Mobile */
+@media(max-width:767px){
+    .usr-hero__inner { flex-direction:column; align-items:flex-start; gap:.75rem; }
+    .usr-form-row { grid-template-columns:1fr; }
+    .usr-staff-grid { grid-template-columns:1fr; }
+    .usr-table thead th:nth-child(3),.usr-table tbody td:nth-child(3) { display:none; }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="cx-coming-soon">
-    <div class="cx-coming-soon__icon"><i class="fas fa-users-cog"></i></div>
-    <h3 class="cx-coming-soon__title">إدارة المستخدمين</h3>
-    <p class="cx-coming-soon__text">هذا القسم قيد التطوير</p>
+<div class="usr-wrapper">
+
+  <!-- ── Hero ─────────────────────────────────────────────────── -->
+  <div class="usr-hero">
+    <div class="usr-hero__orb"></div>
+    <div class="usr-hero__inner">
+      <div class="usr-hero__left">
+        <div class="usr-hero__icon"><i class="fas fa-users-cog"></i></div>
+        <div>
+          <p class="usr-hero__title">إدارة المستخدمين</p>
+          <p class="usr-hero__desc">مستخدمو المشتركين ومساعدو المنصة</p>
+        </div>
+      </div>
+      <div class="usr-stats">
+        <span class="usr-stat usr-stat--all"><i class="fas fa-users"></i> {{ stats.total_tenant_users }} مستخدم</span>
+        <span class="usr-stat usr-stat--active"><i class="fas fa-circle"></i> {{ stats.active }} نشط</span>
+        <span class="usr-stat usr-stat--inactive"><i class="fas fa-circle"></i> {{ stats.inactive }} معطّل</span>
+        <span class="usr-stat usr-stat--staff"><i class="fas fa-shield-alt"></i> {{ stats.platform_staff }} مساعد</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ──────────────────────────────────────────────────── -->
+  <div class="usr-tabs">
+    <button class="usr-tab {% if tab == 'tenant' %}active{% endif %}"
+            onclick="switchTab('tenant')">
+      <i class="fas fa-user"></i> مستخدمو المشتركين
+      <span class="usr-tab__badge">{{ stats.total_tenant_users }}</span>
+    </button>
+    <button class="usr-tab {% if tab == 'staff' %}active{% endif %}"
+            onclick="switchTab('staff')">
+      <i class="fas fa-shield-alt"></i> مساعدو المنصة
+      <span class="usr-tab__badge">{{ stats.platform_staff }}</span>
+    </button>
+  </div>
+
+  <!-- ══════════════ TAB: TENANT USERS ═══════════════════════════ -->
+  <div id="tabTenant" {% if tab != 'tenant' %}style="display:none"{% endif %}>
+
+    <!-- Filters -->
+    <div class="usr-filters mb-3">
+      <form method="get" action="?tab=tenant">
+        <div class="usr-search">
+          <i class="fas fa-search" style="color:#94a3b8;font-size:.8rem;"></i>
+          <input type="text" name="q" value="{{ search }}" placeholder="بحث باسم المستخدم أو الإيميل…">
+        </div>
+        <select name="tenant" class="usr-select">
+          <option value="">كل المشتركين</option>
+          {% for t in tenants %}<option value="{{ t.pk }}" {% if tenant_filter == t.pk|stringformat:"d" %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+        </select>
+        <select name="status" class="usr-select">
+          <option value="">كل الحالات</option>
+          <option value="active"       {% if status_filter == 'active'       %}selected{% endif %}>نشط</option>
+          <option value="inactive"     {% if status_filter == 'inactive'     %}selected{% endif %}>معطّل</option>
+          <option value="never_logged" {% if status_filter == 'never_logged' %}selected{% endif %}>لم يسجّل دخولاً</option>
+          <option value="admin"        {% if status_filter == 'admin'        %}selected{% endif %}>مديرو النشاط</option>
+        </select>
+        <button type="submit" class="usr-btn usr-btn--primary"><i class="fas fa-filter"></i> تصفية</button>
+        <a href="?tab=tenant" class="usr-btn usr-btn--outline"><i class="fas fa-times"></i> مسح</a>
+      </form>
+      {% if request.user.is_superuser %}
+      <button class="usr-btn usr-btn--green" style="margin-right:auto" onclick="openCreateUserModal()">
+        <i class="fas fa-plus"></i> مستخدم جديد
+      </button>
+      {% endif %}
+    </div>
+
+    <!-- Table -->
+    <div class="usr-table-wrap">
+      <table class="usr-table">
+        <thead>
+          <tr>
+            <th>المستخدم</th>
+            <th>المشترك</th>
+            <th>آخر دخول</th>
+            <th>النوع</th>
+            <th>الحالة</th>
+            <th>إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in tenant_users %}
+          <tr>
+            <td>
+              <div class="usr-cell">
+                <div class="usr-avatar" style="background:{{ u.pk|stringformat:"d"|add:"0" }};">{% firstof u.first_name|first u.username|first %}</div>
+                <div>
+                  <div class="usr-cell__name">{{ u.get_full_name|default:u.username }}</div>
+                  <div class="usr-cell__sub">{{ u.username }}{% if u.email %} · {{ u.email }}{% endif %}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if u.tenant %}
+              <span class="usr-tenant-pill"><i class="fas fa-building" style="font-size:.7rem;"></i>{{ u.tenant.name }}</span>
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if u.last_login %}{{ u.last_login|date:"Y-m-d" }}
+              {% else %}<span class="usr-badge usr-badge--never"><i class="fas fa-clock"></i> لم يدخل</span>{% endif %}
+            </td>
+            <td>
+              {% if u.is_tenant_admin %}<span class="usr-badge usr-badge--admin"><i class="fas fa-user-cog"></i> مدير</span>
+              {% else %}<span class="usr-badge" style="background:#f1f5f9;color:#64748b;">موظف</span>{% endif %}
+            </td>
+            <td>
+              {% if u.is_active %}<span class="usr-badge usr-badge--active"><i class="fas fa-circle" style="font-size:.55rem;"></i> نشط</span>
+              {% else %}<span class="usr-badge usr-badge--inactive"><i class="fas fa-circle" style="font-size:.55rem;"></i> معطّل</span>{% endif %}
+            </td>
+            <td>
+              <div class="usr-actions">
+                <button class="usr-icon-btn usr-icon-btn--view" title="عرض التفاصيل" onclick="viewUser({{ u.pk }})">
+                  <i class="fas fa-eye"></i>
+                </button>
+                {% if request.user.is_superuser %}
+                <button class="usr-icon-btn usr-icon-btn--toggle {% if not u.is_active %}is-inactive{% endif %}"
+                        title="{% if u.is_active %}تعطيل{% else %}تفعيل{% endif %}"
+                        data-pk="{{ u.pk }}" data-active="{{ u.is_active|yesno:'true,false' }}"
+                        onclick="toggleUser(this)">
+                  <i class="fas {% if u.is_active %}fa-toggle-on{% else %}fa-toggle-off{% endif %}"></i>
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-muted,#64748b);">
+            <i class="fas fa-inbox" style="font-size:2rem;margin-bottom:.5rem;display:block;opacity:.3;"></i>
+            لا توجد نتائج
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB: PLATFORM STAFF ═════════════════════════ -->
+  <div id="tabStaff" {% if tab != 'staff' %}style="display:none"{% endif %}>
+
+    {% if request.user.is_superuser %}
+    <div class="usr-add-bar mb-3">
+      <button class="usr-btn usr-btn--green" onclick="openStaffModal()">
+        <i class="fas fa-plus"></i> إضافة مساعد منصة
+      </button>
+    </div>
+    {% endif %}
+
+    <div class="usr-staff-grid">
+      {% for s in staff_users %}
+      <div class="usr-staff-card">
+        <div class="usr-staff-card__header">
+          <div class="usr-avatar" style="background:{% if s.is_superuser %}linear-gradient(135deg,#4f46e5,#7c3aed){% else %}#7c3aed{% endif %};width:44px;height:44px;font-size:.9rem;">
+            {% firstof s.first_name|first s.username|first %}
+          </div>
+          <div class="usr-staff-card__info">
+            <div class="usr-staff-card__name">{{ s.get_full_name|default:s.username }}</div>
+            <div class="usr-staff-card__user">
+              @{{ s.username }} ·
+              {% if s.is_superuser %}<span class="usr-badge usr-badge--super" style="padding:.1rem .45rem;font-size:.68rem;">سوبر أدمن</span>
+              {% else %}<span class="usr-badge usr-badge--staff" style="padding:.1rem .45rem;font-size:.68rem;">مساعد</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="usr-staff-card__perms">
+          {% if s.is_superuser %}
+          {% for perm_key, perm_label, perm_icon in PLATFORM_PERMS %}
+          <span class="usr-perm-chip"><i class="fas {{ perm_icon }}"></i> {{ perm_label }}</span>
+          {% endfor %}
+          {% else %}
+          {% for perm_key, perm_label, perm_icon in PLATFORM_PERMS %}
+          {% if perm_key in s.platform_permissions %}
+          <span class="usr-perm-chip"><i class="fas {{ perm_icon }}"></i> {{ perm_label }}</span>
+          {% endif %}
+          {% endfor %}
+          {% if not s.platform_permissions %}
+          <span style="font-size:.78rem;color:#94a3b8;">لا توجد صلاحيات</span>
+          {% endif %}
+          {% endif %}
+        </div>
+        <div class="usr-staff-card__footer">
+          <div style="font-size:.78rem;color:#94a3b8;flex:1;align-self:center;">
+            <i class="fas fa-calendar-alt"></i> {{ s.date_joined|date:"Y-m-d" }}
+          </div>
+          {% if request.user.is_superuser and not s.is_superuser %}
+          <button class="usr-btn usr-btn--outline" style="padding:.3rem .75rem;font-size:.78rem;"
+                  onclick="editStaff({{ s.pk }}, '{{ s.first_name|escapejs }}', '{{ s.last_name|escapejs }}', '{{ s.email|escapejs }}', '{{ s.username|escapejs }}', {{ s.platform_permissions|default:'[]' }})">
+            <i class="fas fa-edit"></i> تعديل
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div class="usr-empty" style="grid-column:1/-1;">
+        <i class="fas fa-shield-alt"></i>
+        <p>لا يوجد مساعدون للمنصة بعد</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div><!-- /usr-wrapper -->
+
+<!-- ════════════ MODAL: View User ══════════════════════════════════ -->
+<div class="usr-modal-overlay" id="modalViewUser">
+  <div class="usr-modal">
+    <div class="usr-modal__head">
+      <h6 class="usr-modal__title">تفاصيل المستخدم</h6>
+      <button class="usr-modal__close" onclick="closeModal('modalViewUser')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="usr-modal__body" id="modalViewBody">
+      <div style="text-align:center;padding:2rem;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+    </div>
+  </div>
 </div>
+
+{% if request.user.is_superuser %}
+<!-- ════════════ MODAL: Create User ════════════════════════════════ -->
+<div class="usr-modal-overlay" id="modalCreateUser">
+  <div class="usr-modal">
+    <div class="usr-modal__head">
+      <h6 class="usr-modal__title">إنشاء مستخدم جديد</h6>
+      <button class="usr-modal__close" onclick="closeModal('modalCreateUser')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="usr-modal__body">
+      <div class="usr-form-row">
+        <div class="usr-form-group">
+          <label class="usr-form-label">الاسم الأول</label>
+          <input class="usr-form-input" id="cuFirst" placeholder="أحمد">
+        </div>
+        <div class="usr-form-group">
+          <label class="usr-form-label">الاسم الأخير</label>
+          <input class="usr-form-input" id="cuLast" placeholder="محمد">
+        </div>
+      </div>
+      <div class="usr-form-row">
+        <div class="usr-form-group">
+          <label class="usr-form-label">اسم المستخدم <span style="color:#ef4444">*</span></label>
+          <input class="usr-form-input" id="cuUsername" placeholder="ahmed.m">
+        </div>
+        <div class="usr-form-group">
+          <label class="usr-form-label">البريد الإلكتروني</label>
+          <input class="usr-form-input" id="cuEmail" type="email" placeholder="ahmed@example.com">
+        </div>
+      </div>
+      <div class="usr-form-group">
+        <label class="usr-form-label">كلمة المرور <span style="color:#ef4444">*</span></label>
+        <input class="usr-form-input" id="cuPassword" type="password" placeholder="••••••••">
+      </div>
+      <div class="usr-form-group">
+        <label class="usr-form-label">المشترك</label>
+        <select class="usr-form-input usr-select" id="cuTenant">
+          <option value="">— اختر المشترك —</option>
+          {% for t in tenants %}<option value="{{ t.pk }}">{{ t.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <label class="usr-perm-item" onclick="this.classList.toggle('checked')" id="cuAdminItem">
+        <input type="checkbox" id="cuIsAdmin">
+        <span class="usr-perm-item__check"><i class="fas fa-check"></i></span>
+        <span class="usr-perm-item__icon"><i class="fas fa-user-cog"></i></span>
+        <span class="usr-perm-item__label">مدير النشاط</span>
+      </label>
+    </div>
+    <div class="usr-modal__foot">
+      <button class="usr-btn usr-btn--outline" onclick="closeModal('modalCreateUser')">إلغاء</button>
+      <button class="usr-btn usr-btn--primary" onclick="submitCreateUser()"><i class="fas fa-plus"></i> إنشاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MODAL: Staff ══════════════════════════════════════ -->
+<div class="usr-modal-overlay" id="modalStaff">
+  <div class="usr-modal">
+    <div class="usr-modal__head">
+      <h6 class="usr-modal__title" id="staffModalTitle">إضافة مساعد منصة</h6>
+      <button class="usr-modal__close" onclick="closeModal('modalStaff')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="usr-modal__body">
+      <input type="hidden" id="staffPk" value="">
+      <div id="staffUsernameRow" class="usr-form-row">
+        <div class="usr-form-group">
+          <label class="usr-form-label">اسم المستخدم <span style="color:#ef4444">*</span></label>
+          <input class="usr-form-input" id="staffUsername" placeholder="admin.helper">
+        </div>
+        <div class="usr-form-group">
+          <label class="usr-form-label">كلمة المرور <span style="color:#ef4444">*</span></label>
+          <input class="usr-form-input" id="staffPassword" type="password" placeholder="••••••••">
+        </div>
+      </div>
+      <div class="usr-form-row">
+        <div class="usr-form-group">
+          <label class="usr-form-label">الاسم الأول</label>
+          <input class="usr-form-input" id="staffFirst">
+        </div>
+        <div class="usr-form-group">
+          <label class="usr-form-label">الاسم الأخير</label>
+          <input class="usr-form-input" id="staffLast">
+        </div>
+      </div>
+      <div class="usr-form-group">
+        <label class="usr-form-label">البريد الإلكتروني</label>
+        <input class="usr-form-input" id="staffEmail" type="email">
+      </div>
+      <div style="font-size:.8rem;font-weight:600;color:var(--text-muted,#64748b);margin-top:.25rem;">الصلاحيات</div>
+      <div class="usr-perm-list">
+        {% for perm_key, perm_label, perm_icon in PLATFORM_PERMS %}
+        <label class="usr-perm-item" data-perm="{{ perm_key }}" onclick="togglePerm(this)">
+          <input type="checkbox" value="{{ perm_key }}">
+          <span class="usr-perm-item__check"><i class="fas fa-check"></i></span>
+          <span class="usr-perm-item__icon"><i class="fas {{ perm_icon }}"></i></span>
+          <span class="usr-perm-item__label">{{ perm_label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="usr-modal__foot">
+      <button class="usr-btn usr-btn--outline" onclick="closeModal('modalStaff')">إلغاء</button>
+      <button class="usr-btn usr-btn--primary" onclick="submitStaff()"><i class="fas fa-save"></i> حفظ</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Toast -->
+<div class="usr-toast" id="usrToast"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+const URL_TOGGLE  = (pk) => `/system/users/api/${pk}/toggle-active/`;
+const URL_DETAIL  = (pk) => `/system/users/api/${pk}/detail/`;
+const URL_CREATE  = '/system/users/api/create/';
+const URL_STAFF_CREATE = '/system/users/api/staff/create/';
+const URL_STAFF_UPDATE = (pk) => `/system/users/api/staff/${pk}/update/`;
+
+/* ── Tab switching ────────────────────────────────────────── */
+function switchTab(name) {
+    document.getElementById('tabTenant').style.display = name === 'tenant' ? '' : 'none';
+    document.getElementById('tabStaff').style.display  = name === 'staff'  ? '' : 'none';
+    document.querySelectorAll('.usr-tab').forEach((btn, i) => {
+        btn.classList.toggle('active', (i === 0 && name === 'tenant') || (i === 1 && name === 'staff'));
+    });
+    // Update URL without reload
+    const url = new URL(window.location);
+    url.searchParams.set('tab', name);
+    history.replaceState({}, '', url);
+}
+
+/* ── Avatar colour ────────────────────────────────────────── */
+const PALETTE = ['#6366f1','#8b5cf6','#ec4899','#0ea5e9','#14b8a6','#f59e0b','#ef4444'];
+document.querySelectorAll('.usr-avatar').forEach(el => {
+    const text = el.textContent.trim();
+    const idx  = text.charCodeAt(0) % PALETTE.length;
+    el.style.background = PALETTE[idx];
+});
+
+/* ── Modal helpers ────────────────────────────────────────── */
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.usr-modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+/* ── View user detail ─────────────────────────────────────── */
+function viewUser(pk) {
+    document.getElementById('modalViewBody').innerHTML = '<div style="text-align:center;padding:2rem;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>';
+    document.getElementById('modalViewUser').classList.add('open');
+    fetch(URL_DETAIL(pk)).then(r => r.json()).then(d => {
+        if (!d.success) return;
+        document.getElementById('modalViewBody').innerHTML = `
+            <div class="usr-detail-row"><span class="usr-detail-label">الاسم</span><span class="usr-detail-val">${d.full_name || d.username}</span></div>
+            <div class="usr-detail-row"><span class="usr-detail-label">اسم المستخدم</span><span class="usr-detail-val">@${d.username}</span></div>
+            <div class="usr-detail-row"><span class="usr-detail-label">البريد</span><span class="usr-detail-val">${d.email || '—'}</span></div>
+            <div class="usr-detail-row"><span class="usr-detail-label">الهاتف</span><span class="usr-detail-val">${d.phone || '—'}</span></div>
+            <div class="usr-detail-row"><span class="usr-detail-label">المشترك</span><span class="usr-detail-val">${d.tenant}</span></div>
+            <div class="usr-detail-row"><span class="usr-detail-label">الحالة</span><span class="usr-detail-val">${d.is_active ? '<span class="usr-badge usr-badge--active">نشط</span>' : '<span class="usr-badge usr-badge--inactive">معطّل</span>'}</span></div>
+            <div class="usr-detail-row"><span class="usr-detail-label">النوع</span><span class="usr-detail-val">${d.is_tenant_admin ? '<span class="usr-badge usr-badge--admin">مدير نشاط</span>' : 'موظف'}</span></div>
+            <div class="usr-detail-row"><span class="usr-detail-label">تاريخ الانضمام</span><span class="usr-detail-val">${d.date_joined}</span></div>
+            <div class="usr-detail-row"><span class="usr-detail-label">آخر دخول</span><span class="usr-detail-val">${d.last_login}</span></div>
+        `;
+    });
+}
+
+/* ── Toggle active ────────────────────────────────────────── */
+function toggleUser(btn) {
+    const pk = btn.dataset.pk;
+    fetch(URL_TOGGLE(pk), {method:'POST', headers:{'X-CSRFToken':CSRF}})
+        .then(r => r.json()).then(d => {
+            if (!d.success) return showToast('حدث خطأ', 'err');
+            const active = d.is_active;
+            btn.dataset.active = active;
+            btn.querySelector('i').className = `fas ${active ? 'fa-toggle-on' : 'fa-toggle-off'}`;
+            btn.classList.toggle('is-inactive', !active);
+            btn.title = active ? 'تعطيل' : 'تفعيل';
+            const row = btn.closest('tr');
+            const badgeCell = row.querySelector('td:nth-child(5)');
+            badgeCell.innerHTML = active
+                ? '<span class="usr-badge usr-badge--active"><i class="fas fa-circle" style="font-size:.55rem;"></i> نشط</span>'
+                : '<span class="usr-badge usr-badge--inactive"><i class="fas fa-circle" style="font-size:.55rem;"></i> معطّل</span>';
+            showToast(active ? 'تم تفعيل المستخدم' : 'تم تعطيل المستخدم', 'ok');
+        });
+}
+
+/* ── Create user modal ────────────────────────────────────── */
+function openCreateUserModal() {
+    ['cuFirst','cuLast','cuUsername','cuEmail','cuPassword'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cuTenant').value = '';
+    document.getElementById('cuAdminItem').classList.remove('checked');
+    document.getElementById('modalCreateUser').classList.add('open');
+}
+
+function submitCreateUser() {
+    const payload = {
+        username:        document.getElementById('cuUsername').value.trim(),
+        password:        document.getElementById('cuPassword').value.trim(),
+        email:           document.getElementById('cuEmail').value.trim(),
+        first_name:      document.getElementById('cuFirst').value.trim(),
+        last_name:       document.getElementById('cuLast').value.trim(),
+        tenant_id:       document.getElementById('cuTenant').value || null,
+        is_tenant_admin: document.getElementById('cuAdminItem').classList.contains('checked'),
+    };
+    if (!payload.username || !payload.password) { showToast('اسم المستخدم وكلمة المرور مطلوبان', 'err'); return; }
+    fetch(URL_CREATE, {
+        method:'POST', headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},
+        body:JSON.stringify(payload),
+    }).then(r => r.json()).then(d => {
+        if (d.success) { closeModal('modalCreateUser'); showToast(d.message, 'ok'); setTimeout(()=>location.reload(), 1200); }
+        else showToast(d.error || 'حدث خطأ', 'err');
+    });
+}
+
+/* ── Staff modal ──────────────────────────────────────────── */
+function togglePerm(label) {
+    label.classList.toggle('checked');
+}
+
+function openStaffModal() {
+    document.getElementById('staffPk').value = '';
+    document.getElementById('staffModalTitle').textContent = 'إضافة مساعد منصة';
+    document.getElementById('staffUsernameRow').style.display = '';
+    ['staffUsername','staffPassword','staffFirst','staffLast','staffEmail'].forEach(id => document.getElementById(id).value = '');
+    document.querySelectorAll('.usr-perm-item').forEach(l => l.classList.remove('checked'));
+    document.getElementById('modalStaff').classList.add('open');
+}
+
+function editStaff(pk, first, last, email, username, permsArr) {
+    document.getElementById('staffPk').value = pk;
+    document.getElementById('staffModalTitle').textContent = `تعديل: ${username}`;
+    document.getElementById('staffUsernameRow').style.display = 'none';
+    document.getElementById('staffFirst').value = first;
+    document.getElementById('staffLast').value  = last;
+    document.getElementById('staffEmail').value = email;
+    document.querySelectorAll('.usr-perm-item').forEach(l => {
+        l.classList.toggle('checked', permsArr.includes(l.dataset.perm));
+    });
+    document.getElementById('modalStaff').classList.add('open');
+}
+
+function submitStaff() {
+    const pk = document.getElementById('staffPk').value;
+    const perms = [...document.querySelectorAll('.usr-perm-item.checked')].map(l => l.dataset.perm);
+    const payload = {
+        first_name: document.getElementById('staffFirst').value.trim(),
+        last_name:  document.getElementById('staffLast').value.trim(),
+        email:      document.getElementById('staffEmail').value.trim(),
+        permissions: perms,
+    };
+    if (!pk) {
+        payload.username = document.getElementById('staffUsername').value.trim();
+        payload.password = document.getElementById('staffPassword').value.trim();
+        if (!payload.username || !payload.password) { showToast('اسم المستخدم وكلمة المرور مطلوبان', 'err'); return; }
+    }
+    const url = pk ? URL_STAFF_UPDATE(pk) : URL_STAFF_CREATE;
+    fetch(url, {
+        method:'POST', headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},
+        body:JSON.stringify(payload),
+    }).then(r => r.json()).then(d => {
+        if (d.success) { closeModal('modalStaff'); showToast(d.message, 'ok'); setTimeout(()=>location.reload(), 1200); }
+        else showToast(d.error || 'حدث خطأ', 'err');
+    });
+}
+
+/* ── Toast ────────────────────────────────────────────────── */
+function showToast(msg, type='ok') {
+    const t = document.getElementById('usrToast');
+    t.textContent = msg;
+    t.className = `usr-toast usr-toast--${type}`;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+</script>
 {% endblock %}

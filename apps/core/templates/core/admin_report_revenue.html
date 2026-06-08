@@ -1,10 +1,227 @@
 {% extends "layouts/dashboard.html" %}
-{% load static %}
+{% load static humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_reports.css' %}?v=1.1">
+{% endblock %}
+
 {% block page_title %}الإيرادات الشهرية{% endblock %}
+{% block page_description %}تقدير الإيرادات الشهرية وإحصائيات استخدام المشتركين{% endblock %}
+
 {% block content %}
-<div class="cx-coming-soon">
-    <div class="cx-coming-soon__icon"><i class="fas fa-chart-line"></i></div>
-    <h3 class="cx-coming-soon__title">الإيرادات الشهرية</h3>
-    <p class="cx-coming-soon__text">هذا القسم قيد التطوير</p>
+<div class="rpt-scene">
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<div class="rpt-hero">
+    <div class="rpt-hero__orb rpt-hero__orb--1"></div>
+    <div class="rpt-hero__orb rpt-hero__orb--2"></div>
+    <div class="rpt-hero__inner">
+        <div class="rpt-hero__left">
+            <div class="rpt-hero__icon"><i class="fas fa-chart-line"></i></div>
+            <div>
+                <div class="rpt-hero__kicker">تقارير النظام</div>
+                <h2 class="rpt-hero__title">الإيرادات الشهرية</h2>
+                <p class="rpt-hero__desc">تقدير MRR بناءً على الباقات النشطة واستخدام المشتركين</p>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- ═══════════════ MRR CARDS ═══════════════ -->
+<div class="rpt-alerts">
+    <div class="rpt-alert-card rpt-alert-card--indigo">
+        <div class="rpt-alert-card__num">{{ total_mrr }}</div>
+        <div class="rpt-alert-card__lbl">MRR المقدّر (دولار)</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-dollar-sign"></i></div>
+    </div>
+    {% for key, data in plan_revenue.items %}
+    <div class="rpt-alert-card {% if key == 'enterprise' %}rpt-alert-card--indigo{% elif key == 'pro' %}rpt-alert-card--blue{% elif key == 'basic' %}rpt-alert-card--green{% else %}rpt-alert-card--muted{% endif %}">
+        <div class="rpt-alert-card__num">${{ data.monthly }}</div>
+        <div class="rpt-alert-card__lbl">
+            {% if key == 'trial' %}تجريبي ({{ data.count }})
+            {% elif key == 'basic' %}أساسي ({{ data.count }})
+            {% elif key == 'pro' %}احترافي ({{ data.count }})
+            {% elif key == 'enterprise' %}مؤسسات ({{ data.count }})
+            {% endif %}
+        </div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-layer-group"></i></div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ═══════════════ CHARTS ═══════════════ -->
+<div class="rpt-panels">
+    <div class="rpt-panel" style="flex:2;">
+        <div class="rpt-panel__hd">
+            <i class="fas fa-chart-bar"></i>
+            <span>المشتركون الجدد شهرياً (آخر 12 شهراً)</span>
+        </div>
+        <div class="rpt-chart-wrap">
+            <canvas id="monthlyNewChart"></canvas>
+        </div>
+    </div>
+    <div class="rpt-panel" style="flex:1;">
+        <div class="rpt-panel__hd">
+            <i class="fas fa-chart-pie"></i>
+            <span>توزيع الإيرادات بالباقات</span>
+        </div>
+        <div class="rpt-chart-wrap">
+            <canvas id="revenueDistChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ TOP TENANTS BY USAGE ═══════════════ -->
+<div class="rpt-panel">
+    <div class="rpt-panel__hd">
+        <i class="fas fa-trophy"></i>
+        <span>أكثر المشتركين نشاطاً (حسب المبيعات)</span>
+        <div class="rpt-search-wrap ms-auto">
+            <i class="fas fa-search rpt-search-icon"></i>
+            <input type="text" id="revSearchInput" class="rpt-search" placeholder="ابحث...">
+        </div>
+    </div>
+
+    <!-- Desktop table -->
+    <div class="rpt-table-wrap">
+        <table class="rpt-table" id="revTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>المشترك</th>
+                    <th>الباقة</th>
+                    <th>فواتير البيع</th>
+                    <th>فواتير الشراء</th>
+                    <th>إجمالي المبيعات</th>
+                    <th>رسوم شهرية</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in tenant_stats %}
+                <tr data-name="{{ row.name|lower }}">
+                    <td class="rpt-td--num">{{ forloop.counter }}</td>
+                    <td>
+                        <div class="rpt-tenant-name">{{ row.name }}</div>
+                        <div class="rpt-tenant-slug">{{ row.slug }}</div>
+                    </td>
+                    <td><span class="rpt-plan-badge rpt-plan-badge--{{ row.plan_key }}">{{ row.plan }}</span></td>
+                    <td>{{ row.sales_count|intcomma }}</td>
+                    <td>{{ row.purchases_count|intcomma }}</td>
+                    <td class="rpt-td--num">{{ row.sales_total|floatformat:2|intcomma }}</td>
+                    <td>
+                        {% if row.monthly_fee > 0 %}
+                        <span style="color:#6366f1;font-weight:700;">${{ row.monthly_fee }}</span>
+                        {% else %}
+                        <span class="rpt-td--muted">مجاني</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="rpt-empty">لا توجد بيانات</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="rpt-mob-cards" id="revCards">
+        {% for row in tenant_stats %}
+        <div class="rpt-mob-card" data-name="{{ row.name|lower }}">
+            <div class="rpt-mob-card__header">
+                <div class="rpt-mob-card__title">
+                    <div class="rpt-mob-card__name">{{ row.name }}</div>
+                    <div class="rpt-mob-card__slug">{{ row.slug }}</div>
+                </div>
+                <span class="rpt-plan-badge rpt-plan-badge--{{ row.plan_key }}">{{ row.plan }}</span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">فواتير البيع</span>
+                <span class="rpt-mob-card__val">{{ row.sales_count|intcomma }}</span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">فواتير الشراء</span>
+                <span class="rpt-mob-card__val">{{ row.purchases_count|intcomma }}</span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">إجمالي المبيعات</span>
+                <span class="rpt-mob-card__val rpt-mob-card__val--num">{{ row.sales_total|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="rpt-mob-card__row">
+                <span class="rpt-mob-card__label">رسوم شهرية</span>
+                <span class="rpt-mob-card__val">
+                    {% if row.monthly_fee > 0 %}<span style="color:#6366f1;font-weight:700;">${{ row.monthly_fee }}</span>
+                    {% else %}<span class="rpt-mob-card__val--muted">مجاني</span>{% endif %}
+                </span>
+            </div>
+        </div>
+        {% empty %}
+        <div style="text-align:center;padding:1.5rem;color:#94a3b8;">لا توجد بيانات</div>
+        {% endfor %}
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+    // Monthly new tenants bar chart
+    const mnCtx = document.getElementById('monthlyNewChart');
+    if (mnCtx) {
+        new Chart(mnCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ monthly_labels_json|safe }},
+                datasets: [{
+                    label: 'مشترك جديد',
+                    data: {{ monthly_new_json|safe }},
+                    backgroundColor: 'rgba(99,102,241,0.7)',
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // Revenue distribution donut
+    const rdCtx = document.getElementById('revenueDistChart');
+    if (rdCtx) {
+        const labels = [];
+        const data = [];
+        const colors = ['#94a3b8','#3b82f6','#6366f1','#7c3aed'];
+        const bkgColors = [];
+        {% for key, d in plan_revenue.items %}
+        labels.push('{{ key }}'); data.push({{ d.monthly }}); bkgColors.push(colors[{{ forloop.counter0 }}]);
+        {% endfor %}
+        new Chart(rdCtx, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: bkgColors }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+            }
+        });
+    }
+
+    // Search (table + cards)
+    const search = document.getElementById('revSearchInput');
+    if (search) {
+        search.addEventListener('input', () => {
+            const q = search.value.trim().toLowerCase();
+            document.querySelectorAll('#revTable tbody tr[data-name], #revCards .rpt-mob-card').forEach(el => {
+                el.style.display = !q || el.dataset.name.includes(q) || el.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    }
+})();
+</script>
 {% endblock %}

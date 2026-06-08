@@ -26,10 +26,15 @@ urlpatterns = [
     path('tenants/api/<int:pk>/update/', views.tenant_update_api, name='tenant_update_api'),
     path('tenants/api/<int:pk>/delete/', views.tenant_delete_api, name='tenant_delete_api'),
     path('tenants/api/<int:pk>/suspend/', views.tenant_suspend_api, name='tenant_suspend_api'),
+    path('tenants/api/<int:pk>/renew/', views.tenant_renew_api, name='tenant_renew_api'),
 
-    # System — Users (superuser)
+    # System — Users
     path('system/users/', views.admin_users, name='admin_users'),
-    path('system/users/create/', views.admin_user_create, name='admin_user_create'),
+    path('system/users/api/create/', views.admin_user_create, name='admin_user_create'),
+    path('system/users/api/<int:pk>/detail/', views.admin_user_detail_api, name='admin_user_detail_api'),
+    path('system/users/api/<int:pk>/toggle-active/', views.admin_user_toggle_active, name='admin_user_toggle_active'),
+    path('system/users/api/staff/create/', views.admin_staff_save, name='admin_staff_create'),
+    path('system/users/api/staff/<int:pk>/update/', views.admin_staff_save, name='admin_staff_update'),
 
     # System — Support
     path('system/support/', views.admin_support, name='admin_support'),
@@ -44,6 +49,12 @@ urlpatterns = [
     path('system/reports/subscriptions/', views.admin_report_subscriptions, name='admin_report_subscriptions'),
     path('system/reports/revenue/', views.admin_report_revenue, name='admin_report_revenue'),
     path('system/reports/activity/', views.admin_report_activity, name='admin_report_activity'),
+
+    # System — Admin Notifications
+    path('system/notifications/', views.admin_notifications, name='admin_notifications'),
+    path('system/notifications/api/mark-read/<int:pk>/', views.admin_notifications_mark_read, name='admin_notifications_mark_read'),
+    path('system/notifications/api/mark-all-read/', views.admin_notifications_mark_all_read, name='admin_notifications_mark_all_read'),
+    path('system/notifications/api/unread/', views.admin_notifications_api, name='admin_notifications_api'),
 
     # System — Audit & Settings
     path('system/audit-log/', views.admin_audit_log, name='admin_audit_log'),

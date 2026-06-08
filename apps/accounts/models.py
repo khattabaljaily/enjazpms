@@ -68,7 +68,11 @@ class User(AbstractUser):
     # Profile
     phone = models.CharField('رقم الهاتف', max_length=20, blank=True)
     avatar = models.ImageField('الصورة الشخصية', upload_to='users/avatars/', blank=True, null=True)
-    is_tenant_admin = models.BooleanField('مدير النشاط', default=False)
+    is_tenant_admin    = models.BooleanField('مدير النشاط', default=False)
+
+    # Platform staff (admin assistants — tenant=None, not full superuser)
+    is_platform_staff   = models.BooleanField('مساعد منصة', default=False)
+    platform_permissions = models.JSONField('صلاحيات المنصة', default=list, blank=True)
     
     # Additional Info
     date_joined = models.DateTimeField('تاريخ الانضمام', auto_now_add=True)
@@ -103,6 +107,14 @@ class User(AbstractUser):
         if self.is_superuser:
             return True
         return self.tenant == tenant
+
+    def has_platform_perm(self, perm):
+        """Superusers have all platform perms; platform staff only what's granted."""
+        if self.is_superuser:
+            return True
+        if self.is_platform_staff:
+            return perm in (self.platform_permissions or [])
+        return False
 
     def get_permission_keys(self):
         if self.is_superuser or self.is_tenant_admin:

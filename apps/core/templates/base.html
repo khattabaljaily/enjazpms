@@ -85,6 +85,7 @@
     {% if request.user.is_authenticated and request.tenant %}
         {% include "ai/chat_widget.html" %}
     {% endif %}
+
     
     <script>
         // Global AJAX setup for Django CSRF

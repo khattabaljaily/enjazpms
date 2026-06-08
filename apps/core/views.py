@@ -11,7 +11,8 @@ from django.shortcuts import get_object_or_404
 from apps.accounts.decorators import require_permission
 from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
 from django.views.decorators.http import require_POST
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_type
+from django.utils import timezone as dj_timezone
 
 from .models import Settings, Tenant, BusinessType, SupportTicket, SupportMessage, TenantBackup
 from apps.notifications.models import Notification
@@ -307,7 +308,7 @@ def dashboard(request):
 @login_required
 def admin_dashboard(request):
     """لوحة مشرف النظام"""
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or getattr(request.user, 'is_platform_staff', False)):
         return render(request, 'core/no_permission.html', status=403)
 
     today = datetime.today().date()
@@ -334,6 +335,26 @@ def admin_dashboard(request):
         for tenant in recent_tenants
     ]
 
+    # Health: expiring soon
+    expiring_7  = Tenant.objects.filter(is_active=True, subscription_expires__isnull=False,
+                                         subscription_expires__gte=today,
+                                         subscription_expires__lte=today + timedelta(days=7))
+    expiring_30 = Tenant.objects.filter(is_active=True, subscription_expires__isnull=False,
+                                         subscription_expires__gte=today,
+                                         subscription_expires__lte=today + timedelta(days=30))
+
+    # Old open tickets (> 3 days)
+    old_tickets = SupportTicket.objects.filter(
+        status__in=['open', 'in_progress'],
+        created_at__date__lte=today - timedelta(days=3)
+    ).select_related('tenant').order_by('created_at')[:8]
+
+    PLAN_PRICES = {'trial': 0, 'basic': 50, 'pro': 120, 'enterprise': 300}
+    mrr = sum(
+        PLAN_PRICES.get(p, 0) * Tenant.objects.filter(is_active=True, subscription_plan=p).count()
+        for p in PLAN_PRICES
+    )
+
     stats = {
         'total_clients': total_clients,
         'active_clients': active_clients,
@@ -347,7 +368,9 @@ def admin_dashboard(request):
         'multi_branch_clients': multi_branch_clients,
         'pending_support': SupportTicket.objects.filter(status__in=['open', 'in_progress']).count(),
         'backup_ready': max(active_clients, 0),
-        'monthly_revenue': 0,
+        'monthly_revenue': mrr,
+        'expiring_7_count': expiring_7.count(),
+        'expiring_30_count': expiring_30.count(),
         'plan_distribution_json': json.dumps([
             {'name': 'تجريبي', 'value': trial_clients},
             {'name': 'أساسي', 'value': basic_clients},
@@ -364,28 +387,211 @@ def admin_dashboard(request):
 
     return render(request, 'core/admin_dashboard.html', {
         'stats': stats,
+        'expiring_7': expiring_7,
+        'expiring_30': expiring_30,
+        'old_tickets': old_tickets,
     })
 
 
 @login_required
 def admin_users(request):
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('manage_users'):
         return redirect('core:no_permission')
+
     from apps.accounts.models import User
-    users = User.objects.select_related('tenant').order_by('-date_joined')
-    return render(request, 'core/admin_users.html', {'users': users})
+
+    tab = request.GET.get('tab', 'tenant')  # 'tenant' | 'staff'
+
+    # Tenant users
+    tenant_qs = User.objects.filter(
+        is_superuser=False, is_platform_staff=False
+    ).select_related('tenant').order_by('-date_joined')
+
+    search = request.GET.get('q', '').strip()
+    tenant_filter = request.GET.get('tenant', '')
+    status_filter = request.GET.get('status', '')
+
+    if search:
+        tenant_qs = tenant_qs.filter(
+            Q(username__icontains=search) | Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) | Q(email__icontains=search)
+        )
+    if tenant_filter:
+        tenant_qs = tenant_qs.filter(tenant_id=tenant_filter)
+    if status_filter == 'active':
+        tenant_qs = tenant_qs.filter(is_active=True)
+    elif status_filter == 'inactive':
+        tenant_qs = tenant_qs.filter(is_active=False)
+    elif status_filter == 'never_logged':
+        tenant_qs = tenant_qs.filter(last_login__isnull=True)
+    elif status_filter == 'admin':
+        tenant_qs = tenant_qs.filter(is_tenant_admin=True)
+
+    # Platform staff
+    staff_qs = User.objects.filter(
+        Q(is_superuser=True) | Q(is_platform_staff=True)
+    ).order_by('-date_joined')
+
+    # Stats
+    stats = {
+        'total_tenant_users': User.objects.filter(is_superuser=False, is_platform_staff=False).count(),
+        'active': User.objects.filter(is_superuser=False, is_platform_staff=False, is_active=True).count(),
+        'inactive': User.objects.filter(is_superuser=False, is_platform_staff=False, is_active=False).count(),
+        'never_logged': User.objects.filter(is_superuser=False, is_platform_staff=False, last_login__isnull=True).count(),
+        'tenant_admins': User.objects.filter(is_superuser=False, is_platform_staff=False, is_tenant_admin=True).count(),
+        'platform_staff': User.objects.filter(Q(is_superuser=True) | Q(is_platform_staff=True)).count(),
+    }
+
+    tenants = Tenant.objects.filter(is_active=True).order_by('name')
+
+    return render(request, 'core/admin_users.html', {
+        'tab': tab,
+        'tenant_users': tenant_qs,
+        'staff_users': staff_qs,
+        'stats': stats,
+        'tenants': tenants,
+        'search': search,
+        'tenant_filter': tenant_filter,
+        'status_filter': status_filter,
+        'PLATFORM_PERMS': PLATFORM_PERMS,
+    })
+
+
+# ── Platform permission definitions ──────────────────────────────────────
+PLATFORM_PERMS = [
+    ('manage_tenants',    'إدارة المشتركين',         'fa-building'),
+    ('manage_users',      'إدارة المستخدمين',         'fa-users'),
+    ('view_reports',      'عرض التقارير',             'fa-chart-bar'),
+    ('manage_support',    'إدارة الدعم الفني',        'fa-headset'),
+    ('view_audit_log',    'سجل المراجعة',             'fa-clock-rotate-left'),
+    ('manage_backups',    'النسخ الاحتياطية',          'fa-database'),
+    ('view_notifications','إشعارات النظام',            'fa-bell'),
+]
+
+
+@login_required
+def admin_user_toggle_active(request, pk):
+    """Toggle tenant user active status."""
+    if not request.user.has_platform_perm('manage_users'):
+        return JsonResponse({'success': False}, status=403)
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    from apps.accounts.models import User
+    user = get_object_or_404(User, pk=pk, is_superuser=False, is_platform_staff=False)
+    user.is_active = not user.is_active
+    user.save(update_fields=['is_active'])
+    return JsonResponse({'success': True, 'is_active': user.is_active})
+
+
+@login_required
+def admin_user_detail_api(request, pk):
+    """Return user detail JSON for the view modal."""
+    if not request.user.has_platform_perm('manage_users'):
+        return JsonResponse({'success': False}, status=403)
+    from apps.accounts.models import User
+    u = get_object_or_404(User, pk=pk)
+    return JsonResponse({
+        'success': True,
+        'id': u.pk,
+        'username': u.username,
+        'full_name': u.get_full_name(),
+        'email': u.email,
+        'phone': u.phone,
+        'tenant': u.tenant.name if u.tenant else '—',
+        'is_active': u.is_active,
+        'is_tenant_admin': u.is_tenant_admin,
+        'date_joined': u.date_joined.strftime('%Y-%m-%d'),
+        'last_login': u.last_login.strftime('%Y-%m-%d %H:%M') if u.last_login else 'لم يسجّل دخولاً',
+    })
 
 
 @login_required
 def admin_user_create(request):
+    """Create a new tenant user."""
+    if not request.user.has_platform_perm('manage_users'):
+        return JsonResponse({'success': False}, status=403)
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    from apps.accounts.models import User
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'بيانات غير صالحة'}, status=400)
+
+    username  = data.get('username', '').strip()
+    password  = data.get('password', '').strip()
+    email     = data.get('email', '').strip()
+    first     = data.get('first_name', '').strip()
+    last      = data.get('last_name', '').strip()
+    tenant_id = data.get('tenant_id')
+    is_admin  = bool(data.get('is_tenant_admin', False))
+
+    if not username or not password:
+        return JsonResponse({'success': False, 'error': 'اسم المستخدم وكلمة المرور مطلوبان'})
+    if User.objects.filter(username=username).exists():
+        return JsonResponse({'success': False, 'error': 'اسم المستخدم مستخدم بالفعل'})
+
+    tenant = None
+    if tenant_id:
+        tenant = get_object_or_404(Tenant, pk=tenant_id)
+
+    user = User.objects.create_user(
+        username=username, password=password,
+        email=email, first_name=first, last_name=last,
+        tenant=tenant, is_tenant_admin=is_admin,
+    )
+    return JsonResponse({'success': True, 'message': f'تم إنشاء المستخدم "{user.username}" بنجاح'})
+
+
+@login_required
+def admin_staff_save(request, pk=None):
+    """Create or update a platform staff member (superuser only)."""
     if not request.user.is_superuser:
-        return redirect('core:no_permission')
-    return render(request, 'core/admin_user_create.html', {})
+        return JsonResponse({'success': False}, status=403)
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    from apps.accounts.models import User
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'بيانات غير صالحة'}, status=400)
+
+    perms = [p for p in data.get('permissions', []) if p in [k for k, *_ in PLATFORM_PERMS]]
+
+    if pk:
+        # Update existing staff member
+        staff = get_object_or_404(User, pk=pk, is_platform_staff=True)
+        staff.first_name = data.get('first_name', staff.first_name).strip()
+        staff.last_name  = data.get('last_name',  staff.last_name).strip()
+        staff.email      = data.get('email', staff.email).strip()
+        staff.platform_permissions = perms
+        staff.save(update_fields=['first_name', 'last_name', 'email', 'platform_permissions'])
+        return JsonResponse({'success': True, 'message': f'تم تحديث "{staff.username}"'})
+    else:
+        # Create new staff member
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        if not username or not password:
+            return JsonResponse({'success': False, 'error': 'اسم المستخدم وكلمة المرور مطلوبان'})
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'success': False, 'error': 'اسم المستخدم مستخدم بالفعل'})
+        staff = User.objects.create_user(
+            username=username, password=password,
+            first_name=data.get('first_name', '').strip(),
+            last_name=data.get('last_name', '').strip(),
+            email=data.get('email', '').strip(),
+            tenant=None,
+            is_platform_staff=True,
+            platform_permissions=perms,
+        )
+        return JsonResponse({'success': True, 'message': f'تم إنشاء مساعد المنصة "{staff.username}"'})
 
 
 @login_required
 def admin_support(request):
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('manage_support'):
         return redirect('core:no_permission')
 
     status_filter = request.GET.get('status', '')
@@ -422,7 +628,7 @@ def admin_support(request):
 
 @login_required
 def admin_support_detail(request, pk):
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('manage_support'):
         return redirect('core:no_permission')
 
     ticket = get_object_or_404(SupportTicket.objects.select_related('tenant', 'created_by'), pk=pk)
@@ -567,30 +773,398 @@ def tenant_support_detail(request, pk):
 
 @login_required
 def admin_report_subscriptions(request):
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('view_reports'):
         return redirect('core:no_permission')
-    return render(request, 'core/admin_report_subscriptions.html', {})
+
+    today = datetime.today().date()
+
+    tenants = Tenant.objects.select_related('business_type').order_by('-created_at')
+
+    # Expiry buckets
+    expiring_7  = tenants.filter(is_active=True, subscription_expires__isnull=False,
+                                  subscription_expires__gte=today,
+                                  subscription_expires__lte=today + timedelta(days=7)).count()
+    expiring_30 = tenants.filter(is_active=True, subscription_expires__isnull=False,
+                                  subscription_expires__gte=today,
+                                  subscription_expires__lte=today + timedelta(days=30)).count()
+    expired     = tenants.filter(is_active=True, subscription_expires__isnull=False,
+                                  subscription_expires__lt=today).count()
+    lifetime    = tenants.filter(subscription_expires__isnull=True).count()
+    suspended   = tenants.filter(is_active=False).count()
+
+    # Plan distribution
+    plan_counts = {p: tenants.filter(subscription_plan=p).count() for p, _ in Tenant.SUBSCRIPTION_PLANS}
+
+    rows = []
+    for t in tenants:
+        days = t.days_until_expiry()
+        if not t.subscription_expires:
+            status_label = 'مدى الحياة'
+            status_class = 'lifetime'
+        elif not t.is_active:
+            status_label = 'موقوف'
+            status_class = 'suspended'
+        elif days is not None and days < 0:
+            status_label = f'منتهي منذ {abs(days)} يوم'
+            status_class = 'expired'
+        elif days is not None and days <= 7:
+            status_label = f'ينتهي خلال {days} يوم'
+            status_class = 'danger'
+        elif days is not None and days <= 30:
+            status_label = f'ينتهي خلال {days} يوم'
+            status_class = 'warning'
+        else:
+            status_label = 'نشط'
+            status_class = 'active'
+
+        rows.append({
+            'id': t.pk,
+            'name': t.name,
+            'slug': t.slug,
+            'plan': t.get_subscription_plan_display(),
+            'plan_key': t.subscription_plan,
+            'version': t.get_version_type_display(),
+            'start': t.subscription_start.strftime('%Y-%m-%d') if t.subscription_start else '—',
+            'expires': t.subscription_expires.strftime('%Y-%m-%d') if t.subscription_expires else 'مدى الحياة',
+            'days': days,
+            'status_label': status_label,
+            'status_class': status_class,
+        })
+
+    return render(request, 'core/admin_report_subscriptions.html', {
+        'rows': rows,
+        'today': today,
+        'expiring_7': expiring_7,
+        'expiring_30': expiring_30,
+        'expired': expired,
+        'lifetime': lifetime,
+        'suspended': suspended,
+        'total': tenants.count(),
+        'plan_counts': plan_counts,
+        'plan_counts_json': json.dumps(plan_counts, ensure_ascii=False),
+    })
 
 
 @login_required
 def admin_report_revenue(request):
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('view_reports'):
         return redirect('core:no_permission')
-    return render(request, 'core/admin_report_revenue.html', {})
+
+    from apps.sales.models import SaleInvoice
+    from apps.purchases.models import PurchaseInvoice
+
+    today = datetime.today().date()
+    # Build last 12 months
+    months = []
+    for i in range(11, -1, -1):
+        d = today.replace(day=1) - timedelta(days=i * 30)
+        months.append(d.replace(day=1))
+
+    PLAN_PRICES = {'trial': 0, 'basic': 50, 'pro': 120, 'enterprise': 300}
+
+    # Per-tenant usage stats
+    tenants = Tenant.objects.filter(is_active=True).order_by('-created_at')
+    tenant_stats = []
+    for t in tenants:
+        sales_count = SaleInvoice.objects.filter(tenant=t, status='confirmed').count()
+        purchases_count = PurchaseInvoice.objects.filter(tenant=t, status='confirmed').count()
+        sales_total = SaleInvoice.objects.filter(
+            tenant=t, status='confirmed'
+        ).aggregate(s=Sum('grand_total'))['s'] or 0
+
+        tenant_stats.append({
+            'name': t.name,
+            'slug': t.slug,
+            'plan': t.get_subscription_plan_display(),
+            'plan_key': t.subscription_plan,
+            'sales_count': sales_count,
+            'purchases_count': purchases_count,
+            'sales_total': float(sales_total),
+            'monthly_fee': PLAN_PRICES.get(t.subscription_plan, 0),
+        })
+
+    tenant_stats.sort(key=lambda x: x['sales_count'], reverse=True)
+
+    # Subscription revenue estimate per plan
+    plan_revenue = {}
+    for plan_key, price in PLAN_PRICES.items():
+        count = Tenant.objects.filter(is_active=True, subscription_plan=plan_key).count()
+        plan_revenue[plan_key] = {'count': count, 'monthly': count * price, 'price': price}
+
+    total_mrr = sum(v['monthly'] for v in plan_revenue.values())
+
+    # Monthly growth (new tenants per month for last 12m)
+    _rev_tz = dj_timezone.get_current_timezone()
+    monthly_new = []
+    for m in months:
+        next_m = (m.replace(day=28) + timedelta(days=4)).replace(day=1)
+        m_start = dj_timezone.make_aware(datetime.combine(m, datetime.min.time()), _rev_tz)
+        m_end = dj_timezone.make_aware(datetime.combine(next_m, datetime.min.time()), _rev_tz)
+        cnt = Tenant.objects.filter(created_at__gte=m_start, created_at__lt=m_end).count()
+        monthly_new.append({'month': m.strftime('%b %Y'), 'count': cnt})
+
+    return render(request, 'core/admin_report_revenue.html', {
+        'tenant_stats': tenant_stats,
+        'plan_revenue': plan_revenue,
+        'total_mrr': total_mrr,
+        'monthly_new': monthly_new,
+        'monthly_new_json': json.dumps([m['count'] for m in monthly_new], ensure_ascii=False),
+        'monthly_labels_json': json.dumps([m['month'] for m in monthly_new], ensure_ascii=False),
+        'PLAN_PRICES': PLAN_PRICES,
+    })
 
 
 @login_required
 def admin_report_activity(request):
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('view_reports'):
         return redirect('core:no_permission')
-    return render(request, 'core/admin_report_activity.html', {})
+
+    from .models import ActivityLog
+    from apps.accounts.models import User
+
+    now = dj_timezone.now()
+    today = now.date()
+    week_ago_dt = now - timedelta(days=7)
+    month_ago_dt = now - timedelta(days=30)
+
+    # Per-tenant activity summary
+    tenant_activity = (
+        ActivityLog.objects.filter(created_at__gte=month_ago_dt)
+        .values('tenant__id', 'tenant__name', 'tenant__slug', 'tenant__subscription_plan')
+        .annotate(total=Count('id'))
+        .order_by('-total')[:20]
+    )
+
+    # Recent logins
+    recent_logins = (
+        ActivityLog.objects.filter(action='login')
+        .select_related('tenant', 'user')
+        .order_by('-created_at')[:30]
+    )
+
+    # Action distribution
+    action_counts = (
+        ActivityLog.objects.filter(created_at__gte=month_ago_dt)
+        .values('action')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+
+    action_map = {a: d for a, d in ActivityLog.ACTION_TYPES}
+    action_dist = [
+        {'key': row['action'], 'label': action_map.get(row['action'], row['action']), 'count': row['count']}
+        for row in action_counts
+    ]
+
+    # Daily activity last 14 days — use gte/lt on datetime to avoid MySQL CONVERT_TZ issue
+    daily = []
+    local_tz = dj_timezone.get_current_timezone()
+    for i in range(13, -1, -1):
+        d = today - timedelta(days=i)
+        d_start = dj_timezone.make_aware(datetime.combine(d, datetime.min.time()), local_tz)
+        d_end = d_start + timedelta(days=1)
+        cnt = ActivityLog.objects.filter(created_at__gte=d_start, created_at__lt=d_end).count()
+        daily.append({'date': d.strftime('%m/%d'), 'count': cnt})
+
+    # Tenants with zero activity in last 30 days
+    active_tenant_ids = set(
+        ActivityLog.objects.filter(created_at__gte=month_ago_dt)
+        .values_list('tenant_id', flat=True).distinct()
+    )
+    active_tenant_ids.discard(None)
+    inactive_tenants = Tenant.objects.filter(is_active=True).exclude(id__in=active_tenant_ids)
+
+    active_count = len(active_tenant_ids)
+    return render(request, 'core/admin_report_activity.html', {
+        'tenant_activity': tenant_activity,
+        'recent_logins': recent_logins,
+        'action_dist': action_dist,
+        'daily': daily,
+        'daily_counts_json': json.dumps([d['count'] for d in daily], ensure_ascii=False),
+        'daily_labels_json': json.dumps([d['date'] for d in daily], ensure_ascii=False),
+        'inactive_tenants': inactive_tenants,
+        'inactive_count': inactive_tenants.count(),
+        'active_count': active_count,
+        'today': today,
+        'week_ago': (today - timedelta(days=7)),
+        'month_ago': (today - timedelta(days=30)),
+    })
 
 
 @login_required
 def admin_audit_log(request):
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('view_audit_log'):
         return redirect('core:no_permission')
-    return render(request, 'core/admin_audit_log.html', {})
+
+    from .models import ActivityLog
+
+    qs = ActivityLog.objects.select_related('tenant', 'user').order_by('-created_at')
+
+    # Filters from GET params
+    tenant_id = request.GET.get('tenant', '')
+    action    = request.GET.get('action', '')
+    date_from = request.GET.get('date_from', '')
+    date_to   = request.GET.get('date_to', '')
+    search    = request.GET.get('q', '')
+
+    if tenant_id:
+        qs = qs.filter(tenant_id=tenant_id)
+    if action:
+        qs = qs.filter(action=action)
+    local_tz = dj_timezone.get_current_timezone()
+    if date_from:
+        try:
+            d = datetime.strptime(date_from, '%Y-%m-%d').date()
+            qs = qs.filter(created_at__gte=dj_timezone.make_aware(datetime.combine(d, datetime.min.time()), local_tz))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            d = datetime.strptime(date_to, '%Y-%m-%d').date()
+            qs = qs.filter(created_at__lt=dj_timezone.make_aware(datetime.combine(d, datetime.min.time()), local_tz) + timedelta(days=1))
+        except ValueError:
+            pass
+    if search:
+        qs = qs.filter(
+            Q(description__icontains=search) |
+            Q(user__username__icontains=search) |
+            Q(tenant__name__icontains=search) |
+            Q(model_name__icontains=search)
+        )
+
+    total_count = qs.count()
+    logs = qs[:200]
+
+    tenants = Tenant.objects.filter(is_active=True).order_by('name')
+    action_choices = ActivityLog.ACTION_TYPES
+
+    return render(request, 'core/admin_audit_log.html', {
+        'logs': logs,
+        'tenants': tenants,
+        'action_choices': action_choices,
+        'total_count': total_count,
+        'filters': {
+            'tenant_id': tenant_id,
+            'action': action,
+            'date_from': date_from,
+            'date_to': date_to,
+            'q': search,
+        },
+    })
+
+
+@login_required
+def admin_notifications(request):
+    """صفحة إشعارات مدير النظام"""
+    if not request.user.has_platform_perm('view_notifications'):
+        return redirect('core:no_permission')
+
+    from .models import AdminNotification, SupportTicket
+
+    # Auto-generate expiring/expired subscription notifications on each visit
+    today = datetime.today().date()
+    expiring_soon = Tenant.objects.filter(
+        is_active=True,
+        subscription_expires__isnull=False,
+        subscription_expires__gte=today,
+        subscription_expires__lte=today + timedelta(days=7),
+    )
+    for t in expiring_soon:
+        days_left = (t.subscription_expires - today).days
+        AdminNotification.push(
+            notification_type='subscription_expiring',
+            title=f'اشتراك "{t.name}" سينتهي خلال {days_left} يوم',
+            message=f'الباقة: {t.get_subscription_plan_display()} — ينتهي في {t.subscription_expires}',
+            link='/tenants/',
+            priority='high',
+            ref_key=f'expiring_{t.pk}_{t.subscription_expires}',
+        )
+
+    expired = Tenant.objects.filter(is_active=True, subscription_expires__lt=today)
+    for t in expired:
+        AdminNotification.push(
+            notification_type='subscription_expired',
+            title=f'اشتراك "{t.name}" منتهٍ',
+            message=f'انتهى الاشتراك في {t.subscription_expires} — يحتاج تجديداً.',
+            link='/tenants/',
+            priority='high',
+            ref_key=f'expired_{t.pk}_{t.subscription_expires}',
+        )
+
+    # Old open tickets (> 3 days)
+    old_cutoff = dj_timezone.now() - timedelta(days=3)
+    old_tickets = SupportTicket.objects.filter(status='open', created_at__lt=old_cutoff)
+    for ticket in old_tickets:
+        AdminNotification.push(
+            notification_type='old_ticket',
+            title=f'تذكرة مفتوحة منذ أكثر من 3 أيام #{ticket.pk}',
+            message=f'{ticket.tenant.name if ticket.tenant else ""}: {ticket.subject}',
+            link='/support/',
+            priority='medium',
+            ref_key=f'old_ticket_{ticket.pk}',
+        )
+
+    notifications = AdminNotification.objects.all()
+    unread_count = notifications.filter(is_read=False).count()
+
+    return render(request, 'core/admin_notifications.html', {
+        'notifications': notifications[:100],
+        'unread_count': unread_count,
+    })
+
+
+@login_required
+@require_POST
+def admin_notifications_mark_read(request, pk):
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False}, status=403)
+    from .models import AdminNotification
+    AdminNotification.objects.filter(pk=pk).update(is_read=True)
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_POST
+def admin_notifications_mark_all_read(request):
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False}, status=403)
+    from .models import AdminNotification
+    AdminNotification.objects.filter(is_read=False).update(is_read=True)
+    return JsonResponse({'success': True})
+
+
+@login_required
+def admin_notifications_api(request):
+    """Returns unread count + recent items for the navbar bell (superuser only)."""
+    if not request.user.is_superuser:
+        return JsonResponse({'unread': 0, 'items': []})
+    from .models import AdminNotification
+
+    TYPE_ICONS = {
+        'new_tenant':            'fa-building text-success',
+        'new_ticket':            'fa-ticket text-primary',
+        'subscription_expiring': 'fa-clock text-warning',
+        'subscription_expired':  'fa-times-circle text-danger',
+        'old_ticket':            'fa-hourglass-half text-purple',
+        'general':               'fa-bell text-secondary',
+    }
+
+    unread = AdminNotification.objects.filter(is_read=False).count()
+    recent = AdminNotification.objects.all()[:8]
+    items = [
+        {
+            'id':      n.pk,
+            'title':   n.title,
+            'message': n.message[:80],
+            'is_read': n.is_read,
+            'link':    n.link,
+            'priority': n.priority,
+            'icon':    TYPE_ICONS.get(n.notification_type, 'fa-bell text-secondary'),
+            'time':    n.created_at.strftime('%Y-%m-%d %H:%M'),
+        }
+        for n in recent
+    ]
+    return JsonResponse({'unread': unread, 'items': items})
 
 
 @login_required
@@ -676,7 +1250,7 @@ def admin_settings_update_api(request):
 @login_required
 def admin_backup(request):
     """لوحة النسخ الاحتياطي — قائمة جميع المشتركين مع إحصاء نسخهم"""
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('manage_backups'):
         return redirect('core:no_permission')
 
     from .backup_service import get_tenant_backup_stats
@@ -717,7 +1291,7 @@ def admin_backup(request):
 @login_required
 def admin_backup_detail(request, tenant_slug):
     """تفاصيل النسخ الاحتياطية لمشترك محدد"""
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('manage_backups'):
         return redirect('core:no_permission')
     tenant = get_object_or_404(Tenant, slug=tenant_slug)
     backups = TenantBackup.objects.filter(tenant=tenant).order_by('-created_at')
@@ -733,7 +1307,7 @@ def admin_backup_detail(request, tenant_slug):
 @require_POST
 def admin_backup_create_api(request, tenant_slug):
     """API: إنشاء نسخة احتياطية يدوية"""
-    err = _superuser_required(request)
+    err = _superuser_required(request, 'manage_backups')
     if err:
         return err
     tenant = get_object_or_404(Tenant, slug=tenant_slug)
@@ -762,7 +1336,7 @@ def admin_backup_create_api(request, tenant_slug):
 @require_POST
 def admin_backup_restore_api(request, backup_id):
     """API: استعادة نسخة احتياطية"""
-    err = _superuser_required(request)
+    err = _superuser_required(request, 'manage_backups')
     if err:
         return err
     from .backup_service import restore_backup
@@ -775,7 +1349,7 @@ def admin_backup_restore_api(request, backup_id):
 @require_POST
 def admin_backup_delete_api(request, backup_id):
     """API: حذف نسخة احتياطية"""
-    err = _superuser_required(request)
+    err = _superuser_required(request, 'manage_backups')
     if err:
         return err
     from .backup_service import delete_backup
@@ -786,7 +1360,7 @@ def admin_backup_delete_api(request, backup_id):
 @login_required
 def admin_backup_download(request, backup_id):
     """تنزيل ملف النسخة الاحتياطية"""
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('manage_backups'):
         return redirect('core:no_permission')
     from django.http import FileResponse, Http404
     from pathlib import Path
@@ -805,7 +1379,7 @@ def admin_backup_download(request, backup_id):
 
 @login_required
 def admin_training(request):
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or getattr(request.user, 'is_platform_staff', False)):
         return redirect('core:no_permission')
     return render(request, 'core/admin_training.html', {})
 
@@ -961,17 +1535,23 @@ def subscription_info(request):
 # TENANT MANAGEMENT — Superuser Only
 # ============================================================
 
-def _superuser_required(request):
-    """Return 403 JsonResponse if not superuser, else None."""
-    if not request.user.is_superuser:
-        return JsonResponse({'success': False, 'message': 'غير مصرح'}, status=403)
+def _superuser_required(request, perm=None):
+    """Return 403 JsonResponse if not authorized, else None.
+    If perm is given, checks has_platform_perm(); otherwise requires is_superuser.
+    """
+    if perm:
+        if not request.user.has_platform_perm(perm):
+            return JsonResponse({'success': False, 'message': 'غير مصرح'}, status=403)
+    else:
+        if not request.user.is_superuser:
+            return JsonResponse({'success': False, 'message': 'غير مصرح'}, status=403)
     return None
 
 
 @login_required
 def tenant_list(request):
     """قائمة المشتركين (المشتركين) - للمشرف فقط"""
-    if not request.user.is_superuser:
+    if not request.user.has_platform_perm('manage_tenants'):
         return render(request, 'core/no_permission.html', status=403)
     business_types = BusinessType.objects.filter(is_active=True).order_by('display_order', 'name_ar')
     total = Tenant.objects.count()
@@ -993,7 +1573,7 @@ def tenant_list(request):
 @login_required
 def tenant_table_api(request):
     """API: جدول المشتركين لـ DataTable"""
-    err = _superuser_required(request)
+    err = _superuser_required(request, 'manage_tenants')
     if err:
         return err
 
@@ -1082,7 +1662,7 @@ def tenant_table_api(request):
 @login_required
 def tenant_create_api(request):
     """API: إنشاء مشترك جديد مع مستخدم مدير"""
-    err = _superuser_required(request)
+    err = _superuser_required(request, 'manage_tenants')
     if err:
         return err
     if request.method != 'POST':
@@ -1161,7 +1741,7 @@ def tenant_create_api(request):
 @login_required
 def tenant_detail_api(request, pk):
     """API: تفاصيل مشترك"""
-    err = _superuser_required(request)
+    err = _superuser_required(request, 'manage_tenants')
     if err:
         return err
 
@@ -1222,7 +1802,7 @@ def tenant_detail_api(request, pk):
 @login_required
 def tenant_update_api(request, pk):
     """API: تعديل بيانات مشترك"""
-    err = _superuser_required(request)
+    err = _superuser_required(request, 'manage_tenants')
     if err:
         return err
     if request.method != 'POST':
@@ -1285,7 +1865,7 @@ def tenant_update_api(request, pk):
 @login_required
 def tenant_delete_api(request, pk):
     """API: حذف مشترك"""
-    err = _superuser_required(request)
+    err = _superuser_required(request, 'manage_tenants')
     if err:
         return err
     if request.method != 'POST':
@@ -1370,7 +1950,7 @@ def _delete_tenant_data(tenant):
 @login_required
 def tenant_suspend_api(request, pk):
     """API: تعليق / إلغاء تعليق مشترك"""
-    err = _superuser_required(request)
+    err = _superuser_required(request, 'manage_tenants')
     if err:
         return err
     if request.method != 'POST':
@@ -1381,6 +1961,52 @@ def tenant_suspend_api(request, pk):
     tenant.save(update_fields=['is_active', 'updated_at'])
     action = 'تم تفعيل' if tenant.is_active else 'تم تعليق'
     return JsonResponse({'success': True, 'message': f'{action} المشترك "{tenant.name}" بنجاح', 'is_active': tenant.is_active})
+
+
+@login_required
+def tenant_renew_api(request, pk):
+    """API: تجديد اشتراك مشترك"""
+    err = _superuser_required(request, 'manage_tenants')
+    if err:
+        return err
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    tenant = get_object_or_404(Tenant, pk=pk)
+
+    try:
+        payload = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'بيانات غير صالحة'}, status=400)
+
+    days = int(payload.get('days', 30))
+    plan = payload.get('plan', '').strip()
+
+    if days <= 0 or days > 3650:
+        return JsonResponse({'success': False, 'error': 'عدد الأيام غير صالح'}, status=400)
+
+    today = datetime.today().date()
+    base_date = tenant.subscription_expires if (tenant.subscription_expires and tenant.subscription_expires >= today) else today
+    tenant.subscription_expires = base_date + timedelta(days=days)
+
+    update_fields = ['subscription_expires', 'updated_at']
+
+    if plan and plan in dict(Tenant.SUBSCRIPTION_PLANS):
+        tenant.subscription_plan = plan
+        update_fields.append('subscription_plan')
+
+    if not tenant.is_active:
+        tenant.is_active = True
+        update_fields.append('is_active')
+
+    tenant.save(update_fields=update_fields)
+
+    return JsonResponse({
+        'success': True,
+        'message': f'تم تجديد اشتراك "{tenant.name}" حتى {tenant.subscription_expires.strftime("%Y-%m-%d")}',
+        'new_expires': tenant.subscription_expires.strftime('%Y-%m-%d'),
+        'plan': tenant.get_subscription_plan_display(),
+    })
 
 
 def pricing(request):

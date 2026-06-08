@@ -641,3 +641,53 @@ class TenantBackup(models.Model):
     def file_exists(self):
         from pathlib import Path
         return Path(self.file_path).exists()
+
+
+# ============================================
+# ADMIN NOTIFICATIONS (إشعارات مدير النظام)
+# ============================================
+
+class AdminNotification(models.Model):
+    """إشعارات خاصة بمدير النظام (السوبر يوزر) — مستقلة عن إشعارات المشتركين."""
+
+    TYPE_CHOICES = [
+        ('new_tenant',            'مشترك جديد'),
+        ('new_ticket',            'تذكرة دعم جديدة'),
+        ('subscription_expiring', 'اشتراك قارب الانتهاء'),
+        ('subscription_expired',  'اشتراك منتهٍ'),
+        ('old_ticket',            'تذكرة مفتوحة منذ فترة'),
+        ('general',               'عام'),
+    ]
+    PRIORITY_CHOICES = [('low', 'منخفضة'), ('medium', 'متوسطة'), ('high', 'عالية')]
+
+    notification_type = models.CharField('النوع', max_length=30, choices=TYPE_CHOICES, default='general')
+    priority          = models.CharField('الأولوية', max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    title             = models.CharField('العنوان', max_length=200)
+    message           = models.TextField('الرسالة')
+    is_read           = models.BooleanField('مقروء', default=False)
+    link              = models.CharField('الرابط', max_length=300, blank=True)
+    ref_key           = models.CharField('مفتاح التكرار', max_length=120, unique=True, blank=True)
+    created_at        = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'admin_notifications'
+        verbose_name = 'إشعار إداري'
+        verbose_name_plural = 'الإشعارات الإدارية'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+    @classmethod
+    def push(cls, *, notification_type, title, message, link='', priority='medium', ref_key=''):
+        """Create a notification only if the ref_key hasn't been used before."""
+        if ref_key and cls.objects.filter(ref_key=ref_key).exists():
+            return None
+        return cls.objects.create(
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            link=link,
+            priority=priority,
+            ref_key=ref_key,
+        )

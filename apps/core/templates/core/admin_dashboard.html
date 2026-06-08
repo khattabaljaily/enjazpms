@@ -248,6 +248,56 @@
         </div>
 
     </div>
+
+    <!-- ─── System Health ─────────────────────────────────────── -->
+    {% if stats.expiring_7_count or stats.expired_clients or old_tickets %}
+    <div class="adm-health">
+        <div class="adm-health__hd">
+            <i class="fas fa-heartbeat" style="color:#ef4444;"></i>
+            <span>تنبيهات صحة النظام</span>
+        </div>
+        <div class="adm-health__grid">
+
+            {% if stats.expiring_7_count %}
+            <a href="{% url 'core:admin_report_subscriptions' %}" class="adm-health-card adm-health-card--danger">
+                <div class="adm-health-card__icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="adm-health-card__body">
+                    <div class="adm-health-card__num">{{ stats.expiring_7_count }}</div>
+                    <div class="adm-health-card__lbl">اشتراك ينتهي خلال 7 أيام</div>
+                    <div class="adm-health-card__tenants">
+                        {% for t in expiring_7 %}{{ t.name }}{% if not forloop.last %} · {% endif %}{% endfor %}
+                    </div>
+                </div>
+            </a>
+            {% endif %}
+
+            {% if stats.expired_clients %}
+            <a href="{% url 'core:admin_report_subscriptions' %}" class="adm-health-card adm-health-card--warning">
+                <div class="adm-health-card__icon"><i class="fas fa-times-circle"></i></div>
+                <div class="adm-health-card__body">
+                    <div class="adm-health-card__num">{{ stats.expired_clients }}</div>
+                    <div class="adm-health-card__lbl">اشتراك منتهٍ (نشط لكن منتهي)</div>
+                </div>
+            </a>
+            {% endif %}
+
+            {% if old_tickets %}
+            <a href="{% url 'core:admin_support' %}" class="adm-health-card adm-health-card--amber">
+                <div class="adm-health-card__icon"><i class="fas fa-headset"></i></div>
+                <div class="adm-health-card__body">
+                    <div class="adm-health-card__num">{{ old_tickets|length }}</div>
+                    <div class="adm-health-card__lbl">تذكرة مفتوحة منذ أكثر من 3 أيام</div>
+                    <div class="adm-health-card__tenants">
+                        {% for tk in old_tickets %}{{ tk.tenant.name }}{% if not forloop.last %} · {% endif %}{% endfor %}
+                    </div>
+                </div>
+            </a>
+            {% endif %}
+
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}
 

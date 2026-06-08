@@ -61,7 +61,7 @@
     <div class="cx-toolbar">
         <div class="cx-toolbar-search">
             <i class="fas fa-search cx-toolbar-search-icon"></i>
-            <input type="text" id="tenantSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو البريد أو المدينة...">
+            <input type="text" id="tenantSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو البريد أو المدينة..." autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
         </div>
 
         <div class="cx-toolbar-end">
@@ -501,6 +501,47 @@
 </div>
 
 <!-- ══════════════════════════ LOGIN AS MODAL ══════════════════════════ -->
+<!-- ══════════════ Renew Modal ══════════════ -->
+<div class="modal fade" id="renewTenantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
+        <div class="modal-content cx-confirm-modal">
+            <div class="cx-confirm-body">
+                <div class="cx-confirm-icon" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;">
+                    <i class="fas fa-rotate-right"></i>
+                </div>
+                <h5 class="cx-confirm-title">تجديد الاشتراك</h5>
+                <p class="cx-confirm-desc">تجديد اشتراك <strong id="renewTenantName"></strong></p>
+                <input type="hidden" id="renewTenantId" value="">
+                <div class="mt-3 text-end">
+                    <label class="form-label fw-bold small text-muted">عدد أيام التجديد</label>
+                    <select id="renewDaysSelect" class="form-select form-select-sm mb-2">
+                        <option value="30">30 يوماً (شهر)</option>
+                        <option value="90">90 يوماً (3 أشهر)</option>
+                        <option value="180">180 يوماً (6 أشهر)</option>
+                        <option value="365">365 يوماً (سنة)</option>
+                    </select>
+                    <label class="form-label fw-bold small text-muted">الباقة (اختياري)</label>
+                    <select id="renewPlanSelect" class="form-select form-select-sm">
+                        <option value="">— بدون تغيير —</option>
+                        <option value="trial">تجريبي</option>
+                        <option value="basic">أساسي</option>
+                        <option value="pro">احترافي</option>
+                        <option value="enterprise">مؤسسات</option>
+                    </select>
+                    <div id="renewError" class="text-danger small mt-1 d-none"></div>
+                </div>
+            </div>
+            <div class="cx-confirm-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" id="confirmRenewBtn"
+                    style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-weight:600;">
+                    <i class="fas fa-check me-1"></i> تجديد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="loginAsTenantModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
         <div class="modal-content cx-confirm-modal">
@@ -544,12 +585,13 @@
     const urlUpdate   = "{% url 'core:tenant_update_api' 0 %}";
     const urlDelete   = "{% url 'core:tenant_delete_api' 0 %}";
     const urlSuspend  = "{% url 'core:tenant_suspend_api' 0 %}";
+    const urlRenew    = "{% url 'core:tenant_renew_api' 0 %}";
     const urlLoginAs  = "{% url 'accounts:login_as_tenant_api' 0 %}";
 
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
     /* ── Append modals to body to avoid stacking context issues ── */
-    ['tenantModal','viewTenantModal','suspendTenantModal','deleteTenantModal','loginAsTenantModal'].forEach(function(id) {
+    ['tenantModal','viewTenantModal','suspendTenantModal','renewTenantModal','deleteTenantModal','loginAsTenantModal'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el && el.parentElement !== document.body) document.body.appendChild(el);
     });
@@ -558,6 +600,7 @@
     const viewModal    = new bootstrap.Modal(document.getElementById('viewTenantModal'));
     const suspendModal = new bootstrap.Modal(document.getElementById('suspendTenantModal'));
     const deleteModal  = new bootstrap.Modal(document.getElementById('deleteTenantModal'));
+    const renewModal   = new bootstrap.Modal(document.getElementById('renewTenantModal'));
     const loginAsModal = new bootstrap.Modal(document.getElementById('loginAsTenantModal'));
 
     const $form      = $('#tenantForm');
@@ -607,6 +650,7 @@
                         <button class="cxr-act cxr-act--view js-view-tenant"    data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
                         <button class="cxr-act js-edit-tenant"                   data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
                         <button class="cxr-act cxr-act--warn js-suspend-tenant" data-id="${r.id}" data-name="${r.name}" data-active="${r.is_active}" title="${suspTitle}"><i class="fas ${suspIcon}"></i></button>
+                        <button class="cxr-act cxr-act--renew js-renew-tenant" data-id="${r.id}" data-name="${r.name}" data-plan="${r.subscription_plan_key||''}" title="تجديد الاشتراك"><i class="fas fa-rotate-right"></i></button>
                         <button class="cxr-act cxr-act--del js-delete-tenant"   data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>
                         <button class="cxr-act cxr-act--login js-login-as-tenant" data-id="${r.id}" data-name="${r.name}" title="دخول كمدير المشترك"><i class="fas fa-user-secret"></i></button>
                     </div>
@@ -684,6 +728,7 @@
                         <button class="cxr-act cxr-act--view js-view-tenant"    data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
                         <button class="cxr-act js-edit-tenant"                   data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
                         <button class="cxr-act cxr-act--warn js-suspend-tenant" data-id="${r.id}" data-name="${r.name}" data-active="${r.is_active}" title="${suspendLabel}"><i class="fas ${suspendIcon}"></i></button>
+                        <button class="cxr-act cxr-act--renew js-renew-tenant" data-id="${r.id}" data-name="${r.name}" data-plan="${r.subscription_plan_key||''}" title="تجديد الاشتراك"><i class="fas fa-rotate-right"></i></button>
                         <button class="cxr-act cxr-act--del js-delete-tenant"   data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>
                         <button class="cxr-act cxr-act--login js-login-as-tenant" data-id="${r.id}" data-name="${r.name}" title="دخول كمدير المشترك"><i class="fas fa-user-secret"></i></button>
                     </div>`;
@@ -983,6 +1028,53 @@
 
     $('#viewSuspendBtn').on('click', function () {
         openSuspend($(this).data('id'), $(this).data('name'), $(this).data('active'));
+    });
+
+    /* ── Renew ── */
+    $(document).on('click', '.js-renew-tenant', function () {
+        const id   = $(this).data('id');
+        const name = $(this).data('name');
+        const plan = $(this).data('plan') || '';
+        $('#renewTenantId').val(id);
+        $('#renewTenantName').text(name);
+        $('#renewDaysSelect').val('30');
+        $('#renewPlanSelect').val(plan);
+        $('#renewError').addClass('d-none').text('');
+        renewModal.show();
+    });
+
+    $('#confirmRenewBtn').on('click', function () {
+        const id   = $('#renewTenantId').val();
+        const days = parseInt($('#renewDaysSelect').val(), 10);
+        const plan = $('#renewPlanSelect').val();
+        const $btn = $(this);
+        const orig = $btn.html();
+
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> جاري...');
+        $('#renewError').addClass('d-none');
+
+        $.ajax({
+            url    : apiUrl(urlRenew, id),
+            method : 'POST',
+            contentType: 'application/json',
+            data   : JSON.stringify({ days: days, plan: plan }),
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            success: function (resp) {
+                if (resp.success) {
+                    renewModal.hide();
+                    dt.ajax.reload(null, false);
+                    EnjazIMS.toast(resp.message || 'تم تجديد الاشتراك بنجاح', 'success');
+                } else {
+                    $('#renewError').removeClass('d-none').text(resp.error || 'حدث خطأ');
+                }
+            },
+            error: function () {
+                $('#renewError').removeClass('d-none').text('حدث خطأ في الاتصال');
+            },
+            complete: function () {
+                $btn.prop('disabled', false).html(orig);
+            }
+        });
     });
 
     /* ── Login As ── */

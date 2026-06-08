@@ -39,7 +39,11 @@
                         <div class="notif-drop-empty"><i class="fas fa-bell-slash"></i>لا إشعارات جديدة</div>
                     </div>
                     <div class="notif-menu-footer">
-                        <a href="/notifications/">عرض جميع الإشعارات <i class="fas fa-arrow-left" style="font-size:.65rem"></i></a>
+                        {% if request.user.is_superuser %}
+                        <a href="{% url 'core:admin_notifications' %}">عرض جميع الإشعارات <i class="fas fa-arrow-left" style="font-size:.65rem"></i></a>
+                        {% else %}
+                        <a href="{% url 'notifications:list' %}">عرض جميع الإشعارات <i class="fas fa-arrow-left" style="font-size:.65rem"></i></a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -126,9 +130,19 @@ const NOTIF_ICON_STYLE = {
     'fa-bell':                 { bg: 'rgba(107,114,128,0.10)', color: '#6b7280' },
 };
 
+{% if request.user.is_superuser %}
+const NOTIF_API     = '{% url "core:admin_notifications_api" %}';
+const NOTIF_READ    = (id) => '{% url "core:admin_notifications_mark_read" 0 %}'.replace('/0/', `/${id}/`);
+const NOTIF_ALL_READ = '{% url "core:admin_notifications_mark_all_read" %}';
+{% else %}
+const NOTIF_API     = '/notifications/api/';
+const NOTIF_READ    = (id) => `/notifications/api/${id}/read/`;
+const NOTIF_ALL_READ = '/notifications/api/read-all/';
+{% endif %}
+
 async function loadNotifications() {
     try {
-        const r = await fetch('/notifications/api/');
+        const r = await fetch(NOTIF_API);
         const d = await r.json();
         const badge = document.getElementById('notifBadge');
         const list  = document.getElementById('notifList');
@@ -136,7 +150,7 @@ async function loadNotifications() {
         badge.textContent = d.unread > 99 ? '99+' : d.unread;
         badge.classList.toggle('d-none', !d.unread);
 
-        if (!d.items.length) {
+        if (!d.items || !d.items.length) {
             list.innerHTML = '<div class="notif-drop-empty"><i class="fas fa-bell-slash"></i>لا إشعارات جديدة</div>';
             return;
         }
@@ -145,7 +159,7 @@ async function loadNotifications() {
             const iconName = (n.icon || 'fa-bell').split(' ')[0];
             const style = NOTIF_ICON_STYLE[iconName] || NOTIF_ICON_STYLE['fa-bell'];
             return `
-            <a href="${n.link || '/notifications/'}"
+            <a href="${n.link || '#'}"
                class="notif-drop-item${n.is_read ? '' : ' notif-drop-item--unread'}"
                onclick="markRead(${n.id}, event)">
                 <div class="notif-drop-icon" style="background:${style.bg};color:${style.color}">
@@ -163,14 +177,14 @@ async function loadNotifications() {
 }
 
 async function markRead(id, event) {
-    await fetch(`/notifications/api/${id}/read/`, {
+    await fetch(NOTIF_READ(id), {
         method: 'POST',
         headers: { 'X-CSRFToken': getCookie('csrftoken') },
     });
 }
 
 async function markAllRead() {
-    await fetch('/notifications/api/read-all/', {
+    await fetch(NOTIF_ALL_READ, {
         method: 'POST',
         headers: { 'X-CSRFToken': getCookie('csrftoken') },
     });

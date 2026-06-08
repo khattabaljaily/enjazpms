@@ -667,3 +667,93 @@
     .adm-kpi-card__icon { width: 40px; height: 40px; }
     .adm-kpi-card__num { font-size: 1.55rem; }
 }
+
+/* ── System Health ─────────────────────────────────────── */
+.adm-health {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #fecaca;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+
+.adm-health__hd {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.1rem;
+    border-bottom: 1px solid #fee2e2;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #991b1b;
+    background: #fef2f2;
+}
+
+.adm-health__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0;
+}
+
+.adm-health-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    padding: 0.9rem 1.1rem;
+    border-left: 1px solid #f1f5f9;
+    text-decoration: none;
+    transition: background 0.18s;
+}
+[dir="rtl"] .adm-health-card { border-left: none; border-right: 1px solid #f1f5f9; }
+.adm-health-card:first-child { border-left: none; }
+[dir="rtl"] .adm-health-card:first-child { border-right: none; }
+.adm-health-card:hover { background: #fafbff; }
+
+.adm-health-card__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.adm-health-card--danger  .adm-health-card__icon { background: #fef2f2; color: #dc2626; }
+.adm-health-card--warning .adm-health-card__icon { background: #fff7ed; color: #ea580c; }
+.adm-health-card--amber   .adm-health-card__icon { background: #fffbeb; color: #d97706; }
+
+.adm-health-card__num {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.adm-health-card--danger  .adm-health-card__num { color: #dc2626; }
+.adm-health-card--warning .adm-health-card__num { color: #ea580c; }
+.adm-health-card--amber   .adm-health-card__num { color: #d97706; }
+
+.adm-health-card__lbl {
+    font-size: 0.77rem;
+    font-weight: 600;
+    color: #475569;
+    margin-top: 3px;
+}
+
+.adm-health-card__tenants {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    margin-top: 4px;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+@media (max-width: 768px) {
+    .adm-health__grid { grid-template-columns: 1fr; }
+    .adm-health-card { border-left: none; border-right: none; border-top: 1px solid #f1f5f9; }
+}
