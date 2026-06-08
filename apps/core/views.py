@@ -1740,7 +1740,8 @@ def tenant_create_api(request):
         from django.template.loader import render_to_string
         from django.utils import timezone
 
-        dashboard_url = request.build_absolute_uri(reverse('core:tenant_list'))
+        from django.urls import reverse as _reverse
+        dashboard_url = request.build_absolute_uri(_reverse('core:tenant_list'))
         html_body = render_to_string('core/email/new_tenant_notification.html', {
             'tenant': tenant,
             'admin_full_name': full_name,
