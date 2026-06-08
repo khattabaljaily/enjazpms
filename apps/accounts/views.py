@@ -644,6 +644,32 @@ def register_step3(request):
                     request.session.pop('reg_step1', None)
                     request.session.pop('reg_step2', None)
 
+                    # 6. Send admin notification email
+                    try:
+                        from django.core.mail import EmailMessage
+                        from django.template.loader import render_to_string
+                        from django.utils import timezone as tz
+                        from django.conf import settings as django_settings
+                        html_body = render_to_string('core/email/new_tenant_notification.html', {
+                            'tenant': tenant,
+                            'admin_full_name': user.get_full_name() or step1_data['username'],
+                            'admin_username': step1_data['username'],
+                            'admin_email': step1_data.get('email', ''),
+                            'created_at': tz.now(),
+                            'dashboard_url': request.build_absolute_uri('/tenants/'),
+                        })
+                        msg = EmailMessage(
+                            subject=f'New Tenant Registered: {tenant.name}',
+                            body=html_body,
+                            from_email='EnjazIMS <{}>'.format(django_settings.EMAIL_HOST_USER),
+                            to=['khattabaljaily@gmail.com'],
+                        )
+                        msg.content_subtype = 'html'
+                        msg.send(fail_silently=False)
+                    except Exception as _email_err:
+                        import logging
+                        logging.getLogger(__name__).error('registration email failed: %s', _email_err, exc_info=True)
+
                     if _wants_json(request):
                         return JsonResponse({
                             'success': True,
