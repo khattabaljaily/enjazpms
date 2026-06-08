@@ -12,7 +12,7 @@ class MaintenanceModeMiddleware:
     يتحقق من وضع الصيانة — يعيد توجيه غير السوبر أدمن لصفحة الصيانة
     """
 
-    EXEMPT_PATHS = ['/admin/', '/static/', '/media/', '/accounts/login/', '/accounts/logout/']
+    EXEMPT_PATHS = ['/admin/', '/static/', '/media/', '/accounts/login/', '/accounts/api/login/', '/accounts/logout/']
 
     def __init__(self, get_response):
         self.get_response = get_response
