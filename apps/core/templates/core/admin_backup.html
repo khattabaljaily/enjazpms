@@ -57,15 +57,6 @@
     </div>
 </div>
 
-<!-- ══════════════════════════ CRON HINT ══════════════════════════ -->
-<div class="bk-cron-box mb-4">
-    <div>
-        <i class="fas fa-clock me-1" style="color:#6366f1"></i>
-        <strong>النسخ التلقائي:</strong>
-        أضف هذا السطر في <code style="display:inline; padding:0.1rem 0.35rem; font-size:0.75rem">crontab</code> لتشغيل النسخ الاحتياطي مرتين يومياً (6ص و 6م):
-    </div>
-    <code>0 6,18 * * * cd /path/to/EnjazIMS && python manage.py auto_backup_tenants >> /var/log/enjaz_backup.log 2>&1</code>
-</div>
 
 <!-- ══════════════════════════ PANEL ══════════════════════════════ -->
 <div class="cx-panel">
