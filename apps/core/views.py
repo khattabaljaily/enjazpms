@@ -1754,9 +1754,10 @@ def tenant_create_api(request):
             to=['khattabaljaily@gmail.com'],
         )
         msg.content_subtype = 'html'
-        msg.send(fail_silently=True)
-    except Exception:
-        pass
+        msg.send(fail_silently=False)
+    except Exception as _email_err:
+        import logging
+        logging.getLogger(__name__).error('tenant notification email failed: %s', _email_err, exc_info=True)
 
     return JsonResponse({
         'success': True,
