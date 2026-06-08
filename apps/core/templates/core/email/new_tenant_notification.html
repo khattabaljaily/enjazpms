@@ -1,444 +1,268 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Tenant Registered — EnjazIMS</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f1f5f9;
-            color: #1e293b;
-            line-height: 1.6;
-        }
-
-        .wrapper {
-            max-width: 620px;
-            margin: 32px auto;
-            padding: 0 16px 32px;
-        }
-
-        /* ── Card ── */
-        .card {
-            background: #ffffff;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-        }
-
-        /* ── Header ── */
-        .header {
-            background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%);
-            padding: 40px 36px 36px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(ellipse at top right, rgba(255,255,255,0.12) 0%, transparent 60%);
-        }
-
-        .header-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 64px;
-            height: 64px;
-            background: rgba(255,255,255,0.18);
-            border-radius: 16px;
-            font-size: 28px;
-            margin-bottom: 16px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .header-logo {
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.7);
-            margin-bottom: 10px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .header-title {
-            font-size: 26px;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 6px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .header-subtitle {
-            font-size: 14px;
-            color: rgba(255,255,255,0.8);
-            position: relative;
-            z-index: 1;
-        }
-
-        /* ── Alert Banner ── */
-        .alert-banner {
-            background: linear-gradient(90deg, #ecfdf5, #d1fae5);
-            border-left: 4px solid #10b981;
-            padding: 14px 24px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: #065f46;
-            font-weight: 600;
-        }
-
-        /* ── Body ── */
-        .body {
-            padding: 32px 36px;
-        }
-
-        .greeting {
-            font-size: 16px;
-            color: #475569;
-            margin-bottom: 28px;
-        }
-
-        .greeting strong {
-            color: #1e293b;
-        }
-
-        /* ── Section title ── */
-        .section-title {
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            color: #94a3b8;
-            margin-bottom: 12px;
-            margin-top: 28px;
-        }
-
-        /* ── Info Grid ── */
-        .info-grid {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            overflow: hidden;
-        }
-
-        .info-row {
-            display: flex;
-            align-items: center;
-            padding: 14px 18px;
-            border-bottom: 1px solid #e2e8f0;
-            gap: 14px;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .info-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            flex-shrink: 0;
-        }
-
-        .info-icon.purple { background: #ede9fe; }
-        .info-icon.blue   { background: #dbeafe; }
-        .info-icon.green  { background: #dcfce7; }
-        .info-icon.orange { background: #ffedd5; }
-        .info-icon.pink   { background: #fce7f3; }
-        .info-icon.slate  { background: #f1f5f9; }
-
-        .info-content {
-            flex: 1;
-        }
-
-        .info-label {
-            font-size: 11px;
-            color: #94a3b8;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-        }
-
-        .info-value {
-            font-size: 14px;
-            color: #1e293b;
-            font-weight: 600;
-            margin-top: 2px;
-        }
-
-        /* ── Badges ── */
-        .badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
-        .badge-trial      { background: #fef3c7; color: #92400e; }
-        .badge-basic      { background: #dbeafe; color: #1e40af; }
-        .badge-pro        { background: #ede9fe; color: #5b21b6; }
-        .badge-enterprise { background: #dcfce7; color: #166534; }
-        .badge-demo       { background: #fce7f3; color: #9d174d; }
-        .badge-live       { background: #d1fae5; color: #065f46; }
-        .badge-single     { background: #e0f2fe; color: #0369a1; }
-        .badge-multi      { background: #f3e8ff; color: #7e22ce; }
-
-        /* ── CTA Button ── */
-        .cta-section {
-            text-align: center;
-            margin: 32px 0 8px;
-        }
-
-        .cta-btn {
-            display: inline-block;
-            background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%);
-            color: #ffffff !important;
-            text-decoration: none;
-            padding: 14px 36px;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 700;
-            letter-spacing: 0.3px;
-            box-shadow: 0 6px 20px rgba(79,70,229,0.35);
-        }
-
-        /* ── Timestamp line ── */
-        .timestamp {
-            text-align: center;
-            font-size: 12px;
-            color: #94a3b8;
-            margin-top: 16px;
-        }
-
-        /* ── Footer ── */
-        .footer {
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-            padding: 24px 36px;
-            text-align: center;
-        }
-
-        .footer p {
-            font-size: 12px;
-            color: #94a3b8;
-            margin: 4px 0;
-        }
-
-        .footer-brand {
-            font-size: 15px;
-            font-weight: 700;
-            color: #4f46e5;
-            margin-bottom: 6px;
-        }
-
-        @media (max-width: 600px) {
-            .body { padding: 24px 20px; }
-            .header { padding: 32px 20px 28px; }
-            .footer { padding: 20px; }
-            .header-title { font-size: 22px; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Tenant Registered — EnjazIMS</title>
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; background-color: #f0f4f8; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; }
+  .email-body { background-color: #f0f4f8; padding: 32px 16px; }
+  .card { background: #ffffff; border-radius: 12px; overflow: hidden; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
+</style>
 </head>
 <body>
-<div class="wrapper">
-    <div class="card">
+<div class="email-body">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr><td align="center">
+<table class="card" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.08);">
 
-        <!-- Header -->
-        <div class="header">
-            <div class="header-logo">EnjazIMS</div>
-            <div class="header-icon">🏢</div>
-            <div class="header-title">New Tenant Registered</div>
-            <div class="header-subtitle">A new subscription has been created on EnjazIMS</div>
-        </div>
+  <!-- HEADER -->
+  <tr>
+    <td style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:40px 40px 32px;text-align:center;">
+      <p style="margin:0 0 16px;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.65);">EnjazIMS Platform</p>
+      <div style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:50px;padding:10px 24px;margin-bottom:20px;">
+        <span style="font-size:14px;color:#ffffff;font-weight:600;letter-spacing:1px;">NEW TENANT REGISTERED</span>
+      </div>
+      <h1 style="margin:0;font-size:28px;font-weight:700;color:#ffffff;line-height:1.3;">Subscription Created</h1>
+      <p style="margin:10px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">{{ created_at|date:"l, F j, Y" }} at {{ created_at|date:"g:i A" }}</p>
+    </td>
+  </tr>
 
-        <!-- Alert Banner -->
-        <div class="alert-banner">
-            <span>✅</span>
-            <span>Tenant successfully created on {{ created_at|date:"F j, Y \a\t g:i A" }}</span>
-        </div>
+  <!-- SUCCESS BANNER -->
+  <tr>
+    <td style="background:#ecfdf5;border-bottom:1px solid #d1fae5;padding:14px 32px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="24" style="vertical-align:middle;">
+            <div style="width:10px;height:10px;background:#10b981;border-radius:50%;"></div>
+          </td>
+          <td style="vertical-align:middle;padding-left:10px;font-size:13px;font-weight:600;color:#065f46;">
+            Tenant account successfully created and is now active
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
 
-        <!-- Body -->
-        <div class="body">
+  <!-- BODY -->
+  <tr>
+    <td style="padding:32px 40px 8px;">
+      <p style="margin:0 0 28px;font-size:15px;color:#64748b;line-height:1.6;">
+        A new subscription has been registered on EnjazIMS. Here is the full summary:
+      </p>
 
-            <p class="greeting">Hi <strong>Admin</strong>, a new tenant has just been registered on EnjazIMS. Here's a full summary:</p>
+      <!-- SECTION: Business Info -->
+      <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;">Business Information</p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:24px;">
 
-            <!-- Business Info -->
-            <div class="section-title">Business Information</div>
-            <div class="info-grid">
-                <div class="info-row">
-                    <span class="info-icon purple">🏢</span>
-                    <div class="info-content">
-                        <div class="info-label">Business Name</div>
-                        <div class="info-value">{{ tenant.name }}</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon blue">🔗</span>
-                    <div class="info-content">
-                        <div class="info-label">Slug / Identifier</div>
-                        <div class="info-value" style="font-family: monospace; font-size: 13px; color: #4f46e5;">{{ tenant.slug }}</div>
-                    </div>
-                </div>
-                {% if tenant.business_type %}
-                <div class="info-row">
-                    <span class="info-icon orange">📂</span>
-                    <div class="info-content">
-                        <div class="info-label">Business Type</div>
-                        <div class="info-value">{{ tenant.business_type.name_ar }}</div>
-                    </div>
-                </div>
-                {% endif %}
-                {% if tenant.city %}
-                <div class="info-row">
-                    <span class="info-icon green">📍</span>
-                    <div class="info-content">
-                        <div class="info-label">Location</div>
-                        <div class="info-value">{{ tenant.city }}{% if tenant.country %}, {{ tenant.country }}{% endif %}</div>
-                    </div>
-                </div>
-                {% endif %}
-                {% if tenant.phone %}
-                <div class="info-row">
-                    <span class="info-icon slate">📞</span>
-                    <div class="info-content">
-                        <div class="info-label">Phone</div>
-                        <div class="info-value">{{ tenant.phone }}</div>
-                    </div>
-                </div>
-                {% endif %}
-                {% if tenant.email %}
-                <div class="info-row">
-                    <span class="info-icon pink">✉️</span>
-                    <div class="info-content">
-                        <div class="info-label">Business Email</div>
-                        <div class="info-value">{{ tenant.email }}</div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
+        <!-- Business Name -->
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Business Name</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            <span style="font-size:14px;font-weight:700;color:#1e293b;">{{ tenant.name }}</span>
+          </td>
+        </tr>
 
-            <!-- Subscription Info -->
-            <div class="section-title">Subscription Details</div>
-            <div class="info-grid">
-                <div class="info-row">
-                    <span class="info-icon purple">💎</span>
-                    <div class="info-content">
-                        <div class="info-label">Plan</div>
-                        <div class="info-value">
-                            <span class="badge badge-{{ tenant.subscription_plan }}">{{ tenant.get_subscription_plan_display }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon blue">🖥️</span>
-                    <div class="info-content">
-                        <div class="info-label">Version</div>
-                        <div class="info-value">
-                            <span class="badge badge-{% if tenant.version_type == 'single_store' %}single{% else %}multi{% endif %}">{{ tenant.get_version_type_display }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon orange">🏷️</span>
-                    <div class="info-content">
-                        <div class="info-label">Account Type</div>
-                        <div class="info-value">
-                            {% if tenant.is_demo %}
-                                <span class="badge badge-demo">Demo</span>
-                            {% else %}
-                                <span class="badge badge-live">Live</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% if tenant.subscription_start %}
-                <div class="info-row">
-                    <span class="info-icon green">📅</span>
-                    <div class="info-content">
-                        <div class="info-label">Start Date</div>
-                        <div class="info-value">{{ tenant.subscription_start|date:"F j, Y" }}</div>
-                    </div>
-                </div>
-                {% endif %}
-                <div class="info-row">
-                    <span class="info-icon pink">⏳</span>
-                    <div class="info-content">
-                        <div class="info-label">Expires</div>
-                        <div class="info-value">{% if tenant.subscription_expires %}{{ tenant.subscription_expires|date:"F j, Y" }}{% else %}Open-ended{% endif %}</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon slate">👥</span>
-                    <div class="info-content">
-                        <div class="info-label">Limits</div>
-                        <div class="info-value">{{ tenant.max_users }} users · {{ tenant.max_stocks }} warehouses · {{ tenant.max_branches }} branches</div>
-                    </div>
-                </div>
-            </div>
+        <!-- Slug -->
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Identifier</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            <span style="font-size:13px;font-family:monospace;color:#4f46e5;background:#ede9fe;padding:2px 8px;border-radius:4px;">{{ tenant.slug }}</span>
+          </td>
+        </tr>
 
-            <!-- Admin User Info -->
-            <div class="section-title">Admin Account Created</div>
-            <div class="info-grid">
-                {% if admin_full_name %}
-                <div class="info-row">
-                    <span class="info-icon purple">👤</span>
-                    <div class="info-content">
-                        <div class="info-label">Full Name</div>
-                        <div class="info-value">{{ admin_full_name }}</div>
-                    </div>
-                </div>
-                {% endif %}
-                <div class="info-row">
-                    <span class="info-icon blue">🔑</span>
-                    <div class="info-content">
-                        <div class="info-label">Username</div>
-                        <div class="info-value" style="font-family: monospace; font-size: 13px;">{{ admin_username }}</div>
-                    </div>
-                </div>
-                {% if admin_email %}
-                <div class="info-row">
-                    <span class="info-icon green">📧</span>
-                    <div class="info-content">
-                        <div class="info-label">Email</div>
-                        <div class="info-value">{{ admin_email }}</div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
+        {% if tenant.business_type %}
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Business Type</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            <span style="font-size:14px;color:#1e293b;">{{ tenant.business_type.name_ar }}</span>
+          </td>
+        </tr>
+        {% endif %}
 
-            <!-- CTA -->
-            <div class="cta-section">
-                <a href="{{ dashboard_url }}" class="cta-btn">View in Admin Dashboard →</a>
-            </div>
-            <p class="timestamp">Registered on {{ created_at|date:"l, F j, Y \a\t g:i A" }}</p>
+        {% if tenant.city %}
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Location</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            <span style="font-size:14px;color:#1e293b;">{{ tenant.city }}{% if tenant.country %}, {{ tenant.country }}{% endif %}</span>
+          </td>
+        </tr>
+        {% endif %}
 
-        </div>
+        {% if tenant.phone %}
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Phone</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            <span style="font-size:14px;color:#1e293b;">{{ tenant.phone }}</span>
+          </td>
+        </tr>
+        {% endif %}
 
-        <!-- Footer -->
-        <div class="footer">
-            <div class="footer-brand">EnjazIMS</div>
-            <p>This is an automated notification. Please do not reply to this email.</p>
-            <p style="margin-top: 8px; color: #cbd5e1;">© {{ created_at|date:"Y" }} EnjazIMS — All rights reserved.</p>
-        </div>
+        {% if tenant.email %}
+        <tr>
+          <td style="padding:14px 18px;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Email</span>
+          </td>
+          <td style="padding:14px 18px;vertical-align:top;">
+            <span style="font-size:14px;color:#1e293b;">{{ tenant.email }}</span>
+          </td>
+        </tr>
+        {% endif %}
 
-    </div>
+      </table>
+
+      <!-- SECTION: Subscription -->
+      <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;">Subscription Details</p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:24px;">
+
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Plan</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            {% if tenant.subscription_plan == 'trial' %}
+              <span style="font-size:12px;font-weight:700;color:#92400e;background:#fef3c7;padding:3px 10px;border-radius:20px;">{{ tenant.get_subscription_plan_display }}</span>
+            {% elif tenant.subscription_plan == 'basic' %}
+              <span style="font-size:12px;font-weight:700;color:#1e40af;background:#dbeafe;padding:3px 10px;border-radius:20px;">{{ tenant.get_subscription_plan_display }}</span>
+            {% elif tenant.subscription_plan == 'pro' %}
+              <span style="font-size:12px;font-weight:700;color:#5b21b6;background:#ede9fe;padding:3px 10px;border-radius:20px;">{{ tenant.get_subscription_plan_display }}</span>
+            {% else %}
+              <span style="font-size:12px;font-weight:700;color:#166534;background:#dcfce7;padding:3px 10px;border-radius:20px;">{{ tenant.get_subscription_plan_display }}</span>
+            {% endif %}
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Version</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            <span style="font-size:14px;color:#1e293b;">{{ tenant.get_version_type_display }}</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Account Type</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            {% if tenant.is_demo %}
+              <span style="font-size:12px;font-weight:700;color:#9d174d;background:#fce7f3;padding:3px 10px;border-radius:20px;">Demo</span>
+            {% else %}
+              <span style="font-size:12px;font-weight:700;color:#065f46;background:#d1fae5;padding:3px 10px;border-radius:20px;">Live</span>
+            {% endif %}
+          </td>
+        </tr>
+
+        {% if tenant.subscription_start %}
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Start Date</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            <span style="font-size:14px;color:#1e293b;">{{ tenant.subscription_start|date:"F j, Y" }}</span>
+          </td>
+        </tr>
+        {% endif %}
+
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Expires</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            <span style="font-size:14px;color:#1e293b;">{% if tenant.subscription_expires %}{{ tenant.subscription_expires|date:"F j, Y" }}{% else %}Open-ended{% endif %}</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:14px 18px;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Limits</span>
+          </td>
+          <td style="padding:14px 18px;vertical-align:top;">
+            <span style="font-size:13px;color:#475569;">
+              {{ tenant.max_users }} users &nbsp;&bull;&nbsp; {{ tenant.max_stocks }} warehouses &nbsp;&bull;&nbsp; {{ tenant.max_branches }} branches
+            </span>
+          </td>
+        </tr>
+
+      </table>
+
+      <!-- SECTION: Admin Account -->
+      <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;">Admin Account Created</p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:32px;">
+
+        {% if admin_full_name %}
+        <tr>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Full Name</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
+            <span style="font-size:14px;font-weight:600;color:#1e293b;">{{ admin_full_name }}</span>
+          </td>
+        </tr>
+        {% endif %}
+
+        <tr>
+          <td style="padding:14px 18px;border-bottom:{% if admin_email %}1px solid #e2e8f0{% else %}0{% endif %};vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Username</span>
+          </td>
+          <td style="padding:14px 18px;border-bottom:{% if admin_email %}1px solid #e2e8f0{% else %}0{% endif %};vertical-align:top;">
+            <span style="font-size:13px;font-family:monospace;color:#4f46e5;background:#ede9fe;padding:2px 8px;border-radius:4px;">{{ admin_username }}</span>
+          </td>
+        </tr>
+
+        {% if admin_email %}
+        <tr>
+          <td style="padding:14px 18px;vertical-align:top;width:160px;">
+            <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Email</span>
+          </td>
+          <td style="padding:14px 18px;vertical-align:top;">
+            <span style="font-size:14px;color:#1e293b;">{{ admin_email }}</span>
+          </td>
+        </tr>
+        {% endif %}
+
+      </table>
+
+      <!-- CTA BUTTON -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+        <tr>
+          <td align="center">
+            <a href="{{ dashboard_url }}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:8px;letter-spacing:0.3px;">
+              View in Admin Dashboard
+            </a>
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:24px 40px;text-align:center;">
+      <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#4f46e5;">EnjazIMS</p>
+      <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;">This is an automated notification. Please do not reply.</p>
+      <p style="margin:12px 0 0;font-size:11px;color:#cbd5e1;">&copy; {{ created_at|date:"Y" }} EnjazIMS. All rights reserved.</p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
 </div>
 </body>
 </html>
