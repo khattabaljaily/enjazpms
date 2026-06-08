@@ -160,7 +160,8 @@ class Tenant(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(self.name)
+            import uuid
+            base_slug = slugify(self.name, allow_unicode=True) or str(uuid.uuid4())[:8]
             slug = base_slug
             counter = 1
             while Tenant.objects.filter(slug=slug).exists():

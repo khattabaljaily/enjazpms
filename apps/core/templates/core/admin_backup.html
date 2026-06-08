@@ -120,13 +120,20 @@
                 <button class="bk-icon-btn bk-icon-btn--secondary bk-btn-quick-backup"
                         data-slug="{{ row.tenant.slug }}"
                         data-name="{{ row.tenant.name }}"
-                        title="نسخة احتياطية الآن">
+                        title="نسخة احتياطية الآن"
+                        {% if not row.tenant.slug %}disabled style="opacity:.4;cursor:not-allowed;"{% endif %}>
                     <i class="fas fa-plus"></i>
                 </button>
+                {% if row.tenant.slug %}
                 <a href="{% url 'core:admin_backup_detail' row.tenant.slug %}"
                    class="bk-icon-btn bk-icon-btn--primary" title="عرض النسخ">
                     <i class="fas fa-list"></i>
                 </a>
+                {% else %}
+                <span class="bk-icon-btn bk-icon-btn--primary" title="لا يوجد رابط للمشترك" style="opacity:.4;cursor:not-allowed;">
+                    <i class="fas fa-list"></i>
+                </span>
+                {% endif %}
             </div>
         </div>
         {% empty %}
