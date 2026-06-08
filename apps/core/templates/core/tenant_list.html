@@ -575,6 +575,9 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ country_timezone_map|json_script:"ctz-data" }}
+{{ country_currency_map|json_script:"ccy-data" }}
+{{ currency_ar|json_script:"ccy-ar-data" }}
 <script>
 (function () {
     'use strict';
@@ -1126,9 +1129,9 @@
 
 // ── Auto-fill timezone & currency from country ─────────────────
 (function () {
-    const CTZ      = {{ country_timezone_map_json|safe }};
-    const CCY      = {{ country_currency_map_json|safe }};
-    const CCY_AR   = {{ currency_ar_json|safe }};
+    const CTZ      = JSON.parse(document.getElementById('ctz-data').textContent);
+    const CCY      = JSON.parse(document.getElementById('ccy-data').textContent);
+    const CCY_AR   = JSON.parse(document.getElementById('ccy-ar-data').textContent);
 
     function setCurrency(code) {
         if (!code) return;

@@ -4,6 +4,7 @@ Core Views - Dashboard وصفحات النظام الأساسية
 import json
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseNotAllowed
@@ -1563,9 +1564,9 @@ def tenant_list(request):
         'form': TenantForm(),
         'business_types': business_types,
         'stats': {'total': total, 'active': active, 'suspended': suspended, 'expired': expired},
-        'country_timezone_map_json': json.dumps(COUNTRY_TIMEZONE_MAP, ensure_ascii=False),
-        'country_currency_map_json': json.dumps(COUNTRY_CURRENCY_MAP, ensure_ascii=False),
-        'currency_ar_json': json.dumps(CURRENCY_AR, ensure_ascii=False),
+        'country_timezone_map': COUNTRY_TIMEZONE_MAP,
+        'country_currency_map': COUNTRY_CURRENCY_MAP,
+        'currency_ar': CURRENCY_AR,
     }
     return render(request, 'core/tenant_list.html', context)
 
@@ -1730,6 +1731,32 @@ def tenant_create_api(request):
         import logging
         logging.getLogger(__name__).error('tenant_create_api error: %s', e, exc_info=True)
         return JsonResponse({'success': False, 'message': f'حدث خطأ: {e}'}, status=500)
+
+    # Send admin notification email (non-blocking)
+    try:
+        from django.core.mail import EmailMessage
+        from django.template.loader import render_to_string
+        from django.utils import timezone
+
+        dashboard_url = request.build_absolute_uri(reverse('core:tenant_list'))
+        html_body = render_to_string('core/email/new_tenant_notification.html', {
+            'tenant': tenant,
+            'admin_full_name': full_name,
+            'admin_username': username,
+            'admin_email': email,
+            'created_at': timezone.now(),
+            'dashboard_url': dashboard_url,
+        })
+        msg = EmailMessage(
+            subject=f'New Tenant Registered: {tenant.name}',
+            body=html_body,
+            from_email='EnjazIMS <{}>'.format(settings.EMAIL_HOST_USER),
+            to=['khattabaljaily@gmail.com'],
+        )
+        msg.content_subtype = 'html'
+        msg.send(fail_silently=True)
+    except Exception:
+        pass
 
     return JsonResponse({
         'success': True,
