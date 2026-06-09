@@ -138,6 +138,7 @@
 .usr-badge--staff    { background:#f5f3ff; color:#7c3aed; }
 .usr-badge--super    { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; }
 .usr-badge--never    { background:#f1f5f9; color:#64748b; }
+.usr-badge--neutral  { background:#f1f5f9; color:#64748b; }
 
 /* ── Action icons ────────────────────────────────────── */
 .usr-actions { display:flex; align-items:center; gap:.4rem; }
@@ -300,13 +301,58 @@
 .usr-toast--ok  { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
 .usr-toast--err { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
 
+/* ── Mobile cards ────────────────────────────────────── */
+.usr-mob-list { display:none; flex-direction:column; gap:.65rem; }
+.usr-mob-card {
+    background:var(--card-bg,#fff); border-radius:14px;
+    border:1px solid var(--border-color,#e2e8f0);
+    padding:.85rem 1rem; box-shadow:0 1px 4px rgba(15,23,42,.05);
+}
+.usr-mob-card__head {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:.75rem; margin-bottom:.75rem;
+}
+.usr-mob-card__body {
+    display:grid; grid-template-columns:1fr 1fr; gap:.5rem .75rem;
+}
+.usr-mob-card__row { display:flex; flex-direction:column; gap:.15rem; }
+.usr-mob-card__lbl {
+    font-size:.68rem; font-weight:600; color:var(--text-muted,#94a3b8);
+    text-transform:uppercase; letter-spacing:.03em;
+}
+.usr-mob-card__val { font-size:.82rem; color:var(--text-main,#1e293b); }
+
 /* Mobile */
 @media(max-width:767px){
     .usr-hero__inner { flex-direction:column; align-items:flex-start; gap:.75rem; }
     .usr-form-row { grid-template-columns:1fr; }
     .usr-staff-grid { grid-template-columns:1fr; }
-    .usr-table thead th:nth-child(3),.usr-table tbody td:nth-child(3) { display:none; }
+    .usr-table-wrap { display:none; }
+    .usr-mob-list { display:flex; }
 }
+
+/* Dark Mode */
+[data-theme="dark"] .usr-badge--active   { background:rgba(22,163,74,.15);  color:#86efac; }
+[data-theme="dark"] .usr-badge--inactive { background:rgba(220,38,38,.15);  color:#fca5a5; }
+[data-theme="dark"] .usr-badge--admin    { background:rgba(37,99,235,.15);  color:#93c5fd; }
+[data-theme="dark"] .usr-badge--staff    { background:rgba(124,58,237,.15); color:#d8b4fe; }
+[data-theme="dark"] .usr-badge--never    { background:rgba(100,116,139,.12); color:#94a3b8; }
+[data-theme="dark"] .usr-badge--neutral  { background:rgba(100,116,139,.12); color:#94a3b8; }
+[data-theme="dark"] .usr-badge--super    { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; }
+
+[data-theme="dark"] .usr-icon-btn--view   { background:rgba(37,99,235,.15);  color:#93c5fd; }
+[data-theme="dark"] .usr-icon-btn--toggle { background:rgba(22,163,74,.15);  color:#86efac; }
+[data-theme="dark"] .usr-icon-btn--toggle.is-inactive { background:rgba(220,38,38,.15); color:#fca5a5; }
+[data-theme="dark"] .usr-icon-btn--edit   { background:rgba(124,58,237,.15); color:#d8b4fe; }
+
+[data-theme="dark"] .usr-perm-chip     { background:rgba(124,58,237,.15); color:#d8b4fe; }
+[data-theme="dark"] .usr-perm-chip--off { background:rgba(100,116,139,.12); color:#94a3b8; }
+[data-theme="dark"] .usr-perm-item__icon { background:rgba(37,99,235,.15); color:#93c5fd; }
+[data-theme="dark"] .usr-perm-item.checked .usr-perm-item__icon { background:rgba(124,58,237,.15); color:#d8b4fe; }
+[data-theme="dark"] .usr-perm-item__check { border-color:#475569; }
+
+[data-theme="dark"] .usr-toast--ok  { background:rgba(22,163,74,.15);  color:#86efac; border-color:rgba(22,163,74,.3); }
+[data-theme="dark"] .usr-toast--err { background:rgba(220,38,38,.15);  color:#fca5a5; border-color:rgba(220,38,38,.3); }
 </style>
 {% endblock %}
 
@@ -337,12 +383,12 @@
   <div class="usr-tabs">
     <button class="usr-tab {% if tab == 'tenant' %}active{% endif %}"
             onclick="switchTab('tenant')">
-      <i class="fas fa-user"></i> مستخدمو المشتركين
+      <i class="fas fa-user"></i> جميع المستخدمين
       <span class="usr-tab__badge">{{ stats.total_tenant_users }}</span>
     </button>
     <button class="usr-tab {% if tab == 'staff' %}active{% endif %}"
             onclick="switchTab('staff')">
-      <i class="fas fa-shield-alt"></i> مساعدو المنصة
+      <i class="fas fa-shield-alt"></i> مدراء النظام
       <span class="usr-tab__badge">{{ stats.platform_staff }}</span>
     </button>
   </div>
@@ -414,7 +460,7 @@
             </td>
             <td>
               {% if u.is_tenant_admin %}<span class="usr-badge usr-badge--admin"><i class="fas fa-user-cog"></i> مدير</span>
-              {% else %}<span class="usr-badge" style="background:#f1f5f9;color:#64748b;">موظف</span>{% endif %}
+              {% else %}<span class="usr-badge usr-badge--neutral">موظف</span>{% endif %}
             </td>
             <td>
               {% if u.is_active %}<span class="usr-badge usr-badge--active"><i class="fas fa-circle" style="font-size:.55rem;"></i> نشط</span>
@@ -445,6 +491,68 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Mobile cards -->
+    <div class="usr-mob-list">
+      {% for u in tenant_users %}
+      <div class="usr-mob-card" data-pk="{{ u.pk }}">
+        <div class="usr-mob-card__head">
+          <div class="usr-cell">
+            <div class="usr-avatar">{% firstof u.first_name|first u.username|first %}</div>
+            <div>
+              <div class="usr-cell__name">{{ u.get_full_name|default:u.username }}</div>
+              <div class="usr-cell__sub">{{ u.username }}{% if u.email %} · {{ u.email }}{% endif %}</div>
+            </div>
+          </div>
+          <div class="usr-actions">
+            <button class="usr-icon-btn usr-icon-btn--view" title="عرض التفاصيل" onclick="viewUser({{ u.pk }})">
+              <i class="fas fa-eye"></i>
+            </button>
+            {% if request.user.is_superuser %}
+            <button class="usr-icon-btn usr-icon-btn--toggle {% if not u.is_active %}is-inactive{% endif %}"
+                    title="{% if u.is_active %}تعطيل{% else %}تفعيل{% endif %}"
+                    data-pk="{{ u.pk }}" data-active="{{ u.is_active|yesno:'true,false' }}"
+                    onclick="toggleUser(this)">
+              <i class="fas {% if u.is_active %}fa-toggle-on{% else %}fa-toggle-off{% endif %}"></i>
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        <div class="usr-mob-card__body">
+          <div class="usr-mob-card__row">
+            <span class="usr-mob-card__lbl">المشترك</span>
+            <span class="usr-mob-card__val">
+              {% if u.tenant %}<span class="usr-tenant-pill"><i class="fas fa-building" style="font-size:.7rem;"></i>{{ u.tenant.name }}</span>{% else %}—{% endif %}
+            </span>
+          </div>
+          <div class="usr-mob-card__row">
+            <span class="usr-mob-card__lbl">آخر دخول</span>
+            <span class="usr-mob-card__val">
+              {% if u.last_login %}{{ u.last_login|date:"Y-m-d" }}{% else %}<span class="usr-badge usr-badge--never"><i class="fas fa-clock"></i> لم يدخل</span>{% endif %}
+            </span>
+          </div>
+          <div class="usr-mob-card__row">
+            <span class="usr-mob-card__lbl">النوع</span>
+            <span class="usr-mob-card__val">
+              {% if u.is_tenant_admin %}<span class="usr-badge usr-badge--admin"><i class="fas fa-user-cog"></i> مدير</span>{% else %}<span class="usr-badge usr-badge--neutral">موظف</span>{% endif %}
+            </span>
+          </div>
+          <div class="usr-mob-card__row">
+            <span class="usr-mob-card__lbl">الحالة</span>
+            <span class="usr-mob-card__val usr-mob-card__status">
+              {% if u.is_active %}<span class="usr-badge usr-badge--active"><i class="fas fa-circle" style="font-size:.55rem;"></i> نشط</span>{% else %}<span class="usr-badge usr-badge--inactive"><i class="fas fa-circle" style="font-size:.55rem;"></i> معطّل</span>{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="usr-empty">
+        <i class="fas fa-inbox"></i>
+        <p>لا توجد نتائج</p>
+      </div>
+      {% endfor %}
+    </div>
+
   </div>
 
   <!-- ══════════════ TAB: PLATFORM STAFF ═════════════════════════ -->
@@ -701,15 +809,22 @@ function toggleUser(btn) {
         .then(r => r.json()).then(d => {
             if (!d.success) return showToast('حدث خطأ', 'err');
             const active = d.is_active;
-            btn.dataset.active = active;
-            btn.querySelector('i').className = `fas ${active ? 'fa-toggle-on' : 'fa-toggle-off'}`;
-            btn.classList.toggle('is-inactive', !active);
-            btn.title = active ? 'تعطيل' : 'تفعيل';
-            const row = btn.closest('tr');
-            const badgeCell = row.querySelector('td:nth-child(5)');
-            badgeCell.innerHTML = active
+            const badgeHTML = active
                 ? '<span class="usr-badge usr-badge--active"><i class="fas fa-circle" style="font-size:.55rem;"></i> نشط</span>'
                 : '<span class="usr-badge usr-badge--inactive"><i class="fas fa-circle" style="font-size:.55rem;"></i> معطّل</span>';
+            // Update all toggle buttons for this user (table + card)
+            document.querySelectorAll(`.usr-icon-btn--toggle[data-pk="${pk}"]`).forEach(b => {
+                b.dataset.active = active;
+                b.querySelector('i').className = `fas ${active ? 'fa-toggle-on' : 'fa-toggle-off'}`;
+                b.classList.toggle('is-inactive', !active);
+                b.title = active ? 'تعطيل' : 'تفعيل';
+            });
+            // Update status badge in table row
+            const row = btn.closest('tr');
+            if (row) row.querySelector('td:nth-child(5)').innerHTML = badgeHTML;
+            // Update status badge in mobile card
+            const card = btn.closest('.usr-mob-card');
+            if (card) card.querySelector('.usr-mob-card__status').innerHTML = badgeHTML;
             showToast(active ? 'تم تفعيل المستخدم' : 'تم تعطيل المستخدم', 'ok');
         });
 }

@@ -53,6 +53,8 @@
 [data-theme="dark"] .pos-discount-type,
 [data-theme="dark"] .pos-customer-row select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 0.65rem center;
 }
 
 /* ── Top Bar ─────────────────────────────────────────────── */
@@ -494,7 +496,7 @@
     padding: .4rem .65rem .4rem 2rem;
     border: 1.5px solid var(--border-color);
     border-radius: var(--radius-md);
-    background: var(--bg-secondary);
+    background-color: var(--bg-secondary);
     color: var(--text-primary);
     font-family: inherit;
     font-size: .82rem;

@@ -89,6 +89,25 @@
 }
 .adn-empty i { font-size: 2.5rem; }
 .adn-empty p { font-size: 0.9rem; margin: 0; }
+
+/* Dark Mode */
+[data-theme="dark"] .adn-item { border-bottom-color: var(--border-light); }
+[data-theme="dark"] .adn-item.unread { background: rgba(99,102,241,0.06); }
+[data-theme="dark"] .adn-item:hover  { background: var(--surface-hover); }
+[data-theme="dark"] .adn-item__title,
+[data-theme="dark"] .adn-item.unread .adn-item__title { color: var(--text-primary); }
+[data-theme="dark"] .adn-item:not(.unread) .adn-item__title { color: var(--text-tertiary); }
+[data-theme="dark"] .adn-item__msg  { color: var(--text-tertiary); }
+[data-theme="dark"] .adn-item__time { color: var(--text-tertiary); }
+[data-theme="dark"] .adn-btn-read   { color: var(--text-tertiary); }
+[data-theme="dark"] .adn-btn-read:hover { background: var(--surface-hover); color: var(--primary); }
+[data-theme="dark"] .adn-icon--new_tenant            { background:rgba(22,163,74,.15);  color:#86efac; }
+[data-theme="dark"] .adn-icon--new_ticket            { background:rgba(37,99,235,.15);  color:#93c5fd; }
+[data-theme="dark"] .adn-icon--subscription_expiring { background:rgba(217,119,6,.15);  color:#fcd34d; }
+[data-theme="dark"] .adn-icon--subscription_expired  { background:rgba(220,38,38,.15);  color:#fca5a5; }
+[data-theme="dark"] .adn-icon--old_ticket            { background:rgba(147,51,234,.15); color:#d8b4fe; }
+[data-theme="dark"] .adn-icon--general               { background:rgba(100,116,139,.12); color:#94a3b8; }
+[data-theme="dark"] .adn-empty { color: var(--text-tertiary); }
 </style>
 {% endblock %}
 

@@ -741,7 +741,7 @@ select.cx-input {
   .cx-panel {
     break-inside: avoid;
     box-shadow: none;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
   }
   
   .sales-sticky-panel {
@@ -764,7 +764,7 @@ select.cx-input {
         gap: 0.75rem;
         padding: 0.9rem;
         background: var(--bg-card, #ffffff);
-        border: 1px solid #ddd;
+        border: 1px solid var(--border-color);
         border-radius: 18px;
         box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
         transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
@@ -911,7 +911,7 @@ select.cx-input {
         gap: 0.75rem;
         padding: 0.9rem;
         background: var(--bg-card, #ffffff);
-        border: 1px solid #ddd;
+        border: 1px solid var(--border-color);
         border-radius: 18px;
         box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
         transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;

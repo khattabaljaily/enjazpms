@@ -670,7 +670,7 @@
 
 /* ── System Health ─────────────────────────────────────── */
 .adm-health {
-    background: #fff;
+    background: var(--surface);
     border-radius: 16px;
     border: 1px solid #fecaca;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
@@ -700,14 +700,14 @@
     align-items: flex-start;
     gap: 0.9rem;
     padding: 0.9rem 1.1rem;
-    border-left: 1px solid #f1f5f9;
+    border-left: 1px solid var(--border-light);
     text-decoration: none;
     transition: background 0.18s;
 }
-[dir="rtl"] .adm-health-card { border-left: none; border-right: 1px solid #f1f5f9; }
+[dir="rtl"] .adm-health-card { border-left: none; border-right: 1px solid var(--border-light); }
 .adm-health-card:first-child { border-left: none; }
 [dir="rtl"] .adm-health-card:first-child { border-right: none; }
-.adm-health-card:hover { background: #fafbff; }
+.adm-health-card:hover { background: var(--surface-hover); }
 
 .adm-health-card__icon {
     width: 36px;
@@ -738,13 +738,13 @@
 .adm-health-card__lbl {
     font-size: 0.77rem;
     font-weight: 600;
-    color: #475569;
+    color: var(--text-secondary);
     margin-top: 3px;
 }
 
 .adm-health-card__tenants {
     font-size: 0.72rem;
-    color: #94a3b8;
+    color: var(--text-tertiary);
     margin-top: 4px;
     line-height: 1.5;
     white-space: nowrap;
@@ -755,5 +755,20 @@
 
 @media (max-width: 768px) {
     .adm-health__grid { grid-template-columns: 1fr; }
-    .adm-health-card { border-left: none; border-right: none; border-top: 1px solid #f1f5f9; }
+    .adm-health-card { border-left: none; border-right: none; border-top: 1px solid var(--border-light); }
 }
+
+/* ── Dark Mode: System Health ──────────────────────────── */
+[data-theme="dark"] .adm-health {
+    border-color: rgba(220, 38, 38, 0.25);
+}
+
+[data-theme="dark"] .adm-health__hd {
+    background: rgba(220, 38, 38, 0.08);
+    border-color: rgba(220, 38, 38, 0.2);
+    color: #f87171;
+}
+
+[data-theme="dark"] .adm-health-card--danger  .adm-health-card__icon { background: rgba(220, 38, 38, 0.15); }
+[data-theme="dark"] .adm-health-card--warning .adm-health-card__icon { background: rgba(234, 88, 12, 0.15); }
+[data-theme="dark"] .adm-health-card--amber   .adm-health-card__icon { background: rgba(217, 119, 6, 0.15); }
