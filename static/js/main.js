@@ -129,6 +129,8 @@ document.addEventListener('click', function (e) {
     if (link.target === '_blank') return;
     if (link.hasAttribute('data-bs-toggle') || link.hasAttribute('data-bs-dismiss')) return;
     if (link.hasAttribute('download') || link.hasAttribute('data-no-spinner')) return;
+    // Skip file-download URLs (exports, templates, backups) — page doesn't reload so spinner never hides.
+    if (/\/(export|download|template|backup)[_\/]|[?&](export|download)=/i.test(href)) return;
     GSpinner.show();
 }, true);
 

@@ -3,6 +3,261 @@
    خاص بصفحة الموردين فقط
    ============================================================ */
 
+/* ══════════════════════════ IMPORT MODAL ══════════════════════════ */
+.cx-import-dialog { max-width: 600px; }
+
+.cx-import-modal {
+    border: none;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.cx-import-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 1.5rem 1.75rem;
+    background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(16,185,129,0.04));
+    border-bottom: 1px solid var(--border-light);
+}
+
+.cx-import-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cx-import-title i { color: var(--primary); }
+
+.cx-import-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.cx-import-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cx-import-close:hover { border-color: var(--primary); color: var(--primary); }
+
+.cx-import-body { padding: 1.75rem; }
+
+/* Upload Area */
+.cx-upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: var(--bg-secondary);
+}
+
+.cx-upload-area:hover,
+.cx-upload-area.drag-over {
+    border-color: var(--primary);
+    background: rgba(99,102,241,0.04);
+}
+
+.cx-upload-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(99,102,241,0.1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.cx-upload-icon i { font-size: 2rem; color: var(--primary); }
+
+.cx-upload-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+}
+
+.cx-upload-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0 0 1rem 0;
+}
+
+.cx-btn-upload {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1.25rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'Cairo', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.cx-btn-upload:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+.cx-upload-hint {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    margin: 0.75rem 0 0 0;
+}
+
+/* File Selected */
+.cx-file-selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    margin-bottom: 1rem;
+}
+
+.cx-file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+.cx-file-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: rgba(16,185,129,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cx-file-icon i  { font-size: 1.25rem; color: #10b981; }
+.cx-file-details { flex: 1; }
+
+.cx-file-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.cx-file-size { font-size: 0.7rem; color: var(--text-secondary); }
+
+.cx-file-remove {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(239,68,68,0.1);
+    color: #ef4444;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cx-file-remove:hover { background: rgba(239,68,68,0.2); }
+
+/* Import Instructions */
+.cx-import-instructions {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 12px;
+    background: rgba(16,185,129,0.04);
+    border: 1px solid rgba(16,185,129,0.2);
+}
+
+.cx-instructions-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.75rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.cx-instructions-title i { color: #10b981; font-size: 0.8rem; }
+
+.cx-instructions-list {
+    margin: 0;
+    padding: 0 0 0 1.25rem;
+    list-style: disc;
+}
+
+.cx-instructions-list li {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.4rem;
+}
+
+.cx-instructions-list li:last-child { margin-bottom: 0; }
+
+.cx-template-link {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cx-template-link:hover { text-decoration: underline; }
+
+.cx-import-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.75rem;
+    border-top: 1px solid var(--border-light);
+    background: var(--bg-secondary);
+}
+
+/* Dark Mode */
+[data-theme="dark"] .cx-import-modal {
+    background-color: var(--surface) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .cx-import-header {
+    background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(16,185,129,0.06));
+    border-bottom-color: var(--border-light);
+}
+
+[data-theme="dark"] .cx-import-body   { background-color: var(--surface); }
+[data-theme="dark"] .cx-import-footer {
+    background-color: var(--bg-secondary);
+    border-top-color: var(--border-light);
+}
+
+[data-theme="dark"] .cx-upload-area {
+    border-color: var(--border-color);
+    background: var(--bg-secondary);
+}
+
 /* ══════════════════════════ MOBILE CARD LAYOUT — SUPPLIERS TABLE ══════════════════════════ */
 /*
   Suppliers columns (same as customers):

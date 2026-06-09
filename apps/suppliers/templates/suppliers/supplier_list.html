@@ -3,7 +3,7 @@
 {% load humanize %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/suppliers.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/suppliers.css' %}?v=2.0">
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -1003,9 +1003,16 @@
             contentType: false,
             success: function(resp) {
                 if (resp.success) {
-                    importModal.hide();
-                    dt.ajax.reload();
-                    EnjazIMS.toast(resp.message || 'تم استيراد الموردين بنجاح', 'success');
+                    if (resp.imported > 0) {
+                        importModal.hide();
+                        dt.ajax.reload();
+                    }
+                    const toastType = resp.imported > 0 ? 'success' : 'error';
+                    EnjazIMS.toast(resp.message || 'تم استيراد الموردين بنجاح', toastType);
+                    if (resp.errors && resp.errors.length > 0) {
+                        const errHtml = resp.errors.map(e => `<div>• ${e}</div>`).join('');
+                        EnjazIMS.toast(errHtml, 'error');
+                    }
                 } else {
                     EnjazIMS.toast(resp.message || 'فشل الاستيراد', 'error');
                 }

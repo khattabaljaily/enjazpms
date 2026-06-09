@@ -188,8 +188,8 @@
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
-                <li><a href="{% url 'items:list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة المنتجات</a></li>
                 <li><a href="{% url 'items:category_list' %}" class="nav-sublink"><i class="fas fa-tags me-2"></i>التصنيفات</a></li>
+                <li><a href="{% url 'items:list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة المنتجات</a></li>
                 {% if tenant_capabilities|has_capability:"has_manufacturing" %}
                 <li><a href="{% url 'items:bom_list' %}" class="nav-sublink"><i class="fas fa-flask me-2"></i>وصفات التصنيع</a></li>
                 {% endif %}

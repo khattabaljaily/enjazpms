@@ -867,10 +867,28 @@ def item_export_api(request):
     return response
 
 
+_ITEM_FIELD_SCHEMA = [
+    {"field": "name",             "description": "اسم المنتج أو الصنف أو السلعة", "required": True},
+    {"field": "name_en",          "description": "الاسم الإنجليزي للمنتج"},
+    {"field": "barcode",          "description": "الباركود أو رمز المنتج أو رمز الشريط"},
+    {"field": "category",         "description": "التصنيف أو القسم أو الفئة"},
+    {"field": "unit",             "description": "وحدة القياس أو وحدة البيع"},
+    {"field": "purchase_unit",    "description": "وحدة الشراء"},
+    {"field": "cost_price",       "description": "سعر التكلفة أو سعر الشراء"},
+    {"field": "selling_price",    "description": "سعر البيع أو السعر"},
+    {"field": "min_selling_price","description": "أدنى سعر بيع أو أقل سعر مسموح"},
+    {"field": "min_quantity",     "description": "الحد الأدنى للمخزون أو أقل كمية"},
+    {"field": "max_quantity",     "description": "الحد الأقصى للمخزون أو أعلى كمية"},
+]
+
+
 @login_required
 @require_permission('add_items')
 def item_import_api(request):
-    from apps.core.io_utils import parse_uploaded_file, get, safe_decimal
+    import logging, traceback
+    from apps.core.io_utils import parse_uploaded_file, smart_get, safe_decimal
+    from apps.ai.services import smart_map_headers, match_category_name
+
     tenant = _ensure_tenant(request)
     if not tenant:
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
@@ -883,54 +901,99 @@ def item_import_api(request):
     if err:
         return JsonResponse({'success': False, 'message': err}, status=400)
 
+    if not rows:
+        return JsonResponse({'success': False, 'message': 'الملف فارغ أو لا يحتوي على بيانات'}, status=400)
+
+    actual_headers = list(rows[0].keys())
+    try:
+        mapping = smart_map_headers(actual_headers, _ITEM_FIELD_SCHEMA)
+    except Exception:
+        mapping = {}
+
+    # Load existing categories & units once — avoid N+1 queries and enable AI matching
+    existing_cats = {c.name: c for c in Category.objects.for_tenant(tenant).only('id', 'name')}
+    existing_units = {u.name: u for u in Unit.objects.for_tenant(tenant).only('id', 'name')}
+
+    # Per-import caches so repeated names don't trigger repeated AI calls
+    cat_cache: dict = {}
+    unit_cache: dict = {}
+
+    def resolve_category(raw: str) -> Category | None:
+        if not raw:
+            return None
+        if raw in cat_cache:
+            return cat_cache[raw]
+
+        # 1. Exact match (case-insensitive)
+        raw_lower = raw.strip().lower()
+        for existing_name, cat in existing_cats.items():
+            if existing_name.strip().lower() == raw_lower:
+                cat_cache[raw] = cat
+                return cat
+
+        # 2. AI fuzzy match against existing names
+        matched = match_category_name(raw, list(existing_cats.keys()))
+        if matched:
+            cat_cache[raw] = existing_cats[matched]
+            return existing_cats[matched]
+
+        # 3. No match → create new category
+        new_cat, _ = Category.objects.for_tenant(tenant).get_or_create(
+            name=raw, defaults={'tenant': tenant}
+        )
+        existing_cats[raw] = new_cat
+        cat_cache[raw] = new_cat
+        return new_cat
+
+    def resolve_unit(raw: str) -> Unit | None:
+        if not raw:
+            return None
+        if raw in unit_cache:
+            return unit_cache[raw]
+
+        raw_lower = raw.strip().lower()
+        for existing_name, unit in existing_units.items():
+            if existing_name.strip().lower() == raw_lower:
+                unit_cache[raw] = unit
+                return unit
+
+        new_unit, _ = Unit.objects.for_tenant(tenant).get_or_create(
+            name=raw, defaults={'tenant': tenant}
+        )
+        existing_units[raw] = new_unit
+        unit_cache[raw] = new_unit
+        return new_unit
+
     imported, errors = 0, []
     for i, row in enumerate(rows, start=2):
         try:
-            name = get(row, 'الاسم', 'name')
+            name = smart_get(row, 'name', mapping, 'الاسم', 'اسم المنتج', 'الصنف', 'name')
             if not name:
-                errors.append(f'الصف {i}: الاسم مطلوب')
+                errors.append(f'الصف {i}: اسم المنتج مطلوب')
                 continue
 
-            # Resolve / create category
-            cat_name = get(row, 'التصنيف', 'category')
-            category = None
-            if cat_name:
-                category, _ = Category.objects.for_tenant(tenant).get_or_create(
-                    name=cat_name, defaults={'tenant': tenant}
-                )
-
-            # Resolve / create unit
-            unit_name = get(row, 'الوحدة', 'unit')
-            unit = None
-            if unit_name:
-                unit, _ = Unit.objects.for_tenant(tenant).get_or_create(
-                    name=unit_name, defaults={'tenant': tenant}
-                )
-
-            pu_name = get(row, 'وحدة الشراء', 'purchase_unit')
-            purchase_unit = None
-            if pu_name:
-                purchase_unit, _ = Unit.objects.for_tenant(tenant).get_or_create(
-                    name=pu_name, defaults={'tenant': tenant}
-                )
+            category = resolve_category(smart_get(row, 'category', mapping, 'التصنيف', 'القسم', 'الفئة', 'category'))
+            unit = resolve_unit(smart_get(row, 'unit', mapping, 'الوحدة', 'وحدة القياس', 'unit'))
+            purchase_unit = resolve_unit(smart_get(row, 'purchase_unit', mapping, 'وحدة الشراء', 'purchase_unit'))
 
             Item.objects.create(
                 tenant=tenant,
                 name=name,
-                name_en=get(row, 'الاسم الإنجليزي', 'name_en'),
-                barcode=get(row, 'الباركود', 'barcode') or None,
+                name_en=smart_get(row, 'name_en', mapping, 'الاسم الإنجليزي', 'name_en'),
+                barcode=smart_get(row, 'barcode', mapping, 'الباركود', 'barcode'),
                 category=category,
                 unit=unit,
                 purchase_unit=purchase_unit,
-                cost_price=safe_decimal(get(row, 'سعر التكلفة', 'cost_price', default='0')),
-                selling_price=safe_decimal(get(row, 'سعر البيع', 'selling_price', default='0')),
-                min_selling_price=safe_decimal(get(row, 'أدنى سعر بيع', 'min_selling_price', default='0')),
-                min_quantity=safe_decimal(get(row, 'الحد الأدنى للمخزون', 'min_quantity', default='0')),
-                max_quantity=safe_decimal(get(row, 'الحد الأقصى للمخزون', 'max_quantity', default='0')),
+                cost_price=safe_decimal(smart_get(row, 'cost_price', mapping, 'سعر التكلفة', 'التكلفة', 'cost_price', default='0')),
+                selling_price=safe_decimal(smart_get(row, 'selling_price', mapping, 'سعر البيع', 'السعر', 'selling_price', default='0')),
+                min_selling_price=safe_decimal(smart_get(row, 'min_selling_price', mapping, 'أدنى سعر بيع', 'min_selling_price', default='0')),
+                min_quantity=safe_decimal(smart_get(row, 'min_quantity', mapping, 'الحد الأدنى للمخزون', 'الحد الأدنى', 'min_quantity', default='0')),
+                max_quantity=safe_decimal(smart_get(row, 'max_quantity', mapping, 'الحد الأقصى للمخزون', 'الحد الأقصى', 'max_quantity', default='0')),
                 is_active=True,
             )
             imported += 1
         except Exception as exc:
+            logging.getLogger('items').error('import row %d: %s\n%s', i, exc, traceback.format_exc())
             errors.append(f'الصف {i}: {exc}')
 
     msg = f'تم استيراد {imported} منتج بنجاح'
@@ -977,10 +1040,21 @@ def category_export_api(request):
     return response
 
 
+_CATEGORY_FIELD_SCHEMA = [
+    {"field": "name",          "description": "اسم التصنيف أو القسم أو الفئة", "required": True},
+    {"field": "parent",        "description": "التصنيف الرئيسي أو الأب أو التصنيف الأعلى"},
+    {"field": "description",   "description": "وصف التصنيف أو تفاصيله"},
+    {"field": "display_order", "description": "ترتيب العرض أو الأولوية"},
+    {"field": "is_active",     "description": "هل التصنيف نشط أو مفعّل"},
+]
+
+
 @login_required
 @require_permission('add_items')
 def category_import_api(request):
-    from apps.core.io_utils import parse_uploaded_file, get as io_get, bool_from_str
+    from apps.core.io_utils import parse_uploaded_file, smart_get, bool_from_str
+    from apps.ai.services import smart_map_headers
+
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
@@ -996,30 +1070,41 @@ def category_import_api(request):
     if err:
         return JsonResponse({'success': False, 'message': err}, status=400)
 
+    if not rows:
+        return JsonResponse({'success': False, 'message': 'الملف فارغ أو لا يحتوي على بيانات'}, status=400)
+
+    actual_headers = list(rows[0].keys())
+    try:
+        mapping = smart_map_headers(actual_headers, _CATEGORY_FIELD_SCHEMA)
+    except Exception:
+        mapping = {}
+
     imported, errors = 0, []
     for i, row in enumerate(rows, start=2):
-        name = io_get(row, 'الاسم', 'name')
+        name = smart_get(row, 'name', mapping, 'الاسم', 'اسم التصنيف', 'التصنيف', 'name')
         if not name:
             errors.append(f'الصف {i}: اسم التصنيف مطلوب')
             continue
         try:
-            parent_name = io_get(row, 'التصنيف الرئيسي', 'parent')
+            parent_name = smart_get(row, 'parent', mapping, 'التصنيف الرئيسي', 'الأب', 'parent')
             parent = None
             if parent_name:
                 parent = Category.objects.for_tenant(tenant).filter(name=parent_name).first()
 
-            is_active = bool_from_str(io_get(row, 'الحالة', 'is_active', default='نعم'))
+            is_active = bool_from_str(smart_get(row, 'is_active', mapping, 'الحالة', 'is_active', default='نعم'))
             try:
-                display_order = int(io_get(row, 'الترتيب', 'display_order', default='0'))
+                display_order = int(smart_get(row, 'display_order', mapping, 'الترتيب', 'display_order', default='0'))
             except (ValueError, TypeError):
                 display_order = 0
+
+            description = smart_get(row, 'description', mapping, 'الوصف', 'description')
 
             cat, created = Category.objects.for_tenant(tenant).get_or_create(
                 name=name,
                 defaults={
                     'tenant': tenant,
                     'parent': parent,
-                    'description': io_get(row, 'الوصف', 'description'),
+                    'description': description,
                     'display_order': display_order,
                     'is_active': is_active,
                 },
@@ -1029,11 +1114,13 @@ def category_import_api(request):
                     cat.parent = parent
                 cat.is_active = is_active
                 cat.display_order = display_order
-                if io_get(row, 'الوصف', 'description'):
-                    cat.description = io_get(row, 'الوصف', 'description')
+                if description:
+                    cat.description = description
                 cat.save()
             imported += 1
         except Exception as exc:
+            import logging, traceback
+            logging.getLogger('items').error('category import row %d: %s\n%s', i, exc, traceback.format_exc())
             errors.append(f'الصف {i}: {exc}')
 
     msg = f'تم استيراد {imported} تصنيف بنجاح'

@@ -287,6 +287,115 @@ def generate_daily_insights(tenant) -> str:
 # Public API — Smart Notification Analysis
 # ──────────────────────────────────────────────────────────────
 
+# ──────────────────────────────────────────────────────────────
+# Public API — Smart Import Header Mapping
+# ──────────────────────────────────────────────────────────────
+
+def match_category_name(written_name: str, existing_names: list) -> str | None:
+    """
+    Use AI to find the closest existing category name for a written name that
+    didn't match exactly.
+
+    Returns the matched name from existing_names, or None (caller should create new).
+    Falls back to None if AI is unavailable.
+    """
+    if not existing_names:
+        return None
+
+    api_key = settings.DEEPSEEK_API_KEY
+    if not api_key:
+        return None
+
+    names_text = "، ".join(f'"{n}"' for n in existing_names[:60])
+
+    prompt = (
+        f'اسم التصنيف في الملف: "{written_name}"\n'
+        f'التصنيفات الموجودة في النظام: {names_text}\n\n'
+        'هل يطابق اسم الملف أياً من التصنيفات الموجودة (مع مراعاة الأخطاء الإملائية والاختصارات والاختلافات البسيطة)؟\n'
+        'إذا نعم: اكتب الاسم الدقيق من القائمة فقط بدون أي نص آخر.\n'
+        'إذا لا: اكتب كلمة "جديد" فقط.'
+    )
+
+    messages = [
+        {"role": "system", "content": "أنت نظام مطابقة أسماء دقيق. أجب بالاسم الدقيق من القائمة أو بكلمة 'جديد' فقط، بدون أي نص إضافي."},
+        {"role": "user", "content": prompt},
+    ]
+
+    try:
+        result = _call_deepseek(messages, max_tokens=60).strip().strip('"').strip("'")
+    except Exception:
+        return None
+
+    if not result or result == 'جديد':
+        return None
+
+    if result in existing_names:
+        return result
+
+    result_lower = result.lower()
+    for name in existing_names:
+        if name.lower() == result_lower:
+            return name
+
+    return None
+
+
+def smart_map_headers(actual_headers: list, field_schema: list) -> dict:
+    """
+    Use AI to semantically map actual file column headers to expected field names.
+
+    field_schema: list of {"field": str, "description": str, "required": bool}
+    Returns: {actual_header: canonical_field_name}
+    Falls back to empty dict if AI is unavailable or response is unparseable.
+    """
+    if not actual_headers:
+        return {}
+
+    api_key = settings.DEEPSEEK_API_KEY
+    if not api_key:
+        return {}
+
+    schema_lines = "\n".join(
+        f'- {f["field"]}: {f["description"]}{"  (مطلوب)" if f.get("required") else ""}'
+        for f in field_schema
+    )
+    headers_text = "، ".join(f'"{h}"' for h in actual_headers if h)
+
+    prompt = (
+        f"أعمدة الملف المرفوع: {headers_text}\n\n"
+        f"الحقول المتوقعة:\n{schema_lines}\n\n"
+        "عيّن كل عمود إلى الحقل الأنسب دلالياً (المعنى وليس التطابق الحرفي).\n"
+        "أجب بـ JSON فقط بلا أي نص إضافي، بالشكل:\n"
+        '{"اسم العمود في الملف": "اسم_الحقل", ...}\n'
+        "إذا لم يتطابق عمود مع أي حقل، لا تُدرجه."
+    )
+
+    messages = [
+        {"role": "system", "content": "أنت نظام تعيين أعمدة بيانات. أجب بـ JSON صحيح فقط بلا مقدمة أو شرح."},
+        {"role": "user", "content": prompt},
+    ]
+
+    raw = _call_deepseek(messages, max_tokens=400)
+
+    try:
+        json_match = __import__('re').search(r'\{[^{}]*\}', raw, __import__('re').DOTALL)
+        if json_match:
+            mapping = json.loads(json_match.group())
+            valid_fields = {f["field"] for f in field_schema}
+            header_set = set(actual_headers)
+            return {
+                k: v
+                for k, v in mapping.items()
+                if isinstance(k, str) and isinstance(v, str)
+                and v in valid_fields
+                and k in header_set
+            }
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        logger.warning("smart_map_headers: failed to parse AI response: %s", raw[:200])
+
+    return {}
+
+
 def enrich_notification(notification_type: str, raw_message: str, tenant) -> str:
     """
     Given a raw notification message (e.g., "المخزون منخفض لمنتج X"),

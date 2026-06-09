@@ -602,10 +602,25 @@ def supplier_create(request):
     return redirect('suppliers:list')
 
 
+_SUPPLIER_FIELD_SCHEMA = [
+    {"field": "name",            "description": "اسم المورد أو الشركة أو المصنع", "required": True},
+    {"field": "phone",           "description": "رقم الهاتف أو الجوال أو الموبايل"},
+    {"field": "email",           "description": "البريد الإلكتروني"},
+    {"field": "city",            "description": "المدينة أو المنطقة أو الموقع"},
+    {"field": "address",         "description": "العنوان التفصيلي أو الشارع"},
+    {"field": "opening_balance", "description": "الرصيد الافتتاحي أو رصيد البداية أو المديونية"},
+    {"field": "credit_limit",    "description": "حد الائتمان أو سقف الدين"},
+    {"field": "notes",           "description": "ملاحظات أو تعليقات"},
+]
+
+
 @login_required
 @require_permission('import_suppliers')
 def supplier_import_api(request):
-    """Import suppliers from Excel/CSV file"""
+    """Import suppliers from Excel/CSV with AI-assisted column mapping."""
+    from apps.core.io_utils import parse_uploaded_file, smart_get, safe_decimal, clean_phone, clean_email
+    from apps.ai.services import smart_map_headers
+
     tenant = _ensure_tenant(request)
     if not tenant:
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
@@ -616,87 +631,55 @@ def supplier_import_api(request):
     if 'file' not in request.FILES:
         return JsonResponse({'success': False, 'message': 'لم يتم رفع أي ملف'}, status=400)
 
-    file = request.FILES['file']
-    
-    # Validate file extension
-    if not file.name.endswith(('.csv', '.xlsx', '.xls')):
-        return JsonResponse({'success': False, 'message': 'نوع الملف غير مدعوم'}, status=400)
+    rows, err = parse_uploaded_file(request.FILES['file'])
+    if err:
+        return JsonResponse({'success': False, 'message': err}, status=400)
 
+    if not rows:
+        return JsonResponse({'success': False, 'message': 'الملف فارغ أو لا يحتوي على بيانات'}, status=400)
+
+    actual_headers = list(rows[0].keys())
     try:
-        imported_count = 0
-        errors = []
+        mapping = smart_map_headers(actual_headers, _SUPPLIER_FIELD_SCHEMA)
+    except Exception:
+        mapping = {}
 
-        if file.name.endswith('.csv'):
-            # Handle CSV
-            decoded_file = file.read().decode('utf-8-sig')
-            csv_reader = csv.DictReader(io.StringIO(decoded_file))
-            
-            for row_num, row in enumerate(csv_reader, start=2):
-                try:
-                    Supplier.objects.create(
-                        tenant=tenant,
-                        name=row.get('name', '').strip() or row.get('الاسم', '').strip(),
-                        phone=row.get('phone', '').strip() or row.get('الهاتف', '').strip() or None,
-                        email=row.get('email', '').strip() or row.get('البريد', '').strip() or None,
-                        city=row.get('city', '').strip() or row.get('المدينة', '').strip() or None,
-                        address=row.get('address', '').strip() or row.get('العنوان', '').strip() or None,
-                        opening_balance=float(row.get('opening_balance', 0) or row.get('الرصيد', 0) or 0),
-                        credit_limit=float(row.get('credit_limit', 0) or row.get('حد_الائتمان', 0) or 0),
-                        is_active=True
-                    )
-                    imported_count += 1
-                except Exception as e:
-                    errors.append(f'الصف {row_num}: {str(e)}')
-        else:
-            # Handle Excel - requires openpyxl
-            try:
-                import openpyxl
-            except ImportError:
-                return JsonResponse({
-                    'success': False, 
-                    'message': 'مكتبة openpyxl غير مثبتة. الرجاء تثبيتها أولاً'
-                }, status=500)
+    imported_count, errors = 0, []
+    for row_num, row in enumerate(rows, start=2):
+        try:
+            name = smart_get(row, 'name', mapping, 'الاسم', 'اسم المورد', 'المورد', 'الشركة', 'name')
+            if not name:
+                errors.append(f'الصف {row_num}: اسم المورد مطلوب')
+                continue
 
-            wb = openpyxl.load_workbook(file)
-            ws = wb.active
-            
-            # Get headers from first row
-            headers = [cell.value for cell in ws[1]]
-            
-            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-                try:
-                    data = dict(zip(headers, row))
-                    Supplier.objects.create(
-                        tenant=tenant,
-                        name=str(data.get('name', '') or data.get('الاسم', '')).strip(),
-                        phone=str(data.get('phone', '') or data.get('الهاتف', '')).strip() or None,
-                        email=str(data.get('email', '') or data.get('البريد', '')).strip() or None,
-                        city=str(data.get('city', '') or data.get('المدينة', '')).strip() or None,
-                        address=str(data.get('address', '') or data.get('العنوان', '')).strip() or None,
-                        opening_balance=float(data.get('opening_balance', 0) or data.get('الرصيد', 0) or 0),
-                        credit_limit=float(data.get('credit_limit', 0) or data.get('حد_الائتمان', 0) or 0),
-                        is_active=True
-                    )
-                    imported_count += 1
-                except Exception as e:
-                    errors.append(f'الصف {row_num}: {str(e)}')
+            Supplier.objects.create(
+                tenant=tenant,
+                name=name,
+                phone=clean_phone(smart_get(row, 'phone', mapping, 'الهاتف', 'الجوال', 'الموبايل', 'phone')) or '',
+                email=clean_email(smart_get(row, 'email', mapping, 'البريد', 'البريد الإلكتروني', 'email')) or '',
+                city=smart_get(row, 'city', mapping, 'المدينة', 'المنطقة', 'city'),
+                address=smart_get(row, 'address', mapping, 'العنوان', 'address'),
+                opening_balance=safe_decimal(smart_get(row, 'opening_balance', mapping, 'الرصيد الافتتاحي', 'الرصيد', 'رصيد البداية', 'opening_balance', default='0')),
+                credit_limit=safe_decimal(smart_get(row, 'credit_limit', mapping, 'حد الائتمان', 'حد_الائتمان', 'credit_limit', default='0')),
+                notes=smart_get(row, 'notes', mapping, 'الملاحظات', 'ملاحظات', 'notes'),
+                is_active=True,
+            )
+            imported_count += 1
+        except Exception as e:
+            import logging, traceback
+            logging.getLogger('suppliers').error('import row %d: %s\n%s', row_num, e, traceback.format_exc())
+            errors.append(f'الصف {row_num}: {str(e)}')
 
-        message = f'تم استيراد {imported_count} مورد بنجاح'
-        if errors:
-            message += f'. حدثت {len(errors)} أخطاء'
+    message = f'تم استيراد {imported_count} مورد بنجاح'
+    if errors:
+        message += f'. حدثت {len(errors)} أخطاء'
 
-        return JsonResponse({
-            'success': True,
-            'message': message,
-            'imported': imported_count,
-            'errors': errors[:10]  # Return first 10 errors only
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'حدث خطأ أثناء الاستيراد: {str(e)}'
-        }, status=500)
+    return JsonResponse({
+        'success': True,
+        'message': message,
+        'imported': imported_count,
+        'errors': errors[:10],
+    })
 
 
 @login_required
@@ -708,7 +691,7 @@ def supplier_export_api(request):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
 
     # Create CSV response
-    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="suppliers.csv"'
     
     # Add BOM for Excel UTF-8 support
@@ -745,7 +728,7 @@ def supplier_export_api(request):
 @require_permission('import_suppliers')
 def download_template(request):
     """Download CSV template for import"""
-    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="suppliers_template.csv"'
     
     # Add BOM for Excel UTF-8 support
