@@ -348,7 +348,7 @@ class PlatformSettings(models.Model):
     default_tax_value      = models.DecimalField('نسبة الضريبة الافتراضية %',
                                                  max_digits=5, decimal_places=2, default=0)
     default_invoice_prefix = models.CharField('بادئة الفاتورة الافتراضية', max_length=10, default='INV')
-    default_trial_days     = models.IntegerField('أيام التجربة المجانية', default=14)
+    default_trial_days     = models.IntegerField('أيام التجربة المجانية', default=30)
 
     updated_at = models.DateTimeField('آخر تحديث', auto_now=True)
 

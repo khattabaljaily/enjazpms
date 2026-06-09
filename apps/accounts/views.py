@@ -600,7 +600,7 @@ def register_step3(request):
                     business_type = BusinessType.objects.get(id=step2_data['business_type_id'])
                     
                     subscription_plan = form.cleaned_data.get('subscription_plan', 'trial')
-                    trial_duration = 7 if subscription_plan == 'trial' else 30
+                    trial_duration = 30
 
                     tenant = Tenant.objects.create(
                         name=step2_data['business_name'],
@@ -610,7 +610,7 @@ def register_step3(request):
                         city=step2_data['city'],
                         subscription_plan=subscription_plan,
                         subscription_start=datetime.now().date(),
-                        subscription_expires=datetime.now().date() + timedelta(days=trial_duration),  # 7 أيام تجريبية
+                        subscription_expires=datetime.now().date() + timedelta(days=trial_duration),  # شهران تجريبيان مجاناً
                         version_type=form.cleaned_data['version_type'],
                         max_stocks=form.cleaned_data['num_stocks'],
                         timezone=form.cleaned_data['timezone'],

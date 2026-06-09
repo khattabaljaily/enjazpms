@@ -2099,6 +2099,6 @@ def pricing(request):
     return render(request, 'core/pricing.html', {
         'plans': plans,
         'benefits': benefits,
-        'trial_days': 7,
+        'trial_days': 30,
         'current_subscription_plan_display': tenant.get_subscription_plan_display() if tenant else None,
     })
