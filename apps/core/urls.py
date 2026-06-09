@@ -63,8 +63,8 @@ urlpatterns = [
 
     # System — Backup
     path('system/backup/', views.admin_backup, name='admin_backup'),
-    path('system/backup/<slug:tenant_slug>/', views.admin_backup_detail, name='admin_backup_detail'),
-    path('system/backup/<slug:tenant_slug>/create/', views.admin_backup_create_api, name='admin_backup_create_api'),
+    path('system/backup/<str:tenant_slug>/', views.admin_backup_detail, name='admin_backup_detail'),
+    path('system/backup/<str:tenant_slug>/create/', views.admin_backup_create_api, name='admin_backup_create_api'),
     path('system/backup/restore/<int:backup_id>/', views.admin_backup_restore_api, name='admin_backup_restore_api'),
     path('system/backup/delete/<int:backup_id>/', views.admin_backup_delete_api, name='admin_backup_delete_api'),
     path('system/backup/download/<int:backup_id>/', views.admin_backup_download, name='admin_backup_download'),

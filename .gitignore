@@ -60,3 +60,4 @@ htmlcov/
 *.bak
 *.backup
 *.sql
+*.cnf
