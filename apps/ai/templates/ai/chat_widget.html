@@ -370,7 +370,8 @@
     let history     = [];
     let isOpen      = false;
     let busy        = false;
-    let _typingEl   = null;     // the injected typing bubble DOM node
+    let _typingEl   = null;
+    let _openLogged = false;    // track only first open per page load
 
     // ── Open / Close ─────────────────────────────────────────
     function openPanel() {
@@ -379,6 +380,12 @@
         panel.setAttribute('aria-hidden', 'false');
         overlay.classList.add('show');
         input.focus();
+        if (!_openLogged) {
+            _openLogged = true;
+            $.post({ url: '{% url "ai:track_open" %}', global: false,
+                     contentType: 'application/json',
+                     data: JSON.stringify({ page: window.location.pathname }) });
+        }
     }
     function closePanel() {
         isOpen = false;

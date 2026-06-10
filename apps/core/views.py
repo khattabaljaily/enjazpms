@@ -920,8 +920,7 @@ def admin_report_activity(request):
     if not request.user.has_platform_perm('view_reports'):
         return redirect('core:no_permission')
 
-    from .models import ActivityLog
-    from apps.accounts.models import User
+    from apps.accounts.models import UserActivity
 
     now = dj_timezone.now()
     today = now.date()
@@ -930,7 +929,7 @@ def admin_report_activity(request):
 
     # Per-tenant activity summary
     tenant_activity = (
-        ActivityLog.objects.filter(created_at__gte=month_ago_dt)
+        UserActivity.objects.filter(created_at__gte=month_ago_dt)
         .values('tenant__id', 'tenant__name', 'tenant__slug', 'tenant__subscription_plan')
         .annotate(total=Count('id'))
         .order_by('-total')[:20]
@@ -938,38 +937,38 @@ def admin_report_activity(request):
 
     # Recent logins
     recent_logins = (
-        ActivityLog.objects.filter(action='login')
+        UserActivity.objects.filter(action_type='login')
         .select_related('tenant', 'user')
         .order_by('-created_at')[:30]
     )
 
     # Action distribution
     action_counts = (
-        ActivityLog.objects.filter(created_at__gte=month_ago_dt)
-        .values('action')
+        UserActivity.objects.filter(created_at__gte=month_ago_dt)
+        .values('action_type')
         .annotate(count=Count('id'))
         .order_by('-count')
     )
 
-    action_map = {a: d for a, d in ActivityLog.ACTION_TYPES}
+    action_map = {a: d for a, d in UserActivity.ACTION_CHOICES}
     action_dist = [
-        {'key': row['action'], 'label': action_map.get(row['action'], row['action']), 'count': row['count']}
+        {'key': row['action_type'], 'label': action_map.get(row['action_type'], row['action_type']), 'count': row['count']}
         for row in action_counts
     ]
 
-    # Daily activity last 14 days — use gte/lt on datetime to avoid MySQL CONVERT_TZ issue
+    # Daily activity last 14 days
     daily = []
     local_tz = dj_timezone.get_current_timezone()
     for i in range(13, -1, -1):
         d = today - timedelta(days=i)
         d_start = dj_timezone.make_aware(datetime.combine(d, datetime.min.time()), local_tz)
         d_end = d_start + timedelta(days=1)
-        cnt = ActivityLog.objects.filter(created_at__gte=d_start, created_at__lt=d_end).count()
+        cnt = UserActivity.objects.filter(created_at__gte=d_start, created_at__lt=d_end).count()
         daily.append({'date': d.strftime('%m/%d'), 'count': cnt})
 
     # Tenants with zero activity in last 30 days
     active_tenant_ids = set(
-        ActivityLog.objects.filter(created_at__gte=month_ago_dt)
+        UserActivity.objects.filter(created_at__gte=month_ago_dt)
         .values_list('tenant_id', flat=True).distinct()
     )
     active_tenant_ids.discard(None)
@@ -997,21 +996,20 @@ def admin_audit_log(request):
     if not request.user.has_platform_perm('view_audit_log'):
         return redirect('core:no_permission')
 
-    from .models import ActivityLog
+    from apps.accounts.models import UserActivity
 
-    qs = ActivityLog.objects.select_related('tenant', 'user').order_by('-created_at')
+    qs = UserActivity.objects.select_related('tenant', 'user').order_by('-created_at')
 
-    # Filters from GET params
-    tenant_id = request.GET.get('tenant', '')
-    action    = request.GET.get('action', '')
-    date_from = request.GET.get('date_from', '')
-    date_to   = request.GET.get('date_to', '')
-    search    = request.GET.get('q', '')
+    tenant_id  = request.GET.get('tenant', '')
+    action     = request.GET.get('action', '')
+    date_from  = request.GET.get('date_from', '')
+    date_to    = request.GET.get('date_to', '')
+    search     = request.GET.get('q', '')
 
     if tenant_id:
         qs = qs.filter(tenant_id=tenant_id)
     if action:
-        qs = qs.filter(action=action)
+        qs = qs.filter(action_type=action)
     local_tz = dj_timezone.get_current_timezone()
     if date_from:
         try:
@@ -1027,17 +1025,17 @@ def admin_audit_log(request):
             pass
     if search:
         qs = qs.filter(
-            Q(description__icontains=search) |
+            Q(title__icontains=search) |
+            Q(details__icontains=search) |
             Q(user__username__icontains=search) |
-            Q(tenant__name__icontains=search) |
-            Q(model_name__icontains=search)
+            Q(tenant__name__icontains=search)
         )
 
     total_count = qs.count()
-    logs = qs[:200]
+    logs = qs[:500]
 
     tenants = Tenant.objects.filter(is_active=True).order_by('name')
-    action_choices = ActivityLog.ACTION_TYPES
+    action_choices = UserActivity.ACTION_CHOICES
 
     return render(request, 'core/admin_audit_log.html', {
         'logs': logs,
@@ -2102,3 +2100,18 @@ def pricing(request):
         'trial_days': 30,
         'current_subscription_plan_display': tenant.get_subscription_plan_display() if tenant else None,
     })
+
+
+
+@login_required
+@require_POST
+def help_open_track(request):
+    """Called from JS when user opens the help panel."""
+    from apps.accounts.activity_service import log_activity
+    try:
+        body = json.loads(request.body)
+        page = (body.get('page') or '')[:200]
+    except (json.JSONDecodeError, ValueError):
+        page = ''
+    log_activity(request, 'فتح لوحة المساعدة', f'الصفحة: {page}' if page else '', 'other')
+    return JsonResponse({'ok': True})

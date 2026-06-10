@@ -213,7 +213,7 @@
                         <div class="rpt-tenant-slug">{{ log.user.username }}</div>
                     </td>
                     <td>{{ log.tenant.name }}</td>
-                    <td class="rpt-td--muted">{{ log.description }}</td>
+                    <td class="rpt-td--muted">{{ log.details }}</td>
                     <td class="rpt-td--date">{{ log.created_at|date:"Y-m-d H:i" }}</td>
                 </tr>
                 {% empty %}
@@ -239,7 +239,7 @@
             </div>
             <div class="rpt-mob-card__row">
                 <span class="rpt-mob-card__label">الوصف</span>
-                <span class="rpt-mob-card__val rpt-mob-card__val--muted">{{ log.description }}</span>
+                <span class="rpt-mob-card__val rpt-mob-card__val--muted">{{ log.details }}</span>
             </div>
         </div>
         {% empty %}
@@ -295,8 +295,8 @@
         ];
         const colorMap = {
             create: '#16a34a', update: '#2563eb', delete: '#dc2626',
-            login: '#6366f1', logout: '#94a3b8', export: '#d97706',
-            import: '#9333ea', view: '#0d9488'
+            confirm: '#0d9488', cancel: '#ea580c',
+            login: '#6366f1', other: '#94a3b8'
         };
         new Chart(adCtx, {
             type: 'doughnut',

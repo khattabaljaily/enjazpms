@@ -71,4 +71,7 @@ urlpatterns = [
 
     # System — Training
     path('system/training/', views.admin_training, name='admin_training'),
+
+    # Help panel tracking
+    path('help/open/', views.help_open_track, name='help_open_track'),
 ]

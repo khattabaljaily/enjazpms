@@ -1,0 +1,223 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<style>
+.act-hero { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 60%, #3730a3 100%); color: #fff; border-radius: 16px; padding: 28px 32px 20px; margin-bottom: 28px; }
+.act-hero h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+.act-hero p { margin: 0; opacity: .75; font-size: .9rem; }
+.act-stat { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.15); border-radius: 20px; padding: 4px 14px; font-size: .82rem; font-weight: 600; margin-top: 14px; margin-left: 8px; }
+
+.act-filter-bar { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; margin-bottom: 22px; }
+.dark-mode .act-filter-bar { background: #1e293b; border-color: #334155; }
+
+.act-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+
+.act-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; transition: box-shadow .2s, transform .2s; }
+.act-card:hover { box-shadow: 0 8px 24px rgba(99,102,241,.12); transform: translateY(-2px); }
+.dark-mode .act-card { background: #1e293b; border-color: #334155; }
+
+.act-card-top { display: flex; align-items: flex-start; gap: 12px; }
+.act-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+.act-icon--create  { background: #dcfce7; color: #16a34a; }
+.act-icon--update  { background: #dbeafe; color: #2563eb; }
+.act-icon--delete  { background: #fee2e2; color: #dc2626; }
+.act-icon--confirm { background: #d1fae5; color: #059669; }
+.act-icon--cancel  { background: #ffedd5; color: #ea580c; }
+.act-icon--login   { background: #ede9fe; color: #7c3aed; }
+.act-icon--other   { background: #f1f5f9; color: #64748b; }
+.dark-mode .act-icon--create  { background: #14532d; color: #4ade80; }
+.dark-mode .act-icon--update  { background: #1e3a8a; color: #60a5fa; }
+.dark-mode .act-icon--delete  { background: #7f1d1d; color: #f87171; }
+.dark-mode .act-icon--confirm { background: #064e3b; color: #34d399; }
+.dark-mode .act-icon--cancel  { background: #7c2d12; color: #fb923c; }
+.dark-mode .act-icon--login   { background: #4c1d95; color: #a78bfa; }
+.dark-mode .act-icon--other   { background: #1e293b; color: #94a3b8; }
+
+.act-title { font-weight: 600; font-size: .92rem; line-height: 1.4; color: #0f172a; }
+.dark-mode .act-title { color: #f1f5f9; }
+.act-user { font-size: .8rem; color: #6366f1; font-weight: 500; }
+.act-time { font-size: .78rem; color: #94a3b8; display: flex; align-items: center; gap: 5px; }
+.act-time i { font-size: .72rem; }
+
+.act-detail-btn { margin-top: auto; width: 100%; border: 1px solid #6366f1; color: #6366f1; background: transparent; border-radius: 8px; padding: 6px 0; font-size: .82rem; font-weight: 600; cursor: pointer; transition: all .18s; }
+.act-detail-btn:hover { background: #6366f1; color: #fff; }
+
+.act-empty { text-align: center; padding: 80px 20px; color: #94a3b8; grid-column: 1 / -1; }
+.act-empty i { font-size: 3rem; display: block; margin-bottom: 12px; opacity: .5; }
+
+/* Modal details table */
+.act-detail-table { width: 100%; }
+.act-detail-table th { font-weight: 600; color: #6366f1; width: 35%; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-size: .85rem; }
+.act-detail-table td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-size: .88rem; color: #374151; }
+.dark-mode .act-detail-table th { color: #818cf8; border-color: #334155; }
+.dark-mode .act-detail-table td { color: #cbd5e1; border-color: #334155; }
+.act-details-text { background: #f8fafc; border-radius: 10px; padding: 14px 16px; font-size: .88rem; line-height: 1.7; color: #374151; white-space: pre-wrap; border: 1px solid #e5e7eb; }
+.dark-mode .act-details-text { background: #0f172a; color: #cbd5e1; border-color: #334155; }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+    <!-- ══ HERO ══ -->
+    <div class="act-hero">
+        <h1>
+            <i class="fas fa-clock-rotate-left me-2"></i>
+            {% if is_admin_view %}سجل نشاط المستخدمين{% else %}سجل نشاطاتي{% endif %}
+        </h1>
+        <p>{% if is_admin_view %}كل إجراءات المستخدمين مسجّلة بالتفصيل{% else %}جميع إجراءاتك داخل النظام{% endif %}</p>
+        <span class="act-stat"><i class="fas fa-list-check"></i> {{ activities|length }} سجل</span>
+    </div>
+
+    {% if is_admin_view %}
+    <!-- ══ FILTER BAR ══ -->
+    <div class="act-filter-bar">
+        <form method="get" class="row align-items-end g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold mb-1" style="font-size:.85rem;">تصفية حسب المستخدم</label>
+                <select name="user" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">جميع المستخدمين</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if selected_user_id == u.id|stringformat:"s" %}selected{% endif %}>
+                        {{ u.get_full_name }}{% if not u.is_active %} (غير نشط){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                {% if selected_user_id %}
+                <a href="{% url 'accounts:activity_log' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-xmark me-1"></i>إعادة تعيين
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- ══ CARDS GRID ══ -->
+    <div class="act-grid">
+        {% for act in activities %}
+        <div class="act-card">
+            <div class="act-card-top">
+                <div class="act-icon act-icon--{{ act.action_type }}">
+                    {% if act.action_type == 'create' %}<i class="fas fa-plus"></i>
+                    {% elif act.action_type == 'update' %}<i class="fas fa-pencil"></i>
+                    {% elif act.action_type == 'delete' %}<i class="fas fa-trash"></i>
+                    {% elif act.action_type == 'confirm' %}<i class="fas fa-check"></i>
+                    {% elif act.action_type == 'cancel' %}<i class="fas fa-ban"></i>
+                    {% elif act.action_type == 'login' %}<i class="fas fa-right-to-bracket"></i>
+                    {% else %}<i class="fas fa-bolt"></i>{% endif %}
+                </div>
+                <div style="min-width:0;">
+                    <div class="act-title">{{ act.title }}</div>
+                    {% if is_admin_view and act.user %}
+                    <div class="act-user">{{ act.user.get_full_name }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="act-time">
+                <i class="fas fa-clock"></i>
+                {{ act.created_at|date:"Y-m-d" }} &nbsp;·&nbsp; {{ act.created_at|date:"H:i" }}
+            </div>
+            <button class="act-detail-btn"
+                    data-bs-toggle="modal"
+                    data-bs-target="#actModal"
+                    data-title="{{ act.title|escapejs }}"
+                    data-type="{{ act.get_action_type_display }}"
+                    data-user="{% if act.user %}{{ act.user.get_full_name|escapejs }}{% else %}—{% endif %}"
+                    data-datetime="{{ act.created_at|date:'Y-m-d H:i:s' }}"
+                    data-ip="{{ act.ip_address|default:'—' }}"
+                    data-details="{{ act.details|escapejs }}">
+                <i class="fas fa-eye me-1"></i>عرض التفاصيل
+            </button>
+        </div>
+        {% empty %}
+        <div class="act-empty">
+            <i class="fas fa-clock-rotate-left"></i>
+            <p>لا توجد سجلات نشاط حتى الآن</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- ══ DETAIL MODAL ══ -->
+<div class="modal fade" id="actModal" tabindex="-1" aria-labelledby="actModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px;border:none;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border-radius:16px 16px 0 0;border:none;">
+                <h5 class="modal-title" id="actModalLabel">
+                    <i class="fas fa-clock-rotate-left me-2"></i>تفاصيل النشاط
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <table class="act-detail-table">
+                    <tr>
+                        <th><i class="fas fa-tag me-1"></i>الإجراء</th>
+                        <td id="actModalTitle">—</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-layer-group me-1"></i>النوع</th>
+                        <td id="actModalType">—</td>
+                    </tr>
+                    {% if is_admin_view %}
+                    <tr>
+                        <th><i class="fas fa-user me-1"></i>المستخدم</th>
+                        <td id="actModalUser">—</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <th><i class="fas fa-clock me-1"></i>التاريخ والوقت</th>
+                        <td id="actModalDatetime">—</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-globe me-1"></i>عنوان IP</th>
+                        <td id="actModalIp">—</td>
+                    </tr>
+                </table>
+                <div class="mt-3" id="actModalDetailsWrap" style="display:none;">
+                    <div class="fw-semibold mb-2" style="font-size:.85rem;color:#6366f1;">
+                        <i class="fas fa-align-right me-1"></i>التفاصيل
+                    </div>
+                    <div class="act-details-text" id="actModalDetails"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const modal = document.getElementById('actModal');
+    if (!modal) return;
+    modal.addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+        modal.querySelector('#actModalTitle').textContent    = btn.dataset.title    || '—';
+        modal.querySelector('#actModalType').textContent     = btn.dataset.type     || '—';
+        modal.querySelector('#actModalDatetime').textContent = btn.dataset.datetime || '—';
+        modal.querySelector('#actModalIp').textContent       = btn.dataset.ip       || '—';
+
+        const userRow = modal.querySelector('#actModalUser');
+        if (userRow) userRow.textContent = btn.dataset.user || '—';
+
+        const details = (btn.dataset.details || '').trim();
+        const wrap = modal.querySelector('#actModalDetailsWrap');
+        const detailEl = modal.querySelector('#actModalDetails');
+        if (details) {
+            detailEl.textContent = details;
+            wrap.style.display = '';
+        } else {
+            wrap.style.display = 'none';
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -2,6 +2,7 @@ import csv
 import io
 import json
 from decimal import Decimal
+from apps.accounts.activity_service import log_activity
 
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -165,6 +166,8 @@ def customer_create_api(request):
         customer.created_by = request.user
         customer.updated_by = request.user
         customer.save()
+        log_activity(request, 'إضافة عميل جديد',
+                     f"العميل: {customer.name}\nرقم الهاتف: {customer.phone or '—'}", 'create')
         return JsonResponse({
             'success': True,
             'message': 'تم إضافة العميل بنجاح',
@@ -545,6 +548,9 @@ def customer_payment_create_api(request):
         .aggregate(s=Sum('amount'))['s'] or 0
     )
     current_balance = (customer.opening_balance or 0) + balance
+
+    log_activity(request, 'تسجيل دفعة من عميل',
+                 f"العميل: {customer.name}\nالمبلغ: {amount}\nطريقة الدفع: {method}", 'create')
 
     return _json_ok(data={'current_balance': str(current_balance)}, msg='تم تسجيل دفعة العميل بنجاح')
 

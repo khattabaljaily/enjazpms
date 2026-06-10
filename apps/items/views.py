@@ -2,6 +2,7 @@
 Items Views - عمليات CRUD للمنتجات والتصنيفات والوحدات
 كل العمليات عبر JSON API (AJAX) + صفحة واحدة لكل قسم
 """
+from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q, Sum
@@ -259,6 +260,8 @@ def item_create_api(request):
         item.updated_by = request.user
         item.save()
         _save_item_units(item, request.POST.get('units_json', ''), tenant)
+        log_activity(request, 'إضافة منتج جديد',
+                     f"المنتج: {item.name}\nكود: {item.sku or '—'}\nالنوع: {item.get_item_type_display()}", 'create')
         return JsonResponse({'success': True, 'message': 'تم إضافة المنتج بنجاح', 'id': item.id})
 
     return JsonResponse({

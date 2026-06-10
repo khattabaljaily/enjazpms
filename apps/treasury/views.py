@@ -1,3 +1,4 @@
+from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission
 from django.db.models import Q
@@ -132,6 +133,8 @@ def treasury_create_api(request):
             Treasury.objects.for_tenant(tenant).filter(is_default=True).update(is_default=False)
 
         treasury.save()
+        log_activity(request, 'إضافة خزينة جديدة',
+                     f"الخزينة: {treasury.name}\nالنوع: {treasury.get_treasury_type_display()}", 'create')
 
         return JsonResponse({
             'success': True,

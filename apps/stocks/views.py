@@ -5,6 +5,7 @@ Stocks Views - عمليات CRUD للمخازن
 import json
 import csv
 from datetime import timedelta
+from apps.accounts.activity_service import log_activity
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.contrib.auth.decorators import login_required
@@ -1207,6 +1208,8 @@ def transfer_create(request):
                     notes=ln.get('notes', ''),
                 )
 
+        log_activity(request, 'إنشاء تحويل مخزون',
+                     f"التحويل: {transfer.transfer_number}\nمن: {from_stock.name}\nإلى: {to_stock.name}", 'create')
         return JsonResponse({'success': True, 'id': transfer.id,
                              'redirect': f'/stocks/transfers/{transfer.id}/'})
 
@@ -1455,6 +1458,8 @@ def stocktake_create(request):
                 ))
             StocktakeLine.objects.bulk_create(lines_to_create)
 
+        log_activity(request, 'إنشاء جرد مخزون',
+                     f"الجرد: {stocktake.reference}\nالمخزن: {stock.name}\nعدد الأصناف: {len(lines_to_create)}", 'create')
         return JsonResponse({'success': True, 'id': stocktake.id,
                              'redirect': f'/stocks/stocktakes/{stocktake.id}/'})
 
@@ -1646,6 +1651,8 @@ def manufacturing_create(request):
             created_by=request.user,
             updated_by=request.user,
         )
+        log_activity(request, 'إنشاء أمر تصنيع',
+                     f"الأمر: {order.order_number}\nالمنتج: {recipe.item.name}\nالكمية: {quantity}\nالمخزن: {stock.name}", 'create')
         return JsonResponse({'success': True, 'id': order.id, 'order_number': order.order_number})
 
     from apps.items.models import BOMRecipe

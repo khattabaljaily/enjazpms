@@ -2,6 +2,7 @@ import json
 import re
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
+from apps.accounts.activity_service import log_activity
 
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission
@@ -353,6 +354,11 @@ def _process_order_post(request, tenant, invoice):
     except Exception as e:
         return _json_error(f'حدث خطأ: {str(e)}')
 
+    if invoice is None:
+        supplier = inv.supplier.name if inv.supplier else 'بدون مورد'
+        log_activity(request, 'إنشاء أمر شراء',
+                     f"أمر الشراء: {inv.invoice_number}\nالمورد: {supplier}\nالإجمالي: {inv.grand_total}", 'create')
+
     return JsonResponse({'success': True, 'redirect': f'/purchases/{inv.id}/'})
 
 
@@ -620,6 +626,10 @@ def _process_return_post(request, tenant, invoice):
         return _json_error(str(e))
     except Exception as e:
         return _json_error(f'حدث خطأ: {str(e)}')
+
+    supplier = invoice.supplier.name if invoice.supplier else '—'
+    log_activity(request, 'إنشاء مرتجع مشتريات',
+                 f"المرتجع: {purchase_return.return_number}\nأمر الشراء: {invoice.invoice_number}\nالمورد: {supplier}\nالمبلغ المسترد: {purchase_return.total_returned}", 'create')
 
     return JsonResponse({'success': True, 'redirect': f'/purchases/returns/{purchase_return.id}/'})
 
@@ -1506,6 +1516,10 @@ def rfq_create(request):
                     quoted_price=Decimal('0'),
                     notes=ln.get('notes', ''),
                 )
+
+        supplier_name = rfq.supplier.name if rfq.supplier else '—'
+        log_activity(request, 'إنشاء طلب عرض سعر (RFQ)',
+                     f"الطلب: {rfq.rfq_number}\nالمورد: {supplier_name}\nالمخزن: {rfq.stock.name}", 'create')
 
         return JsonResponse({'success': True, 'id': rfq.id,
                              'redirect': f'/purchases/rfq/{rfq.id}/'})

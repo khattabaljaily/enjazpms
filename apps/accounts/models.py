@@ -205,3 +205,58 @@ class PermissionGroup(models.Model):
     def permission_schema(cls):
         return load_permission_schema()
 
+
+class UserActivity(models.Model):
+    ACTION_CREATE  = 'create'
+    ACTION_UPDATE  = 'update'
+    ACTION_DELETE  = 'delete'
+    ACTION_CONFIRM = 'confirm'
+    ACTION_CANCEL  = 'cancel'
+    ACTION_LOGIN   = 'login'
+    ACTION_OTHER   = 'other'
+
+    ACTION_CHOICES = [
+        (ACTION_CREATE,  'إنشاء'),
+        (ACTION_UPDATE,  'تعديل'),
+        (ACTION_DELETE,  'حذف'),
+        (ACTION_CONFIRM, 'تأكيد'),
+        (ACTION_CANCEL,  'إلغاء'),
+        (ACTION_LOGIN,   'تسجيل دخول'),
+        (ACTION_OTHER,   'أخرى'),
+    ]
+
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        verbose_name='المشترك',
+        related_name='user_activities',
+        db_index=True,
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='المستخدم',
+        related_name='activities',
+    )
+    title       = models.CharField('العنوان', max_length=200)
+    action_type = models.CharField('نوع الإجراء', max_length=50, choices=ACTION_CHOICES, default=ACTION_OTHER)
+    details     = models.TextField('التفاصيل', blank=True)
+    ip_address  = models.GenericIPAddressField('عنوان IP', null=True, blank=True)
+    created_at  = models.DateTimeField('وقت النشاط', auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'user_activities'
+        verbose_name = 'نشاط مستخدم'
+        verbose_name_plural = 'سجل الأنشطة'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['tenant', '-created_at']),
+            models.Index(fields=['tenant', 'user', '-created_at']),
+        ]
+
+    def __str__(self):
+        username = self.user.username if self.user else 'مجهول'
+        return f"{username}: {self.title}"
+

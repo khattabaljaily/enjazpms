@@ -1,0 +1,389 @@
+{% load static %}
+
+<!-- Help Floating Button -->
+<button id="help-fab" class="help-fab" title="المساعدة" aria-label="فتح لوحة المساعدة">
+    <i class="fa-solid fa-circle-question"></i>
+</button>
+
+<!-- Help Panel -->
+<div id="help-panel" class="help-panel" role="dialog" aria-label="لوحة المساعدة" aria-hidden="true">
+
+    <!-- Header -->
+    <div class="help-panel__header">
+        <div class="help-panel__header-info">
+            <div class="help-panel__avatar">
+                <i class="fa-solid fa-circle-question"></i>
+            </div>
+            <div>
+                <div class="help-panel__title">مركز المساعدة</div>
+                <div class="help-panel__subtitle">دليل الاستخدام والنصائح</div>
+            </div>
+        </div>
+        <button id="help-close-btn" class="help-header-btn" title="إغلاق">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <!-- Content -->
+    <div class="help-panel__body">
+
+        <!-- Quick actions -->
+        <div class="help-section">
+            <div class="help-section__title"><i class="fa-solid fa-bolt me-1"></i> روابط سريعة</div>
+            <div class="help-quick-links">
+                <a href="{% url 'sales:invoice_list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-file-invoice"></i><span>فواتير المبيعات</span>
+                </a>
+                <a href="{% url 'customers:list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-users"></i><span>العملاء</span>
+                </a>
+                <a href="{% url 'items:list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-box"></i><span>الأصناف</span>
+                </a>
+                <a href="{% url 'stocks:list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-warehouse"></i><span>المخزن</span>
+                </a>
+                <a href="{% url 'purchases:order_list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-cart-shopping"></i><span>المشتريات</span>
+                </a>
+                <a href="{% url 'expenses:list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-receipt"></i><span>المصاريف</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Tips accordion -->
+        <div class="help-section">
+            <div class="help-section__title"><i class="fa-solid fa-lightbulb me-1"></i> نصائح سريعة</div>
+
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-invoices">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> إنشاء فاتورة مبيعات
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-invoices">
+                    <ol>
+                        <li>اختر <strong>المبيعات ← فواتير المبيعات</strong></li>
+                        <li>اضغط <strong>فاتورة جديدة</strong></li>
+                        <li>اختر العميل وأضف الأصناف</li>
+                        <li>اضغط <strong>حفظ</strong> ثم <strong>تأكيد</strong> لإتمام الفاتورة</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-stock">
+                    <i class="fa-solid fa-warehouse"></i> متابعة المخزون
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-stock">
+                    <ol>
+                        <li>اذهب إلى <strong>المخزن ← كميات الأصناف</strong> لعرض الأرصدة</li>
+                        <li>استخدم <strong>جرد المخزن</strong> لتصحيح الكميات</li>
+                        <li>أنشئ <strong>طلب تحويل</strong> لنقل المخزون بين المستودعات</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-purchases">
+                    <i class="fa-solid fa-cart-shopping"></i> إضافة مشتريات
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-purchases">
+                    <ol>
+                        <li>اذهب إلى <strong>المشتريات ← أوامر الشراء</strong></li>
+                        <li>اضغط <strong>أمر شراء جديد</strong> واختر المورد</li>
+                        <li>أضف الأصناف والكميات والأسعار</li>
+                        <li>بعد الاستلام اضغط <strong>تأكيد</strong> لتحديث المخزون تلقائياً</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-reports">
+                    <i class="fa-solid fa-chart-bar"></i> التقارير
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-reports">
+                    <ul>
+                        <li><strong>المبيعات ← التقارير</strong>: تقارير الإيرادات والأداء</li>
+                        <li><strong>المخزن ← التقارير</strong>: الأرصدة والحركات</li>
+                        <li><strong>العملاء ← التقارير</strong>: المديونيات والأعمار</li>
+                        <li>كل التقارير قابلة للتصدير إلى PDF وExcel</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-users">
+                    <i class="fa-solid fa-users-gear"></i> المستخدمين والصلاحيات
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-users">
+                    <ul>
+                        <li>أضف مستخدمين من <strong>الإعدادات ← المستخدمين</strong></li>
+                        <li>أنشئ <strong>مجموعات صلاحيات</strong> لتحديد وصول كل دور</li>
+                        <li>راجع <strong>سجل النشاط</strong> لمتابعة ما يفعله كل مستخدم</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Support link -->
+        <div class="help-section help-support">
+            <a href="{% url 'core:tenant_support' %}" class="help-support-btn">
+                <i class="fa-solid fa-headset"></i>
+                <div>
+                    <div class="fw-semibold">تواصل مع الدعم الفني</div>
+                    <div class="small text-muted">أرسل تذكرة دعم وسنرد عليك قريباً</div>
+                </div>
+                <i class="fa-solid fa-arrow-left ms-auto"></i>
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<!-- Overlay -->
+<div id="help-overlay" class="help-overlay"></div>
+
+
+<style>
+:root {
+    --help-primary: #0ea5e9;
+    --help-primary-dark: #0284c7;
+    --help-surface: var(--surface, #ffffff);
+    --help-surface-alt: var(--surface-alt, #f8fafc);
+    --help-border: var(--border-color, #e2e8f0);
+    --help-text: var(--text-primary, #1e293b);
+    --help-text-muted: var(--text-muted, #64748b);
+}
+
+.help-fab {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--help-primary), var(--help-primary-dark));
+    border: none;
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    z-index: 1050;
+    box-shadow: 0 4px 16px rgba(14,165,233,.4);
+    transition: transform .2s, box-shadow .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.help-fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(14,165,233,.5); }
+.help-fab:active { transform: scale(.95); }
+
+.help-panel {
+    position: fixed;
+    bottom: 88px;
+    right: 16px;
+    width: 360px;
+    max-height: 560px;
+    display: flex;
+    flex-direction: column;
+    background: var(--help-surface);
+    border: 1px solid var(--help-border);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.15);
+    z-index: 1049;
+    overflow: hidden;
+    transform: translateY(20px) scale(.96);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .2s;
+    direction: rtl;
+}
+.help-panel.open {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: all;
+}
+
+.help-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, var(--help-primary), var(--help-primary-dark));
+    color: #fff;
+    flex-shrink: 0;
+}
+.help-panel__header-info { display: flex; align-items: center; gap: 10px; }
+.help-panel__avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+}
+.help-panel__title { font-weight: 700; font-size: .9rem; }
+.help-panel__subtitle { font-size: .7rem; opacity: .8; }
+.help-header-btn {
+    background: rgba(255,255,255,.15);
+    border: none; color: #fff;
+    width: 28px; height: 28px;
+    border-radius: 7px; cursor: pointer;
+    font-size: .8rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+}
+.help-header-btn:hover { background: rgba(255,255,255,.28); }
+
+.help-panel__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--help-surface-alt);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.help-panel__body::-webkit-scrollbar { width: 4px; }
+.help-panel__body::-webkit-scrollbar-thumb { background: var(--help-border); border-radius: 2px; }
+
+.help-section__title {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--help-text-muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 8px;
+}
+
+.help-quick-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.help-quick-link {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 10px;
+    background: var(--help-surface);
+    border: 1px solid var(--help-border);
+    border-radius: 10px;
+    color: var(--help-text);
+    text-decoration: none;
+    font-size: .8rem;
+    font-weight: 500;
+    transition: background .15s, border-color .15s;
+}
+.help-quick-link i { color: var(--help-primary); font-size: .85rem; }
+.help-quick-link:hover { background: #e0f2fe; border-color: var(--help-primary); color: var(--help-primary-dark); }
+
+.help-tip {
+    border: 1px solid var(--help-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--help-surface);
+    margin-bottom: 4px;
+}
+.help-tip__toggle {
+    width: 100%; text-align: right; background: none; border: none;
+    padding: 10px 12px;
+    font-size: .82rem; font-weight: 600;
+    color: var(--help-text);
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: background .15s;
+}
+.help-tip__toggle:hover { background: var(--help-surface-alt); }
+.help-tip__toggle i:first-child { color: var(--help-primary); }
+.help-tip__arrow { transition: transform .2s; font-size: .65rem; }
+.help-tip__toggle.open .help-tip__arrow { transform: rotate(180deg); }
+.help-tip__body {
+    display: none;
+    padding: 6px 14px 12px;
+    font-size: .8rem;
+    color: var(--help-text-muted);
+    line-height: 1.7;
+    border-top: 1px solid var(--help-border);
+}
+.help-tip__body ol, .help-tip__body ul { padding-right: 18px; margin: 0; }
+.help-tip__body li { margin-bottom: 4px; }
+.help-tip__body strong { color: var(--help-text); }
+
+.help-support { padding-top: 0; }
+.help-support-btn {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    background: var(--help-surface);
+    border: 1px solid var(--help-border);
+    border-radius: 12px;
+    color: var(--help-text);
+    text-decoration: none;
+    transition: background .15s, border-color .15s;
+}
+.help-support-btn i:first-child {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: #e0f2fe;
+    color: var(--help-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; flex-shrink: 0;
+}
+.help-support-btn:hover { background: #e0f2fe; border-color: var(--help-primary); }
+
+.help-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.25); z-index: 1048;
+}
+.help-overlay.show { display: block; }
+
+@media (max-width: 480px) {
+    .help-panel { bottom: 0; right: 0; width: 100%; max-height: 70vh; border-radius: 16px 16px 0 0; }
+    .help-fab { bottom: 18px; right: 18px; }
+}
+</style>
+
+
+<script>
+(function () {
+    const fab     = document.getElementById('help-fab');
+    const panel   = document.getElementById('help-panel');
+    const overlay = document.getElementById('help-overlay');
+    const closeBtn = document.getElementById('help-close-btn');
+    let isOpen    = false;
+    let _logged   = false;
+
+    function openPanel() {
+        isOpen = true;
+        panel.classList.add('open');
+        panel.setAttribute('aria-hidden', 'false');
+        overlay.classList.add('show');
+        if (!_logged) {
+            _logged = true;
+            $.post({ url: '{% url "core:help_open_track" %}', global: false,
+                     contentType: 'application/json',
+                     data: JSON.stringify({ page: window.location.pathname }) });
+        }
+    }
+    function closePanel() {
+        isOpen = false;
+        panel.classList.remove('open');
+        panel.setAttribute('aria-hidden', 'true');
+        overlay.classList.remove('show');
+    }
+
+    fab.addEventListener('click', () => isOpen ? closePanel() : openPanel());
+    closeBtn.addEventListener('click', closePanel);
+    overlay.addEventListener('click', closePanel);
+
+    // Accordion tips
+    document.querySelectorAll('.help-tip__toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const body = document.getElementById(btn.dataset.target);
+            const open = btn.classList.toggle('open');
+            body.style.display = open ? 'block' : 'none';
+        });
+    });
+}());
+</script>

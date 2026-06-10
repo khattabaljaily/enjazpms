@@ -1,6 +1,7 @@
 import json
 from decimal import Decimal, InvalidOperation
 
+from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission
 from django.db.models import Q, Sum
@@ -271,7 +272,12 @@ def _process_expense_post(request, tenant, expense):
     expense.reference_number = reference_number
     expense.notes = notes
     expense.updated_by = request.user
+    is_new = expense.pk is None
     expense.save()
+
+    if is_new:
+        log_activity(request, 'إضافة مصروف جديد',
+                     f"الوصف: {expense.description}\nالفئة: {expense.category.name}\nالمبلغ: {expense.amount}", 'create')
 
     return JsonResponse({
         'success': True,

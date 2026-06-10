@@ -22,11 +22,8 @@
                 <div class="rpt-hero__kicker">أدوات النظام</div>
                 <h2 class="rpt-hero__title">سجل المراجعة</h2>
                 <p class="rpt-hero__desc">
-                    {% if total_count > 200 %}
-                    عرض أحدث 200 سجل من أصل {{ total_count|intcomma }} سجل
-                    {% else %}
-                    {{ total_count|intcomma }} سجل
-                    {% endif %}
+                    {% if total_count > 500 %}عرض أحدث 500 سجل من أصل {{ total_count|intcomma }} سجل
+                    {% else %}{{ total_count|intcomma }} سجل{% endif %}
                 </p>
             </div>
         </div>
@@ -42,19 +39,15 @@
             <option value="{{ t.pk }}" {% if filters.tenant_id == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>
             {% endfor %}
         </select>
-
         <select name="action">
             <option value="">— كل العمليات —</option>
             {% for key, label in action_choices %}
             <option value="{{ key }}" {% if filters.action == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-
-        <input type="date" name="date_from" value="{{ filters.date_from }}" placeholder="من تاريخ">
-        <input type="date" name="date_to"   value="{{ filters.date_to }}"   placeholder="إلى تاريخ">
-
-        <input type="text" name="q" value="{{ filters.q }}" placeholder="بحث في الوصف / المستخدم...">
-
+        <input type="date" name="date_from" value="{{ filters.date_from }}">
+        <input type="date" name="date_to"   value="{{ filters.date_to }}">
+        <input type="text" name="q" value="{{ filters.q }}" placeholder="بحث في العنوان / المستخدم / المشترك...">
         <button type="submit"><i class="fas fa-filter"></i> تطبيق</button>
         <a href="{% url 'core:admin_audit_log' %}" style="padding:0.38rem 0.75rem;border-radius:8px;background:var(--surface-hover);color:var(--text-tertiary);font-size:0.83rem;font-weight:600;text-decoration:none;">
             <i class="fas fa-times"></i> إعادة ضبط
@@ -66,50 +59,50 @@
         <table class="rpt-table">
             <thead>
                 <tr>
-                    <th>#</th>
                     <th>المشترك</th>
                     <th>المستخدم</th>
-                    <th>العملية</th>
-                    <th>النموذج</th>
-                    <th>الوصف</th>
-                    <th>عنوان IP</th>
+                    <th>الإجراء</th>
                     <th>التاريخ</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for log in logs %}
                 <tr>
-                    <td class="rpt-td--num">{{ log.pk }}</td>
                     <td>
-                        {% if log.tenant %}
-                        <div class="rpt-tenant-name">{{ log.tenant.name }}</div>
-                        {% else %}
-                        <span class="rpt-td--muted">—</span>
-                        {% endif %}
+                        {% if log.tenant %}<div class="rpt-tenant-name">{{ log.tenant.name }}</div>
+                        {% else %}<span class="rpt-td--muted">—</span>{% endif %}
                     </td>
                     <td>
                         {% if log.user %}
-                        <div class="rpt-tenant-name" style="font-size:0.82rem;">{{ log.user.get_full_name|default:log.user.username }}</div>
-                        {% else %}
-                        <span class="rpt-td--muted">—</span>
-                        {% endif %}
+                        <div style="font-size:0.82rem;font-weight:600;">{{ log.user.get_full_name|default:log.user.username }}</div>
+                        <div class="rpt-tenant-slug">{{ log.user.username }}</div>
+                        {% else %}<span class="rpt-td--muted">—</span>{% endif %}
                     </td>
                     <td>
-                        <span class="rpt-action-badge rpt-action-badge--{{ log.action }}">
-                            {{ log.get_action_display }}
-                        </span>
-                    </td>
-                    <td class="rpt-td--muted">{{ log.model_name|default:"—" }}</td>
-                    <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ log.description }}">
-                        {{ log.description }}
-                    </td>
-                    <td class="rpt-td--muted" style="direction:ltr;text-align:left;font-size:0.76rem;">
-                        {{ log.ip_address|default:"—" }}
+                        <div style="display:flex;align-items:center;gap:7px;">
+                            <span class="rpt-action-badge rpt-action-badge--{{ log.action_type }}">{{ log.get_action_type_display }}</span>
+                            <span style="font-size:0.82rem;color:var(--text-primary);">{{ log.title }}</span>
+                        </div>
                     </td>
                     <td class="rpt-td--date">{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        <button class="audit-view-btn"
+                            data-title="{{ log.title|escapejs }}"
+                            data-action="{{ log.get_action_type_display|escapejs }}"
+                            data-action-type="{{ log.action_type }}"
+                            data-tenant="{{ log.tenant.name|default:'—'|escapejs }}"
+                            data-user="{{ log.user.get_full_name|default:log.user.username|default:'—'|escapejs }}"
+                            data-username="{{ log.user.username|default:''|escapejs }}"
+                            data-ip="{{ log.ip_address|default:'—' }}"
+                            data-date="{{ log.created_at|date:'Y-m-d H:i:s' }}"
+                            data-details="{{ log.details|default:''|escapejs }}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="8" class="rpt-empty">لا توجد سجلات تطابق الفلاتر</td></tr>
+                <tr><td colspan="5" class="rpt-empty">لا توجد سجلات تطابق الفلاتر</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -118,37 +111,23 @@
     <!-- Mobile cards -->
     <div class="rpt-mob-cards">
         {% for log in logs %}
-        <div class="rpt-mob-card">
+        <div class="rpt-mob-card" style="cursor:pointer;" onclick="openAuditModal(this)"
+            data-title="{{ log.title|escapejs }}"
+            data-action="{{ log.get_action_type_display|escapejs }}"
+            data-action-type="{{ log.action_type }}"
+            data-tenant="{{ log.tenant.name|default:'—'|escapejs }}"
+            data-user="{{ log.user.get_full_name|default:log.user.username|default:'—'|escapejs }}"
+            data-username="{{ log.user.username|default:''|escapejs }}"
+            data-ip="{{ log.ip_address|default:'—' }}"
+            data-date="{{ log.created_at|date:'Y-m-d H:i:s' }}"
+            data-details="{{ log.details|default:''|escapejs }}">
             <div class="rpt-mob-card__header">
-                <span class="rpt-action-badge rpt-action-badge--{{ log.action }}">{{ log.get_action_display }}</span>
+                <span class="rpt-action-badge rpt-action-badge--{{ log.action_type }}">{{ log.get_action_type_display }}</span>
                 <span class="rpt-mob-card__val rpt-mob-card__val--muted" style="font-size:0.74rem;">{{ log.created_at|date:"m/d H:i" }}</span>
             </div>
-            <div style="margin-bottom:0.5rem;font-size:0.82rem;color:#374151;line-height:1.4;">
-                {{ log.description|truncatechars:80 }}
-            </div>
+            <div style="font-size:0.84rem;font-weight:600;color:var(--text-primary);margin-top:6px;">{{ log.title }}</div>
             {% if log.tenant %}
-            <div class="rpt-mob-card__row">
-                <span class="rpt-mob-card__label">المشترك</span>
-                <span class="rpt-mob-card__val">{{ log.tenant.name }}</span>
-            </div>
-            {% endif %}
-            {% if log.user %}
-            <div class="rpt-mob-card__row">
-                <span class="rpt-mob-card__label">المستخدم</span>
-                <span class="rpt-mob-card__val">{{ log.user.get_full_name|default:log.user.username }}</span>
-            </div>
-            {% endif %}
-            {% if log.model_name %}
-            <div class="rpt-mob-card__row">
-                <span class="rpt-mob-card__label">النموذج</span>
-                <span class="rpt-mob-card__val rpt-mob-card__val--muted">{{ log.model_name }}</span>
-            </div>
-            {% endif %}
-            {% if log.ip_address %}
-            <div class="rpt-mob-card__row">
-                <span class="rpt-mob-card__label">IP</span>
-                <span class="rpt-mob-card__val rpt-mob-card__val--muted" style="direction:ltr;font-family:monospace;font-size:0.76rem;">{{ log.ip_address }}</span>
-            </div>
+            <div style="font-size:0.76rem;color:var(--text-tertiary);margin-top:3px;">{{ log.tenant.name }}</div>
             {% endif %}
         </div>
         {% empty %}
@@ -158,4 +137,114 @@
 </div>
 
 </div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="auditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <span id="auditModalBadge" class="rpt-action-badge"></span>
+                    <span id="auditModalTitle" style="font-size:0.95rem;font-weight:700;margin-right:8px;color:var(--text-primary);"></span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <table class="audit-detail-table">
+                    <tr>
+                        <td class="audit-detail-lbl">المشترك</td>
+                        <td id="auditModalTenant" class="audit-detail-val"></td>
+                    </tr>
+                    <tr>
+                        <td class="audit-detail-lbl">المستخدم</td>
+                        <td id="auditModalUser" class="audit-detail-val"></td>
+                    </tr>
+                    <tr>
+                        <td class="audit-detail-lbl">نوع الإجراء</td>
+                        <td id="auditModalAction" class="audit-detail-val"></td>
+                    </tr>
+                    <tr>
+                        <td class="audit-detail-lbl">التاريخ</td>
+                        <td id="auditModalDate" class="audit-detail-val" style="direction:ltr;text-align:right;font-family:monospace;"></td>
+                    </tr>
+                    <tr>
+                        <td class="audit-detail-lbl">عنوان IP</td>
+                        <td id="auditModalIp" class="audit-detail-val" style="direction:ltr;text-align:right;font-family:monospace;"></td>
+                    </tr>
+                </table>
+                <div id="auditModalDetailsWrap" style="display:none;margin-top:14px;">
+                    <div style="font-size:0.75rem;font-weight:600;color:var(--text-tertiary);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">التفاصيل</div>
+                    <pre id="auditModalDetails" style="white-space:pre-wrap;font-family:inherit;font-size:0.84rem;color:var(--text-primary);margin:0;padding:12px;background:var(--surface-alt);border-radius:8px;border:1px solid var(--border-color);"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const _auditModal = new bootstrap.Modal(document.getElementById('auditModal'));
+
+function openAuditModal(el) {
+    const d = el.dataset;
+    document.getElementById('auditModalTitle').textContent  = d.title;
+    document.getElementById('auditModalTenant').textContent = d.tenant;
+    document.getElementById('auditModalAction').textContent = d.action;
+    document.getElementById('auditModalDate').textContent   = d.date;
+    document.getElementById('auditModalIp').textContent     = d.ip;
+
+    const badge = document.getElementById('auditModalBadge');
+    badge.className = 'rpt-action-badge rpt-action-badge--' + d.actionType;
+    badge.textContent = d.action;
+
+    const userEl = document.getElementById('auditModalUser');
+    userEl.textContent = d.user + (d.username ? ' (' + d.username + ')' : '');
+
+    const wrap = document.getElementById('auditModalDetailsWrap');
+    const pre  = document.getElementById('auditModalDetails');
+    if (d.details) {
+        pre.textContent = d.details;
+        wrap.style.display = 'block';
+    } else {
+        wrap.style.display = 'none';
+    }
+    _auditModal.show();
+}
+
+document.querySelectorAll('.audit-view-btn').forEach(btn => {
+    btn.addEventListener('click', () => openAuditModal(btn));
+});
+</script>
+<style>
+.audit-view-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--surface-hover); border: none; cursor: pointer;
+    color: var(--text-tertiary); font-size: 0.78rem;
+    transition: background .15s, color .15s;
+}
+.audit-view-btn:hover { background: #e0e7ff; color: #6366f1; }
+
+.audit-detail-table { width: 100%; border-collapse: collapse; }
+.audit-detail-table tr + tr td { border-top: 1px solid var(--border-color); }
+.audit-detail-lbl {
+    padding: 8px 0; width: 100px;
+    font-size: 0.78rem; font-weight: 600; color: var(--text-tertiary);
+    white-space: nowrap;
+}
+.audit-detail-val {
+    padding: 8px 0 8px 12px;
+    font-size: 0.84rem; color: var(--text-primary);
+}
+
+/* Badge types */
+.rpt-action-badge--confirm { background: #f0fdf4; color: #16a34a; }
+.rpt-action-badge--cancel  { background: #fff7ed; color: #ea580c; }
+.rpt-action-badge--other   { background: #f8fafc; color: #64748b; }
+[data-theme="dark"] .rpt-action-badge--confirm { background: rgba(22,163,74,.15); color: #86efac; }
+[data-theme="dark"] .rpt-action-badge--cancel  { background: rgba(234,88,12,.15);  color: #fdba74; }
+[data-theme="dark"] .rpt-action-badge--other   { background: var(--surface-hover); color: var(--text-tertiary); }
+</style>
 {% endblock %}

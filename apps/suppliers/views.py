@@ -1,3 +1,4 @@
+from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import DecimalField, Exists, OuterRef, Q, Sum, Value
@@ -162,6 +163,8 @@ def supplier_create_api(request):
         supplier.created_by = request.user
         supplier.updated_by = request.user
         supplier.save()
+        log_activity(request, 'إضافة مورد جديد',
+                     f"المورد: {supplier.name}\nرقم الهاتف: {supplier.phone or '—'}", 'create')
         return JsonResponse({
             'success': True,
             'message': 'تم إضافة المورد بنجاح',
@@ -500,6 +503,9 @@ def supplier_payment_create_api(request):
         .aggregate(s=Sum('amount'))['s'] or 0
     )
     current_balance = (supplier.opening_balance or 0) + balance
+
+    log_activity(request, 'تسجيل دفعة للمورد',
+                 f"المورد: {supplier.name}\nالمبلغ: {amount}\nطريقة الدفع: {method}", 'create')
 
     return _json_ok(data={'current_balance': str(current_balance)}, msg='تم تسجيل دفعة المورد بنجاح')
 

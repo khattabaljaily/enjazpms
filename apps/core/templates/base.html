@@ -84,6 +84,7 @@
 
     {% if request.user.is_authenticated and request.tenant %}
         {% include "ai/chat_widget.html" %}
+        {% include "components/help_widget.html" %}
     {% endif %}
 
     {% if training_template %}

@@ -68,6 +68,7 @@ from .services import (
     convert_quote_to_invoice,
 )
 from .reports import SalesReportGenerator
+from apps.accounts.activity_service import log_activity
 
 
 # ─────────────────────────────────────────────
@@ -297,6 +298,10 @@ def invoice_create(request):
     if request.method == 'POST':
         error = _process_invoice_post(request, tenant, invoice=None)
         if isinstance(error, SaleInvoice):
+            inv = error
+            customer = inv.customer.name if inv.customer else 'بدون عميل'
+            log_activity(request, 'إنشاء فاتورة مبيعات',
+                         f"الفاتورة: {inv.invoice_number}\nالعميل: {customer}\nالإجمالي: {inv.grand_total}", 'create')
             return redirect('sales:invoice_detail', pk=error.id)
         # إذا رجع dict فهو للـ AJAX
         if isinstance(error, JsonResponse):
@@ -820,6 +825,9 @@ def return_create(request, invoice_pk):
     if request.method == 'POST':
         result = _process_return_post(request, tenant, invoice)
         if isinstance(result, SaleReturn):
+            customer = result.customer.name if result.customer else '—'
+            log_activity(request, 'إنشاء مرتجع مبيعات',
+                         f"المرتجع: {result.return_number}\nالفاتورة الأصلية: {invoice.invoice_number}\nالعميل: {customer}\nالمبلغ المسترد: {result.total_returned}", 'create')
             return redirect('sales:return_detail', pk=result.id)
         if isinstance(result, JsonResponse):
             return result
@@ -1259,6 +1267,9 @@ def quote_create(request):
         except Exception as e:
             return _json_error(str(e))
 
+        customer = quote.customer.name if quote.customer else 'بدون عميل'
+        log_activity(request, 'إنشاء عرض سعر',
+                     f"عرض السعر: {quote.quote_number}\nالعميل: {customer}\nالإجمالي: {quote.grand_total}", 'create')
         return _json_ok({'redirect': f'/sales/quotes/{quote.pk}/'}, 'تم حفظ عرض السعر')
 
     return render(request, 'sales/quote_form.html', {
@@ -2459,6 +2470,16 @@ def pos_checkout_api(request):
 
     except Exception as exc:
         return _json_error(str(exc))
+
+    customer_name = '—'
+    if customer_id:
+        try:
+            from apps.customers.models import Customer as _Cust
+            customer_name = _Cust.objects.get(pk=customer_id, tenant=tenant).name
+        except Exception:
+            pass
+    log_activity(request, 'إتمام عملية بيع من نقطة البيع',
+                 f"الفاتورة: {invoice.invoice_number}\nالعميل: {customer_name}\nالإجمالي: {invoice.grand_total}", 'create')
 
     return JsonResponse({
         'success': True,

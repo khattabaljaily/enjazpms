@@ -23,6 +23,8 @@ from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
 
 from apps.core.models import Tenant, Settings
+from .models import UserActivity
+from .activity_service import log_activity
 from apps.core.constants import COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country
 from .models import PermissionGroup, User
 from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginForm, UserManagementForm, PasswordResetForm, SetPasswordForm
@@ -197,6 +199,8 @@ def user_create_api(request):
         }, status=400)
 
     user = form.save()
+    log_activity(request, 'إضافة مستخدم جديد',
+                 f"المستخدم: {user.get_full_name()}\nاسم الدخول: {user.username}", 'create')
 
     return _json_ok({'id': user.id}, 'تم إضافة المستخدم بنجاح')
 
@@ -388,6 +392,8 @@ def permission_group_create_api(request):
         group.users.set(User.objects.filter(tenant=tenant, id__in=user_ids))
 
     enabled_count = sum(1 for p in sanitized_permissions.values() if p)
+    log_activity(request, 'إنشاء مجموعة صلاحيات جديدة',
+                 f"المجموعة: {group.name}\nعدد الصلاحيات المفعّلة: {enabled_count}", 'create')
     return _json_ok({
         'id': group.id,
         'saved_permissions': sanitized_permissions,
@@ -732,11 +738,14 @@ def login_view(request):
 
             if user is not None:
                 login(request, user)
-                
+                request.tenant = user.tenant
+                if user.tenant:
+                    log_activity(request, 'تسجيل دخول للنظام', f'المستخدم: {user.get_full_name()}\nاسم الدخول: {user.username}', 'login')
+
                 # Remember me
                 if not remember_me:
                     request.session.set_expiry(0)  # Session expires when browser closes
-                
+
                 # Redirect based on user type
                 if user.is_superuser:
                     next_url = reverse('core:admin_dashboard')
@@ -792,6 +801,7 @@ def login_api(request):
 @login_required
 def logout_view(request):
     """تسجيل الخروج"""
+    log_activity(request, 'تسجيل خروج من النظام', f'المستخدم: {request.user.get_full_name()}\nاسم الدخول: {request.user.username}', 'login')
     logout(request)
     messages.info(request, 'تم تسجيل الخروج بنجاح')
     return redirect('accounts:login')
@@ -938,3 +948,37 @@ def password_reset_complete(request):
         return redirect('core:dashboard')
 
     return render(request, 'accounts/password_reset_complete.html')
+
+
+# ─────────────────────────────────────────────
+#   ACTIVITY LOG
+# ─────────────────────────────────────────────
+
+@login_required
+def activity_log(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:dashboard')
+
+    is_admin = request.user.is_tenant_admin
+
+    users_qs = None
+    selected_user_id = request.GET.get('user', '').strip()
+
+    if is_admin:
+        from .models import User as AccountUser
+        users_qs = AccountUser.objects.filter(tenant=tenant).order_by('first_name', 'username')
+        qs = UserActivity.objects.filter(tenant=tenant).select_related('user')
+        if selected_user_id:
+            qs = qs.filter(user_id=selected_user_id)
+    else:
+        qs = UserActivity.objects.filter(tenant=tenant, user=request.user)
+
+    qs = qs.order_by('-created_at')[:500]
+
+    return render(request, 'accounts/activity_log.html', {
+        'activities': qs,
+        'users': users_qs,
+        'selected_user_id': selected_user_id,
+        'is_admin_view': is_admin,
+    })

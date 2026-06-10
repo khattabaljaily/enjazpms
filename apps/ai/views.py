@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission
+from apps.accounts.activity_service import log_activity
 
 from .services import chat, generate_daily_insights
 
@@ -18,11 +19,6 @@ logger = logging.getLogger(__name__)
 @require_permission('use_ai_chat')
 @require_POST
 def chat_api(request):
-    """
-    POST /ai/chat/
-    Body: {"message": "...", "history": [...]}
-    Returns: {"reply": "..."}
-    """
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
@@ -47,6 +43,8 @@ def chat_api(request):
         logger.error("AI chat error: %s\n%s", exc, traceback.format_exc())
         return JsonResponse({"error": f"خطأ داخلي: {exc}"}, status=500)
 
+    preview = user_message[:150] + ('...' if len(user_message) > 150 else '')
+    log_activity(request, 'استخدام المساعد الذكي', f'السؤال: {preview}', 'other')
     return JsonResponse({"reply": reply})
 
 
@@ -54,15 +52,12 @@ def chat_api(request):
 @require_permission('view_ai_insights')
 @require_GET
 def insights_api(request):
-    """
-    GET /ai/insights/
-    Returns: {"insights": "..."}
-    """
     tenant = getattr(request, 'tenant', None)
     if tenant is None:
         return JsonResponse({"error": "لا يوجد tenant مرتبط بالجلسة"}, status=403)
 
     insights = generate_daily_insights(tenant)
+    log_activity(request, 'عرض الرؤى الذكية اليومية', '', 'other')
     return JsonResponse({"insights": insights})
 
 
@@ -70,31 +65,21 @@ def insights_api(request):
 @require_permission('view_ai_insights')
 @require_GET
 def advices_api(request):
-    """
-    GET /ai/advices/
-    Returns: {"advices": ["...", "..."]}
-    The AI service returns a short multi-point summary; we split it into items.
-    """
     tenant = getattr(request, 'tenant', None)
     if tenant is None:
         return JsonResponse({"error": "لا يوجد tenant مرتبط بالجلسة"}, status=403)
 
     try:
         raw = generate_daily_insights(tenant)
-        # Split into lines and filter empty/short lines
         parts = [p.strip() for p in raw.splitlines() if p.strip()]
-        # If result is a single paragraph, split by common separators
         if len(parts) <= 1:
-            # try splitting by numbered bullets or '•' or '•'
-            for sep in ['•', '-', '\u2022']:
+            for sep in ['•', '-', '•']:
                 if sep in raw:
                     parts = [p.strip() for p in raw.split(sep) if p.strip()]
                     break
-            # fallback split by sentences
             if len(parts) <= 1:
                 parts = [s.strip() for s in raw.replace('\n', ' ').split('  ') if s.strip()]
 
-        # Final cleanup: remove numeric prefixes like '1.' or '١)'
         import re
         cleaned = []
         for p in parts:
@@ -103,7 +88,6 @@ def advices_api(request):
             if len(p2) > 5:
                 cleaned.append(p2)
 
-        # Provide fallback advices when AI returns nothing useful
         if not cleaned:
             cleaned = [
                 'راجع الأصناف ذات المخزون المنخفض وأعد طلب المخزون الضروري.',
@@ -111,6 +95,7 @@ def advices_api(request):
                 'راجع أفضل المنتجات هذا الشهر وفكر في ترويج للمنتجات الأبطأ مبيعاً.',
             ]
 
+        log_activity(request, 'عرض النصائح الذكية', '', 'other')
         return JsonResponse({"advices": cleaned})
     except Exception as exc:
         import traceback
@@ -118,3 +103,16 @@ def advices_api(request):
         return JsonResponse({"advices": [
             'تعذّر توليد نصائح ذكية في الوقت الحالي. حاول مرة لاحقة.'
         ]})
+
+
+@login_required
+@require_POST
+def track_open_api(request):
+    """Called from JS when user opens the AI chat panel."""
+    try:
+        body = json.loads(request.body)
+        page = (body.get('page') or '')[:200]
+    except (json.JSONDecodeError, ValueError):
+        page = ''
+    log_activity(request, 'فتح المساعد الذكي', f'الصفحة: {page}' if page else '', 'other')
+    return JsonResponse({'ok': True})
