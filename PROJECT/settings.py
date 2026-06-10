@@ -115,6 +115,7 @@ TEMPLATES = [
                 'apps.core.context_processors.app_context',
                 'apps.core.context_processors.platform_context',
                 'apps.core.context_processors.impersonation_context',
+                'apps.core.context_processors.training_context',
             ],
         },
     },

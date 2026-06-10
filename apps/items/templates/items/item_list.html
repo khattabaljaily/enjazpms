@@ -1281,15 +1281,35 @@
                     return;
                 }
 
+                const refLabels = {
+                    'sale_invoice':             'فاتورة مبيعات',
+                    'sale_return':              'مرتجع مبيعات',
+                    'sale_payment':             'دفعة عميل',
+                    'purchase_invoice':         'أمر شراء',
+                    'purchase_return':          'مرتجع مشتريات',
+                    'purchase_payment':         'دفعة مورد',
+                    'customer_payment_cash':    'دفعة عميل - نقداً',
+                    'customer_payment_bank':    'دفعة عميل - بنكي',
+                    'customer_payment_cancel':  'إلغاء دفعة عميل',
+                    'customer_payment_cash_cancel': 'إلغاء دفعة عميل - نقداً',
+                    'expense':                  'مصروف',
+                    'expense_cancel':           'إلغاء مصروف',
+                    'opening_balance':          'رصيد افتتاحي',
+                    'stock_transfer':           'تحويل مخزون',
+                    'stocktake':                'جرد مخزون',
+                    'manufacturing_order':      'أمر تصنيع',
+                };
+
                 const rows = d.movements.map(function(m) {
                     const qty = EnjazIMS.parseNumber(m.quantity || 0);
                     const qtyClass = (m.direction === 'in') ? 'text-success' : 'text-danger';
                     const qtyPrefix = (m.direction === 'in') ? '+' : '-';
+                    const refLabel = refLabels[m.reference_type] || m.reference_type || '—';
                     return `<tr>
                         <td>${m.movement_date || '—'}</td>
                         <td>${m.stock || '—'}</td>
                         <td>${m.movement_type_label || m.movement_type || '—'}</td>
-                        <td>${m.reference_type || '—'}</td>
+                        <td>${refLabel}</td>
                         <td class="${qtyClass}">${qtyPrefix}${EnjazIMS.formatQuantity(qty)}</td>
                         <td>${EnjazIMS.formatQuantity(m.balance_after || 0)}</td>
                         <td>${m.notes || '—'}</td>

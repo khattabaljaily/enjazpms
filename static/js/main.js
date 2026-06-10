@@ -735,3 +735,47 @@ function handleAjaxForm(formId, onSuccess) {
         });
     });
 }
+
+
+/* ════════════════════════════════════════════════════════════
+   Training Panel — دليل الاستخدام
+   ════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function () {
+    var fab     = document.getElementById('training-fab');
+    var panel   = document.getElementById('training-panel');
+    var overlay = document.getElementById('training-overlay');
+    var closeBtn= document.getElementById('training-close-btn');
+
+    if (!fab || !panel) return;
+
+    function open() {
+        panel.classList.add('is-open');
+        overlay.classList.add('is-open');
+        fab.classList.add('is-open');
+        panel.setAttribute('aria-hidden', 'false');
+    }
+    function close() {
+        panel.classList.remove('is-open');
+        overlay.classList.remove('is-open');
+        fab.classList.remove('is-open');
+        panel.setAttribute('aria-hidden', 'true');
+    }
+
+    fab.addEventListener('click', function () {
+        panel.classList.contains('is-open') ? close() : open();
+    });
+    if (closeBtn)  closeBtn.addEventListener('click', close);
+    if (overlay)   overlay.addEventListener('click', close);
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') close();
+    });
+
+    /* Accordion sections inside training files */
+    document.addEventListener('click', function (e) {
+        var head = e.target.closest('.t-section__head');
+        if (!head) return;
+        var section = head.closest('.t-section');
+        if (!section) return;
+        section.classList.toggle('is-open');
+    });
+});

@@ -1858,3 +1858,276 @@ div.dataTables_wrapper div.dataTables_paginate {
     font-size: .85rem; padding: .1rem .3rem;
 }
 .pf-banner__close:hover { opacity: 1; }
+
+
+/* ════════════════════════════════════════════════════════════
+   Training Panel — دليل الاستخدام
+   ════════════════════════════════════════════════════════════ */
+
+/* Trigger Button */
+.training-fab {
+    position: fixed;
+    top: 0.6rem;
+    left: 1.2rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f5559d 0%, #ee1379 100%);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    box-shadow: 0 3px 12px rgba(238,19,121,.45);
+    transition: transform .2s, box-shadow .2s;
+    z-index: 1040;
+}
+.training-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 5px 18px rgba(238,19,121,.55);
+}
+.training-fab.is-open {
+    background: linear-gradient(135deg, #ee1379 0%, #c91068 100%);
+}
+
+/* Panel */
+.training-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 360px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: 4px 0 32px rgba(0,0,0,.12);
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform .3s cubic-bezier(.4,0,.2,1);
+    border-radius: 0 16px 16px 0;
+    overflow: hidden;
+}
+.training-panel.is-open {
+    transform: translateX(0);
+}
+
+/* Header */
+.training-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.2rem;
+    background: linear-gradient(135deg, #f5559d 0%, #ee1379 100%);
+    color: #fff;
+    flex-shrink: 0;
+}
+.training-panel__header-info {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+.training-panel__avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+.training-panel__title {
+    font-size: .95rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.training-panel__subtitle {
+    font-size: .75rem;
+    opacity: .8;
+    margin-top: 1px;
+}
+.training-header-btn {
+    background: rgba(255,255,255,.15);
+    border: none;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: .85rem;
+    transition: background .15s;
+    flex-shrink: 0;
+}
+.training-header-btn:hover { background: rgba(255,255,255,.3); }
+
+/* Body / Content */
+.training-panel__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Overlay */
+.training-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.3);
+    z-index: 1049;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s;
+}
+.training-overlay.is-open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* ── Content Blocks inside training files ── */
+.t-overview {
+    background: #f0f4ff;
+    border-right: 4px solid #ee1379;
+    border-radius: 8px;
+    padding: .8rem 1rem;
+    font-size: .88rem;
+    color: #374151;
+    line-height: 1.7;
+}
+
+.t-section {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.t-section__head {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .65rem 1rem;
+    background: #f8fafc;
+    font-size: .85rem;
+    font-weight: 700;
+    color: #374151;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid #e5e7eb;
+}
+.t-section__head i.t-icon { color: #ee1379; font-size: .9rem; }
+.t-section__head .t-chevron {
+    margin-right: auto;
+    margin-left: 0;
+    color: #9ca3af;
+    font-size: .75rem;
+    transition: transform .2s;
+}
+.t-section.is-open .t-chevron { transform: rotate(180deg); }
+
+.t-section__body {
+    padding: .8rem 1rem;
+    display: none;
+    font-size: .83rem;
+    color: #4b5563;
+    line-height: 1.75;
+}
+.t-section.is-open .t-section__body { display: block; }
+
+.t-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+.t-list li {
+    display: block;
+    padding-right: 1rem;
+    position: relative;
+    line-height: 1.7;
+    word-break: break-word;
+}
+.t-list li::before {
+    content: "•";
+    color: #ee1379;
+    font-weight: 700;
+    position: absolute;
+    right: 0;
+    top: .08rem;
+}
+
+.t-steps {
+    counter-reset: t-step;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+.t-steps li {
+    counter-increment: t-step;
+    display: flex;
+    gap: .6rem;
+    align-items: flex-start;
+    min-width: 0;
+}
+.t-steps li > * { min-width: 0; }
+.t-steps li::before {
+    content: counter(t-step);
+    background: #ee1379;
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 700;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: .15rem;
+}
+
+.t-task {
+    margin-bottom: .8rem;
+}
+.t-task__title {
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: .35rem;
+    font-size: .83rem;
+}
+
+.t-badge {
+    display: inline-block;
+    padding: .15rem .5rem;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 600;
+}
+.t-badge--info    { background: #dbeafe; color: #1d4ed8; }
+.t-badge--success { background: #dcfce7; color: #166534; }
+.t-badge--warning { background: #fef3c7; color: #92400e; }
+.t-badge--danger  { background: #fee2e2; color: #991b1b; }
+.t-badge--muted   { background: #f1f5f9; color: #64748b; }
+
+.t-tip {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: .6rem .9rem;
+    font-size: .8rem;
+    color: #78350f;
+    display: flex;
+    gap: .5rem;
+    align-items: flex-start;
+}
+.t-tip i { color: #f59e0b; flex-shrink: 0; margin-top: .1rem; }

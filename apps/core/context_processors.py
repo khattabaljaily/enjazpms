@@ -61,6 +61,32 @@ def impersonation_context(request):
     return {'impersonating': bool(impersonator_id)}
 
 
+def training_context(request):
+    """حقن مسار ملف التدريب المناسب للصفحة الحالية تلقائياً"""
+    if not (hasattr(request, 'tenant') and request.tenant):
+        return {'training_template': None}
+    if request.user.is_superuser:
+        return {'training_template': None}
+    try:
+        match = request.resolver_match
+        if not match:
+            return {'training_template': None}
+        namespace = match.namespace or ''
+        url_name = match.url_name or ''
+        if not namespace or not url_name:
+            return {'training_template': None}
+        candidate = f"training/{namespace}/{url_name}.html"
+        from django.template.loader import get_template
+        from django.template import TemplateDoesNotExist
+        try:
+            get_template(candidate)
+            return {'training_template': candidate}
+        except TemplateDoesNotExist:
+            return {'training_template': None}
+    except Exception:
+        return {'training_template': None}
+
+
 def platform_context(request):
     """إعدادات النظام — الإشعار العام ووضع الصيانة"""
     from django.core.cache import cache

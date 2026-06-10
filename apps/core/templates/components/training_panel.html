@@ -1,0 +1,35 @@
+{% load static %}
+
+<!-- Training Trigger Button -->
+<button id="training-fab" class="training-fab" title="دليل الاستخدام" aria-label="فتح دليل الاستخدام">
+    <i class="fas fa-circle-question"></i>
+</button>
+
+<!-- Training Panel -->
+<div id="training-panel" class="training-panel" role="dialog" aria-label="دليل الاستخدام" aria-hidden="true">
+
+    <div class="training-panel__header">
+        <div class="training-panel__header-info">
+            <div class="training-panel__avatar">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <div>
+                <div class="training-panel__title">دليل الاستخدام</div>
+                <div class="training-panel__subtitle">شرح مكونات الشاشة</div>
+            </div>
+        </div>
+        <button id="training-close-btn" class="training-header-btn" title="إغلاق">
+            <i class="fas fa-xmark"></i>
+        </button>
+    </div>
+
+    <div class="training-panel__body">
+        {% if training_template %}
+            {% include training_template %}
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Training Overlay -->
+<div id="training-overlay" class="training-overlay"></div>

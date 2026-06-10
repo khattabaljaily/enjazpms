@@ -34,7 +34,7 @@
     <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=2.2">
 
     <!-- Shared UI Components CSS -->
-    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=1.6">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}?v=2.0">
 
     <!-- Auth Pages CSS -->
     <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=2.0">
@@ -64,7 +64,7 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     
     <!-- Custom JS -->
-    <script src="{% static 'js/main.js' %}?v=3.9"></script>
+    <script src="{% static 'js/main.js' %}?v=4.0"></script>
 
     <!-- Inject print date for report letterhead (no-op on non-report pages) -->
     <script>
@@ -84,6 +84,10 @@
 
     {% if request.user.is_authenticated and request.tenant %}
         {% include "ai/chat_widget.html" %}
+    {% endif %}
+
+    {% if training_template %}
+        {% include "components/training_panel.html" %}
     {% endif %}
 
     
