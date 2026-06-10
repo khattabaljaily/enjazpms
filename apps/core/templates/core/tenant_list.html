@@ -634,6 +634,9 @@
             const demoBadge  = r.is_demo ? '<span class="tnr-badge tnr-badge--demo">تجريبي</span>' : '';
             const suspIcon   = r.is_active ? 'fa-pause' : 'fa-play';
             const suspTitle  = r.is_active ? 'تعليق' : 'تفعيل';
+            const storeBtn   = r.store_slug
+                ? `<a class="cxr-act cxr-act--store" href="/store/${r.store_slug}/" target="_blank" title="زيارة المتجر${r.store_enabled ? '' : ' (معطّل)'}"><i class="fas fa-store"></i></a>`
+                : '';
             $list.append(`
             <div class="cx-card-item">
                 <div class="cx-card-header">
@@ -654,6 +657,7 @@
                         <button class="cxr-act js-edit-tenant"                   data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
                         <button class="cxr-act cxr-act--warn js-suspend-tenant" data-id="${r.id}" data-name="${r.name}" data-active="${r.is_active}" title="${suspTitle}"><i class="fas ${suspIcon}"></i></button>
                         <button class="cxr-act cxr-act--renew js-renew-tenant" data-id="${r.id}" data-name="${r.name}" data-plan="${r.subscription_plan_key||''}" title="تجديد الاشتراك"><i class="fas fa-rotate-right"></i></button>
+                        ${storeBtn}
                         <button class="cxr-act cxr-act--del js-delete-tenant"   data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>
                         <button class="cxr-act cxr-act--login js-login-as-tenant" data-id="${r.id}" data-name="${r.name}" title="دخول كمدير المشترك"><i class="fas fa-user-secret"></i></button>
                     </div>
@@ -727,11 +731,15 @@
                 render: function (_, __, r) {
                     const suspendLabel = r.is_active ? 'تعليق' : 'تفعيل';
                     const suspendIcon  = r.is_active ? 'fa-pause' : 'fa-play';
+                    const storeBtn     = r.store_slug
+                        ? `<a class="cxr-act cxr-act--store" href="/store/${r.store_slug}/" target="_blank" title="زيارة المتجر${r.store_enabled ? '' : ' (معطّل)'}"><i class="fas fa-store"></i></a>`
+                        : '';
                     return `<div class="cxr-actions">
                         <button class="cxr-act cxr-act--view js-view-tenant"    data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
                         <button class="cxr-act js-edit-tenant"                   data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
                         <button class="cxr-act cxr-act--warn js-suspend-tenant" data-id="${r.id}" data-name="${r.name}" data-active="${r.is_active}" title="${suspendLabel}"><i class="fas ${suspendIcon}"></i></button>
                         <button class="cxr-act cxr-act--renew js-renew-tenant" data-id="${r.id}" data-name="${r.name}" data-plan="${r.subscription_plan_key||''}" title="تجديد الاشتراك"><i class="fas fa-rotate-right"></i></button>
+                        ${storeBtn}
                         <button class="cxr-act cxr-act--del js-delete-tenant"   data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>
                         <button class="cxr-act cxr-act--login js-login-as-tenant" data-id="${r.id}" data-name="${r.name}" title="دخول كمدير المشترك"><i class="fas fa-user-secret"></i></button>
                     </div>`;

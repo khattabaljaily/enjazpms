@@ -1583,7 +1583,9 @@ def tenant_table_api(request):
     status_filter = request.GET.get('status', '').strip()
     plan_filter = request.GET.get('plan', '').strip()
 
-    qs = Tenant.objects.select_related('business_type').all()
+    from apps.store.models import StoreSettings
+
+    qs = Tenant.objects.select_related('business_type').prefetch_related('storesettings_set').all()
     records_total = qs.count()
 
     today = datetime.today().date()
@@ -1636,6 +1638,7 @@ def tenant_table_api(request):
             exp_label = t.subscription_expires.strftime('%Y-%m-%d') if t.subscription_expires else '—'
             exp_status = 'ok'
 
+        store = next(iter(t.storesettings_set.all()), None)
         data.append({
             'id': t.id,
             'name': t.name,
@@ -1653,6 +1656,8 @@ def tenant_table_api(request):
             'email': t.email or '—',
             'phone': t.phone or '—',
             'city': t.city or '—',
+            'store_slug': store.slug if store else None,
+            'store_enabled': store.is_enabled if store else False,
         })
 
     return JsonResponse({'draw': draw, 'recordsTotal': records_total, 'recordsFiltered': records_filtered, 'data': data})

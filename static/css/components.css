@@ -548,6 +548,8 @@ table.cx-table thead th {
 .cxr-act--del:hover    { background: rgba(239,68,68,0.1);   color: #ef4444; }
 .cxr-act--login:hover  { background: rgba(99,102,241,0.15); color: #6366f1; }
 .cxr-act--renew:hover  { background: rgba(16,185,129,0.12); color: #059669; }
+.cxr-act--store        { text-decoration: none; }
+.cxr-act--store:hover  { background: rgba(14,165,233,0.12); color: #0ea5e9; text-decoration: none; }
 
 /* ══════════════════════════ MODAL ══════════════════════════ */
 .modal           { z-index: 1050 !important; }
