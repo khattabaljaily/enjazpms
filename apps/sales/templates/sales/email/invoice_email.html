@@ -1,0 +1,402 @@
+{% load humanize %}<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فاتورة {{ invoice.invoice_number }}</title>
+<!--[if mso]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+  table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
+  img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}
+  body{margin:0;padding:0;background:#eef2f7;}
+  @media only screen and (max-width:660px){
+    .email-wrap{padding:16px 8px!important;}
+    .email-card{border-radius:12px!important;}
+    .email-inner{padding:20px 18px!important;}
+    .meta-grid td{display:block!important;padding-bottom:10px!important;}
+    .items-table th,.items-table td{padding:8px 6px!important;font-size:11px!important;}
+    .col-discount,.col-tax{display:none!important;}
+  }
+</style>
+</head>
+
+<body style="margin:0;padding:0;background:#eef2f7;font-family:Cairo,'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;">
+
+<!-- ── Wrapper ─────────────────────────────────────────── -->
+<table class="email-wrap" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background:#eef2f7;padding:36px 16px;">
+<tr><td align="center">
+
+<!-- ── Card ─────────────────────────────────────────────── -->
+<table class="email-card" width="640" cellpadding="0" cellspacing="0" border="0"
+       style="max-width:640px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;
+              box-shadow:0 4px 32px rgba(0,0,0,.13);">
+
+  <!-- ── Color stripe ──────────────────────────────────── -->
+  <tr>
+    <td height="6" bgcolor="{{ brand_color }}"
+        style="line-height:6px;font-size:1px;background:{{ brand_color }}">&nbsp;</td>
+  </tr>
+
+  <!-- ── Header: logo + invoice badge ─────────────────── -->
+  <tr>
+    <td class="email-inner" style="padding:32px 40px 24px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <!-- Logo / Company -->
+          <td valign="middle" style="padding-left:0;">
+            {% if logo_abs_url %}
+              <img src="{{ logo_abs_url }}" alt="{{ tenant.name }}"
+                   height="52" style="display:block;max-height:52px;max-width:160px;border:0;margin-bottom:8px;">
+            {% else %}
+              <div style="width:52px;height:52px;border-radius:12px;
+                          background:{{ brand_color }};display:flex;align-items:center;
+                          justify-content:center;font-size:22px;font-weight:900;color:#fff;
+                          margin-bottom:8px;text-align:center;line-height:52px;">
+                {{ tenant.name|first }}
+              </div>
+            {% endif %}
+            <div style="font-size:17px;font-weight:900;color:#111827;line-height:1.2;">
+              {{ tenant.name }}
+            </div>
+            {% if tenant.phone %}
+            <div style="font-size:12px;color:#6b7280;margin-top:3px;">
+              &#9990; {{ tenant.phone }}
+            </div>
+            {% endif %}
+            {% if tenant.address %}
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">
+              {{ tenant.address }}{% if tenant.city %}، {{ tenant.city }}{% endif %}
+            </div>
+            {% endif %}
+          </td>
+
+          <!-- Invoice Badge -->
+          <td valign="top" align="left" width="190" style="text-align:left;">
+            <table cellpadding="0" cellspacing="0" border="0" align="left">
+              <tr>
+                <td style="background:{{ brand_color_bg }};border:2px solid {{ brand_color_border }};
+                            border-radius:12px;padding:14px 20px;text-align:center;">
+                  <div style="font-size:11px;color:#6b7280;font-weight:700;letter-spacing:.5px;
+                               margin-bottom:6px;text-transform:uppercase;">فاتورة مبيعات</div>
+                  <div style="font-size:22px;font-weight:900;color:{{ brand_color }};
+                               letter-spacing:-.3px;direction:ltr;">
+                    #{{ invoice.invoice_number }}
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── Divider ────────────────────────────────────────── -->
+  <tr>
+    <td style="padding:0 40px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td height="1" bgcolor="#e5e7eb" style="line-height:1px;font-size:1px;">&nbsp;</td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── Meta grid: date / status / payment / due ──────── -->
+  <tr>
+    <td style="padding:20px 40px;">
+      <table class="meta-grid" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="background:#f9fafb;border-radius:10px;overflow:hidden;">
+        <tr>
+          <td style="padding:16px 20px;border-left:1px solid #e5e7eb;">
+            <div style="font-size:11px;color:#9ca3af;font-weight:700;margin-bottom:5px;">
+              التاريخ
+            </div>
+            <div style="font-size:13px;font-weight:700;color:#111827;">
+              {{ invoice.invoice_date }}
+            </div>
+          </td>
+          {% if invoice.due_date %}
+          <td style="padding:16px 20px;border-left:1px solid #e5e7eb;">
+            <div style="font-size:11px;color:#9ca3af;font-weight:700;margin-bottom:5px;">
+              الاستحقاق
+            </div>
+            <div style="font-size:13px;font-weight:700;color:#111827;">
+              {{ invoice.due_date }}
+            </div>
+          </td>
+          {% endif %}
+          <td style="padding:16px 20px;border-left:1px solid #e5e7eb;">
+            <div style="font-size:11px;color:#9ca3af;font-weight:700;margin-bottom:5px;">
+              الحالة
+            </div>
+            <div style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:12px;
+                         font-weight:700;
+                         {% if invoice.status == 'confirmed' %}background:#dcfce7;color:#16a34a;
+                         {% elif invoice.status == 'draft' %}background:#fef9c3;color:#ca8a04;
+                         {% elif invoice.status == 'returned' or invoice.status == 'partially_returned' %}background:#fee2e2;color:#dc2626;
+                         {% else %}background:#e0e7ff;color:#4f46e5;{% endif %}">
+              {{ invoice.get_status_display }}
+            </div>
+          </td>
+          <td style="padding:16px 20px;">
+            <div style="font-size:11px;color:#9ca3af;font-weight:700;margin-bottom:5px;">
+              طريقة الدفع
+            </div>
+            <div style="font-size:13px;font-weight:700;color:#111827;">
+              {{ invoice.get_payment_method_display }}
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── Customer box ───────────────────────────────────── -->
+  <tr>
+    <td style="padding:0 40px 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="border:1px solid #e5e7eb;border-right:3px solid {{ brand_color }};
+                      border-radius:10px;padding:16px 20px;background:#fff;">
+            <div style="font-size:11px;color:{{ brand_color }};font-weight:700;
+                         text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
+              &#9679; بيانات العميل
+            </div>
+            <div style="font-size:15px;font-weight:800;color:#111827;">
+              {{ invoice.customer.name|default:"زبون عابر" }}
+            </div>
+            {% if invoice.customer.phone %}
+            <div style="font-size:12px;color:#6b7280;margin-top:3px;">
+              &#9990; {{ invoice.customer.phone }}
+            </div>
+            {% endif %}
+            {% if invoice.reference_number %}
+            <div style="font-size:12px;color:#6b7280;margin-top:3px;">
+              رقم مرجعي: {{ invoice.reference_number }}
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── Items table ────────────────────────────────────── -->
+  <tr>
+    <td style="padding:0 40px 20px;">
+      <div style="font-size:11px;color:{{ brand_color }};font-weight:700;
+                   text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">
+        &#9679; تفاصيل الفاتورة
+      </div>
+      <table class="items-table" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="border-collapse:collapse;border-radius:10px;overflow:hidden;
+                    border:1px solid #e5e7eb;">
+        <!-- Head -->
+        <thead>
+          <tr style="background:{{ brand_color }};">
+            <th style="padding:11px 12px;font-size:12px;font-weight:700;color:#fff;
+                        text-align:center;width:36px;">#</th>
+            <th style="padding:11px 12px;font-size:12px;font-weight:700;color:#fff;
+                        text-align:right;">المنتج / الخدمة</th>
+            <th style="padding:11px 12px;font-size:12px;font-weight:700;color:#fff;
+                        text-align:center;width:60px;">الكمية</th>
+            <th class="col-discount"
+                style="padding:11px 12px;font-size:12px;font-weight:700;color:#fff;
+                        text-align:center;width:60px;">الخصم</th>
+            <th class="col-tax"
+                style="padding:11px 12px;font-size:12px;font-weight:700;color:#fff;
+                        text-align:center;width:60px;">ضريبة</th>
+            <th style="padding:11px 12px;font-size:12px;font-weight:700;color:#fff;
+                        text-align:center;width:90px;">سعر الوحدة</th>
+            <th style="padding:11px 12px;font-size:12px;font-weight:700;color:#fff;
+                        text-align:center;width:90px;">الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in lines %}
+          <tr style="background:{% cycle '#ffffff' '#f9fafb' %};border-bottom:1px solid #f3f4f6;">
+            <td style="padding:10px 12px;font-size:12px;color:#6b7280;text-align:center;">
+              {{ forloop.counter }}
+            </td>
+            <td style="padding:10px 12px;text-align:right;">
+              <div style="font-size:13px;font-weight:700;color:#111827;">
+                {{ line.item.name }}
+              </div>
+              {% if line.unit_display %}
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">
+                {{ line.unit_display }}
+              </div>
+              {% endif %}
+            </td>
+            <td style="padding:10px 12px;font-size:13px;font-weight:700;color:#374151;
+                        text-align:center;direction:ltr;">
+              {{ line.quantity|floatformat:"-3u" }}
+            </td>
+            <td class="col-discount"
+                style="padding:10px 12px;font-size:12px;color:#374151;text-align:center;">
+              {% if line.discount_percent %}
+                {{ line.discount_percent|floatformat:"-2u" }}%
+              {% else %}—{% endif %}
+            </td>
+            <td class="col-tax"
+                style="padding:10px 12px;font-size:12px;color:#374151;text-align:center;">
+              {% if line.tax_rate %}
+                {{ line.tax_rate|floatformat:"-2u" }}%
+              {% else %}—{% endif %}
+            </td>
+            <td style="padding:10px 12px;font-size:13px;color:#374151;text-align:center;
+                        direction:ltr;">
+              {{ line.unit_price|floatformat:"2u"|intcomma }}
+            </td>
+            <td style="padding:10px 12px;font-size:13px;font-weight:700;color:#111827;
+                        text-align:center;direction:ltr;">
+              {{ line.line_total|floatformat:"2u"|intcomma }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── Totals ─────────────────────────────────────────── -->
+  <tr>
+    <td style="padding:0 40px 28px;">
+      <table cellpadding="0" cellspacing="0" border="0" align="left">
+        <tr>
+          <td style="min-width:260px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+
+              <!-- Subtotal -->
+              <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:11px 18px;font-size:13px;color:#374151;font-weight:600;">
+                  المجموع الفرعي
+                </td>
+                <td style="padding:11px 18px;font-size:13px;font-weight:700;color:#111827;
+                            text-align:left;direction:ltr;white-space:nowrap;">
+                  {{ invoice.subtotal|floatformat:"2u"|intcomma }}
+                </td>
+              </tr>
+
+              {% if invoice.invoice_discount_amount %}
+              <tr style="border-bottom:1px solid #f3f4f6;background:#fef2f2;">
+                <td style="padding:11px 18px;font-size:13px;color:#dc2626;font-weight:600;">
+                  الخصم
+                </td>
+                <td style="padding:11px 18px;font-size:13px;font-weight:700;color:#dc2626;
+                            text-align:left;direction:ltr;white-space:nowrap;">
+                  &#8722;&nbsp;{{ invoice.invoice_discount_amount|floatformat:"2u"|intcomma }}
+                </td>
+              </tr>
+              {% endif %}
+
+              {% if invoice.tax_amount %}
+              <tr style="border-bottom:1px solid #f3f4f6;background:#fefce8;">
+                <td style="padding:11px 18px;font-size:13px;color:#ca8a04;font-weight:600;">
+                  الضريبة
+                </td>
+                <td style="padding:11px 18px;font-size:13px;font-weight:700;color:#ca8a04;
+                            text-align:left;direction:ltr;white-space:nowrap;">
+                  +&nbsp;{{ invoice.tax_amount|floatformat:"2u"|intcomma }}
+                </td>
+              </tr>
+              {% endif %}
+
+              <!-- Grand total -->
+              <tr style="background:{{ brand_color }};">
+                <td style="padding:14px 18px;font-size:14px;color:#fff;font-weight:800;">
+                  الإجمالي النهائي
+                </td>
+                <td style="padding:14px 18px;font-size:16px;font-weight:900;color:#fff;
+                            text-align:left;direction:ltr;white-space:nowrap;letter-spacing:-.3px;">
+                  {{ invoice.grand_total|floatformat:"2u"|intcomma }}
+                </td>
+              </tr>
+
+              <!-- Paid -->
+              <tr style="border-bottom:1px solid #f3f4f6;background:#f0fdf4;">
+                <td style="padding:11px 18px;font-size:13px;color:#16a34a;font-weight:600;">
+                  المدفوع
+                </td>
+                <td style="padding:11px 18px;font-size:13px;font-weight:700;color:#16a34a;
+                            text-align:left;direction:ltr;white-space:nowrap;">
+                  {{ invoice.paid_amount|floatformat:"2u"|intcomma }}
+                </td>
+              </tr>
+
+              <!-- Remaining -->
+              <tr>
+                <td style="padding:11px 18px;font-size:13px;
+                            color:{% if invoice.remaining_amount > 0 %}#dc2626{% else %}#16a34a{% endif %};
+                            font-weight:700;">
+                  المتبقي
+                </td>
+                <td style="padding:11px 18px;font-size:13px;font-weight:900;
+                            color:{% if invoice.remaining_amount > 0 %}#dc2626{% else %}#16a34a{% endif %};
+                            text-align:left;direction:ltr;white-space:nowrap;">
+                  {{ invoice.remaining_amount|floatformat:"2u"|intcomma }}
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ── Notes ──────────────────────────────────────────── -->
+  {% if invoice.notes %}
+  <tr>
+    <td style="padding:0 40px 24px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 18px;">
+            <div style="font-size:11px;color:#ca8a04;font-weight:700;margin-bottom:4px;">
+              &#128203; ملاحظات
+            </div>
+            <div style="font-size:13px;color:#374151;line-height:1.65;">
+              {{ invoice.notes }}
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% endif %}
+
+  <!-- ── Footer stripe ──────────────────────────────────── -->
+  <tr>
+    <td height="4" bgcolor="{{ brand_color }}"
+        style="line-height:4px;font-size:1px;background:{{ brand_color }}">&nbsp;</td>
+  </tr>
+
+  <!-- ── Footer text ────────────────────────────────────── -->
+  <tr>
+    <td style="padding:20px 40px;background:#f9fafb;text-align:center;">
+      <div style="font-size:14px;font-weight:700;color:#374151;margin-bottom:6px;">
+        {% if settings_obj.invoice_footer %}
+          {{ settings_obj.invoice_footer }}
+        {% else %}
+          شكراً لثقتكم بنا &#10084;
+        {% endif %}
+      </div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:4px;">
+        تم إنشاء هذه الفاتورة بواسطة نظام إنجاز
+      </div>
+    </td>
+  </tr>
+
+</table>
+<!-- /Card -->
+
+</td></tr>
+</table>
+<!-- /Wrapper -->
+
+</body>
+</html>

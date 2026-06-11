@@ -1,6 +1,7 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
 {% load humanize %}
+{% load permission_tags %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
@@ -47,6 +48,11 @@
             <button onclick="window.print()" class="cx-btn-secondary">
                 <i class="fas fa-print"></i><span>طباعة</span>
             </button>
+            {% if invoice.status in 'confirmed,partially_returned,returned' %}{% if request.user|has_perm_key:'send_invoice_email' %}
+            <button class="cx-btn-secondary" onclick="openEmailModal()">
+                <i class="fas fa-envelope"></i><span>إرسال بالإيميل</span>
+            </button>
+            {% endif %}{% endif %}
             {% if can_edit %}
             <a href="{% url 'sales:invoice_edit' invoice.pk %}" class="cx-btn-secondary">
                 <i class="fas fa-pencil"></i><span>تعديل</span>
@@ -342,6 +348,31 @@
 
 {% include "sales/partials/print_invoice.html" %}
 
+<!-- Email Modal -->
+<div class="cx-modal-backdrop sales-field-hidden" id="emailModalBackdrop">
+    <div class="cx-modal sales-modal-sm">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title"><i class="fas fa-envelope me-2"></i>إرسال الفاتورة بالبريد الإلكتروني</h3>
+            <button type="button" class="cx-modal-close" onclick="closeEmailModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <p class="text-muted mb-3">سيتم إرسال تفاصيل الفاتورة <strong>{{ invoice.invoice_number }}</strong> إلى العنوان أدناه.</p>
+            <label class="cx-label">البريد الإلكتروني <span class="text-danger">*</span></label>
+            <input type="email" id="emailRecipient" class="cx-input" placeholder="example@email.com"
+                   value="{{ invoice.customer.email|default:'' }}">
+            <div id="emailError" class="text-danger mt-2" style="font-size:.85rem;display:none"></div>
+        </div>
+        <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-secondary" onclick="closeEmailModal()">إلغاء</button>
+            <button type="button" class="cx-btn-add" id="emailSubmitBtn" onclick="submitEmail()">
+                <i class="fas fa-paper-plane me-1"></i>إرسال
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Cancel Modal -->
 <div class="cx-modal-backdrop sales-field-hidden" id="cancelModalBackdrop">
     <div class="cx-modal sales-modal-sm">
@@ -550,6 +581,55 @@ function showAlert(msg, type = 'danger') {
         return;
     }
     console.warn(msg);
+}
+
+// ── Email Modal ──────────────────────────────────────────────────
+function openEmailModal() {
+    document.getElementById('emailError').style.display = 'none';
+    document.getElementById('emailModalBackdrop').classList.remove('sales-field-hidden');
+    setTimeout(() => document.getElementById('emailRecipient').focus(), 100);
+}
+function closeEmailModal() {
+    document.getElementById('emailModalBackdrop').classList.add('sales-field-hidden');
+}
+function submitEmail() {
+    const email = document.getElementById('emailRecipient').value.trim();
+    const errEl = document.getElementById('emailError');
+    errEl.style.display = 'none';
+
+    if (!email || !email.includes('@')) {
+        errEl.textContent = 'يرجى إدخال بريد إلكتروني صالح';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    const btn = document.getElementById('emailSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري الإرسال...';
+
+    fetch(`/sales/${INVOICE_ID}/send-email/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeEmailModal();
+            showAlert(data.message, 'success');
+        } else {
+            errEl.textContent = data.message || 'فشل الإرسال';
+            errEl.style.display = 'block';
+        }
+    })
+    .catch(() => {
+        errEl.textContent = 'حدث خطأ أثناء الإرسال';
+        errEl.style.display = 'block';
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>إرسال';
+    });
 }
 </script>
 {% endblock %}

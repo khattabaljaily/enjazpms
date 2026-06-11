@@ -95,7 +95,8 @@
         "change_quotes": "تعديل عرض السعر",
         "delete_quotes": "حذف عرض السعر",
         "view_quotes": "عرض عروض الأسعار",
-        "convert_quote_to_sale": "تحويل عرض سعر إلى فاتورة بيع"
+        "convert_quote_to_sale": "تحويل عرض سعر إلى فاتورة بيع",
+        "send_invoice_email": "إرسال فاتورة المبيعات بالبريد الإلكتروني"
     },
     "المشتريات": {
         "add_purchases": "إنشاء فاتورة مشتريات جديدة",

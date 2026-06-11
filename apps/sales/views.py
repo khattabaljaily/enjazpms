@@ -2492,3 +2492,42 @@ def pos_checkout_api(request):
         'invoice_id': invoice.id,
         'grand_total': str(invoice.grand_total),
     })
+
+
+# ─────────────────────────────────────────────
+#   INVOICE EMAIL (AJAX)
+# ─────────────────────────────────────────────
+
+@login_required
+@require_permission('send_invoice_email')
+@require_POST
+def invoice_send_email_ajax(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
+
+    if invoice.status not in ('confirmed', 'partially_returned', 'returned'):
+        return _json_error('يمكن إرسال الفاتورة المؤكدة فقط')
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return _json_error('طلب غير صالح')
+
+    recipient = (body.get('email') or '').strip()
+    if not recipient or '@' not in recipient:
+        return _json_error('البريد الإلكتروني غير صالح')
+
+    from .email_service import send_invoice_email
+    success, error = send_invoice_email(invoice, recipient, request=request)
+
+    if not success:
+        return _json_error(f'فشل الإرسال: {error}')
+
+    log_activity(
+        request, 'إرسال فاتورة بالبريد الإلكتروني',
+        f'الفاتورة: {invoice.invoice_number} — إلى: {recipient}', 'other',
+    )
+    return _json_ok(msg=f'تم إرسال الفاتورة إلى {recipient}')

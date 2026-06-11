@@ -15,6 +15,7 @@ urlpatterns = [
     path('<int:pk>/deliver/', views.invoice_deliver_ajax, name='invoice_deliver'),
     path('<int:pk>/cancel/', views.invoice_cancel_ajax, name='invoice_cancel'),
     path('<int:pk>/pay/', views.record_payment_ajax, name='record_payment'),
+    path('<int:pk>/send-email/', views.invoice_send_email_ajax, name='invoice_send_email'),
 
     # ── Returns ──────────────────────────────────────────────
     path('returns/', views.return_list, name='return_list'),
