@@ -5,8 +5,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from apps.core.views import service_worker, pwa_manifest
 
 urlpatterns = [
+    # PWA
+    path('sw.js', service_worker, name='service_worker'),
+    path('manifest.json', pwa_manifest, name='pwa_manifest'),
+
     # Admin
     path('admin/', admin.site.urls),
     

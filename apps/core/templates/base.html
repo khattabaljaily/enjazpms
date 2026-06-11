@@ -8,9 +8,17 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{% static 'img/logo/logo-6547bd.png' %}">
-    <link rel="apple-touch-icon" href="{% static 'img/logo/logo-6547bd.png' %}">
+    <!-- Favicon & PWA -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/icons/icon-128x128.png' %}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{% static 'img/icons/icon-152x152.png' %}">
+    <link rel="apple-touch-icon" sizes="192x192" href="{% static 'img/icons/icon-192x192.png' %}">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EnjazIMS">
+    <meta name="theme-color" content="#6366f1" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: dark)">
 
     <!-- Bootstrap 5 RTL -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
@@ -92,6 +100,16 @@
     {% endif %}
 
     
+    <!-- PWA Service Worker -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .catch(function() {});
+        });
+    }
+    </script>
+
     <script>
         // Global AJAX setup for Django CSRF
         $.ajaxSetup({

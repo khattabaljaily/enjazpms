@@ -1,0 +1,564 @@
+{% extends "layouts/dashboard.html" %}
+{% load humanize %}
+{% load static %}
+{% load number_format %}
+
+{% block page_title %}التحليلات المتقدمة{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Analytics Page ─────────────────────────────────────────── */
+.anl-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.anl-header-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+.anl-header-sub {
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+    margin: 0.15rem 0 0;
+}
+.anl-period-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.38rem 0.9rem;
+    background: var(--indigo-50);
+    color: var(--primary);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 1px solid var(--indigo-100);
+}
+
+/* ── KPI comparison cards ───────────────────────────────────── */
+.anl-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+@media (max-width: 1100px) { .anl-kpi-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 580px)  { .anl-kpi-grid { grid-template-columns: 1fr; } }
+
+.anl-kpi {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.25rem 1.25rem 1rem;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.anl-kpi:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+
+.anl-kpi-accent {
+    position: absolute;
+    top: 0; right: 0;
+    width: 4px;
+    height: 100%;
+    border-radius: 0 16px 16px 0;
+}
+.anl-kpi--sales    .anl-kpi-accent { background: var(--primary); }
+.anl-kpi--purchase .anl-kpi-accent { background: var(--warning); }
+.anl-kpi--expense  .anl-kpi-accent { background: var(--danger); }
+.anl-kpi--profit   .anl-kpi-accent { background: var(--success); }
+
+.anl-kpi-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+.anl-kpi-value {
+    font-size: 1.55rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+}
+.anl-kpi-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+}
+.anl-kpi-prev { font-weight: 500; }
+.anl-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-weight: 700;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+.anl-change--up   { background: rgba(16,185,129,.12);  color: var(--success); }
+.anl-change--down { background: rgba(239,68,68,.12);   color: var(--danger);  }
+.anl-change--flat { background: var(--bg-tertiary);    color: var(--text-tertiary); }
+
+/* ── Panel ──────────────────────────────────────────────────── */
+.anl-panel {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.anl-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid var(--border-light);
+}
+.anl-panel-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.anl-panel-meta {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+.anl-panel-body { padding: 1.1rem 1.25rem; }
+.anl-chart-wrap { position: relative; height: 260px; }
+.anl-chart-wrap--tall { height: 320px; }
+
+/* ── Customer bar list ──────────────────────────────────────── */
+.anl-cust-list { display: flex; flex-direction: column; gap: 0.65rem; }
+.anl-cust-row  { display: flex; flex-direction: column; gap: 0.2rem; }
+.anl-cust-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+}
+.anl-cust-name  { font-weight: 600; color: var(--text-primary); }
+.anl-cust-val   { font-weight: 700; color: var(--primary); }
+.anl-cust-track {
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.anl-cust-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 999px;
+    transition: width 0.6s cubic-bezier(.22,1,.36,1);
+}
+
+/* ── Treasury cards ─────────────────────────────────────────── */
+.anl-treasury-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.65rem;
+    margin-top: 0.75rem;
+}
+.anl-treasury-card {
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.anl-treasury-name { font-size: 0.76rem; color: var(--text-tertiary); font-weight: 600; }
+.anl-treasury-bal  { font-size: 1rem; font-weight: 800; color: var(--text-primary); }
+
+/* ── Balance summary ────────────────────────────────────────── */
+.anl-balance-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+.anl-balance-item {
+    flex: 1;
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+.anl-balance-item--recv { background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2); }
+.anl-balance-item--pay  { background: rgba(239,68,68,.08);  border: 1px solid rgba(239,68,68,.2);  }
+.anl-balance-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+.anl-balance-item--recv .anl-balance-icon { background: rgba(16,185,129,.15); color: var(--success); }
+.anl-balance-item--pay  .anl-balance-icon { background: rgba(239,68,68,.15);  color: var(--danger);  }
+.anl-balance-lbl { font-size: 0.74rem; color: var(--text-tertiary); font-weight: 500; }
+.anl-balance-val { font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="anl-header">
+    <p class="anl-header-sub">مقارنة الأداء، الاتجاهات السنوية، والمؤشرات المالية</p>
+    <span class="anl-period-badge">
+        <i class="fas fa-calendar-alt"></i>
+        {{ this_month_label }}
+    </span>
+</div>
+
+<!-- KPI Comparison Row -->
+<div class="anl-kpi-grid">
+
+    <div class="anl-kpi anl-kpi--sales">
+        <div class="anl-kpi-accent"></div>
+        <div class="anl-kpi-label"><i class="fas fa-receipt" style="margin-left:.3rem;"></i> إجمالي المبيعات</div>
+        <div class="anl-kpi-value">{{ kpis.sales.value|money }}</div>
+        <div class="anl-kpi-footer">
+            <span class="anl-kpi-prev">الشهر السابق: {{ kpis.sales.prev|money }}</span>
+            {% if kpis.sales.change is not None %}
+            <span class="anl-change {% if kpis.sales.change >= 0 %}anl-change--up{% else %}anl-change--down{% endif %}">
+                <i class="fas fa-arrow-{% if kpis.sales.change >= 0 %}up{% else %}down{% endif %}"></i>
+                {{ kpis.sales.change|floatformat:1 }}%
+            </span>
+            {% else %}
+            <span class="anl-change anl-change--flat">جديد</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="anl-kpi anl-kpi--purchase">
+        <div class="anl-kpi-accent"></div>
+        <div class="anl-kpi-label"><i class="fas fa-cart-shopping" style="margin-left:.3rem;"></i> إجمالي المشتريات</div>
+        <div class="anl-kpi-value">{{ kpis.purchases.value|money }}</div>
+        <div class="anl-kpi-footer">
+            <span class="anl-kpi-prev">الشهر السابق: {{ kpis.purchases.prev|money }}</span>
+            {% if kpis.purchases.change is not None %}
+            <span class="anl-change {% if kpis.purchases.change <= 0 %}anl-change--up{% else %}anl-change--down{% endif %}">
+                <i class="fas fa-arrow-{% if kpis.purchases.change >= 0 %}up{% else %}down{% endif %}"></i>
+                {{ kpis.purchases.change|floatformat:1 }}%
+            </span>
+            {% else %}
+            <span class="anl-change anl-change--flat">جديد</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="anl-kpi anl-kpi--expense">
+        <div class="anl-kpi-accent"></div>
+        <div class="anl-kpi-label"><i class="fas fa-money-bill-wave" style="margin-left:.3rem;"></i> إجمالي المصروفات</div>
+        <div class="anl-kpi-value">{{ kpis.expenses.value|money }}</div>
+        <div class="anl-kpi-footer">
+            <span class="anl-kpi-prev">الشهر السابق: {{ kpis.expenses.prev|money }}</span>
+            {% if kpis.expenses.change is not None %}
+            <span class="anl-change {% if kpis.expenses.change <= 0 %}anl-change--up{% else %}anl-change--down{% endif %}">
+                <i class="fas fa-arrow-{% if kpis.expenses.change >= 0 %}up{% else %}down{% endif %}"></i>
+                {{ kpis.expenses.change|floatformat:1 }}%
+            </span>
+            {% else %}
+            <span class="anl-change anl-change--flat">جديد</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="anl-kpi anl-kpi--profit">
+        <div class="anl-kpi-accent"></div>
+        <div class="anl-kpi-label"><i class="fas fa-coins" style="margin-left:.3rem;"></i> صافي الربح</div>
+        <div class="anl-kpi-value" style="color:{% if kpis.profit.value >= 0 %}var(--success){% else %}var(--danger){% endif %}">
+            {{ kpis.profit.value|money }}
+        </div>
+        <div class="anl-kpi-footer">
+            <span class="anl-kpi-prev">الشهر السابق: {{ kpis.profit.prev|money }}</span>
+            {% if kpis.profit.change is not None %}
+            <span class="anl-change {% if kpis.profit.change >= 0 %}anl-change--up{% else %}anl-change--down{% endif %}">
+                <i class="fas fa-arrow-{% if kpis.profit.change >= 0 %}up{% else %}down{% endif %}"></i>
+                {{ kpis.profit.change|floatformat:1 }}%
+            </span>
+            {% else %}
+            <span class="anl-change anl-change--flat">جديد</span>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- 12-Month Trend Chart -->
+<div class="row g-3 mb-3">
+    <div class="col-12">
+        <div class="anl-panel">
+            <div class="anl-panel-head">
+                <h3 class="anl-panel-title">
+                    <i class="fas fa-chart-area" style="color:var(--primary);"></i>
+                    الاتجاه السنوي — المبيعات والمشتريات والأرباح
+                </h3>
+                <span class="anl-panel-meta">آخر 12 شهراً</span>
+            </div>
+            <div class="anl-panel-body">
+                <div class="anl-chart-wrap anl-chart-wrap--tall">
+                    <canvas id="annualTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Row: Top Customers + Cash Position -->
+<div class="row g-3 mb-3">
+
+    <!-- Top Customers -->
+    <div class="col-lg-6">
+        <div class="anl-panel" style="height:100%;">
+            <div class="anl-panel-head">
+                <h3 class="anl-panel-title">
+                    <i class="fas fa-trophy" style="color:#f59e0b;"></i>
+                    أفضل العملاء إيراداً
+                </h3>
+                <span class="anl-panel-meta">{{ this_month_label }}</span>
+            </div>
+            <div class="anl-panel-body">
+                {% if top_customers %}
+                <div class="anl-cust-list">
+                    {% for c in top_customers %}
+                    <div class="anl-cust-row">
+                        <div class="anl-cust-meta">
+                            <span class="anl-cust-name">{{ forloop.counter }}. {{ c.name }}</span>
+                            <span class="anl-cust-val">{{ c.total|money }}</span>
+                        </div>
+                        <div class="anl-cust-track">
+                            <div class="anl-cust-fill" style="width:{% widthratio c.total max_customer_total 100 %}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4" style="color:var(--text-tertiary);">
+                    <i class="fas fa-users fa-2x mb-2" style="opacity:.35;"></i>
+                    <p class="mb-0 small">لا توجد بيانات مبيعات هذا الشهر</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Cash Position + Outstanding -->
+    <div class="col-lg-6">
+
+        <!-- Treasury -->
+        <div class="anl-panel mb-3">
+            <div class="anl-panel-head">
+                <h3 class="anl-panel-title">
+                    <i class="fas fa-building-columns" style="color:#10b981;"></i>
+                    الخزينة والحسابات
+                </h3>
+                <span class="anl-panel-meta" style="font-weight:800; color:var(--success);">{{ treasury_total|money }}</span>
+            </div>
+            <div class="anl-panel-body" style="padding-top:.75rem;">
+                {% if treasuries %}
+                <div class="anl-treasury-grid">
+                    {% for t in treasuries %}
+                    <div class="anl-treasury-card">
+                        <span class="anl-treasury-name">{{ t.name }}</span>
+                        <span class="anl-treasury-bal">{{ t.current_balance|money }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="mb-0 small" style="color:var(--text-tertiary);">لا توجد خزائن مفعّلة</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Outstanding balances -->
+        <div class="anl-panel">
+            <div class="anl-panel-head">
+                <h3 class="anl-panel-title">
+                    <i class="fas fa-scale-balanced" style="color:#6366f1;"></i>
+                    الأرصدة المستحقة
+                </h3>
+            </div>
+            <div class="anl-panel-body" style="padding-top:.75rem;">
+                <div class="anl-balance-row">
+                    <div class="anl-balance-item anl-balance-item--recv">
+                        <div class="anl-balance-icon"><i class="fas fa-arrow-down"></i></div>
+                        <div>
+                            <div class="anl-balance-lbl">ذمم العملاء</div>
+                            <div class="anl-balance-val">{{ customer_debt|money }}</div>
+                        </div>
+                    </div>
+                    <div class="anl-balance-item anl-balance-item--pay">
+                        <div class="anl-balance-icon"><i class="fas fa-arrow-up"></i></div>
+                        <div>
+                            <div class="anl-balance-lbl">ذمم الموردين</div>
+                            <div class="anl-balance-val">{{ supplier_debt|money }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Profit Breakdown Chart -->
+<div class="row g-3 mb-3">
+    <div class="col-12">
+        <div class="anl-panel">
+            <div class="anl-panel-head">
+                <h3 class="anl-panel-title">
+                    <i class="fas fa-chart-bar" style="color:var(--success);"></i>
+                    تحليل الربحية الشهرية
+                </h3>
+                <span class="anl-panel-meta">آخر 12 شهراً</span>
+            </div>
+            <div class="anl-panel-body">
+                <div class="anl-chart-wrap">
+                    <canvas id="profitChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const MONTHS   = {{ months_labels_json|safe }};
+const M_SALES  = {{ monthly_sales_json|safe }};
+const M_PURCH  = {{ monthly_purchases_json|safe }};
+const M_EXP    = {{ monthly_expenses_json|safe }};
+const M_PROFIT = {{ monthly_profit_json|safe }};
+
+const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
+const gridColor = () => isDark() ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+const textColor = () => isDark() ? '#94a3b8' : '#6b7280';
+
+Chart.defaults.font.family = 'Cairo, sans-serif';
+
+// ── Annual Trend Line Chart ─────────────────────────────────
+const annualCtx = document.getElementById('annualTrendChart').getContext('2d');
+new Chart(annualCtx, {
+    type: 'line',
+    data: {
+        labels: MONTHS,
+        datasets: [
+            {
+                label: 'المبيعات',
+                data: M_SALES,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99,102,241,0.08)',
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.4,
+            },
+            {
+                label: 'المشتريات',
+                data: M_PURCH,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245,158,11,0.06)',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                fill: false,
+                tension: 0.4,
+            },
+            {
+                label: 'المصروفات',
+                data: M_EXP,
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239,68,68,0.06)',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                fill: false,
+                tension: 0.4,
+                borderDash: [5, 3],
+            },
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: { position: 'top', labels: { color: textColor(), usePointStyle: true, padding: 16 } },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2})}`,
+                }
+            }
+        },
+        scales: {
+            x: { grid: { color: gridColor() }, ticks: { color: textColor(), maxRotation: 45 } },
+            y: {
+                grid: { color: gridColor() },
+                ticks: {
+                    color: textColor(),
+                    callback: v => v.toLocaleString('en-US', {notation:'compact', compactDisplay:'short'}),
+                },
+                beginAtZero: true,
+            },
+        }
+    }
+});
+
+// ── Profit Bar Chart ───────────────────────────────────────
+const profitCtx = document.getElementById('profitChart').getContext('2d');
+new Chart(profitCtx, {
+    type: 'bar',
+    data: {
+        labels: MONTHS,
+        datasets: [{
+            label: 'صافي الربح',
+            data: M_PROFIT,
+            backgroundColor: M_PROFIT.map(v => v >= 0 ? 'rgba(16,185,129,0.72)' : 'rgba(239,68,68,0.72)'),
+            borderColor:     M_PROFIT.map(v => v >= 0 ? '#10b981' : '#ef4444'),
+            borderWidth: 1.5,
+            borderRadius: 6,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ` ${ctx.parsed.y >= 0 ? 'ربح' : 'خسارة'}: ${Math.abs(ctx.parsed.y).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2})}`,
+                }
+            }
+        },
+        scales: {
+            x: { grid: { color: gridColor() }, ticks: { color: textColor(), maxRotation: 45 } },
+            y: {
+                grid: { color: gridColor() },
+                ticks: {
+                    color: textColor(),
+                    callback: v => v.toLocaleString('en-US', {notation:'compact', compactDisplay:'short'}),
+                },
+            },
+        }
+    }
+});
+</script>
+{% endblock %}

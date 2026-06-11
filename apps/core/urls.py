@@ -17,6 +17,7 @@ urlpatterns = [
     path('subscription/', views.subscription_info, name='subscription'),
     path('pricing/', views.pricing, name='pricing'),
     path('about/', views.about, name='about'),
+    path('analytics/', views.analytics, name='analytics'),
 
     # Tenant management (superuser)
     path('tenants/', views.tenant_list, name='tenant_list'),

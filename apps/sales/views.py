@@ -553,11 +553,16 @@ def invoice_detail(request, pk):
     payments = invoice.payments.all()
     returns = invoice.sale_returns.filter(status='confirmed').select_related('confirmed_by')
 
+    from apps.core.models import Settings as TenantSettings
+    settings_obj, _ = TenantSettings.objects.get_or_create(tenant=tenant)
+
     context = {
         'invoice': invoice,
         'lines': lines,
         'payments': payments,
         'returns': returns,
+        'tenant': tenant,
+        'settings_obj': settings_obj,
         'can_confirm': invoice.status == 'draft',
         'can_delete_draft': invoice.status == 'draft',
         'can_edit': invoice.status in ('draft', 'confirmed'),
@@ -570,7 +575,7 @@ def invoice_detail(request, pk):
             and invoice.remaining_amount > 0
         ),
     }
-    
+
     return render(request, 'sales/invoice_detail.html', context)
 
 

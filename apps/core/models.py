@@ -269,6 +269,7 @@ class Settings(models.Model):
     # Invoice Settings
     invoice_prefix = models.CharField('بادئة الفاتورة', max_length=10, default='INV')
     invoice_footer = models.TextField('تذييل الفاتورة', blank=True)
+    invoice_color = models.CharField('لون الفاتورة', max_length=7, default='#6366f1')
     print_sale_invoice = models.BooleanField('طباعة فاتورة البيع', default=True)
     print_purchase_invoice = models.BooleanField('طباعة فاتورة الشراء', default=True)
     

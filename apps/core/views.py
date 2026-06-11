@@ -7,7 +7,7 @@ from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponseNotAllowed
+from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404
 from apps.accounts.decorators import require_permission
 from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
@@ -1468,6 +1468,10 @@ def tenant_settings_update_api(request):
 
     settings_obj.invoice_prefix = str(data.get('invoice_prefix', settings_obj.invoice_prefix)).strip()[:10] or 'INV'
     settings_obj.invoice_footer = str(data.get('invoice_footer', settings_obj.invoice_footer)).strip()
+    raw_color = str(data.get('invoice_color', settings_obj.invoice_color)).strip()
+    import re as _re
+    if _re.match(r'^#[0-9a-fA-F]{6}$', raw_color):
+        settings_obj.invoice_color = raw_color
     settings_obj.tax_enabled = _as_bool(data.get('tax_enabled', settings_obj.tax_enabled))
     settings_obj.tax_value = _as_decimal(data.get('tax_value', settings_obj.tax_value), settings_obj.tax_value)
     settings_obj.tax_number = str(data.get('tax_number', settings_obj.tax_number)).strip()
@@ -2120,3 +2124,159 @@ def help_open_track(request):
         page = ''
     log_activity(request, 'فتح لوحة المساعدة', f'الصفحة: {page}' if page else '', 'other')
     return JsonResponse({'ok': True})
+
+
+
+def service_worker(request):
+    """Serve the PWA service worker from root scope /sw.js"""
+    import os
+    sw_path = os.path.join(settings.BASE_DIR, 'static', 'js', 'sw.js')
+    return FileResponse(open(sw_path, 'rb'), content_type='application/javascript')
+
+
+def pwa_manifest(request):
+    """Serve the PWA manifest from /manifest.json"""
+    import os
+    manifest_path = os.path.join(settings.BASE_DIR, 'static', 'manifest.json')
+    return FileResponse(open(manifest_path, 'rb'), content_type='application/manifest+json')
+
+
+@login_required
+def analytics(request):
+    """Advanced analytics dashboard — 12-month trends, period comparison, profit, top customers"""
+    tenant = request.tenant
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    today = datetime.today().date()
+    first_this_month = today.replace(day=1)
+
+    # ── Previous month boundaries ───────────────────────────────────
+    last_day_prev = first_this_month - timedelta(days=1)
+    first_prev_month = last_day_prev.replace(day=1)
+
+    from apps.sales.models import SaleInvoice, SaleInvoiceLine
+    from apps.purchases.models import PurchaseInvoice
+    from apps.customers.models import Customer
+    from apps.suppliers.models import Supplier
+
+    def sales_total(qs_filter):
+        return float(SaleInvoice.objects.filter(tenant=tenant, status='confirmed', **qs_filter)
+                     .aggregate(t=Sum('grand_total'))['t'] or 0)
+
+    def purchase_total(qs_filter):
+        return float(PurchaseInvoice.objects.filter(tenant=tenant, status='confirmed', **qs_filter)
+                     .aggregate(t=Sum('grand_total'))['t'] or 0)
+
+    def expense_total(qs_filter):
+        return float(Expense.objects.filter(tenant=tenant, status='confirmed', **qs_filter)
+                     .aggregate(t=Sum('amount'))['t'] or 0)
+
+    # ── Period comparison KPIs ──────────────────────────────────────
+    this_sales    = sales_total({'invoice_date__gte': first_this_month, 'invoice_date__lte': today})
+    prev_sales    = sales_total({'invoice_date__gte': first_prev_month, 'invoice_date__lte': last_day_prev})
+    this_purchases = purchase_total({'invoice_date__gte': first_this_month, 'invoice_date__lte': today})
+    prev_purchases = purchase_total({'invoice_date__gte': first_prev_month, 'invoice_date__lte': last_day_prev})
+    this_expenses = expense_total({'expense_date__gte': first_this_month, 'expense_date__lte': today})
+    prev_expenses = expense_total({'expense_date__gte': first_prev_month, 'expense_date__lte': last_day_prev})
+
+    this_profit  = this_sales - this_purchases - this_expenses
+    prev_profit  = prev_sales - prev_purchases - prev_expenses
+
+    def pct_change(curr, prev):
+        if prev == 0:
+            return None
+        return round(((curr - prev) / prev) * 100, 1)
+
+    kpis = {
+        'sales':     {'value': this_sales,     'prev': prev_sales,     'change': pct_change(this_sales, prev_sales)},
+        'purchases': {'value': this_purchases, 'prev': prev_purchases, 'change': pct_change(this_purchases, prev_purchases)},
+        'expenses':  {'value': this_expenses,  'prev': prev_expenses,  'change': pct_change(this_expenses, prev_expenses)},
+        'profit':    {'value': this_profit,    'prev': prev_profit,    'change': pct_change(this_profit, prev_profit)},
+    }
+
+    # ── 12-month trend (revenue, purchases, expenses) ───────────────
+    months_labels, monthly_sales, monthly_purchases, monthly_expenses, monthly_profit = [], [], [], [], []
+    arabic_months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
+                     'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
+
+    for i in range(11, -1, -1):
+        # Build month start/end
+        year  = today.year
+        month = today.month - i
+        while month <= 0:
+            month += 12
+            year  -= 1
+        import calendar
+        last_day = calendar.monthrange(year, month)[1]
+        m_start = date_type(year, month, 1)
+        m_end   = date_type(year, month, last_day)
+
+        s = sales_total({'invoice_date__gte': m_start, 'invoice_date__lte': m_end})
+        p = purchase_total({'invoice_date__gte': m_start, 'invoice_date__lte': m_end})
+        e = expense_total({'expense_date__gte': m_start, 'expense_date__lte': m_end})
+
+        months_labels.append(f"{arabic_months[month-1]} {year}")
+        monthly_sales.append(s)
+        monthly_purchases.append(p)
+        monthly_expenses.append(e)
+        monthly_profit.append(round(s - p - e, 2))
+
+    # ── Top 10 customers by revenue (this month) ────────────────────
+    top_customers = (
+        SaleInvoiceLine.objects
+        .filter(tenant=tenant, invoice__status='confirmed', invoice__invoice_date__gte=first_this_month)
+        .values('invoice__customer__name')
+        .annotate(total=Sum('line_total'))
+        .order_by('-total')[:10]
+    )
+    top_customers_list = [
+        {'name': r['invoice__customer__name'] or 'عميل نقدي', 'total': float(r['total'])}
+        for r in top_customers
+    ]
+    max_customer_total = max((c['total'] for c in top_customers_list), default=1)
+
+    # ── Treasury balances ───────────────────────────────────────────
+    from apps.treasury.models import Treasury
+    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).values('name', 'current_balance')
+    treasury_total = float(Treasury.objects.filter(tenant=tenant, is_active=True)
+                           .aggregate(t=Sum('current_balance'))['t'] or 0)
+
+    # ── Outstanding balances ────────────────────────────────────────
+    # customer debt = sum of unpaid portions of confirmed credit/mixed sales invoices
+    from apps.sales.models import SaleInvoice
+    from django.db.models import F
+    customer_debt = float(
+        SaleInvoice.objects.filter(
+            tenant=tenant,
+            status__in=('confirmed', 'partially_returned'),
+            payment_method__in=('credit', 'mixed'),
+        ).aggregate(t=Sum(F('grand_total') - F('paid_amount')))['t'] or 0
+    )
+    # supplier debt = sum of unpaid confirmed purchase invoices (credit/mixed)
+    from apps.purchases.models import PurchaseInvoice
+    supplier_debt = float(
+        PurchaseInvoice.objects.filter(
+            tenant=tenant,
+            status='confirmed',
+            payment_method__in=('credit', 'mixed'),
+        ).aggregate(t=Sum('grand_total'))['t'] or 0
+    )
+
+    context = {
+        'kpis': kpis,
+        'this_month_label': f"{arabic_months[today.month-1]} {today.year}",
+        'prev_month_label': f"{arabic_months[last_day_prev.month-1]} {last_day_prev.year}",
+        'months_labels_json': json.dumps(months_labels),
+        'monthly_sales_json': json.dumps(monthly_sales),
+        'monthly_purchases_json': json.dumps(monthly_purchases),
+        'monthly_expenses_json': json.dumps(monthly_expenses),
+        'monthly_profit_json': json.dumps(monthly_profit),
+        'top_customers': top_customers_list,
+        'max_customer_total': max_customer_total,
+        'treasuries': list(treasuries),
+        'treasury_total': treasury_total,
+        'customer_debt': customer_debt,
+        'supplier_debt': supplier_debt,
+    }
+    return render(request, 'core/analytics.html', context)
