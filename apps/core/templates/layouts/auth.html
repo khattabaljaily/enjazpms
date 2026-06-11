@@ -3,52 +3,147 @@
 {% load humanize %}
 
 {% block body %}
-<div class="auth-page">
-    <div class="container auth-container">
-        <div class="row justify-content-center">
-            <div class="col-12 col-sm-11 col-md-9 col-lg-7 col-xl-6">
-                
-                <div class="auth-card animate-fade-in">
-                    <!-- Logo -->
-                    <div class="text-center mb-4">
-                        <div class="auth-logo">
-                            <!-- Light mode: Company color logo -->
-                            <img src="{% static 'img/logo/logo-6547bd.png' %}" alt="إنجاز" class="logo-light">
-                            <!-- Dark mode: White logo -->
-                            <img src="{% static 'img/logo/logo-ffffff.png' %}" alt="إنجاز" class="logo-dark">
-                        </div>
-                    </div>
-                    
-                    {% if messages %}
-                    {% for message in messages %}
-                    <div class="alert alert-{% if 'error' in message.tags or 'danger' in message.tags %}danger{% elif 'success' in message.tags %}success{% elif 'warning' in message.tags %}warning{% else %}info{% endif %} d-flex align-items-center gap-2 mb-3">
-                        <i class="fas {% if 'error' in message.tags or 'danger' in message.tags %}fa-exclamation-circle{% elif 'success' in message.tags %}fa-check-circle{% elif 'warning' in message.tags %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
-                        <span>{{ message }}</span>
-                    </div>
-                    {% endfor %}
-                    {% endif %}
 
-                    {% block auth_content %}{% endblock %}
-
-                    <div class="auth-footer">
-                        {% block auth_links %}{% endblock %}
-                    </div>
-                </div>
+<!-- ══ Auth Navbar ══════════════════════════════════════ -->
+<nav class="auth-nav">
+    <div class="auth-nav-inner">
+        <a class="auth-nav-brand" href="{% url 'core:pricing' %}">
+            <div class="auth-nav-logo-wrap">
+                <img src="{% static 'img/logo/logo-6547bd.png' %}" alt="إنجاز" class="auth-nav-logo logo-light">
+                <img src="{% static 'img/logo/logo-ffffff.png' %}" alt="إنجاز" class="auth-nav-logo logo-dark">
             </div>
+            <span class="auth-nav-brand-text">إنجاز</span>
+        </a>
+
+        <div class="auth-nav-actions">
+            <a href="{% url 'core:pricing' %}" class="auth-nav-link">
+                <i class="fas fa-tag"></i>
+                <span>خطط الاشتراك</span>
+            </a>
+            <a href="{% url 'core:about' %}" class="auth-nav-link">
+                <i class="fas fa-circle-info"></i>
+                <span>عن النظام</span>
+            </a>
+            <div class="auth-nav-sep"></div>
+            <button class="auth-theme-btn" id="authThemeBtn" onclick="toggleAuthTheme()" title="تبديل المظهر" aria-label="تبديل المظهر">
+                <i class="fas fa-moon" id="authThemeIcon"></i>
+            </button>
         </div>
     </div>
+</nav>
+
+<!-- ══ Split Page ═══════════════════════════════════════ -->
+<div class="auth-split-page">
+
+    <!-- Brand Panel (right in RTL) -->
+    <aside class="auth-brand-panel">
+        <!-- Background layers -->
+        <div class="auth-brand-mesh"></div>
+        <div class="auth-brand-orb auth-brand-orb--1"></div>
+        <div class="auth-brand-orb auth-brand-orb--2"></div>
+        <div class="auth-brand-orb auth-brand-orb--3"></div>
+
+        <div class="auth-brand-inner">
+            <!-- Logo badge -->
+            <div class="auth-brand-logo-wrap">
+                <img src="{% static 'img/logo/logo-ffffff.png' %}" alt="إنجاز" class="auth-brand-logo-img">
+            </div>
+
+            <!-- Headline -->
+            <h2 class="auth-brand-headline">EnjazIMS</h2>
+            <p class="auth-brand-tagline">منصة متكاملة لإدارة المخزون والمبيعات وتتبع الأنشطة التجارية</p>
+
+            <!-- Stats -->
+            <div class="auth-brand-stats">
+                <div class="auth-brand-stat">
+                    <span class="auth-brand-stat-value">10+</span>
+                    <span class="auth-brand-stat-label">أنواع نشاط</span>
+                </div>
+                <div class="auth-brand-stat-sep"></div>
+                <div class="auth-brand-stat">
+                    <span class="auth-brand-stat-value">99.9%</span>
+                    <span class="auth-brand-stat-label">وقت التشغيل</span>
+                </div>
+                <div class="auth-brand-stat-sep"></div>
+                <div class="auth-brand-stat">
+                    <span class="auth-brand-stat-value">24/7</span>
+                    <span class="auth-brand-stat-label">دعم فني</span>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <ul class="auth-brand-features">
+                <li class="auth-brand-feat">
+                    <span class="auth-brand-feat-icon">
+                        <i class="fas fa-boxes-stacked"></i>
+                    </span>
+                    <div class="auth-brand-feat-text">
+                        <strong>إدارة المخزون</strong>
+                        <span>تتبع المنتجات والكميات لحظة بلحظة</span>
+                    </div>
+                </li>
+                <li class="auth-brand-feat">
+                    <span class="auth-brand-feat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </span>
+                    <div class="auth-brand-feat-text">
+                        <strong>تقارير تحليلية</strong>
+                        <span>لوحات بيانات ذكية وتقارير مفصّلة</span>
+                    </div>
+                </li>
+                <li class="auth-brand-feat">
+                    <span class="auth-brand-feat-icon">
+                        <i class="fas fa-shield-halved"></i>
+                    </span>
+                    <div class="auth-brand-feat-text">
+                        <strong>أمان وحماية</strong>
+                        <span>صلاحيات دقيقة وحماية كاملة للبيانات</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </aside>
+
+    <!-- Form Panel (left in RTL) -->
+    <main class="auth-form-panel">
+        <div class="auth-card animate-fade-in">
+
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{% if 'error' in message.tags or 'danger' in message.tags %}danger{% elif 'success' in message.tags %}success{% elif 'warning' in message.tags %}warning{% else %}info{% endif %} d-flex align-items-center gap-2 mb-3">
+                <i class="fas {% if 'error' in message.tags or 'danger' in message.tags %}fa-exclamation-circle{% elif 'success' in message.tags %}fa-check-circle{% elif 'warning' in message.tags %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {% block auth_content %}{% endblock %}
+
+            <div class="auth-footer">
+                {% block auth_links %}{% endblock %}
+            </div>
+        </div>
+    </main>
+
 </div>
 
 <script>
-// Auto-detect system theme preference
+function toggleAuthTheme() {
+    var html = document.documentElement;
+    var newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    var icon = document.getElementById('authThemeIcon');
+    if (icon) icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+}
+
 (function() {
-    const savedTheme = localStorage.getItem('theme');
-    if (!savedTheme) {
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.setAttribute('data-theme', systemDark ? 'dark' : 'light');
-    } else {
-        document.documentElement.setAttribute('data-theme', savedTheme);
-    }
+    var saved = localStorage.getItem('theme');
+    var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+    var icon = document.getElementById('authThemeIcon');
+    if (icon && theme === 'dark') icon.className = 'fas fa-sun';
 })();
 </script>
+
 {% endblock %}
