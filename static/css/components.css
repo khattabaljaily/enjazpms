@@ -2080,7 +2080,6 @@ div.dataTables_wrapper div.dataTables_paginate {
     flex-direction: column;
     transform: translateX(-100%);
     transition: transform .3s cubic-bezier(.4,0,.2,1);
-    border-radius: 0 16px 16px 0;
     overflow: hidden;
     padding-bottom: 0;
 }
