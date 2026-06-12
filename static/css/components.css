@@ -1863,6 +1863,177 @@ div.dataTables_wrapper div.dataTables_paginate {
 
 
 /* ════════════════════════════════════════════════════════════
+   PWA Install Banner — تثبيت التطبيق
+   ════════════════════════════════════════════════════════════ */
+
+.pwa-install-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    z-index: 1030;
+    padding: 1rem 1.2rem;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    animation: slideDown .3s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.pwa-install-banner--hidden {
+    animation: slideUp .3s cubic-bezier(.4,0,.2,1) forwards;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+}
+
+.pwa-install-banner__content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.pwa-install-banner__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.pwa-install-banner__text {
+    flex: 1;
+}
+
+.pwa-install-banner__title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 0.2rem;
+}
+
+.pwa-install-banner__description {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    line-height: 1.4;
+}
+
+/* Desktop/Android buttons */
+.pwa-install-banner__actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.pwa-install-banner__btn {
+    border: none;
+    border-radius: 6px;
+    padding: 0.65rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+}
+
+.pwa-install-banner__btn--primary {
+    background: #fff;
+    color: #667eea;
+}
+
+.pwa-install-banner__btn--primary:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.pwa-install-banner__btn--secondary {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.pwa-install-banner__btn--secondary:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* iOS close button */
+.pwa-install-banner__close {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background .2s;
+    flex-shrink: 0;
+}
+
+.pwa-install-banner__close:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Mobile responsive */
+@media (max-width: 576px) {
+    .pwa-install-banner {
+        padding: 0.8rem 1rem;
+    }
+
+    .pwa-install-banner__content {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+
+    .pwa-install-banner__text {
+        text-align: center;
+    }
+
+    .pwa-install-banner__actions {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .pwa-install-banner__btn {
+        flex: 1;
+        min-width: 80px;
+    }
+}
+
+/* RTL adjustments (for Arabic) */
+[dir="rtl"] .pwa-install-banner__description i {
+    margin-right: 0.3rem;
+}
+
+
+/* ════════════════════════════════════════════════════════════
    Training Panel — دليل الاستخدام
    ════════════════════════════════════════════════════════════ */
 

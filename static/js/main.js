@@ -801,3 +801,123 @@ document.addEventListener('DOMContentLoaded', function () {
         section.classList.toggle('is-open');
     });
 });
+
+
+/* ════════════════════════════════════════════════════════════
+   PWA Install Prompt — تثبيت التطبيق
+   ════════════════════════════════════════════════════════════ */
+(function setupPWAInstallPrompt() {
+    var installPrompt = null;
+    var isiOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+    var isAndroid = /android/.test(navigator.userAgent.toLowerCase());
+    var isDesktop = !isiOS && !isAndroid;
+    var promptShownKey = 'pwa_install_prompt_shown';
+    var iOSPromptKey = 'ios_install_prompt_shown';
+
+    /* ─── Desktop/Android Install Prompt ─── */
+    window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        installPrompt = e;
+        showInstallBanner('desktop');
+    });
+
+    /* ─── iOS Install Prompt ─── */
+    if (isiOS) {
+        // Show iOS install prompt after 3 seconds
+        var iosShown = sessionStorage.getItem(iOSPromptKey);
+        if (!iosShown && !isAppAlreadyInstalled()) {
+            setTimeout(function() {
+                showInstallBanner('ios');
+                sessionStorage.setItem(iOSPromptKey, 'true');
+            }, 3000);
+        }
+    }
+
+    function isAppAlreadyInstalled() {
+        // Check if app is running in standalone mode (already installed)
+        return window.navigator.standalone === true || 
+               window.matchMedia('(display-mode: standalone)').matches;
+    }
+
+    function showInstallBanner(type) {
+        // Don't show if already shown this session
+        if (sessionStorage.getItem(promptShownKey + '_' + type)) return;
+
+        var banner = document.createElement('div');
+        banner.className = 'pwa-install-banner pwa-install-banner--' + type;
+        banner.setAttribute('role', 'alert');
+        banner.innerHTML = type === 'ios' ? 
+            `<div class="pwa-install-banner__content">
+                <div class="pwa-install-banner__icon"><i class="fas fa-download"></i></div>
+                <div class="pwa-install-banner__text">
+                    <div class="pwa-install-banner__title">ثبّت التطبيق</div>
+                    <div class="pwa-install-banner__description">اضغط على <i class="fas fa-share-alt"></i> ثم اختر "إضافة إلى الشاشة الرئيسية"</div>
+                </div>
+                <button class="pwa-install-banner__close" aria-label="إغلاق">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>` :
+            `<div class="pwa-install-banner__content">
+                <div class="pwa-install-banner__icon"><i class="fas fa-download"></i></div>
+                <div class="pwa-install-banner__text">
+                    <div class="pwa-install-banner__title">ثبّت التطبيق</div>
+                    <div class="pwa-install-banner__description">ثبّت التطبيق على جهازك للوصول السريع</div>
+                </div>
+                <div class="pwa-install-banner__actions">
+                    <button class="pwa-install-banner__btn pwa-install-banner__btn--primary" data-action="install">ثبّت</button>
+                    <button class="pwa-install-banner__btn pwa-install-banner__btn--secondary" data-action="dismiss">رفض</button>
+                </div>
+            </div>`;
+
+        document.body.insertBefore(banner, document.body.firstChild);
+        sessionStorage.setItem(promptShownKey + '_' + type, 'true');
+
+        // Close button handler (iOS)
+        var closeBtn = banner.querySelector('.pwa-install-banner__close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                banner.classList.add('pwa-install-banner--hidden');
+                setTimeout(function() { banner.remove(); }, 300);
+            });
+        }
+
+        // Action buttons handler (Desktop/Android)
+        var installBtn = banner.querySelector('[data-action="install"]');
+        var dismissBtn = banner.querySelector('[data-action="dismiss"]');
+
+        if (installBtn) {
+            installBtn.addEventListener('click', function() {
+                if (installPrompt) {
+                    installPrompt.prompt();
+                    installPrompt.userChoice.then(function(choiceResult) {
+                        if (choiceResult.outcome === 'accepted') {
+                            banner.classList.add('pwa-install-banner--hidden');
+                        }
+                    });
+                }
+            });
+        }
+
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', function() {
+                banner.classList.add('pwa-install-banner--hidden');
+                setTimeout(function() { banner.remove(); }, 300);
+            });
+        }
+
+        // Auto-hide after 10 seconds
+        setTimeout(function() {
+            if (document.body.contains(banner)) {
+                banner.classList.add('pwa-install-banner--hidden');
+                setTimeout(function() { banner.remove(); }, 300);
+            }
+        }, 10000);
+    }
+
+    /* App installed event */
+    window.addEventListener('appinstalled', function() {
+        console.log('PWA installed successfully');
+        // Clear the shown state so it doesn't show again
+        sessionStorage.removeItem(promptShownKey + '_desktop');
+    });
+})();
