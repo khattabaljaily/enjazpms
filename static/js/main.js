@@ -743,6 +743,7 @@ function handleAjaxForm(formId, onSuccess) {
 document.addEventListener('DOMContentLoaded', function () {
     var fab     = document.getElementById('training-fab');
     var panel   = document.getElementById('training-panel');
+    var panelBody = panel ? panel.querySelector('.training-panel__body') : null;
     var overlay = document.getElementById('training-overlay');
     var closeBtn= document.getElementById('training-close-btn');
 
@@ -753,12 +754,16 @@ document.addEventListener('DOMContentLoaded', function () {
         overlay.classList.add('is-open');
         fab.classList.add('is-open');
         panel.setAttribute('aria-hidden', 'false');
+        // Prevent page scroll when panel is open
+        document.documentElement.style.overflow = 'hidden';
     }
     function close() {
         panel.classList.remove('is-open');
         overlay.classList.remove('is-open');
         fab.classList.remove('is-open');
         panel.setAttribute('aria-hidden', 'true');
+        // Restore page scroll
+        document.documentElement.style.overflow = '';
     }
 
     fab.addEventListener('click', function () {
@@ -769,6 +774,23 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') close();
     });
+
+    /* Prevent scroll event bubbling to page when scrolling inside panel */
+    if (panelBody) {
+        panelBody.addEventListener('wheel', function(e) {
+            var scrollTop = panelBody.scrollTop;
+            var scrollHeight = panelBody.scrollHeight;
+            var clientHeight = panelBody.clientHeight;
+            
+            // Allow scroll only if there's content to scroll
+            if (scrollHeight <= clientHeight) {
+                e.preventDefault();
+            } else if ((e.deltaY > 0 && scrollTop + clientHeight >= scrollHeight) ||
+                       (e.deltaY < 0 && scrollTop <= 0)) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    }
 
     /* Accordion sections inside training files */
     document.addEventListener('click', function (e) {
