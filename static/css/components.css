@@ -2080,6 +2080,7 @@ div.dataTables_wrapper div.dataTables_paginate {
     transform: translateX(-100%);
     transition: transform .3s cubic-bezier(.4,0,.2,1);
     border-radius: 0 16px 16px 0;
+    overflow: hidden;
 }
 .training-panel.is-open {
     transform: translateX(0);
@@ -2143,6 +2144,7 @@ div.dataTables_wrapper div.dataTables_paginate {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 1.2rem;
     display: flex;
     flex-direction: column;
@@ -2179,6 +2181,7 @@ div.dataTables_wrapper div.dataTables_paginate {
     border: 1px solid #e5e7eb;
     border-radius: 10px;
     overflow: hidden;
+    flex-shrink: 0;
 }
 .t-section__head {
     display: flex;
