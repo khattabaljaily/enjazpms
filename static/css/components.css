@@ -2081,7 +2081,7 @@ div.dataTables_wrapper div.dataTables_paginate {
     transition: transform .3s cubic-bezier(.4,0,.2,1);
     border-radius: 0 16px 16px 0;
     overflow: hidden;
-    padding-bottom: 25px !important;
+    padding-bottom: 30px !important;
 }
 .training-panel.is-open {
     transform: translateX(0);
