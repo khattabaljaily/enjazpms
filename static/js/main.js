@@ -804,6 +804,53 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 /* ════════════════════════════════════════════════════════════
+   Sidebar Scroll Fix — منع تمرير الحدث إلى الصفحة
+   ════════════════════════════════════════════════════════════ */
+(function fixSidebarScroll() {
+    var sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    /* Prevent scroll event bubbling to page when scrolling inside sidebar */
+    sidebar.addEventListener('wheel', function(e) {
+        var scrollTop = sidebar.scrollTop;
+        var scrollHeight = sidebar.scrollHeight;
+        var clientHeight = sidebar.clientHeight;
+        
+        // Allow scroll only if there's content to scroll
+        if (scrollHeight <= clientHeight) {
+            e.preventDefault();
+        } else if ((e.deltaY > 0 && scrollTop + clientHeight >= scrollHeight) ||
+                   (e.deltaY < 0 && scrollTop <= 0)) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    /* Also handle touch scroll for mobile */
+    var touchStartY = 0;
+    sidebar.addEventListener('touchstart', function(e) {
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    sidebar.addEventListener('touchmove', function(e) {
+        var touchEndY = e.touches[0].clientY;
+        var scrollTop = sidebar.scrollTop;
+        var scrollHeight = sidebar.scrollHeight;
+        var clientHeight = sidebar.clientHeight;
+
+        var isScrollingUp = touchEndY > touchStartY;
+        var isScrollingDown = touchEndY < touchStartY;
+
+        if (scrollHeight <= clientHeight) {
+            e.preventDefault();
+        } else if ((isScrollingDown && scrollTop + clientHeight >= scrollHeight) ||
+                   (isScrollingUp && scrollTop <= 0)) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+})();
+
+
+/* ════════════════════════════════════════════════════════════
    PWA Install Prompt — تثبيت التطبيق
    ════════════════════════════════════════════════════════════ */
 (function setupPWAInstallPrompt() {
