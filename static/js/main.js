@@ -781,7 +781,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!head) return;
         var section = head.closest('.t-section');
         if (!section) return;
+
         section.classList.toggle('is-open');
+
+        if (section.classList.contains('is-open') && panelBody) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     });
 });
 
