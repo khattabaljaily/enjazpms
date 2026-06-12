@@ -775,23 +775,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.key === 'Escape') close();
     });
 
-    /* Prevent scroll event bubbling to page when scrolling inside panel */
-    if (panelBody) {
-        panelBody.addEventListener('wheel', function(e) {
-            var scrollTop = panelBody.scrollTop;
-            var scrollHeight = panelBody.scrollHeight;
-            var clientHeight = panelBody.clientHeight;
-            
-            // Allow scroll only if there's content to scroll
-            if (scrollHeight <= clientHeight) {
-                e.preventDefault();
-            } else if ((e.deltaY > 0 && scrollTop + clientHeight >= scrollHeight) ||
-                       (e.deltaY < 0 && scrollTop <= 0)) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-    }
-
     /* Accordion sections inside training files */
     document.addEventListener('click', function (e) {
         var head = e.target.closest('.t-section__head');
@@ -810,22 +793,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
 
-    /* Prevent scroll event bubbling to page when scrolling inside sidebar */
-    sidebar.addEventListener('wheel', function(e) {
-        var scrollTop = sidebar.scrollTop;
-        var scrollHeight = sidebar.scrollHeight;
-        var clientHeight = sidebar.clientHeight;
-        
-        // Allow scroll only if there's content to scroll
-        if (scrollHeight <= clientHeight) {
-            e.preventDefault();
-        } else if ((e.deltaY > 0 && scrollTop + clientHeight >= scrollHeight) ||
-                   (e.deltaY < 0 && scrollTop <= 0)) {
-            e.preventDefault();
-        }
-    }, { passive: false });
-
-    /* Also handle touch scroll for mobile */
+    /* Handle touch scroll for mobile to prevent scroll chaining */
     var touchStartY = 0;
     sidebar.addEventListener('touchstart', function(e) {
         touchStartY = e.touches[0].clientY;

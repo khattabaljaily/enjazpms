@@ -2081,7 +2081,6 @@ div.dataTables_wrapper div.dataTables_paginate {
     transition: transform .3s cubic-bezier(.4,0,.2,1);
     border-radius: 0 16px 16px 0;
     overflow: hidden;
-    overscroll-behavior: contain;
 }
 .training-panel.is-open {
     transform: translateX(0);
@@ -2143,8 +2142,8 @@ div.dataTables_wrapper div.dataTables_paginate {
 /* Body / Content */
 .training-panel__body {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    overscroll-behavior: contain;
     padding: 1.2rem;
     display: flex;
     flex-direction: column;
