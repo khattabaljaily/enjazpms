@@ -2,6 +2,7 @@
 Notification generation services.
 Called from views or management commands.
 """
+import pytz
 from datetime import timedelta
 from django.db.models import Q
 from django.utils import timezone
@@ -69,7 +70,8 @@ def generate_overdue_invoice_notifications(tenant):
     from apps.sales.models import SaleInvoice
     from decimal import Decimal
 
-    today = timezone.now().date()
+    tenant_tz = pytz.timezone(tenant.timezone)
+    today = timezone.localtime(timezone.now(), tenant_tz).date()
     overdue = SaleInvoice.objects.filter(
         tenant=tenant,
         status='confirmed',
@@ -102,7 +104,8 @@ def generate_rfq_expiry_notifications(tenant):
     """Notify about RFQs expiring within 3 days."""
     from apps.purchases.models import PurchaseRFQ
 
-    today = timezone.now().date()
+    tenant_tz = pytz.timezone(tenant.timezone)
+    today = timezone.localtime(timezone.now(), tenant_tz).date()
     from datetime import timedelta
     soon = today + timedelta(days=3)
 

@@ -174,7 +174,7 @@ def approve_order(order: OnlineOrder) -> 'SaleInvoice':
         tenant         = tenant,
         customer       = customer,
         stock          = stock,
-        invoice_date   = timezone.now().date(),
+        invoice_date   = timezone.localdate(),
         payment_method = order.payment_method,
         status         = 'draft',
         notes          = (

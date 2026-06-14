@@ -8,6 +8,7 @@ OnlineOrderLine — individual line items for each order
 import uuid
 import random
 from decimal import Decimal
+import pytz
 from django.db import models
 from django.utils.text import slugify
 from django.utils import timezone
@@ -163,8 +164,9 @@ class StoreSettings(TenantMixin):
                 'override':    True,
             }
 
-        # Auto mode — check working hours schedule
-        now      = timezone.localtime()
+        # Auto mode — check working hours schedule (use tenant's timezone explicitly)
+        tenant_tz = pytz.timezone(self.tenant.timezone)
+        now      = timezone.localtime(timezone.now(), tenant_tz)
         day_name = _WEEKDAY_TO_NAME[now.weekday()]
         day_info = self.get_hours_for_day(day_name)
         now_str  = now.strftime('%H:%M')
@@ -193,7 +195,8 @@ class StoreSettings(TenantMixin):
     def _next_open_str(self, now=None) -> str:
         """Return human-readable string of next opening."""
         if now is None:
-            now = timezone.localtime()
+            tenant_tz = pytz.timezone(self.tenant.timezone)
+            now = timezone.localtime(timezone.now(), tenant_tz)
         now_str  = now.strftime('%H:%M')
         weekday  = now.weekday()
         hours    = self.working_hours or DEFAULT_HOURS

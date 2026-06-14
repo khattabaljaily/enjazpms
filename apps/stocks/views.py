@@ -487,7 +487,7 @@ def opening_balance_save_api(request):
             direction=direction,
             quantity=abs(delta),
             unit_cost=sq.item.cost_price or Decimal('0'),
-            movement_date=timezone.now().date(),
+            movement_date=timezone.localdate(),
             reference_type='opening_balance',
             reference_id=sq.id,
             balance_after=sq.quantity,
@@ -870,8 +870,8 @@ def stocks_item_movement_report(request):
 
     item_id = request.GET.get('item_id') or None
     stock_id = request.GET.get('stock_id') or None
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     generator = StocksReportGenerator(tenant, start_date, end_date)
     report = generator.get_item_movement_report(item_id=item_id, stock_id=stock_id)
@@ -898,8 +898,8 @@ def stocks_item_movement_report_export(request):
 
     item_id = request.GET.get('item_id') or None
     stock_id = request.GET.get('stock_id') or None
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = StocksReportGenerator(tenant, start_date, end_date).get_item_movement_report(item_id=item_id, stock_id=stock_id)
 
@@ -1018,8 +1018,8 @@ def stocks_non_moving_report(request):
         except ValueError:
             end_date = None
 
-    start_date = start_date or (timezone.now().date() - timedelta(days=30))
-    end_date = end_date or timezone.now().date()
+    start_date = start_date or (timezone.localdate() - timedelta(days=30))
+    end_date = end_date or timezone.localdate()
 
     report = StocksReportGenerator(tenant, start_date, end_date).get_non_moving_report()
 
@@ -1047,8 +1047,8 @@ def stocks_non_moving_report_export(request):
     except ValueError:
         start_date = end_date = None
 
-    start_date = start_date or (timezone.now().date() - timedelta(days=30))
-    end_date = end_date or timezone.now().date()
+    start_date = start_date or (timezone.localdate() - timedelta(days=30))
+    end_date = end_date or timezone.localdate()
 
     report = StocksReportGenerator(tenant, start_date, end_date).get_non_moving_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -1162,7 +1162,7 @@ def transfer_create(request):
 
         from_id   = data.get('from_stock')
         to_id     = data.get('to_stock')
-        tdate     = data.get('transfer_date') or str(timezone.now().date())
+        tdate     = data.get('transfer_date') or str(timezone.localdate())
         notes     = data.get('notes', '')
         lines_raw = data.get('lines', [])
 
@@ -1213,7 +1213,7 @@ def transfer_create(request):
         return JsonResponse({'success': True, 'id': transfer.id,
                              'redirect': f'/stocks/transfers/{transfer.id}/'})
 
-    context = {'stocks': stocks, 'items': items, 'today': str(timezone.now().date())}
+    context = {'stocks': stocks, 'items': items, 'today': str(timezone.localdate())}
     return render(request, 'stocks/transfer_form.html', context)
 
 
@@ -1426,7 +1426,7 @@ def stocktake_create(request):
             data = request.POST.dict()
 
         stock_id = data.get('stock_id')
-        tdate    = data.get('stocktake_date') or str(timezone.now().date())
+        tdate    = data.get('stocktake_date') or str(timezone.localdate())
         notes    = data.get('notes', '')
 
         if not stock_id:
@@ -1463,7 +1463,7 @@ def stocktake_create(request):
         return JsonResponse({'success': True, 'id': stocktake.id,
                              'redirect': f'/stocks/stocktakes/{stocktake.id}/'})
 
-    context = {'stocks': stocks, 'today': str(timezone.now().date())}
+    context = {'stocks': stocks, 'today': str(timezone.localdate())}
     return render(request, 'stocks/stocktake_form.html', context)
 
 
@@ -1661,7 +1661,7 @@ def manufacturing_create(request):
     return render(request, 'stocks/manufacturing_form.html', {
         'recipes': recipes,
         'stocks': stocks,
-        'today': timezone.now().date().strftime('%Y-%m-%d'),
+        'today': timezone.localdate().strftime('%Y-%m-%d'),
     })
 
 

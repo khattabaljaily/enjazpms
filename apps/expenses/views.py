@@ -373,8 +373,8 @@ def expenses_summary_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     gen = ExpensesReportGenerator(tenant, start_date, end_date)
     report = gen.get_summary_report()
@@ -400,8 +400,8 @@ def expenses_summary_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_category_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -424,8 +424,8 @@ def expenses_details_report(request):
         return redirect('core:no_tenant')
 
     category_id = request.GET.get('category_id') or None
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = ExpensesReportGenerator(tenant, start_date, end_date).get_details_report(category_id=category_id)
 
@@ -450,8 +450,8 @@ def expenses_details_report_export(request):
         return redirect('core:no_tenant')
 
     category_id = request.GET.get('category_id') or None
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = ExpensesReportGenerator(tenant, start_date, end_date).get_details_report(category_id=category_id)
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -477,8 +477,8 @@ def expenses_by_category_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_category_report()
 
@@ -501,8 +501,8 @@ def expenses_by_category_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_category_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -532,8 +532,8 @@ def expenses_by_date_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     group_by = request.GET.get('group_by', 'day')
 
     report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_date_report(group_by=group_by)
@@ -558,8 +558,8 @@ def expenses_by_date_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     group_by = request.GET.get('group_by', 'day')
 
     report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_date_report(group_by=group_by)

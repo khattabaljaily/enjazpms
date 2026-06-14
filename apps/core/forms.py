@@ -50,4 +50,4 @@ class TenantForm(forms.ModelForm):
         self.fields['business_type'].queryset = BusinessType.objects.filter(is_active=True).order_by('display_order', 'name_ar')
         self.fields['business_type'].label = 'نوع النشاط'
         if not self.instance.pk:
-            self.fields['subscription_start'].initial = timezone.now().date()
+            self.fields['subscription_start'].initial = timezone.localdate()

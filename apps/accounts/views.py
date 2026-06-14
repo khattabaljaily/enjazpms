@@ -21,6 +21,7 @@ from django.db.models import Q
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
+from django.utils import timezone as _tz
 
 from apps.core.models import Tenant, Settings
 from .models import UserActivity
@@ -615,8 +616,8 @@ def register_step3(request):
                         address=step2_data['address'],
                         city=step2_data['city'],
                         subscription_plan=subscription_plan,
-                        subscription_start=datetime.now().date(),
-                        subscription_expires=datetime.now().date() + timedelta(days=trial_duration),  # شهران تجريبيان مجاناً
+                        subscription_start=_tz.localdate(),
+                        subscription_expires=_tz.localdate() + timedelta(days=trial_duration),  # شهران تجريبيان مجاناً
                         version_type=form.cleaned_data['version_type'],
                         max_stocks=form.cleaned_data['num_stocks'],
                         timezone=form.cleaned_data['timezone'],

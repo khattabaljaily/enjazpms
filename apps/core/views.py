@@ -77,7 +77,7 @@ def dashboard(request):
         
         # Sales today
         from apps.sales.models import SaleInvoice
-        today = datetime.today().date()
+        today = dj_timezone.localdate()
         today_sales = SaleInvoice.objects.filter(
             tenant=tenant,
             invoice_date=today,
@@ -312,7 +312,7 @@ def admin_dashboard(request):
     if not (request.user.is_superuser or getattr(request.user, 'is_platform_staff', False)):
         return render(request, 'core/no_permission.html', status=403)
 
-    today = datetime.today().date()
+    today = dj_timezone.localdate()
     total_clients = Tenant.objects.count()
     active_clients = Tenant.objects.filter(is_active=True).count()
     expired_clients = Tenant.objects.filter(is_active=True, subscription_expires__lt=today).count()
@@ -777,7 +777,7 @@ def admin_report_subscriptions(request):
     if not request.user.has_platform_perm('view_reports'):
         return redirect('core:no_permission')
 
-    today = datetime.today().date()
+    today = dj_timezone.localdate()
 
     tenants = Tenant.objects.select_related('business_type').order_by('-created_at')
 
@@ -854,7 +854,7 @@ def admin_report_revenue(request):
     from apps.sales.models import SaleInvoice
     from apps.purchases.models import PurchaseInvoice
 
-    today = datetime.today().date()
+    today = dj_timezone.localdate()
     # Build last 12 months
     months = []
     for i in range(11, -1, -1):
@@ -923,7 +923,7 @@ def admin_report_activity(request):
     from apps.accounts.models import UserActivity
 
     now = dj_timezone.now()
-    today = now.date()
+    today = dj_timezone.localdate()
     week_ago_dt = now - timedelta(days=7)
     month_ago_dt = now - timedelta(days=30)
 
@@ -1061,7 +1061,7 @@ def admin_notifications(request):
     from .models import AdminNotification, SupportTicket
 
     # Auto-generate expiring/expired subscription notifications on each visit
-    today = datetime.today().date()
+    today = dj_timezone.localdate()
     expiring_soon = Tenant.objects.filter(
         is_active=True,
         subscription_expires__isnull=False,
@@ -1560,7 +1560,7 @@ def tenant_list(request):
     total = Tenant.objects.count()
     active = Tenant.objects.filter(is_active=True).count()
     suspended = total - active
-    today = datetime.today().date()
+    today = dj_timezone.localdate()
     expired = Tenant.objects.filter(is_active=True, subscription_expires__lt=today).count()
     context = {
         'form': TenantForm(),
@@ -1592,7 +1592,7 @@ def tenant_table_api(request):
     qs = Tenant.objects.select_related('business_type').prefetch_related('storesettings_set').all()
     records_total = qs.count()
 
-    today = datetime.today().date()
+    today = dj_timezone.localdate()
 
     if status_filter == 'active':
         qs = qs.filter(is_active=True)
@@ -2020,7 +2020,7 @@ def tenant_renew_api(request, pk):
     if days <= 0 or days > 3650:
         return JsonResponse({'success': False, 'error': 'عدد الأيام غير صالح'}, status=400)
 
-    today = datetime.today().date()
+    today = dj_timezone.localdate()
     base_date = tenant.subscription_expires if (tenant.subscription_expires and tenant.subscription_expires >= today) else today
     tenant.subscription_expires = base_date + timedelta(days=days)
 
@@ -2148,7 +2148,7 @@ def analytics(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    today = datetime.today().date()
+    today = dj_timezone.localdate()
     first_this_month = today.replace(day=1)
 
     # ── Previous month boundaries ───────────────────────────────────

@@ -305,7 +305,7 @@ def supplier_payments(request):
             'cash_amount': positive(stats['cash']),
             'bank_amount': positive(stats['bank']),
         },
-        'today': timezone.now().date().isoformat(),
+        'today': timezone.localdate().isoformat(),
     }
     return render(request, 'suppliers/payment_list.html', context)
 
@@ -444,7 +444,7 @@ def supplier_payment_create_api(request):
         body = json.loads(request.body.decode('utf-8') if isinstance(request.body, bytes) else request.body)
         supplier_id = int(body.get('supplier_id'))
         amount = Decimal(str(body.get('amount')))
-        payment_date = body.get('payment_date') or timezone.now().date().isoformat()
+        payment_date = body.get('payment_date') or timezone.localdate().isoformat()
         method = body.get('method', 'cash')
         treasury_id = body.get('treasury_id')
         reference = str(body.get('reference', '') or '').strip()
@@ -533,7 +533,7 @@ def supplier_payment_cancel_api(request, pk):
                 post_treasury_receipt(
                     tenant=tenant,
                     amount=abs(payment.amount),
-                    date=timezone.now().date(),
+                    date=timezone.localdate(),
                     reference_type='supplier_payment_cash_cancel',
                     reference_id=payment.id,
                     description=f'إلغاء دفعة مورد {payment.supplier.name}',
@@ -548,7 +548,7 @@ def supplier_payment_cancel_api(request, pk):
             entry_type='adjustment',
             reference_type='supplier_payment_cancel',
             reference_id=payment.id,
-            date=timezone.now().date(),
+            date=timezone.localdate(),
             notes=reverse_notes,
         )
 

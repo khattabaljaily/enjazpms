@@ -332,8 +332,8 @@ def treasury_statement_report(request):
         return redirect('core:no_tenant')
 
     treasury_id = request.GET.get('treasury_id')
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     gen = TreasuryReportGenerator(tenant, start_date, end_date)
     report = gen.get_statement_report(treasury_id) if treasury_id else None
@@ -362,8 +362,8 @@ def treasury_statement_report_export(request):
         return redirect('core:no_tenant')
 
     treasury_id = request.GET.get('treasury_id')
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = TreasuryReportGenerator(tenant, start_date, end_date).get_statement_report(treasury_id) if treasury_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -390,8 +390,8 @@ def treasury_movements_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = TreasuryReportGenerator(tenant, start_date, end_date).get_movements_summary()
 
@@ -415,8 +415,8 @@ def treasury_movements_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = TreasuryReportGenerator(tenant, start_date, end_date).get_movements_summary()
     response = HttpResponse(content_type='text/csv; charset=utf-8')

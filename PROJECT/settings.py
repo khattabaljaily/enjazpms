@@ -93,6 +93,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.core.middleware.MaintenanceModeMiddleware',
     'apps.core.middleware.TenantMiddleware',
+    'apps.core.middleware.TimezoneMiddleware',
     'apps.core.middleware.ActiveTenantMiddleware',
     'apps.accounts.activity_middleware.ActivityLogMiddleware',
 ]

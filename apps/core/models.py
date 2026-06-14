@@ -183,13 +183,13 @@ class Tenant(models.Model):
             return False
         if not self.subscription_expires:
             return True
-        return self.subscription_expires >= timezone.now().date()
+        return self.subscription_expires >= timezone.localdate()
     
     def days_until_expiry(self):
         """عدد الأيام المتبقية على انتهاء الاشتراك"""
         if not self.subscription_expires:
             return None
-        delta = self.subscription_expires - timezone.now().date()
+        delta = self.subscription_expires - timezone.localdate()
         return delta.days
 
 

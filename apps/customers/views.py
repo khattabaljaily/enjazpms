@@ -322,7 +322,7 @@ def customer_payments(request):
             'cash_amount': positive(stats['cash']),
             'bank_amount': positive(stats['bank']),
         },
-        'today': timezone.now().date().isoformat(),
+        'today': timezone.localdate().isoformat(),
     }
     return render(request, 'customers/payment_list.html', context)
 
@@ -489,7 +489,7 @@ def customer_payment_create_api(request):
         body = json.loads(request.body)
         customer_id = int(body.get('customer_id'))
         amount = Decimal(str(body.get('amount')))
-        payment_date = body.get('payment_date') or timezone.now().date().isoformat()
+        payment_date = body.get('payment_date') or timezone.localdate().isoformat()
         method = body.get('method', 'cash')
         treasury_id = body.get('treasury_id')
         reference = str(body.get('reference', '') or '').strip()
@@ -577,7 +577,7 @@ def customer_payment_cancel_api(request, pk):
                 post_treasury_disbursement(
                     tenant=tenant,
                     amount=abs(payment.amount),
-                    date=timezone.now().date(),
+                    date=timezone.localdate(),
                     reference_type='customer_payment_cash_cancel',
                     reference_id=payment.id,
                     description=f'إلغاء دفعة عميل {payment.customer.name}',
@@ -592,7 +592,7 @@ def customer_payment_cancel_api(request, pk):
             entry_type='adjustment',
             reference_type='customer_payment_cancel',
             reference_id=payment.id,
-            date=timezone.now().date(),
+            date=timezone.localdate(),
             notes=reverse_notes,
         )
 

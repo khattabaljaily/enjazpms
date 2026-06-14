@@ -314,7 +314,7 @@ def invoice_create(request):
         'stocks': stocks,
         'items': items,
         'default_stock': default_stock,
-        'today': timezone.now().date().isoformat(),
+        'today': timezone.localdate().isoformat(),
         'action': 'create',
     }
     return render(request, 'sales/invoice_form.html', context)
@@ -384,7 +384,7 @@ def invoice_edit(request, pk):
         'customers': customers,
         'stocks': stocks,
         'items': items,
-        'today': timezone.now().date().isoformat(),
+        'today': timezone.localdate().isoformat(),
         'action': 'edit',
     }
     return render(request, 'sales/invoice_form.html', context)
@@ -676,7 +676,7 @@ def record_payment_ajax(request, pk):
         body = json.loads(request.body)
         amount = Decimal(str(body['amount']))
         method = body.get('method', 'cash')
-        date = body.get('date') or timezone.now().date().isoformat()
+        date = body.get('date') or timezone.localdate().isoformat()
         reference = body.get('reference', '')
         notes = body.get('notes', '')
     except (KeyError, InvalidOperation, json.JSONDecodeError) as e:
@@ -841,7 +841,7 @@ def return_create(request, invoice_pk):
     context = {
         'invoice': invoice,
         'returnable_lines': returnable_lines,
-        'today': timezone.now().date().isoformat(),
+        'today': timezone.localdate().isoformat(),
     }
     return render(request, 'sales/return_form.html', context)
 
@@ -863,7 +863,7 @@ def _process_return_post(request, tenant, invoice):
         with transaction.atomic():
             sale_return = SaleReturn(
                 tenant=tenant,
-                return_date=header.get('return_date') or timezone.now().date(),
+                return_date=header.get('return_date') or timezone.localdate(),
                 original_invoice=invoice,
                 refund_method=header.get('refund_method', 'cash'),
                 reason=header.get('reason', ''),
@@ -1281,7 +1281,7 @@ def quote_create(request):
         'customers': customers,
         'stocks': stocks,
         'quote': None,
-        'today': timezone.now().date().isoformat(),
+        'today': timezone.localdate().isoformat(),
         'lines_json': '[]',
     })
 
@@ -1349,7 +1349,7 @@ def quote_edit(request, pk):
         'stocks': stocks,
         'quote': quote,
         'lines_json': json.dumps(lines_json),
-        'today': timezone.now().date().isoformat(),
+        'today': timezone.localdate().isoformat(),
     })
 
 
@@ -1509,9 +1509,9 @@ def sales_summary_report(request):
     end_date = _parse_date(request.GET.get('end_date'))
 
     if not start_date:
-        start_date = (timezone.now().date() - timedelta(days=30))
+        start_date = (timezone.localdate() - timedelta(days=30))
     if not end_date:
-        end_date = timezone.now().date()
+        end_date = timezone.localdate()
     
     # Generate report
     generator = SalesReportGenerator(tenant, start_date, end_date)
@@ -1550,9 +1550,9 @@ def sales_summary_report_export(request):
     end_date = _parse_date(request.GET.get('end_date'))
     
     if not start_date:
-        start_date = (timezone.now().date() - timedelta(days=30))
+        start_date = (timezone.localdate() - timedelta(days=30))
     if not end_date:
-        end_date = timezone.now().date()
+        end_date = timezone.localdate()
     
     # Generate report
     generator = SalesReportGenerator(tenant, start_date, end_date)
@@ -1592,9 +1592,9 @@ def sales_by_customer_report(request):
     end_date = _parse_date(request.GET.get('end_date'))
     
     if not start_date:
-        start_date = (timezone.now().date() - timedelta(days=30))
+        start_date = (timezone.localdate() - timedelta(days=30))
     if not end_date:
-        end_date = timezone.now().date()
+        end_date = timezone.localdate()
     
     # Generate report
     # Optional customer filter
@@ -1642,9 +1642,9 @@ def sales_by_customer_report_export(request):
     end_date = _parse_date(request.GET.get('end_date'))
     
     if not start_date:
-        start_date = (timezone.now().date() - timedelta(days=30))
+        start_date = (timezone.localdate() - timedelta(days=30))
     if not end_date:
-        end_date = timezone.now().date()
+        end_date = timezone.localdate()
     
     # Generate report
     # Optional customer filter
@@ -1715,8 +1715,8 @@ def sales_by_item_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
     generator = SalesReportGenerator(tenant, start_date, end_date)
@@ -1749,8 +1749,8 @@ def sales_by_item_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
     generator = SalesReportGenerator(tenant, start_date, end_date)
@@ -1791,9 +1791,9 @@ def sales_by_date_report(request):
     group_by = request.GET.get('group_by', 'day')
     
     if not start_date:
-        start_date = (timezone.now().date() - timedelta(days=30))
+        start_date = (timezone.localdate() - timedelta(days=30))
     if not end_date:
-        end_date = timezone.now().date()
+        end_date = timezone.localdate()
     
     # Generate report
     generator = SalesReportGenerator(tenant, start_date, end_date)
@@ -1826,9 +1826,9 @@ def sales_by_date_report_export(request):
     group_by = request.GET.get('group_by', 'day')
     
     if not start_date:
-        start_date = (timezone.now().date() - timedelta(days=30))
+        start_date = (timezone.localdate() - timedelta(days=30))
     if not end_date:
-        end_date = timezone.now().date()
+        end_date = timezone.localdate()
     
     # Generate report
     generator = SalesReportGenerator(tenant, start_date, end_date)
@@ -1870,8 +1870,8 @@ def sales_customer_statement(request):
         return redirect('core:no_tenant')
 
     customer_id = request.GET.get('customer_id')
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     generator = SalesReportGenerator(tenant, start_date, end_date)
     report = generator.get_customer_statement(customer_id) if customer_id else None
@@ -1897,8 +1897,8 @@ def sales_customer_statement_export(request):
         return redirect('core:no_tenant')
 
     customer_id = request.GET.get('customer_id')
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     generator = SalesReportGenerator(tenant, start_date, end_date)
     report = generator.get_customer_statement(customer_id) if customer_id else None
@@ -1961,8 +1961,8 @@ def sales_payments_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     generator = SalesReportGenerator(tenant, start_date, end_date)
     report = generator.get_payments_report()
@@ -1984,8 +1984,8 @@ def sales_payments_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = SalesReportGenerator(tenant, start_date, end_date).get_payments_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -2005,8 +2005,8 @@ def sales_returns_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     generator = SalesReportGenerator(tenant, start_date, end_date)
     report = generator.get_returns_report()
@@ -2028,8 +2028,8 @@ def sales_returns_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = SalesReportGenerator(tenant, start_date, end_date).get_returns_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -2053,8 +2053,8 @@ def sales_by_user_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     user_id = request.GET.get('user_id') or None
 
     generator = SalesReportGenerator(tenant, start_date, end_date)
@@ -2084,8 +2084,8 @@ def sales_by_user_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     user_id = request.GET.get('user_id') or None
 
     report = SalesReportGenerator(tenant, start_date, end_date).get_by_user_report(user_id=user_id)
@@ -2122,8 +2122,8 @@ def income_statement_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = IncomeStatementGenerator(tenant, start_date, end_date).get_report()
 
@@ -2145,8 +2145,8 @@ def income_statement_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = IncomeStatementGenerator(tenant, start_date, end_date).get_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -2178,8 +2178,8 @@ def sales_profit_margin_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
     generator = SalesReportGenerator(tenant, start_date, end_date)
@@ -2209,8 +2209,8 @@ def sales_profit_margin_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
     report = SalesReportGenerator(tenant, start_date, end_date).get_profit_margin_report(item_id=item_id)
@@ -2248,8 +2248,8 @@ def sales_by_payment_method_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = SalesReportGenerator(tenant, start_date, end_date).get_by_payment_method_report()
 
@@ -2270,8 +2270,8 @@ def sales_by_payment_method_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    start_date = _parse_date(request.GET.get('start_date')) or (timezone.now().date() - timedelta(days=30))
-    end_date = _parse_date(request.GET.get('end_date')) or timezone.now().date()
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     report = SalesReportGenerator(tenant, start_date, end_date).get_by_payment_method_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -2443,7 +2443,7 @@ def pos_checkout_api(request):
         })
 
     invoice_data = {
-        'invoice_date': timezone.now().date(),
+        'invoice_date': timezone.localdate(),
         'payment_method': payment_method,
         'invoice_discount_type': discount_type,
         'invoice_discount_value': discount_value,
@@ -2454,7 +2454,7 @@ def pos_checkout_api(request):
         'customer_id': customer_id,
     }
     if customer_id:
-        invoice_data['due_date'] = timezone.now().date()
+        invoice_data['due_date'] = timezone.localdate()
 
     try:
         with transaction.atomic():
@@ -2468,7 +2468,7 @@ def pos_checkout_api(request):
                         invoice=invoice,
                         amount=partial,
                         method='cash' if cash_amount >= bank_amount else 'bank',
-                        date=timezone.now().date(),
+                        date=timezone.localdate(),
                         reference=bank_reference,
                         user=request.user,
                     )

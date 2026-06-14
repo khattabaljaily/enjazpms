@@ -1,9 +1,11 @@
 """
 Core Middleware - الوسائط الأساسية
 """
+import pytz
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.core.cache import cache
+from django.utils import timezone
 from apps.core.models import Tenant
 
 
@@ -226,4 +228,30 @@ class ActivityLogMiddleware:
         except Exception:
             pass
 
+        return response
+
+
+class TimezoneMiddleware:
+    """
+    تفعيل المنطقة الزمنية للمشترك لكل طلب — يجب أن يأتي بعد TenantMiddleware
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        tzname = None
+        if hasattr(request, 'tenant') and request.tenant:
+            tzname = request.tenant.timezone
+
+        if tzname:
+            try:
+                timezone.activate(pytz.timezone(tzname))
+            except Exception:
+                timezone.deactivate()
+        else:
+            timezone.deactivate()
+
+        response = self.get_response(request)
+        timezone.deactivate()
         return response

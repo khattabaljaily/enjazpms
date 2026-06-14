@@ -78,7 +78,7 @@ def collect_business_context(tenant) -> dict:
     from apps.purchases.models import PurchaseInvoice
     from apps.expenses.models import Expense
 
-    now = timezone.now().date()
+    now = timezone.localdate()
     month_ago = now - timedelta(days=30)
     week_ago = now - timedelta(days=7)
 

@@ -110,7 +110,7 @@ def _reverse_payments(tenant, invoice):
             post_treasury_receipt(
                 tenant=tenant,
                 amount=payment.amount,
-                date=timezone.now().date(),
+                date=timezone.localdate(),
                 reference_type='purchase_payment',
                 reference_id=payment.id,
                 description=f'عكس دفعة أمر شراء {invoice.invoice_number}',
@@ -420,7 +420,7 @@ def cancel_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRet
         post_treasury_disbursement(
             tenant=tenant,
             amount=purchase_return.total_returned,
-            date=timezone.now().date(),
+            date=timezone.localdate(),
             reference_type='purchase_return',
             reference_id=purchase_return.id,
             description=f'عكس استلام مرتجع شراء {purchase_return.return_number}',

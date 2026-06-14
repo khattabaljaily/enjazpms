@@ -33,8 +33,8 @@ class SalesReportGenerator:
     
     def __init__(self, tenant, start_date=None, end_date=None):
         self.tenant = tenant
-        self.start_date = start_date or (timezone.now().date() - timedelta(days=30))
-        self.end_date = end_date or timezone.now().date()
+        self.start_date = start_date or (timezone.localdate() - timedelta(days=30))
+        self.end_date = end_date or timezone.localdate()
         
     def get_summary_report(self):
         """تقرير ملخص المبيعات — مع قائمة الفواتير التفصيلية"""
@@ -662,8 +662,8 @@ class IncomeStatementGenerator:
     def __init__(self, tenant, start_date=None, end_date=None):
         from datetime import timedelta
         self.tenant = tenant
-        self.start_date = start_date or (timezone.now().date() - timedelta(days=30))
-        self.end_date = end_date or timezone.now().date()
+        self.start_date = start_date or (timezone.localdate() - timedelta(days=30))
+        self.end_date = end_date or timezone.localdate()
 
     def get_report(self):
         from decimal import Decimal

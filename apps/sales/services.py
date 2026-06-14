@@ -274,7 +274,7 @@ def _reverse_payments(tenant, invoice):
                 post_treasury_disbursement(
                     tenant=tenant,
                     amount=abs(payment.amount),
-                    date=timezone.now().date(),
+                    date=timezone.localdate(),
                     reference_type='sale_payment',
                     reference_id=payment.id,
                     description=reverse_notes,
@@ -283,7 +283,7 @@ def _reverse_payments(tenant, invoice):
                 post_treasury_receipt(
                     tenant=tenant,
                     amount=abs(payment.amount),
-                    date=timezone.now().date(),
+                    date=timezone.localdate(),
                     reference_type='sale_payment',
                     reference_id=payment.id,
                     description=reverse_notes,
@@ -457,7 +457,7 @@ def deliver_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
             direction='out',
             quantity=qty_base,
             unit_cost=line.cost_price_snapshot,
-            movement_date=timezone.now().date(),
+            movement_date=timezone.localdate(),
             reference_type='sale_invoice',
             reference_id=invoice.id,
             balance_after=sq.quantity,
@@ -832,7 +832,7 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
                     post_treasury_receipt(
                         tenant=tenant,
                         amount=abs(payment.amount),
-                        date=timezone.now().date(),
+                        date=timezone.localdate(),
                         reference_type='sale_payment',
                         reference_id=payment.id,
                         description=reverse_notes,
@@ -841,7 +841,7 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
                     post_treasury_disbursement(
                         tenant=tenant,
                         amount=abs(payment.amount),
-                        date=timezone.now().date(),
+                        date=timezone.localdate(),
                         reference_type='sale_payment',
                         reference_id=payment.id,
                         description=reverse_notes,

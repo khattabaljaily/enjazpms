@@ -35,8 +35,8 @@ class StocksReportGenerator:
 
     def __init__(self, tenant, start_date=None, end_date=None):
         self.tenant = tenant
-        self.start_date = start_date or (tz.now().date() - timedelta(days=30))
-        self.end_date = end_date or tz.now().date()
+        self.start_date = start_date or (tz.localdate() - timedelta(days=30))
+        self.end_date = end_date or tz.localdate()
 
     def get_summary_report(self):
         """تقرير ملخص المخزن - إجمالي الكميات والقيمة"""
@@ -409,7 +409,7 @@ class StocksReportGenerator:
         )
         last_movement = {m['item_id']: m['last_date'] for m in last_movement_qs}
 
-        today = tz.now().date()
+        today = tz.localdate()
         data = []
         total_value = 0.0
         for iid, v in item_agg.items():

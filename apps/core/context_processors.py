@@ -2,6 +2,7 @@
 Context Processors - معالجات السياق
 توفر متغيرات عامة لجميع Templates
 """
+from django.utils import timezone
 from apps.core.models import Settings, TenantCapabilities
 
 
@@ -46,12 +47,11 @@ def app_context(request):
     """
     معلومات عامة عن التطبيق
     """
-    from datetime import datetime
     return {
         'app_name': 'EnjazIMS',
         'app_version': '1.0.0',
         'app_description': 'نظام إدارة المخزون ونقاط البيع',
-        'current_year': datetime.now().year,
+        'current_year': timezone.localtime().year,
     }
 
 
