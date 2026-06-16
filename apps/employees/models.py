@@ -34,7 +34,7 @@ class Employee(TenantMixin):
     class Meta:
         db_table = 'employees'
         verbose_name = 'موظف'
-        verbose_name_plural = 'الموظفون'
+        verbose_name_plural = 'الموظفين'
         ordering = ['name']
         indexes = [
             models.Index(fields=['tenant', 'is_active']),

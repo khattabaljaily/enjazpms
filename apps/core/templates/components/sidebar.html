@@ -251,6 +251,12 @@
     <!-- ── Accounting ── -->
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link{% if request.resolver_match.app_name == 'employees' and request.resolver_match.url_name == 'list' %} active{% endif %}" href="{% url 'employees:list' %}">
+                <span class="nav-icon nav-icon--emp"><i class="fas fa-users-gear"></i></span>
+                الموظفين
+            </a>
+        </li>
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
                 <span class="nav-icon nav-icon--acct"><i class="fas fa-calculator"></i></span>
@@ -262,17 +268,7 @@
                 <li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين</a></li>
                 <li><a href="{% url 'expenses:list' %}" class="nav-sublink"><i class="fas fa-receipt me-2"></i>المصروفات</a></li>
                 <li><a href="{% url 'treasury:list' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>الخزائن</a></li>
-            </ul>
-        </li>
-        <li class="nav-item has-submenu">
-            <a class="nav-link nav-link-toggle{% if request.resolver_match.app_name == 'employees' %} active{% endif %}" href="#">
-                <span class="nav-icon nav-icon--emp"><i class="fas fa-users-gear"></i></span>
-                الموظفون
-                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
-            </a>
-            <ul class="nav-submenu">
-                <li><a href="{% url 'employees:list' %}" class="nav-sublink"><i class="fas fa-users me-2"></i>قائمة الموظفين</a></li>
-                <li><a href="{% url 'employees:advance_list' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>السلف</a></li>
+                <li><a href="{% url 'employees:advance_list' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>سلف الموظفين</a></li>
                 <li><a href="{% url 'employees:salary_list' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشوف الرواتب</a></li>
                 <li><a href="{% url 'employees:incentive_list' %}" class="nav-sublink"><i class="fas fa-star me-2"></i>الحوافز والخصومات</a></li>
             </ul>
