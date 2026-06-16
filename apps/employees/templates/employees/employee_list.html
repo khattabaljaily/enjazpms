@@ -1,0 +1,509 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/employees.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════ HERO ══════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-users-gear"></i></div>
+            <div>
+                <h1 class="cx-hero-title">الموظفون</h1>
+                <p class="cx-hero-desc">إدارة بيانات الموظفين والرواتب</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                {% if request.user|has_perm_key:"add_employees" %}
+                <button type="button" class="cx-btn-add" id="btnOpenCreateEmployee">
+                    <i class="fas fa-plus"></i><span>موظف جديد</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-users"></i><strong>{{ stats.total }}</strong><span>إجمالي</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-user-check"></i><strong>{{ stats.active }}</strong><span>نشط</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-user-slash"></i><strong>{{ stats.inactive }}</strong><span>غير نشط</span>
+        </span>
+    </div>
+</div>
+
+<!-- ══════════ TABLE PANEL ══════════ -->
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="empSearch" class="cx-search-input" placeholder="الاسم، رقم الموظف، المسمى، القسم...">
+        </div>
+        <div class="cx-toolbar-end">
+            <div class="cx-filter-tabs" role="group">
+                <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
+                <button type="button" class="cx-filter-tab" data-status="active">نشط</button>
+                <button type="button" class="cx-filter-tab" data-status="inactive">غير نشط</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="employeesTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>رقم الموظف</th>
+                    <th>الاسم</th>
+                    <th>المسمى الوظيفي</th>
+                    <th>القسم</th>
+                    <th>الهاتف</th>
+                    <th>الراتب الأساسي</th>
+                    <th>السلف القائمة</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div id="employeesCardsMobile" class="employees-mobile-card-list d-none p-3" aria-live="polite"></div>
+</div>
+
+</div>
+
+<!-- ══════════ ADD / EDIT MODAL ══════════ -->
+<div class="modal fade" id="employeeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-main">
+                <div class="cx-modal-header">
+                    <div>
+                        <h5 class="cx-modal-title" id="employeeModalTitle">موظف جديد</h5>
+                    </div>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cx-modal-body">
+                    <input type="hidden" id="empId" value="">
+                    <div class="cx-form-group-label">
+                        <span class="cx-form-group-icon"><i class="fas fa-user"></i></span>
+                        البيانات الشخصية
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="cx-label">الاسم <sup class="cx-required">*</sup></label>
+                            <input type="text" id="empName" class="cx-input" placeholder="الاسم الكامل للموظف">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">الهاتف</label>
+                            <input type="text" id="empPhone" class="cx-input" placeholder="رقم الهاتف">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">المسمى الوظيفي</label>
+                            <input type="text" id="empPosition" class="cx-input" placeholder="مدير، محاسب، مبيعات...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">القسم</label>
+                            <input type="text" id="empDepartment" class="cx-input" placeholder="المحاسبة، المبيعات...">
+                        </div>
+                    </div>
+                    <div class="cx-form-group-label">
+                        <span class="cx-form-group-icon"><i class="fas fa-coins"></i></span>
+                        بيانات الراتب
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="cx-label">نوع الراتب</label>
+                            <select id="empSalaryType" class="cx-input">
+                                <option value="fixed">راتب ثابت</option>
+                                <option value="hourly">بالساعة</option>
+                                <option value="daily">بالأيام</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="cx-label">الراتب الأساسي</label>
+                            <input type="number" id="empBaseSalary" class="cx-input text-end" value="0" min="0" step="0.01">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="cx-label">تاريخ التعيين</label>
+                            <input type="date" id="empHireDate" class="cx-input">
+                        </div>
+                    </div>
+                    <div class="cx-form-group-label">
+                        <span class="cx-form-group-icon"><i class="fas fa-list-check"></i></span>
+                        ملاحظات وحالة
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="cx-label">ملاحظات</label>
+                            <textarea id="empNotes" class="cx-input" rows="2" placeholder="ملاحظات اختيارية..."></textarea>
+                        </div>
+                        <div class="col-12" id="empIsActiveRow" style="display:none">
+                            <label class="cx-toggle-card" for="empIsActive">
+                                <div class="cx-toggle-info">
+                                    <span class="cx-toggle-title">الموظف نشط</span>
+                                    <span class="cx-toggle-desc">الموظف نشط ومتاح في الرواتب والتقارير</span>
+                                </div>
+                                <input type="checkbox" id="empIsActive" checked>
+                                <div class="cx-toggle-switch"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="cx-btn-primary" id="btnSaveEmployee">
+                        <i class="fas fa-check me-1"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ VIEW MODAL ══════════ -->
+<div class="modal fade" id="viewEmployeeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar" id="viewEmpAvatar"></div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewEmpName">—</h5>
+                        <p class="cx-view-subtitle" id="viewEmpId">—</p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="cx-view-body">
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-user"></i>البيانات الشخصية</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--name"><i class="fas fa-id-card"></i></div>
+                            <div class="cx-info-card-content"><span class="cx-info-card-label">المسمى الوظيفي</span><span class="cx-info-card-value" id="viewEmpPosition">—</span></div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--phone"><i class="fas fa-phone"></i></div>
+                            <div class="cx-info-card-content"><span class="cx-info-card-label">الهاتف</span><span class="cx-info-card-value" id="viewEmpPhone">—</span></div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--city"><i class="fas fa-building"></i></div>
+                            <div class="cx-info-card-content"><span class="cx-info-card-label">القسم</span><span class="cx-info-card-value" id="viewEmpDepartment">—</span></div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--status"><i class="fas fa-calendar-check"></i></div>
+                            <div class="cx-info-card-content"><span class="cx-info-card-label">تاريخ التعيين</span><span class="cx-info-card-value" id="viewEmpHireDate">—</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-coins"></i>الراتب</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card cx-info-card--money">
+                            <div class="cx-info-card-icon cx-info-icon--balance"><i class="fas fa-wallet"></i></div>
+                            <div class="cx-info-card-content"><span class="cx-info-card-label">الراتب الأساسي</span><span class="cx-info-card-value cx-info-card-value--money" id="viewEmpSalary">—</span></div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--credit"><i class="fas fa-tag"></i></div>
+                            <div class="cx-info-card-content"><span class="cx-info-card-label">نوع الراتب</span><span class="cx-info-card-value" id="viewEmpSalaryType">—</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="cx-btn-primary" id="viewEditEmpBtn">
+                    <i class="fas fa-pen-to-square me-1"></i>تعديل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ DELETE MODAL ══════════ -->
+<div class="modal fade" id="deleteEmployeeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+                <h5 class="cx-delete-title">حذف الموظف؟</h5>
+                <p class="cx-delete-desc">ستقوم بحذف <strong id="deleteEmpName"></strong> بشكل نهائي. لا يمكن التراجع عن هذا الإجراء.</p>
+                <input type="hidden" id="deleteEmpId">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteEmpBtn">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    const urlTable  = "{% url 'employees:table_api' %}";
+    const urlCreate = "{% url 'employees:create' %}";
+
+    function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+    const urlDetail = '/employees/api/0/';
+    const urlUpdate = '/employees/api/0/update/';
+    const urlDelete = '/employees/api/0/delete/';
+
+    const empModalEl    = document.getElementById('employeeModal');
+    const viewModalEl   = document.getElementById('viewEmployeeModal');
+    const deleteModalEl = document.getElementById('deleteEmployeeModal');
+    [empModalEl, viewModalEl, deleteModalEl].forEach(function (el) {
+        if (el && el.parentElement !== document.body) document.body.appendChild(el);
+    });
+    const empModal    = new bootstrap.Modal(empModalEl);
+    const viewModal   = new bootstrap.Modal(viewModalEl);
+    const deleteModal = new bootstrap.Modal(deleteModalEl);
+
+    let activeStatus = '';
+    const empRows = new Map();
+    const COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
+    function avatarColor(name) { return COLORS[name.charCodeAt(0) % COLORS.length]; }
+
+    /* ── Mobile cards ── */
+    function renderMobileCards(rows) {
+        const $c = $('#employeesCardsMobile');
+        if (!$c.length) return;
+        if (!rows || !rows.length) { $c.html('<div class="cx-empty-state">لا توجد موظفين للعرض</div>'); return; }
+        $c.html(rows.map(function (r) {
+            const status = r.is_active
+                ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
+                : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>غير نشط</span>';
+            return `<article class="cx-emp-card">
+                <div class="cx-emp-card-head">
+                    <div><h2 class="cx-emp-card-title">${r.name}</h2><p class="cx-emp-card-sub"><code>${r.employee_id}</code></p></div>
+                    ${status}
+                </div>
+                <div class="cx-emp-card-meta">
+                    <div><span class="cx-emp-card-meta-label">المسمى</span><strong class="cx-emp-card-meta-value">${r.position}</strong></div>
+                    <div><span class="cx-emp-card-meta-label">الراتب</span><strong class="cx-emp-card-meta-value">${EnjazIMS.formatMoney(r.base_salary)}</strong></div>
+                </div>
+                <div class="cx-emp-card-actions">
+                    <button class="cxr-act js-view-emp" data-id="${r.id}"><i class="fas fa-eye"></i></button>
+                    <button class="cxr-act js-edit-emp" data-id="${r.id}"><i class="fas fa-pen-to-square"></i></button>
+                    <button class="cxr-act cxr-act--del js-del-emp" data-id="${r.id}" data-name="${r.name}"><i class="fas fa-trash"></i></button>
+                </div>
+            </article>`;
+        }).join(''));
+    }
+
+    /* ── DataTable ── */
+    const dt = $('#employeesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ordering: false,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
+        ajax: {
+            url: urlTable,
+            data: function (d) { d.status = activeStatus; }
+        },
+        columns: [
+            { data: 'employee_id', render: v => `<code class="cxr-code">${v}</code>` },
+            { data: 'name', render: v => `<span class="cxr-name">${v}</span>` },
+            { data: 'position' },
+            { data: 'department' },
+            { data: 'phone' },
+            { data: 'base_salary', className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
+            { data: 'pending_advances', className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
+            {
+                data: 'is_active',
+                render: v => v
+                    ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+                    : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>غير نشط</span>'
+            },
+            {
+                data: null, orderable: false, searchable: false,
+                render: function (_, __, r) {
+                    return `<div class="cxr-actions">
+                        <a href="/employees/${r.id}/statement/" class="cxr-act cxr-act--view" title="كشف الحساب"><i class="fas fa-file-alt"></i></a>
+                        <button class="cxr-act js-view-emp" data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
+                        <button class="cxr-act js-edit-emp" data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                        <button class="cxr-act cxr-act--del js-del-emp" data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>
+                    </div>`;
+                }
+            }
+        ],
+        language: {
+            emptyTable: 'لا يوجد موظفون',
+            zeroRecords: 'لا توجد نتائج مطابقة',
+            info: 'عرض _START_ إلى _END_ من _TOTAL_',
+            paginate: { previous: 'السابق', next: 'التالي' }
+        },
+        pageLength: 25,
+        drawCallback: function () {
+            renderMobileCards(dt.rows({ page: 'current' }).data().toArray());
+        }
+    });
+
+    dt.on('xhr', function (_, __, json) {
+        empRows.clear();
+        (json.data || []).forEach(r => empRows.set(r.id, r));
+    });
+
+    /* ── Search & Filter ── */
+    let searchTimer;
+    $('#empSearch').on('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+    $('.cx-filter-tab').on('click', function () {
+        $('.cx-filter-tab').removeClass('active');
+        $(this).addClass('active');
+        activeStatus = $(this).data('status');
+        dt.ajax.reload();
+    });
+
+    /* ── Open Create ── */
+    $('#btnOpenCreateEmployee').on('click', function () {
+        $('#empId').val('');
+        $('#employeeModalTitle').text('موظف جديد');
+        ['empName','empPhone','empPosition','empDepartment','empNotes'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('empSalaryType').value = 'fixed';
+        document.getElementById('empBaseSalary').value = '0';
+        document.getElementById('empHireDate').value = '';
+        document.getElementById('empIsActiveRow').style.display = 'none';
+        empModal.show();
+    });
+
+    /* ── Open Edit ── */
+    function openEdit(id) {
+        fetch(apiUrl(urlDetail, id))
+            .then(r => r.json())
+            .then(function (d) {
+                $('#empId').val(d.id);
+                $('#employeeModalTitle').text('تعديل موظف');
+                document.getElementById('empName').value = d.name;
+                document.getElementById('empPhone').value = d.phone;
+                document.getElementById('empPosition').value = d.position;
+                document.getElementById('empDepartment').value = d.department;
+                document.getElementById('empSalaryType').value = d.salary_type;
+                document.getElementById('empBaseSalary').value = d.base_salary;
+                document.getElementById('empHireDate').value = d.hire_date;
+                document.getElementById('empIsActive').checked = d.is_active;
+                document.getElementById('empNotes').value = d.notes;
+                document.getElementById('empIsActiveRow').style.display = '';
+                empModal.show();
+            })
+            .catch(() => EnjazIMS.toast('تعذر تحميل البيانات', 'error'));
+    }
+
+    /* ── Save ── */
+    $('#btnSaveEmployee').on('click', function () {
+        const id = $('#empId').val();
+        const name = document.getElementById('empName').value.trim();
+        if (!name) { EnjazIMS.toast('اسم الموظف مطلوب', 'error'); return; }
+
+        const payload = {
+            name,
+            phone:       document.getElementById('empPhone').value.trim(),
+            position:    document.getElementById('empPosition').value.trim(),
+            department:  document.getElementById('empDepartment').value.trim(),
+            salary_type: document.getElementById('empSalaryType').value,
+            base_salary: document.getElementById('empBaseSalary').value,
+            hire_date:   document.getElementById('empHireDate').value,
+            is_active:   document.getElementById('empIsActive').checked,
+            notes:       document.getElementById('empNotes').value.trim(),
+        };
+
+        const url = id ? apiUrl(urlUpdate, id) : urlCreate;
+        const $btn = $('#btnSaveEmployee');
+        const orig = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...').prop('disabled', true);
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(payload),
+        })
+        .then(r => r.json())
+        .then(function (resp) {
+            $btn.html(orig).prop('disabled', false);
+            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
+            empModal.hide();
+            dt.ajax.reload(null, false);
+            EnjazIMS.toast('تم حفظ الموظف بنجاح', 'success');
+        })
+        .catch(() => { $btn.html(orig).prop('disabled', false); EnjazIMS.toast('خطأ في الاتصال', 'error'); });
+    });
+
+    /* ── View ── */
+    function openView(id) {
+        fetch(apiUrl(urlDetail, id))
+            .then(r => r.json())
+            .then(function (d) {
+                const color = avatarColor(d.name);
+                $('#viewEmpAvatar').text(d.name.charAt(0).toUpperCase()).css('background', color);
+                $('#viewEmpName').text(d.name);
+                $('#viewEmpId').html(`<code>${d.employee_id}</code>`);
+                $('#viewEmpPosition').text(d.position || '—');
+                $('#viewEmpPhone').text(d.phone || '—');
+                $('#viewEmpDepartment').text(d.department || '—');
+                $('#viewEmpHireDate').text(d.hire_date || '—');
+                $('#viewEmpSalary').text(EnjazIMS.formatMoney(d.base_salary || 0));
+                $('#viewEmpSalaryType').text(d.salary_type === 'fixed' ? 'ثابت' : d.salary_type === 'hourly' ? 'بالساعة' : 'بالأيام');
+                $('#viewEditEmpBtn').data('id', d.id);
+                viewModal.show();
+            })
+            .catch(() => EnjazIMS.toast('تعذر تحميل البيانات', 'error'));
+    }
+
+    /* ── Delete ── */
+    function openDelete(id, name) {
+        $('#deleteEmpId').val(id);
+        $('#deleteEmpName').text(name);
+        deleteModal.show();
+    }
+
+    $('#confirmDeleteEmpBtn').on('click', function () {
+        const id = $('#deleteEmpId').val();
+        fetch(apiUrl(urlDelete, id), {
+            method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(r => r.json())
+        .then(function (resp) {
+            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الحذف', 'error'); return; }
+            deleteModal.hide();
+            dt.ajax.reload(null, false);
+            EnjazIMS.toast('تم حذف الموظف', 'success');
+        })
+        .catch(() => EnjazIMS.toast('خطأ في الاتصال', 'error'));
+    });
+
+    /* ── Table bindings ── */
+    $('#employeesTable').on('click', '.js-view-emp', function () { openView($(this).data('id')); });
+    $('#employeesTable').on('click', '.js-edit-emp', function () { openEdit($(this).data('id')); });
+    $('#employeesTable').on('click', '.js-del-emp', function () { openDelete($(this).data('id'), $(this).data('name')); });
+    $('#employeesCardsMobile').on('click', '.js-view-emp', function () { openView($(this).data('id')); });
+    $('#employeesCardsMobile').on('click', '.js-edit-emp', function () { openEdit($(this).data('id')); });
+    $('#employeesCardsMobile').on('click', '.js-del-emp', function () { openDelete($(this).data('id'), $(this).data('name')); });
+    $('#viewEditEmpBtn').on('click', function () { viewModal.hide(); openEdit($(this).data('id')); });
+
+})();
+</script>
+{% endblock %}

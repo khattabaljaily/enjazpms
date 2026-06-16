@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'apps.portal',
     'apps.ai',
     'apps.store',
+    'apps.employees',
 ]
 
 MIDDLEWARE = [

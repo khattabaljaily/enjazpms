@@ -1,0 +1,47 @@
+@import url('sales.css');
+
+.employees-mobile-card-list { display: none !important; }
+
+@media (max-width: 768px) {
+    .cx-table-wrap { display: none !important; }
+    .employees-mobile-card-list {
+        display: grid !important;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+    .cx-emp-card {
+        display: grid;
+        gap: 0.75rem;
+        padding: 0.9rem;
+        background: var(--bg-card, #fff);
+        border: 1px solid var(--border-color);
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(15,23,42,.08);
+    }
+    .cx-emp-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: .65rem;
+    }
+    .cx-emp-card-title { margin: 0; font-size: .95rem; font-weight: 700; }
+    .cx-emp-card-sub   { margin: 0; font-size: .8rem; color: var(--text-muted, #6b7280); }
+    .cx-emp-card-meta  { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .cx-emp-card-meta-label { font-size: .75rem; color: var(--text-muted, #6b7280); display: block; }
+    .cx-emp-card-meta-value { font-size: .85rem; font-weight: 600; display: block; }
+    .cx-emp-card-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+}
+
+/* Statement page */
+.cx-mini-stat {
+    background: var(--bg-card, #fff);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 2px 8px rgba(15,23,42,.06);
+    border: 1px solid var(--border-color);
+}
+.cx-mini-stat-label { font-size: .8rem; color: var(--text-muted, #6b7280); margin-bottom: .25rem; }
+.cx-mini-stat-value { font-size: 1.3rem; font-weight: 700; }
+
+/* nav-icon color for employees */
+.nav-icon--emp { background: linear-gradient(135deg, #6366f1, #8b5cf6); }

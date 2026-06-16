@@ -1,0 +1,361 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/employees.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════ HERO ══════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-hand-holding-dollar"></i></div>
+            <div>
+                <h1 class="cx-hero-title">سلف الموظفين</h1>
+                <p class="cx-hero-desc">إدارة السلف والمدفوعات المقدمة للموظفين</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                {% if request.user|has_perm_key:"add_employee_advances" %}
+                <button type="button" class="cx-btn-add" id="btnOpenCreateAdvance">
+                    <i class="fas fa-plus"></i><span>سلفة جديدة</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-list"></i><strong>{{ stats.total }}</strong><span>إجمالي</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--warning">
+            <i class="fas fa-clock"></i><strong>{{ stats.pending }}</strong><span>قائمة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-check-circle"></i><strong>{{ stats.deducted }}</strong><span>مخصومة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-ban"></i><strong>{{ stats.cancelled }}</strong><span>ملغاة</span>
+        </span>
+    </div>
+</div>
+
+<!-- ══════════ TABLE PANEL ══════════ -->
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="advSearch" class="cx-search-input" placeholder="اسم الموظف، ملاحظات...">
+        </div>
+        <div class="cx-toolbar-end">
+            <select id="employeeFilter" class="cx-select-sm">
+                <option value="">كل الموظفين</option>
+                {% for emp in employees %}
+                <option value="{{ emp.pk }}">{{ emp.name }}</option>
+                {% endfor %}
+            </select>
+            <select id="statusFilter" class="cx-select-sm">
+                <option value="">كل الحالات</option>
+                <option value="pending">قائمة</option>
+                <option value="deducted">مخصومة</option>
+                <option value="cancelled">ملغاة</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="advancesTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>الموظف</th>
+                    <th>المبلغ</th>
+                    <th>التاريخ</th>
+                    <th>الخزينة</th>
+                    <th>الحالة</th>
+                    <th>ملاحظات</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- ══════════ CREATE MODAL ══════════ -->
+<div class="modal fade" id="advanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-main">
+                <div class="cx-modal-header">
+                    <div>
+                        <h5 class="cx-modal-title">سلفة جديدة</h5>
+                    </div>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cx-modal-body">
+                    <div class="cx-form-group-label">
+                        <span class="cx-form-group-icon"><i class="fas fa-hand-holding-dollar"></i></span>
+                        بيانات السلفة
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="cx-label">الموظف <sup class="cx-required">*</sup></label>
+                            <select id="advEmployee" class="cx-input" required>
+                                <option value="">اختر موظف</option>
+                                {% for emp in employees %}
+                                <option value="{{ emp.pk }}">{{ emp.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">المبلغ <sup class="cx-required">*</sup></label>
+                            <input type="number" id="advAmount" class="cx-input text-end" min="0.01" step="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">التاريخ</label>
+                            <input type="date" id="advDate" class="cx-input">
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label">طريقة الدفع</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="cx-btn-secondary flex-fill adv-pm active" data-method="cash"><i class="fas fa-coins me-1"></i>نقدي</button>
+                                <button type="button" class="cx-btn-secondary flex-fill adv-pm" data-method="bank"><i class="fas fa-building-columns me-1"></i>تحويل بنكي</button>
+                            </div>
+                            <input type="hidden" id="advPaymentMethod" value="cash">
+                        </div>
+                        <div class="col-12" id="advTreasuryRow">
+                            <label class="cx-label">الخزينة / الحساب <sup class="cx-required">*</sup></label>
+                            <select id="advTreasury" class="cx-input">
+                                <option value="">اختر خزينة</option>
+                                {% for t in treasuries %}
+                                <option value="{{ t.pk }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12" id="advBankRefRow" style="display:none">
+                            <label class="cx-label">رقم الحوالة / المرجع</label>
+                            <input type="text" id="advBankRef" class="cx-input" placeholder="رقم الحوالة البنكية...">
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label">ملاحظات</label>
+                            <textarea id="advNotes" class="cx-input" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="cx-btn-primary" id="btnSaveAdvance">
+                        <i class="fas fa-check me-1"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ CANCEL CONFIRM MODAL ══════════ -->
+<div class="modal fade" id="cancelAdvanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-ban"></i></div>
+                <h5 class="cx-delete-title">إلغاء السلفة؟</h5>
+                <p class="cx-delete-desc">سيتم إلغاء السلفة وإعادة المبلغ للخزينة إن وُجدت. لا يمكن التراجع.</p>
+                <input type="hidden" id="cancelAdvanceId">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">لا</button>
+                <button type="button" class="cx-btn-danger" id="btnConfirmCancelAdvance">نعم، إلغاء السلفة</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    const urlTable  = "{% url 'employees:advance_table_api' %}";
+    const urlCreate = "{% url 'employees:advance_create' %}";
+    function cancelUrl(id) { return '/employees/advances/api/' + id + '/cancel/'; }
+
+    const advModalEl    = document.getElementById('advanceModal');
+    const cancelModalEl = document.getElementById('cancelAdvanceModal');
+    [advModalEl, cancelModalEl].forEach(function (el) {
+        if (el && el.parentElement !== document.body) document.body.appendChild(el);
+    });
+    const advModal    = new bootstrap.Modal(advModalEl);
+    const cancelModal = new bootstrap.Modal(cancelModalEl);
+
+    function fmtStatus(s) {
+        const m = {
+            'pending':   '<span class="cxr-status cxr-status--warn">قائمة</span>',
+            'deducted':  '<span class="cxr-status cxr-status--on">مخصومة</span>',
+            'cancelled': '<span class="cxr-status cxr-status--off">ملغاة</span>',
+        };
+        return m[s] || s;
+    }
+
+    /* ── DataTable ── */
+    const dt = $('#advancesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ordering: false,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
+        ajax: {
+            url: urlTable,
+            data: function (d) {
+                d.status   = document.getElementById('statusFilter').value;
+                d.employee = document.getElementById('employeeFilter').value;
+                d.search   = { value: document.getElementById('advSearch').value };
+            }
+        },
+        columns: [
+            { data: 'employee', render: v => `<span class="cxr-name">${v}</span>` },
+            { data: 'amount', className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
+            { data: 'date' },
+            { data: 'treasury' },
+            { data: 'status', render: v => fmtStatus(v) },
+            { data: 'notes' },
+            {
+                data: null, orderable: false, searchable: false,
+                render: function (_, __, r) {
+                    if (r.status === 'cancelled' || r.status === 'deducted') return '<span class="text-muted">—</span>';
+                    return `<div class="cxr-actions">
+                        <button class="cxr-act cxr-act--del js-cancel-adv" data-id="${r.id}" title="إلغاء السلفة"><i class="fas fa-ban"></i></button>
+                    </div>`;
+                }
+            }
+        ],
+        language: {
+            emptyTable: 'لا توجد سلف',
+            zeroRecords: 'لا توجد نتائج مطابقة',
+            info: 'عرض _START_ إلى _END_ من _TOTAL_',
+            paginate: { previous: 'السابق', next: 'التالي' }
+        },
+        pageLength: 25,
+        order: [[2, 'desc']]
+    });
+
+    /* ── Search & Filter ── */
+    let searchTimer;
+    $('#advSearch').on('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+    ['statusFilter', 'employeeFilter'].forEach(function (id) {
+        document.getElementById(id).addEventListener('change', () => dt.ajax.reload());
+    });
+
+    function setAdvPM(method) {
+        document.getElementById('advPaymentMethod').value = method;
+        document.querySelectorAll('.adv-pm').forEach(b => b.classList.toggle('active', b.dataset.method === method));
+        document.getElementById('advTreasuryRow').style.display = method === 'cash' ? '' : 'none';
+        document.getElementById('advBankRefRow').style.display  = method === 'bank' ? '' : 'none';
+        if (method === 'bank') document.getElementById('advTreasury').value = '';
+        else document.getElementById('advBankRef').value = '';
+    }
+
+    document.querySelectorAll('.adv-pm').forEach(b => b.addEventListener('click', () => setAdvPM(b.dataset.method)));
+
+    /* ── Open Create ── */
+    $('#btnOpenCreateAdvance').on('click', function () {
+        document.getElementById('advEmployee').value = '';
+        document.getElementById('advAmount').value = '';
+        document.getElementById('advDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('advTreasury').value = '';
+        document.getElementById('advBankRef').value = '';
+        document.getElementById('advNotes').value = '';
+        setAdvPM('cash');
+        advModal.show();
+    });
+
+    /* ── Save Advance ── */
+    $('#btnSaveAdvance').on('click', function () {
+        const employee = document.getElementById('advEmployee').value;
+        const amount   = document.getElementById('advAmount').value;
+        const method   = document.getElementById('advPaymentMethod').value;
+        const treasury = document.getElementById('advTreasury').value;
+        if (!employee) { EnjazIMS.toast('الرجاء اختيار الموظف', 'error'); return; }
+        if (!amount || parseFloat(amount) <= 0) { EnjazIMS.toast('الرجاء إدخال مبلغ صحيح', 'error'); return; }
+        if (method === 'cash' && !treasury) { EnjazIMS.toast('الرجاء اختيار الخزينة للدفع النقدي', 'error'); return; }
+
+        const payload = {
+            employee,
+            amount,
+            payment_method:  method,
+            date:            document.getElementById('advDate').value,
+            treasury:        treasury,
+            bank_reference:  document.getElementById('advBankRef').value.trim(),
+            notes:           document.getElementById('advNotes').value.trim(),
+        };
+
+        const $btn = $('#btnSaveAdvance');
+        const orig = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...').prop('disabled', true);
+
+        fetch(urlCreate, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(payload),
+        })
+        .then(r => r.json())
+        .then(function (resp) {
+            $btn.html(orig).prop('disabled', false);
+            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
+            advModal.hide();
+            dt.ajax.reload(null, false);
+            EnjazIMS.toast('تم تسجيل السلفة بنجاح', 'success');
+        })
+        .catch(() => { $btn.html(orig).prop('disabled', false); EnjazIMS.toast('خطأ في الاتصال', 'error'); });
+    });
+
+    /* ── Cancel Advance ── */
+    $('#advancesTable').on('click', '.js-cancel-adv', function () {
+        document.getElementById('cancelAdvanceId').value = $(this).data('id');
+        cancelModal.show();
+    });
+
+    $('#btnConfirmCancelAdvance').on('click', function () {
+        const id = document.getElementById('cancelAdvanceId').value;
+        const $btn = $(this);
+        const orig = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin me-1"></i>...').prop('disabled', true);
+
+        fetch(cancelUrl(id), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({}),
+        })
+        .then(r => r.json())
+        .then(function (resp) {
+            $btn.html(orig).prop('disabled', false);
+            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الإلغاء', 'error'); return; }
+            cancelModal.hide();
+            dt.ajax.reload(null, false);
+            EnjazIMS.toast('تم إلغاء السلفة', 'success');
+        })
+        .catch(() => { $btn.html(orig).prop('disabled', false); EnjazIMS.toast('خطأ في الاتصال', 'error'); });
+    });
+
+})();
+</script>
+{% endblock %}

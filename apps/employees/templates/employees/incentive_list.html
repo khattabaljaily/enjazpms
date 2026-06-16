@@ -1,0 +1,482 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/employees.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════ HERO ══════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-star"></i></div>
+            <div>
+                <h1 class="cx-hero-title">الحوافز والخصومات</h1>
+                <p class="cx-hero-desc">إدارة حوافز وخصومات الموظفين</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                {% if request.user|has_perm_key:"add_employee_incentives" %}
+                <button type="button" class="cx-btn-add" id="btnOpenCreateIncentive">
+                    <i class="fas fa-plus"></i><span>حافز / خصم جديد</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-list"></i><strong>{{ stats.total }}</strong><span>إجمالي</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-star"></i><strong>{{ stats.bonuses }}</strong><span>حوافز</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--danger">
+            <i class="fas fa-minus-circle"></i><strong>{{ stats.deductions }}</strong><span>خصومات</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--warning">
+            <i class="fas fa-clock"></i><strong>{{ stats.pending }}</strong><span>معلق</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-check"></i><strong>{{ stats.paid }}</strong><span>مدفوع</span>
+        </span>
+    </div>
+</div>
+
+<!-- ══════════ TABLE PANEL ══════════ -->
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="incSearch" class="cx-search-input" placeholder="الموظف، الوصف...">
+        </div>
+        <div class="cx-toolbar-end">
+            <select id="employeeFilter" class="cx-select-sm">
+                <option value="">كل الموظفين</option>
+                {% for emp in employees %}
+                <option value="{{ emp.pk }}">{{ emp.name }}</option>
+                {% endfor %}
+            </select>
+            <select id="typeFilter" class="cx-select-sm">
+                <option value="">النوع</option>
+                <option value="bonus">حوافز</option>
+                <option value="deduction">خصومات</option>
+            </select>
+            <select id="statusFilter" class="cx-select-sm">
+                <option value="">كل الحالات</option>
+                <option value="pending">معلق</option>
+                <option value="paid">مدفوع</option>
+                <option value="cancelled">ملغى</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="incentivesTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>الموظف</th>
+                    <th>النوع</th>
+                    <th>المبلغ</th>
+                    <th>الوصف</th>
+                    <th>طريقة الصرف</th>
+                    <th>التاريخ</th>
+                    <th>الخزينة</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- ══════════ CREATE MODAL ══════════ -->
+<div class="modal fade" id="incentiveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-main">
+                <div class="cx-modal-header">
+                    <div>
+                        <h5 class="cx-modal-title">حافز / خصم جديد</h5>
+                    </div>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cx-modal-body">
+                    <div class="cx-form-group-label">
+                        <span class="cx-form-group-icon"><i class="fas fa-star"></i></span>
+                        بيانات الحافز / الخصم
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="cx-label">الموظف <sup class="cx-required">*</sup></label>
+                            <select id="incEmployee" class="cx-input" required>
+                                <option value="">اختر موظف</option>
+                                {% for emp in employees %}
+                                <option value="{{ emp.pk }}">{{ emp.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">النوع</label>
+                            <select id="incType" class="cx-input">
+                                <option value="bonus">حافز</option>
+                                <option value="deduction">خصم</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">طريقة الصرف</label>
+                            <select id="incPayout" class="cx-input">
+                                <option value="with_salary">مع الراتب</option>
+                                <option value="immediate">فوري</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">المبلغ <sup class="cx-required">*</sup></label>
+                            <input type="number" id="incAmount" class="cx-input text-end" min="0.01" step="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">التاريخ</label>
+                            <input type="date" id="incDate" class="cx-input">
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label">الوصف <sup class="cx-required">*</sup></label>
+                            <input type="text" id="incDescription" class="cx-input" placeholder="سبب الحافز أو الخصم..." required>
+                        </div>
+                        <div class="col-12" id="incPaymentRow" style="display:none">
+                            <label class="cx-label">طريقة الدفع</label>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="cx-btn-secondary flex-fill inc-pm active" data-method="cash"><i class="fas fa-coins me-1"></i>نقدي</button>
+                                <button type="button" class="cx-btn-secondary flex-fill inc-pm" data-method="bank"><i class="fas fa-building-columns me-1"></i>تحويل بنكي</button>
+                            </div>
+                            <input type="hidden" id="incPaymentMethod" value="cash">
+                        </div>
+                        <div class="col-12" id="incTreasuryRow" style="display:none">
+                            <label class="cx-label">الخزينة / الحساب <sup class="cx-required">*</sup></label>
+                            <select id="incTreasury" class="cx-input">
+                                <option value="">اختر خزينة</option>
+                                {% for t in treasuries %}
+                                <option value="{{ t.pk }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12" id="incBankRefRow" style="display:none">
+                            <label class="cx-label">رقم الحوالة / المرجع</label>
+                            <input type="text" id="incBankRef" class="cx-input" placeholder="رقم الحوالة البنكية...">
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label">ملاحظات</label>
+                            <textarea id="incNotes" class="cx-input" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="cx-btn-primary" id="btnSaveIncentive">
+                        <i class="fas fa-check me-1"></i>حفظ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ PAY CONFIRM MODAL ══════════ -->
+<div class="modal fade" id="payIncentiveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)"><i class="fas fa-money-bill-wave"></i></div>
+                <h5 class="cx-delete-title">دفع الحافز؟</h5>
+                <p class="cx-delete-desc">سيتم خصم مبلغ الحافز من الخزينة المحددة وتسجيل الحركة.</p>
+                <input type="hidden" id="payIncentiveId">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">لا</button>
+                <button type="button" class="cx-btn-primary" id="btnConfirmPayIncentive">نعم، دفع الحافز</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ CANCEL CONFIRM MODAL ══════════ -->
+<div class="modal fade" id="cancelIncentiveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-ban"></i></div>
+                <h5 class="cx-delete-title">إلغاء الحافز؟</h5>
+                <p class="cx-delete-desc">سيتم إلغاء هذا السجل وإعادة المبلغ للخزينة إن كان مدفوعاً. لا يمكن التراجع.</p>
+                <input type="hidden" id="cancelIncentiveId">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">لا</button>
+                <button type="button" class="cx-btn-danger" id="btnConfirmCancelIncentive">نعم، إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    const urlTable  = "{% url 'employees:incentive_table_api' %}";
+    const urlCreate = "{% url 'employees:incentive_create' %}";
+    function payUrl(id)    { return '/employees/incentives/api/' + id + '/pay/'; }
+    function cancelUrl(id) { return '/employees/incentives/api/' + id + '/cancel/'; }
+
+    const incModalEl    = document.getElementById('incentiveModal');
+    const payModalEl    = document.getElementById('payIncentiveModal');
+    const cancelModalEl = document.getElementById('cancelIncentiveModal');
+    [incModalEl, payModalEl, cancelModalEl].forEach(function (el) {
+        if (el && el.parentElement !== document.body) document.body.appendChild(el);
+    });
+    const incModal    = new bootstrap.Modal(incModalEl);
+    const payModal    = new bootstrap.Modal(payModalEl);
+    const cancelModal = new bootstrap.Modal(cancelModalEl);
+
+    function fmtType(t) {
+        return t === 'bonus'
+            ? '<span class="cxr-status cxr-status--on">حافز</span>'
+            : '<span class="cxr-status cxr-status--off">خصم</span>';
+    }
+
+    function fmtStatus(s) {
+        const m = {
+            'pending':   '<span class="cxr-status cxr-status--warn">معلق</span>',
+            'paid':      '<span class="cxr-status cxr-status--on">مدفوع</span>',
+            'cancelled': '<span class="cxr-status cxr-status--off">ملغى</span>',
+        };
+        return m[s] || s;
+    }
+
+    /* ── DataTable ── */
+    const dt = $('#incentivesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ordering: false,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
+        ajax: {
+            url: urlTable,
+            data: function (d) {
+                d.status   = document.getElementById('statusFilter').value;
+                d.type     = document.getElementById('typeFilter').value;
+                d.employee = document.getElementById('employeeFilter').value;
+                d.search   = { value: document.getElementById('incSearch').value };
+            }
+        },
+        columns: [
+            { data: 'employee', render: v => `<span class="cxr-name">${v}</span>` },
+            { data: 'type',          render: v => fmtType(v) },
+            { data: 'amount',        className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
+            { data: 'description' },
+            { data: 'payout_display' },
+            { data: 'date' },
+            { data: 'treasury' },
+            { data: 'status',        render: v => fmtStatus(v) },
+            {
+                data: null, orderable: false, searchable: false,
+                render: function (_, __, r) {
+                    let html = '<div class="cxr-actions">';
+                    if (r.status === 'pending' && r.type === 'bonus' && r.payout === 'immediate') {
+                        html += `<button class="cxr-act js-pay-inc" data-id="${r.id}" title="دفع الحافز"><i class="fas fa-money-bill-wave"></i></button>`;
+                    }
+                    if (r.status !== 'cancelled') {
+                        html += `<button class="cxr-act cxr-act--del js-cancel-inc" data-id="${r.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`;
+                    }
+                    html += '</div>';
+                    return html;
+                }
+            }
+        ],
+        language: {
+            emptyTable: 'لا توجد حوافز أو خصومات',
+            zeroRecords: 'لا توجد نتائج مطابقة',
+            info: 'عرض _START_ إلى _END_ من _TOTAL_',
+            paginate: { previous: 'السابق', next: 'التالي' }
+        },
+        pageLength: 25,
+        order: [[5, 'desc']]
+    });
+
+    /* ── Search & Filter ── */
+    let searchTimer;
+    $('#incSearch').on('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+    ['statusFilter', 'typeFilter', 'employeeFilter'].forEach(function (id) {
+        document.getElementById(id).addEventListener('change', () => dt.ajax.reload());
+    });
+
+    function setIncPM(method) {
+        document.getElementById('incPaymentMethod').value = method;
+        document.querySelectorAll('.inc-pm').forEach(b => b.classList.toggle('active', b.dataset.method === method));
+        document.getElementById('incTreasuryRow').style.display = method === 'cash' ? '' : 'none';
+        document.getElementById('incBankRefRow').style.display  = method === 'bank' ? '' : 'none';
+        if (method === 'bank') document.getElementById('incTreasury').value = '';
+        else document.getElementById('incBankRef').value = '';
+    }
+
+    document.querySelectorAll('.inc-pm').forEach(b => b.addEventListener('click', () => setIncPM(b.dataset.method)));
+
+    function toggleIncPaymentSection() {
+        const type   = document.getElementById('incType').value;
+        const payout = document.getElementById('incPayout').value;
+        const show   = type === 'bonus' && payout === 'immediate';
+        document.getElementById('incPaymentRow').style.display  = show ? '' : 'none';
+        if (!show) {
+            document.getElementById('incTreasuryRow').style.display = 'none';
+            document.getElementById('incBankRefRow').style.display  = 'none';
+            document.getElementById('incTreasury').value = '';
+        } else {
+            setIncPM(document.getElementById('incPaymentMethod').value);
+        }
+    }
+
+    document.getElementById('incType').addEventListener('change', toggleIncPaymentSection);
+    document.getElementById('incPayout').addEventListener('change', toggleIncPaymentSection);
+
+    /* ── Open Create ── */
+    $('#btnOpenCreateIncentive').on('click', function () {
+        document.getElementById('incEmployee').value = '';
+        document.getElementById('incType').value = 'bonus';
+        document.getElementById('incPayout').value = 'with_salary';
+        document.getElementById('incAmount').value = '';
+        document.getElementById('incDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('incDescription').value = '';
+        document.getElementById('incTreasury').value = '';
+        document.getElementById('incBankRef').value = '';
+        document.getElementById('incPaymentMethod').value = 'cash';
+        document.getElementById('incNotes').value = '';
+        toggleIncPaymentSection();
+        incModal.show();
+    });
+
+    /* ── Save ── */
+    $('#btnSaveIncentive').on('click', function () {
+        const employee    = document.getElementById('incEmployee').value;
+        const amount      = document.getElementById('incAmount').value;
+        const description = document.getElementById('incDescription').value.trim();
+        const type     = document.getElementById('incType').value;
+        const payout   = document.getElementById('incPayout').value;
+        const method   = document.getElementById('incPaymentMethod').value;
+        const treasury = document.getElementById('incTreasury').value;
+        if (!employee)    { EnjazIMS.toast('الرجاء اختيار الموظف', 'error'); return; }
+        if (!amount || parseFloat(amount) <= 0) { EnjazIMS.toast('الرجاء إدخال مبلغ صحيح', 'error'); return; }
+        if (!description) { EnjazIMS.toast('الرجاء إدخال وصف', 'error'); return; }
+        if (type === 'bonus' && payout === 'immediate' && method === 'cash' && !treasury) {
+            EnjazIMS.toast('الحوافز النقدية الفورية تتطلب تحديد الخزينة', 'error'); return;
+        }
+
+        const payload = {
+            employee,
+            type,
+            payout,
+            payment_method:  method,
+            amount,
+            description,
+            date:            document.getElementById('incDate').value,
+            treasury:        treasury,
+            bank_reference:  document.getElementById('incBankRef').value.trim(),
+            notes:           document.getElementById('incNotes').value.trim(),
+        };
+
+        const $btn = $('#btnSaveIncentive');
+        const orig = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...').prop('disabled', true);
+
+        fetch(urlCreate, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(payload),
+        })
+        .then(r => r.json())
+        .then(function (resp) {
+            $btn.html(orig).prop('disabled', false);
+            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
+            incModal.hide();
+            dt.ajax.reload(null, false);
+            EnjazIMS.toast('تم حفظ السجل بنجاح', 'success');
+        })
+        .catch(() => { $btn.html(orig).prop('disabled', false); EnjazIMS.toast('خطأ في الاتصال', 'error'); });
+    });
+
+    /* ── Pay ── */
+    $('#incentivesTable').on('click', '.js-pay-inc', function () {
+        document.getElementById('payIncentiveId').value = $(this).data('id');
+        payModal.show();
+    });
+
+    $('#btnConfirmPayIncentive').on('click', function () {
+        const id = document.getElementById('payIncentiveId').value;
+        const $btn = $(this);
+        const orig = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin me-1"></i>...').prop('disabled', true);
+
+        fetch(payUrl(id), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({}),
+        })
+        .then(r => r.json())
+        .then(function (resp) {
+            $btn.html(orig).prop('disabled', false);
+            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الدفع', 'error'); return; }
+            payModal.hide();
+            dt.ajax.reload(null, false);
+            EnjazIMS.toast('تم دفع الحافز بنجاح', 'success');
+        })
+        .catch(() => { $btn.html(orig).prop('disabled', false); EnjazIMS.toast('خطأ في الاتصال', 'error'); });
+    });
+
+    /* ── Cancel ── */
+    $('#incentivesTable').on('click', '.js-cancel-inc', function () {
+        document.getElementById('cancelIncentiveId').value = $(this).data('id');
+        cancelModal.show();
+    });
+
+    $('#btnConfirmCancelIncentive').on('click', function () {
+        const id = document.getElementById('cancelIncentiveId').value;
+        const $btn = $(this);
+        const orig = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin me-1"></i>...').prop('disabled', true);
+
+        fetch(cancelUrl(id), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({}),
+        })
+        .then(r => r.json())
+        .then(function (resp) {
+            $btn.html(orig).prop('disabled', false);
+            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الإلغاء', 'error'); return; }
+            cancelModal.hide();
+            dt.ajax.reload(null, false);
+            EnjazIMS.toast('تم إلغاء السجل', 'success');
+        })
+        .catch(() => { $btn.html(orig).prop('disabled', false); EnjazIMS.toast('خطأ في الاتصال', 'error'); });
+    });
+
+})();
+</script>
+{% endblock %}
