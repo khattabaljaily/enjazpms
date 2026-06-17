@@ -88,13 +88,12 @@
                     <i class="fas fa-trash-alt"></i>مسح
                 </button>
             </div>
-            <div class="pos-customer-row">
-                <select id="posCustomer" class="pos-stock-select" style="width:100%;max-width:none;">
-                    <option value="">زبون عابر</option>
-                    {% for c in customers %}
-                    <option value="{{ c.id }}">{{ c.name }}</option>
-                    {% endfor %}
-                </select>
+            <div class="pos-customer-row" style="position:relative;">
+                <input type="text" id="posCustomerSearch" class="pos-stock-select"
+                       placeholder="زبون عابر..." autocomplete="off"
+                       style="width:100%;max-width:none;padding-left:2rem;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' stroke='%236b7280' stroke-width='2' fill='none'/%3E%3Ccircle cx='12' cy='7' r='4' stroke='%236b7280' stroke-width='2' fill='none'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:left .65rem center;">
+                <input type="hidden" id="posCustomerId" value="">
+                <div id="posCustomerDrop" style="display:none;position:absolute;top:100%;right:0;left:0;z-index:999;background:var(--bg-card,#fff);border:1px solid var(--border-light,#e5e7eb);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;margin-top:2px;"></div>
             </div>
         </div>
 
@@ -235,7 +234,49 @@ const $cartEmpty  = document.getElementById('cartEmpty');
 const $cartBadge  = document.getElementById('cartBadge');
 const $search     = document.getElementById('posSearch');
 const $stock      = document.getElementById('posStock');
-const $customer   = document.getElementById('posCustomer');
+const $customer   = document.getElementById('posCustomerId');
+
+/* ── POS customer searchable widget ──────────────────────── */
+(function () {
+    const POS_CUSTOMERS = [
+        { id: '', name: 'زبون عابر' },
+        {% for c in customers %}{ id: '{{ c.id }}', name: '{{ c.name|escapejs }}' },{% endfor %}
+    ];
+    const inp  = document.getElementById('posCustomerSearch');
+    const hid  = document.getElementById('posCustomerId');
+    const drop = document.getElementById('posCustomerDrop');
+
+    function renderDrop(list) {
+        drop.innerHTML = list.map(c =>
+            `<div style="padding:.55rem 1rem;cursor:pointer;font-size:.85rem;color:var(--text-primary,#111827);" data-id="${c.id}">${c.name}</div>`
+        ).join('') || `<div style="padding:.55rem 1rem;font-size:.8rem;color:var(--text-muted,#9ca3af);">لا توجد نتائج</div>`;
+        drop.querySelectorAll('[data-id]').forEach(el => {
+            el.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                hid.value  = this.dataset.id;
+                inp.value  = this.textContent;
+                drop.style.display = 'none';
+            });
+            el.addEventListener('mouseenter', function() { this.style.background = 'var(--surface-alt,#f3f4f6)'; });
+            el.addEventListener('mouseleave', function() { this.style.background = ''; });
+        });
+    }
+
+    inp.addEventListener('focus', function () {
+        this.value  = '';
+        hid.value   = '';
+        renderDrop(POS_CUSTOMERS);
+        drop.style.display = 'block';
+    });
+    inp.addEventListener('input', function () {
+        const q = this.value.toLowerCase();
+        renderDrop(POS_CUSTOMERS.filter(c => c.name.toLowerCase().includes(q)));
+        drop.style.display = 'block';
+    });
+    inp.addEventListener('blur', function () {
+        setTimeout(() => { drop.style.display = 'none'; }, 160);
+    });
+})();
 const $discType   = document.getElementById('discountType');
 const $discVal    = document.getElementById('discountValue');
 const $bankRef    = document.getElementById('bankRef');
@@ -650,6 +691,7 @@ document.getElementById('successNew').addEventListener('click', () => {
     $cashRcvd.value  = '';
     $notes.value     = '';
     $customer.value  = '';
+    document.getElementById('posCustomerSearch').value = '';
     $changeVal.textContent = '—';
     loadItems(activeCat, '');
     $search.value = '';

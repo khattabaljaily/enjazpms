@@ -396,7 +396,11 @@ let lineCounter = 0;
         dropdown.style.display = 'block';
     }
 
-    searchInput.addEventListener('focus', openDropdown);
+    searchInput.addEventListener('focus', function () {
+        this.value   = '';
+        hiddenInput.value = '';
+        openDropdown();
+    });
     searchInput.addEventListener('input', openDropdown);
     searchInput.addEventListener('blur', function () {
         setTimeout(() => { dropdown.style.display = 'none'; }, 150);
