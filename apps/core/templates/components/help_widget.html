@@ -49,6 +49,12 @@
                 <a href="{% url 'expenses:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-receipt"></i><span>المصاريف</span>
                 </a>
+                <a href="{% url 'employees:list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-user-tie"></i><span>الموظفون</span>
+                </a>
+                <a href="{% url 'employees:salary_list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-file-invoice-dollar"></i><span>الرواتب</span>
+                </a>
             </div>
         </div>
 
@@ -125,6 +131,21 @@
                         <li>أضف مستخدمين من <strong>الإعدادات ← المستخدمين</strong></li>
                         <li>أنشئ <strong>مجموعات صلاحيات</strong> لتحديد وصول كل دور</li>
                         <li>راجع <strong>سجل النشاط</strong> لمتابعة ما يفعله كل مستخدم</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-employees">
+                    <i class="fa-solid fa-user-tie"></i> الموظفون والرواتب
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-employees">
+                    <ul>
+                        <li><strong>الموظفون:</strong> أضف بيانات كل موظف مع الراتب الأساسي</li>
+                        <li><strong>كشف الراتب:</strong> اختر موظفاً، حدد الفترة، أضف بنود الراتب، ثم ادفع</li>
+                        <li><strong>سلفة فورية:</strong> سجّل السلفة من <em>سلف الموظفين</em> وتُخصم من الخزينة مباشرة</li>
+                        <li><strong>الحوافز والخصومات:</strong> حافز فوري يُصرف نقداً، أو خصم يُضاف لكشف الراتب</li>
                     </ul>
                 </div>
             </div>

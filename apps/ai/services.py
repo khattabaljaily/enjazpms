@@ -163,6 +163,29 @@ def collect_business_context(tenant) -> dict:
     )
     monthly_purchases = _decimal_to_float(recent_purchases)
 
+    # ── Employee payroll (last 30 days) ───────────────────────
+    employee_data = {}
+    try:
+        from apps.employees.models import Employee, SalaryPayment, EmployeeAdvance
+        employee_count = Employee.objects.filter(tenant=tenant, is_active=True).count()
+        monthly_salaries = _decimal_to_float(
+            SalaryPayment.objects
+            .filter(tenant=tenant, status='paid', period_start__gte=month_ago)
+            .aggregate(t=Sum('net_salary'))['t'] or 0
+        )
+        pending_advances = _decimal_to_float(
+            EmployeeAdvance.objects
+            .filter(tenant=tenant, status='active')
+            .aggregate(t=Sum('amount'))['t'] or 0
+        )
+        employee_data = {
+            'active_employees': employee_count,
+            'monthly_salaries': monthly_salaries,
+            'pending_advances': pending_advances,
+        }
+    except Exception:
+        pass
+
     return {
         'period': f"{month_ago} → {now}",
         'currency': tenant.currency or 'SDG',
@@ -175,6 +198,7 @@ def collect_business_context(tenant) -> dict:
         'top_selling_items': top_items,
         'low_stock_items': low_stock,
         'top_debtors': top_debtors,
+        'employee_data': employee_data,
     }
 
 
@@ -225,6 +249,14 @@ def _build_context_message(context: dict) -> str:
         lines.append("\n💳 أعلى أرصدة العملاء:")
         for d in ctx['top_debtors']:
             lines.append(f"  • {d['name']}: {d['balance']:,.0f} {cur_label}")
+
+    emp = ctx.get('employee_data', {})
+    if emp:
+        lines.append(f"\n👥 الموظفون: {emp.get('active_employees', 0)} موظف نشط")
+        if emp.get('monthly_salaries'):
+            lines.append(f"  • رواتب مدفوعة هذا الشهر: {emp['monthly_salaries']:,.0f} {cur_label}")
+        if emp.get('pending_advances'):
+            lines.append(f"  • سلف معلقة: {emp['pending_advances']:,.0f} {cur_label}")
 
     return "\n".join(lines)
 
