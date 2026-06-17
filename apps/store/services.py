@@ -184,18 +184,26 @@ def approve_order(order: OnlineOrder) -> 'SaleInvoice':
     )
 
     # ── Lines ─────────────────────────────────────────────────
+    from decimal import Decimal as D
+    running_subtotal = D('0')
     for line in order.lines.select_related('item').all():
         sale_line = SaleInvoiceLine(
-            tenant     = tenant,
-            invoice    = invoice,
-            item       = line.item,
-            quantity   = line.quantity,
-            unit_price = line.unit_price,
+            tenant            = tenant,
+            invoice           = invoice,
+            item              = line.item,
+            quantity          = line.quantity,
+            unit_price        = line.unit_price,
+            cost_price_snapshot = line.item.cost_price,
         )
         sale_line.calculate()
         sale_line.save()
+        running_subtotal += sale_line.line_subtotal
 
-    invoice.recalculate_totals()
+    # Set totals directly from in-memory computed values (avoids re-query)
+    invoice.subtotal              = running_subtotal
+    invoice.invoice_discount_amount = D('0')
+    invoice.tax_amount            = D('0')
+    invoice.grand_total           = running_subtotal
     invoice.save()
 
     # ── Link ──────────────────────────────────────────────────
