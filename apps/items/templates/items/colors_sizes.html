@@ -149,11 +149,23 @@
   margin-right: .3rem;
 }
 
+/* ── Panel add button — compact height ───────────────────── */
+.cs-panel-head .cx-btn-add {
+  padding: .3rem .85rem;
+  font-size: .78rem;
+  border-radius: 8px;
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 768px) {
   .cs-grid { grid-template-columns: 1fr; gap: 1rem; }
-  .cs-table { display: none; }           /* hide table on mobile */
-  .cs-mobile { display: block; }         /* show cards on mobile */
+  .cs-table { display: none; }
+  .cs-mobile { display: block; }
+  /* override global cx-btn-add { width:100% } — keep it compact in panel head */
+  .cs-panel-head .cx-btn-add {
+    width: auto;
+    align-self: flex-start;
+  }
 }
 </style>
 {% endblock %}
