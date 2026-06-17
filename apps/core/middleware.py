@@ -98,9 +98,15 @@ class TenantMiddleware:
                 # Check if tenant is active and subscription is valid
                 if request.tenant:
                     if not request.tenant.is_active or not request.tenant.is_subscription_valid():
-                        # Redirect to subscription expired page
-                        if not request.path.startswith('/subscription-expired/'):
-                            return redirect('/subscription-expired/')
+                        _expired_allowed = (
+                            '/subscription/',
+                            '/support/',
+                            '/accounts/logout/',
+                            '/static/',
+                            '/media/',
+                        )
+                        if not any(request.path.startswith(p) for p in _expired_allowed):
+                            return redirect('/subscription/')
         else:
             request.tenant = None
         

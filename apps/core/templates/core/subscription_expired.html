@@ -1,28 +1,142 @@
 {% extends "layouts/auth.html" %}
-{% load humanize %}
+{% load static %}
 
 {% block auth_content %}
-<div class="text-center">
-    <div class="mb-4">
-        <i class="fas fa-exclamation-triangle fa-5x text-warning"></i>
+<style>
+.exp-wrapper {
+  display:flex; flex-direction:column; gap:1.25rem;
+  max-width:480px; margin:0 auto;
+}
+.exp-hero {
+  background:linear-gradient(135deg,#1e1b4b 0%,#312e81 60%,#4338ca 100%);
+  border-radius:20px; padding:1.5rem 1.75rem;
+  display:flex; align-items:center; gap:1rem;
+  box-shadow:0 8px 32px rgba(67,56,202,.25);
+  position:relative; overflow:hidden;
+}
+.exp-hero::before {
+  content:''; position:absolute; top:-50px; right:-30px;
+  width:200px; height:200px; border-radius:50%;
+  background:rgba(255,255,255,.05); pointer-events:none;
+}
+.exp-hero__icon {
+  width:52px; height:52px; border-radius:14px;
+  background:rgba(255,255,255,.12);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.5rem; color:#a5b4fc; flex-shrink:0;
+}
+.exp-hero__title { color:#fff; font-size:1.15rem; font-weight:800; margin:0; }
+.exp-hero__sub   { color:rgba(255,255,255,.65); font-size:.82rem; margin-top:2px; }
+
+.exp-alert {
+  display:flex; align-items:flex-start; gap:.85rem;
+  background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.2);
+  border-radius:14px; padding:1rem 1.1rem;
+}
+.exp-alert i { color:#ef4444; font-size:1.2rem; flex-shrink:0; margin-top:2px; }
+.exp-alert__title { font-size:.88rem; font-weight:800; color:#991b1b; margin-bottom:3px; }
+.exp-alert__desc  { font-size:.8rem; color:#7f1d1d; line-height:1.55; }
+
+/* WhatsApp card */
+.exp-wa {
+  display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+  background:linear-gradient(135deg, #052e16 0%, #14532d 60%, #166534 100%);
+  border-radius:18px; padding:1rem 1.25rem;
+  box-shadow:0 4px 20px rgba(22,101,52,.3);
+  position:relative; overflow:hidden;
+}
+.exp-wa::before {
+  content:''; position:absolute; top:-30px; left:-30px;
+  width:120px; height:120px; border-radius:50%;
+  background:rgba(255,255,255,.04); pointer-events:none;
+}
+.exp-wa__icon {
+  width:46px; height:46px; border-radius:13px; flex-shrink:0;
+  background:rgba(255,255,255,.1);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.5rem; color:#4ade80;
+}
+.exp-wa__body { flex:1; min-width:0; }
+.exp-wa__title { font-weight:800; font-size:.9rem; color:#fff; }
+.exp-wa__sub   { font-size:.75rem; color:rgba(255,255,255,.5); margin-top:2px; }
+.exp-wa__btn {
+  background:rgba(255,255,255,.12); color:#fff;
+  border:1.5px solid rgba(255,255,255,.25);
+  border-radius:12px; padding:.55rem 1.1rem;
+  font-size:.85rem; font-weight:700;
+  text-decoration:none; display:inline-flex; align-items:center; gap:.45rem;
+  transition:background .18s; white-space:nowrap;
+}
+.exp-wa__btn:hover { background:rgba(255,255,255,.2); color:#fff; }
+
+.exp-actions {
+  display:flex; flex-direction:column; gap:.65rem;
+}
+.exp-btn {
+  display:flex; align-items:center; justify-content:center; gap:.5rem;
+  width:100%; padding:.7rem 1rem; border-radius:12px;
+  font-size:.88rem; font-weight:700; text-decoration:none;
+  border:none; cursor:pointer; transition:all .15s; font-family:inherit;
+}
+.exp-btn--primary {
+  background:linear-gradient(135deg,#4f46e5,#6d28d9); color:#fff;
+  box-shadow:0 4px 14px rgba(79,70,229,.3);
+}
+.exp-btn--primary:hover { opacity:.9; color:#fff; }
+.exp-btn--ghost {
+  background:transparent; color:var(--text-muted,#64748b);
+  border:1px solid var(--border-color,#e2e8f0);
+}
+.exp-btn--ghost:hover { background:var(--hover-bg,#f8fafc); color:var(--text-main,#1e293b); }
+</style>
+
+<div class="exp-wrapper">
+
+  <!-- Hero -->
+  <div class="exp-hero">
+    <div class="exp-hero__icon"><i class="fas fa-clock"></i></div>
+    <div>
+      <div class="exp-hero__title">انتهى اشتراكك</div>
+      <div class="exp-hero__sub">نظام إنجاز لإدارة المخزون والمبيعات</div>
     </div>
-    
-    <h3 class="mb-3">انتهى اشتراكك</h3>
-    
-    <p class="text-muted mb-4">
-        عذراً، اشتراكك في النظام قد انتهى.<br>
-        يرجى تجديد الاشتراك للاستمرار في استخدام النظام.
-    </p>
-    
-    <div class="d-grid gap-2">
-        <a href="{% url 'core:subscription' %}" class="btn btn-primary">
-            <i class="fas fa-credit-card me-2"></i>
-            تجديد الاشتراك
-        </a>
-        <a href="{% url 'accounts:logout' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-sign-out-alt me-2"></i>
-            تسجيل الخروج
-        </a>
+  </div>
+
+  <!-- Alert -->
+  <div class="exp-alert">
+    <i class="fas fa-ban"></i>
+    <div>
+      <div class="exp-alert__title">الوصول موقوف مؤقتاً</div>
+      <div class="exp-alert__desc">
+        انتهت صلاحية اشتراكك. بياناتك محفوظة ومؤمّنة تماماً وستعود للعمل فور تجديد الاشتراك.
+        تواصل مع فريق إنجاز لتجديد الاشتراك في أقرب وقت.
+      </div>
     </div>
+  </div>
+
+  <!-- WhatsApp -->
+  <div class="exp-wa">
+    <div class="exp-wa__icon"><i class="fab fa-whatsapp"></i></div>
+    <div class="exp-wa__body">
+      <div class="exp-wa__title">تواصل معنا عبر واتساب</div>
+      <div class="exp-wa__sub">للتواصل السريع مع فريق إنجاز</div>
+    </div>
+    {% with user_name=request.user.get_full_name|default:request.user.username tenant_name=request.tenant.name|default:"" %}
+    <a href="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج إنجاز.{% endfilter %}"
+       target="_blank" rel="noopener" class="exp-wa__btn">
+      <i class="fab fa-whatsapp"></i> تواصل معنا
+    </a>
+    {% endwith %}
+  </div>
+
+  <!-- Actions -->
+  <div class="exp-actions">
+    <a href="{% url 'core:tenant_support' %}" class="exp-btn exp-btn--primary">
+      <i class="fas fa-headset"></i> فتح تذكرة دعم
+    </a>
+    <a href="{% url 'accounts:logout' %}" class="exp-btn exp-btn--ghost">
+      <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+    </a>
+  </div>
+
 </div>
 {% endblock %}

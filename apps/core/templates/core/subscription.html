@@ -6,7 +6,7 @@
 {% block page_description %}مراجعة حالة الباقة الحالية، مدة الاشتراك، والحدود المتاحة للنشاط التجاري{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/subscription.css' %}?v=2.0">
+<link rel="stylesheet" href="{% static 'css/subscription.css' %}?v=2.1">
 {% endblock %}
 
 {% block breadcrumb_items %}
@@ -15,6 +15,23 @@
 
 {% block content %}
 <div class="sub-wrapper">
+
+    <!-- ─── Expired Alert ─────────────────────────────────────── -->
+    {% if subscription_status_tone == 'danger' %}
+    <div class="sub-expired-alert">
+        <div class="sub-expired-alert__icon"><i class="fas fa-ban"></i></div>
+        <div class="sub-expired-alert__body">
+            <div class="sub-expired-alert__title">انتهى اشتراكك</div>
+            <div class="sub-expired-alert__desc">
+                تم إيقاف الوصول للنظام مؤقتاً. بياناتك محفوظة ومؤمّنة وستعود للعمل فور التجديد.
+                تواصل مع فريق إنجاز لتجديد الاشتراك.
+            </div>
+        </div>
+        <a href="{% url 'core:tenant_support' %}" class="sub-expired-alert__btn">
+            <i class="fas fa-headset"></i> طلب الدعم
+        </a>
+    </div>
+    {% endif %}
 
     <!-- ─── Hero Banner ─────────────────────────────────────────── -->
     <div class="sub-hero">
@@ -54,8 +71,10 @@
                             stroke-dashoffset="314"/>
                 </svg>
                 <div class="sub-ring__label">
-                    <span class="sub-ring__num" id="subDaysNum">{% if days_remaining != None %}{{ days_remaining }}{% else %}∞{% endif %}</span>
-                    <span class="sub-ring__text">يوم متبقي</span>
+                    <span class="sub-ring__num {% if subscription_status_tone == 'danger' %}sub-ring__num--expired{% endif %}" id="subDaysNum">
+                        {% if subscription_status_tone == 'danger' %}<i class="fas fa-ban"></i>{% elif days_remaining != None %}{{ days_remaining }}{% else %}∞{% endif %}
+                    </span>
+                    <span class="sub-ring__text">{% if subscription_status_tone == 'danger' %}منتهي{% else %}يوم متبقي{% endif %}</span>
                 </div>
             </div>
         </div>
@@ -72,13 +91,13 @@
                 <div class="sub-stat__value">{{ current_tenant.subscription_start|date:"Y-m-d"|default:"-" }}</div>
             </div>
         </div>
-        <div class="sub-stat">
-            <div class="sub-stat__icon sub-stat__icon--violet">
+        <div class="sub-stat {% if subscription_status_tone == 'danger' %}sub-stat--danger{% endif %}">
+            <div class="sub-stat__icon {% if subscription_status_tone == 'danger' %}sub-stat__icon--danger{% else %}sub-stat__icon--violet{% endif %}">
                 <i class="fas fa-calendar-times"></i>
             </div>
             <div class="sub-stat__info">
                 <div class="sub-stat__label">نهاية الاشتراك</div>
-                <div class="sub-stat__value">{{ current_tenant.subscription_expires|date:"Y-m-d"|default:"-" }}</div>
+                <div class="sub-stat__value {% if subscription_status_tone == 'danger' %}sub-stat__value--danger{% endif %}">{{ current_tenant.subscription_expires|date:"Y-m-d"|default:"-" }}</div>
             </div>
         </div>
         <div class="sub-stat">
@@ -90,13 +109,13 @@
                 <div class="sub-stat__value">{{ current_tenant.business_type.name_ar|default:"-" }}</div>
             </div>
         </div>
-        <div class="sub-stat">
-            <div class="sub-stat__icon sub-stat__icon--amber">
-                <i class="fas fa-signal"></i>
+        <div class="sub-stat {% if subscription_status_tone == 'danger' %}sub-stat--danger{% endif %}">
+            <div class="sub-stat__icon {% if subscription_status_tone == 'danger' %}sub-stat__icon--danger{% else %}sub-stat__icon--amber{% endif %}">
+                <i class="fas fa-{% if subscription_status_tone == 'danger' %}ban{% else %}signal{% endif %}"></i>
             </div>
             <div class="sub-stat__info">
                 <div class="sub-stat__label">حالة الحساب</div>
-                <div class="sub-stat__value">{{ subscription_status_label }}</div>
+                <div class="sub-stat__value {% if subscription_status_tone == 'danger' %}sub-stat__value--danger{% endif %}">{{ subscription_status_label }}</div>
             </div>
         </div>
     </div>
@@ -171,7 +190,53 @@
             </div>
         </div>
 
-        <!-- Notes -->
+        <!-- Notes / Expired Action -->
+        {% if subscription_status_tone == 'danger' %}
+        <div class="sub-panel sub-panel--danger">
+            <div class="sub-panel__header sub-panel__header--danger">
+                <i class="fas fa-triangle-exclamation"></i>
+                إجراءات مطلوبة
+            </div>
+            <div class="sub-panel__body">
+                <div class="sub-action-steps">
+                    <div class="sub-action-step">
+                        <div class="sub-action-step__num">١</div>
+                        <p class="sub-action-step__text">افتح صفحة الدعم الفني وأرسل طلب تجديد الاشتراك أو تواصل معنا عبر واتساب.</p>
+                    </div>
+                    <div class="sub-action-step">
+                        <div class="sub-action-step__num">٢</div>
+                        <p class="sub-action-step__text">سيتواصل معك فريق إنجاز لإتمام التجديد وإعادة تفعيل حسابك.</p>
+                    </div>
+                    <div class="sub-action-step">
+                        <div class="sub-action-step__num">٣</div>
+                        <p class="sub-action-step__text">بعد التجديد تعود جميع بياناتك وصلاحياتك كما كانت دون أي فقدان.</p>
+                    </div>
+                </div>
+                <a href="{% url 'core:tenant_support' %}" class="sub-support-btn">
+                    <i class="fas fa-headset"></i>
+                    فتح صفحة الدعم الفني
+                </a>
+                {% with user_name=request.user.get_full_name|default:request.user.username tenant_name=request.tenant.name|default:"" %}
+                {# Mobile: direct link — Desktop: open QR modal #}
+                <a href="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج إنجاز.{% endfilter %}"
+                   target="_blank" rel="noopener"
+                   class="sub-wa-btn sub-wa-btn--mobile"
+                   id="subWaLinkMobile">
+                    <i class="fab fa-whatsapp"></i>
+                    تواصل عبر واتساب
+                </a>
+                <button type="button"
+                        class="sub-wa-btn sub-wa-btn--desktop"
+                        id="subWaBtnDesktop"
+                        data-wa-url="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج إنجاز.{% endfilter %}"
+                        data-bs-toggle="modal" data-bs-target="#waQrModal">
+                    <i class="fab fa-whatsapp"></i>
+                    تواصل عبر واتساب
+                </button>
+                {% endwith %}
+            </div>
+        </div>
+        {% else %}
         <div class="sub-panel">
             <div class="sub-panel__header">
                 <i class="fas fa-lightbulb"></i>
@@ -200,24 +265,92 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
     </div>
 </div>
+
+<!-- ── WhatsApp QR Modal (desktop only) ──────────────────── -->
+{% if subscription_status_tone == 'danger' %}
+<div class="modal fade" id="waQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:340px;">
+        <div class="modal-content cx-modal" style="border-radius:20px;overflow:hidden;">
+            <div class="cx-modal-header" style="background:linear-gradient(135deg,#14532d,#166534);border:none;">
+                <div>
+                    <h5 class="cx-modal-title" style="color:#fff;">
+                        <i class="fab fa-whatsapp me-2" style="color:#4ade80;"></i>
+                        تواصل عبر واتساب
+                    </h5>
+                    <p class="cx-modal-subtitle" style="color:rgba(255,255,255,.6);">امسح الكود بكاميرا جوالك</p>
+                </div>
+                <button type="button" data-bs-dismiss="modal"
+                        style="width:34px;height:34px;border-radius:9px;border:1.5px solid rgba(255,255,255,.25);
+                               background:rgba(255,255,255,.12);color:#fff;cursor:pointer;
+                               display:inline-flex;align-items:center;justify-content:center;
+                               font-size:.85rem;transition:background .15s;flex-shrink:0;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="cx-modal-body" style="display:flex;flex-direction:column;align-items:center;gap:1rem;padding:1.5rem;">
+                <canvas id="subWaQrCanvas" style="border-radius:14px;background:#fff;padding:8px;box-shadow:0 2px 16px rgba(0,0,0,.15);"></canvas>
+                <p style="font-size:.78rem;color:var(--text-muted,#64748b);text-align:center;margin:0;">
+                    أو افتح الرابط مباشرة من جوالك
+                </p>
+                <a id="subWaDirectLink" href="#" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:700;color:#15803d;text-decoration:none;">
+                    <i class="fab fa-whatsapp"></i> افتح المحادثة
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
 (function () {
+    /* Ring animation */
     var days = {% if days_remaining != None %}{{ days_remaining }}{% else %}-1{% endif %};
     var fill = document.getElementById('subRingFill');
-    if (!fill || days < 0) return;
-    var max = 365;
-    var fraction = Math.min(days / max, 1);
-    var offset = 314 * (1 - fraction);
-    setTimeout(function () {
-        fill.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)';
-        fill.style.strokeDashoffset = offset;
-    }, 200);
+    if (fill && days >= 0) {
+        var offset = 314 * (1 - Math.min(days / 365, 1));
+        setTimeout(function () {
+            fill.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)';
+            fill.style.strokeDashoffset = offset;
+        }, 200);
+    }
+
+    {% if subscription_status_tone == 'danger' %}
+    /* WhatsApp: show mobile btn on touch/small screens, desktop btn otherwise */
+    var isMobile = window.matchMedia('(pointer:coarse),(max-width:768px)').matches;
+    var btnMobile  = document.getElementById('subWaLinkMobile');
+    var btnDesktop = document.getElementById('subWaBtnDesktop');
+    if (btnMobile)  btnMobile.style.display  = isMobile ? '' : 'none';
+    if (btnDesktop) btnDesktop.style.display = isMobile ? 'none' : '';
+
+    /* QR generation when modal opens */
+    var waUrl = btnDesktop ? btnDesktop.getAttribute('data-wa-url') : '';
+    var modalEl = document.getElementById('waQrModal');
+    if (modalEl && waUrl) {
+        modalEl.addEventListener('show.bs.modal', function () {
+            var canvas = document.getElementById('subWaQrCanvas');
+            var link   = document.getElementById('subWaDirectLink');
+            if (link) link.href = waUrl;
+            if (canvas && !canvas.dataset.loaded) {
+                var img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function () {
+                    canvas.width  = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    canvas.getContext('2d').drawImage(img, 0, 0);
+                    canvas.dataset.loaded = '1';
+                };
+                img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=6&color=15803d&data=' + encodeURIComponent(waUrl);
+            }
+        });
+    }
+    {% endif %}
 }());
 </script>
 {% endblock %}

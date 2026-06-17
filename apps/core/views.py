@@ -1487,7 +1487,6 @@ def tenant_settings_update_api(request):
 
 
 @login_required
-@require_permission('view_tenant_settings')
 def subscription_info(request):
     """معلومات الاشتراك"""
     from .models import Tenant

@@ -413,6 +413,145 @@
     padding-top: 0.1rem;
 }
 
+/* ── Expired Alert Banner ────────────────────────────────── */
+.sub-expired-alert {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 60%, #991b1b 100%);
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+.sub-expired-alert::before {
+    content: '';
+    position: absolute;
+    top: -40px; left: -40px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.04);
+    pointer-events: none;
+}
+.sub-expired-alert__icon {
+    width: 46px; height: 46px;
+    border-radius: 13px; flex-shrink: 0;
+    background: rgba(255,255,255,.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; color: #fca5a5;
+}
+.sub-expired-alert__body { flex: 1; min-width: 0; }
+.sub-expired-alert__title {
+    font-weight: 800; font-size: .95rem; color: #fff; margin-bottom: 3px;
+}
+.sub-expired-alert__desc {
+    font-size: .78rem; color: rgba(255,255,255,.65); line-height: 1.5;
+}
+.sub-expired-alert__btn {
+    display: inline-flex; align-items: center; gap: .45rem;
+    background: rgba(255,255,255,.15); color: #fff;
+    border: 1.5px solid rgba(255,255,255,.28);
+    border-radius: 11px; padding: .55rem 1.1rem;
+    font-size: .83rem; font-weight: 700;
+    text-decoration: none; white-space: nowrap;
+    transition: background .15s;
+}
+.sub-expired-alert__btn:hover { background: rgba(255,255,255,.25); color: #fff; }
+
+/* ── Expired Stats ───────────────────────────────────────── */
+.sub-stat--danger {
+    border-color: rgba(239, 68, 68, 0.25) !important;
+    background: rgba(239, 68, 68, 0.04);
+}
+.sub-stat__icon--danger { background: rgba(239,68,68,.12); color: #ef4444; }
+.sub-stat__value--danger { color: #dc2626; }
+
+/* ── Ring expired ────────────────────────────────────────── */
+.sub-ring__num--expired { font-size: 1.2rem; color: #f87171; }
+
+/* ── Panel Danger ────────────────────────────────────────── */
+.sub-panel--danger {
+    border-color: rgba(239, 68, 68, 0.25);
+}
+.sub-panel__header--danger {
+    background: rgba(239, 68, 68, 0.06);
+    color: #dc2626;
+    border-bottom-color: rgba(239, 68, 68, 0.15);
+}
+.sub-panel__header--danger i { color: #ef4444; }
+
+/* ── Action Steps ────────────────────────────────────────── */
+.sub-action-steps {
+    display: flex;
+    flex-direction: column;
+    gap: .65rem;
+    margin-bottom: 1.1rem;
+}
+.sub-action-step {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    padding: .75rem .9rem;
+    border: 1px solid rgba(239,68,68,.15);
+    border-radius: 12px;
+    background: rgba(239,68,68,.04);
+}
+.sub-action-step__num {
+    width: 28px; height: 28px; flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(239,68,68,.12);
+    color: #dc2626;
+    font-size: .8rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+}
+.sub-action-step__text {
+    font-size: .8rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0;
+    padding-top: .15rem;
+}
+
+/* ── Support / WhatsApp buttons ──────────────────────────── */
+.sub-support-btn,
+.sub-wa-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    width: 100%;
+    padding: .7rem 1rem;
+    border-radius: 11px;
+    font-size: .85rem;
+    font-weight: 700;
+    text-decoration: none;
+    margin-bottom: .6rem;
+    transition: opacity .15s, transform .15s;
+}
+.sub-support-btn:last-child,
+.sub-wa-btn:last-child { margin-bottom: 0; }
+.sub-support-btn {
+    background: linear-gradient(135deg, #4f46e5, #6d28d9);
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(79,70,229,.3);
+}
+.sub-support-btn:hover { opacity: .9; color: #fff; transform: translateY(-1px); }
+.sub-wa-btn {
+    background: linear-gradient(135deg, #14532d, #166534);
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(22,101,52,.3);
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+.sub-wa-btn:hover { opacity: .9; color: #fff; transform: translateY(-1px); }
+
+/* mobile btn hidden by default — JS overrides based on pointer type */
+.sub-wa-btn--mobile  { display: none; }
+.sub-wa-btn--desktop { display: flex; }
+
 /* ── Dark Mode ───────────────────────────────────────────── */
 [data-theme="dark"] .sub-stat,
 [data-theme="dark"] .sub-panel {
