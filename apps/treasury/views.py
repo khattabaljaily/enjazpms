@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import TreasuryForm
 from .models import Treasury, TreasuryMovement
+from .reports import REFERENCE_TYPE_AR
 
 
 def _ensure_tenant(request):
@@ -184,18 +185,19 @@ def treasury_transactions_api(request, pk):
     qs = (
         TreasuryMovement.objects.for_tenant(tenant)
         .filter(treasury=treasury)
-        .order_by('-movement_date', '-id')[:200]
+        .order_by('-id')[:200]
     )
 
     data = [
         {
             'id': m.id,
             'movement_date': m.movement_date.isoformat(),
-            'movement_type': m.movement_type,
+            'movement_type': m.get_movement_type_display(),
+            'movement_type_key': m.movement_type,
             'amount': str(m.amount),
             'running_balance': str(m.running_balance),
-            'reference_type': m.reference_type or '—',
-            'description': m.description or '—',
+            'reference_type': REFERENCE_TYPE_AR.get(m.reference_type, m.reference_type) if m.reference_type else '',
+            'description': m.description or '',
         }
         for m in qs
     ]
