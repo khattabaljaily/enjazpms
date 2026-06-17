@@ -13,6 +13,7 @@ urlpatterns = [
     path('api/<int:pk>/delete/',views.employee_delete,     name='delete'),
     path('<int:pk>/statement/', views.employee_statement,  name='statement'),
     path('api/<int:pk>/pending-advances/', views.employee_pending_advances_api, name='pending_advances_api'),
+    path('api/<int:pk>/pending-incentives/', views.employee_pending_incentives_api, name='pending_incentives_api'),
 
     # ── Advances ─────────────────────────────────────────────────────────────
     path('advances/',               views.advance_list,       name='advance_list'),

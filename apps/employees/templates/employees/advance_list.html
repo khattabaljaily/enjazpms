@@ -317,8 +317,10 @@
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
             body: JSON.stringify(payload),
         })
-        .then(r => r.json())
-        .then(function (resp) {
+        .then(async function (r) {
+            const text = await r.text();
+            let resp;
+            try { resp = JSON.parse(text); } catch (e) { resp = { success: false, message: text || 'خطأ في الاتصال' }; }
             $btn.html(orig).prop('disabled', false);
             if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
             advModal.hide();

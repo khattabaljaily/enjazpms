@@ -160,6 +160,7 @@
         dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
         ajax: {
             url: "{% url 'purchases:order_api' %}",
+            cache: false,
             data: function(d) {
                 d.status = $('#orderStatusFilter').val();
             }

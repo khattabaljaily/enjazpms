@@ -157,6 +157,15 @@
                             <label class="cx-label">تفاصيل الخصومات</label>
                             <textarea id="salDeductionsNotes" class="cx-input" rows="2" placeholder="سبب الخصم..."></textarea>
                         </div>
+                        <div class="col-12" id="pendingSalaryItemsWrap" style="display:none">
+                            <div class="p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold">الحوافز والخصومات المؤجلة</span>
+                                    <span class="small text-muted" id="pendingSalaryItemsCount">0 عناصر</span>
+                                </div>
+                                <div id="pendingSalaryItems" class="d-flex flex-column gap-2"></div>
+                            </div>
+                        </div>
                         <div class="col-12">
                             <div style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">
                                 <span class="fw-bold">صافي الراتب المستحق</span>
@@ -288,6 +297,7 @@
     function payUrl(id)    { return '/employees/salaries/api/' + id + '/pay/'; }
     function cancelUrl(id) { return '/employees/salaries/api/' + id + '/cancel/'; }
     function pendAdvUrl(id){ return '/employees/api/' + id + '/pending-advances/'; }
+    function pendIncUrl(id){ return '/employees/api/' + id + '/pending-incentives/'; }
 
     const salModalEl    = document.getElementById('salaryModal');
     const viewModalEl   = document.getElementById('viewSalaryModal');
@@ -385,6 +395,64 @@
         document.getElementById(id).addEventListener('input', calcNet);
     });
 
+    function renderPendingIncentives(items) {
+        const wrap = document.getElementById('pendingSalaryItemsWrap');
+        const count = document.getElementById('pendingSalaryItemsCount');
+        const box = document.getElementById('pendingSalaryItems');
+        if (!items.length) {
+            wrap.style.display = 'none';
+            box.innerHTML = '';
+            count.textContent = '0 عناصر';
+            return;
+        }
+        wrap.style.display = '';
+        count.textContent = items.length + ' عناصر';
+        box.innerHTML = items.map(item => `
+            <div class="d-flex justify-content-between align-items-start gap-3 p-2 rounded-3" style="background:#fff;border:1px solid #e5e7eb;">
+                <div>
+                    <div class="fw-semibold">${item.type_display}</div>
+                    <div class="small text-muted">${item.description}</div>
+                </div>
+                <div class="text-end">
+                    <div class="fw-bold ${item.type === 'bonus' ? 'text-success' : 'text-danger'}">${EnjazIMS.formatMoney(item.amount)}</div>
+                    <div class="small text-muted">${item.date}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function updatePendingSalaryData() {
+        const employee = document.getElementById('salEmployee').value;
+        const start = document.getElementById('salPeriodStart').value;
+        const end = document.getElementById('salPeriodEnd').value;
+
+        if (!employee || !start || !end) {
+            document.getElementById('pendingSalaryItemsWrap').style.display = 'none';
+            document.getElementById('pendingSalaryItems').innerHTML = '';
+            return;
+        }
+
+        const url = new URL(pendIncUrl(employee), window.location.origin);
+        url.searchParams.set('period_start', start);
+        url.searchParams.set('period_end', end);
+
+        fetch(url)
+            .then(r => r.json())
+            .then(function (d) {
+                renderPendingIncentives(d.items || []);
+                if (d.bonus_total !== undefined) {
+                    document.getElementById('salBonus').value = d.bonus_total;
+                }
+                if (d.deduction_total !== undefined) {
+                    document.getElementById('salDeductions').value = d.deduction_total;
+                }
+                calcNet();
+            })
+            .catch(() => {
+                document.getElementById('pendingSalaryItemsWrap').style.display = 'none';
+            });
+    }
+
     /* ── When employee changes → prefill salary + pending advances ── */
     document.getElementById('salEmployee').addEventListener('change', function () {
         const opt = this.options[this.selectedIndex];
@@ -401,6 +469,12 @@
                     document.getElementById('salAdvancesDeducted').max = d.total;
                 });
         }
+        updatePendingSalaryData();
+    });
+
+    ['salPeriodStart', 'salPeriodEnd'].forEach(function (id) {
+        document.getElementById(id).addEventListener('input', updatePendingSalaryData);
+        document.getElementById(id).addEventListener('change', updatePendingSalaryData);
     });
 
     function setSalPM(method) {
@@ -429,6 +503,8 @@
         document.getElementById('salNotes').value = '';
         document.getElementById('salNetDisplay').textContent = '0.00';
         document.getElementById('pendingAdvLabel').textContent = '';
+        document.getElementById('pendingSalaryItems').innerHTML = '';
+        document.getElementById('pendingSalaryItemsWrap').style.display = 'none';
         setSalPM('cash');
         salModal.show();
     });
@@ -486,6 +562,19 @@
             .then(function (d) {
                 $('#viewSalEmployee').text(d.employee);
                 $('#viewSalPeriod').text(d.period_start + ' — ' + d.period_end);
+
+                const deferredItemsHtml = Array.isArray(d.deferred_items) && d.deferred_items.length
+                    ? d.deferred_items.map(item => `
+                        <div class="cx-info-card" style="grid-column:1/-1">
+                            <div class="cx-info-card-icon ${item.type === 'bonus' ? 'cx-info-icon--success' : 'cx-info-icon--danger'}"><i class="fas ${item.type === 'bonus' ? 'fa-star' : 'fa-minus-circle'}"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">${item.type_display} — ${item.date}</span>
+                                <span class="cx-info-card-value">${item.description} (${EnjazIMS.formatMoney(item.amount)})</span>
+                            </div>
+                        </div>
+                    `).join('')
+                    : '';
+
                 $('#viewSalBody').html(`
                     <div class="cx-info-card">
                         <div class="cx-info-card-icon cx-info-icon--balance"><i class="fas fa-wallet"></i></div>
@@ -512,6 +601,7 @@
                         <div class="cx-info-card-content"><span class="cx-info-card-label">الحالة</span><span class="cx-info-card-value">${d.status_display}</span></div>
                     </div>
                     ${d.treasury ? `<div class="cx-info-card"><div class="cx-info-card-icon cx-info-icon--credit"><i class="fas fa-building-columns"></i></div><div class="cx-info-card-content"><span class="cx-info-card-label">الخزينة</span><span class="cx-info-card-value">${d.treasury}</span></div></div>` : ''}
+                    ${deferredItemsHtml}
                     ${d.deductions_notes ? `<div class="cx-info-card" style="grid-column:1/-1"><div class="cx-info-card-icon cx-info-icon--notes"><i class="fas fa-note-sticky"></i></div><div class="cx-info-card-content"><span class="cx-info-card-label">تفاصيل الخصومات</span><span class="cx-info-card-value">${d.deductions_notes}</span></div></div>` : ''}
                     ${d.notes ? `<div class="cx-info-card" style="grid-column:1/-1"><div class="cx-info-card-icon cx-info-icon--notes"><i class="fas fa-note-sticky"></i></div><div class="cx-info-card-content"><span class="cx-info-card-label">ملاحظات</span><span class="cx-info-card-value">${d.notes}</span></div></div>` : ''}
                 `);

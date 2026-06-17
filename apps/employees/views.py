@@ -348,34 +348,45 @@ def advance_create(request):
         treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
 
     from django.db import transaction
-    with transaction.atomic():
-        adv = EmployeeAdvance.objects.create(
-            tenant=tenant,
-            employee=emp,
-            amount=amount,
-            date=data.get('date') or timezone.localdate(),
-            payment_method=payment_method,
-            treasury=treasury,
-            bank_reference=(data.get('bank_reference') or '').strip(),
-            notes=(data.get('notes') or '').strip(),
-            created_by=request.user,
-            updated_by=request.user,
-        )
+    try:
+        with transaction.atomic():
+            if payment_method == 'cash' and treasury:
+                treasury = Treasury.objects.select_for_update().get(pk=treasury.pk)
+                current_balance = treasury.current_balance or Decimal('0')
+                if current_balance < amount:
+                    raise ValueError(
+                        f"رصيد الخزينة غير كافٍ. الرصيد الحالي: {current_balance} والمطلوب صرفه: {amount}."
+                    )
 
-        if payment_method == 'cash' and treasury:
-            mv = post_treasury_disbursement(
+            adv = EmployeeAdvance.objects.create(
                 tenant=tenant,
+                employee=emp,
                 amount=amount,
-                date=adv.date,
-                reference_type='employee_advance',
-                reference_id=adv.pk,
-                description=f'سلفة {emp.name}',
-                user=request.user,
+                date=data.get('date') or timezone.localdate(),
+                payment_method=payment_method,
                 treasury=treasury,
+                bank_reference=(data.get('bank_reference') or '').strip(),
+                notes=(data.get('notes') or '').strip(),
+                created_by=request.user,
+                updated_by=request.user,
             )
-            if mv:
-                adv.treasury_movement = mv
-                adv.save(update_fields=['treasury_movement', 'updated_at'])
+
+            if payment_method == 'cash' and treasury:
+                mv = post_treasury_disbursement(
+                    tenant=tenant,
+                    amount=amount,
+                    date=adv.date,
+                    reference_type='employee_advance',
+                    reference_id=adv.pk,
+                    description=f'سلفة {emp.name}',
+                    user=request.user,
+                    treasury=treasury,
+                )
+                if mv:
+                    adv.treasury_movement = mv
+                    adv.save(update_fields=['treasury_movement', 'updated_at'])
+    except ValueError as e:
+        return _err(str(e))
 
     log_activity(request, 'create', f'سلفة موظف: {emp.name} — {amount}')
     return JsonResponse({'success': True, 'id': adv.pk})
@@ -588,6 +599,17 @@ def salary_cancel(request, pk):
 def salary_detail_api(request, pk):
     tenant = _tenant(request)
     sp = get_object_or_404(EmployeeSalaryPayment, pk=pk, tenant=tenant)
+    deferred_items = [
+        {
+            'id': inc.pk,
+            'type': inc.type,
+            'type_display': inc.get_type_display(),
+            'description': inc.description,
+            'amount': str(inc.amount),
+            'date': str(inc.date),
+        }
+        for inc in sp.get_pending_with_salary_incentives()
+    ]
     return JsonResponse({
         'id': sp.pk,
         'employee': sp.employee.name,
@@ -605,6 +627,7 @@ def salary_detail_api(request, pk):
         'status': sp.status,
         'status_display': sp.get_status_display(),
         'notes': sp.notes,
+        'deferred_items': deferred_items,
     })
 
 
@@ -825,4 +848,42 @@ def employee_pending_advances_api(request, pk):
             for a in advances
         ],
         'total': str(total),
+    })
+
+
+@login_required
+def employee_pending_incentives_api(request, pk):
+    """إرجاع الحوافز/الخصومات المؤجلة للموظف ضمن فترة الراتب المحددة."""
+    tenant = _tenant(request)
+    emp = get_object_or_404(Employee, pk=pk, tenant=tenant)
+    start = request.GET.get('period_start')
+    end = request.GET.get('period_end')
+
+    qs = emp.incentives.filter(status='pending', payout='with_salary')
+    if start:
+        qs = qs.filter(date__gte=start)
+    if end:
+        qs = qs.filter(date__lte=end)
+
+    bonus_total = Decimal('0')
+    deduction_total = Decimal('0')
+    items = []
+    for inc in qs.order_by('date', 'pk'):
+        items.append({
+            'id': inc.pk,
+            'type': inc.type,
+            'type_display': inc.get_type_display(),
+            'amount': str(inc.amount),
+            'description': inc.description,
+            'date': str(inc.date),
+        })
+        if inc.type == 'bonus':
+            bonus_total += inc.amount
+        else:
+            deduction_total += inc.amount
+
+    return JsonResponse({
+        'items': items,
+        'bonus_total': str(bonus_total),
+        'deduction_total': str(deduction_total),
     })

@@ -308,6 +308,7 @@ function initTable() {
         dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
         ajax: {
             url: QUOTES_API_URL,
+            cache: false,
             data: function (d) {
                 d.status = document.getElementById('filterStatus').value;
                 d.customer_id = document.getElementById('filterCustomer').value;

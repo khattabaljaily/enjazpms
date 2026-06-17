@@ -373,6 +373,7 @@ function initTable() {
         dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
         ajax: {
             url: SALES_API_URL,
+            cache: false,
             data: function (d) {
                 d.status = document.getElementById('filterStatus').value;
                 d.payment_method = document.getElementById('filterPayment').value;

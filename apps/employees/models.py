@@ -202,7 +202,7 @@ class EmployeeSalaryPayment(TenantMixin):
 
     def get_pending_with_salary_incentives(self):
         return self.employee.incentives.filter(
-            status='pending',
+            status__in=('pending', 'paid'),
             payout='with_salary',
             date__range=(self.period_start, self.period_end),
         ).order_by('date', 'pk')
