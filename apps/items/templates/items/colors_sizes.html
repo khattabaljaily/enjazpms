@@ -6,7 +6,6 @@
 <style>
 /* ── Layout grid ─────────────────────────────────────────── */
 .cs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-@media (max-width: 768px) { .cs-grid { grid-template-columns: 1fr; } }
 
 /* ── Panel ───────────────────────────────────────────────── */
 .cs-panel {
@@ -15,51 +14,53 @@
   border-radius: 16px; overflow: hidden;
 }
 .cs-panel-head {
-  padding: 1rem 1.25rem;
+  padding: .75rem 1rem;
   border-bottom: 1px solid var(--border-light, #e5e7eb);
   display: flex; align-items: center; justify-content: space-between;
   background: var(--surface-alt, #f9fafb);
 }
 .cs-panel-title {
-  font-size: .9rem; font-weight: 700;
+  font-size: .875rem; font-weight: 700;
   color: var(--text-primary, #111827);
-  display: flex; align-items: center; gap: .5rem;
+  display: flex; align-items: center; gap: .45rem;
 }
-.cs-panel-title i { color: #6366f1; }
+.cs-panel-title i { color: #6366f1; font-size: .85rem; }
 
-/* ── Table ───────────────────────────────────────────────── */
-.cs-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+/* ── Desktop Table (compact) ─────────────────────────────── */
+.cs-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
 .cs-table th {
-  padding: .6rem 1rem; font-size: .72rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: .04em;
+  padding: .4rem .75rem; font-size: .68rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .05em;
   color: var(--text-muted, #9ca3af);
   border-bottom: 1px solid var(--border-light, #e5e7eb);
   background: var(--surface-alt, #f9fafb);
+  white-space: nowrap;
 }
 .cs-table td {
-  padding: .65rem 1rem;
+  padding: .42rem .75rem;
   border-bottom: 1px solid var(--border-light, #e5e7eb);
   color: var(--text-primary, #111827);
   vertical-align: middle;
+  white-space: nowrap;
 }
 .cs-table tr:last-child td { border-bottom: none; }
-.cs-table tr:hover td { background: var(--surface-alt, #f9fafb); }
+.cs-table tr:hover td { background: rgba(99,102,241,.03); }
 
 /* ── Color swatch ────────────────────────────────────────── */
-.cs-swatch {
-  display: inline-flex; align-items: center; gap: .55rem;
-}
+.cs-swatch { display: inline-flex; align-items: center; gap: .5rem; }
 .cs-swatch-dot {
-  width: 22px; height: 22px; border-radius: 50%;
-  border: 2px solid rgba(0,0,0,.08);
-  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
   flex-shrink: 0;
 }
+.cs-hex { font-size: .7rem; color: var(--text-muted,#9ca3af); font-family: monospace; }
 
 /* ── Status badge ────────────────────────────────────────── */
 .cs-badge {
-  display: inline-block; padding: .2rem .6rem;
-  border-radius: 20px; font-size: .7rem; font-weight: 600;
+  display: inline-block; padding: .15rem .5rem;
+  border-radius: 20px; font-size: .68rem; font-weight: 600;
+  white-space: nowrap;
 }
 .cs-badge--on  { background: #d1fae5; color: #065f46; }
 .cs-badge--off { background: #f3f4f6; color: #6b7280; }
@@ -67,37 +68,90 @@
 
 /* ── Empty state ─────────────────────────────────────────── */
 .cs-empty {
-  text-align: center; padding: 2.5rem 1rem;
-  color: var(--text-muted, #9ca3af); font-size: .85rem;
+  text-align: center; padding: 2rem 1rem;
+  color: var(--text-muted, #9ca3af); font-size: .82rem;
 }
-.cs-empty i { display: block; font-size: 1.75rem; margin-bottom: .6rem; opacity: .35; }
+.cs-empty i { display: block; font-size: 1.5rem; margin-bottom: .5rem; opacity: .3; }
 
 /* ── Action buttons ──────────────────────────────────────── */
 .cs-act {
   background: none; border: none; cursor: pointer;
-  width: 30px; height: 30px;
+  width: 26px; height: 26px;
   display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 7px; color: var(--text-muted, #9ca3af);
-  font-size: .8rem; transition: background .15s, color .15s;
+  border-radius: 6px; color: var(--text-muted, #9ca3af);
+  font-size: .75rem; transition: background .13s, color .13s;
 }
-.cs-act:hover { background: var(--surface-alt, #f3f4f6); color: var(--text-primary, #111827); }
-.cs-act--del:hover { background: #fee2e2; color: #dc2626; }
+.cs-act:hover        { background: var(--surface-alt,#f3f4f6); color: var(--text-primary,#111827); }
+.cs-act--del:hover   { background: #fee2e2; color: #dc2626; }
+
+/* ── Mobile cards ────────────────────────────────────────── */
+.cs-mobile { display: none; padding: .75rem; }
+.cs-cards  { display: flex; flex-direction: column; gap: .5rem; }
+
+/* Color card */
+.cs-color-card {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .65rem .875rem;
+  background: var(--surface,#fff);
+  border: 1px solid var(--border-light,#e5e7eb);
+  border-radius: 12px;
+  transition: box-shadow .15s;
+}
+.cs-color-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.cs-color-card-swatch {
+  width: 38px; height: 38px; border-radius: 10px;
+  border: 2px solid rgba(0,0,0,.08);
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+  flex-shrink: 0;
+}
+.cs-color-card-body { flex: 1; min-width: 0; }
+.cs-color-card-name { font-size: .875rem; font-weight: 700; color: var(--text-primary,#111827); }
+.cs-color-card-hex  { font-size: .7rem; color: var(--text-muted,#9ca3af); font-family: monospace; margin-top: .1rem; }
+.cs-color-card-actions { display: flex; gap: .3rem; align-items: center; flex-shrink: 0; }
+
+/* Size pill grid */
+.cs-size-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: .5rem; padding: .75rem; }
+.cs-size-pill {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: .6rem .5rem;
+  background: var(--surface,#fff);
+  border: 1.5px solid var(--border-light,#e5e7eb);
+  border-radius: 12px; gap: .3rem;
+  transition: border-color .15s, box-shadow .15s;
+  position: relative;
+}
+.cs-size-pill:hover { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+.cs-size-pill-name  { font-size: .95rem; font-weight: 800; color: var(--text-primary,#111827); }
+.cs-size-pill-order { font-size: .65rem; color: var(--text-muted,#9ca3af); }
+.cs-size-pill-actions {
+  display: flex; gap: .2rem; justify-content: center;
+  margin-top: .1rem;
+}
+.cs-size-pill--off { opacity: .55; }
+.cs-size-pill--off .cs-size-pill-name { text-decoration: line-through; }
 
 /* ── Color picker ────────────────────────────────────────── */
 .cs-color-row { display: flex; gap: .5rem; align-items: center; }
 .cs-color-row input[type=color] {
   width: 42px; height: 38px;
-  border: 1px solid var(--border-light, #e5e7eb);
+  border: 1px solid var(--border-light,#e5e7eb);
   border-radius: 8px; cursor: pointer; padding: 2px; flex-shrink: 0;
 }
 
-/* ── cx-label-opt used in size modal ─────────────────────── */
+/* ── cx-label-opt ────────────────────────────────────────── */
 .cx-label-opt {
   font-size: .68rem; font-weight: 500;
-  color: var(--text-muted, #9ca3af);
-  background: var(--surface-alt, #f3f4f6);
-  border-radius: 4px; padding: .1rem .45rem;
+  color: var(--text-muted,#9ca3af);
+  background: var(--surface-alt,#f3f4f6);
+  border-radius: 4px; padding: .1rem .4rem;
   margin-right: .3rem;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .cs-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .cs-table { display: none; }           /* hide table on mobile */
+  .cs-mobile { display: block; }         /* show cards on mobile */
 }
 </style>
 {% endblock %}
@@ -123,10 +177,10 @@
     </div>
   </div>
   <div class="cx-stats-inline">
-    <span class="cx-stat-badge cx-stat-badge--primary" id="statColors">
+    <span class="cx-stat-badge cx-stat-badge--primary">
       <i class="fas fa-circle-half-stroke"></i><strong id="statColorsNum">—</strong><span>لون</span>
     </span>
-    <span class="cx-stat-badge cx-stat-badge--info" id="statSizes">
+    <span class="cx-stat-badge cx-stat-badge--info">
       <i class="fas fa-ruler"></i><strong id="statSizesNum">—</strong><span>مقاس</span>
     </span>
   </div>
@@ -138,93 +192,93 @@
   <!-- ═══ Colors Panel ═══ -->
   <div class="cs-panel">
     <div class="cs-panel-head">
-      <div class="cs-panel-title">
-        <i class="fas fa-circle-half-stroke"></i> الألوان
-      </div>
+      <div class="cs-panel-title"><i class="fas fa-circle-half-stroke"></i> الألوان</div>
       <button class="cx-btn-add" id="btnAddColor">
         <i class="fas fa-plus"></i><span>إضافة لون</span>
       </button>
     </div>
+
+    <!-- Desktop table -->
     <table class="cs-table">
       <thead>
         <tr>
           <th>اللون</th>
           <th>الاسم</th>
           <th>الحالة</th>
-          <th style="width:72px;"></th>
+          <th style="width:64px;"></th>
         </tr>
       </thead>
       <tbody id="colorsTbody">
-        <tr><td colspan="4" class="cs-empty">
-          <i class="fas fa-spinner fa-spin"></i>جاري التحميل...
-        </td></tr>
+        <tr><td colspan="4" class="cs-empty"><i class="fas fa-spinner fa-spin"></i>جاري التحميل...</td></tr>
       </tbody>
     </table>
+
+    <!-- Mobile cards -->
+    <div class="cs-mobile">
+      <div class="cs-cards" id="colorsMobile">
+        <div class="cs-empty"><i class="fas fa-spinner fa-spin"></i>جاري التحميل...</div>
+      </div>
+    </div>
   </div>
 
   <!-- ═══ Sizes Panel ═══ -->
   <div class="cs-panel">
     <div class="cs-panel-head">
-      <div class="cs-panel-title">
-        <i class="fas fa-ruler"></i> المقاسات
-      </div>
+      <div class="cs-panel-title"><i class="fas fa-ruler"></i> المقاسات</div>
       <button class="cx-btn-add" id="btnAddSize">
         <i class="fas fa-plus"></i><span>إضافة مقاس</span>
       </button>
     </div>
+
+    <!-- Desktop table -->
     <table class="cs-table">
       <thead>
         <tr>
           <th>المقاس</th>
           <th>الترتيب</th>
           <th>الحالة</th>
-          <th style="width:72px;"></th>
+          <th style="width:64px;"></th>
         </tr>
       </thead>
       <tbody id="sizesTbody">
-        <tr><td colspan="4" class="cs-empty">
-          <i class="fas fa-spinner fa-spin"></i>جاري التحميل...
-        </td></tr>
+        <tr><td colspan="4" class="cs-empty"><i class="fas fa-spinner fa-spin"></i>جاري التحميل...</td></tr>
       </tbody>
     </table>
+
+    <!-- Mobile pill grid -->
+    <div class="cs-mobile" id="sizesMobileWrap">
+      <div class="cs-size-grid" id="sizesMobile">
+        <div class="cs-empty" style="grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i>جاري التحميل...</div>
+      </div>
+    </div>
   </div>
 
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     Color Modal
-══════════════════════════════════════════════════════════ -->
+<!-- ══════════ Color Modal ══════════ -->
 <div class="modal fade" id="colorModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered cx-modal-dialog" style="max-width:420px;">
     <div class="modal-content cx-modal">
       <div class="cx-modal-main">
         <div class="cx-modal-header">
           <h5 class="cx-modal-title" id="colorModalTitle">إضافة لون</h5>
-          <button type="button" class="cx-modal-close" data-bs-dismiss="modal">
-            <i class="fas fa-times"></i>
-          </button>
+          <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
         </div>
         <form id="colorForm">
           <input type="hidden" id="colorId">
           <div class="cx-modal-body">
             <div class="alert alert-danger d-none mb-3" id="colorErrors"></div>
-
             <div class="mb-3">
-              <label class="cx-label" for="colorName">
-                اسم اللون <sup class="cx-required">*</sup>
-              </label>
-              <input type="text" id="colorName" class="form-control"
-                     placeholder="مثال: أحمر، أزرق سماوي، بيج">
+              <label class="cx-label" for="colorName">اسم اللون <sup class="cx-required">*</sup></label>
+              <input type="text" id="colorName" class="form-control" placeholder="مثال: أحمر، أزرق سماوي، بيج">
             </div>
-
             <div class="mb-3">
               <label class="cx-label">الكود اللوني</label>
               <div class="cs-color-row">
-                <input type="color" id="colorHex" value="#6366f1" title="اختر لون">
+                <input type="color" id="colorHex" value="#6366f1">
                 <input type="text" id="colorHexText" class="form-control" placeholder="#6366f1">
               </div>
             </div>
-
             <div class="form-check mt-1">
               <input class="form-check-input" type="checkbox" id="colorActive" checked>
               <label class="form-check-label" for="colorActive">نشط</label>
@@ -242,39 +296,27 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     Size Modal
-══════════════════════════════════════════════════════════ -->
+<!-- ══════════ Size Modal ══════════ -->
 <div class="modal fade" id="sizeModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered cx-modal-dialog" style="max-width:380px;">
     <div class="modal-content cx-modal">
       <div class="cx-modal-main">
         <div class="cx-modal-header">
           <h5 class="cx-modal-title" id="sizeModalTitle">إضافة مقاس</h5>
-          <button type="button" class="cx-modal-close" data-bs-dismiss="modal">
-            <i class="fas fa-times"></i>
-          </button>
+          <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
         </div>
         <form id="sizeForm">
           <input type="hidden" id="sizeId">
           <div class="cx-modal-body">
             <div class="alert alert-danger d-none mb-3" id="sizeErrors"></div>
-
             <div class="mb-3">
-              <label class="cx-label" for="sizeName">
-                اسم المقاس <sup class="cx-required">*</sup>
-              </label>
-              <input type="text" id="sizeName" class="form-control"
-                     placeholder="مثال: S، M، L، XL، 38، 40">
+              <label class="cx-label" for="sizeName">اسم المقاس <sup class="cx-required">*</sup></label>
+              <input type="text" id="sizeName" class="form-control" placeholder="مثال: S، M، L، XL، 38، 40">
             </div>
-
             <div class="mb-3">
-              <label class="cx-label" for="sizeOrder">
-                ترتيب العرض <span class="cx-label-opt">اختياري</span>
-              </label>
+              <label class="cx-label" for="sizeOrder">ترتيب العرض <span class="cx-label-opt">اختياري</span></label>
               <input type="number" id="sizeOrder" class="form-control" value="0" min="0">
             </div>
-
             <div class="form-check mt-1">
               <input class="form-check-input" type="checkbox" id="sizeActive" checked>
               <label class="form-check-label" for="sizeActive">نشط</label>
@@ -292,9 +334,7 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     Delete Confirm Modal
-══════════════════════════════════════════════════════════ -->
+<!-- ══════════ Delete Modal ══════════ -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
     <div class="modal-content cx-delete-modal">
@@ -336,16 +376,14 @@
 
   function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
-  // Cache maps for O(1) edit lookup — avoids extra API round-trip on every edit click
   const colorsMap = new Map();
   const sizesMap  = new Map();
 
-  // Bootstrap modals
   const colorModal  = new bootstrap.Modal(document.getElementById('colorModal'));
   const sizeModal   = new bootstrap.Modal(document.getElementById('sizeModal'));
   const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
 
-  // Color hex ↔ text sync
+  /* hex sync */
   document.getElementById('colorHex').addEventListener('input', function () {
     document.getElementById('colorHexText').value = this.value;
   });
@@ -354,42 +392,75 @@
     if (/^#[0-9a-fA-F]{6}$/.test(v)) document.getElementById('colorHex').value = v;
   });
 
-  // ────────────────── COLORS ────────────────────────────────
+  /* ── action buttons template (shared) ─────────────────── */
+  function actBtns(editClass, delClass, id, name) {
+    return `<button class="cs-act ${editClass}" data-id="${id}" title="تعديل"><i class="fas fa-pen"></i></button>`
+         + `<button class="cs-act cs-act--del ${delClass}" data-id="${id}" data-name="${name}" title="حذف"><i class="fas fa-trash"></i></button>`;
+  }
+
+  /* ═══════════════════ COLORS ═══════════════════════════ */
 
   function renderColors(data) {
     colorsMap.clear();
-    const tbody = document.getElementById('colorsTbody');
     document.getElementById('statColorsNum').textContent = data.length;
 
+    /* Desktop table */
+    const tbody = document.getElementById('colorsTbody');
+    /* Mobile list */
+    const mobile = document.getElementById('colorsMobile');
+
     if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="cs-empty"><i class="fas fa-palette"></i>لا توجد ألوان بعد</td></tr>';
+      const empty = '<div class="cs-empty"><i class="fas fa-palette"></i>لا توجد ألوان بعد</div>';
+      tbody.innerHTML  = '<tr><td colspan="4" class="cs-empty"><i class="fas fa-palette"></i>لا توجد ألوان بعد</td></tr>';
+      mobile.innerHTML = empty;
       return;
     }
-    tbody.innerHTML = data.map(c => {
+
+    let tableRows = '';
+    let mobileCards = '';
+
+    data.forEach(c => {
       colorsMap.set(String(c.id), c);
-      return `<tr>
+      const hex    = c.hex_code || '#e5e7eb';
+      const badge  = `<span class="cs-badge ${c.is_active ? 'cs-badge--on' : 'cs-badge--off'}">${c.is_active ? 'نشط' : 'موقوف'}</span>`;
+      const acts   = actBtns('js-edit-color', 'js-del-color', c.id, c.name);
+
+      /* table row */
+      tableRows += `<tr>
         <td>
           <div class="cs-swatch">
-            <span class="cs-swatch-dot" style="background:${c.hex_code || '#e5e7eb'};"></span>
-            <code style="font-size:.75rem;color:var(--text-muted,#9ca3af);">${c.hex_code || ''}</code>
+            <span class="cs-swatch-dot" style="background:${hex};"></span>
+            <span class="cs-hex">${hex}</span>
           </div>
         </td>
         <td><strong>${c.name}</strong></td>
-        <td><span class="cs-badge ${c.is_active ? 'cs-badge--on' : 'cs-badge--off'}">${c.is_active ? 'نشط' : 'موقوف'}</span></td>
-        <td class="text-center">
-          <button class="cs-act js-edit-color" data-id="${c.id}" title="تعديل"><i class="fas fa-pen"></i></button>
-          <button class="cs-act cs-act--del js-del-color" data-id="${c.id}" data-name="${c.name}" title="حذف"><i class="fas fa-trash"></i></button>
-        </td>
+        <td>${badge}</td>
+        <td class="text-center" style="padding-inline:.5rem;">${acts}</td>
       </tr>`;
-    }).join('');
+
+      /* mobile card */
+      mobileCards += `<div class="cs-color-card">
+        <span class="cs-color-card-swatch" style="background:${hex};"></span>
+        <div class="cs-color-card-body">
+          <div class="cs-color-card-name">${c.name}</div>
+          <div class="cs-color-card-hex">${hex}</div>
+        </div>
+        ${badge}
+        <div class="cs-color-card-actions">${acts}</div>
+      </div>`;
+    });
+
+    tbody.innerHTML  = tableRows;
+    mobile.innerHTML = mobileCards;
   }
 
   function loadColors() {
-    $.getJSON(URL_COLOR_TABLE + '?length=500', function (resp) {
-      renderColors(resp.data || []);
+    $.getJSON(URL_COLOR_TABLE + '?length=500', function (r) {
+      renderColors(r.data || []);
     }).fail(function () {
-      document.getElementById('colorsTbody').innerHTML =
-        '<tr><td colspan="4" class="cs-empty" style="color:#ef4444;"><i class="fas fa-exclamation-circle"></i>تعذر تحميل الألوان</td></tr>';
+      const err = '<div class="cs-empty" style="color:#ef4444;"><i class="fas fa-exclamation-circle"></i>تعذر التحميل</div>';
+      document.getElementById('colorsTbody').innerHTML = '<tr><td colspan="4">' + err + '</td></tr>';
+      document.getElementById('colorsMobile').innerHTML = err;
     });
   }
 
@@ -426,7 +497,6 @@
     btn.disabled = true;
     const errBox = document.getElementById('colorErrors');
     errBox.classList.add('d-none');
-
     $.ajax({
       url, method: 'POST', contentType: 'application/json',
       data: JSON.stringify({
@@ -448,51 +518,67 @@
     });
   });
 
-  document.getElementById('colorsTbody').addEventListener('click', function (e) {
-    const editBtn = e.target.closest('.js-edit-color');
-    if (editBtn) { openColorEdit(editBtn.dataset.id); return; }
-    const delBtn = e.target.closest('.js-del-color');
-    if (delBtn) {
-      document.getElementById('deleteItemId').value   = delBtn.dataset.id;
-      document.getElementById('deleteItemType').value = 'color';
-      document.getElementById('deleteItemName').textContent = delBtn.dataset.name;
-      deleteModal.show();
-    }
-  });
-
+  function onColorClick(e) {
+    const ed = e.target.closest('.js-edit-color');
+    if (ed) { openColorEdit(ed.dataset.id); return; }
+    const dl = e.target.closest('.js-del-color');
+    if (dl) { openDeleteModal('color', dl.dataset.id, dl.dataset.name); }
+  }
+  document.getElementById('colorsTbody').addEventListener('click', onColorClick);
+  document.getElementById('colorsMobile').addEventListener('click', onColorClick);
   document.getElementById('btnAddColor').addEventListener('click', openColorCreate);
 
-  // ────────────────── SIZES ─────────────────────────────────
+  /* ═══════════════════ SIZES ════════════════════════════ */
 
   function renderSizes(data) {
     sizesMap.clear();
-    const tbody = document.getElementById('sizesTbody');
     document.getElementById('statSizesNum').textContent = data.length;
 
+    const tbody  = document.getElementById('sizesTbody');
+    const mobile = document.getElementById('sizesMobile');
+
     if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="cs-empty"><i class="fas fa-ruler"></i>لا توجد مقاسات بعد</td></tr>';
+      const empty = '<div class="cs-empty" style="grid-column:1/-1;"><i class="fas fa-ruler"></i>لا توجد مقاسات بعد</div>';
+      tbody.innerHTML  = '<tr><td colspan="4" class="cs-empty"><i class="fas fa-ruler"></i>لا توجد مقاسات بعد</td></tr>';
+      mobile.innerHTML = empty;
       return;
     }
-    tbody.innerHTML = data.map(s => {
+
+    let tableRows  = '';
+    let mobilePills = '';
+
+    data.forEach(s => {
       sizesMap.set(String(s.id), s);
-      return `<tr>
+      const badge = `<span class="cs-badge ${s.is_active ? 'cs-badge--on' : 'cs-badge--off'}">${s.is_active ? 'نشط' : 'موقوف'}</span>`;
+      const acts  = actBtns('js-edit-size', 'js-del-size', s.id, s.name);
+
+      /* table row */
+      tableRows += `<tr>
         <td><strong>${s.name}</strong></td>
-        <td><span style="color:var(--text-muted,#9ca3af);font-size:.8rem;">${s.display_order}</span></td>
-        <td><span class="cs-badge ${s.is_active ? 'cs-badge--on' : 'cs-badge--off'}">${s.is_active ? 'نشط' : 'موقوف'}</span></td>
-        <td class="text-center">
-          <button class="cs-act js-edit-size" data-id="${s.id}" title="تعديل"><i class="fas fa-pen"></i></button>
-          <button class="cs-act cs-act--del js-del-size" data-id="${s.id}" data-name="${s.name}" title="حذف"><i class="fas fa-trash"></i></button>
-        </td>
+        <td><span style="color:var(--text-muted,#9ca3af);font-size:.78rem;">${s.display_order}</span></td>
+        <td>${badge}</td>
+        <td class="text-center" style="padding-inline:.5rem;">${acts}</td>
       </tr>`;
-    }).join('');
+
+      /* mobile pill */
+      mobilePills += `<div class="cs-size-pill${s.is_active ? '' : ' cs-size-pill--off'}">
+        <div class="cs-size-pill-name">${s.name}</div>
+        <div class="cs-size-pill-order">#${s.display_order}</div>
+        <div class="cs-size-pill-actions">${acts}</div>
+      </div>`;
+    });
+
+    tbody.innerHTML  = tableRows;
+    mobile.innerHTML = mobilePills;
   }
 
   function loadSizes() {
-    $.getJSON(URL_SIZE_TABLE + '?length=500', function (resp) {
-      renderSizes(resp.data || []);
+    $.getJSON(URL_SIZE_TABLE + '?length=500', function (r) {
+      renderSizes(r.data || []);
     }).fail(function () {
-      document.getElementById('sizesTbody').innerHTML =
-        '<tr><td colspan="4" class="cs-empty" style="color:#ef4444;"><i class="fas fa-exclamation-circle"></i>تعذر تحميل المقاسات</td></tr>';
+      const err = '<div class="cs-empty" style="color:#ef4444;grid-column:1/-1;"><i class="fas fa-exclamation-circle"></i>تعذر التحميل</div>';
+      document.getElementById('sizesTbody').innerHTML = '<tr><td colspan="4">' + err + '</td></tr>';
+      document.getElementById('sizesMobile').innerHTML = err;
     });
   }
 
@@ -526,7 +612,6 @@
     btn.disabled = true;
     const errBox = document.getElementById('sizeErrors');
     errBox.classList.add('d-none');
-
     $.ajax({
       url, method: 'POST', contentType: 'application/json',
       data: JSON.stringify({
@@ -548,21 +633,24 @@
     });
   });
 
-  document.getElementById('sizesTbody').addEventListener('click', function (e) {
-    const editBtn = e.target.closest('.js-edit-size');
-    if (editBtn) { openSizeEdit(editBtn.dataset.id); return; }
-    const delBtn = e.target.closest('.js-del-size');
-    if (delBtn) {
-      document.getElementById('deleteItemId').value   = delBtn.dataset.id;
-      document.getElementById('deleteItemType').value = 'size';
-      document.getElementById('deleteItemName').textContent = delBtn.dataset.name;
-      deleteModal.show();
-    }
-  });
-
+  function onSizeClick(e) {
+    const ed = e.target.closest('.js-edit-size');
+    if (ed) { openSizeEdit(ed.dataset.id); return; }
+    const dl = e.target.closest('.js-del-size');
+    if (dl) { openDeleteModal('size', dl.dataset.id, dl.dataset.name); }
+  }
+  document.getElementById('sizesTbody').addEventListener('click', onSizeClick);
+  document.getElementById('sizesMobile').addEventListener('click', onSizeClick);
   document.getElementById('btnAddSize').addEventListener('click', openSizeCreate);
 
-  // ────────────────── DELETE ────────────────────────────────
+  /* ═══════════════════ DELETE ═══════════════════════════ */
+
+  function openDeleteModal(type, id, name) {
+    document.getElementById('deleteItemId').value   = id;
+    document.getElementById('deleteItemType').value = type;
+    document.getElementById('deleteItemName').textContent = name;
+    deleteModal.show();
+  }
 
   document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
     const id   = document.getElementById('deleteItemId').value;
@@ -570,7 +658,6 @@
     const url  = type === 'color' ? apiUrl(URL_COLOR_DELETE, id) : apiUrl(URL_SIZE_DELETE, id);
     const btn  = this;
     btn.disabled = true;
-
     $.ajax({
       url, method: 'POST',
       success: function (r) {
@@ -590,7 +677,7 @@
     });
   });
 
-  // ────────────────── INIT ──────────────────────────────────
+  /* ═══════════════════ INIT ══════════════════════════════ */
   loadColors();
   loadSizes();
 
