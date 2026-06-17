@@ -142,7 +142,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="cx-label">المبلغ <sup class="cx-required">*</sup></label>
-                            <input type="number" id="incAmount" class="cx-input text-end" min="0.01" step="0.01" placeholder="0.00" required>
+                            <input type="number" id="incAmount" class="cx-input text-end" min="0.01" step="0.01" required>
                         </div>
                         <div class="col-md-6">
                             <label class="cx-label">التاريخ</label>
@@ -375,7 +375,7 @@
     /* ── Save ── */
     $('#btnSaveIncentive').on('click', function () {
         const employee    = document.getElementById('incEmployee').value;
-        const amount      = document.getElementById('incAmount').value;
+        const amount      = document.getElementById('incAmount').value || '0';
         const description = document.getElementById('incDescription').value.trim();
         const type     = document.getElementById('incType').value;
         const payout   = document.getElementById('incPayout').value;

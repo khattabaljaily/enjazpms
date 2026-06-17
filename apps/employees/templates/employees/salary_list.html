@@ -136,7 +136,7 @@
                     <div class="row g-3 mb-4">
                         <div class="col-12">
                             <label class="cx-label">الراتب الأساسي</label>
-                            <input type="number" id="salBaseSalary" class="cx-input text-end" min="0" step="0.01" value="0">
+                            <input type="number" id="salBaseSalary" class="cx-input text-end" min="0" step="0.01">
                         </div>
                         <div class="col-12" id="pendingItemsSection" style="display:none">
                             <div style="border:1px solid #e2e8f0;border-radius:10px;overflow-x:auto;">
@@ -511,7 +511,7 @@
         document.getElementById('salEmployee').value = '';
         document.getElementById('salPeriodStart').value = '';
         document.getElementById('salPeriodEnd').value = '';
-        document.getElementById('salBaseSalary').value = '0';
+        document.getElementById('salBaseSalary').value = '';
         document.getElementById('salTreasury').value = '';
         document.getElementById('salBankRef') && (document.getElementById('salBankRef').value = '');
         document.getElementById('salNotes').value = '';
@@ -548,7 +548,7 @@
             employee,
             period_start:           start,
             period_end:             end,
-            base_salary:            document.getElementById('salBaseSalary').value,
+            base_salary:            document.getElementById('salBaseSalary').value || '0',
             bonus:                  bonus.toFixed(2),
             advances_deducted:      advances_deducted.toFixed(2),
             deductions:             deductions.toFixed(2),

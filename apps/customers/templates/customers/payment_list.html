@@ -101,12 +101,11 @@
                                     <div class="row g-3">
                                         <div class="col-md-6">
                                             <label class="cx-label">العميل <span class="text-danger">*</span></label>
-                                            <select id="paymentModalCustomer" class="cx-input" required>
-                                                <option value="">— اختر العميل —</option>
-                                                {% for customer in customers %}
-                                                <option value="{{ customer.id }}" data-balance="{{ customer.opening_balance|default:'0'|add:customer.ledger_total }}">{{ customer.name }}</option>
-                                                {% endfor %}
-                                            </select>
+                                            <div style="position:relative;">
+                                                <input type="text" id="paymentCustomerSearch" class="cx-input" placeholder="— ابحث عن عميل —" autocomplete="off" spellcheck="false">
+                                                <input type="hidden" id="paymentModalCustomer" value="">
+                                                <div id="paymentCustomerDrop" style="display:none;position:absolute;top:100%;right:0;left:0;z-index:1060;background:var(--bg-card,#fff);border:1px solid var(--border-light,#e5e7eb);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;margin-top:2px;"></div>
+                                            </div>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="cx-label">التاريخ <span class="text-danger">*</span></label>
@@ -114,7 +113,7 @@
                                         </div>
                                         <div class="col-md-6">
                                             <label class="cx-label">المبلغ <span class="text-danger">*</span></label>
-                                            <input type="number" id="paymentModalAmount" class="cx-input text-end" min="0" step="0.01" placeholder="0.00" required>
+                                            <input type="number" id="paymentModalAmount" class="cx-input text-end" min="0" step="0.01" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="cx-label">طريقة الدفع</label>
@@ -149,14 +148,14 @@
                                     <div class="cx-panel-header mb-3">
                                         <h3 class="cx-panel-title"><i class="fas fa-user me-2"></i>تفاصيل العميل</h3>
                                     </div>
-                                    <div class="cx-info-grid">
-                                        <div class="cx-info-item">
-                                            <span class="cx-info-label">اسم العميل</span>
-                                            <span class="cx-info-value" id="paymentModalCustomerName">—</span>
+                                    <div style="display:flex;flex-direction:column;gap:.5rem;">
+                                        <div style="padding:.65rem .85rem;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border-light);">
+                                            <span style="display:block;font-size:.68rem;font-weight:600;color:var(--text-secondary);letter-spacing:.3px;margin-bottom:.2rem;">اسم العميل</span>
+                                            <span style="display:block;font-size:.85rem;font-weight:700;color:var(--text-primary);overflow-wrap:break-word;" id="paymentModalCustomerName">—</span>
                                         </div>
-                                        <div class="cx-info-item">
-                                            <span class="cx-info-label">المطالبات</span>
-                                            <span class="cx-info-value" id="paymentModalCustomerBalance">—</span>
+                                        <div style="padding:.65rem .85rem;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border-light);">
+                                            <span style="display:block;font-size:.68rem;font-weight:600;color:var(--text-secondary);letter-spacing:.3px;margin-bottom:.2rem;">المطالبات</span>
+                                            <span style="display:block;font-size:.85rem;font-weight:700;color:var(--text-primary);" id="paymentModalCustomerBalance">—</span>
                                         </div>
                                     </div>
                                 </div>
@@ -340,6 +339,53 @@
     const paymentDetailsModal = new bootstrap.Modal(document.getElementById('paymentDetailsModal'));
     const paymentModalCustomer = document.getElementById('paymentModalCustomer');
     const paymentModalDate = document.getElementById('paymentModalDate');
+
+    /* ── Customer searchable widget ── */
+    const PAYMENT_CUSTOMERS = [
+        {% for c in customers %}{ id: '{{ c.id }}', name: '{{ c.name|escapejs }}', balance: '{{ c.opening_balance|default:"0"|add:c.ledger_total }}' },{% endfor %}
+    ];
+    let selectedPaymentCustomer = null;
+    (function () {
+        const inp  = document.getElementById('paymentCustomerSearch');
+        const hid  = paymentModalCustomer;
+        const drop = document.getElementById('paymentCustomerDrop');
+
+        function renderDrop(list) {
+            drop.innerHTML = list.length
+                ? list.map(c => `<div style="padding:.55rem 1rem;cursor:pointer;font-size:.875rem;" data-id="${c.id}">${c.name}</div>`).join('')
+                : '<div style="padding:.55rem 1rem;font-size:.8rem;color:var(--text-muted,#9ca3af);">لا توجد نتائج</div>';
+            drop.querySelectorAll('[data-id]').forEach(function (el) {
+                el.addEventListener('mouseenter', function () { this.style.background = 'var(--surface-alt,#f3f4f6)'; });
+                el.addEventListener('mouseleave', function () { this.style.background = ''; });
+                el.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    const cust = PAYMENT_CUSTOMERS.find(c => c.id === this.dataset.id);
+                    selectedPaymentCustomer = cust || null;
+                    hid.value = this.dataset.id;
+                    inp.value = this.textContent;
+                    drop.style.display = 'none';
+                    updateCustomerInfo();
+                });
+            });
+        }
+
+        inp.addEventListener('focus', function () {
+            this.value = '';
+            hid.value  = '';
+            selectedPaymentCustomer = null;
+            updateCustomerInfo();
+            renderDrop(PAYMENT_CUSTOMERS.slice(0, 30));
+            drop.style.display = 'block';
+        });
+        inp.addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            renderDrop(PAYMENT_CUSTOMERS.filter(c => c.name.toLowerCase().includes(q)).slice(0, 30));
+            drop.style.display = 'block';
+        });
+        inp.addEventListener('blur', function () {
+            setTimeout(function () { drop.style.display = 'none'; }, 160);
+        });
+    }());
     const paymentModalAmount = document.getElementById('paymentModalAmount');
     const paymentModalReferenceRow = document.getElementById('paymentModalReferenceRow');
     const paymentModalReference = document.getElementById('paymentModalReference');
@@ -385,6 +431,8 @@
 
     function resetPaymentForm() {
         paymentModalCustomer.value = '';
+        document.getElementById('paymentCustomerSearch').value = '';
+        selectedPaymentCustomer = null;
         paymentModalDate.value = '{{ today }}';
         paymentModalAmount.value = '';
         paymentModalReference.value = '';
@@ -395,22 +443,19 @@
     }
 
     function updateCustomerInfo() {
-        const customerId = paymentModalCustomer.value;
-        const selectedOption = paymentModalCustomer.options[paymentModalCustomer.selectedIndex];
-        const customerName = selectedOption?.text || '—';
-        const balance = selectedOption ? selectedOption.dataset.balance : null;
-        paymentModalCustomerName.textContent = customerId ? customerName : '—';
-        paymentModalCustomerBalance.textContent = customerId && balance !== undefined
-            ? EnjazIMS.formatMoney(parseFloat(balance))
-            : '—';
+        if (selectedPaymentCustomer) {
+            paymentModalCustomerName.textContent    = selectedPaymentCustomer.name;
+            paymentModalCustomerBalance.textContent = EnjazIMS.formatMoney(parseFloat(selectedPaymentCustomer.balance) || 0);
+        } else {
+            paymentModalCustomerName.textContent    = '—';
+            paymentModalCustomerBalance.textContent = '—';
+        }
     }
 
     document.getElementById('btnOpenCreatePayment').addEventListener('click', function () {
         resetPaymentForm();
         paymentModal.show();
     });
-
-    paymentModalCustomer.addEventListener('change', updateCustomerInfo);
 
     paymentModalPmButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {

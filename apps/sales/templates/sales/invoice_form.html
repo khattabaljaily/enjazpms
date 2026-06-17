@@ -150,12 +150,12 @@
                             <div class="col-md-4">
                                 <label class="cx-label">المبلغ نقداً</label>
                                 <input type="number" id="cashAmount" name="cash_amount" class="cx-input" min="0" step="0.01"
-                                       value="{{ invoice.cash_amount|default:'0' }}" oninput="recalcTotals()">
+                                       value="{{ invoice.cash_amount|default:'' }}" oninput="recalcTotals()">
                             </div>
                             <div class="col-md-4">
                                 <label class="cx-label">المبلغ بنكياً</label>
                                 <input type="number" id="bankAmount" name="bank_amount" class="cx-input" min="0" step="0.01"
-                                       value="{{ invoice.bank_amount|default:'0' }}" oninput="recalcTotals()">
+                                       value="{{ invoice.bank_amount|default:'' }}" oninput="recalcTotals()">
                             </div>
                             <div class="col-md-4">
                                 <label class="cx-label">الآجل (محسوب)</label>
@@ -238,7 +238,7 @@
                     <div class="col-7">
                         <label class="cx-label">&nbsp;</label>
                         <input type="number" id="discountValue" name="invoice_discount_value"
-                               class="cx-input" min="0" step="0.01" value="0" oninput="recalcTotals()">
+                               class="cx-input" min="0" step="0.01" value="{{ invoice.invoice_discount_value|default:'' }}" oninput="recalcTotals()">
                     </div>
                 </div>
 
