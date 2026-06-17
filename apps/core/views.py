@@ -1945,6 +1945,7 @@ def _delete_tenant_data(tenant):
         )
         from apps.purchases.models import PurchaseRFQLine, PurchaseRFQ
         from apps.items.models import BOMRecipe
+        from apps.store.models import OnlineOrderLine, OnlineOrder
 
         # --- stock sub-documents (all PROTECT Stock or Item) ---
         StocktakeLine.objects.filter(**t).delete()
@@ -1957,6 +1958,9 @@ def _delete_tenant_data(tenant):
         PurchaseRFQ.objects.filter(**t).delete()
         # --- BOM (BOMRecipe cascades to BOMLine which PROTECT Item) ---
         BOMRecipe.objects.filter(**t).delete()
+        # --- online store orders (OnlineOrderLine.item PROTECT Item) ---
+        OnlineOrderLine.objects.filter(**t).delete()
+        OnlineOrder.objects.filter(**t).delete()
         SaleReturnLine.objects.filter(**t).delete()
         SaleReturn.objects.filter(**t).delete()
         PurchaseReturnLine.objects.filter(**t).delete()

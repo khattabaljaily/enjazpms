@@ -38,6 +38,9 @@ def on_tenant_created(sender, instance, created, **kwargs):
 def _log(tenant, user, action, description, model_name='', object_id=None,
          ip=None, ua='', metadata=None):
     """Write one ActivityLog row, swallowing all errors so logging never breaks the app."""
+    from apps.core.models import tenant_deletion_in_progress
+    if tenant_deletion_in_progress.get():
+        return
     try:
         from apps.core.models import ActivityLog
         ActivityLog.objects.create(
@@ -108,7 +111,10 @@ def _make_doc_handler(model_label, name_ar):
 
     def on_delete(sender, instance, **kwargs):
         tenant = getattr(instance, 'tenant', None)
-        user = getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None)
+        try:
+            user = getattr(instance, 'updated_by', None) or getattr(instance, 'created_by', None)
+        except Exception:
+            user = None
         if not tenant:
             return
         ref = getattr(instance, 'invoice_number', None) or f'#{instance.pk}'
