@@ -45,10 +45,11 @@
             </div>
             <div class="mb-3">
                 <label class="cx-label">المورد</label>
-                <select id="supplierId" class="cx-input">
-                    <option value="">— بدون مورد محدد —</option>
-                    {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
-                </select>
+                <div style="position:relative;">
+                    <input type="text" id="supplierSearch" class="cx-input" placeholder="— ابحث عن مورد —" autocomplete="off" spellcheck="false">
+                    <input type="hidden" id="supplierId" value="">
+                    <div id="supplierDrop" style="display:none;position:absolute;top:100%;right:0;left:0;z-index:1060;background:#fff;border:1px solid #dee2e6;border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+                </div>
             </div>
             <div class="mb-3">
                 <label class="cx-label">المخزن <span class="text-danger">*</span></label>
@@ -126,6 +127,30 @@ const ITEMS_API = "{% url 'sales:stock_items_api' %}";
 const SAVE_URL  = "{% url 'purchases:rfq_create' %}";
 const CSRF      = "{{ csrf_token }}";
 
+const RFQ_SUPPLIERS = [{% for s in suppliers %}{id:{{ s.id }},name:'{{ s.name|escapejs }}'},{% endfor %}];
+
+(function() {
+    const srchEl  = document.getElementById('supplierSearch');
+    const hidEl   = document.getElementById('supplierId');
+    const dropEl  = document.getElementById('supplierDrop');
+    function renderSuppliers(list) {
+        dropEl.innerHTML = list.length
+            ? list.map(s => `<div style="padding:8px 12px;cursor:pointer;" onmousedown="event.preventDefault();document.getElementById('supplierSearch').value='${s.name.replace(/'/g,"\\'")}';document.getElementById('supplierId').value='${s.id}';document.getElementById('supplierDrop').style.display='none';">${s.name}</div>`).join('')
+            : '<div style="padding:8px 12px;color:#6c757d;">لا توجد نتائج</div>';
+    }
+    srchEl.addEventListener('focus', function() {
+        srchEl.value = ''; hidEl.value = '';
+        renderSuppliers(RFQ_SUPPLIERS.slice(0, 30));
+        dropEl.style.display = 'block';
+    });
+    srchEl.addEventListener('input', function() {
+        const q = this.value.toLowerCase();
+        renderSuppliers(RFQ_SUPPLIERS.filter(s => s.name.toLowerCase().includes(q)));
+        dropEl.style.display = 'block';
+    });
+    srchEl.addEventListener('blur', () => setTimeout(() => { dropEl.style.display = 'none'; }, 150));
+})();
+
 let lines = {};
 let searchTimeout;
 
@@ -162,6 +187,27 @@ function addLine(item) {
     document.getElementById('itemResults').innerHTML = '';
 }
 
+function renderItemResults(arr) {
+    const container = document.getElementById('itemResults');
+    if (!arr.length) { container.innerHTML = '<div class="list-group-item text-muted">لا نتائج</div>'; return; }
+    container.innerHTML = arr.map(item =>
+        `<button class="list-group-item list-group-item-action d-flex justify-content-between"
+            onclick='addLine(${JSON.stringify({id:item.id,name:item.name,unit:item.unit||"",sku:item.sku||""})})'>
+            <span>${item.name} <small class="text-muted">${item.sku||""}</small></span>
+            <small class="text-muted">${item.unit||""}</small>
+        </button>`
+    ).join('');
+}
+
+document.getElementById('itemSearch').addEventListener('focus', function () {
+    if (document.getElementById('itemResults').children.length) return;
+    const stockId = document.getElementById('stockId').value;
+    if (!stockId) return;
+    fetch(`/sales/api/stock-items/?q=&stock_id=${stockId}`)
+        .then(r => r.json())
+        .then(data => { if (data.items) renderItemResults(data.items); });
+});
+
 document.getElementById('itemSearch').addEventListener('input', function () {
     clearTimeout(searchTimeout);
     const q = this.value.trim();
@@ -170,18 +216,7 @@ document.getElementById('itemSearch').addEventListener('input', function () {
         const stockId = document.getElementById('stockId').value;
         let url = `/sales/api/stock-items/?q=${encodeURIComponent(q)}`;
         if (stockId) url += `&stock_id=${stockId}`;
-        fetch(url).then(r => r.json()).then(data => {
-            const arr = data.items || data;
-            const container = document.getElementById('itemResults');
-            if (!arr.length) { container.innerHTML = '<div class="list-group-item text-muted">لا نتائج</div>'; return; }
-            container.innerHTML = arr.map(item =>
-                `<button class="list-group-item list-group-item-action d-flex justify-content-between"
-                    onclick='addLine(${JSON.stringify({id:item.id,name:item.name,unit:item.unit||"",sku:item.sku||""})})'>
-                    <span>${item.name} <small class="text-muted">${item.sku||""}</small></span>
-                    <small class="text-muted">${item.unit||""}</small>
-                </button>`
-            ).join('');
-        });
+        fetch(url).then(r => r.json()).then(data => renderItemResults(data.items || data));
     }, 280);
 });
 

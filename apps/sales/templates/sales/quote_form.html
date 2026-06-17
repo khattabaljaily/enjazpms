@@ -320,7 +320,12 @@ let lineCounter = 0;
         renderOptions(CUSTOMERS_DATA.filter(c => c.name.toLowerCase().includes(q)));
         dropdown.style.display = 'block';
     }
-    searchInput.addEventListener('focus', openDropdown);
+    searchInput.addEventListener('focus', function() {
+        searchInput.value = '';
+        hiddenInput.value = '';
+        renderOptions(CUSTOMERS_DATA.slice(0, 50));
+        dropdown.style.display = 'block';
+    });
     searchInput.addEventListener('input', openDropdown);
     searchInput.addEventListener('blur', () => { setTimeout(() => { dropdown.style.display = 'none'; }, 150); });
     const pre = CUSTOMERS_DATA.find(c => c.id == hiddenInput.value);

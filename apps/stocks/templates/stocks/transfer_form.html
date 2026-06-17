@@ -225,6 +225,11 @@ document.getElementById('fromStock').addEventListener('change', function () {
     }
 });
 
+document.getElementById('itemSearch').addEventListener('focus', function () {
+    if (document.getElementById('itemResults').children.length) return;
+    searchItems('');
+});
+
 document.getElementById('itemSearch').addEventListener('input', function () {
     clearTimeout(searchTimeout);
     const q = this.value.trim();
@@ -234,7 +239,7 @@ document.getElementById('itemSearch').addEventListener('input', function () {
 
 function searchItems(q) {
     const stockId = document.getElementById('fromStock').value;
-    let url = `${ITEMS_API}?q=${encodeURIComponent(q)}`;
+    let url = `${ITEMS_API}?q=${encodeURIComponent(q || '')}`;
     if (stockId) url += `&stock_id=${stockId}`;
 
     fetch(url).then(r => r.json()).then(data => {

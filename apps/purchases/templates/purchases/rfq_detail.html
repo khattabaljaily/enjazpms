@@ -92,34 +92,34 @@
 {% endif %}
 
 <div class="row g-3 mt-1">
-    <div class="col-md-5">
+    <div class="col-lg-5">
         <div class="cx-panel p-4">
             <h5 class="fw-semibold mb-3"><i class="fas fa-info-circle me-2 text-primary"></i>تفاصيل الطلب</h5>
-            <table class="table table-sm">
-                <tr><th class="w-40">رقم الطلب</th><td><strong>{{ rfq.rfq_number }}</strong></td></tr>
-                <tr><th>التاريخ</th><td>{{ rfq.rfq_date }}</td></tr>
+            <table class="table table-sm table-borderless">
+                <tr><th class="w-40 text-muted fw-normal">رقم الطلب</th><td><strong>{{ rfq.rfq_number }}</strong></td></tr>
+                <tr><th class="text-muted fw-normal">التاريخ</th><td>{{ rfq.rfq_date }}</td></tr>
                 {% if rfq.expiry_date %}
-                <tr><th>تاريخ الانتهاء</th><td>{{ rfq.expiry_date }}</td></tr>
+                <tr><th class="text-muted fw-normal">تاريخ الانتهاء</th><td>{{ rfq.expiry_date }}</td></tr>
                 {% endif %}
-                <tr><th>المورد</th><td>{{ rfq.supplier.name|default:"—" }}</td></tr>
-                <tr><th>المخزن</th><td>{{ rfq.stock.name }}</td></tr>
+                <tr><th class="text-muted fw-normal">المورد</th><td>{{ rfq.supplier.name|default:"—" }}</td></tr>
+                <tr><th class="text-muted fw-normal">المخزن</th><td>{{ rfq.stock.name }}</td></tr>
                 {% if rfq.grand_total %}
-                <tr><th>الإجمالي</th><td><strong>{{ rfq.grand_total|money }}</strong></td></tr>
+                <tr><th class="text-muted fw-normal">الإجمالي</th><td><strong class="text-primary">{{ rfq.grand_total|money }}</strong></td></tr>
                 {% endif %}
                 {% if rfq.notes %}
-                <tr><th>ملاحظات</th><td>{{ rfq.notes }}</td></tr>
+                <tr><th class="text-muted fw-normal">ملاحظات</th><td>{{ rfq.notes }}</td></tr>
                 {% endif %}
             </table>
         </div>
     </div>
-</div>
+    <div class="col-lg-7">
 
 <!-- Lines -->
-<div class="cx-panel mt-3">
+<div class="cx-panel h-100">
     <div class="cx-panel-header p-4 pb-2">
         <h5 class="fw-semibold mb-0"><i class="fas fa-list me-2 text-primary"></i>البنود ({{ rfq.lines.count }})</h5>
     </div>
-    <div class="table-responsive">
+    <div class="table-responsive px-3 pb-3">
         <table class="cx-table">
             <thead>
                 <tr>
@@ -156,6 +156,7 @@
     </div>
 </div>
 
+    </div>
 </div>
 
 <!-- Receive modal -->
@@ -164,9 +165,10 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="fas fa-inbox me-2"></i>تسجيل رد المورد — إدخال الأسعار</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body">
-                <table class="table">
+                <table class="table table-bordered table-sm">
                     <thead><tr><th>المنتج</th><th>الكمية</th><th>السعر المقتبَس</th></tr></thead>
                     <tbody>
                         {% for ln in rfq.lines.all %}
@@ -200,7 +202,8 @@
 const CSRF = "{{ csrf_token }}";
 
 async function doAction(action, msg) {
-    if (!await EnjazIMS.confirmAction(msg)) return;
+    const titles = { accept: 'تأكيد القبول', convert: 'تأكيد التحويل', send: 'تأكيد الإرسال', reject: 'رفض العرض', cancel: 'إلغاء الطلب' };
+    if (!await EnjazIMS.confirmAction(msg, titles[action] || 'تأكيد')) return;
     const r = await fetch(`/purchases/rfq/{{ rfq.pk }}/${action}/`, {
         method: 'POST', headers: { 'X-CSRFToken': CSRF },
     });

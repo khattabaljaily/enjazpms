@@ -350,14 +350,6 @@ def advance_create(request):
     from django.db import transaction
     try:
         with transaction.atomic():
-            if payment_method == 'cash' and treasury:
-                treasury = Treasury.objects.select_for_update().get(pk=treasury.pk)
-                current_balance = treasury.current_balance or Decimal('0')
-                if current_balance < amount:
-                    raise ValueError(
-                        f"رصيد الخزينة غير كافٍ. الرصيد الحالي: {current_balance} والمطلوب صرفه: {amount}."
-                    )
-
             adv = EmployeeAdvance.objects.create(
                 tenant=tenant,
                 employee=emp,

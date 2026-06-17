@@ -548,7 +548,7 @@
                 paymentDetailsFields.id.textContent = payment.id;
                 paymentDetailsFields.date.textContent = payment.entry_date;
                 paymentDetailsFields.customer.textContent = payment.customer;
-                paymentDetailsFields.amount.textContent = EnjazIMS.formatMoney(payment.amount);
+                paymentDetailsFields.amount.textContent = EnjazIMS.formatMoney(Math.abs(payment.amount));
                 paymentDetailsFields.method.textContent = payment.payment_method;
                 paymentDetailsFields.treasury.textContent = payment.cash_treasury || '—';
                 paymentDetailsFields.notes.textContent = payment.notes;

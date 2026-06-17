@@ -101,12 +101,11 @@
                                     <div class="row g-3">
                                         <div class="col-md-6">
                                             <label class="cx-label">المورد <span class="text-danger">*</span></label>
-                                            <select id="paymentModalSupplier" class="cx-input" required>
-                                                <option value="">— اختر المورد —</option>
-                                                {% for supplier in suppliers %}
-                                                <option value="{{ supplier.id }}" data-balance="{{ supplier.opening_balance|default:'0'|add:supplier.ledger_total }}">{{ supplier.name }}</option>
-                                                {% endfor %}
-                                            </select>
+                                            <div style="position:relative;">
+                                                <input type="text" id="paymentSupplierSearch" class="cx-input" placeholder="— ابحث عن مورد —" autocomplete="off" spellcheck="false">
+                                                <input type="hidden" id="paymentModalSupplier" value="">
+                                                <div id="paymentSupplierDrop" style="display:none;position:absolute;top:100%;right:0;left:0;z-index:1060;background:#fff;border:1px solid #dee2e6;border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+                                            </div>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="cx-label">التاريخ <span class="text-danger">*</span></label>
@@ -360,6 +359,8 @@
     const paymentCancelConfirmModal = new bootstrap.Modal(document.getElementById('paymentCancelConfirmModal'));
     const paymentDetailsModal = new bootstrap.Modal(document.getElementById('paymentDetailsModal'));
     const paymentModalSupplier = document.getElementById('paymentModalSupplier');
+    const paymentSupplierSearch = document.getElementById('paymentSupplierSearch');
+    const paymentSupplierDrop = document.getElementById('paymentSupplierDrop');
     const paymentModalDate = document.getElementById('paymentModalDate');
     const paymentModalAmount = document.getElementById('paymentModalAmount');
     const paymentModalReferenceRow = document.getElementById('paymentModalReferenceRow');
@@ -376,6 +377,42 @@
     const paymentModalSaveLabel = paymentModalSaveText ? paymentModalSaveText.textContent.trim() : 'تسجيل الدفعة';
     const paymentCancelConfirmBtn = document.getElementById('paymentCancelConfirmBtn');
     let paymentCancelTargetId = null;
+    let selectedPaymentSupplier = null;
+
+    const PAYMENT_SUPPLIERS = [{% for s in suppliers %}{id:{{ s.id }},name:'{{ s.name|escapejs }}',balance:parseFloat('{{ s.opening_balance|default:0 }}')+parseFloat('{{ s.ledger_total|default:0 }}')},{% endfor %}];
+
+    (function() {
+        function renderSupDrop(list) {
+            paymentSupplierDrop.innerHTML = list.length
+                ? list.map(s => `<div class="pay-sup-opt" data-id="${s.id}" data-name="${s.name.replace(/"/g,'&quot;')}" data-balance="${s.balance}" style="padding:8px 12px;cursor:pointer;">${s.name}</div>`).join('')
+                : '<div style="padding:8px 12px;color:#6c757d;">لا توجد نتائج</div>';
+            paymentSupplierDrop.querySelectorAll('.pay-sup-opt').forEach(el => {
+                el.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    selectedPaymentSupplier = { id: this.dataset.id, name: this.dataset.name, balance: parseFloat(this.dataset.balance) };
+                    paymentSupplierSearch.value = selectedPaymentSupplier.name;
+                    paymentModalSupplier.value = selectedPaymentSupplier.id;
+                    paymentSupplierDrop.style.display = 'none';
+                    updateSupplierInfo();
+                });
+            });
+        }
+        paymentSupplierSearch.addEventListener('focus', function() {
+            paymentSupplierSearch.value = '';
+            paymentModalSupplier.value = '';
+            selectedPaymentSupplier = null;
+            paymentModalSupplierName.textContent = '—';
+            paymentModalSupplierBalance.textContent = '—';
+            renderSupDrop(PAYMENT_SUPPLIERS.slice(0, 30));
+            paymentSupplierDrop.style.display = 'block';
+        });
+        paymentSupplierSearch.addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            renderSupDrop(PAYMENT_SUPPLIERS.filter(s => s.name.toLowerCase().includes(q)));
+            paymentSupplierDrop.style.display = 'block';
+        });
+        paymentSupplierSearch.addEventListener('blur', () => setTimeout(() => { paymentSupplierDrop.style.display = 'none'; }, 150));
+    })();
     const paymentDetailsTitle = document.getElementById('paymentDetailsTitle');
     const paymentDetailsSubtitle = document.getElementById('paymentDetailsSubtitle');
     const paymentDetailsFields = {
@@ -406,6 +443,8 @@
 
     function resetPaymentForm() {
         paymentModalSupplier.value = '';
+        paymentSupplierSearch.value = '';
+        selectedPaymentSupplier = null;
         paymentModalDate.value = '{{ today }}';
         paymentModalAmount.value = '';
         paymentModalReference.value = '';
@@ -416,14 +455,13 @@
     }
 
     function updateSupplierInfo() {
-        const supplierId = paymentModalSupplier.value;
-        const selectedOption = paymentModalSupplier.options[paymentModalSupplier.selectedIndex];
-        const supplierName = selectedOption?.text || '—';
-        const balance = selectedOption ? selectedOption.dataset.balance : null;
-        paymentModalSupplierName.textContent = supplierId ? supplierName : '—';
-        paymentModalSupplierBalance.textContent = supplierId && balance !== undefined
-            ? EnjazIMS.formatMoney(parseFloat(balance))
-            : '—';
+        if (selectedPaymentSupplier) {
+            paymentModalSupplierName.textContent = selectedPaymentSupplier.name;
+            paymentModalSupplierBalance.textContent = EnjazIMS.formatMoney(selectedPaymentSupplier.balance || 0);
+        } else {
+            paymentModalSupplierName.textContent = '—';
+            paymentModalSupplierBalance.textContent = '—';
+        }
     }
 
     document.getElementById('btnOpenCreatePayment').addEventListener('click', function () {
@@ -431,7 +469,6 @@
         paymentModal.show();
     });
 
-    paymentModalSupplier.addEventListener('change', updateSupplierInfo);
 
     paymentModalPmButtons.forEach(function (btn) {
         btn.addEventListener('click', function () {
