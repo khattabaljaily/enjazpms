@@ -426,15 +426,15 @@
         const start = document.getElementById('salPeriodStart').value;
         const end = document.getElementById('salPeriodEnd').value;
 
-        if (!employee || !start || !end) {
+        if (!employee) {
             document.getElementById('pendingSalaryItemsWrap').style.display = 'none';
             document.getElementById('pendingSalaryItems').innerHTML = '';
             return;
         }
 
         const url = new URL(pendIncUrl(employee), window.location.origin);
-        url.searchParams.set('period_start', start);
-        url.searchParams.set('period_end', end);
+        if (start) url.searchParams.set('period_start', start);
+        if (end) url.searchParams.set('period_end', end);
 
         fetch(url)
             .then(r => r.json())
