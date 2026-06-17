@@ -4,222 +4,333 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/employees.css' %}?v=1.0">
+<style>
+/* ── Hero employee card ────────────────────────────────── */
+.emp-hero-card {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 60%, #7c3aed 100%);
+  border-radius: 20px;
+  padding: 1.75rem 2rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 24px rgba(99,102,241,.35);
+  flex-wrap: wrap;
+}
+.emp-hero-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,.3);
+}
+.emp-hero-body { flex: 1; min-width: 0; }
+.emp-hero-name { font-size: 1.3rem; font-weight: 800; margin-bottom: .35rem; }
+.emp-hero-meta {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+  font-size: .82rem; opacity: .85;
+}
+.emp-hero-meta span { display: flex; align-items: center; gap: .35rem; }
+.emp-hero-salary {
+  text-align: end; flex-shrink: 0;
+}
+.emp-hero-salary-label { font-size: .75rem; opacity: .75; margin-bottom: .2rem; }
+.emp-hero-salary-value { font-size: 1.5rem; font-weight: 800; }
+
+/* ── Stat cards ────────────────────────────────────────── */
+.emp-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.emp-stat {
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--border-color, #e5e7eb);
+  box-shadow: 0 2px 8px rgba(15,23,42,.05);
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+}
+.emp-stat-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.emp-stat-content { min-width: 0; }
+.emp-stat-label { font-size: .72rem; color: var(--text-muted, #6b7280); margin-bottom: .2rem; }
+.emp-stat-value { font-size: 1.2rem; font-weight: 800; line-height: 1.1; }
+
+/* icon color variants */
+.emp-stat-icon--purple { background: rgba(99,102,241,.1); color: #6366f1; }
+.emp-stat-icon--green  { background: rgba(16,185,129,.1); color: #10b981; }
+.emp-stat-icon--red    { background: rgba(239,68,68,.1);  color: #ef4444; }
+.emp-stat-icon--amber  { background: rgba(245,158,11,.1); color: #f59e0b; }
+
+/* ── Section panels ────────────────────────────────────── */
+.emp-section {
+  background: var(--bg-card, #fff);
+  border-radius: 18px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  box-shadow: 0 2px 8px rgba(15,23,42,.05);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+.emp-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-alt, #f9fafb);
+}
+.emp-section-title {
+  font-size: .875rem; font-weight: 700;
+  color: var(--text-primary, #111827);
+  display: flex; align-items: center; gap: .5rem;
+}
+.emp-section-title i { font-size: .85rem; }
+.emp-section-body { padding: 0; }
+
+/* table inside section — override cx-table defaults to flush edges */
+.emp-section .cx-table { border-radius: 0; box-shadow: none; }
+.emp-section .cx-table thead th:first-child,
+.emp-section .cx-table tbody td:first-child { padding-inline-start: 1.5rem; }
+.emp-section .cx-table thead th:last-child,
+.emp-section .cx-table tbody td:last-child  { padding-inline-end: 1.5rem; }
+
+/* ── Mobile ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .emp-hero-card { padding: 1.25rem; gap: 1rem; }
+  .emp-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .emp-hero-salary { display: none; }
+  .emp-section .cx-table-wrap { overflow-x: auto; }
+}
+</style>
 {% endblock %}
 
 {% block page_header %}{% endblock %}
 
-{% block page_title %}كشف حساب: {{ employee.name }}{% endblock %}
-
 {% block content %}
 <div class="cx-scene">
 
-    <!-- بطاقة الموظف -->
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm" style="border-radius:16px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;">
-                <div class="card-body p-4">
-                    <div class="d-flex align-items-center gap-4">
-                        <div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:2rem;">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            <h4 class="mb-1 fw-bold">{{ employee.name }}</h4>
-                            <div class="d-flex gap-3 flex-wrap opacity-90">
-                                <span><i class="fas fa-id-badge me-1"></i>{{ employee.employee_id }}</span>
-                                {% if employee.position %}<span><i class="fas fa-briefcase me-1"></i>{{ employee.position }}</span>{% endif %}
-                                {% if employee.department %}<span><i class="fas fa-building me-1"></i>{{ employee.department }}</span>{% endif %}
-                                {% if employee.phone %}<span><i class="fas fa-phone me-1"></i>{{ employee.phone }}</span>{% endif %}
-                            </div>
-                        </div>
-                        <div class="text-center">
-                            <div class="small opacity-75">الراتب الأساسي</div>
-                            <div class="fs-4 fw-bold">{{ employee.base_salary|floatformat:2|intcomma }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <!-- Employee hero ───────────────────────────────────── -->
+  <div class="emp-hero-card">
+    <div class="emp-hero-avatar"><i class="fas fa-user-tie"></i></div>
+    <div class="emp-hero-body">
+      <div class="emp-hero-name">{{ employee.name }}</div>
+      <div class="emp-hero-meta">
+        <span><i class="fas fa-id-badge"></i> {{ employee.employee_id }}</span>
+        {% if employee.position %}<span><i class="fas fa-briefcase"></i> {{ employee.position }}</span>{% endif %}
+        {% if employee.department %}<span><i class="fas fa-building"></i> {{ employee.department }}</span>{% endif %}
+        {% if employee.phone %}<span><i class="fas fa-phone"></i> {{ employee.phone }}</span>{% endif %}
+      </div>
     </div>
+    <div class="emp-hero-salary">
+      <div class="emp-hero-salary-label">الراتب الأساسي</div>
+      <div class="emp-hero-salary-value">{{ employee.base_salary|floatformat:2|intcomma }}</div>
+    </div>
+  </div>
 
-    <!-- إحصائيات سريعة -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="cx-mini-stat" style="border-inline-start:4px solid #6366f1;">
-                <div class="cx-mini-stat-label">إجمالي الرواتب المدفوعة</div>
-                <div class="cx-mini-stat-value">{{ total_paid|floatformat:2|intcomma }}</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="cx-mini-stat" style="border-inline-start:4px solid #22c55e;">
-                <div class="cx-mini-stat-label">إجمالي الحوافز</div>
-                <div class="cx-mini-stat-value text-success">{{ total_bonus|floatformat:2|intcomma }}</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="cx-mini-stat" style="border-inline-start:4px solid #ef4444;">
-                <div class="cx-mini-stat-label">إجمالي الخصومات</div>
-                <div class="cx-mini-stat-value text-danger">{{ total_deduct|floatformat:2|intcomma }}</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="cx-mini-stat" style="border-inline-start:4px solid #f59e0b;">
-                <div class="cx-mini-stat-label">السلف القائمة</div>
-                <div class="cx-mini-stat-value text-warning">{{ total_adv|floatformat:2|intcomma }}</div>
-            </div>
-        </div>
+  <!-- Stats row ──────────────────────────────────────── -->
+  <div class="emp-stats-row">
+    <div class="emp-stat">
+      <div class="emp-stat-icon emp-stat-icon--purple"><i class="fas fa-file-invoice-dollar"></i></div>
+      <div class="emp-stat-content">
+        <div class="emp-stat-label">إجمالي الرواتب</div>
+        <div class="emp-stat-value">{{ total_paid|floatformat:2|intcomma }}</div>
+      </div>
     </div>
+    <div class="emp-stat">
+      <div class="emp-stat-icon emp-stat-icon--green"><i class="fas fa-star"></i></div>
+      <div class="emp-stat-content">
+        <div class="emp-stat-label">إجمالي الحوافز</div>
+        <div class="emp-stat-value" style="color:#10b981;">{{ total_bonus|floatformat:2|intcomma }}</div>
+      </div>
+    </div>
+    <div class="emp-stat">
+      <div class="emp-stat-icon emp-stat-icon--red"><i class="fas fa-scissors"></i></div>
+      <div class="emp-stat-content">
+        <div class="emp-stat-label">إجمالي الخصومات</div>
+        <div class="emp-stat-value" style="color:#ef4444;">{{ total_deduct|floatformat:2|intcomma }}</div>
+      </div>
+    </div>
+    <div class="emp-stat">
+      <div class="emp-stat-icon emp-stat-icon--amber"><i class="fas fa-hand-holding-dollar"></i></div>
+      <div class="emp-stat-content">
+        <div class="emp-stat-label">السلف القائمة</div>
+        <div class="emp-stat-value" style="color:#f59e0b;">{{ total_adv|floatformat:2|intcomma }}</div>
+      </div>
+    </div>
+  </div>
 
-    <!-- كشوف الرواتب -->
-    <div class="cx-panel mb-4">
-        <div class="cx-panel-header">
-            <h6 class="mb-0"><i class="fas fa-file-invoice-dollar me-2 text-primary"></i>كشوف الرواتب</h6>
-        </div>
-        <div class="table-responsive">
-            <table class="cx-table">
-                <thead>
-                    <tr>
-                        <th>الفترة</th>
-                        <th>الراتب</th>
-                        <th>الحوافز</th>
-                        <th>السلف</th>
-                        <th>الخصومات</th>
-                        <th>الصافي</th>
-                        <th>الخزينة</th>
-                        <th>الحالة</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for sp in salaries %}
-                    <tr>
-                        <td>{{ sp.period_start }} — {{ sp.period_end }}</td>
-                        <td>{{ sp.base_salary|floatformat:2|intcomma }}</td>
-                        <td class="text-success">{{ sp.bonus|floatformat:2|intcomma }}</td>
-                        <td class="text-danger">{{ sp.advances_deducted|floatformat:2|intcomma }}</td>
-                        <td class="text-danger">{{ sp.deductions|floatformat:2|intcomma }}</td>
-                        <td><strong>{{ sp.total_due|floatformat:2|intcomma }}</strong></td>
-                        <td>{{ sp.treasury.name|default:"—" }}</td>
-                        <td>
-                            {% if sp.status == 'paid' %}
-                            <span class="cx-badge cx-badge--success">مدفوع</span>
-                            {% elif sp.status == 'draft' %}
-                            <span class="cx-badge cx-badge--secondary">مسودة</span>
-                            {% else %}
-                            <span class="cx-badge cx-badge--danger">ملغى</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="8" class="text-center text-muted py-4">لا توجد كشوف رواتب</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <!-- Salaries table ─────────────────────────────────── -->
+  <div class="emp-section">
+    <div class="emp-section-head">
+      <div class="emp-section-title">
+        <i class="fas fa-file-invoice-dollar" style="color:#6366f1;"></i> كشوف الرواتب
+      </div>
     </div>
+    <div class="emp-section-body">
+      <div class="table-responsive">
+        <table class="cx-table">
+          <thead>
+            <tr>
+              <th>الفترة</th>
+              <th>الراتب</th>
+              <th>الحوافز</th>
+              <th>السلف</th>
+              <th>الخصومات</th>
+              <th>الصافي</th>
+              <th>الخزينة</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sp in salaries %}
+            <tr>
+              <td><span style="font-size:.82rem;color:var(--text-muted,#6b7280);">{{ sp.period_start }} — {{ sp.period_end }}</span></td>
+              <td>{{ sp.base_salary|floatformat:2|intcomma }}</td>
+              <td class="text-success fw-600">{{ sp.bonus|floatformat:2|intcomma }}</td>
+              <td class="text-danger">{{ sp.advances_deducted|floatformat:2|intcomma }}</td>
+              <td class="text-danger">{{ sp.deductions|floatformat:2|intcomma }}</td>
+              <td><strong>{{ sp.total_due|floatformat:2|intcomma }}</strong></td>
+              <td><span style="font-size:.82rem;">{{ sp.treasury.name|default:"—" }}</span></td>
+              <td>
+                {% if sp.status == 'paid' %}
+                <span class="cx-badge cx-badge--success">مدفوع</span>
+                {% elif sp.status == 'draft' %}
+                <span class="cx-badge cx-badge--secondary">مسودة</span>
+                {% else %}
+                <span class="cx-badge cx-badge--danger">ملغى</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-4">لا توجد كشوف رواتب</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-    <!-- السلف -->
-    <div class="cx-panel mb-4">
-        <div class="cx-panel-header">
-            <h6 class="mb-0"><i class="fas fa-hand-holding-dollar me-2 text-warning"></i>السلف</h6>
-        </div>
-        <div class="table-responsive">
-            <table class="cx-table">
-                <thead>
-                    <tr>
-                        <th>التاريخ</th>
-                        <th>المبلغ</th>
-                        <th>الخزينة</th>
-                        <th>الحالة</th>
-                        <th>ملاحظات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for adv in advances %}
-                    <tr>
-                        <td>{{ adv.date }}</td>
-                        <td class="text-danger fw-bold">{{ adv.amount|floatformat:2|intcomma }}</td>
-                        <td>{{ adv.treasury.name|default:"—" }}</td>
-                        <td>
-                            {% if adv.status == 'pending' %}
-                            <span class="cx-badge cx-badge--warning">قائمة</span>
-                            {% elif adv.status == 'deducted' %}
-                            <span class="cx-badge cx-badge--success">مخصومة</span>
-                            {% else %}
-                            <span class="cx-badge cx-badge--secondary">ملغاة</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ adv.notes|default:"—" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="5" class="text-center text-muted py-4">لا توجد سلف</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <!-- Advances table ─────────────────────────────────── -->
+  <div class="emp-section">
+    <div class="emp-section-head">
+      <div class="emp-section-title">
+        <i class="fas fa-hand-holding-dollar" style="color:#f59e0b;"></i> السلف
+      </div>
     </div>
+    <div class="emp-section-body">
+      <div class="table-responsive">
+        <table class="cx-table">
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>المبلغ</th>
+              <th>الخزينة</th>
+              <th>الحالة</th>
+              <th>ملاحظات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for adv in advances %}
+            <tr>
+              <td><span style="font-size:.82rem;color:var(--text-muted,#6b7280);">{{ adv.date }}</span></td>
+              <td class="text-danger fw-bold">{{ adv.amount|floatformat:2|intcomma }}</td>
+              <td><span style="font-size:.82rem;">{{ adv.treasury.name|default:"—" }}</span></td>
+              <td>
+                {% if adv.status == 'pending' %}
+                <span class="cx-badge cx-badge--warning">قائمة</span>
+                {% elif adv.status == 'deducted' %}
+                <span class="cx-badge cx-badge--success">مخصومة</span>
+                {% else %}
+                <span class="cx-badge cx-badge--secondary">ملغاة</span>
+                {% endif %}
+              </td>
+              <td><span style="font-size:.82rem;color:var(--text-muted,#6b7280);">{{ adv.notes|default:"—" }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-4">لا توجد سلف</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-    <!-- الحوافز والخصومات -->
-    <div class="cx-panel mb-4">
-        <div class="cx-panel-header">
-            <h6 class="mb-0"><i class="fas fa-star me-2 text-success"></i>الحوافز والخصومات</h6>
-        </div>
-        <div class="table-responsive">
-            <table class="cx-table">
-                <thead>
-                    <tr>
-                        <th>النوع</th>
-                        <th>الوصف</th>
-                        <th>المبلغ</th>
-                        <th>طريقة الصرف</th>
-                        <th>التاريخ</th>
-                        <th>الحالة</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for inc in incentives %}
-                    <tr>
-                        <td>
-                            {% if inc.type == 'bonus' %}
-                            <span class="cx-badge cx-badge--success">حافز</span>
-                            {% else %}
-                            <span class="cx-badge cx-badge--danger">خصم</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ inc.description }}</td>
-                        <td class="{% if inc.type == 'bonus' %}text-success{% else %}text-danger{% endif %} fw-bold">{{ inc.amount|floatformat:2|intcomma }}</td>
-                        <td>{{ inc.get_payout_display }}</td>
-                        <td>{{ inc.date }}</td>
-                        <td>
-                            {% if inc.status == 'paid' %}
-                            <span class="cx-badge cx-badge--success">مدفوع</span>
-                            {% elif inc.status == 'pending' %}
-                            <span class="cx-badge cx-badge--warning">معلق</span>
-                            {% else %}
-                            <span class="cx-badge cx-badge--secondary">ملغى</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="6" class="text-center text-muted py-4">لا توجد حوافز أو خصومات</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <!-- Incentives table ───────────────────────────────── -->
+  <div class="emp-section">
+    <div class="emp-section-head">
+      <div class="emp-section-title">
+        <i class="fas fa-star" style="color:#10b981;"></i> الحوافز والخصومات
+      </div>
     </div>
+    <div class="emp-section-body">
+      <div class="table-responsive">
+        <table class="cx-table">
+          <thead>
+            <tr>
+              <th>النوع</th>
+              <th>الوصف</th>
+              <th>المبلغ</th>
+              <th>طريقة الصرف</th>
+              <th>التاريخ</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inc in incentives %}
+            <tr>
+              <td>
+                {% if inc.type == 'bonus' %}
+                <span class="cx-badge cx-badge--success">حافز</span>
+                {% else %}
+                <span class="cx-badge cx-badge--danger">خصم</span>
+                {% endif %}
+              </td>
+              <td>{{ inc.description }}</td>
+              <td class="{% if inc.type == 'bonus' %}text-success{% else %}text-danger{% endif %} fw-bold">{{ inc.amount|floatformat:2|intcomma }}</td>
+              <td><span style="font-size:.82rem;">{{ inc.get_payout_display }}</span></td>
+              <td><span style="font-size:.82rem;color:var(--text-muted,#6b7280);">{{ inc.date }}</span></td>
+              <td>
+                {% if inc.status == 'paid' %}
+                <span class="cx-badge cx-badge--success">مدفوع</span>
+                {% elif inc.status == 'pending' %}
+                <span class="cx-badge cx-badge--warning">معلق</span>
+                {% else %}
+                <span class="cx-badge cx-badge--secondary">ملغى</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-4">لا توجد حوافز أو خصومات</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-    <!-- روابط سريعة -->
-    <div class="d-flex gap-2 flex-wrap">
-        <a href="{% url 'employees:list' %}" class="cx-btn-secondary">
-            <i class="fas fa-arrow-right me-1"></i>الموظفين
-        </a>
-        <a href="{% url 'employees:advance_list' %}" class="cx-btn-secondary">
-            <i class="fas fa-hand-holding-dollar me-1"></i>السلف
-        </a>
-        <a href="{% url 'employees:salary_list' %}" class="cx-btn-secondary">
-            <i class="fas fa-file-invoice-dollar me-1"></i>الرواتب
-        </a>
-        <a href="{% url 'employees:incentive_list' %}" class="cx-btn-secondary">
-            <i class="fas fa-star me-1"></i>الحوافز
-        </a>
-    </div>
+  <!-- Quick links ────────────────────────────────────── -->
+  <div class="d-flex gap-2 flex-wrap pb-2">
+    <a href="{% url 'employees:list' %}" class="cx-btn-secondary">
+      <i class="fas fa-arrow-right"></i><span>الموظفين</span>
+    </a>
+    <a href="{% url 'employees:advance_list' %}" class="cx-btn-secondary">
+      <i class="fas fa-hand-holding-dollar"></i><span>السلف</span>
+    </a>
+    <a href="{% url 'employees:salary_list' %}" class="cx-btn-secondary">
+      <i class="fas fa-file-invoice-dollar"></i><span>الرواتب</span>
+    </a>
+    <a href="{% url 'employees:incentive_list' %}" class="cx-btn-secondary">
+      <i class="fas fa-star"></i><span>الحوافز</span>
+    </a>
+  </div>
+
 </div>
 {% endblock %}
