@@ -376,7 +376,7 @@ def treasury_statement_report_export(request):
         writer.writerow([f'كشف خزينة: {report["treasury"].name}'])
         writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
         writer.writerow([])
-        writer.writerow(['التاريخ', 'نوع الحركة', 'الوصف', 'قبض', 'صرف', 'الرصيد بعد'])
+        writer.writerow(['التاريخ', 'نوع الحركة', 'الوصف', 'وارد', 'صادر', 'الرصيد بعد'])
         for row in report['data']:
             writer.writerow([row['movement_date'], row['movement_type'], row['description'], row['receipt'], row['disbursement'], row['running_balance']])
     return response
@@ -425,7 +425,7 @@ def treasury_movements_report_export(request):
     response['Content-Disposition'] = f'attachment; filename="treasury_movements_{end_date}.csv"'
     response.write('﻿')
     writer = csv.writer(response)
-    writer.writerow(['التاريخ', 'الخزينة', 'نوع الحركة', 'الوصف', 'قبض', 'صرف', 'الرصيد بعد'])
+    writer.writerow(['التاريخ', 'الخزينة', 'نوع الحركة', 'الوصف', 'وارد', 'صادر', 'الرصيد بعد'])
     for row in report['data']:
         writer.writerow([row['movement_date'], row['treasury_name'], row['movement_type'], row['description'], row['receipt'], row['disbursement'], row['running_balance']])
     return response

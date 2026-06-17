@@ -16,7 +16,7 @@
                 <div class="rpt-hero-icon"><i class="fas fa-cash-register"></i></div>
                 <div>
                     <h1 class="rpt-hero-title">كشف الصندوق</h1>
-                    <p class="rpt-hero-desc">سجل حركات القبض والصرف لخزينة محددة</p>
+                    <p class="rpt-hero-desc">سجل حركات الوارد والصادر لخزينة محددة</p>
                 </div>
             </div>
             <div class="rpt-hero-actions">
@@ -59,12 +59,12 @@
         <div class="rpt-kpi-card rpt-kpi--green">
             <div class="rpt-kpi-icon"><i class="fas fa-arrow-down"></i></div>
             <div class="rpt-kpi-value">{{ report.summary.total_receipts }}</div>
-            <div class="rpt-kpi-label">إجمالي القبض</div>
+            <div class="rpt-kpi-label">إجمالي الوارد</div>
         </div>
         <div class="rpt-kpi-card rpt-kpi--red">
             <div class="rpt-kpi-icon"><i class="fas fa-arrow-up"></i></div>
             <div class="rpt-kpi-value">{{ report.summary.total_disbursements }}</div>
-            <div class="rpt-kpi-label">إجمالي الصرف</div>
+            <div class="rpt-kpi-label">إجمالي الصادر</div>
         </div>
         <div class="rpt-kpi-card rpt-kpi--teal">
             <div class="rpt-kpi-icon"><i class="fas fa-balance-scale"></i></div>
@@ -94,8 +94,8 @@
                             <th>التاريخ</th>
                             <th>نوع الحركة</th>
                             <th>الوصف / المرجع</th>
-                            <th class="text-end" style="color:#11998e;">قبض +</th>
-                            <th class="text-end" style="color:#ef4444;">صرف −</th>
+                            <th class="text-end" style="color:#11998e;">وارد +</th>
+                            <th class="text-end" style="color:#ef4444;">صادر −</th>
                             <th class="text-end">الرصيد بعد</th>
                         </tr>
                     </thead>

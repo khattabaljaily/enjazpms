@@ -185,13 +185,15 @@ def approve_order(order: OnlineOrder) -> 'SaleInvoice':
 
     # ── Lines ─────────────────────────────────────────────────
     for line in order.lines.select_related('item').all():
-        SaleInvoiceLine.objects.create(
+        sale_line = SaleInvoiceLine(
             tenant     = tenant,
             invoice    = invoice,
             item       = line.item,
             quantity   = line.quantity,
             unit_price = line.unit_price,
         )
+        sale_line.calculate()
+        sale_line.save()
 
     invoice.recalculate_totals()
     invoice.save()

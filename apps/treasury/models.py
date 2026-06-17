@@ -29,8 +29,8 @@ class Treasury(TenantMixin):
 
 class TreasuryMovement(TenantMixin):
     MOVEMENT_TYPE_CHOICES = (
-        ('receipt', 'قبض'),
-        ('disbursement', 'صرف'),
+        ('receipt', 'وارد'),
+        ('disbursement', 'صادر'),
         ('adjustment', 'تسوية'),
     )
 
