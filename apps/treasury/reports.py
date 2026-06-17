@@ -19,6 +19,34 @@ def format_number(value, decimals=2):
         return str(value)
 
 
+REFERENCE_TYPE_AR = {
+    'sale_invoice':              'فاتورة مبيعات',
+    'sale_payment':              'دفعة عميل',
+    'sale_return':               'مرتجع مبيعات',
+    'purchase_invoice':          'فاتورة مشتريات',
+    'purchase_payment':          'دفعة مورد',
+    'purchase_return':           'مرتجع مشتريات',
+    'supplier_payment_cash':     'دفعة مورد نقدي',
+    'supplier_payment_cancel':   'إلغاء دفعة مورد',
+    'supplier_payment_cash_cancel': 'إلغاء دفعة مورد نقدي',
+    'customer_payment_cash':     'دفعة عميل نقدي',
+    'customer_payment_cancel':   'إلغاء دفعة عميل',
+    'customer_payment_cash_cancel': 'إلغاء دفعة عميل نقدي',
+    'employee_advance':          'سلفة موظف',
+    'employee_advance_cancel':   'إلغاء سلفة موظف',
+    'employee_salary':           'راتب موظف',
+    'employee_salary_cancel':    'إلغاء راتب موظف',
+    'employee_incentive':        'حافز / خصم موظف',
+    'employee_incentive_cancel': 'إلغاء حافز / خصم',
+    'expense':                   'مصروف',
+    'expense_cancel':            'إلغاء مصروف',
+    'manufacturing_order':       'أمر تصنيع',
+    'opening_balance':           'رصيد افتتاحي',
+    'stocktake':                 'جرد مخزون',
+    'stock_transfer':            'تحويل مخزون',
+}
+
+
 class TreasuryReportGenerator:
 
     def __init__(self, tenant, start_date=None, end_date=None):
@@ -60,7 +88,7 @@ class TreasuryReportGenerator:
             treasury=treasury,
             movement_date__gte=self.start_date,
             movement_date__lte=self.end_date,
-        ).order_by('movement_date', 'id')
+        ).order_by('-id')
 
         data = []
         total_receipts = Decimal('0')
@@ -80,7 +108,7 @@ class TreasuryReportGenerator:
                 'receipt': format_number(receipt_amt, 2) if receipt_amt else '—',
                 'disbursement': format_number(disb_amt, 2) if disb_amt else '—',
                 'running_balance': format_number(float(m.running_balance), 2),
-                'reference_type': m.reference_type,
+                'reference_type': REFERENCE_TYPE_AR.get(m.reference_type, m.reference_type),
             })
 
         return {
