@@ -305,8 +305,28 @@ const EnjazIMS = {
 
     // Modal-based confirmation — returns a Promise that resolves true/false.
     // Usage: EnjazIMS.confirmAction('رسالة').then(ok => { if (ok) ... });
-    confirmAction: function(message, title) {
+    confirmAction: function(message, title, confirmText) {
         return new Promise(function(resolve) {
+            // Determine icon, colour and button label from title keywords
+            const t = title || '';
+            let iconClass, iconColor, iconBg, btnColor, btnLabel;
+            if (/حذف/.test(t)) {
+                iconClass = 'fa-trash-alt'; iconColor = '#ef4444'; iconBg = 'rgba(239,68,68,0.1)';
+                btnColor  = '#ef4444'; btnLabel = confirmText || 'نعم، احذف';
+            } else if (/إلغاء/.test(t)) {
+                iconClass = 'fa-ban'; iconColor = '#f59e0b'; iconBg = 'rgba(245,158,11,0.1)';
+                btnColor  = '#f59e0b'; btnLabel = confirmText || 'نعم، إلغاء';
+            } else if (/تجاهل/.test(t)) {
+                iconClass = 'fa-rotate-left'; iconColor = '#6b7280'; iconBg = 'rgba(107,114,128,0.1)';
+                btnColor  = '#6b7280'; btnLabel = confirmText || 'نعم، تجاهل';
+            } else if (/تأكيد/.test(t)) {
+                iconClass = 'fa-check-circle'; iconColor = '#10b981'; iconBg = 'rgba(16,185,129,0.1)';
+                btnColor  = '#10b981'; btnLabel = confirmText || 'نعم، تأكيد';
+            } else {
+                iconClass = 'fa-circle-question'; iconColor = '#6366f1'; iconBg = 'rgba(99,102,241,0.1)';
+                btnColor  = '#6366f1'; btnLabel = confirmText || 'نعم، متابعة';
+            }
+
             // Create a simple overlay modal that works on all devices
             const overlay = document.createElement('div');
             overlay.id = 'enjazConfirmOverlay';
@@ -336,18 +356,17 @@ const EnjazIMS = {
 
             modal.innerHTML = `
                 <div style="padding: 2rem 1.75rem; text-align: center;">
-                    <div style="width: 64px; height: 64px; border-radius: 32px; background: rgba(239,68,68,0.1); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
-                        <i class="fas fa-trash-alt" style="font-size: 2rem; color: #ef4444;"></i>
+                    <div style="width: 64px; height: 64px; border-radius: 32px; background: ${iconBg}; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                        <i class="fas ${iconClass}" style="font-size: 2rem; color: ${iconColor};"></i>
                     </div>
-                    <h5 style="font-size: 1.25rem; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem;">${title || 'تأكيد الحذف'}</h5>
+                    <h5 style="font-size: 1.25rem; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem;">${t || 'تأكيد'}</h5>
                     <p style="font-size: 0.85rem; color: #6b7280; margin: 0;">
                         ${message}
-                        <br><small style="color: #9ca3af;">لا يمكن التراجع عن هذا الإجراء.</small>
                     </p>
                 </div>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 1rem 1.75rem; border-top: 1px solid #e5e7eb; background: #f9fafb;">
-                    <button type="button" class="cx-btn-ghost" id="enjazConfirmNo" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 8px; background: white; color: #6b7280; font-size: 0.875rem; cursor: pointer;">إلغاء</button>
-                    <button type="button" class="cx-btn-danger" id="enjazConfirmYes" style="padding: 0.5rem 1rem; border: none; border-radius: 8px; background: #ef4444; color: white; font-size: 0.875rem; cursor: pointer;">نعم، احذف</button>
+                    <button type="button" class="cx-btn-ghost" id="enjazConfirmNo" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 8px; background: white; color: #6b7280; font-size: 0.875rem; cursor: pointer;">تراجع</button>
+                    <button type="button" id="enjazConfirmYes" style="padding: 0.5rem 1rem; border: none; border-radius: 8px; background: ${btnColor}; color: white; font-size: 0.875rem; cursor: pointer; font-weight: 600;">${btnLabel}</button>
                 </div>
             `;
 

@@ -30,7 +30,8 @@ from datetime import datetime, timedelta, date
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission
 from django.db import transaction
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, DecimalField, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -152,14 +153,26 @@ def invoice_list(request):
     cancelled = qs.filter(status='cancelled').count()
     returned = qs.filter(status__in=['returned', 'partially_returned']).count()
 
-    grand_total_sum = (
-        qs.filter(status='confirmed')
-        .aggregate(s=Sum('grand_total'))['s'] or Decimal('0')
+    active_statuses = ['confirmed', 'partially_returned']
+    # إجمالي المبيعات الفعلية = مؤكدة + (مرتجعة جزئياً بعد خصم المرتجع)
+    returned_sq = (
+        SaleReturn.objects
+        .filter(original_invoice=OuterRef('pk'), status='confirmed')
+        .values('original_invoice')
+        .annotate(t=Sum('total_returned'))
+        .values('t')
     )
-    paid_total = (
-        qs.filter(status='confirmed')
-        .aggregate(s=Sum('paid_amount'))['s'] or Decimal('0')
+    active_qs = (
+        qs.filter(status__in=active_statuses)
+        .annotate(returned_amt=Coalesce(Subquery(returned_sq, output_field=DecimalField(max_digits=14, decimal_places=2)), Decimal('0')))
     )
+    agg = active_qs.aggregate(
+        s=Sum('grand_total'),
+        r=Sum('returned_amt'),
+        p=Sum('paid_amount'),
+    )
+    grand_total_sum = (agg['s'] or Decimal('0')) - (agg['r'] or Decimal('0'))
+    paid_total = agg['p'] or Decimal('0')
     unpaid_total = grand_total_sum - paid_total
 
     # للفلترة في الـ DataTable
@@ -199,6 +212,14 @@ def invoice_table_api(request):
     customer_filter = request.GET.get('customer_id', '')
     payment_filter = request.GET.get('payment_method', '')
 
+    _returned_sq = (
+        SaleReturn.objects
+        .filter(original_invoice=OuterRef('pk'), status='confirmed')
+        .values('original_invoice')
+        .annotate(t=Sum('total_returned'))
+        .values('t')
+    )
+
     qs = SaleInvoice.objects.for_tenant(tenant).select_related('customer', 'stock')
     total = qs.count()
 
@@ -231,7 +252,9 @@ def invoice_table_api(request):
     order_field = col_map.get(order_col, 'invoice_date')
     if order_dir == 'desc':
         order_field = f'-{order_field}'
-    qs = qs.order_by(order_field)
+    qs = qs.order_by(order_field).annotate(
+        returned_amt=Coalesce(Subquery(_returned_sq, output_field=DecimalField(max_digits=14, decimal_places=2)), Decimal('0'))
+    )
 
     page_qs = qs[start: start + length]
 
@@ -253,6 +276,8 @@ def invoice_table_api(request):
     data = []
     for inv in page_qs:
         label, color = STATUS_LABELS.get(inv.status, (inv.status, 'secondary'))
+        returned_amt = getattr(inv, 'returned_amt', Decimal('0')) or Decimal('0')
+        net_total = inv.grand_total - returned_amt
         data.append({
             'id': inv.id,
             'invoice_number': inv.invoice_number,
@@ -261,6 +286,8 @@ def invoice_table_api(request):
             'stock': inv.stock.name,
             'payment_method': PAYMENT_LABELS.get(inv.payment_method, inv.payment_method),
             'grand_total': str(inv.grand_total),
+            'returned_amount': str(returned_amt),
+            'net_total': str(net_total),
             'paid_amount': str(inv.paid_amount),
             'remaining': str(inv.remaining_amount),
             'status': inv.status,

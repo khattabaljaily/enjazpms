@@ -67,15 +67,18 @@
           </tr>
           {% endfor %}
         </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3" style="font-weight:700;padding:.75rem 1rem;">الإجمالي</td>
-            <td style="font-weight:900;font-size:1rem;color:#6366f1;padding:.75rem 1rem;" dir="ltr">
-              {{ order.total_amount|format_price }} {{ order.tenant.currency|currency_ar }}
-            </td>
-          </tr>
-        </tfoot>
       </table>
+    </div>
+    <!-- إجمالي الطلب خارج الجدول لضمان الظهور على الموبايل -->
+    <div class="d-flex justify-content-end mt-3 px-2">
+      <div style="background:#f0f0ff;border-radius:12px;padding:.875rem 1.25rem;border:1px solid #c7d2fe;min-width:240px;">
+        <div class="d-flex justify-content-between align-items-center gap-4">
+          <span style="font-size:.9rem;color:#4338ca;font-weight:600;">الإجمالي النهائي</span>
+          <strong style="font-size:1.15rem;color:#6366f1;" dir="ltr">
+            {{ order.total_amount|format_price }} {{ order.tenant.currency|currency_ar }}
+          </strong>
+        </div>
+      </div>
     </div>
   </div>
 

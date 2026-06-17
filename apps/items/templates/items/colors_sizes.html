@@ -1,0 +1,394 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/items.css' %}?v=1.0">
+<style>
+.cs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+@media (max-width: 768px) { .cs-grid { grid-template-columns: 1fr; } }
+.cs-panel { background: var(--surface, #fff); border: 1px solid var(--border-light, #e5e7eb); border-radius: 16px; overflow: hidden; }
+.cs-panel-head {
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--border-light, #e5e7eb);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface-alt, #f9fafb);
+}
+.cs-panel-title { font-size: .95rem; font-weight: 700; color: var(--text-primary, #111827); display: flex; align-items: center; gap: .5rem; }
+.cs-panel-title i { color: var(--indigo-500, #6366f1); }
+.cs-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.cs-table th { padding: .65rem 1rem; font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted, #9ca3af); border-bottom: 1px solid var(--border-light, #e5e7eb); background: var(--surface-alt, #f9fafb); }
+.cs-table td { padding: .65rem 1rem; border-bottom: 1px solid var(--border-light, #e5e7eb); color: var(--text-primary, #111827); vertical-align: middle; }
+.cs-table tr:last-child td { border-bottom: none; }
+.cs-table tr:hover td { background: var(--surface-alt, #f9fafb); }
+.cs-color-swatch { display: inline-block; width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(0,0,0,.1); vertical-align: middle; }
+.cs-badge { display: inline-block; padding: .15rem .5rem; border-radius: 20px; font-size: .7rem; font-weight: 600; }
+.cs-badge--on { background: #d1fae5; color: #065f46; }
+.cs-badge--off { background: #f3f4f6; color: #6b7280; }
+.cs-empty { text-align: center; padding: 2rem; color: var(--text-muted, #9ca3af); font-size: .85rem; }
+.cs-act { background: none; border: none; cursor: pointer; padding: .25rem .45rem; border-radius: 6px; color: var(--text-muted, #9ca3af); transition: background .15s, color .15s; }
+.cs-act:hover { background: var(--surface-alt, #f3f4f6); color: var(--text-primary, #111827); }
+.cs-act--del:hover { background: #fee2e2; color: #dc2626; }
+.color-picker-row { display: flex; gap: .5rem; align-items: center; }
+.color-picker-row input[type=color] { width: 40px; height: 36px; border: 1px solid var(--border-light, #e5e7eb); border-radius: 8px; cursor: pointer; padding: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cx-page-header">
+  <div class="cx-page-header-content">
+    <div class="cx-page-title-row">
+      <a href="{% url 'items:list' %}" class="cx-back-link"><i class="fas fa-arrow-right"></i></a>
+      <h1 class="cx-page-title"><i class="fas fa-palette me-2" style="color:#6366f1;"></i>المقاسات والألوان</h1>
+    </div>
+    <p class="cx-page-subtitle">إدارة الألوان والمقاسات المتاحة للمنتجات</p>
+  </div>
+</div>
+
+<div class="cs-grid">
+
+  <!-- ═══════════ COLORS PANEL ═══════════ -->
+  <div class="cs-panel">
+    <div class="cs-panel-head">
+      <div class="cs-panel-title"><i class="fas fa-circle-half-stroke"></i> الألوان</div>
+      <button class="cx-btn cx-btn--primary cx-btn--sm" id="btnAddColor"><i class="fas fa-plus me-1"></i>إضافة لون</button>
+    </div>
+    <table class="cs-table" id="colorsTable">
+      <thead><tr><th>اللون</th><th>الاسم</th><th>الحالة</th><th></th></tr></thead>
+      <tbody id="colorsTbody"><tr><td colspan="4" class="cs-empty">جاري التحميل...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════ SIZES PANEL ═══════════ -->
+  <div class="cs-panel">
+    <div class="cs-panel-head">
+      <div class="cs-panel-title"><i class="fas fa-ruler"></i> المقاسات</div>
+      <button class="cx-btn cx-btn--primary cx-btn--sm" id="btnAddSize"><i class="fas fa-plus me-1"></i>إضافة مقاس</button>
+    </div>
+    <table class="cs-table" id="sizesTable">
+      <thead><tr><th>المقاس</th><th>الترتيب</th><th>الحالة</th><th></th></tr></thead>
+      <tbody id="sizesTbody"><tr><td colspan="4" class="cs-empty">جاري التحميل...</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ═══ Color Modal ═══ -->
+<div class="modal fade" id="colorModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content cx-modal-card">
+      <div class="cx-modal-header">
+        <h5 class="cx-modal-title" id="colorModalTitle">إضافة لون</h5>
+        <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="colorForm">
+        <input type="hidden" id="colorId">
+        <div class="cx-modal-body">
+          <div class="alert alert-danger d-none js-color-errors mb-3" id="colorErrors"></div>
+          <div class="cx-field mb-3">
+            <label class="cx-label">اسم اللون <span class="text-danger">*</span></label>
+            <input type="text" id="colorName" class="cx-input" placeholder="مثال: أحمر، أزرق سماوي">
+          </div>
+          <div class="cx-field mb-3">
+            <label class="cx-label">الكود اللوني</label>
+            <div class="color-picker-row">
+              <input type="color" id="colorHex" value="#6366f1">
+              <input type="text" id="colorHexText" class="cx-input" placeholder="#6366f1" style="flex:1;">
+            </div>
+          </div>
+          <div class="cx-field">
+            <label class="cx-label d-flex align-items-center gap-2">
+              <input type="checkbox" id="colorActive" class="form-check-input" checked> نشط
+            </label>
+          </div>
+        </div>
+        <div class="cx-modal-footer">
+          <button type="button" class="cx-btn cx-btn--ghost" data-bs-dismiss="modal">إلغاء</button>
+          <button type="submit" class="cx-btn cx-btn--primary" id="colorSubmitBtn">حفظ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Size Modal ═══ -->
+<div class="modal fade" id="sizeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
+    <div class="modal-content cx-modal-card">
+      <div class="cx-modal-header">
+        <h5 class="cx-modal-title" id="sizeModalTitle">إضافة مقاس</h5>
+        <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="sizeForm">
+        <input type="hidden" id="sizeId">
+        <div class="cx-modal-body">
+          <div class="alert alert-danger d-none js-size-errors mb-3" id="sizeErrors"></div>
+          <div class="cx-field mb-3">
+            <label class="cx-label">اسم المقاس <span class="text-danger">*</span></label>
+            <input type="text" id="sizeName" class="cx-input" placeholder="مثال: S, M, L, XL, 38, 40">
+          </div>
+          <div class="cx-field mb-3">
+            <label class="cx-label">ترتيب العرض</label>
+            <input type="number" id="sizeOrder" class="cx-input" value="0" min="0">
+          </div>
+          <div class="cx-field">
+            <label class="cx-label d-flex align-items-center gap-2">
+              <input type="checkbox" id="sizeActive" class="form-check-input" checked> نشط
+            </label>
+          </div>
+        </div>
+        <div class="cx-modal-footer">
+          <button type="button" class="cx-btn cx-btn--ghost" data-bs-dismiss="modal">إلغاء</button>
+          <button type="submit" class="cx-btn cx-btn--primary" id="sizeSubmitBtn">حفظ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Delete Confirm Modal ═══ -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+    <div class="modal-content cx-delete-modal">
+      <div class="cx-delete-body">
+        <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+        <h5 class="cx-delete-title">تأكيد الحذف</h5>
+        <p class="cx-delete-desc">هل أنت متأكد من حذف <strong id="deleteItemName"></strong>؟</p>
+        <input type="hidden" id="deleteItemId">
+        <input type="hidden" id="deleteItemType">
+      </div>
+      <div class="cx-delete-footer">
+        <button type="button" class="cx-btn cx-btn--ghost" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="cx-btn cx-btn--danger" id="confirmDeleteBtn">نعم، احذف</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  'use strict';
+
+  const URL_COLOR_TABLE  = "{% url 'items:color_table_api' %}";
+  const URL_COLOR_CREATE = "{% url 'items:color_create_api' %}";
+  const URL_COLOR_UPDATE = "{% url 'items:color_update_api' 0 %}";
+  const URL_COLOR_DELETE = "{% url 'items:color_delete_api' 0 %}";
+  const URL_SIZE_TABLE   = "{% url 'items:size_table_api' %}";
+  const URL_SIZE_CREATE  = "{% url 'items:size_create_api' %}";
+  const URL_SIZE_UPDATE  = "{% url 'items:size_update_api' 0 %}";
+  const URL_SIZE_DELETE  = "{% url 'items:size_delete_api' 0 %}";
+
+  function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+
+  // Modals
+  const colorModalEl  = document.getElementById('colorModal');
+  const sizeModalEl   = document.getElementById('sizeModal');
+  const deleteModalEl = document.getElementById('deleteModal');
+  [colorModalEl, sizeModalEl, deleteModalEl].forEach(el => {
+    if (el && el.parentElement !== document.body) document.body.appendChild(el);
+  });
+  const colorModal  = new bootstrap.Modal(colorModalEl);
+  const sizeModal   = new bootstrap.Modal(sizeModalEl);
+  const deleteModal = new bootstrap.Modal(deleteModalEl);
+
+  // Color hex sync
+  document.getElementById('colorHex').addEventListener('input', function () {
+    document.getElementById('colorHexText').value = this.value;
+  });
+  document.getElementById('colorHexText').addEventListener('input', function () {
+    const v = this.value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) document.getElementById('colorHex').value = v;
+  });
+
+  // ── COLORS ──────────────────────────────────────────────────
+  function loadColors() {
+    $.getJSON(URL_COLOR_TABLE + '?length=200', function (resp) {
+      const tbody = document.getElementById('colorsTbody');
+      if (!resp.data || !resp.data.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="cs-empty">لا توجد ألوان بعد</td></tr>';
+        return;
+      }
+      tbody.innerHTML = resp.data.map(c => `
+        <tr>
+          <td><span class="cs-color-swatch" style="background:${c.hex_code};"></span></td>
+          <td>${c.name}</td>
+          <td><span class="cs-badge ${c.is_active ? 'cs-badge--on' : 'cs-badge--off'}">${c.is_active ? 'نشط' : 'موقوف'}</span></td>
+          <td>
+            <button class="cs-act js-edit-color" data-id="${c.id}" title="تعديل"><i class="fas fa-pen"></i></button>
+            <button class="cs-act cs-act--del js-del-color" data-id="${c.id}" data-name="${c.name}" title="حذف"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`).join('');
+    });
+  }
+
+  function openColorCreate() {
+    document.getElementById('colorId').value = '';
+    document.getElementById('colorModalTitle').textContent = 'إضافة لون';
+    document.getElementById('colorForm').reset();
+    document.getElementById('colorHex').value = '#6366f1';
+    document.getElementById('colorHexText').value = '#6366f1';
+    document.getElementById('colorActive').checked = true;
+    document.getElementById('colorErrors').classList.add('d-none');
+    colorModal.show();
+  }
+
+  function openColorEdit(id) {
+    // Find from table data
+    $.getJSON(URL_COLOR_TABLE + '?length=200', function (resp) {
+      const c = (resp.data || []).find(x => x.id == id);
+      if (!c) return;
+      document.getElementById('colorId').value = c.id;
+      document.getElementById('colorModalTitle').textContent = 'تعديل لون';
+      document.getElementById('colorName').value = c.name;
+      document.getElementById('colorHex').value = c.hex_code || '#6366f1';
+      document.getElementById('colorHexText').value = c.hex_code || '#6366f1';
+      document.getElementById('colorActive').checked = c.is_active;
+      document.getElementById('colorErrors').classList.add('d-none');
+      colorModal.show();
+    });
+  }
+
+  document.getElementById('colorForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const id = document.getElementById('colorId').value;
+    const url = id ? apiUrl(URL_COLOR_UPDATE, id) : URL_COLOR_CREATE;
+    const body = JSON.stringify({
+      name: document.getElementById('colorName').value.trim(),
+      hex_code: document.getElementById('colorHexText').value.trim() || document.getElementById('colorHex').value,
+      is_active: document.getElementById('colorActive').checked,
+    });
+    const errBox = document.getElementById('colorErrors');
+    errBox.classList.add('d-none');
+    $.ajax({ url, method: 'POST', contentType: 'application/json', data: body,
+      success: function (r) {
+        if (r.success) { colorModal.hide(); loadColors(); EnjazIMS.toast(r.message, 'success'); return; }
+        errBox.classList.remove('d-none'); errBox.textContent = r.message || 'تعذر الحفظ';
+      },
+      error: function (xhr) {
+        const r = xhr.responseJSON;
+        errBox.classList.remove('d-none'); errBox.textContent = (r && r.message) || 'حدث خطأ';
+      }
+    });
+  });
+
+  document.getElementById('colorsTbody').addEventListener('click', function (e) {
+    const editBtn = e.target.closest('.js-edit-color');
+    if (editBtn) { openColorEdit(editBtn.dataset.id); return; }
+    const delBtn = e.target.closest('.js-del-color');
+    if (delBtn) {
+      document.getElementById('deleteItemId').value = delBtn.dataset.id;
+      document.getElementById('deleteItemType').value = 'color';
+      document.getElementById('deleteItemName').textContent = delBtn.dataset.name;
+      deleteModal.show();
+    }
+  });
+
+  document.getElementById('btnAddColor').addEventListener('click', openColorCreate);
+
+  // ── SIZES ──────────────────────────────────────────────────
+  function loadSizes() {
+    $.getJSON(URL_SIZE_TABLE + '?length=200', function (resp) {
+      const tbody = document.getElementById('sizesTbody');
+      if (!resp.data || !resp.data.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="cs-empty">لا توجد مقاسات بعد</td></tr>';
+        return;
+      }
+      tbody.innerHTML = resp.data.map(s => `
+        <tr>
+          <td><strong>${s.name}</strong></td>
+          <td>${s.display_order}</td>
+          <td><span class="cs-badge ${s.is_active ? 'cs-badge--on' : 'cs-badge--off'}">${s.is_active ? 'نشط' : 'موقوف'}</span></td>
+          <td>
+            <button class="cs-act js-edit-size" data-id="${s.id}" title="تعديل"><i class="fas fa-pen"></i></button>
+            <button class="cs-act cs-act--del js-del-size" data-id="${s.id}" data-name="${s.name}" title="حذف"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`).join('');
+    });
+  }
+
+  function openSizeCreate() {
+    document.getElementById('sizeId').value = '';
+    document.getElementById('sizeModalTitle').textContent = 'إضافة مقاس';
+    document.getElementById('sizeForm').reset();
+    document.getElementById('sizeActive').checked = true;
+    document.getElementById('sizeErrors').classList.add('d-none');
+    sizeModal.show();
+  }
+
+  function openSizeEdit(id) {
+    $.getJSON(URL_SIZE_TABLE + '?length=200', function (resp) {
+      const s = (resp.data || []).find(x => x.id == id);
+      if (!s) return;
+      document.getElementById('sizeId').value = s.id;
+      document.getElementById('sizeModalTitle').textContent = 'تعديل مقاس';
+      document.getElementById('sizeName').value = s.name;
+      document.getElementById('sizeOrder').value = s.display_order;
+      document.getElementById('sizeActive').checked = s.is_active;
+      document.getElementById('sizeErrors').classList.add('d-none');
+      sizeModal.show();
+    });
+  }
+
+  document.getElementById('sizeForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const id = document.getElementById('sizeId').value;
+    const url = id ? apiUrl(URL_SIZE_UPDATE, id) : URL_SIZE_CREATE;
+    const body = JSON.stringify({
+      name: document.getElementById('sizeName').value.trim(),
+      display_order: parseInt(document.getElementById('sizeOrder').value) || 0,
+      is_active: document.getElementById('sizeActive').checked,
+    });
+    const errBox = document.getElementById('sizeErrors');
+    errBox.classList.add('d-none');
+    $.ajax({ url, method: 'POST', contentType: 'application/json', data: body,
+      success: function (r) {
+        if (r.success) { sizeModal.hide(); loadSizes(); EnjazIMS.toast(r.message, 'success'); return; }
+        errBox.classList.remove('d-none'); errBox.textContent = r.message || 'تعذر الحفظ';
+      },
+      error: function (xhr) {
+        const r = xhr.responseJSON;
+        errBox.classList.remove('d-none'); errBox.textContent = (r && r.message) || 'حدث خطأ';
+      }
+    });
+  });
+
+  document.getElementById('sizesTbody').addEventListener('click', function (e) {
+    const editBtn = e.target.closest('.js-edit-size');
+    if (editBtn) { openSizeEdit(editBtn.dataset.id); return; }
+    const delBtn = e.target.closest('.js-del-size');
+    if (delBtn) {
+      document.getElementById('deleteItemId').value = delBtn.dataset.id;
+      document.getElementById('deleteItemType').value = 'size';
+      document.getElementById('deleteItemName').textContent = delBtn.dataset.name;
+      deleteModal.show();
+    }
+  });
+
+  document.getElementById('btnAddSize').addEventListener('click', openSizeCreate);
+
+  // ── DELETE ─────────────────────────────────────────────────
+  document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+    const id   = document.getElementById('deleteItemId').value;
+    const type = document.getElementById('deleteItemType').value;
+    const url  = type === 'color' ? apiUrl(URL_COLOR_DELETE, id) : apiUrl(URL_SIZE_DELETE, id);
+    $.ajax({ url, method: 'POST',
+      success: function (r) {
+        if (r.success) {
+          deleteModal.hide();
+          if (type === 'color') loadColors(); else loadSizes();
+          EnjazIMS.toast(r.message, 'success');
+        } else {
+          EnjazIMS.toast(r.message || 'تعذر الحذف', 'error');
+        }
+      },
+      error: function () { EnjazIMS.toast('تعذر الحذف', 'error'); }
+    });
+  });
+
+  // ── INIT ───────────────────────────────────────────────────
+  loadColors();
+  loadSizes();
+})();
+</script>
+{% endblock %}

@@ -134,7 +134,7 @@ def treasury_create_api(request):
 
         treasury.save()
         log_activity(request, 'إضافة خزينة جديدة',
-                     f"الخزينة: {treasury.name}\nالنوع: {treasury.get_treasury_type_display()}", 'create')
+                     f"الخزينة: {treasury.name}", 'create')
 
         return JsonResponse({
             'success': True,

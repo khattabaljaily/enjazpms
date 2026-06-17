@@ -499,6 +499,9 @@
     overflow: visible !important;
     overflow-x: hidden !important;
     background: #fff !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
   .dashboard-body,

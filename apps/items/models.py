@@ -13,6 +13,48 @@ from apps.core.models import TenantMixin
 
 
 # ============================================
+# COLOR (الألوان)
+# ============================================
+
+class Color(TenantMixin):
+    name = models.CharField('اسم اللون', max_length=100)
+    hex_code = models.CharField('الكود اللوني', max_length=7, blank=True, default='#6366f1')
+    is_active = models.BooleanField('نشط', default=True)
+
+    class Meta:
+        db_table = 'item_colors'
+        verbose_name = 'لون'
+        verbose_name_plural = 'الألوان'
+        ordering = ['name']
+        unique_together = [('tenant', 'name')]
+        indexes = [models.Index(fields=['tenant', 'is_active'])]
+
+    def __str__(self):
+        return self.name
+
+
+# ============================================
+# SIZE (المقاسات)
+# ============================================
+
+class Size(TenantMixin):
+    name = models.CharField('اسم المقاس', max_length=50)
+    display_order = models.IntegerField('ترتيب العرض', default=0)
+    is_active = models.BooleanField('نشط', default=True)
+
+    class Meta:
+        db_table = 'item_sizes'
+        verbose_name = 'مقاس'
+        verbose_name_plural = 'المقاسات'
+        ordering = ['display_order', 'name']
+        unique_together = [('tenant', 'name')]
+        indexes = [models.Index(fields=['tenant', 'is_active'])]
+
+    def __str__(self):
+        return self.name
+
+
+# ============================================
 # CATEGORY (تصنيفات المنتجات)
 # ============================================
 

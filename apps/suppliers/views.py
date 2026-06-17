@@ -2,6 +2,7 @@ from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import DecimalField, Exists, OuterRef, Q, Sum, Value
+from django.db.models.deletion import ProtectedError
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -595,7 +596,13 @@ def supplier_delete_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
-    supplier.delete()
+    try:
+        supplier.delete()
+    except ProtectedError:
+        return JsonResponse({
+            'success': False,
+            'message': 'لا يمكن حذف المورد لوجود فواتير أو حركات مرتبطة به.',
+        }, status=400)
     return JsonResponse({
         'success': True,
         'message': 'تم حذف المورد بنجاح',

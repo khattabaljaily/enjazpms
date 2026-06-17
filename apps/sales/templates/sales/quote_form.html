@@ -5,6 +5,21 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
 <link rel="stylesheet" href="{% static 'css/sales_quote_form.css' %}?v=1.0">
+<style>
+.cx-searchable-select { position: relative; }
+.cx-searchable-select-dropdown {
+  position: absolute; z-index: 1050; width: 100%;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.12);
+  max-height: 220px; overflow-y: auto;
+  top: calc(100% + 4px);
+}
+.cx-searchable-option { padding: .55rem 1rem; cursor: pointer; font-size: .875rem; color: var(--text-primary, #111827); }
+.cx-searchable-option:hover { background: var(--surface-alt, #f3f4f6); }
+.cx-searchable-no-results { padding: .75rem 1rem; font-size: .8rem; color: var(--text-muted, #9ca3af); }
+</style>
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -58,15 +73,11 @@
                     <!-- العميل -->
                     <div class="col-md-6">
                         <label class="cx-label">العميل</label>
-                        <select id="customerId" name="customer_id" class="cx-input">
-                            <option value="">— زبون عابر —</option>
-                            {% for c in customers %}
-                            <option value="{{ c.id }}"
-                                {% if quote and quote.customer_id == c.id %}selected{% endif %}>
-                                {{ c.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                        <div class="cx-searchable-select">
+                            <input type="text" id="customerSearch" class="cx-input" placeholder="ابحث عن عميل..." autocomplete="off">
+                            <input type="hidden" id="customerId" name="customer_id" value="{% if quote and quote.customer_id %}{{ quote.customer_id }}{% endif %}">
+                            <div id="customerDropdown" class="cx-searchable-select-dropdown" style="display:none;"></div>
+                        </div>
                     </div>
 
                     <!-- المخزن -->
@@ -267,6 +278,10 @@
 const ITEM_INFO_URL = "{% url 'sales:item_info_api' %}";
 const STOCK_ITEMS_URL = "{% url 'sales:stock_items_api' %}";
 const CUSTOMER_INFO_URL = "{% url 'sales:customer_info_api' %}";
+const CUSTOMERS_DATA = [
+    { id: '', name: '— زبون عابر —' },
+    {% for c in customers %}{ id: '{{ c.id }}', name: '{{ c.name|escapejs }}' },{% endfor %}
+];
 const IS_EDIT = {% if quote %}true{% else %}false{% endif %};
 const QUOTE_ID = "{{ quote.id|default:'' }}";
 const QUOTE_CREATE_URL = "{% url 'sales:quote_create' %}";
@@ -281,9 +296,40 @@ const EXISTING_LINES = [];
 
 let lineCounter = 0;
 
+// ── Searchable Customer Select ────────────────────────────────────
+(function () {
+    const searchInput = document.getElementById('customerSearch');
+    const hiddenInput = document.getElementById('customerId');
+    const dropdown    = document.getElementById('customerDropdown');
+    function renderOptions(list) {
+        dropdown.innerHTML = list.length
+            ? list.map(c => `<div class="cx-searchable-option" data-id="${c.id}">${c.name}</div>`).join('')
+            : '<div class="cx-searchable-no-results">لا توجد نتائج</div>';
+        dropdown.querySelectorAll('.cx-searchable-option').forEach(el => {
+            el.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                hiddenInput.value = this.dataset.id;
+                searchInput.value = this.textContent;
+                dropdown.style.display = 'none';
+                fetchCustomerInfo();
+            });
+        });
+    }
+    function openDropdown() {
+        const q = searchInput.value.toLowerCase();
+        renderOptions(CUSTOMERS_DATA.filter(c => c.name.toLowerCase().includes(q)));
+        dropdown.style.display = 'block';
+    }
+    searchInput.addEventListener('focus', openDropdown);
+    searchInput.addEventListener('input', openDropdown);
+    searchInput.addEventListener('blur', () => { setTimeout(() => { dropdown.style.display = 'none'; }, 150); });
+    const pre = CUSTOMERS_DATA.find(c => c.id == hiddenInput.value);
+    if (pre) searchInput.value = pre.name;
+})();
+
 document.addEventListener('DOMContentLoaded', function () {
     EXISTING_LINES.forEach(line => addLineToTable(line));
-    document.getElementById('customerId').addEventListener('change', fetchCustomerInfo);
+    // customer handled via searchable-select above
     if (document.getElementById('customerId').value) fetchCustomerInfo();
     recalcTotals();
     document.getElementById('itemSearchBackdrop').addEventListener('click', function (e) {
@@ -295,8 +341,7 @@ document.addEventListener('DOMContentLoaded', function () {
 function openItemSearch() {
     document.getElementById('itemSearchBackdrop').classList.remove('sales-field-hidden');
     document.getElementById('itemSearchQuery').focus();
-    document.getElementById('itemSearchResults').innerHTML =
-        '<div class="text-muted text-center py-3">ابدأ الكتابة للبحث...</div>';
+    searchItems();
 }
 
 function closeItemSearch() {
@@ -308,17 +353,14 @@ let searchTimeout;
 function searchItems() {
     clearTimeout(searchTimeout);
     const q = document.getElementById('itemSearchQuery').value.trim();
-    if (!q) {
-        document.getElementById('itemSearchResults').innerHTML =
-            '<div class="text-muted text-center py-3">ابدأ الكتابة للبحث...</div>';
-        return;
-    }
+    document.getElementById('itemSearchResults').innerHTML =
+        '<div class="text-muted text-center py-3">جاري التحميل...</div>';
     searchTimeout = setTimeout(() => {
         const stockId = document.getElementById('stockId').value;
         fetch(`${STOCK_ITEMS_URL}?stock_id=${stockId}&q=${encodeURIComponent(q)}`)
             .then(r => r.json())
             .then(data => { if (data.success) renderSearchResults(data.items); });
-    }, 300);
+    }, q ? 300 : 0);
 }
 
 function renderSearchResults(items) {

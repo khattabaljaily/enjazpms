@@ -33,20 +33,29 @@
   <div class="cx-panel p-4">
     <div class="table-responsive cx-table-wrap">
       <table class="cx-table">
-        <thead><tr><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+        <thead><tr><th>المنتج</th><th>الكمية</th><th>سعر الوحدة</th><th class="text-end">الإجمالي</th></tr></thead>
         <tbody>
           {% for line in return_lines %}
           <tr>
             <td>{{ line.item.name }}</td>
             <td>{{ line.returned_quantity|floatformat:"-3u" }}</td>
-            <td>{{ line.unit_cost }}</td>
-            <td>{{ line.line_total }}</td>
+            <td class="text-end" dir="ltr">{{ line.unit_cost|floatformat:2|intcomma }}</td>
+            <td class="text-end fw-bold" dir="ltr">{{ line.line_total|floatformat:2|intcomma }}</td>
           </tr>
           {% empty %}
           <tr><td colspan="4" class="text-center text-muted">لا توجد بنود</td></tr>
           {% endfor %}
         </tbody>
       </table>
+    </div>
+    <!-- إجمالي المرتجع -->
+    <div class="d-flex justify-content-end mt-3">
+      <div style="background:#f8fafc;border-radius:12px;padding:.875rem 1.25rem;border:1px solid #e5e7eb;min-width:220px;">
+        <div class="d-flex justify-content-between align-items-center gap-4">
+          <span style="font-size:.85rem;color:#6b7280;">إجمالي المرتجع</span>
+          <strong style="font-size:1.1rem;color:#6366f1;" dir="ltr">{{ purchase_return.total_returned|floatformat:2|intcomma }}</strong>
+        </div>
+      </div>
     </div>
   </div>
 </div>

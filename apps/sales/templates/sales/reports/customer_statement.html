@@ -110,7 +110,7 @@
                                 <span class="badge" style="background:rgba(107,114,128,.12); color:#6b7280; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ entry.entry_type }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end fw-bold">{{ entry.amount }}</td>
+                            <td class="text-end fw-bold" style="color:{% if entry.amount|first == '-' %}#11998e{% else %}#ef4444{% endif %}">{{ entry.amount }}</td>
                             <td class="text-end fw-bold" style="color:{% if entry.running_balance|first == '-' %}#11998e{% else %}#6366f1{% endif %}">{{ entry.running_balance }}</td>
                             <td class="text-muted" style="font-size:.8rem;">{{ entry.notes|default:"—" }}</td>
                         </tr>

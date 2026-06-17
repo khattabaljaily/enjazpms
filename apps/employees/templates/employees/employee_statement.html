@@ -33,7 +33,7 @@
                         </div>
                         <div class="text-center">
                             <div class="small opacity-75">الراتب الأساسي</div>
-                            <div class="fs-4 fw-bold">{{ employee.base_salary|intcomma }}</div>
+                            <div class="fs-4 fw-bold">{{ employee.base_salary|floatformat:2|intcomma }}</div>
                         </div>
                     </div>
                 </div>
@@ -44,25 +44,25 @@
     <!-- إحصائيات سريعة -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="cx-mini-stat" style="border-left:4px solid #6366f1;">
+            <div class="cx-mini-stat" style="border-inline-start:4px solid #6366f1;">
                 <div class="cx-mini-stat-label">إجمالي الرواتب المدفوعة</div>
                 <div class="cx-mini-stat-value">{{ total_paid|floatformat:2|intcomma }}</div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="cx-mini-stat" style="border-left:4px solid #22c55e;">
+            <div class="cx-mini-stat" style="border-inline-start:4px solid #22c55e;">
                 <div class="cx-mini-stat-label">إجمالي الحوافز</div>
                 <div class="cx-mini-stat-value text-success">{{ total_bonus|floatformat:2|intcomma }}</div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="cx-mini-stat" style="border-left:4px solid #ef4444;">
+            <div class="cx-mini-stat" style="border-inline-start:4px solid #ef4444;">
                 <div class="cx-mini-stat-label">إجمالي الخصومات</div>
                 <div class="cx-mini-stat-value text-danger">{{ total_deduct|floatformat:2|intcomma }}</div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="cx-mini-stat" style="border-left:4px solid #f59e0b;">
+            <div class="cx-mini-stat" style="border-inline-start:4px solid #f59e0b;">
                 <div class="cx-mini-stat-label">السلف القائمة</div>
                 <div class="cx-mini-stat-value text-warning">{{ total_adv|floatformat:2|intcomma }}</div>
             </div>
@@ -136,7 +136,7 @@
                     {% for adv in advances %}
                     <tr>
                         <td>{{ adv.date }}</td>
-                        <td>{{ adv.amount|floatformat:2|intcomma }}</td>
+                        <td class="text-danger fw-bold">{{ adv.amount|floatformat:2|intcomma }}</td>
                         <td>{{ adv.treasury.name|default:"—" }}</td>
                         <td>
                             {% if adv.status == 'pending' %}
@@ -185,7 +185,7 @@
                             {% endif %}
                         </td>
                         <td>{{ inc.description }}</td>
-                        <td>{{ inc.amount|floatformat:2|intcomma }}</td>
+                        <td class="{% if inc.type == 'bonus' %}text-success{% else %}text-danger{% endif %} fw-bold">{{ inc.amount|floatformat:2|intcomma }}</td>
                         <td>{{ inc.get_payout_display }}</td>
                         <td>{{ inc.date }}</td>
                         <td>

@@ -288,7 +288,10 @@ function renderMobileInvoiceCards(rows) {
     };
 
     const cardsHtml = rows.map(function (r) {
-        const total = EnjazIMS.formatMoney(r.grand_total || 0);
+        const returnedAmt = EnjazIMS.parseNumber(r.returned_amount || 0);
+        const total = returnedAmt > 0
+            ? `<span style="text-decoration:line-through;color:#9ca3af;font-size:.8em;">${EnjazIMS.formatMoney(r.grand_total || 0)}</span> <span class="text-danger">${EnjazIMS.formatMoney(r.net_total || 0)}</span>`
+            : EnjazIMS.formatMoney(r.grand_total || 0);
         const statusClass = statusBadgeMap[r.status] || r.status_color || 'muted';
         const statusLabel = r.status_label || '—';
         const paymentMethod = paymentMethodMap[r.payment_method] || r.payment_method || '—';
@@ -393,12 +396,15 @@ function initTable() {
             {
                 data: 'grand_total',
                 className: 'text-end sales-money-col',
-                render: function (data, type) {
-                    const numericValue = EnjazIMS.parseNumber(data);
+                render: function (data, type, row) {
+                    const returnedAmt = EnjazIMS.parseNumber(row.returned_amount || 0);
                     if (type === 'sort' || type === 'type') {
-                        return numericValue;
+                        return EnjazIMS.parseNumber(row.net_total || data);
                     }
-                    return EnjazIMS.formatMoney(numericValue);
+                    if (returnedAmt > 0) {
+                        return `<span style="text-decoration:line-through;color:#9ca3af;font-size:.85em;">${EnjazIMS.formatMoney(data)}</span><br><span class="text-danger fw-bold">${EnjazIMS.formatMoney(row.net_total || 0)}</span><br><small class="text-muted" style="font-size:.7em;">مرتجع: ${EnjazIMS.formatMoney(returnedAmt)}</small>`;
+                    }
+                    return EnjazIMS.formatMoney(EnjazIMS.parseNumber(data));
                 }
             },
             {

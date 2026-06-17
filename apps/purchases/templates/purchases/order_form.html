@@ -205,6 +205,7 @@ function getCookie(name) {
 function openItemSearch() {
     document.getElementById('itemSearchBackdrop').classList.remove('sales-field-hidden');
     document.getElementById('itemSearchQuery').focus();
+    searchItems();
 }
 
 function closeItemSearch() {
@@ -216,13 +217,10 @@ let searchTimer;
 function searchItems() {
     clearTimeout(searchTimer);
     const q = document.getElementById('itemSearchQuery').value.trim();
-    if (q.length < 1) {
-        document.getElementById('itemSearchResults').innerHTML = '<div class="text-muted text-center py-3">اكتب حرفاً واحداً على الأقل</div>';
-        return;
-    }
+    document.getElementById('itemSearchResults').innerHTML = '<div class="text-muted text-center py-3">جاري التحميل...</div>';
 
     searchTimer = setTimeout(() => {
-        fetch(`${ITEM_SEARCH_URL}?q=${encodeURIComponent(q)}&min_chars=1`)
+        fetch(`${ITEM_SEARCH_URL}?q=${encodeURIComponent(q)}&min_chars=0`)
             .then(r => r.json())
             .then(data => {
                 const items = data.results || [];

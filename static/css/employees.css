@@ -35,13 +35,13 @@
 /* Statement page */
 .cx-mini-stat {
     background: var(--bg-card, #fff);
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
     box-shadow: 0 2px 8px rgba(15,23,42,.06);
     border: 1px solid var(--border-color);
 }
-.cx-mini-stat-label { font-size: .8rem; color: var(--text-muted, #6b7280); margin-bottom: .25rem; }
-.cx-mini-stat-value { font-size: 1.3rem; font-weight: 700; }
+.cx-mini-stat-label { font-size: .8rem; color: var(--text-muted, #6b7280); margin-bottom: .35rem; }
+.cx-mini-stat-value { font-size: 1.4rem; font-weight: 700; }
 
 /* nav-icon color for employees */
 .nav-icon--emp { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
