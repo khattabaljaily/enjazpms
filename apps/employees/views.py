@@ -514,15 +514,32 @@ def salary_create(request):
     if advances_deducted > pending_total:
         return _err(f'السلف المطلوب خصمها ({advances_deducted}) أكبر من إجمالي السلف القائمة ({pending_total})')
 
+    pending_incentives = emp.incentives.filter(
+        status='pending',
+        payout='with_salary',
+        date__range=(period_start, period_end),
+    )
+    auto_bonus = Decimal('0')
+    auto_deductions = Decimal('0')
+    for inc in pending_incentives:
+        if inc.type == 'bonus':
+            auto_bonus += inc.amount
+        else:
+            auto_deductions += inc.amount
+
+    base_salary = _dec(data.get('base_salary', emp.base_salary))
+    bonus = _dec(data.get('bonus', 0)) + auto_bonus
+    deductions = _dec(data.get('deductions', 0)) + auto_deductions
+
     sp = EmployeeSalaryPayment.objects.create(
         tenant=tenant,
         employee=emp,
         period_start=period_start,
         period_end=period_end,
-        base_salary=_dec(data.get('base_salary', emp.base_salary)),
-        bonus=_dec(data.get('bonus', 0)),
+        base_salary=base_salary,
+        bonus=bonus,
         advances_deducted=advances_deducted,
-        deductions=_dec(data.get('deductions', 0)),
+        deductions=deductions,
         deductions_notes=(data.get('deductions_notes') or '').strip(),
         payment_method=payment_method,
         treasury=treasury,

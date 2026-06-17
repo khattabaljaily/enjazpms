@@ -200,6 +200,13 @@ class EmployeeSalaryPayment(TenantMixin):
             - self.deductions
         )
 
+    def get_pending_with_salary_incentives(self):
+        return self.employee.incentives.filter(
+            status='pending',
+            payout='with_salary',
+            date__range=(self.period_start, self.period_end),
+        ).order_by('date', 'pk')
+
     def pay(self):
         if self.status != 'draft':
             return
@@ -225,6 +232,13 @@ class EmployeeSalaryPayment(TenantMixin):
 
             # Mark linked advances as deducted
             self.advance_items.filter(status='pending').update(status='deducted')
+
+            # Mark deferred incentives/deductions as paid once the salary is paid
+            self.employee.incentives.filter(
+                status='pending',
+                payout='with_salary',
+                date__range=(self.period_start, self.period_end),
+            ).update(status='paid')
 
     def cancel(self):
         if self.status == 'cancelled':
