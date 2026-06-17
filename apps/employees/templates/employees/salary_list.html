@@ -134,36 +134,37 @@
                         تفاصيل الراتب
                     </div>
                     <div class="row g-3 mb-4">
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="cx-label">الراتب الأساسي</label>
                             <input type="number" id="salBaseSalary" class="cx-input text-end" min="0" step="0.01" value="0">
                         </div>
-                        <div class="col-md-6">
-                            <label class="cx-label">الحوافز</label>
-                            <input type="number" id="salBonus" class="cx-input text-end" min="0" step="0.01" value="0">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="cx-label">
-                                السلف المخصومة
-                                <span id="pendingAdvLabel" class="text-muted small ms-1"></span>
-                            </label>
-                            <input type="number" id="salAdvancesDeducted" class="cx-input text-end" min="0" step="0.01" value="0">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="cx-label">خصومات أخرى</label>
-                            <input type="number" id="salDeductions" class="cx-input text-end" min="0" step="0.01" value="0">
-                        </div>
-                        <div class="col-12">
-                            <label class="cx-label">تفاصيل الخصومات</label>
-                            <textarea id="salDeductionsNotes" class="cx-input" rows="2" placeholder="سبب الخصم..."></textarea>
-                        </div>
-                        <div class="col-12" id="pendingSalaryItemsWrap" style="display:none">
-                            <div class="p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="fw-bold">الحوافز والخصومات المؤجلة</span>
-                                    <span class="small text-muted" id="pendingSalaryItemsCount">0 عناصر</span>
-                                </div>
-                                <div id="pendingSalaryItems" class="d-flex flex-column gap-2"></div>
+                        <div class="col-12" id="pendingItemsSection" style="display:none">
+                            <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+                                <table class="table table-sm table-hover mb-0" style="font-size:.875rem;">
+                                    <thead style="background:#f1f5f9;">
+                                        <tr>
+                                            <th style="width:36px;padding:8px 10px;">
+                                                <input type="checkbox" id="checkAllItems" checked style="cursor:pointer;">
+                                            </th>
+                                            <th style="padding:8px 6px;">النوع</th>
+                                            <th style="padding:8px 6px;">الوصف</th>
+                                            <th style="padding:8px 6px;">التاريخ</th>
+                                            <th class="text-end" style="padding:8px 10px;">المبلغ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pendingItemsBody"></tbody>
+                                    <tfoot>
+                                        <tr style="background:#f8fafc;border-top:2px solid #e2e8f0;">
+                                            <td colspan="5" style="padding:8px 12px;">
+                                                <div class="d-flex gap-4 justify-content-end small fw-semibold flex-wrap">
+                                                    <span>سلفيات: <span id="totAdv" style="color:#d97706">0.00</span></span>
+                                                    <span>حوافز: <span id="totBonus" style="color:#16a34a">0.00</span></span>
+                                                    <span>خصومات: <span id="totDed" style="color:#dc2626">0.00</span></span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
                         </div>
                         <div class="col-12">
@@ -320,13 +321,106 @@
         return m[s] || s;
     }
 
-    function calcNet() {
-        const base  = parseFloat(document.getElementById('salBaseSalary').value) || 0;
-        const bonus = parseFloat(document.getElementById('salBonus').value) || 0;
-        const adv   = parseFloat(document.getElementById('salAdvancesDeducted').value) || 0;
-        const ded   = parseFloat(document.getElementById('salDeductions').value) || 0;
-        document.getElementById('salNetDisplay').textContent = EnjazIMS.formatMoney(base + bonus - adv - ded);
+    /* ── Pending items state ── */
+    let pendingItems = [];
+
+    function updateTotals() {
+        const checked = pendingItems.filter(i => i.checked);
+        document.getElementById('totAdv').textContent   = EnjazIMS.formatMoney(checked.filter(i => i.type === 'advance').reduce((s,i) => s + i.amount, 0));
+        document.getElementById('totBonus').textContent = EnjazIMS.formatMoney(checked.filter(i => i.type === 'bonus').reduce((s,i) => s + i.amount, 0));
+        document.getElementById('totDed').textContent   = EnjazIMS.formatMoney(checked.filter(i => i.type === 'deduction').reduce((s,i) => s + i.amount, 0));
     }
+
+    function calcNet() {
+        const base = parseFloat(document.getElementById('salBaseSalary').value) || 0;
+        const checked = pendingItems.filter(i => i.checked);
+        const bonuses    = checked.filter(i => i.type === 'bonus').reduce((s,i) => s + i.amount, 0);
+        const advances   = checked.filter(i => i.type === 'advance').reduce((s,i) => s + i.amount, 0);
+        const deductions = checked.filter(i => i.type === 'deduction').reduce((s,i) => s + i.amount, 0);
+        document.getElementById('salNetDisplay').textContent = EnjazIMS.formatMoney(base + bonuses - advances - deductions);
+    }
+
+    function renderPendingTable() {
+        const section = document.getElementById('pendingItemsSection');
+        const tbody   = document.getElementById('pendingItemsBody');
+        if (!pendingItems.length) {
+            section.style.display = 'none';
+            tbody.innerHTML = '';
+            updateTotals();
+            return;
+        }
+        section.style.display = '';
+        tbody.innerHTML = pendingItems.map(function (item, idx) {
+            const badge = item.type === 'advance'
+                ? '<span class="badge" style="background:#fef3c7;color:#92400e;font-weight:600;">سلفة</span>'
+                : item.type === 'bonus'
+                ? '<span class="badge" style="background:#dcfce7;color:#166534;font-weight:600;">حافز</span>'
+                : '<span class="badge" style="background:#fee2e2;color:#991b1b;font-weight:600;">خصم</span>';
+            const amtStyle = item.checked ? (item.type === 'bonus' ? 'color:#16a34a' : 'color:#dc2626') : 'color:#9ca3af';
+            const rowStyle = item.checked ? '' : 'opacity:.55';
+            return `<tr id="pit-${idx}" style="${rowStyle}">
+                <td style="padding:7px 10px;"><input type="checkbox" class="pit-chk" data-idx="${idx}" ${item.checked ? 'checked' : ''} style="cursor:pointer;"></td>
+                <td style="padding:7px 6px;">${badge}</td>
+                <td style="padding:7px 6px;" class="small">${item.description || '—'}</td>
+                <td style="padding:7px 6px;" class="small text-muted">${item.date}</td>
+                <td style="padding:7px 10px;text-align:end;font-weight:600;${amtStyle}">${EnjazIMS.formatMoney(item.amount)}</td>
+            </tr>`;
+        }).join('');
+        updateTotals();
+    }
+
+    function loadPendingItems() {
+        const employee = document.getElementById('salEmployee').value;
+        if (!employee) {
+            pendingItems = [];
+            renderPendingTable();
+            calcNet();
+            return;
+        }
+        Promise.all([
+            fetch(pendAdvUrl(employee)).then(r => r.json()),
+            fetch(pendIncUrl(employee)).then(r => r.json())
+        ]).then(function (results) {
+            const advData = results[0];
+            const incData = results[1];
+            const advances   = (advData.advances || []).map(function (a) {
+                return { id: a.id, itemType: 'advance', type: 'advance', amount: parseFloat(a.amount), date: a.date, description: a.notes || 'سلفة', checked: true };
+            });
+            const incentives = (incData.items || []).map(function (i) {
+                return { id: i.id, itemType: 'incentive', type: i.type, amount: parseFloat(i.amount), date: i.date, description: i.description, checked: true };
+            });
+            pendingItems = advances.concat(incentives);
+            const allChecked = pendingItems.length > 0;
+            document.getElementById('checkAllItems').checked = allChecked;
+            renderPendingTable();
+            calcNet();
+        }).catch(function () {
+            pendingItems = [];
+            renderPendingTable();
+        });
+    }
+
+    /* ── Checkbox events (delegation) ── */
+    document.getElementById('pendingItemsBody').addEventListener('change', function (e) {
+        if (!e.target.classList.contains('pit-chk')) return;
+        const idx = parseInt(e.target.dataset.idx, 10);
+        pendingItems[idx].checked = e.target.checked;
+        const row = document.getElementById('pit-' + idx);
+        const item = pendingItems[idx];
+        row.style.opacity = item.checked ? '' : '.55';
+        const amtCell = row.querySelector('td:last-child');
+        amtCell.style.color = item.checked ? (item.type === 'bonus' ? '#16a34a' : '#dc2626') : '#9ca3af';
+        updateTotals();
+        calcNet();
+        const anyUnchecked = pendingItems.some(i => !i.checked);
+        document.getElementById('checkAllItems').checked = !anyUnchecked;
+    });
+
+    document.getElementById('checkAllItems').addEventListener('change', function () {
+        pendingItems.forEach(function (item) { item.checked = this.checked; }, this);
+        renderPendingTable();
+        calcNet();
+    });
 
     /* ── DataTable ── */
     const dt = $('#salariesTable').DataTable({
@@ -390,91 +484,15 @@
         document.getElementById(id).addEventListener('change', () => dt.ajax.reload());
     });
 
-    /* ── Net salary calculation ── */
-    ['salBaseSalary', 'salBonus', 'salAdvancesDeducted', 'salDeductions'].forEach(function (id) {
-        document.getElementById(id).addEventListener('input', calcNet);
-    });
+    document.getElementById('salBaseSalary').addEventListener('input', calcNet);
 
-    function renderPendingIncentives(items) {
-        const wrap = document.getElementById('pendingSalaryItemsWrap');
-        const count = document.getElementById('pendingSalaryItemsCount');
-        const box = document.getElementById('pendingSalaryItems');
-        if (!items.length) {
-            wrap.style.display = 'none';
-            box.innerHTML = '';
-            count.textContent = '0 عناصر';
-            return;
-        }
-        wrap.style.display = '';
-        count.textContent = items.length + ' عناصر';
-        box.innerHTML = items.map(item => `
-            <div class="d-flex justify-content-between align-items-start gap-3 p-2 rounded-3" style="background:#fff;border:1px solid #e5e7eb;">
-                <div>
-                    <div class="fw-semibold">${item.type_display}</div>
-                    <div class="small text-muted">${item.description}</div>
-                </div>
-                <div class="text-end">
-                    <div class="fw-bold ${item.type === 'bonus' ? 'text-success' : 'text-danger'}">${EnjazIMS.formatMoney(item.amount)}</div>
-                    <div class="small text-muted">${item.date}</div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function updatePendingSalaryData() {
-        const employee = document.getElementById('salEmployee').value;
-        const start = document.getElementById('salPeriodStart').value;
-        const end = document.getElementById('salPeriodEnd').value;
-
-        if (!employee) {
-            document.getElementById('pendingSalaryItemsWrap').style.display = 'none';
-            document.getElementById('pendingSalaryItems').innerHTML = '';
-            return;
-        }
-
-        const url = new URL(pendIncUrl(employee), window.location.origin);
-        if (start) url.searchParams.set('period_start', start);
-        if (end) url.searchParams.set('period_end', end);
-
-        fetch(url)
-            .then(r => r.json())
-            .then(function (d) {
-                renderPendingIncentives(d.items || []);
-                if (d.bonus_total !== undefined) {
-                    document.getElementById('salBonus').value = d.bonus_total;
-                }
-                if (d.deduction_total !== undefined) {
-                    document.getElementById('salDeductions').value = d.deduction_total;
-                }
-                calcNet();
-            })
-            .catch(() => {
-                document.getElementById('pendingSalaryItemsWrap').style.display = 'none';
-            });
-    }
-
-    /* ── When employee changes → prefill salary + pending advances ── */
+    /* ── When employee changes → prefill base salary + load pending items ── */
     document.getElementById('salEmployee').addEventListener('change', function () {
         const opt = this.options[this.selectedIndex];
-        if (opt.dataset.salary) {
+        if (opt && opt.dataset.salary) {
             document.getElementById('salBaseSalary').value = opt.dataset.salary;
-            calcNet();
         }
-        if (this.value) {
-            fetch(pendAdvUrl(this.value))
-                .then(r => r.json())
-                .then(function (d) {
-                    document.getElementById('pendingAdvLabel').textContent =
-                        '(إجمالي السلف القائمة: ' + EnjazIMS.formatMoney(d.total) + ')';
-                    document.getElementById('salAdvancesDeducted').max = d.total;
-                });
-        }
-        updatePendingSalaryData();
-    });
-
-    ['salPeriodStart', 'salPeriodEnd'].forEach(function (id) {
-        document.getElementById(id).addEventListener('input', updatePendingSalaryData);
-        document.getElementById(id).addEventListener('change', updatePendingSalaryData);
+        loadPendingItems();
     });
 
     function setSalPM(method) {
@@ -494,17 +512,17 @@
         document.getElementById('salPeriodStart').value = '';
         document.getElementById('salPeriodEnd').value = '';
         document.getElementById('salBaseSalary').value = '0';
-        document.getElementById('salBonus').value = '0';
-        document.getElementById('salAdvancesDeducted').value = '0';
-        document.getElementById('salDeductions').value = '0';
-        document.getElementById('salDeductionsNotes').value = '';
         document.getElementById('salTreasury').value = '';
         document.getElementById('salBankRef') && (document.getElementById('salBankRef').value = '');
         document.getElementById('salNotes').value = '';
         document.getElementById('salNetDisplay').textContent = '0.00';
-        document.getElementById('pendingAdvLabel').textContent = '';
-        document.getElementById('pendingSalaryItems').innerHTML = '';
-        document.getElementById('pendingSalaryItemsWrap').style.display = 'none';
+        pendingItems = [];
+        document.getElementById('pendingItemsSection').style.display = 'none';
+        document.getElementById('pendingItemsBody').innerHTML = '';
+        document.getElementById('checkAllItems').checked = true;
+        document.getElementById('totAdv').textContent   = '0.00';
+        document.getElementById('totBonus').textContent = '0.00';
+        document.getElementById('totDed').textContent   = '0.00';
         setSalPM('cash');
         salModal.show();
     });
@@ -520,19 +538,25 @@
         if (!start || !end) { EnjazIMS.toast('الرجاء تحديد فترة الراتب', 'error'); return; }
         if (method === 'cash' && !treasury) { EnjazIMS.toast('الرجاء اختيار الخزينة للدفع النقدي', 'error'); return; }
 
+        const checked = pendingItems.filter(function (i) { return i.checked; });
+        const bonus            = checked.filter(i => i.type === 'bonus').reduce((s,i) => s + i.amount, 0);
+        const advances_deducted= checked.filter(i => i.type === 'advance').reduce((s,i) => s + i.amount, 0);
+        const deductions       = checked.filter(i => i.type === 'deduction').reduce((s,i) => s + i.amount, 0);
+        const selected_incentive_ids = checked.filter(i => i.itemType === 'incentive').map(i => i.id);
+
         const payload = {
             employee,
-            period_start:      start,
-            period_end:        end,
-            base_salary:       document.getElementById('salBaseSalary').value,
-            bonus:             document.getElementById('salBonus').value,
-            advances_deducted: document.getElementById('salAdvancesDeducted').value,
-            deductions:        document.getElementById('salDeductions').value,
-            deductions_notes:  document.getElementById('salDeductionsNotes').value.trim(),
-            payment_method:    method,
-            treasury:          treasury,
-            bank_reference:    document.getElementById('salBankRef').value.trim(),
-            notes:             document.getElementById('salNotes').value.trim(),
+            period_start:           start,
+            period_end:             end,
+            base_salary:            document.getElementById('salBaseSalary').value,
+            bonus:                  bonus.toFixed(2),
+            advances_deducted:      advances_deducted.toFixed(2),
+            deductions:             deductions.toFixed(2),
+            selected_incentive_ids: selected_incentive_ids,
+            payment_method:         method,
+            treasury:               treasury,
+            bank_reference:         document.getElementById('salBankRef').value.trim(),
+            notes:                  document.getElementById('salNotes').value.trim(),
         };
 
         const $btn = $('#btnSaveSalary');

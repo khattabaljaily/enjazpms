@@ -525,22 +525,28 @@ def salary_create(request):
     if advances_deducted > pending_total:
         return _err(f'السلف المطلوب خصمها ({advances_deducted}) أكبر من إجمالي السلف القائمة ({pending_total})')
 
-    pending_incentives = emp.incentives.filter(
-        status='pending',
-        payout='with_salary',
-        date__range=(period_start, period_end),
-    )
-    auto_bonus = Decimal('0')
-    auto_deductions = Decimal('0')
-    for inc in pending_incentives:
-        if inc.type == 'bonus':
-            auto_bonus += inc.amount
-        else:
-            auto_deductions += inc.amount
-
     base_salary = _dec(data.get('base_salary', emp.base_salary))
-    bonus = _dec(data.get('bonus', 0)) + auto_bonus
-    deductions = _dec(data.get('deductions', 0)) + auto_deductions
+
+    if 'selected_incentive_ids' in data:
+        # Frontend computed selections — trust the sent values directly
+        bonus = _dec(data.get('bonus', 0))
+        deductions = _dec(data.get('deductions', 0))
+    else:
+        # Legacy: auto-add pending incentives within the period
+        pending_incentives = emp.incentives.filter(
+            status='pending',
+            payout='with_salary',
+            date__range=(period_start, period_end),
+        )
+        auto_bonus = Decimal('0')
+        auto_deductions = Decimal('0')
+        for inc in pending_incentives:
+            if inc.type == 'bonus':
+                auto_bonus += inc.amount
+            else:
+                auto_deductions += inc.amount
+        bonus = _dec(data.get('bonus', 0)) + auto_bonus
+        deductions = _dec(data.get('deductions', 0)) + auto_deductions
 
     sp = EmployeeSalaryPayment.objects.create(
         tenant=tenant,
