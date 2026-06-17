@@ -4,6 +4,7 @@ from decimal import Decimal, InvalidOperation
 from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -273,7 +274,13 @@ def _process_expense_post(request, tenant, expense):
     expense.notes = notes
     expense.updated_by = request.user
     is_new = expense.pk is None
-    expense.save()
+
+    try:
+        with transaction.atomic():
+            expense.save()
+            confirm_expense(expense, user=request.user)
+    except ValueError as e:
+        return _err(str(e))
 
     if is_new:
         log_activity(request, 'إضافة مصروف جديد',

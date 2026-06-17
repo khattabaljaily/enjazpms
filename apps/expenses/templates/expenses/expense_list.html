@@ -516,13 +516,10 @@
         const editBtn = row.status_raw === 'draft'
             ? `<button type="button" class="cx-btn-icon js-edit-expense" data-id="${row.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>`
             : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
-        const confirmBtn = row.status_raw === 'draft'
-            ? `<button type="button" class="cx-btn-icon cx-btn-icon--success js-confirm" data-id="${row.id}" title="تأكيد"><i class="fas fa-check"></i></button>`
-            : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
         const cancelBtn = (row.status_raw === 'draft' || row.status_raw === 'confirmed')
             ? `<button type="button" class="cx-btn-icon cx-btn-icon--danger js-cancel" data-id="${row.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`
             : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
-        return `<div class="cx-actions">${viewBtn}${editBtn}${confirmBtn}${cancelBtn}</div>`;
+        return `<div class="cx-actions">${viewBtn}${editBtn}${cancelBtn}</div>`;
     }
 
     /* ── Mobile card renderer ───────────────────────────────── */
@@ -573,7 +570,6 @@
                 <div class="cx-expense-card-actions">
                     <button type="button" class="cxr-act cxr-act--view js-view-expense" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
                     ${r.status_raw === 'draft' ? `<button type="button" class="cxr-act js-edit-expense" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
-                    ${r.status_raw === 'draft' ? `<button type="button" class="cxr-act cxr-act--success js-confirm" data-id="${r.id}" aria-label="تأكيد" title="تأكيد"><i class="fas fa-check"></i></button>` : ''}
                     ${(r.status_raw === 'draft' || r.status_raw === 'confirmed') ? `<button type="button" class="cxr-act cxr-act--del js-cancel" data-id="${r.id}" aria-label="إلغاء" title="إلغاء"><i class="fas fa-ban"></i></button>` : ''}
                 </div>
             </article>`;
@@ -755,10 +751,8 @@
         });
     });
 
-    $('#expensesTable').on('click', '.js-confirm, .js-cancel', function () {
-        const id = $(this).data('id');
-        const isConfirm = $(this).hasClass('js-confirm');
-        openExpenseActionConfirm(id, isConfirm);
+    $('#expensesTable').on('click', '.js-cancel', function () {
+        openExpenseActionConfirm($(this).data('id'), false);
     });
 
     $('#expensesTable').on('click', '.js-edit-expense', function () {
@@ -769,10 +763,8 @@
         openExpenseView($(this).data('id'));
     });
 
-    $('#expensesCardsMobile').on('click', '.js-confirm, .js-cancel', function () {
-        const id = $(this).data('id');
-        const isConfirm = $(this).hasClass('js-confirm');
-        openExpenseActionConfirm(id, isConfirm);
+    $('#expensesCardsMobile').on('click', '.js-cancel', function () {
+        openExpenseActionConfirm($(this).data('id'), false);
     });
 
     $('#expensesCardsMobile').on('click', '.js-edit-expense', function () {

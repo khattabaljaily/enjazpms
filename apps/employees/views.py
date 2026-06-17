@@ -344,6 +344,9 @@ def advance_create(request):
         if not treasury_id:
             return _err('يجب اختيار الخزينة للدفع النقدي')
         treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
+        current_balance = treasury.current_balance or Decimal('0')
+        if current_balance < amount:
+            return _err(f"رصيد الخزينة غير كافٍ. الرصيد الحالي: {current_balance:.2f} والمطلوب صرفه: {amount:.2f}.")
     elif treasury_id:
         treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
 
@@ -746,50 +749,58 @@ def incentive_create(request):
     treasury_id    = data.get('treasury')
     treasury       = None
 
+    if itype == 'deduction':
+        payout = 'with_salary'
+
     if itype == 'bonus' and payout == 'immediate':
         if payment_method == 'cash':
             if not treasury_id:
                 return _err('الحوافز الفورية النقدية تتطلب تحديد الخزينة')
             treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
+            current_balance = treasury.current_balance or Decimal('0')
+            if current_balance < amount:
+                return _err(f"رصيد الخزينة غير كافٍ. الرصيد الحالي: {current_balance:.2f} والمطلوب صرفه: {amount:.2f}.")
         elif treasury_id:
             treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
     elif treasury_id:
         treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
 
     from django.db import transaction
-    with transaction.atomic():
-        inc = EmployeeIncentive.objects.create(
-            tenant=tenant,
-            employee=emp,
-            type=itype,
-            amount=amount,
-            description=description,
-            payout=payout,
-            payment_method=payment_method,
-            treasury=treasury,
-            bank_reference=(data.get('bank_reference') or '').strip(),
-            date=data.get('date') or timezone.localdate(),
-            notes=(data.get('notes') or '').strip(),
-            created_by=request.user,
-            updated_by=request.user,
-        )
-
-        # If immediate cash bonus — disburse from treasury right away
-        if itype == 'bonus' and payout == 'immediate' and payment_method == 'cash' and treasury:
-            mv = post_treasury_disbursement(
+    try:
+        with transaction.atomic():
+            inc = EmployeeIncentive.objects.create(
                 tenant=tenant,
+                employee=emp,
+                type=itype,
                 amount=amount,
-                date=inc.date,
-                reference_type='employee_incentive',
-                reference_id=inc.pk,
-                description=f'حافز {emp.name} — {description}',
-                user=request.user,
+                description=description,
+                payout=payout,
+                payment_method=payment_method,
                 treasury=treasury,
+                bank_reference=(data.get('bank_reference') or '').strip(),
+                date=data.get('date') or timezone.localdate(),
+                notes=(data.get('notes') or '').strip(),
+                created_by=request.user,
+                updated_by=request.user,
             )
-            if mv:
-                inc.treasury_movement = mv
-                inc.status = 'paid'
-                inc.save(update_fields=['treasury_movement', 'status', 'updated_at'])
+
+            if itype == 'bonus' and payout == 'immediate' and payment_method == 'cash' and treasury:
+                mv = post_treasury_disbursement(
+                    tenant=tenant,
+                    amount=amount,
+                    date=inc.date,
+                    reference_type='employee_incentive',
+                    reference_id=inc.pk,
+                    description=f'حافز {emp.name} — {description}',
+                    user=request.user,
+                    treasury=treasury,
+                )
+                if mv:
+                    inc.treasury_movement = mv
+                    inc.status = 'paid'
+                    inc.save(update_fields=['treasury_movement', 'status', 'updated_at'])
+    except ValueError as e:
+        return _err(str(e))
 
     log_activity(request, 'create', f'حافز/خصم: {emp.name} — {description}')
     return JsonResponse({'success': True, 'id': inc.pk})

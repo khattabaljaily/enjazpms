@@ -341,7 +341,15 @@
 
     function toggleIncPaymentSection() {
         const type   = document.getElementById('incType').value;
-        const payout = document.getElementById('incPayout').value;
+        const payoutEl = document.getElementById('incPayout');
+        const immOpt = payoutEl.querySelector('option[value="immediate"]');
+        if (type === 'deduction') {
+            payoutEl.value = 'with_salary';
+            if (immOpt) { immOpt.disabled = true; immOpt.style.display = 'none'; }
+        } else {
+            if (immOpt) { immOpt.disabled = false; immOpt.style.display = ''; }
+        }
+        const payout = payoutEl.value;
         const show   = type === 'bonus' && payout === 'immediate';
         document.getElementById('incPaymentRow').style.display  = show ? '' : 'none';
         if (!show) {

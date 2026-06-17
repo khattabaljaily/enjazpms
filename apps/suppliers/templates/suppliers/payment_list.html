@@ -148,14 +148,14 @@
                                     <div class="cx-panel-header mb-3">
                                         <h3 class="cx-panel-title"><i class="fas fa-user me-2"></i>تفاصيل المورد</h3>
                                     </div>
-                                    <div class="cx-info-grid">
-                                        <div class="cx-info-item">
-                                            <span class="cx-info-label">اسم المورد</span>
-                                            <span class="cx-info-value" id="paymentModalSupplierName">—</span>
+                                    <div style="display:flex;flex-direction:column;gap:10px;">
+                                        <div style="background:#f8f9fa;border-radius:8px;padding:10px 14px;">
+                                            <div style="font-size:0.68rem;color:#6c757d;margin-bottom:3px;">اسم المورد</div>
+                                            <div style="font-size:0.88rem;font-weight:600;overflow-wrap:break-word;" id="paymentModalSupplierName">—</div>
                                         </div>
-                                        <div class="cx-info-item">
-                                            <span class="cx-info-label">المديونية</span>
-                                            <span class="cx-info-value" id="paymentModalSupplierBalance">—</span>
+                                        <div style="background:#f8f9fa;border-radius:8px;padding:10px 14px;">
+                                            <div style="font-size:0.68rem;color:#6c757d;margin-bottom:3px;">المديونية</div>
+                                            <div style="font-size:0.88rem;font-weight:600;" id="paymentModalSupplierBalance">—</div>
                                         </div>
                                     </div>
                                 </div>
@@ -331,7 +331,7 @@
             {
                 data: 'amount',
                 className: 'text-end',
-                render: v => EnjazIMS.formatMoney(v || 0)
+                render: v => EnjazIMS.formatMoney(Math.abs(v || 0))
             },
             { data: 'payment_method' },
             { data: 'notes' },
