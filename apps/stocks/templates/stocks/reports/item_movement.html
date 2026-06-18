@@ -118,7 +118,6 @@
                                     {% if row.direction == 'in' %}دخول{% else %}خروج{% endif %}
                                 </span>
                                 {% if row.is_reversal %}<span class="badge ms-1" style="background:rgba(100,116,139,.12);color:#64748b;font-size:.68rem;border-radius:6px;padding:.2rem .4rem;">↺ إلغاء</span>{% endif %}
-                                <div style="font-size:.7rem;color:#94a3b8;margin-top:.1rem;">{{ row.movement_type }}</div>
                             </td>
                             <td class="text-center fw-bold" style="color:#11998e;">{% if row.direction == 'in' %}{{ row.quantity_in }}{% else %}—{% endif %}</td>
                             <td class="text-center fw-bold" style="color:#ef4444;">{% if row.direction == 'out' %}{{ row.quantity_out }}{% else %}—{% endif %}</td>
