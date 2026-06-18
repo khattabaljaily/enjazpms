@@ -220,7 +220,7 @@ class StocksReportGenerator:
             tenant=self.tenant,
             movement_date__gte=self.start_date,
             movement_date__lte=self.end_date,
-        ).select_related('item', 'stock').prefetch_related('item__item_units').order_by('movement_date', 'id')
+        ).select_related('item', 'stock').prefetch_related('item__item_units').order_by('-id')
 
         if item_id:
             movements = movements.filter(item_id=item_id)
@@ -248,6 +248,7 @@ class StocksReportGenerator:
                 'balance_after': format_number(float(m.balance_after), 2),
                 'unit_cost': format_number(float(m.unit_cost), 2),
                 'notes': m.notes,
+                'is_reversal': m.is_reversal,
             })
 
         # Build item/stock filter options

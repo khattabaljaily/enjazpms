@@ -75,7 +75,7 @@ def _reverse_stock_movements(tenant, invoice):
             tenant=tenant,
             item=mv.item,
             stock=mv.stock,
-            movement_type=mv.movement_type,
+            movement_type='adjustment_out',
             direction='out',
             quantity=mv.quantity,
             unit_cost=mv.unit_cost,
@@ -83,7 +83,7 @@ def _reverse_stock_movements(tenant, invoice):
             reference_type=mv.reference_type,
             reference_id=mv.reference_id,
             movement_date=timezone.localdate(),
-            notes=f'إلغاء: {mv.notes}' if mv.notes else 'إلغاء أمر شراء',
+            notes=f'إلغاء أمر شراء: {mv.notes}' if mv.notes else 'إلغاء أمر شراء',
             is_reversal=True,
         )
 
@@ -446,7 +446,7 @@ def cancel_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRet
             tenant=tenant,
             item=mv.item,
             stock=mv.stock,
-            movement_type=mv.movement_type,
+            movement_type='adjustment_in',
             direction='in',
             quantity=mv.quantity,
             unit_cost=mv.unit_cost,
@@ -454,7 +454,7 @@ def cancel_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRet
             reference_type=mv.reference_type,
             reference_id=mv.reference_id,
             movement_date=timezone.localdate(),
-            notes=f'إلغاء: {mv.notes}' if mv.notes else 'إلغاء مرتجع شراء',
+            notes=f'إلغاء مرتجع شراء: {mv.notes}' if mv.notes else 'إلغاء مرتجع شراء',
             is_reversal=True,
         )
 
