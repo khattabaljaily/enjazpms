@@ -97,10 +97,10 @@
                             <td>{{ line.component.name }}</td>
                             <td><code>{{ line.component.sku }}</code></td>
                             <td>{{ line.quantity|floatformat:"-2" }}</td>
-                            <td><strong>{{ line.quantity|floatformat:"-2" }}</strong> × {{ order.quantity|floatformat:"-2" }}</td>
+                            <td><strong>{{ line.total_qty|floatformat:"-2" }}</strong></td>
                             <td>{{ line.unit.name|default:"-" }}</td>
                             <td>{{ line.component.cost_price|money }}</td>
-                            <td>{{ line.component.cost_price|money }}</td>
+                            <td>{{ line.total_cost|money }}</td>
                         </tr>
                         {% empty %}
                         <tr>

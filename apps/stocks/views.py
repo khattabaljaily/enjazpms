@@ -1673,8 +1673,18 @@ def manufacturing_detail(request, pk):
         return redirect('core:no_tenant')
 
     from django.shortcuts import get_object_or_404
+    from django.db.models import F, ExpressionWrapper, DecimalField as DBDecimalField
     order = get_object_or_404(ManufacturingOrder, pk=pk, tenant=tenant)
-    lines = order.recipe.lines.select_related('component', 'unit').all()
+    lines = order.recipe.lines.select_related('component', 'unit').annotate(
+        total_qty=ExpressionWrapper(
+            F('quantity') * order.quantity,
+            output_field=DBDecimalField(max_digits=16, decimal_places=4)
+        ),
+        total_cost=ExpressionWrapper(
+            F('quantity') * order.quantity * F('component__cost_price'),
+            output_field=DBDecimalField(max_digits=16, decimal_places=4)
+        )
+    )
     return render(request, 'stocks/manufacturing_detail.html', {'order': order, 'lines': lines})
 
 
