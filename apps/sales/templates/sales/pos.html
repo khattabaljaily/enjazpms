@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/main.css' %}?v=8.1">
-    <link rel="stylesheet" href="{% static 'css/pos.css' %}?v=3.0">
+    <link rel="stylesheet" href="{% static 'css/pos.css' %}?v=3.1">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script>(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
 </head>
@@ -89,11 +89,16 @@
                 </button>
             </div>
             <div class="pos-customer-row" style="position:relative;">
-                <input type="text" id="posCustomerSearch" class="cx-input"
-                       placeholder="زبون عابر..." autocomplete="off"
-                       style="width:100%;padding-top:.45rem;padding-bottom:.45rem;padding-left:2rem;font-size:.83rem;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' stroke='%236b7280' stroke-width='2' fill='none'/%3E%3Ccircle cx='12' cy='7' r='4' stroke='%236b7280' stroke-width='2' fill='none'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:left .65rem center;">
+                <div class="pos-cust-wrap" id="posCustomerWrap">
+                    <span class="pos-cust-icon"><i class="fas fa-user"></i></span>
+                    <input type="text" id="posCustomerSearch" class="pos-cust-input"
+                           placeholder="زبون عابر..." autocomplete="off">
+                    <button type="button" class="pos-cust-clear" id="posCustomerClearBtn" title="إلغاء الاختيار">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
                 <input type="hidden" id="posCustomerId" value="">
-                <div id="posCustomerDrop" style="display:none;position:absolute;top:100%;right:0;left:0;z-index:999;background:var(--bg-card,#fff);border:1px solid var(--border-light,#e5e7eb);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;margin-top:2px;"></div>
+                <div id="posCustomerDrop" class="pos-cust-drop" style="display:none"></div>
             </div>
         </div>
 
@@ -242,40 +247,67 @@ const $customer   = document.getElementById('posCustomerId');
         { id: '', name: 'زبون عابر' },
         {% for c in customers %}{ id: '{{ c.id }}', name: '{{ c.name|escapejs }}' },{% endfor %}
     ];
-    const inp  = document.getElementById('posCustomerSearch');
-    const hid  = document.getElementById('posCustomerId');
-    const drop = document.getElementById('posCustomerDrop');
+    const inp      = document.getElementById('posCustomerSearch');
+    const hid      = document.getElementById('posCustomerId');
+    const drop     = document.getElementById('posCustomerDrop');
+    const wrap     = document.getElementById('posCustomerWrap');
+    const clearBtn = document.getElementById('posCustomerClearBtn');
+    let picking    = false;
+
+    function setCustomer(id, name) {
+        hid.value = id;
+        if (id) {
+            inp.value = name;
+            wrap.classList.add('has-customer');
+            clearBtn.style.display = 'flex';
+        } else {
+            inp.value = '';
+            inp.placeholder = 'زبون عابر...';
+            wrap.classList.remove('has-customer');
+            clearBtn.style.display = 'none';
+        }
+        drop.style.display = 'none';
+    }
 
     function renderDrop(list) {
         drop.innerHTML = list.map(c =>
-            `<div style="padding:.55rem 1rem;cursor:pointer;font-size:.85rem;color:var(--text-primary,#111827);" data-id="${c.id}">${c.name}</div>`
-        ).join('') || `<div style="padding:.55rem 1rem;font-size:.8rem;color:var(--text-muted,#9ca3af);">لا توجد نتائج</div>`;
-        drop.querySelectorAll('[data-id]').forEach(el => {
-            el.addEventListener('mousedown', function (e) {
-                e.preventDefault();
-                hid.value  = this.dataset.id;
-                inp.value  = this.textContent;
-                drop.style.display = 'none';
-            });
-            el.addEventListener('mouseenter', function() { this.style.background = 'var(--surface-alt,#f3f4f6)'; });
-            el.addEventListener('mouseleave', function() { this.style.background = ''; });
-        });
+            `<div class="pos-cust-item" data-id="${c.id}" data-name="${c.name}">` +
+            `<i class="fas ${c.id ? 'fa-user' : 'fa-store'}" style="margin-left:.5rem;font-size:.75rem;opacity:.45"></i>` +
+            `${c.name}</div>`
+        ).join('') || `<div class="pos-cust-item pos-cust-item--empty">لا توجد نتائج</div>`;
+        drop.style.display = 'block';
     }
 
+    /* event delegation — avoids listener re-attachment on every render */
+    drop.addEventListener('mousedown', function (e) {
+        const item = e.target.closest('[data-id]');
+        if (!item) return;
+        e.preventDefault();
+        picking = true;
+        setCustomer(item.dataset.id, item.dataset.name);
+        picking = false;
+    });
+
     inp.addEventListener('focus', function () {
-        this.value  = '';
-        hid.value   = '';
-        renderDrop(POS_CUSTOMERS);
-        drop.style.display = 'block';
+        const q = this.value.toLowerCase();
+        renderDrop(q ? POS_CUSTOMERS.filter(c => c.name.toLowerCase().includes(q)) : POS_CUSTOMERS);
     });
     inp.addEventListener('input', function () {
         const q = this.value.toLowerCase();
         renderDrop(POS_CUSTOMERS.filter(c => c.name.toLowerCase().includes(q)));
-        drop.style.display = 'block';
     });
     inp.addEventListener('blur', function () {
-        setTimeout(() => { drop.style.display = 'none'; }, 160);
+        setTimeout(() => {
+            if (picking) return;
+            drop.style.display = 'none';
+            if (!hid.value) inp.value = '';
+        }, 120);
     });
+
+    clearBtn.addEventListener('click', function () { setCustomer('', ''); inp.focus(); });
+    clearBtn.style.display = 'none';
+
+    window._posCustReset = function () { setCustomer('', ''); };
 })();
 const $discType   = document.getElementById('discountType');
 const $discVal    = document.getElementById('discountValue');
@@ -690,8 +722,7 @@ document.getElementById('successNew').addEventListener('click', () => {
     $discVal.value   = '';
     $cashRcvd.value  = '';
     $notes.value     = '';
-    $customer.value  = '';
-    document.getElementById('posCustomerSearch').value = '';
+    window._posCustReset && window._posCustReset();
     $changeVal.textContent = '—';
     loadItems(activeCat, '');
     $search.value = '';

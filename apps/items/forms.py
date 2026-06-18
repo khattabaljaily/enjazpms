@@ -1,5 +1,5 @@
 from django import forms
-from .models import Category, Unit, Item, ItemVariant
+from .models import Category, Unit, Item
 
 
 class CategoryForm(forms.ModelForm):
@@ -83,7 +83,7 @@ class ItemForm(forms.ModelForm):
             'category',
             'cost_price', 'selling_price', 'min_selling_price', 'tax_rate',
             'min_quantity', 'max_quantity',
-            'track_expiry', 'track_batch', 'track_serial', 'has_variants',
+            'track_expiry', 'track_batch', 'track_serial',
             'description', 'image', 'is_active', 'is_sellable', 'is_purchasable',
         ]
         widgets = {
@@ -102,7 +102,6 @@ class ItemForm(forms.ModelForm):
             'track_expiry': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'track_batch': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'track_serial': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'has_variants': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -125,7 +124,6 @@ class ItemForm(forms.ModelForm):
             'track_expiry': 'تتبع تاريخ الانتهاء',
             'track_batch': 'تتبع رقم الدفعة',
             'track_serial': 'تتبع الرقم التسلسلي',
-            'has_variants': 'يحتوي على متغيرات',
             'description': 'الوصف',
             'image': 'الصورة',
             'is_active': 'نشط',
@@ -150,23 +148,3 @@ class ItemForm(forms.ModelForm):
             )
         else:
             self.fields['category'].queryset = Category.objects.none()
-
-
-class ItemVariantForm(forms.ModelForm):
-    class Meta:
-        model = ItemVariant
-        fields = ['name', 'barcode', 'sku_suffix', 'price_adjustment', 'is_active']
-        widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: أبيض - L'}),
-            'barcode': forms.TextInput(attrs={'class': 'form-control'}),
-            'sku_suffix': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '-WL'}),
-            'price_adjustment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-        labels = {
-            'name': 'اسم المتغير',
-            'barcode': 'الباركود',
-            'sku_suffix': 'لاحقة الرمز',
-            'price_adjustment': 'فرق السعر',
-            'is_active': 'نشط',
-        }

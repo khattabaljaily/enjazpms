@@ -22,7 +22,7 @@ class SaleInvoiceLineForm(forms.ModelForm):
     class Meta:
         model = SaleInvoiceLine
         fields = [
-            'item', 'variant', 'quantity', 'unit_price',
+            'item', 'quantity', 'unit_price',
             'discount_percent', 'tax_rate',
             'batch_number', 'serial_number', 'expiry_date',
         ]

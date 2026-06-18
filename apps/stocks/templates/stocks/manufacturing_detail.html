@@ -125,8 +125,8 @@ const CANCEL_URL  = "{% url 'stocks:manufacturing_cancel' order.id %}";
 const DELETE_URL  = "{% url 'stocks:manufacturing_delete' order.id %}";
 const CSRF_TOKEN  = "{{ csrf_token }}";
 
-async function ajaxAction(url, confirmMsg, successMsg, redirectAfter) {
-    const ok = await EnjazIMS.confirmAction(confirmMsg);
+async function ajaxAction(url, confirmMsg, title, successMsg, redirectAfter) {
+    const ok = await EnjazIMS.confirmAction(confirmMsg, title);
     if (!ok) return;
     try {
         const r = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
@@ -147,15 +147,15 @@ async function ajaxAction(url, confirmMsg, successMsg, redirectAfter) {
 }
 
 function confirmOrder() {
-    ajaxAction(CONFIRM_URL, 'هل تريد تأكيد أمر التصنيع؟ سيتم خصم المكوّنات وإضافة المنتج النهائي.', 'تم تأكيد الأمر بنجاح');
+    ajaxAction(CONFIRM_URL, 'سيتم خصم المكوّنات من المخزون وإضافة المنتج النهائي. هل تريد المتابعة؟', 'تأكيد أمر التصنيع', 'تم تأكيد الأمر بنجاح');
 }
 
 function cancelOrder() {
-    ajaxAction(CANCEL_URL, 'هل تريد إلغاء أمر التصنيع؟ سيتم عكس جميع حركات المخزون.', 'تم إلغاء الأمر');
+    ajaxAction(CANCEL_URL, 'سيتم إلغاء الأمر وعكس جميع حركات المخزون. هل تريد المتابعة؟', 'إلغاء أمر التصنيع', 'تم إلغاء الأمر');
 }
 
 function deleteOrder() {
-    ajaxAction(DELETE_URL, 'هل تريد حذف هذه المسودة نهائياً؟', 'تم حذف الأمر', "{% url 'stocks:manufacturing_list' %}");
+    ajaxAction(DELETE_URL, 'سيتم حذف هذه المسودة نهائياً. لا يمكن التراجع.', 'حذف أمر التصنيع', 'تم حذف الأمر', "{% url 'stocks:manufacturing_list' %}");
 }
 </script>
 {% endblock %}

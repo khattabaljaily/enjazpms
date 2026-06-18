@@ -164,11 +164,8 @@
                         </div>
                         <div class="col-6">
                             <label class="cx-label">الوحدة</label>
-                            <select id="lineUnit" class="cx-input">
-                                <option value="">— لا وحدة —</option>
-                                {% for unit in units %}
-                                <option value="{{ unit.id }}">{{ unit.name }}</option>
-                                {% endfor %}
+                            <select id="lineUnit" class="cx-input" disabled>
+                                <option value="">— اختر مكوّناً أولاً —</option>
                             </select>
                         </div>
                         <div class="col-12">
@@ -221,37 +218,61 @@ const BOM_LIST_URL       = "{% url 'items:bom_list' %}";
 const CSRF_TOKEN         = "{{ csrf_token }}";
 
 /* ── Component search ─────────────────────────────────────── */
+const BOM_TYPES = 'raw_material,semi_finished';
+
+function renderCompResults(results) {
+    if (!results.length) {
+        $('#lineComponentResults').html('<div style="padding:.6rem .75rem;color:var(--text-secondary);font-size:.85rem">لا توجد نتائج</div>').show();
+        return;
+    }
+    const html = results.map(r =>
+        `<div class="bom-comp-result" data-id="${r.id}" data-name="${r.name}"
+              data-units='${JSON.stringify(r.units || [])}'
+              style="padding:.55rem .75rem;cursor:pointer;border-bottom:1px solid var(--border-light);transition:background .15s"
+              onmouseenter="this.style.background='var(--bg-secondary)'" onmouseleave="this.style.background=''">
+            <strong style="font-size:.9rem">${r.name}</strong>
+            <span style="font-size:.78rem;color:var(--text-secondary);margin-right:.4rem">${r.sku || ''}</span>
+            <span style="font-size:.72rem;color:var(--primary);margin-right:.3rem">${r.item_type_label || ''}</span>
+        </div>`
+    ).join('');
+    $('#lineComponentResults').html(html).show();
+}
+
+$('#lineComponentSearch').on('focus', function() {
+    if ($('#lineComponent').val()) return;
+    $.getJSON(ITEM_SEARCH_URL + '?q=&min_chars=0&types=' + BOM_TYPES, function(data) {
+        renderCompResults(data.results || []);
+    });
+});
+
 let compSearchTimer;
 $('#lineComponentSearch').on('input', function() {
     clearTimeout(compSearchTimer);
     const q = $(this).val().trim();
-    if (!q) { $('#lineComponentResults').hide(); return; }
     compSearchTimer = setTimeout(function() {
-        $.getJSON(ITEM_SEARCH_URL + '?q=' + encodeURIComponent(q) + '&min_chars=1', function(data) {
-            const results = data.results || [];
-            if (!results.length) {
-                $('#lineComponentResults').html('<div style="padding:.6rem .75rem;color:var(--text-secondary);font-size:.85rem">لا توجد نتائج</div>').show();
-                return;
-            }
-            const html = results.map(r =>
-                `<div class="bom-comp-result" data-id="${r.id}" data-name="${r.name}"
-                      style="padding:.55rem .75rem;cursor:pointer;border-bottom:1px solid var(--border-light);transition:background .15s"
-                      onmouseenter="this.style.background='var(--bg-secondary)'" onmouseleave="this.style.background=''">
-                    <strong style="font-size:.9rem">${r.name}</strong>
-                    <span style="font-size:.78rem;color:var(--text-secondary);margin-right:.4rem">${r.sku || ''}</span>
-                </div>`
-            ).join('');
-            $('#lineComponentResults').html(html).show();
+        $.getJSON(ITEM_SEARCH_URL + '?q=' + encodeURIComponent(q) + '&min_chars=0&types=' + BOM_TYPES, function(data) {
+            renderCompResults(data.results || []);
         });
     }, 250);
 });
 
 $(document).on('click', '.bom-comp-result', function() {
     const id = $(this).data('id'), name = $(this).data('name');
+    const units = $(this).data('units') || [];
     $('#lineComponent').val(id);
     $('#lineComponentSearch').val(name);
     $('#lineComponentSelected').html('<i class="fas fa-check-circle me-1"></i>' + name);
     $('#lineComponentResults').hide();
+
+    const $sel = $('#lineUnit').empty();
+    $sel.append('<option value="">— لا وحدة —</option>');
+    if (units.length) {
+        units.forEach(u => $sel.append(`<option value="${u.id}">${u.name}</option>`));
+        $sel.prop('disabled', false).val(units[0].id);
+    } else {
+        $sel.append('<option value="" disabled>لا توجد وحدات لهذا المنتج</option>');
+        $sel.prop('disabled', false);
+    }
 });
 
 $(document).on('click', function(e) {
@@ -267,7 +288,7 @@ function openAddLineModal() {
     $('#lineComponentSelected').html('');
     $('#lineComponentResults').hide();
     $('#lineQty').val('1');
-    $('#lineUnit').val('');
+    $('#lineUnit').html('<option value="">— اختر مكوّناً أولاً —</option>').prop('disabled', true);
     $('#lineNotes').val('');
     new bootstrap.Modal(document.getElementById('addLineModal')).show();
     setTimeout(() => $('#lineComponentSearch').trigger('focus'), 300);

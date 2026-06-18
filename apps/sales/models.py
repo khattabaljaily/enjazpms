@@ -278,13 +278,6 @@ class SaleInvoiceLine(TenantMixin):
         related_name='sale_lines',
         verbose_name='المنتج'
     )
-    variant = models.ForeignKey(
-        'items.ItemVariant',
-        on_delete=models.PROTECT,
-        null=True, blank=True,
-        related_name='sale_lines',
-        verbose_name='المتغير'
-    )
 
     quantity = models.DecimalField(
         'الكمية', max_digits=12, decimal_places=4
@@ -585,13 +578,6 @@ class StockMovement(TenantMixin):
         on_delete=models.PROTECT,
         related_name='stock_movements',
         verbose_name='المنتج'
-    )
-    variant = models.ForeignKey(
-        'items.ItemVariant',
-        on_delete=models.PROTECT,
-        null=True, blank=True,
-        related_name='stock_movements',
-        verbose_name='المتغير'
     )
     stock = models.ForeignKey(
         'stocks.Stock',
@@ -917,13 +903,6 @@ class SaleQuoteLine(TenantMixin):
         on_delete=models.PROTECT,
         related_name='quote_lines',
         verbose_name='المنتج'
-    )
-    variant = models.ForeignKey(
-        'items.ItemVariant',
-        on_delete=models.PROTECT,
-        null=True, blank=True,
-        related_name='quote_lines',
-        verbose_name='المتغير'
     )
 
     quantity = models.DecimalField(

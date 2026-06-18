@@ -1978,9 +1978,7 @@ def _delete_tenant_data(tenant):
         SupplierLedger.objects.filter(**t).delete()
         Expense.objects.filter(**t).delete()
         TreasuryMovement.objects.filter(**t).delete()
-        # After the above, tenant.delete() cascades safely through
-        # Customer, Supplier, Item, ItemVariant, Stock, StockQuantity,
-        # Treasury, ExpenseCategory, Users, Settings, etc.
+        # After the above, tenant.delete() cascades safely through remaining relations.
     finally:
         tenant_deletion_in_progress.reset(token)
 

@@ -215,9 +215,8 @@ class TenantCapabilities(models.Model):
     has_batch_numbers = models.BooleanField('أرقام الدُفعات / الباتش', default=False)
     has_serial_numbers = models.BooleanField('أرقام تسلسلية', default=False)
 
-    # الكميات والتشكيلات
+    # الكميات
     has_weight_items = models.BooleanField('منتجات بالوزن أو الحجم', default=False)
-    has_variants = models.BooleanField('متغيرات (مقاسات / ألوان)', default=False)
 
     # العمليات
     has_services = models.BooleanField('بنود الخدمة', default=False)
@@ -245,7 +244,6 @@ class TenantCapabilities(models.Model):
             has_batch_numbers=features.get('has_batch_numbers', False),
             has_serial_numbers=features.get('has_serial_numbers', False),
             has_weight_items=features.get('has_weight_items', False),
-            has_variants=features.get('has_variants', False),
             has_services=features.get('has_services', False),
             has_manufacturing=features.get('has_manufacturing', False),
             has_work_orders=features.get('has_work_orders', False),

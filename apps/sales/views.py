@@ -38,7 +38,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.customers.models import Customer
-from apps.items.models import Item, ItemVariant
+from apps.items.models import Item
 from apps.stocks.models import Stock, StockQuantity
 
 from .models import (
@@ -372,7 +372,7 @@ def invoice_edit(request, pk):
         return redirect('sales:invoice_edit', pk=pk)
 
     existing_lines = []
-    for line in invoice.lines.select_related('item', 'variant').prefetch_related('item__item_units'):
+    for line in invoice.lines.select_related('item').prefetch_related('item__item_units'):
         iu_list = list(line.item.item_units.order_by('factor'))
         units = [{'id': u.id, 'name': u.name, 'factor': str(u.factor)} for u in iu_list]
         unit_id = ''
@@ -386,7 +386,6 @@ def invoice_edit(request, pk):
             'item_id': line.item_id,
             'item_name': line.item.name,
             'item_sku': line.item.sku,
-            'variant_id': line.variant_id or '',
             'quantity': str(line.quantity),
             'unit_price': str(line.unit_price),
             'discount_percent': str(line.discount_percent),
@@ -439,7 +438,6 @@ def _process_invoice_post(request, tenant, invoice):
         try:
             lines_data.append({
                 'item_id': int(ld['item_id']),
-                'variant_id': int(ld['variant_id']) if ld.get('variant_id') else None,
                 'quantity': Decimal(str(ld['quantity'])),
                 'unit_price': Decimal(str(ld['unit_price'])),
                 'discount_percent': Decimal(str(ld.get('discount_percent', 0))),
@@ -497,12 +495,11 @@ def _process_invoice_post(request, tenant, invoice):
                 else:
                     # draft edit
                     invoice.lines.all().delete()
-                    from apps.items.models import Item as _Item, ItemVariant as _IV
+                    from apps.items.models import Item as _Item
                     for ld in lines_data:
                         item = _Item.objects.get(id=ld['item_id'], tenant=tenant)
-                        variant = _IV.objects.get(id=ld['variant_id'], tenant=tenant) if ld.get('variant_id') else None
                         line = SaleInvoiceLine(
-                            tenant=tenant, invoice=invoice, item=item, variant=variant,
+                            tenant=tenant, invoice=invoice, item=item,
                             quantity=ld['quantity'], unit_price=ld['unit_price'],
                             discount_percent=ld['discount_percent'], tax_rate=ld['tax_rate'],
                             cost_price_snapshot=ld['cost_price_snapshot'],
@@ -572,7 +569,7 @@ def invoice_detail(request, pk):
         SaleInvoice.objects.select_related('customer', 'stock', 'confirmed_by', 'cancelled_by'),
         pk=pk, tenant=tenant,
     )
-    lines = list(invoice.lines.select_related('item', 'variant').prefetch_related('item__item_units').all())
+    lines = list(invoice.lines.select_related('item').prefetch_related('item__item_units').all())
     for ln in lines:
         iu_list = list(ln.item.item_units.order_by('factor'))
         matched = next((u for u in iu_list if abs(float(u.factor) - float(ln.unit_factor or 1)) < 0.0001), iu_list[0] if iu_list else None)
@@ -851,7 +848,7 @@ def return_create(request, invoice_pk):
         SaleInvoice, pk=invoice_pk, tenant=tenant,
         status__in=['confirmed', 'partially_returned']
     )
-    lines = invoice.lines.select_related('item', 'variant').all()
+    lines = invoice.lines.select_related('item').all()
     returnable_lines = [l for l in lines if l.returnable_quantity > 0]
 
     if request.method == 'POST':
@@ -1022,15 +1019,6 @@ def item_info_api(request):
         except StockQuantity.DoesNotExist:
             available_qty = 0
 
-    variants = []
-    if item.has_variants:
-        for v in item.variants.filter(is_active=True):
-            variants.append({
-                'id': v.id,
-                'name': str(v),
-                'selling_price': str(v.selling_price or item.selling_price),
-            })
-
     iu_qs = list(item.item_units.order_by('factor'))
     units = [{'id': u.id, 'name': u.name, 'factor': str(u.factor)} for u in iu_qs]
     base_unit_id   = iu_qs[0].id   if iu_qs else None
@@ -1046,14 +1034,12 @@ def item_info_api(request):
             'min_selling_price': str(item.min_selling_price),
             'cost_price': str(item.cost_price),
             'tax_rate': str(item.tax_rate),
-            'has_variants': item.has_variants,
             'track_batch': item.track_batch,
             'track_serial': item.track_serial,
             'track_expiry': item.track_expiry,
             'item_type': item.item_type,
             'is_service': is_service,
             'available_qty': available_qty,
-            'variants': variants,
             'unit_id': base_unit_id,
             'unit_name': base_unit_name,
             'unit_factor': '1',
@@ -1158,7 +1144,6 @@ def stock_items_api(request):
             'item_type': item.item_type,
             'is_service': is_service,
             'available_qty': None if is_service else float(sq_map.get(item.id, 0)),
-            'has_variants': item.has_variants,
         })
 
     return JsonResponse({'success': True, 'items': data})
@@ -1351,15 +1336,13 @@ def quote_edit(request, pk):
         return _json_ok({'redirect': f'/sales/quotes/{quote.pk}/'}, 'تم تحديث عرض السعر')
 
     lines_json = []
-    for ql in quote.quote_lines.select_related('item', 'variant').prefetch_related('item__item_units').all():
+    for ql in quote.quote_lines.select_related('item').prefetch_related('item__item_units').all():
         iu_list = list(ql.item.item_units.order_by('factor'))
         units = [{'id': u.id, 'name': u.name, 'factor': str(u.factor)} for u in iu_list]
         lines_json.append({
             'item_id': ql.item_id,
             'item_name': ql.item.name,
             'item_sku': ql.item.sku or '',
-            'variant_id': ql.variant_id,
-            'variant_name': str(ql.variant) if ql.variant else '',
             'quantity': str(ql.quantity),
             'unit_price': str(ql.unit_price),
             'discount_percent': str(ql.discount_percent),
@@ -1391,7 +1374,7 @@ def quote_detail(request, pk):
         SaleQuote.objects.select_related('customer', 'stock', 'converted_invoice', 'converted_by'),
         pk=pk, tenant=tenant
     )
-    lines = list(quote.quote_lines.select_related('item', 'variant').prefetch_related('item__item_units').all())
+    lines = list(quote.quote_lines.select_related('item').prefetch_related('item__item_units').all())
     for ln in lines:
         iu_list = list(ln.item.item_units.order_by('factor'))
         ln.unit_display = iu_list[0].name if iu_list else ln.item.base_unit_name

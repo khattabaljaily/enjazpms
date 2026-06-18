@@ -57,16 +57,4 @@ urlpatterns = [
     # ------- Item Batches -------
     path('<int:pk>/batches/', views.item_batches, name='item_batches'),
 
-    # ------- Colors & Sizes -------
-    path('colors-sizes/', views.colors_sizes_list, name='colors_sizes'),
-    path('colors/api/table/', views.color_table_api, name='color_table_api'),
-    path('colors/api/options/', views.color_options_api, name='color_options_api'),
-    path('colors/api/create/', views.color_create_api, name='color_create_api'),
-    path('colors/api/<int:pk>/update/', views.color_update_api, name='color_update_api'),
-    path('colors/api/<int:pk>/delete/', views.color_delete_api, name='color_delete_api'),
-    path('sizes/api/table/', views.size_table_api, name='size_table_api'),
-    path('sizes/api/options/', views.size_options_api, name='size_options_api'),
-    path('sizes/api/create/', views.size_create_api, name='size_create_api'),
-    path('sizes/api/<int:pk>/update/', views.size_update_api, name='size_update_api'),
-    path('sizes/api/<int:pk>/delete/', views.size_delete_api, name='size_delete_api'),
 ]

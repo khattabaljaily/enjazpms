@@ -42,7 +42,7 @@
     "name_ar": "أزياء وملابس",
     "slug": "fashion-apparel",
     "icon": "fa-shirt",
-    "description": "ملابس، أحذية، اكسسوارات — منتجات بمقاسات وألوان وتشكيلات متعددة",
+    "description": "ملابس، أحذية، اكسسوارات — منتجات متنوعة بكميات صحيحة",
     "display_order": 3,
     "is_active": true,
     "features": {
@@ -50,7 +50,7 @@
       "has_batch_numbers": false,
       "has_serial_numbers": false,
       "has_weight_items": false,
-      "has_variants": true,
+      "has_variants": false,
       "has_services": false,
       "has_manufacturing": false,
       "has_work_orders": false

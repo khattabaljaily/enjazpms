@@ -3,55 +3,12 @@ Items Models - نماذج المنتجات والأصناف
 مصمم ليعمل مع جميع أنواع الأنشطة التجارية:
   - صيدلية:          track_expiry, track_batch
   - إلكترونيات:      track_serial
-  - ملابس/أحذية:     has_variants (مقاسات × ألوان)
   - سوبرماركت:       track_expiry, barcode
   - شركة طبية/توزيع: track_batch, track_serial
 """
 from django.db import models
 from django.utils.text import slugify
 from apps.core.models import TenantMixin
-
-
-# ============================================
-# COLOR (الألوان)
-# ============================================
-
-class Color(TenantMixin):
-    name = models.CharField('اسم اللون', max_length=100)
-    hex_code = models.CharField('الكود اللوني', max_length=7, blank=True, default='#6366f1')
-    is_active = models.BooleanField('نشط', default=True)
-
-    class Meta:
-        db_table = 'item_colors'
-        verbose_name = 'لون'
-        verbose_name_plural = 'الألوان'
-        ordering = ['name']
-        unique_together = [('tenant', 'name')]
-        indexes = [models.Index(fields=['tenant', 'is_active'])]
-
-    def __str__(self):
-        return self.name
-
-
-# ============================================
-# SIZE (المقاسات)
-# ============================================
-
-class Size(TenantMixin):
-    name = models.CharField('اسم المقاس', max_length=50)
-    display_order = models.IntegerField('ترتيب العرض', default=0)
-    is_active = models.BooleanField('نشط', default=True)
-
-    class Meta:
-        db_table = 'item_sizes'
-        verbose_name = 'مقاس'
-        verbose_name_plural = 'المقاسات'
-        ordering = ['display_order', 'name']
-        unique_together = [('tenant', 'name')]
-        indexes = [models.Index(fields=['tenant', 'is_active'])]
-
-    def __str__(self):
-        return self.name
 
 
 # ============================================
@@ -168,7 +125,6 @@ class Item(TenantMixin):
       track_expiry  → صيدليات، أغذية، مواد كيميائية
       track_batch   → صناعات، أدوية، أغذية
       track_serial  → إلكترونيات، أجهزة طبية
-      has_variants  → ملابس، أحذية، أثاث
     """
 
     ITEM_TYPE_CHOICES = (
@@ -249,10 +205,6 @@ class Item(TenantMixin):
     track_serial = models.BooleanField(
         'تتبع الرقم التسلسلي', default=False
     )
-    # الملابس، الأحذية (مقاسات × ألوان)
-    has_variants = models.BooleanField(
-        'يحتوي على متغيرات (مقاسات/ألوان)', default=False
-    )
 
     # ------ تفاصيل إضافية ------
     description = models.TextField('الوصف', blank=True)
@@ -310,50 +262,6 @@ class Item(TenantMixin):
 
 
 # ============================================
-# ITEM VARIANT (متغيرات المنتج: مقاسات × ألوان)
-# ============================================
-
-class ItemVariant(TenantMixin):
-    """
-    تُستخدم فقط عند item.has_variants = True.
-    مثال: تيشيرت أبيض مقاس L = variant منفصل بباركود وسعر مختلف.
-    """
-
-    item = models.ForeignKey(
-        Item,
-        on_delete=models.CASCADE,
-        related_name='variants',
-        verbose_name='المنتج الأساسي'
-    )
-    name = models.CharField('اسم المتغير', max_length=200,
-                            help_text='مثال: أبيض - L')
-    barcode = models.CharField('الباركود', max_length=100, blank=True)
-    sku_suffix = models.CharField('لاحقة الرمز', max_length=20, blank=True,
-                                   help_text='تُضاف لـ SKU الأصل، مثال: -WL')
-    price_adjustment = models.DecimalField(
-        'فرق السعر', max_digits=10, decimal_places=2, default=0,
-        help_text='+ يعني أغلى، - يعني أرخص من الأصل'
-    )
-    is_active = models.BooleanField('نشط', default=True)
-
-    class Meta:
-        db_table = 'item_variants'
-        verbose_name = 'متغير منتج'
-        verbose_name_plural = 'متغيرات المنتجات'
-        ordering = ['name']
-        indexes = [
-            models.Index(fields=['tenant', 'item']),
-        ]
-
-    def __str__(self):
-        return f"{self.item.name} - {self.name}"
-
-    @property
-    def selling_price(self):
-        return self.item.selling_price + self.price_adjustment
-
-
-# ============================================
 # BOM RECIPE (وصفة التصنيع)
 # ============================================
 
@@ -393,7 +301,7 @@ class BOMLine(TenantMixin):
     )
     quantity = models.DecimalField('الكمية', max_digits=12, decimal_places=4)
     unit = models.ForeignKey(
-        Unit, on_delete=models.SET_NULL, null=True, blank=True,
+        'ItemUnit', on_delete=models.SET_NULL, null=True, blank=True,
         verbose_name='الوحدة'
     )
     notes = models.CharField('ملاحظات', max_length=200, blank=True)

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Unit, Item, ItemVariant
+from .models import Category, Unit, Item
 
 
 @admin.register(Category)
@@ -19,13 +19,6 @@ class UnitAdmin(admin.ModelAdmin):
 @admin.register(Item)
 class ItemAdmin(admin.ModelAdmin):
     list_display = ['name', 'sku', 'barcode', 'category', 'selling_price', 'tenant', 'is_active']
-    list_filter = ['tenant', 'is_active', 'item_type', 'track_expiry', 'track_serial', 'has_variants']
+    list_filter = ['tenant', 'is_active', 'item_type', 'track_expiry', 'track_serial']
     search_fields = ['name', 'sku', 'barcode']
     readonly_fields = ['created_at', 'updated_at']
-
-
-@admin.register(ItemVariant)
-class ItemVariantAdmin(admin.ModelAdmin):
-    list_display = ['item', 'name', 'barcode', 'price_adjustment', 'is_active']
-    list_filter = ['tenant', 'is_active']
-    search_fields = ['item__name', 'name', 'barcode']

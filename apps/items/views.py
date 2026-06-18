@@ -11,8 +11,8 @@ from django.views.decorators.http import require_POST
 from django.shortcuts import redirect, render
 
 from apps.accounts.decorators import require_permission
-from .forms import CategoryForm, ItemForm, ItemVariantForm, UnitForm
-from .models import Category, Color, Item, ItemVariant, Size, Unit, BOMRecipe, BOMLine, ItemBatch
+from .forms import CategoryForm, ItemForm, UnitForm
+from .models import Category, Item, Unit, BOMRecipe, BOMLine, ItemBatch
 from apps.sales.models import StockMovement
 from apps.stocks.models import StockQuantity
 
@@ -185,7 +185,6 @@ def item_table_api(request):
             'selling_price': str(item.selling_price),
             'track_expiry': item.track_expiry,
             'track_serial': item.track_serial,
-            'has_variants': item.has_variants,
             'is_active': item.is_active,
         }
         for item in qs
@@ -309,7 +308,6 @@ def item_detail_api(request, pk):
             'track_expiry': item.track_expiry,
             'track_batch': item.track_batch,
             'track_serial': item.track_serial,
-            'has_variants': item.has_variants,
             'description': item.description,
             'is_active': item.is_active,
             'is_sellable': item.is_sellable,
@@ -476,7 +474,12 @@ def item_search_api(request):
 
     from .models import ItemUnit as ItemUnitModel
     limit = 100 if not q else 15
-    base_qs = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
+    types_param = request.GET.get('types', '').strip()
+    type_list = [t.strip() for t in types_param.split(',') if t.strip()] if types_param else []
+    if type_list:
+        base_qs = Item.objects.for_tenant(tenant).filter(is_active=True, item_type__in=type_list)
+    else:
+        base_qs = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
     if q:
         qs = base_qs.filter(
             Q(name__icontains=q) |
@@ -507,6 +510,8 @@ def item_search_api(request):
             'name': item.name,
             'sku': item.sku,
             'barcode': item.barcode,
+            'item_type': item.item_type,
+            'item_type_label': item.get_item_type_display(),
             'cost_price': str(item.cost_price),
             'selling_price': str(item.selling_price),
             'unit_id': unit_id,
@@ -516,7 +521,6 @@ def item_search_api(request):
             'track_expiry': item.track_expiry,
             'track_batch': item.track_batch,
             'track_serial': item.track_serial,
-            'has_variants': item.has_variants,
         })
     return JsonResponse({'results': results})
 
@@ -841,7 +845,7 @@ def item_export_api(request):
         'التصنيف', 'الوحدة', 'وحدة الشراء',
         'سعر التكلفة', 'سعر البيع', 'أدنى سعر بيع',
         'الحد الأدنى للمخزون', 'الحد الأقصى للمخزون',
-        'تتبع الصلاحية', 'تتبع الدفعات', 'تتبع السيريال', 'متغيرات',
+        'تتبع الصلاحية', 'تتبع الدفعات', 'تتبع السيريال',
         'للبيع', 'للشراء', 'نشط',
     ])
     qs = Item.objects.for_tenant(tenant).select_related('category').prefetch_related('item_units').order_by('name')
@@ -862,7 +866,6 @@ def item_export_api(request):
             'نعم' if item.track_expiry else 'لا',
             'نعم' if item.track_batch else 'لا',
             'نعم' if item.track_serial else 'لا',
-            'نعم' if item.has_variants else 'لا',
             'نعم' if item.is_sellable else 'لا',
             'نعم' if item.is_purchasable else 'لا',
             'نعم' if item.is_active else 'لا',
@@ -1221,8 +1224,9 @@ def bom_recipe_detail(request, pk):
             unit_id = payload.get('unit_id') or None
             notes = payload.get('notes', '')
             try:
+                from .models import ItemUnit
                 component = Item.objects.get(pk=component_id, tenant=tenant)
-                unit = Unit.objects.get(pk=unit_id, tenant=tenant) if unit_id else None
+                unit = ItemUnit.objects.get(pk=unit_id, item=component) if unit_id else None
                 from decimal import Decimal as D
                 line = BOMLine.objects.create(
                     tenant=tenant,
@@ -1252,11 +1256,9 @@ def bom_recipe_detail(request, pk):
         return JsonResponse({'success': False, 'message': 'إجراء غير معروف'}, status=400)
 
     lines = recipe.lines.select_related('component', 'unit').order_by('id')
-    units = Unit.objects.filter(tenant=tenant, is_active=True)
     return render(request, 'items/bom_detail.html', {
         'recipe': recipe,
         'lines': lines,
-        'units': units,
     })
 
 
@@ -1364,221 +1366,3 @@ def item_batches(request, pk):
     batches = ItemBatch.objects.filter(tenant=tenant, item=item).select_related('stock').order_by('expiry_date')
     return render(request, 'items/item_batches.html', {'item': item, 'batches': batches})
 
-
-# ============================================================
-# COLORS & SIZES VIEWS
-# ============================================================
-
-@login_required
-@require_permission('view_items')
-def colors_sizes_list(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return redirect('core:no_tenant')
-    return render(request, 'items/colors_sizes.html', {})
-
-
-# --- Colors API ---
-
-@login_required
-@require_permission('view_items')
-def color_table_api(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    q = request.GET.get('search[value]', '').strip()
-    qs = Color.objects.filter(tenant=tenant)
-    if q:
-        qs = qs.filter(name__icontains=q)
-    total = qs.count()
-    start = int(request.GET.get('start', 0))
-    length = int(request.GET.get('length', 25))
-    rows = qs[start:start + length]
-    data = [{'id': c.id, 'name': c.name, 'hex_code': c.hex_code, 'is_active': c.is_active} for c in rows]
-    return JsonResponse({'draw': int(request.GET.get('draw', 1)), 'recordsTotal': total, 'recordsFiltered': total, 'data': data})
-
-
-@login_required
-@require_permission('view_items')
-def color_options_api(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False}, status=400)
-    colors = list(Color.objects.filter(tenant=tenant, is_active=True).values('id', 'name', 'hex_code'))
-    return JsonResponse({'success': True, 'data': colors})
-
-
-@login_required
-@require_permission('add_items')
-def color_create_api(request):
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    import json as _json
-    try:
-        body = _json.loads(request.body)
-    except Exception:
-        body = request.POST
-    name = (body.get('name') or '').strip()
-    hex_code = (body.get('hex_code') or '#6366f1').strip()
-    is_active = body.get('is_active', True)
-    if isinstance(is_active, str):
-        is_active = is_active.lower() not in ('false', '0', '')
-    if not name:
-        return JsonResponse({'success': False, 'message': 'اسم اللون مطلوب'}, status=400)
-    if Color.objects.filter(tenant=tenant, name=name).exists():
-        return JsonResponse({'success': False, 'message': 'هذا اللون موجود مسبقاً'}, status=400)
-    color = Color.objects.create(tenant=tenant, name=name, hex_code=hex_code, is_active=is_active,
-                                  created_by=request.user, updated_by=request.user)
-    return JsonResponse({'success': True, 'message': 'تم إضافة اللون', 'id': color.id})
-
-
-@login_required
-@require_permission('edit_items')
-def color_update_api(request, pk):
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    from django.shortcuts import get_object_or_404
-    import json as _json
-    color = get_object_or_404(Color, pk=pk, tenant=tenant)
-    try:
-        body = _json.loads(request.body)
-    except Exception:
-        body = request.POST
-    name = (body.get('name') or '').strip()
-    hex_code = (body.get('hex_code') or color.hex_code).strip()
-    is_active = body.get('is_active', color.is_active)
-    if isinstance(is_active, str):
-        is_active = is_active.lower() not in ('false', '0', '')
-    if not name:
-        return JsonResponse({'success': False, 'message': 'اسم اللون مطلوب'}, status=400)
-    if Color.objects.filter(tenant=tenant, name=name).exclude(pk=pk).exists():
-        return JsonResponse({'success': False, 'message': 'هذا الاسم مستخدم'}, status=400)
-    color.name = name
-    color.hex_code = hex_code
-    color.is_active = is_active
-    color.updated_by = request.user
-    color.save()
-    return JsonResponse({'success': True, 'message': 'تم التعديل'})
-
-
-@login_required
-@require_permission('delete_items')
-def color_delete_api(request, pk):
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    from django.shortcuts import get_object_or_404
-    color = get_object_or_404(Color, pk=pk, tenant=tenant)
-    color.delete()
-    return JsonResponse({'success': True, 'message': 'تم الحذف'})
-
-
-# --- Sizes API ---
-
-@login_required
-@require_permission('view_items')
-def size_table_api(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    q = request.GET.get('search[value]', '').strip()
-    qs = Size.objects.filter(tenant=tenant)
-    if q:
-        qs = qs.filter(name__icontains=q)
-    total = qs.count()
-    start = int(request.GET.get('start', 0))
-    length = int(request.GET.get('length', 25))
-    rows = qs[start:start + length]
-    data = [{'id': s.id, 'name': s.name, 'display_order': s.display_order, 'is_active': s.is_active} for s in rows]
-    return JsonResponse({'draw': int(request.GET.get('draw', 1)), 'recordsTotal': total, 'recordsFiltered': total, 'data': data})
-
-
-@login_required
-@require_permission('view_items')
-def size_options_api(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False}, status=400)
-    sizes = list(Size.objects.filter(tenant=tenant, is_active=True).values('id', 'name'))
-    return JsonResponse({'success': True, 'data': sizes})
-
-
-@login_required
-@require_permission('add_items')
-def size_create_api(request):
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    import json as _json
-    try:
-        body = _json.loads(request.body)
-    except Exception:
-        body = request.POST
-    name = (body.get('name') or '').strip()
-    display_order = int(body.get('display_order') or 0)
-    is_active = body.get('is_active', True)
-    if isinstance(is_active, str):
-        is_active = is_active.lower() not in ('false', '0', '')
-    if not name:
-        return JsonResponse({'success': False, 'message': 'اسم المقاس مطلوب'}, status=400)
-    if Size.objects.filter(tenant=tenant, name=name).exists():
-        return JsonResponse({'success': False, 'message': 'هذا المقاس موجود مسبقاً'}, status=400)
-    size = Size.objects.create(tenant=tenant, name=name, display_order=display_order, is_active=is_active,
-                                created_by=request.user, updated_by=request.user)
-    return JsonResponse({'success': True, 'message': 'تم إضافة المقاس', 'id': size.id})
-
-
-@login_required
-@require_permission('edit_items')
-def size_update_api(request, pk):
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    from django.shortcuts import get_object_or_404
-    import json as _json
-    size = get_object_or_404(Size, pk=pk, tenant=tenant)
-    try:
-        body = _json.loads(request.body)
-    except Exception:
-        body = request.POST
-    name = (body.get('name') or '').strip()
-    display_order = int(body.get('display_order') or size.display_order)
-    is_active = body.get('is_active', size.is_active)
-    if isinstance(is_active, str):
-        is_active = is_active.lower() not in ('false', '0', '')
-    if not name:
-        return JsonResponse({'success': False, 'message': 'اسم المقاس مطلوب'}, status=400)
-    if Size.objects.filter(tenant=tenant, name=name).exclude(pk=pk).exists():
-        return JsonResponse({'success': False, 'message': 'هذا الاسم مستخدم'}, status=400)
-    size.name = name
-    size.display_order = display_order
-    size.is_active = is_active
-    size.updated_by = request.user
-    size.save()
-    return JsonResponse({'success': True, 'message': 'تم التعديل'})
-
-
-@login_required
-@require_permission('delete_items')
-def size_delete_api(request, pk):
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    from django.shortcuts import get_object_or_404
-    size = get_object_or_404(Size, pk=pk, tenant=tenant)
-    size.delete()
-    return JsonResponse({'success': True, 'message': 'تم الحذف'})

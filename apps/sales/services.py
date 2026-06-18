@@ -83,7 +83,7 @@ def _is_stock_tracked_item(item):
     return getattr(item, 'item_type', None) != 'service'
 
 
-def _reserve_stock(tenant, stock, item, qty, variant=None):
+def _reserve_stock(tenant, stock, item, qty):
     """يزيد reserved_quantity بدون خصم فعلي من الكمية. يتحقق من الكمية المتاحة."""
     if not _is_stock_tracked_item(item):
         return
@@ -97,7 +97,7 @@ def _reserve_stock(tenant, stock, item, qty, variant=None):
     sq.save(update_fields=['reserved_quantity', 'updated_at'])
 
 
-def _release_reservation(tenant, stock, item, qty, variant=None):
+def _release_reservation(tenant, stock, item, qty):
     """يحرر حجز سابق (ينقص reserved_quantity)."""
     if not _is_stock_tracked_item(item):
         return
@@ -106,7 +106,7 @@ def _release_reservation(tenant, stock, item, qty, variant=None):
     sq.save(update_fields=['reserved_quantity', 'updated_at'])
 
 
-def _deduct_stock(tenant, stock, item, qty, unit_cost, invoice, variant=None):
+def _deduct_stock(tenant, stock, item, qty, unit_cost, invoice):
     """
     يخصم qty من المخزون ويُسجِّل حركة sale_out.
     يُفرز ValueError إذا كانت الكمية غير كافية.
@@ -126,7 +126,6 @@ def _deduct_stock(tenant, stock, item, qty, unit_cost, invoice, variant=None):
     StockMovement.objects.create(
         tenant=tenant,
         item=item,
-        variant=variant,
         stock=stock,
         movement_type='sale_out',
         direction='out',
@@ -140,7 +139,7 @@ def _deduct_stock(tenant, stock, item, qty, unit_cost, invoice, variant=None):
 
 
 def _restore_stock(tenant, stock, item, qty, unit_cost, reference_type, reference_id,
-                   movement_date, variant=None, movement_type='sale_return_in'):
+                   movement_date, movement_type='sale_return_in'):
     """
     يُعيد qty إلى المخزون ويُسجِّل حركة دخول.
     """
@@ -154,7 +153,6 @@ def _restore_stock(tenant, stock, item, qty, unit_cost, reference_type, referenc
     StockMovement.objects.create(
         tenant=tenant,
         item=item,
-        variant=variant,
         stock=stock,
         movement_type=movement_type,
         direction='in',
@@ -329,7 +327,7 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
         )
 
     tenant = invoice.tenant
-    lines = list(invoice.lines.select_related('item', 'variant'))
+    lines = list(invoice.lines.select_related('item'))
 
     if not lines:
         raise ValueError("لا يمكن تأكيد فاتورة فارغة (لا توجد بنود).")
@@ -341,14 +339,14 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
         if deferred:
             _reserve_stock(
                 tenant=tenant, stock=invoice.stock,
-                item=line.item, qty=qty_base, variant=line.variant,
+                item=line.item, qty=qty_base,
             )
         else:
             _deduct_stock(
                 tenant=tenant, stock=invoice.stock,
                 item=line.item, qty=qty_base,
                 unit_cost=line.cost_price_snapshot,
-                invoice=invoice, variant=line.variant,
+                invoice=invoice,
             )
 
     # ── 2. تسجيل الدفع ──────────────────────────────────
@@ -432,7 +430,7 @@ def deliver_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
         )
 
     tenant = invoice.tenant
-    lines = list(invoice.lines.select_related('item', 'variant'))
+    lines = list(invoice.lines.select_related('item'))
 
     for line in lines:
         qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
@@ -451,7 +449,6 @@ def deliver_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
         StockMovement.objects.create(
             tenant=tenant,
             item=line.item,
-            variant=line.variant,
             stock=invoice.stock,
             movement_type='sale_out',
             direction='out',
@@ -499,12 +496,12 @@ def cancel_sale_invoice(invoice: SaleInvoice, user, reason: str = '') -> SaleInv
 
     if invoice.status == 'pending_delivery':
         # حرر الحجوزات فقط (لم يُخصم مخزون بعد)
-        lines = list(invoice.lines.select_related('item', 'variant'))
+        lines = list(invoice.lines.select_related('item'))
         for line in lines:
             qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
             _release_reservation(
                 tenant=tenant, stock=invoice.stock,
-                item=line.item, qty=qty_base, variant=line.variant,
+                item=line.item, qty=qty_base,
             )
     else:
         # عكس المخزون (الحالة الاعتيادية)
@@ -550,7 +547,6 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
     lines_data: list of dicts, كل dict يمثل سطراً جديداً للفاتورة:
       {
         'item_id': int,
-        'variant_id': int | None,
         'quantity': Decimal,
         'unit_price': Decimal,
         'discount_percent': Decimal,
@@ -601,11 +597,8 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
 
     new_lines = []
     for ld in lines_data:
-        from apps.items.models import Item, ItemVariant
+        from apps.items.models import Item
         item = Item.objects.get(id=ld['item_id'], tenant=tenant)
-        variant = None
-        if ld.get('variant_id'):
-            variant = ItemVariant.objects.get(id=ld['variant_id'], tenant=tenant)
 
         from apps.items.models import Unit as ItemUnit
         unit_obj = ItemUnit.objects.filter(pk=ld['unit_id'], tenant=tenant).first() if ld.get('unit_id') else None
@@ -614,7 +607,6 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
             tenant=tenant,
             invoice=invoice,
             item=item,
-            variant=variant,
             quantity=Decimal(str(ld['quantity'])),
             unit_price=Decimal(str(ld['unit_price'])),
             discount_percent=Decimal(str(ld.get('discount_percent', 0))),
@@ -928,7 +920,7 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
     لا يؤكِّد الفاتورة؛ استخدم confirm_sale_invoice لاحقاً.
     """
     from apps.customers.models import Customer
-    from apps.items.models import Item, ItemVariant
+    from apps.items.models import Item
 
     customer = None
     if data.get('customer_id'):
@@ -955,9 +947,6 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
 
     for ld in lines_data:
         item = Item.objects.get(id=ld['item_id'], tenant=tenant)
-        variant = None
-        if ld.get('variant_id'):
-            variant = ItemVariant.objects.get(id=ld['variant_id'], tenant=tenant)
 
         from apps.items.models import Unit as ItemUnit
         unit_obj = ItemUnit.objects.filter(pk=ld['unit_id'], tenant=tenant).first() if ld.get('unit_id') else None
@@ -966,7 +955,6 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
             tenant=tenant,
             invoice=invoice,
             item=item,
-            variant=variant,
             quantity=Decimal(str(ld['quantity'])),
             unit_price=Decimal(str(ld['unit_price'])),
             discount_percent=Decimal(str(ld.get('discount_percent', 0))),
@@ -992,7 +980,7 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
 # ═══════════════════════════════════════════════════════════
 
 from .models import SaleQuote, SaleQuoteLine  # noqa: E402 (circular-safe after model def)
-from apps.items.models import Item, ItemVariant  # already imported above; safe double
+from apps.items.models import Item  # already imported above; safe double
 
 
 def build_quote_from_post(tenant, user, post_data, lines_data, instance=None):
@@ -1033,15 +1021,11 @@ def build_quote_from_post(tenant, user, post_data, lines_data, instance=None):
 
     for ld in lines_data:
         item = Item.objects.get(id=ld['item_id'], tenant=tenant)
-        variant = None
-        if ld.get('variant_id'):
-            variant = ItemVariant.objects.get(id=ld['variant_id'], tenant=tenant)
 
         line = SaleQuoteLine(
             tenant=tenant,
             quote=quote,
             item=item,
-            variant=variant,
             quantity=Decimal(str(ld['quantity'])),
             unit_price=Decimal(str(ld['unit_price'])),
             discount_percent=Decimal(str(ld.get('discount_percent', 0))),
@@ -1135,10 +1119,9 @@ def convert_quote_to_invoice(quote, user, payment_method='cash',
 
     # بناء بنود الفاتورة من بنود العرض
     lines = []
-    for ql in quote.quote_lines.select_related('item', 'variant').all():
+    for ql in quote.quote_lines.select_related('item').all():
         lines.append({
             'item_id': ql.item_id,
-            'variant_id': ql.variant_id,
             'quantity': str(ql.quantity),
             'unit_price': str(ql.unit_price),
             'discount_percent': str(ql.discount_percent),
