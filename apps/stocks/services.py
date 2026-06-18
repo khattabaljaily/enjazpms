@@ -181,8 +181,8 @@ def confirm_manufacturing_order(order):
 
     for bom_line in recipe.lines.select_related('component', 'unit').all():
         factor = Decimal('1')
-        if bom_line.unit and bom_line.unit.base_unit and bom_line.unit.conversion_factor:
-            factor = bom_line.unit.conversion_factor
+        if bom_line.unit and bom_line.unit.factor:
+            factor = bom_line.unit.factor
         needed = (bom_line.quantity * factor * order.quantity).quantize(Decimal('0.0001'))
 
         sq = _get_or_create_sq(order.tenant, order.stock, bom_line.component)
