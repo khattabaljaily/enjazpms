@@ -438,6 +438,21 @@
   font-weight: 500;
 }
 
+.footer-timestamps {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  font-size: 7.5px;
+  color: #9ca3af;
+  margin-top: 6px;
+  opacity: .75;
+}
+
+.footer-ts-sep {
+  opacity: .4;
+}
+
 .dashboard-main,
 .content,
 .cx-scene,
@@ -572,6 +587,11 @@
 
   .print-table tbody tr {
     page-break-inside: avoid;
+  }
+
+  .print-doc--invoice {
+    border-left-width: 3px !important;
+    border-left-style: solid !important;
   }
 
   .print-box {
