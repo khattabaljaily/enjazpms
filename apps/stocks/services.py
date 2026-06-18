@@ -269,9 +269,11 @@ def cancel_manufacturing_order(order):
 
     for mv in movements:
         sq = _get_or_create_sq(order.tenant, order.stock, mv.item)
-        if mv.movement_type == 'adjustment_out':
+        if mv.direction == 'out':
+            # component was deducted → restore it
             sq.quantity += mv.quantity
         else:
+            # finished product was added → remove it
             if sq.quantity < mv.quantity:
                 raise ValueError(f"لا يمكن عكس الأمر: رصيد «{mv.item.name}» غير كافٍ.")
             sq.quantity -= mv.quantity
