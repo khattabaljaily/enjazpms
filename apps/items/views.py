@@ -349,7 +349,7 @@ def item_transactions_api(request, pk):
             StockMovement.objects.for_tenant(tenant)
             .filter(item=item)
             .select_related('stock')
-            .order_by('-movement_date', '-created_at')[:200]
+            .order_by('-id')[:200]
         )
 
     data = [
@@ -363,6 +363,7 @@ def item_transactions_api(request, pk):
             'balance_after': str(m.balance_after),
             'reference_type': m.reference_type or '—',
             'notes': m.notes or '—',
+            'is_reversal': m.is_reversal,
         }
         for m in movements
     ]

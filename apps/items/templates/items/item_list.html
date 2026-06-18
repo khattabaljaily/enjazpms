@@ -1282,17 +1282,26 @@
 
                 const rows = d.movements.map(function(m) {
                     const qty = EnjazIMS.parseNumber(m.quantity || 0);
-                    const qtyClass = (m.direction === 'in') ? 'text-success' : 'text-danger';
-                    const qtyPrefix = (m.direction === 'in') ? '+' : '-';
+                    const isIn = m.direction === 'in';
+                    const qtyClass = isIn ? 'text-success' : 'text-danger';
+                    const qtyPrefix = isIn ? '+' : '-';
                     const refLabel = refLabels[m.reference_type] || m.reference_type || '—';
-                    return `<tr>
+                    const dirLabel = isIn ? 'دخول' : 'خروج';
+                    const reversalBadge = m.is_reversal
+                        ? `<span style="background:rgba(100,116,139,.12);color:#64748b;font-size:.68rem;border-radius:5px;padding:.15rem .35rem;margin-right:.25rem;">↺ إلغاء</span>`
+                        : '';
+                    return `<tr${m.is_reversal ? ' style="opacity:.75;"' : ''}>
                         <td>${m.movement_date || '—'}</td>
                         <td>${m.stock || '—'}</td>
-                        <td>${m.movement_type_label || m.movement_type || '—'}</td>
+                        <td>
+                            <span style="background:${isIn ? 'rgba(17,153,142,.12)' : 'rgba(239,68,68,.12)'};color:${isIn ? '#11998e' : '#ef4444'};font-size:.72rem;border-radius:6px;padding:.2rem .5rem;">${dirLabel}</span>
+                            ${reversalBadge}
+                            <div style="font-size:.72rem;color:#64748b;margin-top:.15rem;">${m.movement_type_label || '—'}</div>
+                        </td>
                         <td>${refLabel}</td>
-                        <td class="${qtyClass}">${qtyPrefix}${EnjazIMS.formatQuantity(qty)}</td>
+                        <td class="${qtyClass} fw-bold">${qtyPrefix}${EnjazIMS.formatQuantity(qty)}</td>
                         <td>${EnjazIMS.formatQuantity(m.balance_after || 0)}</td>
-                        <td>${m.notes || '—'}</td>
+                        <td style="font-size:.78rem;max-width:160px;">${m.notes || '—'}</td>
                     </tr>`;
                 }).join('');
 
