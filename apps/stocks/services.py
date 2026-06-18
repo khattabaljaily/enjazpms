@@ -107,12 +107,29 @@ def cancel_stock_transfer(transfer):
         sq_out.quantity += line.quantity
         sq_out.save(update_fields=['quantity', 'updated_at'])
 
-        StockMovement.objects.filter(
+        for mv in StockMovement.objects.filter(
             tenant=tenant,
             reference_type='stock_transfer',
             reference_id=transfer.id,
             item=item,
-        ).delete()
+            is_reversal=False,
+        ):
+            balance = sq_in.quantity if mv.stock_id == transfer.to_stock_id else sq_out.quantity
+            StockMovement.objects.create(
+                tenant=tenant,
+                item=item,
+                stock=mv.stock,
+                movement_type=mv.movement_type,
+                direction='in' if mv.direction == 'out' else 'out',
+                quantity=mv.quantity,
+                unit_cost=mv.unit_cost,
+                balance_after=balance,
+                reference_type=mv.reference_type,
+                reference_id=mv.reference_id,
+                movement_date=timezone.localdate(),
+                notes=f'إلغاء: {mv.notes}' if mv.notes else 'إلغاء تحويل مخزون',
+                is_reversal=True,
+            )
 
     transfer.status = 'cancelled'
     transfer.save(update_fields=['status', 'updated_at'])
@@ -245,6 +262,7 @@ def cancel_manufacturing_order(order):
         tenant=order.tenant,
         reference_type='manufacturing_order',
         reference_id=order.id,
+        is_reversal=False,
     ).select_related('item').select_for_update()
 
     for mv in movements:
@@ -256,7 +274,20 @@ def cancel_manufacturing_order(order):
                 raise ValueError(f"لا يمكن عكس الأمر: رصيد «{mv.item.name}» غير كافٍ.")
             sq.quantity -= mv.quantity
         sq.save(update_fields=['quantity', 'updated_at'])
-
-    movements.delete()
+        StockMovement.objects.create(
+            tenant=order.tenant,
+            item=mv.item,
+            stock=mv.stock,
+            movement_type=mv.movement_type,
+            direction='in' if mv.direction == 'out' else 'out',
+            quantity=mv.quantity,
+            unit_cost=mv.unit_cost,
+            balance_after=sq.quantity,
+            reference_type=mv.reference_type,
+            reference_id=mv.reference_id,
+            movement_date=timezone.localdate(),
+            notes=f'إلغاء: {mv.notes}' if mv.notes else 'إلغاء أمر تصنيع',
+            is_reversal=True,
+        )
     order.status = 'cancelled'
     order.save(update_fields=['status', 'updated_at'])

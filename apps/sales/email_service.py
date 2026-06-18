@@ -19,7 +19,7 @@ def send_invoice_email(invoice, recipient_email: str, request=None) -> tuple[boo
     tenant = invoice.tenant
 
     lines = list(
-        invoice.lines.select_related('item', 'variant')
+        invoice.lines.select_related('item')
         .prefetch_related('item__item_units')
         .all()
     )

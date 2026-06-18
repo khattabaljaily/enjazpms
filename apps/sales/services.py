@@ -245,21 +245,35 @@ def _reverse_stock_movements(tenant, invoice):
     """
     يعكس كل حركات sale_out المرتبطة بالفاتورة:
       - يُعيد الكمية إلى StockQuantity
-      - يحذف سجلات StockMovement
+      - يُسجّل حركة عكسية (is_reversal=True) بدلاً من الحذف
     """
     movements = StockMovement.objects.filter(
         tenant=tenant,
         reference_type='sale_invoice',
         reference_id=invoice.id,
         movement_type='sale_out',
+        is_reversal=False,
     ).select_related('item', 'stock')
 
     for mv in movements:
         sq = _get_stock_qty(tenant, mv.stock, mv.item)
         sq.quantity += mv.quantity
         sq.save(update_fields=['quantity', 'updated_at'])
-
-    movements.delete()
+        StockMovement.objects.create(
+            tenant=tenant,
+            item=mv.item,
+            stock=mv.stock,
+            movement_type=mv.movement_type,
+            direction='in',
+            quantity=mv.quantity,
+            unit_cost=mv.unit_cost,
+            balance_after=sq.quantity,
+            reference_type=mv.reference_type,
+            reference_id=mv.reference_id,
+            movement_date=timezone.localdate(),
+            notes=f'إلغاء: {mv.notes}' if mv.notes else 'إلغاء فاتورة بيع',
+            is_reversal=True,
+        )
 
 
 def _reverse_payments(tenant, invoice):
@@ -293,12 +307,33 @@ def _reverse_payments(tenant, invoice):
 
 
 def _reverse_customer_ledger(tenant, reference_type, reference_id):
-    """يحذف قيود CustomerLedger المرتبطة بهذا المرجع."""
-    CustomerLedger.objects.filter(
+    """يُسجّل قيوداً عكسية في CustomerLedger بدلاً من الحذف."""
+    from django.db.models import Sum as _Sum
+    entries = CustomerLedger.objects.filter(
         tenant=tenant,
         reference_type=reference_type,
         reference_id=reference_id,
-    ).delete()
+        is_reversal=False,
+    ).select_related('customer')
+    for entry in entries:
+        prev = (
+            CustomerLedger.objects
+            .filter(tenant=tenant, customer=entry.customer)
+            .aggregate(s=_Sum('amount'))['s'] or Decimal('0')
+        )
+        reversed_amount = -entry.amount
+        CustomerLedger.objects.create(
+            tenant=tenant,
+            customer=entry.customer,
+            entry_type=entry.entry_type,
+            amount=reversed_amount,
+            entry_date=timezone.localdate(),
+            reference_type=entry.reference_type,
+            reference_id=entry.reference_id,
+            running_balance=prev + reversed_amount,
+            notes=f'إلغاء: {entry.notes}' if entry.notes else 'إلغاء قيد',
+            is_reversal=True,
+        )
 
 
 # ─────────────────────────────────────────────
@@ -786,6 +821,7 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
         tenant=tenant,
         reference_type='sale_return',
         reference_id=sale_return.id,
+        is_reversal=False,
     ).select_related('item', 'stock')
 
     for mv in movements:
@@ -797,8 +833,21 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
                 f"({sq.quantity + mv.quantity}) أقل من المُرتجَع ({mv.quantity})."
             )
         sq.save(update_fields=['quantity', 'updated_at'])
-
-    movements.delete()
+        StockMovement.objects.create(
+            tenant=tenant,
+            item=mv.item,
+            stock=mv.stock,
+            movement_type=mv.movement_type,
+            direction='out',
+            quantity=mv.quantity,
+            unit_cost=mv.unit_cost,
+            balance_after=sq.quantity,
+            reference_type=mv.reference_type,
+            reference_id=mv.reference_id,
+            movement_date=timezone.localdate(),
+            notes=f'إلغاء: {mv.notes}' if mv.notes else 'إلغاء مرتجع بيع',
+            is_reversal=True,
+        )
 
     # ── عكس سطور returned_quantity ───────────────────────
     for rl in sale_return.lines.select_related('invoice_line'):

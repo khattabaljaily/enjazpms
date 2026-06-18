@@ -57,6 +57,7 @@ def _reverse_stock_movements(tenant, invoice):
         reference_type='purchase_invoice',
         reference_id=invoice.id,
         movement_type='purchase_in',
+        is_reversal=False,
     ).select_related('item', 'stock')
 
     for mv in movements:
@@ -70,8 +71,21 @@ def _reverse_stock_movements(tenant, invoice):
             )
         sq.quantity -= mv.quantity
         sq.save(update_fields=['quantity', 'updated_at'])
-
-    movements.delete()
+        StockMovement.objects.create(
+            tenant=tenant,
+            item=mv.item,
+            stock=mv.stock,
+            movement_type=mv.movement_type,
+            direction='out',
+            quantity=mv.quantity,
+            unit_cost=mv.unit_cost,
+            balance_after=sq.quantity,
+            reference_type=mv.reference_type,
+            reference_id=mv.reference_id,
+            movement_date=timezone.localdate(),
+            notes=f'إلغاء: {mv.notes}' if mv.notes else 'إلغاء أمر شراء',
+            is_reversal=True,
+        )
 
 
 def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''):
@@ -146,11 +160,32 @@ def _apply_supplier_ledger(tenant, supplier, amount, entry_type, reference_type,
 
 
 def _reverse_supplier_ledger(tenant, reference_type, reference_id):
-    SupplierLedger.objects.filter(
+    from django.db.models import Sum as _Sum
+    entries = SupplierLedger.objects.filter(
         tenant=tenant,
         reference_type=reference_type,
         reference_id=reference_id,
-    ).delete()
+        is_reversal=False,
+    ).select_related('supplier')
+    for entry in entries:
+        prev = (
+            SupplierLedger.objects
+            .filter(tenant=tenant, supplier=entry.supplier)
+            .aggregate(s=_Sum('amount'))['s'] or Decimal('0')
+        )
+        reversed_amount = -entry.amount
+        SupplierLedger.objects.create(
+            tenant=tenant,
+            supplier=entry.supplier,
+            entry_type=entry.entry_type,
+            amount=reversed_amount,
+            entry_date=timezone.localdate(),
+            reference_type=entry.reference_type,
+            reference_id=entry.reference_id,
+            running_balance=prev + reversed_amount,
+            notes=f'إلغاء: {entry.notes}' if entry.notes else 'إلغاء قيد',
+            is_reversal=True,
+        )
 
 
 def _deduct_stock(tenant, stock, item, qty, unit_cost, reference_type, reference_id, movement_date):
@@ -398,6 +433,7 @@ def cancel_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRet
         reference_type='purchase_return',
         reference_id=purchase_return.id,
         movement_type='purchase_return_out',
+        is_reversal=False,
     ).select_related('item', 'stock')
 
     for mv in movements:
@@ -406,8 +442,21 @@ def cancel_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRet
         sq = _get_stock_qty(tenant, mv.stock, mv.item)
         sq.quantity += mv.quantity
         sq.save(update_fields=['quantity', 'updated_at'])
-
-    movements.delete()
+        StockMovement.objects.create(
+            tenant=tenant,
+            item=mv.item,
+            stock=mv.stock,
+            movement_type=mv.movement_type,
+            direction='in',
+            quantity=mv.quantity,
+            unit_cost=mv.unit_cost,
+            balance_after=sq.quantity,
+            reference_type=mv.reference_type,
+            reference_id=mv.reference_id,
+            movement_date=timezone.localdate(),
+            notes=f'إلغاء: {mv.notes}' if mv.notes else 'إلغاء مرتجع شراء',
+            is_reversal=True,
+        )
 
     for rl in purchase_return.lines.select_related('invoice_line'):
         inv_line = PurchaseInvoiceLine.objects.select_for_update().get(pk=rl.invoice_line_id)

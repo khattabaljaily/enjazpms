@@ -615,6 +615,7 @@ class StockMovement(TenantMixin):
     balance_after = models.DecimalField(
         'الرصيد بعد الحركة', max_digits=14, decimal_places=4, default=0
     )
+    is_reversal = models.BooleanField('قيد عكسي', default=False)
 
     class Meta:
         db_table = 'stock_movements'
@@ -688,6 +689,7 @@ class CustomerLedger(TenantMixin):
     running_balance = models.DecimalField(
         'الرصيد التراكمي', max_digits=14, decimal_places=2, default=0
     )
+    is_reversal = models.BooleanField('قيد عكسي', default=False)
 
     class Meta:
         db_table = 'customer_ledger'

@@ -216,6 +216,7 @@ class SupplierLedger(TenantMixin):
     reference_type = models.CharField('نوع المرجع', max_length=50, blank=True)
     reference_id = models.PositiveBigIntegerField('رقم المرجع', null=True, blank=True)
     running_balance = models.DecimalField('الرصيد التراكمي', max_digits=14, decimal_places=2, default=0)
+    is_reversal = models.BooleanField('قيد عكسي', default=False)
 
     class Meta:
         db_table = 'supplier_ledger'
