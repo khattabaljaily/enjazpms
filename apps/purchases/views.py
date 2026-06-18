@@ -383,6 +383,9 @@ def order_detail(request, pk):
         (l.returnable_quantity or Decimal('0')) > 0 for l in lines
     )
 
+    from apps.core.models import Settings as TenantSettings
+    settings_obj, _ = TenantSettings.objects.get_or_create(tenant=tenant)
+
     return render(request, 'purchases/order_detail.html', {
         'invoice': invoice,
         'lines': lines,
@@ -390,6 +393,7 @@ def order_detail(request, pk):
         'can_cancel': invoice.status == 'confirmed',
         'can_edit': invoice.status in ('draft', 'confirmed'),
         'can_return': can_return,
+        'settings_obj': settings_obj,
     })
 
 

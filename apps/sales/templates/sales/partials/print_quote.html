@@ -1,5 +1,15 @@
 {% load static number_format %}
 {% load humanize %}
+<style>
+.print-doc--quote .print-head      { border-bottom-color: {{ settings_obj.invoice_color|default:"#6366f1" }}; }
+.print-doc--quote .print-head::after { background: {{ settings_obj.invoice_color|default:"#6366f1" }}; }
+.print-doc--quote .print-doc-heading { color: {{ settings_obj.invoice_color|default:"#6366f1" }}; }
+.print-doc--quote .print-doc-heading::after { background: {{ settings_obj.invoice_color|default:"#6366f1" }}; }
+.print-doc--quote .print-box-icon  { background: {{ settings_obj.invoice_color|default:"#6366f1" }}; }
+.print-doc--quote .print-total-row--grand { color: {{ settings_obj.invoice_color|default:"#6366f1" }}; }
+.print-doc--quote .footer-line     { background: {{ settings_obj.invoice_color|default:"#6366f1" }}; }
+.print-doc--quote { border-left: 3px solid {{ settings_obj.invoice_color|default:"#6366f1" }}; box-shadow: -4px 0 14px {{ settings_obj.invoice_color|default:"#6366f1" }}22; }
+</style>
 <div class="print-doc print-doc--quote" dir="rtl">
     <div class="print-head">
         <div class="print-brand">
@@ -93,7 +103,11 @@
 
     <div class="print-footer">
         <div class="footer-line"></div>
-        <div class="footer-text">تمت الطباعة في {% now "Y-m-d H:i" %}</div>
+        <div class="footer-timestamps">
+            <span>وقت الإنشاء: {{ quote.created_at|date:"Y-m-d" }} {{ quote.created_at|time:"H:i" }}</span>
+            <span class="footer-ts-sep">|</span>
+            <span>وقت الطباعة: {% now "Y-m-d H:i" %}</span>
+        </div>
         <div class="footer-thanks">شكراً لثقتكم بنا</div>
     </div>
 </div>

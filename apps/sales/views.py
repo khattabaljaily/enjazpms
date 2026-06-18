@@ -1379,9 +1379,13 @@ def quote_detail(request, pk):
         iu_list = list(ln.item.item_units.order_by('factor'))
         ln.unit_display = iu_list[0].name if iu_list else ln.item.base_unit_name
 
+    from apps.core.models import Settings as TenantSettings
+    settings_obj, _ = TenantSettings.objects.get_or_create(tenant=tenant)
+
     return render(request, 'sales/quote_detail.html', {
         'quote': quote,
         'lines': lines,
+        'settings_obj': settings_obj,
         'can_edit': quote.status == 'draft',
         'can_send': quote.can_send,
         'can_accept': quote.status == 'sent',
