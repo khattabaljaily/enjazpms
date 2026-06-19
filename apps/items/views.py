@@ -92,7 +92,7 @@ def category_list(request):
 # ============================================================
 
 @login_required
-@require_permission('view_units')
+@require_permission('view_items')
 def unit_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -680,7 +680,7 @@ def category_delete_api(request, pk):
 # ============================================================
 
 @login_required
-@require_permission('view_units')
+@require_permission('view_items')
 def unit_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -718,7 +718,7 @@ def unit_table_api(request):
 
 
 @login_required
-@require_permission('view_units')
+@require_permission('view_items')
 def unit_options_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -733,7 +733,7 @@ def unit_options_api(request):
 
 
 @login_required
-@require_permission('add_units')
+@require_permission('add_items')
 @transaction.atomic
 def unit_create_api(request):
     tenant = _ensure_tenant(request)
@@ -755,7 +755,7 @@ def unit_create_api(request):
 
 
 @login_required
-@require_permission('view_units')
+@require_permission('view_items')
 def unit_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -774,7 +774,7 @@ def unit_detail_api(request, pk):
 
 
 @login_required
-@require_permission('change_units')
+@require_permission('change_items')
 @transaction.atomic
 def unit_update_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -799,8 +799,8 @@ def unit_update_api(request, pk):
 
 
 @login_required
-@require_permission('delete_units')
-@require_permission('change_units')
+@require_permission('delete_items')
+@require_permission('change_items')
 def unit_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
