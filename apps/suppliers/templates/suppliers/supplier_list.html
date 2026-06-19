@@ -752,7 +752,7 @@
                 if (resp.success) { deleteModal.hide(); dt.ajax.reload(null, false); EnjazIMS.toast(resp.message || 'تم الحذف', 'success'); return; }
                 EnjazIMS.toast(resp.message || 'تعذر الحذف', 'error');
             },
-            error: function () { EnjazIMS.toast('تعذر الحذف', 'error'); }
+            error: function (xhr) { EnjazIMS.toast(_xhrMsg(xhr, 'تعذر الحذف'), 'error'); }
         });
     });
 

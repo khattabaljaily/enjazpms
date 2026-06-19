@@ -664,6 +664,7 @@ _CUSTOMER_FIELD_SCHEMA = [
 
 
 @login_required
+@require_permission('import_customers')
 def customer_import_api(request):
     """Import customers from Excel/CSV with AI-assisted column mapping."""
     from apps.core.io_utils import parse_uploaded_file, smart_get, safe_decimal, clean_phone, clean_email
@@ -732,6 +733,7 @@ def customer_import_api(request):
 
 
 @login_required
+@require_permission('export_customers')
 def customer_export_api(request):
     """Export customers to CSV file"""
     tenant = _ensure_tenant(request)

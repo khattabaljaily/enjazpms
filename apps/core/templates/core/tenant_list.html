@@ -989,7 +989,7 @@
                 }
                 EnjazIMS.toast(resp.message || 'تعذرت العملية', 'error');
             },
-            error: function () { EnjazIMS.toast('تعذرت العملية', 'error'); }
+            error: function (xhr) { EnjazIMS.toast(_xhrMsg(xhr, 'تعذرت العملية'), 'error'); }
         });
     });
 

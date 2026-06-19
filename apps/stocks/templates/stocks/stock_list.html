@@ -556,7 +556,7 @@
                 if (resp.success) { dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); }
                 else EnjazIMS.toast(resp.message, 'error');
             },
-            error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }
+            error: function(xhr) { EnjazIMS.toast(_xhrMsg(xhr, 'تعذر الحذف'), 'error'); }
         });
     });
 
@@ -605,7 +605,7 @@
                 if (resp.success) { dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); }
                 else EnjazIMS.toast(resp.message, 'error');
             },
-            error: function() { EnjazIMS.toast('تعذر التعيين', 'error'); }
+            error: function(xhr) { EnjazIMS.toast(_xhrMsg(xhr, 'تعذر التعيين'), 'error'); }
         });
     });
 
@@ -625,7 +625,7 @@
                 if (resp.success) { dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); }
                 else EnjazIMS.toast(resp.message, 'error');
             },
-            error: function() { EnjazIMS.toast('تعذر التعيين', 'error'); }
+            error: function(xhr) { EnjazIMS.toast(_xhrMsg(xhr, 'تعذر التعيين'), 'error'); }
         });
     });
 

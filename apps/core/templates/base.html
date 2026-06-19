@@ -75,6 +75,14 @@
     <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}?v=4.0"></script>
 
+    <!-- Global permission-denied handler: reads server message for all jQuery AJAX errors -->
+    <script>
+    function _xhrMsg(xhr, fallback) {
+        try { var r = JSON.parse(xhr.responseText); if (r && r.message) return r.message; } catch(e) {}
+        return fallback;
+    }
+    </script>
+
     <!-- Inject print date for report letterhead (no-op on non-report pages) -->
     <script>
     !function(){

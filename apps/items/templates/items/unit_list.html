@@ -452,7 +452,7 @@
       deleteModal.hide();
       if (resp.success) { dt.ajax.reload(null, false); refreshBaseUnitSelect(null); EnjazIMS.toast(resp.message, 'success'); }
       else EnjazIMS.toast(resp.message, 'error');
-    }, error: function() { EnjazIMS.toast('تعذر الحذف', 'error'); }});
+    }, error: function(xhr) { EnjazIMS.toast(_xhrMsg(xhr, 'تعذر الحذف'), 'error'); }});
   });
   $(document).on('click', '.js-edit-unit', function() { openEdit($(this).data('id')); });
 
