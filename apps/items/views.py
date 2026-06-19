@@ -1010,6 +1010,7 @@ def item_import_api(request):
 
 
 @login_required
+@require_permission('import_items')
 def item_download_template(request):
     from apps.core.io_utils import csv_response, csv_writer
     response = csv_response('items_template.csv')
@@ -1137,6 +1138,7 @@ def category_import_api(request):
 
 
 @login_required
+@require_permission('add_categories')
 def category_download_template(request):
     from apps.core.io_utils import csv_response, csv_writer
     response = csv_response('categories_template.csv')

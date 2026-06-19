@@ -861,6 +861,7 @@ def employee_pending_advances_api(request, pk):
 
 
 @login_required
+@require_permission('view_employee_incentives')
 def employee_pending_incentives_api(request, pk):
     """إرجاع الحوافز/الخصومات المؤجلة للموظف ضمن فترة الراتب المحددة."""
     tenant = _tenant(request)

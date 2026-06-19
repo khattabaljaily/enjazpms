@@ -436,6 +436,7 @@ def customer_payments_table_api(request):
 
 
 @login_required
+@require_permission('view_customer_payments')
 def customer_payment_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -476,6 +477,7 @@ def customer_payment_detail_api(request, pk):
 
 
 @login_required
+@require_permission('add_customer_payments')
 @require_POST
 def customer_payment_create_api(request):
     tenant = _ensure_tenant(request)
@@ -556,6 +558,7 @@ def customer_payment_create_api(request):
 
 
 @login_required
+@require_permission('cancel_customer_payments')
 @require_POST
 def customer_payment_cancel_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -775,6 +778,7 @@ def customer_export_api(request):
 
 
 @login_required
+@require_permission('import_customers')
 def download_template(request):
     """Download CSV template for import"""
     response = HttpResponse(content_type='text/csv; charset=utf-8')
