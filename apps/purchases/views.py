@@ -28,7 +28,7 @@ def _ensure_tenant(request):
 
 
 def _json_error(message, status=400):
-    return JsonResponse({'success': False, 'message': message}, status=status)
+    return JsonResponse({'success': False, 'message': message}, status=status, json_dumps_params={'ensure_ascii': False})
 
 
 def _parse_date(value):
@@ -159,7 +159,7 @@ def order_table_api(request):
             'recordsTotal': total,
             'recordsFiltered': filtered,
             'data': data,
-        })
+        }, json_dumps_params={'ensure_ascii': False})
     except Exception as e:
         return JsonResponse({
             'draw': draw,
@@ -167,7 +167,7 @@ def order_table_api(request):
             'recordsFiltered': 0,
             'data': [],
             'error': str(e),
-        })
+        }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -419,7 +419,7 @@ def order_confirm_ajax(request, pk):
     invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
     try:
         confirm_purchase_invoice(invoice, request.user)
-        return JsonResponse({'success': True, 'message': 'تم تأكيد أمر الشراء'})
+        return JsonResponse({'success': True, 'message': 'تم تأكيد أمر الشراء'}, json_dumps_params={'ensure_ascii': False})
     except ValueError as e:
         return _json_error(str(e))
 
@@ -441,7 +441,7 @@ def order_cancel_ajax(request, pk):
     reason = body.get('reason', '')
     try:
         cancel_purchase_invoice(invoice, request.user, reason)
-        return JsonResponse({'success': True, 'message': 'تم إلغاء أمر الشراء'})
+        return JsonResponse({'success': True, 'message': 'تم إلغاء أمر الشراء'}, json_dumps_params={'ensure_ascii': False})
     except ValueError as e:
         return _json_error(str(e))
 
@@ -520,7 +520,7 @@ def return_table_api(request):
         'recordsTotal': total,
         'recordsFiltered': filtered,
         'data': data,
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -543,7 +543,7 @@ def return_lines_api(request, return_pk):
             'line_total': str(line.line_total),
         })
 
-    return JsonResponse({'success': True, 'lines': data})
+    return JsonResponse({'success': True, 'lines': data}, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -669,7 +669,7 @@ def return_confirm_ajax(request, pk):
     purchase_return = get_object_or_404(PurchaseReturn, pk=pk, tenant=tenant)
     try:
         confirm_purchase_return(purchase_return, request.user)
-        return JsonResponse({'success': True, 'message': 'تم تأكيد المرتجع بنجاح'})
+        return JsonResponse({'success': True, 'message': 'تم تأكيد المرتجع بنجاح'}, json_dumps_params={'ensure_ascii': False})
     except ValueError as e:
         return _json_error(str(e))
 
@@ -685,7 +685,7 @@ def return_cancel_ajax(request, pk):
     purchase_return = get_object_or_404(PurchaseReturn, pk=pk, tenant=tenant)
     try:
         cancel_purchase_return(purchase_return, request.user)
-        return JsonResponse({'success': True, 'message': 'تم إلغاء المرتجع'})
+        return JsonResponse({'success': True, 'message': 'تم إلغاء المرتجع'}, json_dumps_params={'ensure_ascii': False})
     except ValueError as e:
         return _json_error(str(e))
 
@@ -1403,7 +1403,7 @@ def rfq_list(request):
 def rfq_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'error': 'no tenant'}, status=400)
+        return JsonResponse({'error': 'no tenant'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     draw      = int(request.GET.get('draw', 1))
     start     = int(request.GET.get('start', 0))
@@ -1451,7 +1451,7 @@ def rfq_table_api(request):
             'id': r.id,
         })
 
-    return JsonResponse({'draw': draw, 'recordsTotal': total, 'recordsFiltered': filtered, 'data': rows})
+    return JsonResponse({'draw': draw, 'recordsTotal': total, 'recordsFiltered': filtered, 'data': rows}, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -1485,12 +1485,12 @@ def rfq_create(request):
         if not lines_raw:
             errors['lines'] = ['أضف بنداً واحداً على الأقل']
         if errors:
-            return JsonResponse({'success': False, 'errors': errors}, status=400)
+            return JsonResponse({'success': False, 'errors': errors}, status=400, json_dumps_params={'ensure_ascii': False})
 
         try:
             stock = Stock.objects.for_tenant(tenant).get(pk=stock_id)
         except Stock.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=400)
+            return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=400, json_dumps_params={'ensure_ascii': False})
 
         supplier = None
         if supplier_id:
@@ -1556,12 +1556,12 @@ def rfq_send_ajax(request, pk):
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
         if rfq.status != 'draft':
-            return JsonResponse({'success': False, 'message': 'يمكن إرسال المسودات فقط'}, status=400)
+            return JsonResponse({'success': False, 'message': 'يمكن إرسال المسودات فقط'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'sent'
         rfq.save(update_fields=['status', 'updated_at'])
-        return JsonResponse({'success': True, 'message': 'تم تحديث الحالة إلى مُرسَل'})
+        return JsonResponse({'success': True, 'message': 'تم تحديث الحالة إلى مُرسَل'}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -1575,7 +1575,7 @@ def rfq_receive_ajax(request, pk):
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
         if rfq.status not in ('sent', 'draft'):
-            return JsonResponse({'success': False, 'message': 'الحالة الحالية لا تسمح بهذا الإجراء'}, status=400)
+            return JsonResponse({'success': False, 'message': 'الحالة الحالية لا تسمح بهذا الإجراء'}, status=400, json_dumps_params={'ensure_ascii': False})
 
         try:
             data = json.loads(request.body)
@@ -1596,9 +1596,9 @@ def rfq_receive_ajax(request, pk):
             rfq.save(update_fields=['status', 'updated_at'])
             rfq.recalculate_total()
 
-        return JsonResponse({'success': True, 'message': 'تم تسجيل أسعار المورد'})
+        return JsonResponse({'success': True, 'message': 'تم تسجيل أسعار المورد'}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -1609,12 +1609,12 @@ def rfq_accept_ajax(request, pk):
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
         if rfq.status not in ('received', 'sent', 'draft'):
-            return JsonResponse({'success': False, 'message': 'الحالة لا تسمح بالقبول'}, status=400)
+            return JsonResponse({'success': False, 'message': 'الحالة لا تسمح بالقبول'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'accepted'
         rfq.save(update_fields=['status', 'updated_at'])
-        return JsonResponse({'success': True, 'message': 'تم قبول عرض الأسعار'})
+        return JsonResponse({'success': True, 'message': 'تم قبول عرض الأسعار'}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -1625,12 +1625,12 @@ def rfq_reject_ajax(request, pk):
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
         if rfq.status in ('converted', 'cancelled'):
-            return JsonResponse({'success': False, 'message': 'لا يمكن رفض هذا الطلب'}, status=400)
+            return JsonResponse({'success': False, 'message': 'لا يمكن رفض هذا الطلب'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'rejected'
         rfq.save(update_fields=['status', 'updated_at'])
-        return JsonResponse({'success': True, 'message': 'تم رفض عرض الأسعار'})
+        return JsonResponse({'success': True, 'message': 'تم رفض عرض الأسعار'}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -1641,12 +1641,12 @@ def rfq_cancel_ajax(request, pk):
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
         if rfq.status == 'converted':
-            return JsonResponse({'success': False, 'message': 'لا يمكن إلغاء طلب محوَّل'}, status=400)
+            return JsonResponse({'success': False, 'message': 'لا يمكن إلغاء طلب محوَّل'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'cancelled'
         rfq.save(update_fields=['status', 'updated_at'])
-        return JsonResponse({'success': True})
+        return JsonResponse({'success': True}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -1658,7 +1658,7 @@ def rfq_convert_ajax(request, pk):
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
         if rfq.status not in ('accepted', 'received'):
-            return JsonResponse({'success': False, 'message': 'يجب قبول عرض الأسعار أولاً'}, status=400)
+            return JsonResponse({'success': False, 'message': 'يجب قبول عرض الأسعار أولاً'}, status=400, json_dumps_params={'ensure_ascii': False})
 
         with transaction.atomic():
             invoice = PurchaseInvoice.objects.create(
@@ -1688,6 +1688,6 @@ def rfq_convert_ajax(request, pk):
             rfq.save(update_fields=['status', 'converted_invoice', 'updated_at'])
 
         return JsonResponse({'success': True,
-                             'redirect': reverse('purchases:order_detail', args=[invoice.id])})
+                             'redirect': reverse('purchases:order_detail', args=[invoice.id])}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404)
+        return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})

@@ -57,14 +57,14 @@ def _serialize_form_errors(form):
 
 
 def _json_error(message, status=400):
-    return JsonResponse({'success': False, 'message': message}, status=status)
+    return JsonResponse({'success': False, 'message': message}, status=status, json_dumps_params={'ensure_ascii': False})
 
 
 def _json_ok(data=None, msg='تمت العملية بنجاح'):
     payload = {'success': True, 'message': msg}
     if data is not None:
         payload['data'] = data
-    return JsonResponse(payload)
+    return JsonResponse(payload, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -72,7 +72,7 @@ def _json_ok(data=None, msg='تمت العملية بنجاح'):
 def supplier_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     draw = int(request.GET.get('draw', 1))
     start = int(request.GET.get('start', 0))
@@ -152,7 +152,7 @@ def supplier_table_api(request):
 def supplier_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -170,13 +170,13 @@ def supplier_create_api(request):
             'success': True,
             'message': 'تم إضافة المورد بنجاح',
             'id': supplier.id,
-        })
+        }, json_dumps_params={'ensure_ascii': False})
 
     return JsonResponse({
         'success': False,
         'message': 'يرجى التحقق من الحقول المطلوبة',
         'errors': _serialize_form_errors(form),
-    }, status=400)
+    }, status=400, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -184,7 +184,7 @@ def supplier_create_api(request):
 def supplier_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
 
@@ -216,7 +216,7 @@ def supplier_detail_api(request, pk):
 def supplier_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
     opening = supplier.opening_balance or Decimal('0')
@@ -258,7 +258,7 @@ def supplier_transactions_api(request, pk):
                 'reference_id': e.reference_id,
             })
 
-    return JsonResponse({'success': True, 'data': data})
+    return JsonResponse({'success': True, 'data': data}, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -386,7 +386,7 @@ def supplier_payments_table_api(request):
         'recordsTotal': total,
         'recordsFiltered': filtered_total,
         'data': data,
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -561,7 +561,7 @@ def supplier_payment_cancel_api(request, pk):
 def supplier_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -576,13 +576,13 @@ def supplier_update_api(request, pk):
         return JsonResponse({
             'success': True,
             'message': 'تم تعديل بيانات المورد بنجاح',
-        })
+        }, json_dumps_params={'ensure_ascii': False})
 
     return JsonResponse({
         'success': False,
         'message': 'يرجى التحقق من الحقول المطلوبة',
         'errors': _serialize_form_errors(form),
-    }, status=400)
+    }, status=400, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -590,7 +590,7 @@ def supplier_update_api(request, pk):
 def supplier_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -602,11 +602,11 @@ def supplier_delete_api(request, pk):
         return JsonResponse({
             'success': False,
             'message': 'لا يمكن حذف المورد لوجود فواتير أو حركات مرتبطة به.',
-        }, status=400)
+        }, status=400, json_dumps_params={'ensure_ascii': False})
     return JsonResponse({
         'success': True,
         'message': 'تم حذف المورد بنجاح',
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -636,20 +636,20 @@ def supplier_import_api(request):
 
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
     if 'file' not in request.FILES:
-        return JsonResponse({'success': False, 'message': 'لم يتم رفع أي ملف'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لم يتم رفع أي ملف'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     rows, err = parse_uploaded_file(request.FILES['file'])
     if err:
-        return JsonResponse({'success': False, 'message': err}, status=400)
+        return JsonResponse({'success': False, 'message': err}, status=400, json_dumps_params={'ensure_ascii': False})
 
     if not rows:
-        return JsonResponse({'success': False, 'message': 'الملف فارغ أو لا يحتوي على بيانات'}, status=400)
+        return JsonResponse({'success': False, 'message': 'الملف فارغ أو لا يحتوي على بيانات'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     actual_headers = list(rows[0].keys())
     try:
@@ -692,7 +692,7 @@ def supplier_import_api(request):
         'message': message,
         'imported': imported_count,
         'errors': errors[:10],
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -701,7 +701,7 @@ def supplier_export_api(request):
     """Export suppliers to CSV file"""
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     # Create CSV response
     response = HttpResponse(content_type='text/csv; charset=utf-8')

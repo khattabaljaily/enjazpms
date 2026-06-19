@@ -57,14 +57,14 @@ def _serialize_form_errors(form):
 
 
 def _json_error(message, status=400):
-    return JsonResponse({'success': False, 'message': message}, status=status)
+    return JsonResponse({'success': False, 'message': message}, status=status, json_dumps_params={'ensure_ascii': False})
 
 
 def _json_ok(data=None, msg='تمت العملية بنجاح'):
     payload = {'success': True, 'message': msg}
     if data is not None:
         payload['data'] = data
-    return JsonResponse(payload)
+    return JsonResponse(payload, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -72,7 +72,7 @@ def _json_ok(data=None, msg='تمت العملية بنجاح'):
 def customer_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     draw = int(request.GET.get('draw', 1))
     start = int(request.GET.get('start', 0))
@@ -154,7 +154,7 @@ def customer_table_api(request):
 def customer_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -172,23 +172,23 @@ def customer_create_api(request):
             'success': True,
             'message': 'تم إضافة العميل بنجاح',
             'id': customer.id,
-        })
+        }, json_dumps_params={'ensure_ascii': False})
 
     return JsonResponse({
         'success': False,
         'message': 'يرجى التحقق من الحقول المطلوبة',
         'errors': _serialize_form_errors(form),
-    }, status=400)
+    }, status=400, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
 @require_permission('view_customers')
 def generate_portal_token(request, pk):
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'POST required'}, status=405)
+        return JsonResponse({'success': False, 'message': 'POST required'}, status=405, json_dumps_params={'ensure_ascii': False})
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
     customer.refresh_portal_token()
     from django.urls import reverse
@@ -199,7 +199,7 @@ def generate_portal_token(request, pk):
         'success': True,
         'portal_url': portal_url,
         'expires_at': customer.portal_token_expires.strftime('%Y-%m-%d'),
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -207,7 +207,7 @@ def generate_portal_token(request, pk):
 def customer_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
     ledger_total = (
@@ -242,7 +242,7 @@ def customer_detail_api(request, pk):
 def customer_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
     entries = (
@@ -274,7 +274,7 @@ def customer_transactions_api(request, pk):
         for e in entries
     ]
 
-    return JsonResponse({'success': True, 'data': data})
+    return JsonResponse({'success': True, 'data': data}, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -432,7 +432,7 @@ def customer_payments_table_api(request):
         'recordsTotal': total,
         'recordsFiltered': filtered_total,
         'data': data,
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -607,7 +607,7 @@ def customer_payment_cancel_api(request, pk):
 def customer_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -622,13 +622,13 @@ def customer_update_api(request, pk):
         return JsonResponse({
             'success': True,
             'message': 'تم تعديل بيانات العميل بنجاح',
-        })
+        }, json_dumps_params={'ensure_ascii': False})
 
     return JsonResponse({
         'success': False,
         'message': 'يرجى التحقق من الحقول المطلوبة',
         'errors': _serialize_form_errors(form),
-    }, status=400)
+    }, status=400, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -636,7 +636,7 @@ def customer_update_api(request, pk):
 def customer_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -646,7 +646,7 @@ def customer_delete_api(request, pk):
     return JsonResponse({
         'success': True,
         'message': 'تم حذف العميل بنجاح',
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -675,20 +675,20 @@ def customer_import_api(request):
 
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
     if 'file' not in request.FILES:
-        return JsonResponse({'success': False, 'message': 'لم يتم رفع أي ملف'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لم يتم رفع أي ملف'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     rows, err = parse_uploaded_file(request.FILES['file'])
     if err:
-        return JsonResponse({'success': False, 'message': err}, status=400)
+        return JsonResponse({'success': False, 'message': err}, status=400, json_dumps_params={'ensure_ascii': False})
 
     if not rows:
-        return JsonResponse({'success': False, 'message': 'الملف فارغ أو لا يحتوي على بيانات'}, status=400)
+        return JsonResponse({'success': False, 'message': 'الملف فارغ أو لا يحتوي على بيانات'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     # AI maps actual headers → canonical field names (one call for the whole import)
     actual_headers = list(rows[0].keys())
@@ -732,7 +732,7 @@ def customer_import_api(request):
         'message': message,
         'imported': imported_count,
         'errors': errors[:10],
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -741,7 +741,7 @@ def customer_export_api(request):
     """Export customers to CSV file"""
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     # Create CSV response
     response = HttpResponse(content_type='text/csv; charset=utf-8')

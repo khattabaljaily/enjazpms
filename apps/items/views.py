@@ -832,7 +832,7 @@ def unit_delete_api(request, pk):
 # ══════════════════════════════════════════════════════
 
 @login_required
-@require_permission('view_items')
+@require_permission('export_items')
 def item_export_api(request):
     from apps.core.io_utils import csv_response, csv_writer
     tenant = _ensure_tenant(request)
@@ -890,7 +890,7 @@ _ITEM_FIELD_SCHEMA = [
 
 
 @login_required
-@require_permission('add_items')
+@require_permission('import_items')
 def item_import_api(request):
     import logging, traceback
     from apps.core.io_utils import parse_uploaded_file, smart_get, safe_decimal

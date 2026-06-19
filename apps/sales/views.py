@@ -81,7 +81,7 @@ def _ensure_tenant(request):
 
 
 def _json_error(msg, status=400):
-    return JsonResponse({'success': False, 'message': msg}, status=status)
+    return JsonResponse({'success': False, 'message': msg}, status=status, json_dumps_params={'ensure_ascii': False})
 
 
 def _parse_date(value):
@@ -131,7 +131,7 @@ def _json_ok(data=None, msg='تمت العملية بنجاح'):
     payload = {'success': True, 'message': msg}
     if data:
         payload.update(data)
-    return JsonResponse(payload)
+    return JsonResponse(payload, json_dumps_params={'ensure_ascii': False})
 
 
 # ─────────────────────────────────────────────
@@ -300,7 +300,7 @@ def invoice_table_api(request):
         'recordsTotal': total,
         'recordsFiltered': filtered_total,
         'data': data,
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -810,7 +810,7 @@ def return_table_api(request):
         'recordsTotal': total,
         'recordsFiltered': filtered,
         'data': data,
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -833,7 +833,7 @@ def return_lines_api(request, return_pk):
             'line_total': str(line.line_total),
         })
 
-    return JsonResponse({'success': True, 'lines': data})
+    return JsonResponse({'success': True, 'lines': data}, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -1113,7 +1113,7 @@ def stock_items_api(request):
     # avoid using a sliced queryset directly inside __in (LIMIT in subquery).
     item_ids = list(qs.values_list('id', flat=True)[:50])
     if not item_ids:
-        return JsonResponse({'success': True, 'items': []})
+        return JsonResponse({'success': True, 'items': []}, json_dumps_params={'ensure_ascii': False})
 
     items = list(
         Item.objects
@@ -1146,7 +1146,7 @@ def stock_items_api(request):
             'available_qty': None if is_service else float(sq_map.get(item.id, 0)),
         })
 
-    return JsonResponse({'success': True, 'items': data})
+    return JsonResponse({'success': True, 'items': data}, json_dumps_params={'ensure_ascii': False})
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1251,7 +1251,7 @@ def quote_table_api(request):
         'recordsTotal': total,
         'recordsFiltered': filtered,
         'data': rows,
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -2403,7 +2403,7 @@ def pos_items_api(request):
             'image_url': image_url,
         })
 
-    return JsonResponse({'items': items})
+    return JsonResponse({'items': items}, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -2505,7 +2505,7 @@ def pos_checkout_api(request):
         'invoice_number': invoice.invoice_number,
         'invoice_id': invoice.id,
         'grand_total': str(invoice.grand_total),
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 # ─────────────────────────────────────────────

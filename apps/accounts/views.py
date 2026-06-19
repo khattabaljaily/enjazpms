@@ -61,7 +61,7 @@ def _ensure_tenant(request):
 
 
 def _json_error(message, status=400):
-    return JsonResponse({'success': False, 'message': message}, status=status)
+    return JsonResponse({'success': False, 'message': message}, status=status, json_dumps_params={'ensure_ascii': False})
 
 
 def _clear_messages(request):
@@ -75,7 +75,7 @@ def _json_ok(data=None, msg='تمت العملية بنجاح'):
     payload = {'success': True, 'message': msg}
     if data is not None:
         payload['data'] = data
-    return JsonResponse(payload)
+    return JsonResponse(payload, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -112,7 +112,7 @@ def user_list(request):
 def user_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     draw = int(request.GET.get('draw', 1))
     start = int(request.GET.get('start', 0))
@@ -172,7 +172,7 @@ def user_table_api(request):
         'recordsTotal': records_total,
         'recordsFiltered': records_filtered,
         'data': data,
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -182,13 +182,13 @@ def user_create_api(request):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405)
+        return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405, json_dumps_params={'ensure_ascii': False})
 
     current_count = User.objects.filter(tenant=tenant).count()
     if current_count >= tenant.max_users:
         return JsonResponse({
             'success': False,
-            'message': f'وصلت إلى الحد الأقصى للمستخدمين ({tenant.max_users}). يرجى التواصل مع الدعم لترقية الاشتراك.',
+            'message': f'وصلت إلى الحد الأقصى للمستخدمين ({tenant.max_users}, json_dumps_params={'ensure_ascii': False}). يرجى التواصل مع الدعم لترقية الاشتراك.',
         }, status=403)
 
     form = UserManagementForm(request.POST, tenant=tenant)
@@ -197,7 +197,7 @@ def user_create_api(request):
             'success': False,
             'message': 'يرجى التحقق من الحقول المطلوبة',
             'errors': _serialize_form_errors(form),
-        }, status=400)
+        }, status=400, json_dumps_params={'ensure_ascii': False})
 
     user = form.save()
     log_activity(request, 'إضافة مستخدم جديد',
@@ -237,7 +237,7 @@ def user_update_api(request, pk):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405)
+        return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405, json_dumps_params={'ensure_ascii': False})
 
     user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
     
@@ -247,7 +247,7 @@ def user_update_api(request, pk):
             'success': False,
             'message': 'يرجى التحقق من الحقول المطلوبة',
             'errors': _serialize_form_errors(form),
-        }, status=400)
+        }, status=400, json_dumps_params={'ensure_ascii': False})
     
     user_obj = form.save()
     
@@ -261,7 +261,7 @@ def user_delete_api(request, pk):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405)
+        return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405, json_dumps_params={'ensure_ascii': False})
 
     if request.user.pk == pk:
         return _json_error('لا يمكن حذف المستخدم الحالي')
@@ -325,7 +325,7 @@ def permission_group_table_api(request):
         'recordsTotal': total,
         'recordsFiltered': filtered,
         'data': data,
-    })
+    }, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -485,7 +485,7 @@ def register_step1(request):
                     'success': True,
                     'message': 'تم حفظ بيانات المستخدم بنجاح',
                     'redirect_url': reverse('accounts:register_step2'),
-                })
+                }, json_dumps_params={'ensure_ascii': False})
 
             return redirect('accounts:register_step2')
         if _wants_json(request):
@@ -494,7 +494,7 @@ def register_step1(request):
                 'success': False,
                 'message': _first_error_message(errors),
                 'errors': errors,
-            }, status=400)
+            }, status=400, json_dumps_params={'ensure_ascii': False})
     else:
         initial = request.session.get('reg_step1', {})
         form = Step1UserForm(initial=initial)
@@ -525,7 +525,7 @@ def register_step2(request):
                 'success': False,
                 'message': 'يرجى إكمال الخطوة الأولى أولاً',
                 'redirect_url': reverse('accounts:register_step1'),
-            }, status=400)
+            }, status=400, json_dumps_params={'ensure_ascii': False})
         return redirect('accounts:register_step1')
     
     country_timezone_map_json = json.dumps(COUNTRY_TIMEZONE_MAP, ensure_ascii=False)
@@ -553,7 +553,7 @@ def register_step2(request):
                     'success': True,
                     'message': 'تم حفظ بيانات النشاط التجاري بنجاح',
                     'redirect_url': reverse('accounts:register_step3'),
-                })
+                }, json_dumps_params={'ensure_ascii': False})
 
             return redirect('accounts:register_step3')
         if _wants_json(request):
@@ -562,7 +562,7 @@ def register_step2(request):
                 'success': False,
                 'message': _first_error_message(errors),
                 'errors': errors,
-            }, status=400)
+            }, status=400, json_dumps_params={'ensure_ascii': False})
         timezone_preview = get_timezone_for_country(request.POST.get('country', DEFAULT_COUNTRY))
     else:
         initial = request.session.get('reg_step2', {})
@@ -590,7 +590,7 @@ def register_step3(request):
                 'success': False,
                 'message': 'يرجى إكمال خطوات التسجيل السابقة أولاً',
                 'redirect_url': reverse('accounts:register_step1'),
-            }, status=400)
+            }, status=400, json_dumps_params={'ensure_ascii': False})
         return redirect('accounts:register_step1')
     
     if request.method == 'POST':
@@ -692,7 +692,7 @@ def register_step3(request):
                     return JsonResponse({
                         'success': False,
                         'message': f'حدث خطأ أثناء إنشاء الحساب: {str(e)}',
-                    }, status=500)
+                    }, status=500, json_dumps_params={'ensure_ascii': False})
                 messages.error(request, f'حدث خطأ: {str(e)}')
         elif _wants_json(request):
             errors = _serialize_form_errors(form)
@@ -700,7 +700,7 @@ def register_step3(request):
                 'success': False,
                 'message': _first_error_message(errors),
                 'errors': errors,
-            }, status=400)
+            }, status=400, json_dumps_params={'ensure_ascii': False})
     else:
         session_data = request.session.get('reg_step2', {})
         initial_timezone = session_data.get('timezone', get_timezone_for_country(session_data.get('country', DEFAULT_COUNTRY)))
@@ -728,7 +728,7 @@ def login_view(request):
             return JsonResponse({
                 'success': True,
                 'redirect_url': reverse('core:admin_dashboard') if request.user.is_superuser else reverse('core:dashboard'),
-            })
+            }, json_dumps_params={'ensure_ascii': False})
         return redirect('core:admin_dashboard' if request.user.is_superuser else 'core:dashboard')
     
     if request.method == 'POST':
@@ -768,7 +768,7 @@ def login_view(request):
                 'success': False,
                 'message': _first_error_message(errors, default='اسم المستخدم أو كلمة المرور غير صحيحة'),
                 'errors': errors,
-            }, status=400)
+            }, status=400, json_dumps_params={'ensure_ascii': False})
         else:
             messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة')
     else:
@@ -813,28 +813,28 @@ def logout_view(request):
 def login_as_tenant_api(request, tenant_id):
     """تسجيل الدخول كمدير مشترك (للمشرف العام فقط)"""
     if not request.user.is_superuser:
-        return JsonResponse({'success': False, 'message': 'غير مصرح'}, status=403)
+        return JsonResponse({'success': False, 'message': 'غير مصرح'}, status=403, json_dumps_params={'ensure_ascii': False})
 
     password = request.POST.get('password', '')
     if not request.user.check_password(password):
-        return JsonResponse({'success': False, 'message': 'كلمة مرور المشرف غير صحيحة'}, status=400)
+        return JsonResponse({'success': False, 'message': 'كلمة مرور المشرف غير صحيحة'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     from apps.core.models import Tenant
     try:
         tenant = Tenant.objects.get(pk=tenant_id)
     except Tenant.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'المشترك غير موجود'}, status=404)
+        return JsonResponse({'success': False, 'message': 'المشترك غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
 
     target_user = User.objects.filter(tenant=tenant, is_tenant_admin=True, is_active=True).first()
     if target_user is None:
-        return JsonResponse({'success': False, 'message': 'لا يوجد مدير نشط لهذا المشترك'}, status=404)
+        return JsonResponse({'success': False, 'message': 'لا يوجد مدير نشط لهذا المشترك'}, status=404, json_dumps_params={'ensure_ascii': False})
 
     impersonator_id = request.user.pk
     target_user.backend = 'django.contrib.auth.backends.ModelBackend'
     login(request, target_user)
     request.session['_impersonator_id'] = impersonator_id
 
-    return JsonResponse({'success': True, 'redirect_url': reverse('core:dashboard')})
+    return JsonResponse({'success': True, 'redirect_url': reverse('core:dashboard')}, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
