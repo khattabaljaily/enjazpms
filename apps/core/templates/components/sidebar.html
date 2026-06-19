@@ -1,6 +1,7 @@
 {% load static %}
 {% load humanize %}
 {% load capabilities_tags %}
+{% load permission_tags %}
 
 <aside class="sidebar">
 
@@ -388,12 +389,21 @@
                 معلومات الاشتراك
             </a>
         </li>
+    </ul>
+    {% endif %}
+
+    {% if user.is_tenant_admin or request.user|has_perm_key:"view_tenant_settings" or request.user|has_perm_key:"change_tenant_settings" or request.user|has_perm_key:"view_store_settings" or request.user|has_perm_key:"change_store_settings" or request.user|has_perm_key:"view_store_orders" or request.user|has_perm_key:"manage_store_orders" %}
+    {% if not user.is_tenant_admin %}<div class="sidebar-divider"></div>{% endif %}
+    <ul class="nav flex-column">
+        {% if user.is_tenant_admin or request.user|has_perm_key:"view_tenant_settings" or request.user|has_perm_key:"change_tenant_settings" %}
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'core:tenant_settings' %}">
+            <a class="nav-link{% if request.resolver_match.url_name == 'tenant_settings' %} active{% endif %}" href="{% url 'core:tenant_settings' %}">
                 <span class="nav-icon"><i class="fas fa-building"></i></span>
-                النشاط التجاري
+                إعدادات النشاط التجاري
             </a>
         </li>
+        {% endif %}
+        {% if user.is_tenant_admin or request.user|has_perm_key:"view_store_settings" or request.user|has_perm_key:"change_store_settings" or request.user|has_perm_key:"view_store_orders" or request.user|has_perm_key:"manage_store_orders" %}
         <li class="nav-item">
             <a class="nav-link{% if 'store' in request.path %} active{% endif %}" href="{% url 'store:manage_settings' %}">
                 <span class="nav-icon" style="background:linear-gradient(135deg,#6366f1,#7c3aed);color:#fff;"><i class="fas fa-store"></i></span>
@@ -403,6 +413,7 @@
                 {% endif %}
             </a>
         </li>
+        {% endif %}
     </ul>
     {% endif %}
 
