@@ -29,6 +29,7 @@ def about(request):
 
 
 @login_required
+@require_permission('view_dashboard')
 def dashboard(request):
     """الصفحة الرئيسية - Dashboard"""
 

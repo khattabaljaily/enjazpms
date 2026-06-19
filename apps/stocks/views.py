@@ -1070,7 +1070,7 @@ def stocks_non_moving_report_export(request):
 # ============================================================
 
 @login_required
-@require_permission('view_stocks')
+@require_permission('transfer_stocks')
 def transfer_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1088,7 +1088,7 @@ def transfer_list(request):
 
 
 @login_required
-@require_permission('view_stocks')
+@require_permission('transfer_stocks')
 def transfer_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1144,7 +1144,7 @@ def transfer_table_api(request):
 
 
 @login_required
-@require_permission('add_stocks')
+@require_permission('transfer_stocks')
 def transfer_create(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1218,7 +1218,7 @@ def transfer_create(request):
 
 
 @login_required
-@require_permission('view_stocks')
+@require_permission('transfer_stocks')
 def transfer_detail(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1239,7 +1239,7 @@ def transfer_detail(request, pk):
 
 
 @login_required
-@require_permission('add_stocks')
+@require_permission('transfer_stocks')
 def transfer_confirm_ajax(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -1255,7 +1255,7 @@ def transfer_confirm_ajax(request, pk):
 
 
 @login_required
-@require_permission('add_stocks')
+@require_permission('transfer_stocks')
 def transfer_cancel_ajax(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -1271,7 +1271,7 @@ def transfer_cancel_ajax(request, pk):
 
 
 @login_required
-@require_permission('add_stocks')
+@require_permission('transfer_stocks')
 def transfer_delete_draft_ajax(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -1285,7 +1285,7 @@ def transfer_delete_draft_ajax(request, pk):
 
 
 @login_required
-@require_permission('view_stocks')
+@require_permission('transfer_stocks')
 def transfer_items_api(request):
     """Returns available quantity for items in a given stock."""
     tenant = _ensure_tenant(request)
@@ -1341,7 +1341,7 @@ def transfer_items_api(request):
 # ============================================================
 
 @login_required
-@require_permission('view_stocks')
+@require_permission('adjust_stocks')
 def stocktake_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1359,7 +1359,7 @@ def stocktake_list(request):
 
 
 @login_required
-@require_permission('view_stocks')
+@require_permission('adjust_stocks')
 def stocktake_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1411,7 +1411,7 @@ def stocktake_table_api(request):
 
 
 @login_required
-@require_permission('add_stocks')
+@require_permission('adjust_stocks')
 def stocktake_create(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1468,7 +1468,7 @@ def stocktake_create(request):
 
 
 @login_required
-@require_permission('view_stocks')
+@require_permission('adjust_stocks')
 def stocktake_detail(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1489,7 +1489,7 @@ def stocktake_detail(request, pk):
 
 
 @login_required
-@require_permission('add_stocks')
+@require_permission('adjust_stocks')
 def stocktake_save_counts_ajax(request, pk):
     """Save counted quantities without confirming."""
     if request.method != 'POST':
@@ -1520,7 +1520,7 @@ def stocktake_save_counts_ajax(request, pk):
 
 
 @login_required
-@require_permission('add_stocks')
+@require_permission('adjust_stocks')
 def stocktake_confirm_ajax(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -1536,7 +1536,7 @@ def stocktake_confirm_ajax(request, pk):
 
 
 @login_required
-@require_permission('add_stocks')
+@require_permission('adjust_stocks')
 def stocktake_cancel_ajax(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])

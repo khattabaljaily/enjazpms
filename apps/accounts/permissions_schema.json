@@ -4,8 +4,7 @@
     },
     "إعدادات النشاط التجاري": {
         "view_tenant_settings": "عرض إعدادات النشاط التجاري",
-        "change_tenant_settings": "تعديل إعدادات النشاط التجاري",
-        "view_subscription": "عرض معلومات الاشتراك"
+        "change_tenant_settings": "تعديل إعدادات النشاط التجاري"
     },
     "المستخدمين": {
         "add_users": "إضافة مستخدم جديد",
@@ -49,9 +48,7 @@
         "delete_items": "حذف منتج أو خدمة",
         "view_items": "عرض قائمة المنتجات والخدمات",
         "import_items": "استيراد منتجات من ملف",
-        "export_items": "تصدير بيانات المنتجات",
-        "view_item_cost": "عرض تكلفة المنتج (حساس)",
-        "print_item_barcode": "طباعة باركود المنتج"
+        "export_items": "تصدير بيانات المنتجات"
     },
     "التصنيفات": {
         "add_categories": "إضافة تصنيف جديد",
@@ -63,41 +60,29 @@
         "add_stocks": "إضافة مخزن جديد",
         "change_stocks": "تعديل بيانات المخزن",
         "delete_stocks": "حذف مخزن",
-        "view_stocks": "عرض قائمة المخازن",
-        "view_stock_quantities": "عرض الكميات في المخزن",
-        "change_stock_quantities": "تعديل الكميات في المخزن",
-        "transfer_stocks": "نقل مخزون بين المخازن",
-        "adjust_stocks": "تسوية وتعديل أرصدة المخزن",
-        "view_stock_movements": "عرض سجل حركات المخزون",
-        "export_stocks": "تصدير بيانات المخزون"
+        "view_stocks": "عرض قائمة المخازن وأرصدة المخزون",
+        "view_stock_quantities": "عرض الكميات التفصيلية في المخازن",
+        "transfer_stocks": "إنشاء وإدارة تحويلات المخزون بين المخازن",
+        "adjust_stocks": "إنشاء وإدارة عمليات جرد المخزون"
     },
     "المبيعات": {
         "add_sales": "إنشاء فاتورة مبيعات جديدة",
-        "change_sales": "تعديل فاتورة مبيعات",
+        "change_sales": "تعديل وتأكيد فاتورة مبيعات",
         "delete_sales": "إلغاء فاتورة مبيعات",
-        "view_sales": "عرض فواتير المبيعات",
-        "print_sales": "طباعة فواتير المبيعات",
-        "export_sales": "تصدير المبيعات",
-        "view_sales_cost": "عرض تكلفة الأصناف في المبيعات (حساس)",
-        "view_sales_profit": "عرض هامش الربح في المبيعات (حساس)",
-        "apply_discount": "تطبيق خصم على الفاتورة",
-        "override_sale_price": "تعديل سعر البيع عند الفوترة",
+        "view_sales": "عرض وطباعة فواتير المبيعات",
         "add_sales_returns": "تسجيل مرتجع مبيعات",
         "view_sales_returns": "عرض مرتجعات المبيعات",
         "add_quotes": "إنشاء عرض سعر جديد",
-        "change_quotes": "تعديل عرض السعر",
+        "change_quotes": "تعديل وإرسال وتحويل عرض السعر إلى فاتورة",
         "delete_quotes": "حذف عرض السعر",
         "view_quotes": "عرض عروض الأسعار",
-        "convert_quote_to_sale": "تحويل عرض سعر إلى فاتورة بيع",
         "send_invoice_email": "إرسال فاتورة المبيعات بالبريد الإلكتروني"
     },
     "المشتريات": {
-        "add_purchases": "إنشاء فاتورة مشتريات جديدة",
-        "change_purchases": "تعديل فاتورة مشتريات",
+        "add_purchases": "إنشاء فاتورة شراء أو طلب عرض سعر جديد",
+        "change_purchases": "تعديل وتأكيد فاتورة مشتريات",
         "delete_purchases": "إلغاء فاتورة مشتريات",
-        "view_purchases": "عرض فواتير المشتريات",
-        "print_purchases": "طباعة فواتير المشتريات",
-        "export_purchases": "تصدير المشتريات",
+        "view_purchases": "عرض وطباعة فواتير المشتريات وطلبات عروض الأسعار",
         "add_purchase_returns": "تسجيل مرتجع مشتريات",
         "view_purchase_returns": "عرض مرتجعات المشتريات"
     },
@@ -107,8 +92,6 @@
         "delete_expenses": "حذف مصروف",
         "view_expenses": "عرض قائمة المصروفات",
         "add_expense_categories": "إضافة تصنيف مصروفات",
-        "change_expense_categories": "تعديل تصنيف مصروفات",
-        "delete_expense_categories": "حذف تصنيف مصروفات",
         "view_expense_categories": "عرض تصنيفات المصروفات"
     },
     "الخزائن": {
@@ -116,18 +99,14 @@
         "change_treasuries": "تعديل بيانات الخزينة",
         "delete_treasuries": "حذف خزينة",
         "view_treasuries": "عرض الخزائن وأرصدتها",
-        "view_treasury_transactions": "عرض حركات الخزينة",
-        "add_treasury_movements": "تسجيل حركة نقدية (إيداع / سحب)",
-        "transfer_treasury": "تحويل بين الخزائن",
-        "print_treasury_statement": "طباعة كشف الخزينة"
+        "view_treasury_transactions": "عرض حركات وسجل معاملات الخزينة"
     },
     "الذكاء الاصطناعي": {
         "use_ai_chat": "استخدام المساعد الذكي (الدردشة)",
         "view_ai_insights": "عرض التحليلات والتوصيات الذكية"
     },
     "المتجر الإلكتروني": {
-        "view_store_settings": "عرض إعدادات المتجر الإلكتروني",
-        "change_store_settings": "تعديل إعدادات المتجر الإلكتروني",
+        "view_store_settings": "عرض وتعديل إعدادات المتجر الإلكتروني",
         "view_store_orders": "عرض طلبات المتجر الإلكتروني",
         "manage_store_orders": "قبول ورفض طلبات المتجر الإلكتروني"
     },
@@ -136,28 +115,23 @@
         "generate_notifications": "إنشاء وتحديث الإشعارات"
     },
     "تقارير المبيعات": {
-        "view_sales_reports": "عرض صفحة تقارير المبيعات",
         "view_sales_summary_report": "تقرير ملخص المبيعات",
         "view_sales_by_customer_report": "تقرير المبيعات حسب العميل",
         "view_sales_by_item_report": "تقرير المبيعات حسب المنتج",
         "view_sales_by_date_report": "تقرير المبيعات حسب التاريخ",
         "view_sales_by_user_report": "تقرير المبيعات حسب المستخدم",
         "view_sales_profit_margin_report": "تقرير هامش الربح (حساس)",
-        "view_sales_by_payment_method_report": "تقرير المبيعات حسب طريقة الدفع",
-        "export_sales_reports": "تصدير تقارير المبيعات"
+        "view_sales_by_payment_method_report": "تقرير المبيعات حسب طريقة الدفع"
     },
     "تقارير المشتريات": {
-        "view_purchases_reports": "عرض صفحة تقارير المشتريات",
         "view_purchases_summary_report": "تقرير ملخص المشتريات",
         "view_purchases_by_supplier_report": "تقرير المشتريات حسب المورد",
         "view_purchases_by_item_report": "تقرير المشتريات حسب المنتج",
         "view_purchases_by_date_report": "تقرير المشتريات حسب التاريخ",
         "view_purchases_by_user_report": "تقرير المشتريات حسب المستخدم",
-        "view_purchases_price_history_report": "تقرير تاريخ أسعار الشراء",
-        "export_purchases_reports": "تصدير تقارير المشتريات"
+        "view_purchases_price_history_report": "تقرير تاريخ أسعار الشراء"
     },
     "تقارير المخزن": {
-        "view_stocks_reports": "عرض صفحة تقارير المخزن",
         "view_stocks_summary_report": "تقرير ملخص المخزن",
         "view_stocks_by_item_report": "تقرير المخزن حسب المنتج",
         "view_stocks_by_category_report": "تقرير المخزن حسب الفئة",
@@ -165,8 +139,7 @@
         "view_stocks_item_movement_report": "تقرير حركة الأصناف",
         "view_stocks_low_stock_report": "تقرير المخزن المنخفض",
         "view_stocks_valuation_report": "تقرير تقييم المخزن (حساس)",
-        "view_stocks_non_moving_report": "تقرير الأصناف غير المتحركة",
-        "export_stocks_reports": "تصدير تقارير المخزن"
+        "view_stocks_non_moving_report": "تقرير الأصناف غير المتحركة"
     },
     "تقارير الحسابات": {
         "view_sales_customer_statement_report": "كشف حساب العميل",
@@ -186,7 +159,7 @@
         "view_treasury_movements_report": "تقرير حركات الخزائن",
         "view_income_statement_report": "قائمة الدخل (الأرباح والخسائر)"
     },
-    "الموظفون": {
+    "الموظفين": {
         "view_employees": "عرض قائمة الموظفين",
         "add_employees": "إضافة موظف جديد",
         "edit_employees": "تعديل بيانات موظف",

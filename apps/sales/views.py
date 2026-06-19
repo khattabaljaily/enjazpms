@@ -1496,19 +1496,6 @@ def quote_convert_ajax(request, pk):
 #   SALES REPORTS
 # ─────────────────────────────────────────────
 
-@login_required
-@require_permission('view_sales_reports')
-def reports_index(request):
-    """صفحة التقارير الرئيسية للمبيعات"""
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return redirect('core:no_tenant')
-    
-    return render(request, 'sales/reports/index.html', {
-        'section': 'sales_reports',
-        'title': 'تقارير المبيعات',
-    })
-
 
 @login_required
 @require_permission('view_sales_summary_report')
