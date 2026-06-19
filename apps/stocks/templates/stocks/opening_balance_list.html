@@ -143,7 +143,7 @@
             <input type="number" class="cx-input cx-input--sm opening-qty-input"
                 data-item-id="${row.item_id}"
                 data-original="${baseQty}"
-                value="${value}" min="0" step="0.0001">
+                value="${value || ''}" min="0" step="0.0001">
             <span class="inv-unit-badge opening-input-unit-badge">${unit}</span>
         </div>`;
     }
@@ -240,7 +240,7 @@
     $('#openingTable, #openingCardsMobile').on('input', '.opening-qty-input', function () {
         const itemId   = String(this.dataset.itemId);
         const original = parseFloat(this.dataset.original || 0);
-        const newVal   = parseFloat(this.value);
+        const newVal   = parseFloat(this.value) || 0;
 
         if (newVal < 0) { this.value = 0; showToast('لا يمكن إدخال كمية سالبة', 'error'); return; }
 

@@ -439,9 +439,9 @@ def _process_invoice_post(request, tenant, invoice):
             lines_data.append({
                 'item_id': int(ld['item_id']),
                 'quantity': Decimal(str(ld['quantity'])),
-                'unit_price': Decimal(str(ld['unit_price'])),
-                'discount_percent': Decimal(str(ld.get('discount_percent', 0))),
-                'tax_rate': Decimal(str(ld.get('tax_rate', 0))),
+                'unit_price': Decimal(str(ld['unit_price'] or '0')),
+                'discount_percent': Decimal(str(ld.get('discount_percent') or '0')),
+                'tax_rate': Decimal(str(ld.get('tax_rate') or '0')),
                 'cost_price_snapshot': Decimal(str(ld.get('cost_price_snapshot', 0))),
                 'batch_number': ld.get('batch_number', ''),
                 'serial_number': ld.get('serial_number', ''),

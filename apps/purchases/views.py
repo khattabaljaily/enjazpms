@@ -274,8 +274,8 @@ def _process_order_post(request, tenant, invoice):
             lines_data.append({
                 'item_id': int(ld['item_id']),
                 'quantity': Decimal(str(ld['quantity'])),
-                'unit_cost': Decimal(str(ld['unit_cost'])),
-                'tax_rate': Decimal(str(ld.get('tax_rate', 0))),
+                'unit_cost': Decimal(str(ld['unit_cost'] or '0')),
+                'tax_rate': Decimal(str(ld.get('tax_rate') or '0')),
             })
         except (KeyError, InvalidOperation, ValueError):
             return _json_error('بيانات البنود غير صالحة')
@@ -1586,7 +1586,7 @@ def rfq_receive_ajax(request, pk):
         with transaction.atomic():
             for line_id, price_val in prices.items():
                 try:
-                    price = Decimal(str(price_val))
+                    price = Decimal(str(price_val or '0'))
                     line = PurchaseRFQLine.objects.get(pk=int(line_id), rfq=rfq)
                     line.quoted_price = price
                     line.save()

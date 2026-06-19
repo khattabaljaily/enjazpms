@@ -295,8 +295,8 @@ function addLine(itemId, itemName, itemSku, suggestedCost, opts = {}) {
             <input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.qty || 1)}" class="cx-input cx-input--sm inv-num-field" id="qty-${id}" oninput="recalc()">
         </td>
         <td class="inv-unit-cell" id="unit-cell-${id}">${unitHtml}</td>
-        <td><input type="text" inputmode="decimal" value="${suggestedCost || 0}" class="cx-input cx-input--sm inv-num-field" id="cost-${id}" oninput="recalc()"></td>
-        <td><input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.tax_rate || 0)}" class="cx-input cx-input--sm inv-num-field" id="tax-${id}" oninput="recalc()"></td>
+        <td><input type="text" inputmode="decimal" value="${suggestedCost || ''}" class="cx-input cx-input--sm inv-num-field" id="cost-${id}" oninput="recalc()"></td>
+        <td><input type="text" inputmode="decimal" value="${EnjazIMS.parseNumber(opts.tax_rate) || ''}" class="cx-input cx-input--sm inv-num-field" id="tax-${id}" oninput="recalc()"></td>
         <td class="text-end" id="total-${id}">${EnjazIMS.formatMoney(0)}</td>
         <td><button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})"><i class="fas fa-trash"></i></button></td>
     `;

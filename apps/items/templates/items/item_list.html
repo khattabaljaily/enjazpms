@@ -1075,6 +1075,10 @@
         document.getElementById('singleUnitName').value = '';
         updateUnitsJson();
         EnjazIMS.clearFormErrors($form);
+        ['#id_cost_price','#id_selling_price','#id_min_selling_price','#id_tax_rate','#id_min_quantity','#id_max_quantity'].forEach(function(sel) {
+            var el = document.querySelector(sel);
+            if (el && parseFloat(el.value) === 0) el.value = '';
+        });
     }
 
     /* ── Open create ───────────────────────────────────────── */
@@ -1105,12 +1109,12 @@
                 if (d.item_units && d.item_units.length === 1) {
                     document.getElementById('singleUnitName').value = d.item_units[0].name;
                 }
-                $('#id_cost_price').val(EnjazIMS.parseNumber(d.cost_price).toFixed(2));
-                $('#id_selling_price').val(EnjazIMS.parseNumber(d.selling_price).toFixed(2));
-                $('#id_min_selling_price').val(EnjazIMS.parseNumber(d.min_selling_price).toFixed(2));
-                $('#id_tax_rate').val(EnjazIMS.parseNumber(d.tax_rate).toFixed(2));
-                $('#id_min_quantity').val(EnjazIMS.parseNumber(d.min_quantity).toFixed(2));
-                $('#id_max_quantity').val(EnjazIMS.parseNumber(d.max_quantity).toFixed(2));
+                $('#id_cost_price').val(EnjazIMS.parseNumber(d.cost_price) || '');
+                $('#id_selling_price').val(EnjazIMS.parseNumber(d.selling_price) || '');
+                $('#id_min_selling_price').val(EnjazIMS.parseNumber(d.min_selling_price) || '');
+                $('#id_tax_rate').val(EnjazIMS.parseNumber(d.tax_rate) || '');
+                $('#id_min_quantity').val(EnjazIMS.parseNumber(d.min_quantity) || '');
+                $('#id_max_quantity').val(EnjazIMS.parseNumber(d.max_quantity) || '');
                 $('#id_track_expiry').prop('checked', !!d.track_expiry);
                 $('#id_track_batch').prop('checked', !!d.track_batch);
                 $('#id_track_serial').prop('checked', !!d.track_serial);

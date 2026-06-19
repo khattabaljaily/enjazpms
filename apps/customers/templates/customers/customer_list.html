@@ -686,6 +686,10 @@
         $idInput.val('');
         $('#id_is_active').prop('checked', true);
         EnjazIMS.clearFormErrors($form);
+        ['#id_opening_balance', '#id_credit_limit'].forEach(function(sel) {
+            var el = document.querySelector(sel);
+            if (el && parseFloat(el.value) === 0) el.value = '';
+        });
     }
 
     function setModalSidebar(name, letter, color) {
@@ -717,8 +721,8 @@
                 $('#id_email').val(d.email || '');
                 $('#id_city').val(d.city || '');
                 $('#id_address').val(d.address || '');
-                $('#id_opening_balance').val(EnjazIMS.parseNumber(d.opening_balance).toFixed(2));
-                $('#id_credit_limit').val(EnjazIMS.parseNumber(d.credit_limit).toFixed(2));
+                $('#id_opening_balance').val(EnjazIMS.parseNumber(d.opening_balance) || '');
+                $('#id_credit_limit').val(EnjazIMS.parseNumber(d.credit_limit) || '');
                 $('#id_notes').val(d.notes || '');
                 $('#id_is_active').prop('checked', !!d.is_active);
 

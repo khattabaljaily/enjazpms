@@ -178,7 +178,7 @@
                             <td>
                                 <input type="number" class="cx-input" step="0.01" min="0"
                                     id="price_{{ ln.id }}"
-                                    value="{{ ln.quoted_price|floatformat:'2' }}"
+                                    value="{% if ln.quoted_price %}{{ ln.quoted_price|floatformat:'2' }}{% endif %}"
                                     style="width:130px">
                             </td>
                         </tr>

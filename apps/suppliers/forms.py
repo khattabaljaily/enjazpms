@@ -1,9 +1,22 @@
+from decimal import Decimal
+
 from django import forms
 
 from .models import Supplier
 
 
 class SupplierForm(forms.ModelForm):
+    opening_balance = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='الرصيد الافتتاحي',
+    )
+    credit_limit = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='حد الائتمان',
+    )
+
     class Meta:
         model = Supplier
         fields = [
@@ -23,8 +36,14 @@ class SupplierForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'example@email.com'}),
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'الخرطوم'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'opening_balance': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'credit_limit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def clean_opening_balance(self):
+        value = self.cleaned_data.get('opening_balance')
+        return value if value is not None else Decimal('0')
+
+    def clean_credit_limit(self):
+        value = self.cleaned_data.get('credit_limit')
+        return value if value is not None else Decimal('0')

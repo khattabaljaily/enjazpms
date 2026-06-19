@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django import forms
+
 from .models import Category, Unit, Item
 
 
@@ -76,6 +79,13 @@ class UnitForm(forms.ModelForm):
 
 
 class ItemForm(forms.ModelForm):
+    cost_price       = forms.DecimalField(required=False, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}), label='سعر التكلفة')
+    selling_price    = forms.DecimalField(required=False, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}), label='سعر البيع')
+    min_selling_price= forms.DecimalField(required=False, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}), label='الحد الأدنى للبيع')
+    tax_rate         = forms.DecimalField(required=False, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}), label='نسبة الضريبة %')
+    min_quantity     = forms.DecimalField(required=False, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}), label='حد الطلب الأدنى')
+    max_quantity     = forms.DecimalField(required=False, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}), label='الحد الأقصى')
+
     class Meta:
         model = Item
         fields = [
@@ -93,12 +103,6 @@ class ItemForm(forms.ModelForm):
             'barcode': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'امسح أو أدخل الباركود'}),
             'item_type': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
-            'cost_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'selling_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'min_selling_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'tax_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'min_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
-            'max_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
             'track_expiry': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'track_batch': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'track_serial': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -115,12 +119,6 @@ class ItemForm(forms.ModelForm):
             'barcode': 'الباركود',
             'item_type': 'نوع الصنف',
             'category': 'التصنيف',
-            'cost_price': 'سعر التكلفة',
-            'selling_price': 'سعر البيع',
-            'min_selling_price': 'الحد الأدنى للبيع',
-            'tax_rate': 'نسبة الضريبة %',
-            'min_quantity': 'حد الطلب الأدنى',
-            'max_quantity': 'الحد الأقصى',
             'track_expiry': 'تتبع تاريخ الانتهاء',
             'track_batch': 'تتبع رقم الدفعة',
             'track_serial': 'تتبع الرقم التسلسلي',
@@ -148,3 +146,14 @@ class ItemForm(forms.ModelForm):
             )
         else:
             self.fields['category'].queryset = Category.objects.none()
+
+    def _zero_if_none(self, field):
+        value = self.cleaned_data.get(field)
+        return value if value is not None else Decimal('0')
+
+    def clean_cost_price(self):        return self._zero_if_none('cost_price')
+    def clean_selling_price(self):     return self._zero_if_none('selling_price')
+    def clean_min_selling_price(self): return self._zero_if_none('min_selling_price')
+    def clean_tax_rate(self):          return self._zero_if_none('tax_rate')
+    def clean_min_quantity(self):      return self._zero_if_none('min_quantity')
+    def clean_max_quantity(self):      return self._zero_if_none('max_quantity')

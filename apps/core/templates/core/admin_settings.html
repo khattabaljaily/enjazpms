@@ -193,7 +193,7 @@
                         <div class="col-md-6">
                             <label class="asy-label">أيام التجربة المجانية</label>
                             <input type="number" name="default_trial_days" class="asy-input"
-                                   value="{{ ps.default_trial_days }}" min="0" max="365">
+                                   value="{{ ps.default_trial_days|default:'' }}" min="0" max="365">
                         </div>
                         <div class="col-12">
                             <div class="asy-toggle-row">
@@ -211,7 +211,7 @@
                         <div class="col-12" id="taxValueWrap" {% if not ps.default_tax_enabled %}style="display:none"{% endif %}>
                             <label class="asy-label">نسبة الضريبة الافتراضية %</label>
                             <input type="number" name="default_tax_value" class="asy-input"
-                                   value="{{ ps.default_tax_value }}" min="0" max="100" step="0.01">
+                                   value="{{ ps.default_tax_value|default:'' }}" min="0" max="100" step="0.01">
                         </div>
                         <div class="col-12 text-end">
                             <button type="submit" class="asy-btn asy-btn--teal">

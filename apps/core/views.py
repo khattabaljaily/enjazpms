@@ -1228,14 +1228,14 @@ def admin_settings_update_api(request):
             ps.default_timezone = tz
         ps.default_tax_enabled    = request.POST.get('default_tax_enabled') == 'true'
         try:
-            ps.default_tax_value  = float(request.POST.get('default_tax_value', 0))
+            ps.default_tax_value  = float(request.POST.get('default_tax_value') or 0)
         except (ValueError, TypeError):
             pass
         prefix = request.POST.get('default_invoice_prefix', '').strip()
         if prefix:
             ps.default_invoice_prefix = prefix
         try:
-            ps.default_trial_days = int(request.POST.get('default_trial_days', ps.default_trial_days))
+            ps.default_trial_days = int(request.POST.get('default_trial_days') or 0)
         except (ValueError, TypeError):
             pass
     else:
@@ -1473,7 +1473,8 @@ def tenant_settings_update_api(request):
     if _re.match(r'^#[0-9a-fA-F]{6}$', raw_color):
         settings_obj.invoice_color = raw_color
     settings_obj.tax_enabled = _as_bool(data.get('tax_enabled', settings_obj.tax_enabled))
-    settings_obj.tax_value = _as_decimal(data.get('tax_value', settings_obj.tax_value), settings_obj.tax_value)
+    raw_tax = data.get('tax_value')
+    settings_obj.tax_value = _as_decimal(raw_tax or '0', settings_obj.tax_value) if raw_tax is not None else settings_obj.tax_value
     settings_obj.tax_number = str(data.get('tax_number', settings_obj.tax_number)).strip()
     settings_obj.items_per_page = max(5, min(200, _as_int(data.get('items_per_page', settings_obj.items_per_page), settings_obj.items_per_page)))
     settings_obj.date_format = str(data.get('date_format', settings_obj.date_format)).strip() or settings_obj.date_format

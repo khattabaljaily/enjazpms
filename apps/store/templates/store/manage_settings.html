@@ -302,7 +302,7 @@
           <label class="st-label">الحد الأدنى للطلب</label>
           <div class="st-input-group">
             <input class="st-input" type="number" name="min_order_amount"
-                   value="{{ store.min_order_amount }}" min="0" step="0.01">
+                   value="{{ store.min_order_amount|default:'' }}" min="0" step="0.01">
             <span class="st-input-suffix">{{ request.tenant.currency|currency_ar }}</span>
           </div>
           <div class="st-field-hint mt-1">اتركه صفراً لعدم تطبيق حد أدنى</div>

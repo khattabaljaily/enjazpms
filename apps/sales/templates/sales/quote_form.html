@@ -454,11 +454,11 @@ function addLineToTable(lineData) {
         </td>
         <td class="inv-unit-cell" id="unit-cell-${id}">${unitHtml}</td>
         <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-price inv-num-field" id="price-${id}"
-               value="${price}" oninput="updateLine(${id})"></td>
+               value="${price || ''}" oninput="updateLine(${id})"></td>
         <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-pct inv-num-field" id="disc-${id}"
-               value="${disc}" oninput="updateLine(${id})"></td>
+               value="${disc || ''}" oninput="updateLine(${id})"></td>
         <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-pct inv-num-field" id="tax-${id}"
-               value="${tax}" oninput="updateLine(${id})"></td>
+               value="${tax || ''}" oninput="updateLine(${id})"></td>
         <td class="text-end" id="total-${id}"><strong>${EnjazIMS.formatMoney(lineTotal)}</strong></td>
         <td>
             <button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})">
