@@ -15,7 +15,7 @@ class Customer(TenantMixin):
     address = models.TextField('العنوان', blank=True)
     notes = models.TextField('ملاحظات', blank=True)
 
-    opening_balance = models.DecimalField('الرصيد الافتتاحي', max_digits=12, decimal_places=2, default=0)
+    opening_balance = models.DecimalField('المديونية الافتتاحية', max_digits=12, decimal_places=2, default=0)
     credit_limit = models.DecimalField('الحد الائتماني', max_digits=12, decimal_places=2, default=0)
 
     is_active = models.BooleanField('نشط', default=True)

@@ -170,11 +170,11 @@
     },
     "تقارير الحسابات": {
         "view_sales_customer_statement_report": "كشف حساب العميل",
-        "view_sales_customer_balances_report": "تقرير أرصدة العملاء",
+        "view_sales_customer_balances_report": "تقرير مديونيات العملاء",
         "view_sales_payments_report": "تقرير مدفوعات العملاء",
         "view_sales_returns_report": "تقرير مرتجعات المبيعات",
         "view_purchases_supplier_statement_report": "كشف حساب المورد",
-        "view_purchases_supplier_balances_report": "تقرير أرصدة الموردين",
+        "view_purchases_supplier_balances_report": "تقرير مديونيات الموردين",
         "view_purchases_payments_report": "تقرير مدفوعات الموردين",
         "view_purchases_returns_report": "تقرير مرتجعات المشتريات",
         "view_expenses_summary_report": "تقرير ملخص المصروفات",

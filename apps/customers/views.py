@@ -253,7 +253,7 @@ def customer_transactions_api(request, pk):
     )
 
     type_labels = {
-        'opening': 'رصيد افتتاحي',
+        'opening': 'مديونية افتتاحية',
         'invoice': 'فاتورة آجل',
         'payment': 'سداد عميل',
         'return': 'مرتجع',
@@ -660,7 +660,7 @@ _CUSTOMER_FIELD_SCHEMA = [
     {"field": "email",           "description": "البريد الإلكتروني"},
     {"field": "city",            "description": "المدينة أو المنطقة أو الموقع"},
     {"field": "address",         "description": "العنوان التفصيلي أو الشارع"},
-    {"field": "opening_balance", "description": "الرصيد الافتتاحي أو رصيد البداية أو المديونية"},
+    {"field": "opening_balance", "description": "المديونية الافتتاحية أو مديونية البداية أو الرصيد الافتتاحي"},
     {"field": "credit_limit",    "description": "حد الائتمان أو سقف الدين أو أقصى دين"},
     {"field": "notes",           "description": "ملاحظات أو تعليقات"},
 ]
@@ -712,7 +712,7 @@ def customer_import_api(request):
                 email=clean_email(smart_get(row, 'email', mapping, 'البريد', 'البريد الإلكتروني', 'email')) or '',
                 city=smart_get(row, 'city', mapping, 'المدينة', 'المنطقة', 'city'),
                 address=smart_get(row, 'address', mapping, 'العنوان', 'address'),
-                opening_balance=safe_decimal(smart_get(row, 'opening_balance', mapping, 'الرصيد الافتتاحي', 'الرصيد', 'رصيد البداية', 'opening_balance', default='0')),
+                opening_balance=safe_decimal(smart_get(row, 'opening_balance', mapping, 'المديونية الافتتاحية', 'المديونية', 'مديونية البداية', 'الرصيد الافتتاحي', 'الرصيد', 'opening_balance', default='0')),
                 credit_limit=safe_decimal(smart_get(row, 'credit_limit', mapping, 'حد الائتمان', 'حد_الائتمان', 'credit_limit', default='0')),
                 notes=smart_get(row, 'notes', mapping, 'الملاحظات', 'ملاحظات', 'notes'),
                 is_active=True,
@@ -755,7 +755,7 @@ def customer_export_api(request):
     # Write headers
     writer.writerow([
         'الاسم', 'الكود', 'الهاتف', 'البريد', 'المدينة', 'العنوان',
-        'الرصيد الافتتاحي', 'حد الائتمان', 'الملاحظات', 'نشط'
+        'المديونية الافتتاحية', 'حد الائتمان', 'الملاحظات', 'نشط'
     ])
     
     # Write data
@@ -792,7 +792,7 @@ def download_template(request):
     # Write headers
     writer.writerow([
         'الاسم', 'الهاتف', 'البريد', 'المدينة', 'العنوان',
-        'الرصيد الافتتاحي', 'حد الائتمان'
+        'المديونية الافتتاحية', 'حد الائتمان'
     ])
     
     # Write example row

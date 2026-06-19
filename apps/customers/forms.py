@@ -9,7 +9,7 @@ class CustomerForm(forms.ModelForm):
     opening_balance = forms.DecimalField(
         required=False,
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-        label='الرصيد الافتتاحي',
+        label='المديونية الافتتاحية',
     )
     credit_limit = forms.DecimalField(
         required=False,

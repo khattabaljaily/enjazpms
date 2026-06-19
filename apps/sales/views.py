@@ -1926,7 +1926,7 @@ def sales_customer_statement_export(request):
         writer.writerow([f'كشف حساب: {report["customer"].name}'])
         writer.writerow([f'الفترة: {start_date} إلى {end_date}'])
         writer.writerow([])
-        writer.writerow(['التاريخ', 'نوع القيد', 'المبلغ', 'الرصيد التراكمي', 'ملاحظات'])
+        writer.writerow(['التاريخ', 'نوع القيد', 'المبلغ', 'المديونية التراكمية', 'ملاحظات'])
         for row in report['data']:
             writer.writerow([row['entry_date'], row['entry_type'], row['amount'], row['running_balance'], row['notes']])
     return response
@@ -1962,7 +1962,7 @@ def sales_customer_balances_export(request):
     response['Content-Disposition'] = 'attachment; filename="customer_balances.csv"'
     response.write('﻿')
     writer = csv.writer(response)
-    writer.writerow(['الكود', 'اسم العميل', 'الهاتف', 'الحد الائتماني', 'الرصيد'])
+    writer.writerow(['الكود', 'اسم العميل', 'الهاتف', 'الحد الائتماني', 'المديونية'])
     for row in report['data']:
         writer.writerow([row['code'], row['name'], row['phone'], row['credit_limit'], row['balance']])
     return response

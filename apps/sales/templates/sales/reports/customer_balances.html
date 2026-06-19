@@ -15,8 +15,8 @@
             <div class="rpt-hero-left">
                 <div class="rpt-hero-icon"><i class="fas fa-users"></i></div>
                 <div>
-                    <h1 class="rpt-hero-title">أرصدة العملاء</h1>
-                    <p class="rpt-hero-desc">إجمالي الأرصدة الحالية لجميع العملاء</p>
+                    <h1 class="rpt-hero-title">مديونيات العملاء</h1>
+                    <p class="rpt-hero-desc">إجمالي المديونيات الحالية لجميع العملاء</p>
                 </div>
             </div>
             <div class="rpt-hero-actions">
@@ -36,18 +36,18 @@
         <div class="rpt-kpi-card rpt-kpi--amber">
             <div class="rpt-kpi-icon"><i class="fas fa-user-clock"></i></div>
             <div class="rpt-kpi-value">{{ report.summary.total_debtors }}</div>
-            <div class="rpt-kpi-label">عملاء بأرصدة مدينة</div>
+            <div class="rpt-kpi-label">عملاء بمديونيات</div>
         </div>
         <div class="rpt-kpi-card rpt-kpi--blue">
             <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
             <div class="rpt-kpi-value">{{ report.summary.total_balance }}</div>
-            <div class="rpt-kpi-label">إجمالي الأرصدة</div>
+            <div class="rpt-kpi-label">إجمالي المديونيات</div>
         </div>
     </div>
 
     <div class="rpt-panel">
         <div class="rpt-panel-header rpt-panel-header--sales">
-            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>قائمة أرصدة العملاء</h3>
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>قائمة مديونيات العملاء</h3>
         </div>
         <div class="rpt-panel-body">
             {% if report.data %}
@@ -59,7 +59,7 @@
                             <th>اسم العميل</th>
                             <th class="text-center">الهاتف</th>
                             <th class="text-end">الحد الائتماني</th>
-                            <th class="text-end">الرصيد الحالي</th>
+                            <th class="text-end">المديونية الحالية</th>
                         </tr>
                     </thead>
                     <tbody>
