@@ -15,7 +15,7 @@
         <div class="cx-hero-inner">
             <div class="cx-hero-right">
                 <div class="cx-hero-actions">
-                    <button id="btnOpenCreateExpense" type="button" class="cx-btn-add">
+                    <button id="btnOpenCreateExpense" type="button" class="cx-btn-add" data-require-perm="add_expenses">
                         <i class="fas fa-plus"></i><span>مصروف جديد</span>
                     </button>
                 </div>
@@ -513,10 +513,10 @@
 
     function renderExpenseTableRowActions(row) {
         const viewBtn = `<button type="button" class="cx-btn-icon js-view-expense" data-id="${row.id}" title="عرض"><i class="fas fa-eye"></i></button>`;
-        const editBtn = row.status_raw === 'draft'
+        const editBtn = row.status_raw === 'draft' && hasPerm('change_expenses')
             ? `<button type="button" class="cx-btn-icon js-edit-expense" data-id="${row.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>`
             : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
-        const cancelBtn = (row.status_raw === 'draft' || row.status_raw === 'confirmed')
+        const cancelBtn = (row.status_raw === 'draft' || row.status_raw === 'confirmed') && hasPerm('delete_expenses')
             ? `<button type="button" class="cx-btn-icon cx-btn-icon--danger js-cancel" data-id="${row.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`
             : '<span class="cx-btn-icon sales-btn-placeholder"></span>';
         return `<div class="cx-actions">${viewBtn}${editBtn}${cancelBtn}</div>`;
@@ -569,8 +569,8 @@
                 </div>
                 <div class="cx-expense-card-actions">
                     <button type="button" class="cxr-act cxr-act--view js-view-expense" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
-                    ${r.status_raw === 'draft' ? `<button type="button" class="cxr-act js-edit-expense" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
-                    ${(r.status_raw === 'draft' || r.status_raw === 'confirmed') ? `<button type="button" class="cxr-act cxr-act--del js-cancel" data-id="${r.id}" aria-label="إلغاء" title="إلغاء"><i class="fas fa-ban"></i></button>` : ''}
+                    ${r.status_raw === 'draft' && hasPerm('change_expenses') ? `<button type="button" class="cxr-act js-edit-expense" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${(r.status_raw === 'draft' || r.status_raw === 'confirmed') && hasPerm('delete_expenses') ? `<button type="button" class="cxr-act cxr-act--del js-cancel" data-id="${r.id}" aria-label="إلغاء" title="إلغاء"><i class="fas fa-ban"></i></button>` : ''}
                 </div>
             </article>`;
         }).join('');

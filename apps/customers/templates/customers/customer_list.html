@@ -28,15 +28,15 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
-                <button type="button" class="cx-btn-secondary" id="btnImportCustomers">
+                <button type="button" class="cx-btn-secondary" id="btnImportCustomers" data-require-perm="import_customers">
                     <i class="fas fa-arrow-down"></i>
                     <span>استيراد</span>
                 </button>
-                <button type="button" class="cx-btn-secondary" id="btnExportCustomers">
+                <button type="button" class="cx-btn-secondary" id="btnExportCustomers" data-require-perm="export_customers">
                     <i class="fas fa-arrow-up"></i>
                     <span>تصدير</span>
                 </button>
-                <button type="button" class="cx-btn-add" id="btnOpenCreateCustomer">
+                <button type="button" class="cx-btn-add" id="btnOpenCreateCustomer" data-require-perm="add_customers">
                     <i class="fas fa-plus"></i>
                     <span>إضافة عميل</span>
                 </button>
@@ -344,7 +344,7 @@
 
             <div class="cx-view-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
-                <button type="button" class="cx-btn-primary" id="viewEditCustomerBtn">
+                <button type="button" class="cx-btn-primary" id="viewEditCustomerBtn" data-require-perm="change_customers">
                     <i class="fas fa-pen-to-square me-1"></i> تعديل
                 </button>
             </div>

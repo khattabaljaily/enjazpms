@@ -210,13 +210,13 @@ function renderMobileReturnCards(rows) {
         const statusLabel = statusBadgeMap[r.status] || '—';
         const statusClass = r.status ? `cx-badge cx-badge--${r.status === 'draft' ? 'muted' : r.status === 'confirmed' ? 'success' : 'danger'}` : '';
 
-        const editBtn = r.status === 'draft'
+        const editBtn = r.status === 'draft' && hasPerm('add_sales_returns')
             ? `<a href="/sales/returns/${r.id}/edit/" class="cxr-act cxr-act--edit" title="تعديل" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></a>`
             : '';
-        const deleteBtn = r.status === 'draft'
+        const deleteBtn = r.status === 'draft' && hasPerm('add_sales_returns')
             ? `<button class="cxr-act cxr-act--del" onclick="deleteReturn(${r.id})" title="حذف" aria-label="حذف"><i class="fas fa-trash"></i></button>`
             : '';
-        const confirmBtn = r.status === 'draft'
+        const confirmBtn = r.status === 'draft' && hasPerm('add_sales_returns')
             ? `<button class="cxr-act cxr-act--confirm" onclick="confirmReturn(${r.id})" title="تأكيد" aria-label="تأكيد"><i class="fas fa-check"></i></button>`
             : '';
 
@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return `
                 <div class="cx-actions">
                     <button type="button" class="cx-btn-icon js-view-return" data-id="${row.id}" title="عرض"><i class="fas fa-eye"></i></button>
-                    ${row.status === 'draft' ? `<button class="cx-btn-icon cx-btn-icon--success" onclick="confirmReturn(${row.id})" title="تأكيد"><i class="fas fa-check"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
+                    ${row.status === 'draft' && hasPerm('add_sales_returns') ? `<button class="cx-btn-icon cx-btn-icon--success" onclick="confirmReturn(${row.id})" title="تأكيد"><i class="fas fa-check"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
                 </div>`;
             }}
         ],

@@ -25,7 +25,7 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
-                <a href="{% url 'sales:invoice_create' %}" class="cx-btn-add">
+                <a href="{% url 'sales:invoice_create' %}" class="cx-btn-add" data-require-perm="add_sales">
                     <i class="fas fa-plus"></i>
                     <span>فاتورة جديدة</span>
                 </a>
@@ -297,13 +297,13 @@ function renderMobileInvoiceCards(rows) {
         const paymentMethod = paymentMethodMap[r.payment_method] || r.payment_method || '—';
         const viewBtn = `<button class="cxr-act cxr-act--view js-view-invoice" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>`;
         const printBtn = `<a href="${INVOICE_BASE_URL}${r.id}/?print=1" target="_blank" rel="noopener" class="cxr-act" aria-label="طباعة" title="طباعة"><i class="fas fa-print"></i></a>`;
-        const editBtn = ['draft', 'confirmed'].includes(r.status)
+        const editBtn = ['draft', 'confirmed'].includes(r.status) && hasPerm('change_sales')
             ? `<a href="${INVOICE_BASE_URL}${r.id}/edit/" class="cxr-act" aria-label="تعديل" title="تعديل"><i class="fas fa-pencil"></i></a>`
             : '';
-        const deleteBtn = r.status === 'draft'
+        const deleteBtn = r.status === 'draft' && hasPerm('delete_sales')
             ? `<button class="cxr-act cxr-act--del" onclick="deleteDraftInvoice(${r.id})" aria-label="حذف المسودة" title="حذف المسودة"><i class="fas fa-trash"></i></button>`
             : '';
-        const cancelBtn = r.status === 'confirmed'
+        const cancelBtn = r.status === 'confirmed' && hasPerm('delete_sales')
             ? `<button class="cxr-act cxr-act--del" onclick="cancelInvoice(${r.id})" aria-label="إلغاء" title="إلغاء"><i class="fas fa-ban"></i></button>`
             : '';
         const detailBtn = `<a href="${INVOICE_BASE_URL}${r.id}/" class="cxr-act" aria-label="تفاصيل الفاتورة" title="تفاصيل الفاتورة"><i class="fas fa-file-invoice"></i></a>`;
@@ -433,17 +433,17 @@ function initTable() {
                         <a href="${INVOICE_BASE_URL}${row.id}/" class="cx-btn-icon cx-btn-icon--success" title="تفاصيل الفاتورة">
                             <i class="fas fa-file-invoice"></i>
                         </a>
-                        ${['draft', 'confirmed'].includes(row.status) ? `
+                        ${['draft', 'confirmed'].includes(row.status) && hasPerm('change_sales') ? `
                         <a href="${INVOICE_BASE_URL}${row.id}/edit/" class="cx-btn-icon" title="تعديل">
                             <i class="fas fa-pencil"></i>
                         </a>
                         ` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
-                        ${row.status === 'draft' ? `
+                        ${row.status === 'draft' && hasPerm('delete_sales') ? `
                         <button class="cx-btn-icon cx-btn-icon--danger" onclick="deleteDraftInvoice(${row.id})" title="حذف المسودة">
                             <i class="fas fa-trash"></i>
                         </button>
                         ` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
-                        ${row.status === 'confirmed' ? `
+                        ${row.status === 'confirmed' && hasPerm('delete_sales') ? `
                         <button class="cx-btn-icon cx-btn-icon--danger" onclick="cancelInvoice(${row.id})" title="إلغاء">
                             <i class="fas fa-ban"></i>
                         </button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}

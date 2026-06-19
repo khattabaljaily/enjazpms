@@ -26,7 +26,7 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
-                <a href="{% url 'sales:quote_create' %}" class="cx-btn-add">
+                <a href="{% url 'sales:quote_create' %}" class="cx-btn-add" data-require-perm="add_quotes">
                     <i class="fas fa-plus"></i>
                     <span>عرض جديد</span>
                 </a>
@@ -250,10 +250,10 @@ function renderMobileQuoteCards(rows) {
         const statusLabel = statusBadgeMap[r.status] || '—';
         const statusClass = r.status ? `cx-badge cx-badge--${r.status === 'draft' ? 'muted' : r.status === 'sent' ? 'primary' : r.status === 'accepted' ? 'success' : r.status === 'rejected' ? 'danger' : r.status === 'converted' ? 'info' : r.status === 'expired' ? 'warning' : 'danger'}` : '';
 
-        const editBtn = ['draft', 'sent', 'accepted'].includes(r.status)
+        const editBtn = ['draft', 'sent', 'accepted'].includes(r.status) && hasPerm('change_quotes')
             ? `<a href="${QUOTE_BASE_URL}${r.id}/edit/" class="cxr-act cxr-act--edit" title="تعديل" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></a>`
             : '';
-        const deleteBtn = r.status === 'draft'
+        const deleteBtn = r.status === 'draft' && hasPerm('delete_quotes')
             ? `<button class="cxr-act cxr-act--del" onclick="deleteDraftQuote(${r.id})" title="حذف" aria-label="حذف"><i class="fas fa-trash"></i></button>`
             : '';
         const convertBtn = `<a href="${QUOTE_BASE_URL}${r.id}/" class="cxr-act cxr-act--convert" title="تفاصيل الفاتورة" aria-label="تفاصيل الفاتورة"><i class="fas fa-file-invoice"></i></a>`;
@@ -340,10 +340,10 @@ function initTable() {
                 data: null, orderable: false, searchable: false, className: 'text-center',
                 render: function (data, type, row) {
                     quoteRows.set(String(row.id), row);
-                    const editBtn = ['draft', 'sent', 'accepted'].includes(row.status)
+                    const editBtn = ['draft', 'sent', 'accepted'].includes(row.status) && hasPerm('change_quotes')
                         ? `<a href="${QUOTE_BASE_URL}${row.id}/edit/" class="cx-btn-icon" title="تعديل"><i class="fas fa-pencil"></i></a>`
                         : `<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>`;
-                    const deleteBtn = row.status === 'draft'
+                    const deleteBtn = row.status === 'draft' && hasPerm('delete_quotes')
                         ? `<button class="cx-btn-icon cx-btn-icon--danger" onclick="deleteDraftQuote(${row.id})" title="حذف"><i class="fas fa-trash"></i></button>`
                         : `<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>`;
                     const convertBtn = `<a href="${QUOTE_BASE_URL}${row.id}/" class="cx-btn-icon cx-btn-icon--success" title="تفاصيل الفاتورة"><i class="fas fa-file-invoice"></i></a>`;

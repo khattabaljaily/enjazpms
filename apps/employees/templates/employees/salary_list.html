@@ -453,10 +453,10 @@
                 render: function (_, __, r) {
                     let html = '<div class="cxr-actions">';
                     html += `<button class="cxr-act js-view-sal" data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>`;
-                    if (r.status === 'draft') {
+                    if (r.status === 'draft' && hasPerm('pay_employee_salaries')) {
                         html += `<button class="cxr-act js-pay-sal" data-id="${r.id}" title="دفع الراتب"><i class="fas fa-money-bill-wave"></i></button>`;
                     }
-                    if (r.status !== 'cancelled') {
+                    if (r.status !== 'cancelled' && hasPerm('cancel_employee_salaries')) {
                         html += `<button class="cxr-act cxr-act--del js-cancel-sal" data-id="${r.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`;
                     }
                     html += '</div>';

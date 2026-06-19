@@ -110,15 +110,15 @@
                     <i class="fas fa-tags"></i>
                     <span>التصنيفات</span>
                 </a>
-                <a href="{% url 'items:export_api' %}" class="cx-btn-secondary">
+                <a href="{% url 'items:export_api' %}" class="cx-btn-secondary" data-require-perm="export_items">
                     <i class="fas fa-file-export"></i>
                     <span>تصدير</span>
                 </a>
-                <button type="button" class="cx-btn-secondary" id="btnOpenImportItems">
+                <button type="button" class="cx-btn-secondary" id="btnOpenImportItems" data-require-perm="import_items">
                     <i class="fas fa-file-import"></i>
                     <span>استيراد</span>
                 </button>
-                <button type="button" class="cx-btn-add" id="btnOpenCreateItem">
+                <button type="button" class="cx-btn-add" id="btnOpenCreateItem" data-require-perm="add_items">
                     <i class="fas fa-plus"></i>
                     <span>إضافة منتج</span>
                 </button>
@@ -567,7 +567,7 @@
             </div>
             <div class="cx-view-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
-                <button type="button" class="cx-btn-primary" id="viewEditItemBtn">
+                <button type="button" class="cx-btn-primary" id="viewEditItemBtn" data-require-perm="change_items">
                     <i class="fas fa-pen-to-square me-1"></i> تعديل
                 </button>
             </div>
@@ -758,8 +758,8 @@
                 <div class="cx-item-card-actions">
                     ${ledgerBtn}
                     <button class="cxr-act cxr-act--view js-view-item" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
-                    <button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
-                    <button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                    ${hasPerm('change_items') ? `<button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${hasPerm('delete_items') ? `<button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
             </article>`;
         }).join('');
@@ -838,8 +838,8 @@
                     return `<div class="cxr-actions">
                         ${ledgerBtn}
                         <button class="cxr-act cxr-act--view js-view-item" data-id="${r.id}" aria-label="عرض"><i class="fas fa-eye"></i></button>
-                        <button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>
-                        <button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>
+                        ${hasPerm('change_items') ? `<button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                        ${hasPerm('delete_items') ? `<button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>` : ''}
                     </div>`;
                 }
             }

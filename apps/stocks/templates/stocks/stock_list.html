@@ -271,7 +271,7 @@
             </div>
             <div class="cx-view-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
-                <button type="button" class="cx-btn-primary" id="viewEditStockBtn">
+                <button type="button" class="cx-btn-primary" id="viewEditStockBtn" data-require-perm="change_stocks">
                     <i class="fas fa-pen-to-square me-1"></i> تعديل
                 </button>
             </div>
@@ -374,8 +374,8 @@
                 <div class="cx-stock-card-actions">
                     ${!r.is_default ? `<button class="cxr-act js-set-default-stock" data-id="${r.id}" aria-label="تعيين كافتراضي" title="تعيين كافتراضي"><i class="fas fa-star"></i></button>` : `<button class="cxr-act" disabled aria-label="المخزن الافتراضي" title="المخزن الافتراضي"><i class="fas fa-star text-warning"></i></button>`}
                     <button class="cxr-act cxr-act--view js-view-stock" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
-                    <button class="cxr-act js-edit-stock" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
-                    <button class="cxr-act cxr-act--del js-delete-stock" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                    ${hasPerm('change_stocks') ? `<button class="cxr-act js-edit-stock" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${hasPerm('delete_stocks') ? `<button class="cxr-act cxr-act--del js-delete-stock" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
             </article>`;
         }).join('');
@@ -449,8 +449,8 @@
                     return `<div class="cxr-actions">
                         ${defBtn}
                         <button class="cxr-act cxr-act--view js-view-stock" data-id="${r.id}" aria-label="عرض"><i class="fas fa-eye"></i></button>
-                        <button class="cxr-act js-edit-stock" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>
-                        <button class="cxr-act cxr-act--del js-delete-stock" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>
+                        ${hasPerm('change_stocks') ? `<button class="cxr-act js-edit-stock" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                        ${hasPerm('delete_stocks') ? `<button class="cxr-act cxr-act--del js-delete-stock" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>` : ''}
                     </div>`;
                 }
             }

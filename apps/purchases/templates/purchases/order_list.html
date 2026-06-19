@@ -22,7 +22,7 @@
             </div>
             <div class="cx-hero-right">
                 <div class="cx-hero-actions">
-                    <a href="{% url 'purchases:order_create' %}" class="cx-btn-add">
+                    <a href="{% url 'purchases:order_create' %}" class="cx-btn-add" data-require-perm="add_purchases">
                         <i class="fas fa-plus"></i><span>أمر شراء جديد</span>
                     </a>
                 </div>
@@ -101,13 +101,13 @@
             const total = EnjazIMS.formatMoney(r.grand_total || 0);
             const statusClass = statusMap[r.status] || r.status_color || 'secondary';
             const statusLabel = r.status_label || '—';
-            const confirmBtn = r.status === 'draft'
+            const confirmBtn = r.status === 'draft' && hasPerm('change_purchases')
                 ? `<button class="cxr-act cxr-act--success js-confirm" data-id="${r.id}" aria-label="تأكيد" title="تأكيد"><i class="fas fa-check"></i></button>`
                 : '';
-            const cancelBtn = r.status === 'confirmed'
+            const cancelBtn = r.status === 'confirmed' && hasPerm('delete_purchases')
                 ? `<button class="cxr-act cxr-act--del js-cancel" data-id="${r.id}" aria-label="إلغاء" title="إلغاء"><i class="fas fa-ban"></i></button>`
                 : '';
-            const editBtn = ['draft', 'confirmed'].includes(r.status)
+            const editBtn = ['draft', 'confirmed'].includes(r.status) && hasPerm('change_purchases')
                 ? `<a href="/purchases/${r.id}/edit/" class="cxr-act" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></a>`
                 : '';
             const detailBtn = `<a href="/purchases/${r.id}/" class="cxr-act" aria-label="تفاصيل الفاتورة" title="تفاصيل الفاتورة"><i class="fas fa-file-invoice"></i></a>`;
@@ -188,13 +188,13 @@
                 searchable: false,
                 className: 'text-center',
                 render: function(_, __, row) {
-                    const confirmBtn = row.status === 'draft'
+                    const confirmBtn = row.status === 'draft' && hasPerm('change_purchases')
                         ? `<button class="cx-btn-icon cx-btn-icon--success js-confirm" data-id="${row.id}" title="تأكيد"><i class="fas fa-check"></i></button>`
                         : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>';
-                    const cancelBtn = row.status === 'confirmed'
+                    const cancelBtn = row.status === 'confirmed' && hasPerm('delete_purchases')
                         ? `<button class="cx-btn-icon cx-btn-icon--danger js-cancel" data-id="${row.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`
                         : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>';
-                    const editBtn = ['draft', 'confirmed'].includes(row.status)
+                    const editBtn = ['draft', 'confirmed'].includes(row.status) && hasPerm('change_purchases')
                         ? `<a href="/purchases/${row.id}/edit/" class="cx-btn-icon" title="تعديل"><i class="fas fa-pen-to-square"></i></a>`
                         : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>';
 

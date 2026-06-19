@@ -22,7 +22,7 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
-                <button type="button" class="cx-btn-add" id="btnOpenCreateTreasury">
+                <button type="button" class="cx-btn-add" id="btnOpenCreateTreasury" data-require-perm="add_treasuries">
                     <i class="fas fa-plus"></i><span>إضافة خزينة</span>
                 </button>
             </div>
@@ -381,8 +381,8 @@
                 </div>
                 <div class="cx-treasury-card-actions">
                     <button class="cxr-act cxr-act--view js-view-treasury" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>
-                    <button class="cxr-act js-edit-treasury" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
-                    ${r.is_system_default ? '<button class="cxr-act" disabled aria-label="لا يمكن الحذف" title="لا يمكن الحذف"><i class="fas fa-trash"></i></button>' : `<button class="cxr-act cxr-act--del js-delete-treasury" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>`}
+                    ${hasPerm('change_treasuries') ? `<button class="cxr-act js-edit-treasury" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${hasPerm('delete_treasuries') ? (r.is_system_default ? '<button class="cxr-act" disabled aria-label="لا يمكن الحذف" title="لا يمكن الحذف"><i class="fas fa-trash"></i></button>' : `<button class="cxr-act cxr-act--del js-delete-treasury" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>`) : ''}
                 </div>
             </article>`;
         }).join('');
@@ -423,8 +423,8 @@
                 render: function(_, __, row) {
                     return `<div class="cx-actions">
                         <button class="cx-btn-icon" onclick="window.openTreasuryLedger(${row.id})" title="السجل"><i class="fas fa-list"></i></button>
-                        <button class="cx-btn-icon" onclick="window.openEdit(${row.id})" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
-                        ${row.is_system_default ? '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>' : `<button class="cx-btn-icon cx-btn-icon--danger" onclick="window.openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>`}
+                        ${hasPerm('change_treasuries') ? `<button class="cx-btn-icon" onclick="window.openEdit(${row.id})" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
+                        ${hasPerm('delete_treasuries') ? (row.is_system_default ? '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>' : `<button class="cx-btn-icon cx-btn-icon--danger" onclick="window.openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>`) : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
                     </div>`;
                 }
             }

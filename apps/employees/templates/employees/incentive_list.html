@@ -297,10 +297,10 @@
                 data: null, orderable: false, searchable: false,
                 render: function (_, __, r) {
                     let html = '<div class="cxr-actions">';
-                    if (r.status === 'pending' && r.type === 'bonus' && r.payout === 'immediate') {
+                    if (r.status === 'pending' && r.type === 'bonus' && r.payout === 'immediate' && hasPerm('pay_employee_incentives')) {
                         html += `<button class="cxr-act js-pay-inc" data-id="${r.id}" title="دفع الحافز"><i class="fas fa-money-bill-wave"></i></button>`;
                     }
-                    if (r.status !== 'cancelled') {
+                    if (r.status !== 'cancelled' && hasPerm('cancel_employee_incentives')) {
                         html += `<button class="cxr-act cxr-act--del js-cancel-inc" data-id="${r.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`;
                     }
                     html += '</div>';

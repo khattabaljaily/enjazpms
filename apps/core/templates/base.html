@@ -1,5 +1,6 @@
 {% load static %}
 {% load humanize %}
+{% load permission_tags %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -81,6 +82,19 @@
         try { var r = JSON.parse(xhr.responseText); if (r && r.message) return r.message; } catch(e) {}
         return fallback;
     }
+    </script>
+
+    <!-- Global permissions helper: hasPerm(key) + auto-hide data-require-perm elements -->
+    <script>
+    (function(){
+        var _p = new Set({% user_perm_keys_json %});
+        window.hasPerm = function(k){ return !k || _p.has(k); };
+        document.addEventListener('DOMContentLoaded', function(){
+            document.querySelectorAll('[data-require-perm]').forEach(function(el){
+                if (!window.hasPerm(el.dataset.requirePerm)) el.style.display = 'none';
+            });
+        });
+    })();
     </script>
 
     <!-- Inject print date for report letterhead (no-op on non-report pages) -->

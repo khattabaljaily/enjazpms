@@ -323,13 +323,13 @@
         <a href="{% url 'items:list' %}" class="cx-btn-secondary">
           <i class="fas fa-arrow-right"></i><span>المنتجات</span>
         </a>
-        <a href="{% url 'items:category_export_api' %}" class="cx-btn-secondary">
+        <a href="{% url 'items:category_export_api' %}" class="cx-btn-secondary" data-require-perm="export_categories">
           <i class="fas fa-file-export"></i><span>تصدير</span>
         </a>
-        <button type="button" class="cx-btn-secondary" id="btnOpenImportCategories">
+        <button type="button" class="cx-btn-secondary" id="btnOpenImportCategories" data-require-perm="import_categories">
           <i class="fas fa-file-import"></i><span>استيراد</span>
         </button>
-        <button type="button" class="cx-btn-add" id="btnOpenCreateCategory">
+        <button type="button" class="cx-btn-add" id="btnOpenCreateCategory" data-require-perm="add_categories">
           <i class="fas fa-plus"></i><span>إضافة تصنيف</span>
         </button>
       </div>
@@ -636,8 +636,8 @@
       <td><div class="cat-name-cell">${nameInner}</div></td>
       <td>${status}</td>
       <td><div class="cxr-actions">
-        <button class="cxr-act js-edit-category" data-id="${c.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
-        <button class="cxr-act cxr-act--del js-delete-category" data-id="${c.id}" data-name="${c.name}" title="حذف"><i class="fas fa-trash"></i></button>
+        ${hasPerm('change_categories') ? `<button class="cxr-act js-edit-category" data-id="${c.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+        ${hasPerm('delete_categories') ? `<button class="cxr-act cxr-act--del js-delete-category" data-id="${c.id}" data-name="${c.name}" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
       </div></td>
     </tr>`;
   }
@@ -670,8 +670,8 @@
           <div style="margin-top:.15rem">${cStatus}</div>
         </div>
         <div class="cat-mobile-child-actions">
-          <button class="cxr-act js-edit-category" data-id="${child.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
-          <button class="cxr-act cxr-act--del js-delete-category" data-id="${child.id}" data-name="${child.name}" title="حذف"><i class="fas fa-trash"></i></button>
+          ${hasPerm('change_categories') ? `<button class="cxr-act js-edit-category" data-id="${child.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+          ${hasPerm('delete_categories') ? `<button class="cxr-act cxr-act--del js-delete-category" data-id="${child.id}" data-name="${child.name}" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -686,8 +686,8 @@
         <div class="cat-mobile-root-right">
           ${status}
           ${kidsBadge}
-          <button class="cxr-act js-edit-category" data-id="${root.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
-          <button class="cxr-act cxr-act--del js-delete-category" data-id="${root.id}" data-name="${root.name}" title="حذف"><i class="fas fa-trash"></i></button>
+          ${hasPerm('change_categories') ? `<button class="cxr-act js-edit-category" data-id="${root.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+          ${hasPerm('delete_categories') ? `<button class="cxr-act cxr-act--del js-delete-category" data-id="${root.id}" data-name="${root.name}" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
           ${accArrow}
         </div>
       </div>
