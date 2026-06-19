@@ -183,13 +183,20 @@ def user_create_api(request):
         return _json_error('لا يوجد نشاط تجاري')
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405, json_dumps_params={'ensure_ascii': False})
-
+    
     current_count = User.objects.filter(tenant=tenant).count()
     if current_count >= tenant.max_users:
-        return JsonResponse({
-            'success': False,
-            'message': f'وصلت إلى الحد الأقصى للمستخدمين ({tenant.max_users}), json_dumps_params={'ensure_ascii': False}). يرجى التواصل مع الدعم لترقية الاشتراك.',
-        }, status=403)
+        return JsonResponse(
+            {
+                'success': False,
+                'message': (
+                    f'وصلت إلى الحد الأقصى للمستخدمين ({tenant.max_users}). '
+                    'يرجى التواصل مع الدعم لترقية الاشتراك.'
+                ),
+            },
+            status=403,
+            json_dumps_params={'ensure_ascii': False}
+        )
 
     form = UserManagementForm(request.POST, tenant=tenant)
     if not form.is_valid():
