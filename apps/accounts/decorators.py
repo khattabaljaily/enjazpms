@@ -19,7 +19,7 @@ def _is_ajax(request):
 
 def _deny(request):
     if _is_ajax(request):
-        return JsonResponse({'success': False, 'error': 'ليس لديك صلاحية للقيام بهذا الإجراء'}, status=403)
+        return JsonResponse({'success': False, 'message': 'ليس لديك صلاحية للقيام بهذا الإجراء'}, status=403)
     return redirect('core:no_permission')
 
 
