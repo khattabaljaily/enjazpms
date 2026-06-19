@@ -2,6 +2,7 @@
 {% load humanize %}
 {% load static %}
 {% load number_format %}
+{% load permission_tags %}
 
 {% block page_title %}نظرة عامة{% endblock %}
 
@@ -11,6 +12,8 @@
 {% endblock %}
 
 {% block content %}
+
+{% if request.user|has_perm_key:"view_dashboard" %}
 
 <!-- ══ GREETING ══════════════════════════════════════════════════ -->
 <div class="db-greeting">
@@ -385,9 +388,18 @@
 
 </div>
 
+{% else %}
+<div class="d-flex flex-column align-items-center justify-content-center" style="min-height:60vh; gap:1rem; color:var(--text-muted);">
+    <i class="fas fa-lock fa-3x" style="opacity:.35;"></i>
+    <p class="mb-0" style="font-size:1rem; font-weight:600;">ليس لديك صلاحية عرض لوحة التحكم</p>
+    <p class="mb-0" style="font-size:.85rem;">تواصل مع مدير النظام لتفعيل الصلاحية</p>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
+{% if request.user|has_perm_key:"view_dashboard" %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 (function () {
@@ -552,4 +564,5 @@
 })();
 </script>
 <script src="{% static 'js/ai_advices.js' %}"></script>
+{% endif %}
 {% endblock %}
