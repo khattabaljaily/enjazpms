@@ -13,14 +13,13 @@
 
 {% block content %}
 
-{% if request.user|has_perm_key:"view_dashboard" %}
-
 <!-- ══ GREETING ══════════════════════════════════════════════════ -->
 <div class="db-greeting">
     <div class="db-greeting-text">
         <h2>مرحباً، {{ request.user.get_full_name|default:request.user.username }} 👋</h2>
         <p>{% if tenant %}{{ tenant.name }} — {% endif %}إليك نظرة سريعة على أداء اليوم</p>
     </div>
+    {% if request.user|has_perm_key:"view_dashboard" %}
     <div class="db-greeting-badges">
         <div class="db-badge">
             <span class="db-badge-val">{{ stats.today_sales|money }}</span>
@@ -35,7 +34,10 @@
             <span class="db-badge-lbl">غير مسددة</span>
         </div>
     </div>
+    {% endif %}
 </div>
+
+{% if request.user|has_perm_key:"view_dashboard" %}
 
 <!-- AI Advices widget -->
 <div class="ai-adv-wrapper">
@@ -303,11 +305,51 @@
 
 </div>
 
-<!-- ══ QUICK ACTIONS + LOW STOCK ══════════════════════════════════ -->
+<!-- ══ LOW STOCK ═══════════════════════════════════════════════════ -->
 <div class="row g-3 mb-2">
 
-    <!-- Quick actions -->
-    <div class="col-lg-6">
+    <!-- Low stock -->
+    <div class="col-12">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-triangle-exclamation" style="color:#ef4444;"></i>
+                    تنبيهات المخزون المنخفض
+                </h3>
+                {% if stats.low_stock_items %}
+                <span class="db-panel-meta" style="background:rgba(239,68,68,.1); color:#ef4444;">
+                    {{ stats.low_stock_items }} صنف
+                </span>
+                {% endif %}
+            </div>
+            <div class="db-panel-body" id="lowStockPanel">
+                <div class="text-center" style="padding:2rem 0; color:var(--text-tertiary);">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% else %}
+
+<!-- ══ NO PERMISSION — show quick actions only ═══════════════════ -->
+<div class="db-panel mb-3" style="border:1.5px dashed var(--border-color, #e2e8f0);">
+    <div class="db-panel-body d-flex flex-column align-items-center justify-content-center" style="padding:3rem 1rem; gap:.75rem; text-align:center;">
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(99,102,241,.1);display:flex;align-items:center;justify-content:center;">
+            <i class="fas fa-chart-pie" style="font-size:1.4rem;color:#6366f1;opacity:.6;"></i>
+        </div>
+        <p class="mb-0" style="font-size:1rem;font-weight:700;color:var(--text-primary);">إحصاءات لوحة التحكم محجوبة</p>
+        <p class="mb-0" style="font-size:.85rem;color:var(--text-muted);">لا تملك صلاحية عرض بيانات لوحة التحكم — تواصل مع مدير النظام</p>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- ══ QUICK ACTIONS — always visible ══════════════════════════════ -->
+<div class="row g-3 mb-2">
+    <div class="col-12">
         <div class="db-panel">
             <div class="db-panel-head">
                 <h3 class="db-panel-title">
@@ -363,38 +405,7 @@
             </div>
         </div>
     </div>
-
-    <!-- Low stock -->
-    <div class="col-lg-6">
-        <div class="db-panel">
-            <div class="db-panel-head">
-                <h3 class="db-panel-title">
-                    <i class="fas fa-triangle-exclamation" style="color:#ef4444;"></i>
-                    تنبيهات المخزون المنخفض
-                </h3>
-                {% if stats.low_stock_items %}
-                <span class="db-panel-meta" style="background:rgba(239,68,68,.1); color:#ef4444;">
-                    {{ stats.low_stock_items }} صنف
-                </span>
-                {% endif %}
-            </div>
-            <div class="db-panel-body" id="lowStockPanel">
-                <div class="text-center" style="padding:2rem 0; color:var(--text-tertiary);">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
 </div>
-
-{% else %}
-<div class="d-flex flex-column align-items-center justify-content-center" style="min-height:60vh; gap:1rem; color:var(--text-muted);">
-    <i class="fas fa-lock fa-3x" style="opacity:.35;"></i>
-    <p class="mb-0" style="font-size:1rem; font-weight:600;">ليس لديك صلاحية عرض لوحة التحكم</p>
-    <p class="mb-0" style="font-size:.85rem;">تواصل مع مدير النظام لتفعيل الصلاحية</p>
-</div>
-{% endif %}
 
 {% endblock %}
 
