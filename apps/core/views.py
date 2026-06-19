@@ -29,9 +29,10 @@ def about(request):
 
 
 @login_required
+@require_permission('view_dashboard')
 def dashboard(request):
     """الصفحة الرئيسية - Dashboard"""
-    
+
     if request.user.is_superuser:
         return redirect('core:admin_dashboard')
 
