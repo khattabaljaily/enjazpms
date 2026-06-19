@@ -1,6 +1,7 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
 {% load humanize %}
+{% load permission_tags %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/suppliers.css' %}?v=2.0">
@@ -471,6 +472,9 @@
     const urlTransactions = "{% url 'suppliers:transactions_api' 0 %}";
     const urlUpdate = "{% url 'suppliers:update_api' 0 %}";
     const urlDelete = "{% url 'suppliers:delete_api' 0 %}";
+    const CAN_VIEW_TRANSACTIONS = {% if request.user|has_perm_key:"view_supplier_transactions" %}true{% else %}false{% endif %};
+    const CAN_CHANGE = {% if request.user|has_perm_key:"change_suppliers" %}true{% else %}false{% endif %};
+    const CAN_DELETE = {% if request.user|has_perm_key:"delete_suppliers" %}true{% else %}false{% endif %};
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
     const customerModalEl = document.getElementById('customerModal');
@@ -539,10 +543,10 @@
                     </div>
                 </div>
                 <div class="cx-supplier-card-actions">
-                    <button class="cxr-act js-ledger-supplier" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>
+                    ${CAN_VIEW_TRANSACTIONS ? `<button class="cxr-act js-ledger-supplier" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>` : ''}
                     <button class="cxr-act cxr-act--view js-view-supplier" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
-                    <button class="cxr-act js-edit-supplier" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
-                    <button class="cxr-act cxr-act--del js-delete-supplier" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                    ${CAN_CHANGE ? `<button class="cxr-act js-edit-supplier" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${CAN_DELETE ? `<button class="cxr-act cxr-act--del js-delete-supplier" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
             </article>`;
         }).join('');
@@ -619,18 +623,10 @@
                 searchable: false,
                 render: function (_, __, r) {
                     return `<div class="cxr-actions">
-                                <button class="cxr-act js-ledger-supplier" data-id="${r.id}" aria-label="السجل" title="السجل">
-                                    <i class="fas fa-list"></i>
-                                </button>
-                                <button class="cxr-act cxr-act--view js-view-supplier" data-id="${r.id}" aria-label="عرض">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="cxr-act js-edit-supplier" data-id="${r.id}" aria-label="تعديل">
-                                    <i class="fas fa-pen-to-square"></i>
-                                </button>
-                                <button class="cxr-act cxr-act--del js-delete-supplier" data-id="${r.id}" data-name="${r.name}" aria-label="حذف">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                ${CAN_VIEW_TRANSACTIONS ? `<button class="cxr-act js-ledger-supplier" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>` : ''}
+                                <button class="cxr-act cxr-act--view js-view-supplier" data-id="${r.id}" aria-label="عرض"><i class="fas fa-eye"></i></button>
+                                ${CAN_CHANGE ? `<button class="cxr-act js-edit-supplier" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                                ${CAN_DELETE ? `<button class="cxr-act cxr-act--del js-delete-supplier" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>` : ''}
                             </div>`;
                 }
             }

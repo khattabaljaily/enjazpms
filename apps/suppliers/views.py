@@ -212,7 +212,7 @@ def supplier_detail_api(request, pk):
 
 
 @login_required
-@require_permission('view_suppliers')
+@require_permission('view_supplier_transactions')
 def supplier_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:

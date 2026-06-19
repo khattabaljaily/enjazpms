@@ -238,7 +238,7 @@ def customer_detail_api(request, pk):
 
 
 @login_required
-@require_permission('view_customers')
+@require_permission('view_customer_transactions')
 def customer_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
