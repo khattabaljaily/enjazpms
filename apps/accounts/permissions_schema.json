@@ -29,8 +29,7 @@
         "view_customer_payments": "عرض مدفوعات العملاء",
         "add_customer_payments": "تسجيل دفعية عميل",
         "cancel_customer_payments": "إلغاء دفعية عميل",
-        "view_customer_transactions": "عرض حركات حساب العميل",
-        "print_customer_statement": "طباعة كشف حساب العميل"
+        "view_customer_transactions": "عرض حركات حساب العميل"
     },
     "الموردين": {
         "add_suppliers": "إضافة مورد جديد",
@@ -42,8 +41,7 @@
         "view_supplier_payments": "عرض مدفوعات الموردين",
         "add_supplier_payments": "تسجيل دفعية مورد",
         "cancel_supplier_payments": "إلغاء دفعية مورد",
-        "view_supplier_transactions": "عرض حركات حساب المورد",
-        "print_supplier_statement": "طباعة كشف حساب المورد"
+        "view_supplier_transactions": "عرض حركات حساب المورد"
     },
     "المنتجات والخدمات": {
         "add_items": "إضافة منتج أو خدمة جديدة",
@@ -137,22 +135,18 @@
         "view_notifications": "عرض الإشعارات وإدارتها",
         "generate_notifications": "إنشاء وتحديث الإشعارات"
     },
-    "التقارير — المبيعات": {
+    "تقارير المبيعات": {
         "view_sales_reports": "عرض صفحة تقارير المبيعات",
         "view_sales_summary_report": "تقرير ملخص المبيعات",
         "view_sales_by_customer_report": "تقرير المبيعات حسب العميل",
         "view_sales_by_item_report": "تقرير المبيعات حسب المنتج",
         "view_sales_by_date_report": "تقرير المبيعات حسب التاريخ",
         "view_sales_by_user_report": "تقرير المبيعات حسب المستخدم",
-        "view_sales_by_payment_method_report": "تقرير المبيعات حسب طريقة الدفع",
         "view_sales_profit_margin_report": "تقرير هامش الربح (حساس)",
-        "view_sales_customer_statement_report": "كشف حساب العميل",
-        "view_sales_customer_balances_report": "تقرير أرصدة العملاء",
-        "view_sales_payments_report": "تقرير مدفوعات المبيعات",
-        "view_sales_returns_report": "تقرير مرتجعات المبيعات",
+        "view_sales_by_payment_method_report": "تقرير المبيعات حسب طريقة الدفع",
         "export_sales_reports": "تصدير تقارير المبيعات"
     },
-    "التقارير — المشتريات": {
+    "تقارير المشتريات": {
         "view_purchases_reports": "عرض صفحة تقارير المشتريات",
         "view_purchases_summary_report": "تقرير ملخص المشتريات",
         "view_purchases_by_supplier_report": "تقرير المشتريات حسب المورد",
@@ -160,36 +154,36 @@
         "view_purchases_by_date_report": "تقرير المشتريات حسب التاريخ",
         "view_purchases_by_user_report": "تقرير المشتريات حسب المستخدم",
         "view_purchases_price_history_report": "تقرير تاريخ أسعار الشراء",
-        "view_purchases_supplier_statement_report": "كشف حساب المورد",
-        "view_purchases_supplier_balances_report": "تقرير أرصدة الموردين",
-        "view_purchases_payments_report": "تقرير مدفوعات المشتريات",
-        "view_purchases_returns_report": "تقرير مرتجعات المشتريات",
         "export_purchases_reports": "تصدير تقارير المشتريات"
     },
-    "التقارير — المخزون": {
-        "view_stocks_reports": "عرض صفحة تقارير المخزون",
-        "view_stocks_summary_report": "تقرير ملخص المخزون",
-        "view_stocks_by_item_report": "تقرير المخزون حسب المنتج",
-        "view_stocks_by_category_report": "تقرير المخزون حسب الفئة",
-        "view_stocks_by_location_report": "تقرير المخزون حسب الموقع",
+    "تقارير المخزن": {
+        "view_stocks_reports": "عرض صفحة تقارير المخزن",
+        "view_stocks_summary_report": "تقرير ملخص المخزن",
+        "view_stocks_by_item_report": "تقرير المخزن حسب المنتج",
+        "view_stocks_by_category_report": "تقرير المخزن حسب الفئة",
+        "view_stocks_by_location_report": "تقرير المخزن حسب الموقع",
         "view_stocks_item_movement_report": "تقرير حركة الأصناف",
-        "view_stocks_low_stock_report": "تقرير المخزون المنخفض",
+        "view_stocks_low_stock_report": "تقرير المخزن المنخفض",
+        "view_stocks_valuation_report": "تقرير تقييم المخزن (حساس)",
         "view_stocks_non_moving_report": "تقرير الأصناف غير المتحركة",
-        "view_stocks_valuation_report": "تقرير تقييم المخزون (حساس)",
-        "export_stocks_reports": "تصدير تقارير المخزون"
+        "export_stocks_reports": "تصدير تقارير المخزن"
     },
-    "التقارير — المصروفات": {
+    "تقارير الحسابات": {
+        "view_sales_customer_statement_report": "كشف حساب العميل",
+        "view_sales_customer_balances_report": "تقرير أرصدة العملاء",
+        "view_sales_payments_report": "تقرير مدفوعات العملاء",
+        "view_sales_returns_report": "تقرير مرتجعات المبيعات",
+        "view_purchases_supplier_statement_report": "كشف حساب المورد",
+        "view_purchases_supplier_balances_report": "تقرير أرصدة الموردين",
+        "view_purchases_payments_report": "تقرير مدفوعات الموردين",
+        "view_purchases_returns_report": "تقرير مرتجعات المشتريات",
         "view_expenses_summary_report": "تقرير ملخص المصروفات",
         "view_expenses_details_report": "تقرير تفاصيل المصروفات",
         "view_expenses_by_category_report": "تقرير المصروفات حسب التصنيف",
-        "view_expenses_by_date_report": "تقرير المصروفات حسب التاريخ"
-    },
-    "التقارير — الخزائن": {
+        "view_expenses_by_date_report": "تقرير المصروفات حسب التاريخ",
         "view_treasury_balances_report": "تقرير أرصدة الخزائن",
         "view_treasury_statement_report": "كشف حساب الخزينة",
-        "view_treasury_movements_report": "تقرير حركات الخزائن"
-    },
-    "التقارير — المالية": {
+        "view_treasury_movements_report": "تقرير حركات الخزائن",
         "view_income_statement_report": "قائمة الدخل (الأرباح والخسائر)"
     },
     "الموظفون": {
