@@ -19,22 +19,26 @@
         <h2>مرحباً، {{ request.user.get_full_name|default:request.user.username }} 👋</h2>
         <p>{% if tenant %}{{ tenant.name }} — {% endif %}إليك نظرة سريعة على أداء اليوم</p>
     </div>
-    {% if request.user|has_perm_key:"view_dashboard" %}
-    <div class="db-greeting-badges">
+    <div class="db-greeting-badges" {% if not request.user|has_perm_key:"view_dashboard" %}style="pointer-events:none;user-select:none;"{% endif %}>
         <div class="db-badge">
-            <span class="db-badge-val">{{ stats.today_sales|money }}</span>
+            <span class="db-badge-val" {% if not request.user|has_perm_key:"view_dashboard" %}style="filter:blur(6px);"{% endif %}>
+                {% if request.user|has_perm_key:"view_dashboard" %}{{ stats.today_sales|money }}{% else %}8,250.00{% endif %}
+            </span>
             <span class="db-badge-lbl">مبيعات اليوم</span>
         </div>
         <div class="db-badge">
-            <span class="db-badge-val">{{ stats.today_invoices|default:0 }}</span>
+            <span class="db-badge-val" {% if not request.user|has_perm_key:"view_dashboard" %}style="filter:blur(6px);"{% endif %}>
+                {% if request.user|has_perm_key:"view_dashboard" %}{{ stats.today_invoices|default:0 }}{% else %}24{% endif %}
+            </span>
             <span class="db-badge-lbl">فواتير اليوم</span>
         </div>
         <div class="db-badge">
-            <span class="db-badge-val">{{ stats.pending_invoices|default:0 }}</span>
+            <span class="db-badge-val" {% if not request.user|has_perm_key:"view_dashboard" %}style="filter:blur(6px);"{% endif %}>
+                {% if request.user|has_perm_key:"view_dashboard" %}{{ stats.pending_invoices|default:0 }}{% else %}7{% endif %}
+            </span>
             <span class="db-badge-lbl">غير مسددة</span>
         </div>
     </div>
-    {% endif %}
 </div>
 
 {% if request.user|has_perm_key:"view_dashboard" %}
@@ -334,14 +338,187 @@
 
 {% else %}
 
-<!-- ══ NO PERMISSION — show quick actions only ═══════════════════ -->
-<div class="db-panel mb-3" style="border:1.5px dashed var(--border-color, #e2e8f0);">
-    <div class="db-panel-body d-flex flex-column align-items-center justify-content-center" style="padding:3rem 1rem; gap:.75rem; text-align:center;">
-        <div style="width:56px;height:56px;border-radius:50%;background:rgba(99,102,241,.1);display:flex;align-items:center;justify-content:center;">
-            <i class="fas fa-chart-pie" style="font-size:1.4rem;color:#6366f1;opacity:.6;"></i>
+<!-- ══ NO PERMISSION — beautiful locked placeholder ═══════════════ -->
+
+<!-- Lock notice banner -->
+<div style="display:flex;align-items:center;gap:.65rem;padding:.65rem 1rem;margin-bottom:1rem;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;font-size:.84rem;color:var(--text-secondary,#64748b);">
+    <i class="fas fa-lock" style="color:#6366f1;font-size:.9rem;flex-shrink:0;"></i>
+    <span>إحصاءات لوحة التحكم محجوبة — تواصل مع مدير النظام للحصول على صلاحية <strong>عرض لوحة التحكم</strong></span>
+</div>
+
+<!-- KPI Cards — blurred fake values -->
+<div class="db-kpi-grid" style="pointer-events:none;user-select:none;">
+    <div class="db-kpi db-kpi--indigo">
+        <div class="db-kpi-icon"><i class="fas fa-arrow-trend-up"></i></div>
+        <div class="db-kpi-body">
+            <div class="db-kpi-val" style="filter:blur(7px);opacity:.7;">8,250.00</div>
+            <div class="db-kpi-lbl">مبيعات اليوم</div>
+            <span class="db-kpi-tag db-kpi-tag--info"><i class="fas fa-calendar-day"></i> اليوم</span>
         </div>
-        <p class="mb-0" style="font-size:1rem;font-weight:700;color:var(--text-primary);">إحصاءات لوحة التحكم محجوبة</p>
-        <p class="mb-0" style="font-size:.85rem;color:var(--text-muted);">لا تملك صلاحية عرض بيانات لوحة التحكم — تواصل مع مدير النظام</p>
+    </div>
+    <div class="db-kpi db-kpi--emerald">
+        <div class="db-kpi-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="db-kpi-body">
+            <div class="db-kpi-val" style="filter:blur(7px);opacity:.7;">142,500.00</div>
+            <div class="db-kpi-lbl">مبيعات الشهر</div>
+            <span class="db-kpi-tag db-kpi-tag--up"><i class="fas fa-calendar-alt"></i> هذا الشهر</span>
+        </div>
+    </div>
+    <div class="db-kpi db-kpi--amber">
+        <div class="db-kpi-icon"><i class="fas fa-file-invoice"></i></div>
+        <div class="db-kpi-body">
+            <div class="db-kpi-val" style="filter:blur(7px);opacity:.7;">24</div>
+            <div class="db-kpi-lbl">فواتير اليوم</div>
+            <span class="db-kpi-tag db-kpi-tag--info"><i class="fas fa-receipt"></i> مؤكدة</span>
+        </div>
+    </div>
+    <div class="db-kpi db-kpi--rose">
+        <div class="db-kpi-icon"><i class="fas fa-clock-rotate-left"></i></div>
+        <div class="db-kpi-body">
+            <div class="db-kpi-val" style="filter:blur(7px);opacity:.7;">7</div>
+            <div class="db-kpi-lbl">فواتير آجلة غير مسددة</div>
+            <span class="db-kpi-tag db-kpi-tag--down"><i class="fas fa-exclamation"></i> تحتاج متابعة</span>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary stats — blurred -->
+<div class="db-stat-row" style="pointer-events:none;user-select:none;">
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(99,102,241,.1);color:#6366f1;"><i class="fas fa-users"></i></div>
+        <div><div class="db-stat-num" style="filter:blur(6px);opacity:.7;">12</div><div class="db-stat-lbl">مستخدمون</div></div>
+    </div>
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(16,185,129,.1);color:#10b981;"><i class="fas fa-box-open"></i></div>
+        <div><div class="db-stat-num" style="filter:blur(6px);opacity:.7;">387</div><div class="db-stat-lbl">منتجات</div></div>
+    </div>
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(14,165,233,.1);color:#0ea5e9;"><i class="fas fa-user-group"></i></div>
+        <div><div class="db-stat-num" style="filter:blur(6px);opacity:.7;">156</div><div class="db-stat-lbl">عملاء</div></div>
+    </div>
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(245,158,11,.1);color:#d97706;"><i class="fas fa-truck"></i></div>
+        <div><div class="db-stat-num" style="filter:blur(6px);opacity:.7;">63</div><div class="db-stat-lbl">موردون</div></div>
+    </div>
+</div>
+
+<!-- Charts row — fake SVG with lock overlay -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title"><i class="fas fa-chart-area" style="color:#6366f1;"></i> المبيعات الأسبوعية</h3>
+                <span class="db-panel-meta">7 أيام</span>
+            </div>
+            <div class="db-panel-body" style="position:relative;overflow:hidden;">
+                <div class="db-chart-wrap" style="filter:blur(3px);opacity:.4;pointer-events:none;">
+                    <svg width="100%" height="160" viewBox="0 0 420 160" preserveAspectRatio="none">
+                        <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity=".25"/><stop offset="100%" stop-color="#6366f1" stop-opacity=".01"/></linearGradient></defs>
+                        <polygon fill="url(#g1)" points="0,160 0,95 60,75 120,105 180,55 240,85 300,40 360,70 420,60 420,160"/>
+                        <polyline fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linejoin="round" points="0,95 60,75 120,105 180,55 240,85 300,40 360,70 420,60"/>
+                        <circle cx="0"   cy="95"  r="4" fill="#6366f1"/>
+                        <circle cx="60"  cy="75"  r="4" fill="#6366f1"/>
+                        <circle cx="120" cy="105" r="4" fill="#6366f1"/>
+                        <circle cx="180" cy="55"  r="4" fill="#6366f1"/>
+                        <circle cx="240" cy="85"  r="4" fill="#6366f1"/>
+                        <circle cx="300" cy="40"  r="4" fill="#6366f1"/>
+                        <circle cx="360" cy="70"  r="4" fill="#6366f1"/>
+                        <circle cx="420" cy="60"  r="4" fill="#6366f1"/>
+                    </svg>
+                </div>
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;">
+                    <div style="width:40px;height:40px;border-radius:50%;background:#6366f1;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-lock" style="color:#fff;font-size:.95rem;"></i>
+                    </div>
+                    <p style="margin:0;font-size:.82rem;font-weight:600;color:var(--text-secondary,#64748b);">البيانات محجوبة</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title"><i class="fas fa-chart-column" style="color:#10b981;"></i> إيرادات ومصروفات</h3>
+                <span class="db-panel-meta">أسبوعي</span>
+            </div>
+            <div class="db-panel-body" style="position:relative;overflow:hidden;">
+                <div class="db-chart-wrap" style="filter:blur(3px);opacity:.4;pointer-events:none;">
+                    <svg width="100%" height="160" viewBox="0 0 260 160" preserveAspectRatio="none">
+                        <rect x="5"   y="50"  width="28" height="110" fill="#10b981" opacity=".8" rx="4"/>
+                        <rect x="38"  y="90"  width="28" height="70"  fill="#ef4444" opacity=".8" rx="4"/>
+                        <rect x="76"  y="30"  width="28" height="130" fill="#10b981" opacity=".8" rx="4"/>
+                        <rect x="109" y="70"  width="28" height="90"  fill="#ef4444" opacity=".8" rx="4"/>
+                        <rect x="147" y="45"  width="28" height="115" fill="#10b981" opacity=".8" rx="4"/>
+                        <rect x="180" y="85"  width="28" height="75"  fill="#ef4444" opacity=".8" rx="4"/>
+                        <rect x="218" y="20"  width="28" height="140" fill="#10b981" opacity=".8" rx="4"/>
+                    </svg>
+                </div>
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;">
+                    <div style="width:40px;height:40px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-lock" style="color:#fff;font-size:.95rem;"></i>
+                    </div>
+                    <p style="margin:0;font-size:.82rem;font-weight:600;color:var(--text-secondary,#64748b);">البيانات محجوبة</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom panels — blurred placeholders -->
+<div class="row g-3 mb-3" style="pointer-events:none;user-select:none;">
+    <div class="col-lg-5">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title"><i class="fas fa-ranking-star" style="color:#f59e0b;"></i> أفضل المنتجات مبيعاً</h3>
+                <span class="db-panel-meta">هذا الشهر</span>
+            </div>
+            <div class="db-panel-body" style="padding:0;filter:blur(4px);opacity:.5;">
+                <table class="db-prod-table">
+                    <thead><tr><th style="width:36px;">#</th><th>المنتج</th><th class="text-end">الكمية</th><th class="text-end">الإيراد</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="db-prod-rank db-prod-rank--1">1</span></td><td class="fw-bold">منتج أ</td><td class="text-end text-muted">125</td><td class="text-end fw-bold" style="color:#6366f1;">18,500</td></tr>
+                        <tr><td><span class="db-prod-rank db-prod-rank--2">2</span></td><td class="fw-bold">منتج ب</td><td class="text-end text-muted">98</td><td class="text-end fw-bold" style="color:#6366f1;">12,300</td></tr>
+                        <tr><td><span class="db-prod-rank db-prod-rank--3">3</span></td><td class="fw-bold">منتج ج</td><td class="text-end text-muted">74</td><td class="text-end fw-bold" style="color:#6366f1;">9,800</td></tr>
+                        <tr><td><span class="db-prod-rank db-prod-rank--n">4</span></td><td class="fw-bold">منتج د</td><td class="text-end text-muted">61</td><td class="text-end fw-bold" style="color:#6366f1;">7,200</td></tr>
+                        <tr><td><span class="db-prod-rank db-prod-rank--n">5</span></td><td class="fw-bold">منتج ه</td><td class="text-end text-muted">45</td><td class="text-end fw-bold" style="color:#6366f1;">5,100</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title"><i class="fas fa-chart-pie" style="color:#8b5cf6;"></i> أفضل الفئات</h3>
+                <span class="db-panel-meta">هذا الشهر</span>
+            </div>
+            <div class="db-panel-body" style="filter:blur(4px);opacity:.5;">
+                <div class="db-cat-row"><span class="db-cat-name">الإلكترونيات</span><div class="db-cat-track"><div class="db-cat-fill" style="width:72%"></div></div><span class="db-cat-pct">72%</span></div>
+                <div class="db-cat-row"><span class="db-cat-name">الملابس</span><div class="db-cat-track"><div class="db-cat-fill" style="width:54%"></div></div><span class="db-cat-pct">54%</span></div>
+                <div class="db-cat-row"><span class="db-cat-name">المواد الغذائية</span><div class="db-cat-track"><div class="db-cat-fill" style="width:38%"></div></div><span class="db-cat-pct">38%</span></div>
+                <div class="db-cat-row"><span class="db-cat-name">الأثاث</span><div class="db-cat-track"><div class="db-cat-fill" style="width:25%"></div></div><span class="db-cat-pct">25%</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title"><i class="fas fa-shield-heart" style="color:#ef4444;"></i> مؤشرات النظام</h3>
+            </div>
+            <div class="db-panel-body" style="filter:blur(4px);opacity:.5;">
+                <div class="db-ring-wrap mb-3">
+                    <svg class="db-ring-svg" width="90" height="90" viewBox="0 0 90 90">
+                        <circle class="db-ring-track" cx="45" cy="45" r="35"/>
+                        <circle class="db-ring-fill" cx="45" cy="45" r="35" stroke="#10b981" stroke-dasharray="220" stroke-dashoffset="44"/>
+                    </svg>
+                    <span class="db-ring-label">80%</span>
+                    <span class="db-ring-sub">نسبة تحصيل الفواتير</span>
+                </div>
+                <div class="db-status-row"><span class="db-status-label"><i class="fas fa-triangle-exclamation" style="color:#f59e0b;"></i> مخزون منخفض</span><span class="db-status-val db-status-val--warn">3</span></div>
+                <div class="db-status-row"><span class="db-status-label"><i class="fas fa-calendar-xmark" style="color:#ef4444;"></i> منتهي الصلاحية</span><span class="db-status-val db-status-val--ok">0</span></div>
+                <div class="db-status-row"><span class="db-status-label"><i class="fas fa-bolt" style="color:#10b981;"></i> سرعة النظام</span><span class="db-status-val db-status-val--ok">98%</span></div>
+            </div>
+        </div>
     </div>
 </div>
 
