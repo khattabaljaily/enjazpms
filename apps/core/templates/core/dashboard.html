@@ -43,6 +43,7 @@
 
 {% if request.user|has_perm_key:"view_dashboard" %}
 
+{% if request.user|has_perm_key:"view_ai_insights" %}
 <!-- AI Advices widget -->
 <div class="ai-adv-wrapper">
     <div class="ai-adv-tab" role="heading" aria-level="3">
@@ -64,6 +65,7 @@
         <div id="aiAdviceModalBody" class="ai-adv-modal-body"></div>
     </div>
 </div>
+{% endif %}
 
 <!-- ══ PRIMARY KPI ROW ════════════════════════════════════════════ -->
 <div class="db-kpi-grid">
