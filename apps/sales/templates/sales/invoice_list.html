@@ -249,6 +249,7 @@
 
 {% block extra_js %}
 <script>
+const hasPerm = window.hasPerm || (function(){ return false; });
 const SALES_API_URL = "{% url 'sales:invoice_api' %}";
 const INVOICE_BASE_URL = "/sales/";
 

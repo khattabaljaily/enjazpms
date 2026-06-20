@@ -84,14 +84,15 @@
     }
     </script>
 
-    <!-- Global permissions helper: hasPerm(key) + auto-hide data-require-perm elements -->
+    <!-- Global permissions helper: hasPerm(key) + CSS-first hide for data-require-perm elements -->
+    <style>[data-require-perm]{display:none!important}</style>
     <script>
     (function(){
         var _p = new Set({% user_perm_keys_json %});
         window.hasPerm = function(k){ return !k || _p.has(k); };
         document.addEventListener('DOMContentLoaded', function(){
             document.querySelectorAll('[data-require-perm]').forEach(function(el){
-                if (!window.hasPerm(el.dataset.requirePerm)) el.style.display = 'none';
+                if (window.hasPerm(el.dataset.requirePerm)) el.style.removeProperty('display');
             });
         });
     })();

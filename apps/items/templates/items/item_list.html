@@ -676,6 +676,7 @@
 (function () {
     'use strict';
 
+    const hasPerm = window.hasPerm || (function(){ return false; });
     const urlTable       = "{% url 'items:table_api' %}";
     const urlCreate      = "{% url 'items:create_api' %}";
     const urlDetail      = "{% url 'items:detail_api' 0 %}";

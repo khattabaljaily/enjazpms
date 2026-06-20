@@ -186,6 +186,7 @@
 <script>
 (function () {
     'use strict';
+    const hasPerm = window.hasPerm || (function(){ return false; });
 
     function getCookie(name) {
         const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');

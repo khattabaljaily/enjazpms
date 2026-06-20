@@ -303,6 +303,7 @@
 {% block extra_js %}
 <script>
 (function () {
+    const hasPerm = window.hasPerm || (function(){ return false; });
     function getCookie(name) {
         const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
         return v ? v[2] : null;

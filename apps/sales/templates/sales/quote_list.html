@@ -222,6 +222,7 @@
 
 {% block extra_js %}
 <script>
+const hasPerm = window.hasPerm || (function(){ return false; });
 const QUOTES_API_URL = "{% url 'sales:quote_api' %}";
 const QUOTE_BASE_URL = "/sales/quotes/";
 

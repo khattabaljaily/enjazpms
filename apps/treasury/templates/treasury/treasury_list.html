@@ -193,6 +193,7 @@
 <script>
 (function () {
     'use strict';
+    const hasPerm = window.hasPerm || (function(){ return false; });
 
     const TREASURY_TABLE_API = "{% url 'treasury:table_api' %}";
     const TREASURY_CREATE_API = "{% url 'treasury:create_api' %}";

@@ -185,6 +185,7 @@
 
 {% block extra_js %}
 <script>
+const hasPerm = window.hasPerm || (function(){ return false; });
 let returnsTable;
 const returnRows = new Map();
 let pendingReturnListAction = null;

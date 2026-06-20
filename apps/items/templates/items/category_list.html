@@ -535,6 +535,7 @@
 (function () {
   'use strict';
 
+  const hasPerm = window.hasPerm || (function(){ return false; });
   const urlCreate  = "{% url 'items:category_create_api' %}";
   const urlDetail  = "{% url 'items:category_detail_api' 0 %}";
   const urlUpdate  = "{% url 'items:category_update_api' 0 %}";

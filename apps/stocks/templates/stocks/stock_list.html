@@ -306,6 +306,7 @@
 <script>
 (function () {
     'use strict';
+    const hasPerm = window.hasPerm || (function(){ return false; });
 
     const urlTable      = "{% url 'stocks:table_api' %}";
     const urlCreate     = "{% url 'stocks:create_api' %}";
