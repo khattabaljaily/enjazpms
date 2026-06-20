@@ -112,6 +112,10 @@ def employee_table_api(request):
         'recordsTotal': records_total,
         'recordsFiltered': records_filtered,
         'data': rows,
+        'perms': {
+            'edit': request.user.has_perm_key('edit_employees'),
+            'delete': request.user.has_perm_key('delete_employees'),
+        },
     })
 
 
@@ -313,6 +317,9 @@ def advance_table_api(request):
         'recordsTotal': records_total,
         'recordsFiltered': records_filtered,
         'data': rows,
+        'perms': {
+            'cancel': request.user.has_perm_key('cancel_employee_advances'),
+        },
     })
 
 
@@ -478,6 +485,10 @@ def salary_table_api(request):
         'recordsTotal': records_total,
         'recordsFiltered': records_filtered,
         'data': rows,
+        'perms': {
+            'pay': request.user.has_perm_key('pay_employee_salaries'),
+            'cancel': request.user.has_perm_key('cancel_employee_salaries'),
+        },
     })
 
 
@@ -710,11 +721,16 @@ def incentive_table_api(request):
             'notes': inc.notes,
         })
 
+    incentive_perms = {
+        'pay': request.user.has_perm_key('pay_employee_incentives'),
+        'cancel': request.user.has_perm_key('cancel_employee_incentives'),
+    }
     return JsonResponse({
         'draw': draw,
         'recordsTotal': records_total,
         'recordsFiltered': records_filtered,
         'data': rows,
+        'perms': incentive_perms,
     })
 
 

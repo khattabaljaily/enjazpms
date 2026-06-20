@@ -5,6 +5,7 @@ Custom template tags للتحقق من الصلاحيات
 import json
 
 from django import template
+from django.utils.safestring import mark_safe
 
 register = template.Library()
 
@@ -29,8 +30,8 @@ def user_perm_keys_json(context):
     """Return JSON array of all permission keys for the current user (for JS injection)."""
     request = context.get('request')
     if not request or not hasattr(request, 'user') or not request.user.is_authenticated:
-        return '[]'
+        return mark_safe('[]')
     user = request.user
     if not hasattr(user, 'get_permission_keys'):
-        return '[]'
-    return json.dumps(list(user.get_permission_keys()))
+        return mark_safe('[]')
+    return mark_safe(json.dumps(list(user.get_permission_keys())))

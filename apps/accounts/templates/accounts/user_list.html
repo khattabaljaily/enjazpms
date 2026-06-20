@@ -310,6 +310,10 @@
 {% block extra_js %}
 <script>
     window.PERMISSION_GROUPS = {{ permission_groups|safe }};
+    window.USER_PERMS = {
+        edit:   {% if user|has_perm_key:'change_users' %}true{% else %}false{% endif %},
+        delete: {% if user|has_perm_key:'delete_users' %}true{% else %}false{% endif %}
+    };
 </script>
-<script src="{% static 'js/users.js' %}?v=1.0"></script>
+<script src="{% static 'js/users.js' %}?v=2.0"></script>
 {% endblock %}

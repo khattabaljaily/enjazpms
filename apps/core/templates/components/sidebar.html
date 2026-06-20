@@ -441,6 +441,7 @@
     {% endif %}
 
     <!-- ── Notifications ── -->
+    {% if user|has_perm_key:'view_notifications' %}
     <ul class="nav flex-column mt-1">
         <li class="nav-item">
             <a class="nav-link" href="{% url 'notifications:list' %}">
@@ -449,6 +450,7 @@
             </a>
         </li>
     </ul>
+    {% endif %}
     {% endif %}
 
     <!-- ── Footer ── -->

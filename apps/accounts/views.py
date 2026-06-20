@@ -172,6 +172,10 @@ def user_table_api(request):
         'recordsTotal': records_total,
         'recordsFiltered': records_filtered,
         'data': data,
+        'perms': {
+            'edit': request.user.has_perm_key('change_users'),
+            'delete': request.user.has_perm_key('delete_users'),
+        },
     }, json_dumps_params={'ensure_ascii': False})
 
 

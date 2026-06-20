@@ -1,5 +1,6 @@
 {% load static %}
 {% load humanize %}
+{% load permission_tags %}
 <nav class="navbar">
     <div class="navbar-shell">
 
@@ -23,6 +24,7 @@
             </button>
 
             <!-- Notifications -->
+            {% if request.user.is_superuser or request.user|has_perm_key:"view_notifications" %}
             <div class="dropdown" id="notifDropdown">
                 <button class="navbar-icon-btn" data-bs-toggle="dropdown" data-bs-display="static" aria-label="الإشعارات">
                     <i class="fas fa-bell"></i>
@@ -47,6 +49,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
 
             <div class="navbar-sep"></div>
 

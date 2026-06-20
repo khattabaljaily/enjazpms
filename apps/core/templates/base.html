@@ -92,7 +92,7 @@
         window.hasPerm = function(k){ return !k || _p.has(k); };
         document.addEventListener('DOMContentLoaded', function(){
             document.querySelectorAll('[data-require-perm]').forEach(function(el){
-                if (window.hasPerm(el.dataset.requirePerm)) el.style.removeProperty('display');
+                if (window.hasPerm(el.dataset.requirePerm)) el.removeAttribute('data-require-perm');
             });
         });
     })();

@@ -52,6 +52,10 @@ def notification_list(request):
 @login_required
 def notification_api(request):
     """Returns unread count + recent notifications for the header bell."""
+    if not (getattr(request.user, 'is_tenant_admin', False) or
+            request.user.has_perm_key('view_notifications')):
+        return JsonResponse({'unread': 0, 'items': [], 'no_perm': True})
+
     tenant = _tenant(request)
     if not tenant:
         return JsonResponse({'unread': 0, 'items': []})
@@ -87,6 +91,7 @@ def notification_api(request):
 
 
 @login_required
+@require_permission('view_notifications')
 @require_POST
 def mark_read_ajax(request, pk):
     tenant = _tenant(request)
@@ -95,6 +100,7 @@ def mark_read_ajax(request, pk):
 
 
 @login_required
+@require_permission('view_notifications')
 @require_POST
 def mark_all_read_ajax(request):
     tenant = _tenant(request)

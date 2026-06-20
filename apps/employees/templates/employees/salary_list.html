@@ -424,6 +424,8 @@
     });
 
     /* ── DataTable ── */
+    let _perms = { pay: false, cancel: false };
+
     const dt = $('#salariesTable').DataTable({
         processing: true,
         serverSide: true,
@@ -436,7 +438,8 @@
                 d.status   = document.getElementById('statusFilter').value;
                 d.employee = document.getElementById('employeeFilter').value;
                 d.search   = { value: document.getElementById('salSearch').value };
-            }
+            },
+            dataSrc: function (json) { _perms = json.perms || _perms; return json.data; }
         },
         columns: [
             { data: 'employee', render: v => `<span class="cxr-name">${v}</span>` },
@@ -454,10 +457,10 @@
                 render: function (_, __, r) {
                     let html = '<div class="cxr-actions">';
                     html += `<button class="cxr-act js-view-sal" data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>`;
-                    if (r.status === 'draft' && hasPerm('pay_employee_salaries')) {
+                    if (r.status === 'draft' && _perms.pay) {
                         html += `<button class="cxr-act js-pay-sal" data-id="${r.id}" title="دفع الراتب"><i class="fas fa-money-bill-wave"></i></button>`;
                     }
-                    if (r.status !== 'cancelled' && hasPerm('cancel_employee_salaries')) {
+                    if (r.status !== 'cancelled' && _perms.cancel) {
                         html += `<button class="cxr-act cxr-act--del js-cancel-sal" data-id="${r.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`;
                     }
                     html += '</div>';

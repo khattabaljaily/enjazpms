@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const deleteUserName = $('#deleteUserName');
     const confirmDeleteUserBtn = $('#confirmDeleteUserBtn');
     let currentStatus = '';
+    const _perms = window.USER_PERMS || { edit: false, delete: false };
 
     const usersTable = $('#usersTable').DataTable({
         ajax: {
@@ -57,8 +58,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         <button type="button" class="cx-btn-ghost btn-sm btn-view-user" data-id="${data}">
                             <i class="fas fa-eye"></i>
                         </button>
-                        ${window.hasPerm && window.hasPerm('change_users') ? `<button type="button" class="cx-btn-ghost btn-sm btn-edit-user" data-id="${data}"><i class="fas fa-edit"></i></button>` : ''}
-                        ${window.hasPerm && window.hasPerm('delete_users') ? `<button type="button" class="cx-btn-ghost btn-sm btn-delete-user" data-id="${data}" data-name="${displayName}"><i class="fas fa-trash"></i></button>` : ''}
+                        ${_perms.edit ? `<button type="button" class="cx-btn-ghost btn-sm btn-edit-user" data-id="${data}"><i class="fas fa-edit"></i></button>` : ''}
+                        ${_perms.delete ? `<button type="button" class="cx-btn-ghost btn-sm btn-delete-user" data-id="${data}" data-name="${displayName}"><i class="fas fa-trash"></i></button>` : ''}
                     `;
                 }
             }
@@ -108,8 +109,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 <div class="cx-customer-card-actions">
                     <button type="button" class="cxr-act cxr-act--view btn-view-user" data-id="${user.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
-                    ${window.hasPerm && window.hasPerm('change_users') ? `<button type="button" class="cxr-act btn-edit-user" data-id="${user.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-edit"></i></button>` : ''}
-                    ${window.hasPerm && window.hasPerm('delete_users') ? `<button type="button" class="cxr-act cxr-act--del btn-delete-user" data-id="${user.id}" data-name="${name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                    ${_perms.edit ? `<button type="button" class="cxr-act btn-edit-user" data-id="${user.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-edit"></i></button>` : ''}
+                    ${_perms.delete ? `<button type="button" class="cxr-act cxr-act--del btn-delete-user" data-id="${user.id}" data-name="${name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
             </article>`;
         }).join('');
