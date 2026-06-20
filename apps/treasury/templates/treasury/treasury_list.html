@@ -287,10 +287,17 @@
         const tbody = document.getElementById('treasuryLedgerBody');
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">جاري التحميل...</td></tr>';
 
-        fetch(`${TREASURY_DETAIL_API_BASE}${id}/transactions/`)
+        fetch(`${TREASURY_DETAIL_API_BASE}${id}/transactions/`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
             .then(r => r.json())
             .then(resp => {
-                if (!resp.success || !Array.isArray(resp.data) || !resp.data.length) {
+                if (!resp.success) {
+                    const msg = resp.message || 'ليس لديك صلاحية لعرض الحركات';
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-warning py-4"><i class="fas fa-lock me-2"></i>${msg}</td></tr>`;
+                    return;
+                }
+                if (!Array.isArray(resp.data) || !resp.data.length) {
                     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد حركات</td></tr>';
                     return;
                 }
@@ -323,7 +330,7 @@
                 }).join('');
             })
             .catch(() => {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">تعذر تحميل الحركات</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-warning py-4"><i class="fas fa-lock me-2"></i>ليس لديك صلاحية لعرض الحركات</td></tr>';
             });
     }
 
