@@ -471,12 +471,16 @@
             history.push({ role: 'assistant', content: reply });
         })
         .fail((xhr) => {
-            let msg = 'حدث خطأ في الاتصال.';
-            try {
-                const d = JSON.parse(xhr.responseText);
-                if (d.error) msg = `⚠️ ${d.error}`;
-            } catch(e) {}
-            msg += ` (${xhr.status})`;
+            let msg;
+            if (xhr.status === 403) {
+                msg = '🔒 ليس لديك صلاحية لاستخدام المساعد الذكي. تواصل مع مدير النظام لتفعيل هذه الميزة.';
+            } else {
+                msg = 'حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى.';
+                try {
+                    const d = JSON.parse(xhr.responseText);
+                    if (d.error) msg = `⚠️ ${d.error}`;
+                } catch(e) {}
+            }
             appendMsg('assistant', msg);
         })
         .always(() => setBusy(false));

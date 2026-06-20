@@ -2144,6 +2144,7 @@ def pwa_manifest(request):
 
 
 @login_required
+@require_permission('view_analytics')
 def analytics(request):
     """Advanced analytics dashboard — 12-month trends, period comparison, profit, top customers"""
     tenant = request.tenant
