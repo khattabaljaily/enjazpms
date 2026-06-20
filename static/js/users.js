@@ -53,13 +53,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 className: 'text-end',
                 render: function (data, type, row) {
                     const displayName = row.full_name || row.username || 'المستخدم';
-                    const hasPerm = window.hasPerm || function(){ return true; };
                     return `
                         <button type="button" class="cx-btn-ghost btn-sm btn-view-user" data-id="${data}">
                             <i class="fas fa-eye"></i>
                         </button>
-                        ${hasPerm('change_users') ? `<button type="button" class="cx-btn-ghost btn-sm btn-edit-user" data-id="${data}"><i class="fas fa-edit"></i></button>` : ''}
-                        ${hasPerm('delete_users') ? `<button type="button" class="cx-btn-ghost btn-sm btn-delete-user" data-id="${data}" data-name="${displayName}"><i class="fas fa-trash"></i></button>` : ''}
+                        ${window.hasPerm && window.hasPerm('change_users') ? `<button type="button" class="cx-btn-ghost btn-sm btn-edit-user" data-id="${data}"><i class="fas fa-edit"></i></button>` : ''}
+                        ${window.hasPerm && window.hasPerm('delete_users') ? `<button type="button" class="cx-btn-ghost btn-sm btn-delete-user" data-id="${data}" data-name="${displayName}"><i class="fas fa-trash"></i></button>` : ''}
                     `;
                 }
             }
@@ -109,8 +108,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 <div class="cx-customer-card-actions">
                     <button type="button" class="cxr-act cxr-act--view btn-view-user" data-id="${user.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
-                    ${(window.hasPerm || function(){ return true; })('change_users') ? `<button type="button" class="cxr-act btn-edit-user" data-id="${user.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-edit"></i></button>` : ''}
-                    ${(window.hasPerm || function(){ return true; })('delete_users') ? `<button type="button" class="cxr-act cxr-act--del btn-delete-user" data-id="${user.id}" data-name="${name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                    ${window.hasPerm && window.hasPerm('change_users') ? `<button type="button" class="cxr-act btn-edit-user" data-id="${user.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-edit"></i></button>` : ''}
+                    ${window.hasPerm && window.hasPerm('delete_users') ? `<button type="button" class="cxr-act cxr-act--del btn-delete-user" data-id="${user.id}" data-name="${name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
             </article>`;
         }).join('');
