@@ -145,14 +145,12 @@
                 لوحة التحكم
             </a>
         </li>
-        {% if user|has_perm_key:'view_analytics' %}
         <li class="nav-item">
             <a class="nav-link{% if request.resolver_match.url_name == 'analytics' %} active{% endif %}" href="{% url 'core:analytics' %}">
                 <span class="nav-icon" style="background:rgba(139,92,246,.12);color:#8b5cf6;"><i class="fas fa-chart-line"></i></span>
                 التحليلات المتقدمة
             </a>
         </li>
-        {% endif %}
     </ul>
 
     <!-- ── Transactions ── -->
