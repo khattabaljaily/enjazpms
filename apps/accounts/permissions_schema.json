@@ -178,8 +178,7 @@
     },
     "حوافز الموظفين": {
         "view_employee_incentives": "عرض الحوافز والخصومات",
-        "add_employee_incentives": "إضافة حافز أو خصم",
-        "pay_employee_incentives": "دفع حافز",
+        "add_employee_incentives": "تسجيل حافز أو خصم",
         "cancel_employee_incentives": "إلغاء حافز أو خصم"
     }
 }
