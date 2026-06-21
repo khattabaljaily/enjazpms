@@ -18,6 +18,11 @@
     <div class="db-greeting-text">
         <h2>مرحباً، {{ request.user.get_full_name|default:request.user.username }} 👋</h2>
         <p>{% if tenant %}{{ tenant.name }} — {% endif %}إليك نظرة سريعة على أداء اليوم</p>
+        <div class="db-datetime">
+            <span class="db-datetime-date"><i class="fas fa-calendar-alt"></i> <span id="dbDate"></span></span>
+            <span class="db-datetime-sep"></span>
+            <span class="db-datetime-time"><i class="fas fa-clock"></i> <span id="dbTime"></span></span>
+        </div>
     </div>
     <div class="db-greeting-badges" {% if not request.user|has_perm_key:"view_dashboard" %}style="pointer-events:none;user-select:none;"{% endif %}>
         <div class="db-badge">
@@ -755,4 +760,20 @@
 </script>
 <script src="{% static 'js/ai_advices.js' %}"></script>
 {% endif %}
+<script>
+(function () {
+    const days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const dateEl = document.getElementById('dbDate');
+    const timeEl = document.getElementById('dbTime');
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function tick() {
+        const now = new Date();
+        dateEl.textContent = days[now.getDay()] + '، ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+        timeEl.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
+</script>
 {% endblock %}

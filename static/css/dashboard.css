@@ -437,6 +437,39 @@
     .db-stat-row { gap: .5rem; }
 }
 
+/* ── Datetime strip ──────────────────────────────────── */
+.db-datetime {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin-top: .55rem;
+    font-size: .78rem;
+    opacity: .88;
+}
+.db-datetime-date,
+.db-datetime-time {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    background: rgba(255,255,255,.13);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 20px;
+    padding: .22rem .7rem;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .01em;
+}
+.db-datetime-time { font-weight: 700; }
+.db-datetime-sep {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.45);
+}
+@media (max-width: 480px) {
+    .db-datetime { flex-wrap: wrap; }
+}
+
 /* ── Dark overrides ───────────────────────────────────── */
 [data-theme="dark"] .db-panel,
 [data-theme="dark"] .db-kpi,
