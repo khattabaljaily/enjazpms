@@ -1670,7 +1670,9 @@ def tenant_table_api(request):
         except Exception as _e:
             _logger.error('tenant_table_api: error serializing tenant %s: %s', t.id, _e)
 
-    return JsonResponse({'draw': draw, 'recordsTotal': records_total, 'recordsFiltered': records_filtered, 'data': data})
+    response = JsonResponse({'draw': draw, 'recordsTotal': records_total, 'recordsFiltered': records_filtered, 'data': data})
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    return response
 
 
 @login_required
