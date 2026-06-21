@@ -271,10 +271,36 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user) -> PurchaseInvoice:
         )
     elif pm == 'cash':
         _apply_payment(tenant, invoice, 'cash', total, invoice.invoice_date)
+        if invoice.supplier:
+            _apply_supplier_ledger(
+                tenant=tenant, supplier=invoice.supplier, amount=total,
+                entry_type='invoice', reference_type='purchase_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f'أمر شراء {invoice.invoice_number}',
+            )
+            _apply_supplier_ledger(
+                tenant=tenant, supplier=invoice.supplier, amount=-total,
+                entry_type='payment', reference_type='purchase_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f'سداد نقدي — {invoice.invoice_number}',
+            )
     elif pm == 'bank':
         if not bank_reference:
             raise ValueError('يرجى إدخال مرجع التحويل البنكي.')
         _apply_payment(tenant, invoice, 'bank', total, invoice.invoice_date, reference=bank_reference)
+        if invoice.supplier:
+            _apply_supplier_ledger(
+                tenant=tenant, supplier=invoice.supplier, amount=total,
+                entry_type='invoice', reference_type='purchase_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f'أمر شراء {invoice.invoice_number}',
+            )
+            _apply_supplier_ledger(
+                tenant=tenant, supplier=invoice.supplier, amount=-total,
+                entry_type='payment', reference_type='purchase_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f'سداد بنكي — {invoice.invoice_number} ({bank_reference})',
+            )
     elif pm == 'mixed':
         cash_amt = invoice.cash_amount or Decimal('0')
         bank_amt = invoice.bank_amount or Decimal('0')
@@ -298,17 +324,28 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user) -> PurchaseInvoice:
             _apply_payment(tenant, invoice, 'cash', cash_amt, invoice.invoice_date)
         if bank_amt > 0:
             _apply_payment(tenant, invoice, 'bank', bank_amt, invoice.invoice_date, reference=bank_reference)
-        if credit_amt > Decimal('0.005'):
+
+        if invoice.supplier:
             _apply_supplier_ledger(
-                tenant=tenant,
-                supplier=invoice.supplier,
-                amount=credit_amt,
-                entry_type='invoice',
-                reference_type='purchase_invoice',
-                reference_id=invoice.id,
-                date=invoice.invoice_date,
-                notes=f'أمر شراء {invoice.invoice_number} — الجزء الآجل',
+                tenant=tenant, supplier=invoice.supplier, amount=total,
+                entry_type='invoice', reference_type='purchase_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f'أمر شراء {invoice.invoice_number}',
             )
+            if cash_amt > 0:
+                _apply_supplier_ledger(
+                    tenant=tenant, supplier=invoice.supplier, amount=-cash_amt,
+                    entry_type='payment', reference_type='purchase_invoice',
+                    reference_id=invoice.id, date=invoice.invoice_date,
+                    notes=f'سداد نقدي — {invoice.invoice_number}',
+                )
+            if bank_amt > 0:
+                _apply_supplier_ledger(
+                    tenant=tenant, supplier=invoice.supplier, amount=-bank_amt,
+                    entry_type='payment', reference_type='purchase_invoice',
+                    reference_id=invoice.id, date=invoice.invoice_date,
+                    notes=f'سداد بنكي — {invoice.invoice_number} ({bank_reference})',
+                )
 
     invoice.status = 'confirmed'
     try:
