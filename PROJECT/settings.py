@@ -201,7 +201,6 @@ MESSAGE_TAGS = {
 # Sessions
 # ─────────────────────────────────────────────
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-SESSION_COOKIE_AGE = 86400
 
 
 # ─────────────────────────────────────────────
