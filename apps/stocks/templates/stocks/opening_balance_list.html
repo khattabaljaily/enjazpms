@@ -136,11 +136,8 @@
 
     function buildInput(row) {
         const openingQty = parseFloat(row.opening_qty_raw || row.opening_qty) || 0;
-        const currentQty = parseFloat(row.current_qty_raw || row.current_qty) || 0;
-        const changed = changedMap.get(String(row.item_id));
-        // First entry: default to current qty so user sees what they have
-        const defaultVal = openingQty > 0 ? openingQty : currentQty;
-        const value      = changed !== undefined ? changed : defaultVal;
+        const changed    = changedMap.get(String(row.item_id));
+        const value      = changed !== undefined ? changed : openingQty;
         const unit       = baseUnitName(row);
         return `<div class="opening-input-wrap">
             <input type="number" class="cx-input cx-input--sm opening-qty-input"
