@@ -1626,43 +1626,49 @@ def tenant_table_api(request):
         order_field = f'-{order_field}'
     qs = qs.order_by(order_field)[start:start + length]
 
+    import logging as _logging
+    _logger = _logging.getLogger(__name__)
+
     data = []
     for t in qs:
-        days = t.days_until_expiry()
-        if not t.subscription_expires:
-            exp_label = 'مفتوحة'
-            exp_status = 'lifetime'
-        elif days is not None and days < 0:
-            exp_label = f'منتهية منذ {abs(days)} يوم'
-            exp_status = 'expired'
-        elif days is not None and days <= 30:
-            exp_label = f'ينتهي خلال {days} يوم'
-            exp_status = 'soon'
-        else:
-            exp_label = t.subscription_expires.strftime('%Y-%m-%d') if t.subscription_expires else '—'
-            exp_status = 'ok'
+        try:
+            days = t.days_until_expiry()
+            if not t.subscription_expires:
+                exp_label = 'مفتوحة'
+                exp_status = 'lifetime'
+            elif days is not None and days < 0:
+                exp_label = f'منتهية منذ {abs(days)} يوم'
+                exp_status = 'expired'
+            elif days is not None and days <= 30:
+                exp_label = f'ينتهي خلال {days} يوم'
+                exp_status = 'soon'
+            else:
+                exp_label = t.subscription_expires.strftime('%Y-%m-%d') if t.subscription_expires else '—'
+                exp_status = 'ok'
 
-        store = next(iter(t.storesettings_set.all()), None)
-        data.append({
-            'id': t.id,
-            'name': t.name,
-            'slug': t.slug,
-            'business_type': t.business_type.name_ar if t.business_type else '—',
-            'subscription_plan': t.get_subscription_plan_display(),
-            'subscription_plan_key': t.subscription_plan,
-            'version_type': t.get_version_type_display(),
-            'version_type_key': t.version_type,
-            'is_active': t.is_active,
-            'is_demo': t.is_demo,
-            'subscription_expires': t.subscription_expires.strftime('%Y-%m-%d') if t.subscription_expires else None,
-            'exp_label': exp_label,
-            'exp_status': exp_status,
-            'email': t.email or '—',
-            'phone': t.phone or '—',
-            'city': t.city or '—',
-            'store_slug': store.slug if store else None,
-            'store_enabled': store.is_enabled if store else False,
-        })
+            store = next(iter(t.storesettings_set.all()), None)
+            data.append({
+                'id': t.id,
+                'name': t.name,
+                'slug': t.slug,
+                'business_type': t.business_type.name_ar if t.business_type else '—',
+                'subscription_plan': t.get_subscription_plan_display(),
+                'subscription_plan_key': t.subscription_plan,
+                'version_type': t.get_version_type_display(),
+                'version_type_key': t.version_type,
+                'is_active': t.is_active,
+                'is_demo': getattr(t, 'is_demo', False),
+                'subscription_expires': t.subscription_expires.strftime('%Y-%m-%d') if t.subscription_expires else None,
+                'exp_label': exp_label,
+                'exp_status': exp_status,
+                'email': t.email or '—',
+                'phone': t.phone or '—',
+                'city': t.city or '—',
+                'store_slug': store.slug if store else None,
+                'store_enabled': store.is_enabled if store else False,
+            })
+        except Exception as _e:
+            _logger.error('tenant_table_api: error serializing tenant %s: %s', t.id, _e)
 
     return JsonResponse({'draw': draw, 'recordsTotal': records_total, 'recordsFiltered': records_filtered, 'data': data})
 
