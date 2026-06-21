@@ -394,13 +394,17 @@ def treasury_movements_report(request):
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
+    treasury_id = request.GET.get('treasury_id') or None
 
-    report = TreasuryReportGenerator(tenant, start_date, end_date).get_movements_summary()
+    report = TreasuryReportGenerator(tenant, start_date, end_date).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
+    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).order_by('name')
 
     return render(request, 'treasury/reports/movements.html', {
         'report': report,
         'start_date': start_date,
         'end_date': end_date,
+        'treasuries': treasuries,
+        'selected_treasury_id': treasury_id or '',
         'section': 'treasury_reports',
     })
 
@@ -419,13 +423,15 @@ def treasury_movements_report_export(request):
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
+    treasury_id = request.GET.get('treasury_id') or None
 
-    report = TreasuryReportGenerator(tenant, start_date, end_date).get_movements_summary()
+    report = TreasuryReportGenerator(tenant, start_date, end_date).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="treasury_movements_{end_date}.csv"'
     response.write('﻿')
     writer = csv.writer(response)
     writer.writerow(['التاريخ', 'الخزينة', 'نوع الحركة', 'الوصف', 'وارد', 'صادر', 'الرصيد بعد'])
-    for row in report['data']:
-        writer.writerow([row['movement_date'], row['treasury_name'], row['movement_type'], row['description'], row['receipt'], row['disbursement'], row['running_balance']])
+    if report:
+        for row in report['data']:
+            writer.writerow([row['movement_date'], row['treasury_name'], row['movement_type'], row['description'], row['receipt'], row['disbursement'], row['running_balance']])
     return response

@@ -208,9 +208,12 @@
                 </div>
                 <p class="ntf-msg">{{ n.message }}</p>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <a href="{% url 'notifications:detail' n.id %}" class="ntf-link">
+                        <i class="fas fa-eye" style="font-size:.65rem"></i>تفاصيل
+                    </a>
                     {% if n.link %}
                     <a href="{{ n.link }}" class="ntf-link" onclick="markOneRead({{ n.id }})">
-                        <i class="fas fa-arrow-left" style="font-size:.65rem"></i>عرض التفاصيل
+                        <i class="fas fa-arrow-left" style="font-size:.65rem"></i>عرض المرتبط
                     </a>
                     {% endif %}
                     {% if n.notification_type in 'low_stock,overdue_invoice,rfq_expiry' %}

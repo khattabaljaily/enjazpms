@@ -1,0 +1,87 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}{% load humanize %}
+
+{% block extra_css %}
+<style>
+.ntf-detail-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 1px solid var(--border-light);
+    padding: 2rem;
+    max-width: 720px;
+    margin: 0 auto;
+}
+.ntf-detail-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+.ntf-detail-icon--warning { background: rgba(245,158,11,.12); color: #d97706; }
+.ntf-detail-icon--danger  { background: rgba(239,68,68,.12);  color: #dc2626; }
+.ntf-detail-icon--info    { background: rgba(79,172,254,.12); color: #4facfe; }
+.ntf-detail-icon--success { background: rgba(17,153,142,.12); color: #11998e; }
+.ntf-detail-icon--muted   { background: rgba(107,114,128,.12); color: #6b7280; }
+
+.ntf-detail-title { font-size: 1.25rem; font-weight: 700; margin-bottom: .5rem; color: var(--text-primary); }
+.ntf-detail-meta  { font-size: .8rem; color: var(--text-muted); margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+.ntf-detail-body  { font-size: .95rem; line-height: 1.7; color: var(--text-secondary); background: var(--bg-secondary); border-radius: 10px; padding: 1rem 1.25rem; }
+.ntf-priority-badge { display: inline-block; padding: .2rem .65rem; border-radius: 8px; font-size: .72rem; font-weight: 600; }
+.ntf-priority-badge--high   { background: rgba(239,68,68,.12); color: #dc2626; }
+.ntf-priority-badge--medium { background: rgba(245,158,11,.12); color: #d97706; }
+.ntf-priority-badge--low    { background: rgba(107,114,128,.12); color: #6b7280; }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+    <div class="cx-page-header">
+        <div class="cx-page-header-left">
+            <a href="{% url 'notifications:list' %}" class="cx-btn-ghost" style="margin-left:.75rem;">
+                <i class="fas fa-arrow-right me-1"></i> العودة للإشعارات
+            </a>
+            <h1 class="cx-page-title">تفاصيل الإشعار</h1>
+        </div>
+    </div>
+
+    <div class="ntf-detail-card">
+        <div class="ntf-detail-icon
+            {% if notif.notification_type == 'low_stock' %}ntf-detail-icon--warning
+            {% elif notif.notification_type == 'overdue_invoice' %}ntf-detail-icon--danger
+            {% elif notif.notification_type == 'rfq_expiry' %}ntf-detail-icon--info
+            {% elif notif.notification_type == 'transfer_done' or notif.notification_type == 'stocktake_done' %}ntf-detail-icon--success
+            {% else %}ntf-detail-icon--muted{% endif %}">
+            <i class="fas
+                {% if notif.notification_type == 'low_stock' %}fa-triangle-exclamation
+                {% elif notif.notification_type == 'overdue_invoice' %}fa-file-invoice-dollar
+                {% elif notif.notification_type == 'rfq_expiry' %}fa-clock
+                {% elif notif.notification_type == 'transfer_done' %}fa-arrows-left-right
+                {% elif notif.notification_type == 'stocktake_done' %}fa-clipboard-check
+                {% else %}fa-bell{% endif %}"></i>
+        </div>
+
+        <h2 class="ntf-detail-title">{{ notif.title }}</h2>
+
+        <div class="ntf-detail-meta">
+            <span><i class="fas fa-clock me-1"></i>{{ notif.created_at|naturaltime }}</span>
+            <span><i class="fas fa-calendar me-1"></i>{{ notif.created_at|date:"Y-m-d H:i" }}</span>
+            <span class="ntf-priority-badge ntf-priority-badge--{{ notif.priority }}">
+                {% if notif.priority == 'high' %}أولوية عالية{% elif notif.priority == 'medium' %}أولوية متوسطة{% else %}أولوية منخفضة{% endif %}
+            </span>
+        </div>
+
+        <div class="ntf-detail-body">{{ notif.message }}</div>
+
+        {% if notif.link %}
+        <div style="margin-top:1.25rem;">
+            <a href="{{ notif.link }}" class="cx-btn-primary">
+                <i class="fas fa-arrow-left me-1"></i> عرض المرتبط
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -370,7 +370,7 @@ class PurchasesReportGenerator:
             },
         }
 
-    def get_payments_report(self):
+    def get_payments_report(self, supplier_id=None):
         """تقرير مدفوعات الموردين (PurchasePayment) بالفترة"""
         payments = PurchasePayment.objects.filter(
             tenant=self.tenant,
@@ -378,6 +378,9 @@ class PurchasesReportGenerator:
             payment_date__lte=self.end_date,
             is_reversed=False,
         ).select_related('invoice', 'invoice__supplier').order_by('-payment_date')
+
+        if supplier_id:
+            payments = payments.filter(invoice__supplier_id=supplier_id)
 
         data = []
         for p in payments:

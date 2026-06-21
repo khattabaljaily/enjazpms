@@ -92,6 +92,27 @@ def notification_api(request):
 
 @login_required
 @require_permission('view_notifications')
+def notification_detail(request, pk):
+    tenant = _tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    notif = Notification.objects.filter(tenant=tenant, pk=pk).first()
+    if not notif:
+        from django.http import Http404
+        raise Http404
+
+    if not notif.is_read:
+        notif.is_read = True
+        notif.save(update_fields=['is_read'])
+
+    return render(request, 'notifications/notification_detail.html', {
+        'notif': notif,
+    })
+
+
+@login_required
+@require_permission('view_notifications')
 @require_POST
 def mark_read_ajax(request, pk):
     tenant = _tenant(request)

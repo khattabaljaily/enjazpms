@@ -30,10 +30,19 @@
     <div class="rpt-filters">
         <form method="get" class="row g-3">
             <div class="col-md-4">
+                <label class="form-label">المورد <sup style="color:#ef4444">*</sup></label>
+                <select name="supplier_id" class="form-select" required>
+                    <option value="">-- اختر مورداً --</option>
+                    {% for s in suppliers %}
+                    <option value="{{ s.id }}" {% if selected_supplier_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
                 <label class="form-label">من تاريخ</label>
                 <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">إلى تاريخ</label>
                 <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
             </div>
@@ -43,6 +52,7 @@
         </form>
     </div>
 
+    {% if report %}
     <div class="rpt-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
         <div class="rpt-kpi-card rpt-kpi--blue">
             <div class="rpt-kpi-icon"><i class="fas fa-receipt"></i></div>
@@ -112,6 +122,16 @@
             {% endif %}
         </div>
     </div>
+    {% else %}
+    <div class="rpt-panel">
+        <div class="rpt-panel-body">
+            <div class="rpt-empty">
+                <i class="fas fa-hand-pointer"></i>
+                <p>اختر مورداً لعرض تقرير مدفوعاته</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
 </div>
 {% endblock %}

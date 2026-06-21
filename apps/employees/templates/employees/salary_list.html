@@ -251,7 +251,7 @@
             <div class="cx-delete-body">
                 <div class="cx-delete-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)"><i class="fas fa-money-bill-wave"></i></div>
                 <h5 class="cx-delete-title">دفع الراتب؟</h5>
-                <p class="cx-delete-desc">سيتم خصم صافي الراتب من الخزينة المحددة وتسجيل الحركة. لا يمكن التراجع.</p>
+                <p class="cx-delete-desc" id="paySalaryDesc">سيتم خصم صافي الراتب من الخزينة المحددة وتسجيل الحركة. لا يمكن التراجع.</p>
                 <input type="hidden" id="paySalaryId">
             </div>
             <div class="cx-delete-footer">
@@ -269,8 +269,9 @@
             <div class="cx-delete-body">
                 <div class="cx-delete-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-ban"></i></div>
                 <h5 class="cx-delete-title">إلغاء كشف الراتب؟</h5>
-                <p class="cx-delete-desc">سيتم إلغاء الكشف وإعادة المبلغ للخزينة إن كان مدفوعاً. لا يمكن التراجع.</p>
+                <p class="cx-delete-desc" id="cancelSalaryDesc">سيتم إلغاء الكشف وتسجيل الحركة العكسية. لا يمكن التراجع.</p>
                 <input type="hidden" id="cancelSalaryId">
+                <input type="hidden" id="cancelSalaryMethod">
             </div>
             <div class="cx-delete-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">لا</button>
@@ -458,10 +459,10 @@
                     let html = '<div class="cxr-actions">';
                     html += `<button class="cxr-act js-view-sal" data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>`;
                     if (r.status === 'draft' && _perms.pay) {
-                        html += `<button class="cxr-act js-pay-sal" data-id="${r.id}" title="دفع الراتب"><i class="fas fa-money-bill-wave"></i></button>`;
+                        html += `<button class="cxr-act js-pay-sal" data-id="${r.id}" data-method="${r.payment_method || 'cash'}" title="دفع الراتب"><i class="fas fa-money-bill-wave"></i></button>`;
                     }
                     if (r.status !== 'cancelled' && _perms.cancel) {
-                        html += `<button class="cxr-act cxr-act--del js-cancel-sal" data-id="${r.id}" title="إلغاء"><i class="fas fa-ban"></i></button>`;
+                        html += `<button class="cxr-act cxr-act--del js-cancel-sal" data-id="${r.id}" data-method="${r.payment_method || 'cash'}" title="إلغاء"><i class="fas fa-ban"></i></button>`;
                     }
                     html += '</div>';
                     return html;
@@ -640,7 +641,13 @@
 
     /* ── Pay ── */
     $('#salariesTable').on('click', '.js-pay-sal', function () {
-        document.getElementById('paySalaryId').value = $(this).data('id');
+        const id = $(this).data('id');
+        const method = $(this).data('method') || 'cash';
+        document.getElementById('paySalaryId').value = id;
+        const desc = method === 'bank'
+            ? 'سيتم تسجيل صرف الراتب من الحساب البنكي. لا يمكن التراجع.'
+            : 'سيتم خصم صافي الراتب من الخزينة المحددة وتسجيل الحركة. لا يمكن التراجع.';
+        document.getElementById('paySalaryDesc').textContent = desc;
         payModal.show();
     });
 
@@ -668,7 +675,14 @@
 
     /* ── Cancel ── */
     $('#salariesTable').on('click', '.js-cancel-sal', function () {
-        document.getElementById('cancelSalaryId').value = $(this).data('id');
+        const id = $(this).data('id');
+        const method = $(this).data('method') || 'cash';
+        document.getElementById('cancelSalaryId').value = id;
+        document.getElementById('cancelSalaryMethod').value = method;
+        const desc = method === 'bank'
+            ? 'سيتم إلغاء الكشف وعكس عملية الحساب البنكي إن كان مدفوعاً. لا يمكن التراجع.'
+            : 'سيتم إلغاء الكشف وإعادة المبلغ للخزينة إن كان مدفوعاً. لا يمكن التراجع.';
+        document.getElementById('cancelSalaryDesc').textContent = desc;
         cancelModal.show();
     });
 

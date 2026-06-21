@@ -297,6 +297,7 @@
                         <li><a href="{% url 'reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>حسب التاريخ</a></li>
                         <li><a href="{% url 'reports:profit_margin_report' %}" class="nav-sublink"><i class="fas fa-percent me-2"></i>هامش الربح</a></li>
                         <li><a href="{% url 'reports:by_payment_method_report' %}" class="nav-sublink"><i class="fas fa-credit-card me-2"></i>حسب طريقة الدفع</a></li>
+                        <li><a href="{% url 'reports:by_user_report' %}" class="nav-sublink"><i class="fas fa-user me-2"></i>حسب المستخدم</a></li>
                     </ul>
                 </li>
 
@@ -312,6 +313,7 @@
                         <li><a href="{% url 'purchases:reports:by_item_report' %}" class="nav-sublink"><i class="fas fa-box me-2"></i>حسب المنتج</a></li>
                         <li><a href="{% url 'purchases:reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>حسب التاريخ</a></li>
                         <li><a href="{% url 'purchases:reports:price_history_report' %}" class="nav-sublink"><i class="fas fa-chart-line me-2"></i>تاريخ الأسعار</a></li>
+                        <li><a href="{% url 'purchases:reports:by_user_report' %}" class="nav-sublink"><i class="fas fa-user me-2"></i>حسب المستخدم</a></li>
                     </ul>
                 </li>
 
@@ -357,8 +359,7 @@
                         <li><a href="{% url 'expenses:reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>حسب التاريخ</a></li>
                         <li class="nav-submenu-label">الخزائن</li>
                         <li><a href="{% url 'treasury:reports:balances_report' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>أرصدة الخزائن</a></li>
-                        <li><a href="{% url 'treasury:reports:statement_report' %}" class="nav-sublink"><i class="fas fa-cash-register me-2"></i>كشف الصندوق</a></li>
-                        <li><a href="{% url 'treasury:reports:movements_report' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>حركات الخزائن</a></li>
+                        <li><a href="{% url 'treasury:reports:movements_report' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>حركة الخزائن</a></li>
                         <li class="nav-submenu-label">المالية</li>
                         <li><a href="{% url 'reports:income_statement' %}" class="nav-sublink"><i class="fas fa-chart-line me-2"></i>قائمة الدخل (ربح/خسارة)</a></li>
                     </ul>

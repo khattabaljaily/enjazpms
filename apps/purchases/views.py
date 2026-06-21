@@ -136,6 +136,8 @@ def order_table_api(request):
             'draft': ('مسودة', 'secondary'),
             'confirmed': ('مؤكدة', 'success'),
             'cancelled': ('ملغاة', 'danger'),
+            'partially_returned': ('مرتجع جزئي', 'warning'),
+            'returned': ('مرتجع كلي', 'dark'),
         }
 
         data = []
@@ -1156,13 +1158,17 @@ def purchases_payments_report(request):
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
+    supplier_id = request.GET.get('supplier_id') or None
 
-    report = PurchasesReportGenerator(tenant, start_date, end_date).get_payments_report()
+    report = PurchasesReportGenerator(tenant, start_date, end_date).get_payments_report(supplier_id=supplier_id) if supplier_id else None
+    suppliers = Supplier.objects.filter(tenant=tenant).order_by('name')
 
     return render(request, 'purchases/reports/payments.html', {
         'report': report,
         'start_date': start_date,
         'end_date': end_date,
+        'suppliers': suppliers,
+        'selected_supplier_id': supplier_id or '',
         'section': 'purchases_reports',
     })
 

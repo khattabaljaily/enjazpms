@@ -258,6 +258,7 @@ def supplier_transactions_api(request, pk):
                 'reference_id': e.reference_id,
             })
 
+    data.reverse()
     return JsonResponse({'success': True, 'data': data}, json_dumps_params={'ensure_ascii': False})
 
 

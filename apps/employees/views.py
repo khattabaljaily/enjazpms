@@ -475,6 +475,7 @@ def salary_table_api(request):
             'deductions':        str(sp.deductions),
             'total_due':         str(sp.total_due),
             'treasury': sp.treasury.name if sp.treasury else '—',
+            'payment_method': sp.payment_method,
             'status': sp.status,
             'status_display': sp.get_status_display(),
             'notes': sp.notes,

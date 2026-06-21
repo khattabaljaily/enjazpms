@@ -123,13 +123,16 @@ class TreasuryReportGenerator:
             'data': data,
         }
 
-    def get_movements_summary(self):
-        """ملخص حركات الخزائن بالفترة (جميع الخزائن)"""
+    def get_movements_summary(self, treasury_id=None):
+        """حركات خزينة محددة بالفترة مرتبة من الأقدم للأحدث"""
         movements = TreasuryMovement.objects.filter(
             tenant=self.tenant,
             movement_date__gte=self.start_date,
             movement_date__lte=self.end_date,
-        ).select_related('treasury').order_by('-movement_date')
+        ).select_related('treasury').order_by('movement_date', 'id')
+
+        if treasury_id:
+            movements = movements.filter(treasury_id=treasury_id)
 
         data = []
         total_receipts = Decimal('0')

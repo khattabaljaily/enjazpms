@@ -259,6 +259,36 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user) -> PurchaseInvoice:
     if pm == 'credit':
         if not invoice.supplier:
             raise ValueError('أمر الشراء الآجل يتطلب اختيار مورد.')
+
+    # ── فحص الحد الائتماني للمورد ──────────────────────────────
+    if invoice.supplier and pm in ('credit', 'mixed'):
+        from django.db.models import Sum as _CLSum
+        supplier = invoice.supplier
+        credit_limit = supplier.credit_limit or Decimal('0')
+        if credit_limit > 0:
+            current_balance = (
+                SupplierLedger.objects
+                .filter(tenant=tenant, supplier=supplier)
+                .aggregate(s=_CLSum('amount'))['s'] or Decimal('0')
+            ) + (supplier.opening_balance or Decimal('0'))
+
+            if pm == 'credit':
+                credit_amount = total
+            else:
+                cash_amt = invoice.cash_amount or Decimal('0')
+                bank_amt = invoice.bank_amount or Decimal('0')
+                credit_amount = max(total - cash_amt - bank_amt, Decimal('0'))
+
+            if credit_amount > 0 and (current_balance + credit_amount) > credit_limit:
+                available = max(credit_limit - current_balance, Decimal('0'))
+                raise ValueError(
+                    f'تجاوز الحد الائتماني للمورد «{supplier.name}». '
+                    f'الحد: {credit_limit:,.2f} | '
+                    f'المديونية الحالية: {current_balance:,.2f} | '
+                    f'المتاح: {available:,.2f}'
+                )
+
+    if pm == 'credit':
         _apply_supplier_ledger(
             tenant=tenant,
             supplier=invoice.supplier,

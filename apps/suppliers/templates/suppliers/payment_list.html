@@ -286,9 +286,8 @@
 
         return fetch(url, opts).then(response => {
             if (!response.ok) {
-                return response.text().then(text => {
-                    let message = text.trim() || `HTTP ${response.status}`;
-                    throw new Error(message);
+                return response.json().catch(() => ({})).then(data => {
+                    throw new Error(data.message || `HTTP ${response.status}`);
                 });
             }
             return response.json();

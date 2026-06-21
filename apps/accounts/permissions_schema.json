@@ -119,14 +119,16 @@
         "view_sales_by_item_report": "تقرير المبيعات حسب المنتج",
         "view_sales_by_date_report": "تقرير المبيعات حسب التاريخ",
         "view_sales_profit_margin_report": "تقرير هامش الربح (حساس)",
-        "view_sales_by_payment_method_report": "تقرير المبيعات حسب طريقة الدفع"
+        "view_sales_by_payment_method_report": "تقرير المبيعات حسب طريقة الدفع",
+        "view_sales_by_user_report": "تقرير المبيعات حسب المستخدم"
     },
     "تقارير المشتريات": {
         "view_purchases_summary_report": "تقرير ملخص المشتريات",
         "view_purchases_by_supplier_report": "تقرير المشتريات حسب المورد",
         "view_purchases_by_item_report": "تقرير المشتريات حسب المنتج",
         "view_purchases_by_date_report": "تقرير المشتريات حسب التاريخ",
-        "view_purchases_price_history_report": "تقرير تاريخ أسعار الشراء"
+        "view_purchases_price_history_report": "تقرير تاريخ أسعار الشراء",
+        "view_purchases_by_user_report": "تقرير المشتريات حسب المستخدم"
     },
     "تقارير المخزن": {
         "view_stocks_summary_report": "تقرير ملخص المخزن",
@@ -152,8 +154,7 @@
         "view_expenses_by_category_report": "تقرير المصروفات حسب التصنيف",
         "view_expenses_by_date_report": "تقرير المصروفات حسب التاريخ",
         "view_treasury_balances_report": "تقرير أرصدة الخزائن",
-        "view_treasury_statement_report": "كشف حساب الخزينة",
-        "view_treasury_movements_report": "تقرير حركات الخزائن",
+        "view_treasury_movements_report": "تقرير حركة الخزائن",
         "view_income_statement_report": "قائمة الدخل (الأرباح والخسائر)"
     },
     "الموظفين": {
