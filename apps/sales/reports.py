@@ -371,33 +371,41 @@ class SalesReportGenerator:
         }
 
     def get_payments_report(self, customer_id=None):
-        """تقرير مدفوعات العملاء (SalePayment) بالفترة"""
-        qs = SalePayment.objects.filter(
+        """تقرير مدفوعات العملاء (CustomerLedger entry_type=payment) بالفترة"""
+        METHOD_LABELS = {
+            'customer_payment_cash': ('نقداً', 'cash'),
+            'customer_payment_bank': ('بنكي', 'bank'),
+            'sale_payment':          ('دفعة فاتورة', 'invoice'),
+        }
+
+        qs = CustomerLedger.objects.filter(
             tenant=self.tenant,
-            payment_date__gte=self.start_date,
-            payment_date__lte=self.end_date,
-            is_reversed=False,
-        ).select_related('invoice', 'invoice__customer').order_by('-payment_date')
+            entry_type='payment',
+            entry_date__gte=self.start_date,
+            entry_date__lte=self.end_date,
+            is_reversal=False,
+        ).select_related('customer').order_by('-entry_date', '-id')
+
         if customer_id:
-            qs = qs.filter(invoice__customer_id=customer_id)
-        payments = qs
+            qs = qs.filter(customer_id=customer_id)
 
         data = []
-        for p in payments:
+        total_cash = total_bank = 0.0
+        for e in qs:
+            method_label, method_key = METHOD_LABELS.get(e.reference_type, ('—', 'other'))
+            amt = abs(float(e.amount))
+            if method_key == 'cash':
+                total_cash += amt
+            elif method_key == 'bank':
+                total_bank += amt
             data.append({
-                'payment_date': p.payment_date,
-                'invoice_number': p.invoice.invoice_number,
-                'customer_name': p.invoice.customer.name if p.invoice.customer else '—',
-                'payment_method': p.get_payment_method_display(),
-                'payment_method_key': p.payment_method,
-                'amount': format_number(float(p.amount), 2),
-                'reference_number': p.reference_number,
-                'notes': p.notes,
+                'payment_date': e.entry_date,
+                'customer_name': e.customer.name if e.customer else '—',
+                'payment_method': method_label,
+                'payment_method_key': method_key,
+                'amount': format_number(amt, 2),
+                'notes': e.notes or '—',
             })
-
-        total_cash = sum(float(p.amount) for p in payments if p.payment_method == 'cash')
-        total_bank = sum(float(p.amount) for p in payments if p.payment_method == 'bank')
-        total_all = total_cash + total_bank
 
         return {
             'period': {'start': self.start_date, 'end': self.end_date},
@@ -405,7 +413,7 @@ class SalesReportGenerator:
                 'payment_count': format_number(len(data), 0),
                 'total_cash': format_number(total_cash, 2),
                 'total_bank': format_number(total_bank, 2),
-                'total_amount': format_number(total_all, 2),
+                'total_amount': format_number(total_cash + total_bank, 2),
             },
             'data': data,
         }

@@ -86,28 +86,28 @@
                     <thead>
                         <tr>
                             <th>التاريخ</th>
-                            <th>رقم الفاتورة</th>
                             <th>العميل</th>
                             <th class="text-center">طريقة الدفع</th>
                             <th class="text-end">المبلغ</th>
-                            <th>رقم مرجعي</th>
+                            <th>ملاحظات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in report.data %}
                         <tr style="background:rgba(16,185,129,.07);">
                             <td class="text-muted">{{ row.payment_date }}</td>
-                            <td style="font-size:.82rem; font-weight:600;">{{ row.invoice_number }}</td>
                             <td class="fw-bold">{{ row.customer_name }}</td>
                             <td class="text-center">
                                 {% if row.payment_method_key == 'cash' %}
                                 <span class="badge" style="background:rgba(17,153,142,.12); color:#11998e; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;"><i class="fas fa-money-bill me-1"></i>{{ row.payment_method }}</span>
-                                {% else %}
+                                {% elif row.payment_method_key == 'bank' %}
                                 <span class="badge" style="background:rgba(79,172,254,.12); color:#4facfe; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;"><i class="fas fa-building-columns me-1"></i>{{ row.payment_method }}</span>
+                                {% else %}
+                                <span class="badge" style="background:rgba(99,102,241,.12); color:#6366f1; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;"><i class="fas fa-file-invoice-dollar me-1"></i>{{ row.payment_method }}</span>
                                 {% endif %}
                             </td>
                             <td class="text-end fw-bold" style="color:#11998e;">{{ row.amount }}</td>
-                            <td class="text-muted" style="font-size:.8rem;">{{ row.reference_number|default:"—" }}</td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ row.notes }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
