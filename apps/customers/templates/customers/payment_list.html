@@ -310,7 +310,7 @@
             {
                 data: 'amount',
                 className: 'text-end',
-                render: v => EnjazIMS.formatMoney(v || 0)
+                render: v => EnjazIMS.formatMoney(Math.abs(parseFloat(v) || 0))
             },
             { data: 'payment_method' },
             { data: 'notes' },
@@ -332,6 +332,13 @@
                 }
             },
         ],
+        rowCallback: function (row, data) {
+            if (data.is_canceled) {
+                $(row).css({ background: 'rgba(239,68,68,.04)', opacity: '.65' });
+            } else {
+                $(row).css('background', 'rgba(16,185,129,.07)');
+            }
+        },
     });
 
     const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
