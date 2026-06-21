@@ -111,8 +111,7 @@
         "manage_store_orders": "قبول ورفض طلبات المتجر الإلكتروني"
     },
     "الإشعارات": {
-        "view_notifications": "عرض الإشعارات وإدارتها",
-        "generate_notifications": "إنشاء وتحديث الإشعارات"
+        "view_notifications": "عرض الإشعارات"
     },
     "تقارير المبيعات": {
         "view_sales_summary_report": "تقرير ملخص المبيعات",
