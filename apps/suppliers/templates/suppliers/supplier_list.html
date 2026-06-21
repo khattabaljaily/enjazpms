@@ -813,13 +813,15 @@
                 }
 
                 const rows = resp.data.map(function(tx) {
-                    const amount = EnjazIMS.parseNumber(tx.amount || 0);
-                    const amountClass = amount > 0 ? 'text-danger' : amount < 0 ? 'text-success' : 'text-muted';
-                    return `<tr>
+                    const isCredit = tx.entry_type === 'payment' || tx.entry_type === 'return';
+                    const isDebit  = tx.entry_type === 'invoice';
+                    const rowBg    = isCredit ? 'rgba(16,185,129,.08)' : isDebit ? 'rgba(239,68,68,.06)' : '';
+                    const amtColor = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
+                    return `<tr style="background:${rowBg}">
                         <td>${tx.entry_date || '—'}</td>
                         <td>${tx.entry_type_label || tx.entry_type || '—'}</td>
-                        <td class="${amountClass}">${EnjazIMS.formatMoney(tx.amount || 0)}</td>
-                        <td>${EnjazIMS.formatMoney(tx.running_balance || 0)}</td>
+                        <td style="color:${amtColor};font-weight:700;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount || 0)))}</td>
+                        <td>${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance || 0)))}</td>
                         <td>${tx.notes || '—'}</td>
                     </tr>`;
                 }).join('');
