@@ -584,7 +584,7 @@ def salary_pay(request, pk):
     sp = get_object_or_404(EmployeeSalaryPayment, pk=pk, tenant=tenant)
     if sp.status != 'draft':
         return _err('الكشف ليس في حالة مسودة')
-    if not sp.treasury:
+    if sp.payment_method != 'bank' and not sp.treasury:
         return _err('يجب تحديد الخزينة قبل الدفع')
     try:
         sp.pay()
