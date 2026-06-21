@@ -71,7 +71,7 @@
 
     <div class="opening-help">
         <i class="fas fa-circle-info"></i>
-        <span>عدّل حقل <strong>الكمية الافتتاحية الجديدة</strong> ثم اضغط <strong>حفظ التعديلات</strong> (الزر العلوي أو السفلي).</span>
+        <span>اكتب الكمية الافتتاحية لكل صنف في حقل <strong>تصحيح الافتتاحية</strong> — الحقول الفارغة تعني لم تُدخَل بعد، والرقم الباهت هو الكمية الحالية للاسترشاد فقط. ثم اضغط <strong>حفظ التعديلات</strong>.</span>
     </div>
     <div class="rpt-unit-note m-0 p-2 p-2">
         <i class="fas fa-ruler"></i>
@@ -136,14 +136,16 @@
 
     function buildInput(row) {
         const openingQty = parseFloat(row.opening_qty_raw || row.opening_qty) || 0;
+        const currentQty = parseFloat(row.current_qty_raw || row.current_qty) || 0;
         const changed = changedMap.get(String(row.item_id));
-        const value   = changed !== undefined ? changed : openingQty;
+        const value   = changed !== undefined ? changed : (openingQty > 0 ? openingQty : '');
+        const placeholder = openingQty === 0 ? currentQty : '';
         const unit    = baseUnitName(row);
         return `<div class="opening-input-wrap">
             <input type="number" class="cx-input cx-input--sm opening-qty-input"
                 data-item-id="${row.item_id}"
                 data-original="${openingQty}"
-                value="${value || ''}" min="0" step="0.0001">
+                value="${value}" placeholder="${placeholder}" min="0" step="0.0001">
             <span class="inv-unit-badge opening-input-unit-badge">${unit}</span>
         </div>`;
     }
