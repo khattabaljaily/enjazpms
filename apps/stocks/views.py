@@ -475,21 +475,30 @@ def opening_balance_save_api(request):
         if old_opening == new_qty:
             continue
 
-        delta = new_qty - old_opening
         is_first_entry = old_opening == Decimal('0')
+        current_qty = sq.quantity or Decimal('0')
 
-        # تطبيق الفرق على الكمية الحالية وتحديث الكمية الافتتاحية
-        sq.quantity = (sq.quantity or Decimal('0')) + delta
-        sq.opening_quantity = new_qty
-        sq.save(update_fields=['quantity', 'opening_quantity'])
-
-        # سجل الحركة
         if is_first_entry:
+            # First entry: user pre-fills with current qty and edits as needed.
+            # Set stock directly to new_qty instead of adding delta, so existing
+            # stock from purchases isn't double-counted.
+            delta = new_qty - current_qty
+            sq.quantity = new_qty
             movement_type = 'opening_in'
             notes = 'إدخال الكمية الافتتاحية'
         else:
+            # Correction: shift stock by the difference from old opening qty.
+            delta = new_qty - old_opening
+            sq.quantity = current_qty + delta
             movement_type = 'opening_correction'
             notes = f'تصحيح الكمية الافتتاحية: {old_opening:g} ← {new_qty:g}'
+
+        sq.opening_quantity = new_qty
+        sq.save(update_fields=['quantity', 'opening_quantity'])
+
+        if delta == 0:
+            updated_count += 1
+            continue
 
         direction = 'in' if delta > 0 else 'out'
         StockMovement.objects.create(
