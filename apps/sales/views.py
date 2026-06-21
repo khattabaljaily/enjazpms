@@ -1958,20 +1958,25 @@ def sales_customer_balances_export(request):
 @login_required
 @require_permission('view_sales_payments_report')
 def sales_payments_report(request):
+    from apps.customers.models import Customer
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
+    customer_id = request.GET.get('customer_id') or None
 
     generator = SalesReportGenerator(tenant, start_date, end_date)
-    report = generator.get_payments_report()
+    report = generator.get_payments_report(customer_id=customer_id)
+    customers = Customer.objects.filter(tenant=tenant, is_active=True).order_by('name')
 
     return render(request, 'sales/reports/payments.html', {
         'report': report,
         'start_date': start_date,
         'end_date': end_date,
+        'customers': customers,
+        'selected_customer_id': customer_id or '',
         'section': 'sales_reports',
     })
 

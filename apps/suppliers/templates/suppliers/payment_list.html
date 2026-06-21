@@ -353,6 +353,13 @@
                 }
             },
         ],
+        rowCallback: function (row, data) {
+            if (data.is_canceled) {
+                $(row).css({ background: 'rgba(239,68,68,.04)', opacity: '.65' });
+            } else {
+                $(row).css('background', 'rgba(16,185,129,.07)');
+            }
+        },
     });
 
     const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
@@ -557,7 +564,7 @@
                 paymentDetailsFields.id.textContent = payment.id;
                 paymentDetailsFields.date.textContent = payment.entry_date;
                 paymentDetailsFields.supplier.textContent = payment.supplier;
-                paymentDetailsFields.amount.textContent = EnjazIMS.formatMoney(payment.amount);
+                paymentDetailsFields.amount.textContent = EnjazIMS.formatMoney(Math.abs(parseFloat(payment.amount) || 0));
                 paymentDetailsFields.method.textContent = payment.payment_method;
                 paymentDetailsFields.treasury.textContent = payment.cash_treasury || '—';
                 paymentDetailsFields.notes.textContent = payment.notes;

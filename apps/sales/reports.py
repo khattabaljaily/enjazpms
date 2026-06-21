@@ -370,14 +370,17 @@ class SalesReportGenerator:
             },
         }
 
-    def get_payments_report(self):
+    def get_payments_report(self, customer_id=None):
         """تقرير مدفوعات العملاء (SalePayment) بالفترة"""
-        payments = SalePayment.objects.filter(
+        qs = SalePayment.objects.filter(
             tenant=self.tenant,
             payment_date__gte=self.start_date,
             payment_date__lte=self.end_date,
             is_reversed=False,
         ).select_related('invoice', 'invoice__customer').order_by('-payment_date')
+        if customer_id:
+            qs = qs.filter(invoice__customer_id=customer_id)
+        payments = qs
 
         data = []
         for p in payments:
