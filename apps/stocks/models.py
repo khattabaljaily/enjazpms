@@ -150,6 +150,10 @@ class StockQuantity(TenantMixin):
     quantity = models.DecimalField(
         'الكمية المتاحة', max_digits=14, decimal_places=4, default=0
     )
+    opening_quantity = models.DecimalField(
+        'الكمية الافتتاحية', max_digits=14, decimal_places=4, default=0,
+        help_text='الكمية الافتتاحية المُدخلة — لا تتأثر بحركات البيع والشراء'
+    )
     reserved_quantity = models.DecimalField(
         'الكمية المحجوزة', max_digits=14, decimal_places=4, default=0,
         help_text='كميات مخصصة لأوامر بيع لم تُسلَّم بعد'

@@ -398,6 +398,8 @@ def opening_balance_table_api(request):
             'barcode': sq.item.barcode or '—',
             'current_qty': fmt_qty(sq.quantity),
             'current_qty_raw': str(sq.quantity or Decimal('0')),
+            'opening_qty': fmt_qty(sq.opening_quantity),
+            'opening_qty_raw': str(sq.opening_quantity or Decimal('0')),
             'reserved_qty': fmt_qty(sq.reserved_quantity),
             'available_qty': fmt_qty(sq.available_quantity),
             'units': units,
@@ -465,19 +467,30 @@ def opening_balance_save_api(request):
         except StockQuantity.DoesNotExist:
             continue
 
-        old_qty = sq.quantity or Decimal('0')
         if sq.item.item_type == 'service':
             continue
 
-        if old_qty == new_qty:
+        old_opening = sq.opening_quantity or Decimal('0')
+
+        if old_opening == new_qty:
             continue
 
-        delta = new_qty - old_qty
-        sq.quantity = new_qty
-        sq.save(update_fields=['quantity'])
+        delta = new_qty - old_opening
+        is_first_entry = old_opening == Decimal('0')
 
-        # سجل حركة مخزون لتتبع تعديل الرصيد الافتتاحي/التسوية
-        movement_type = 'opening_in' if old_qty == Decimal('0') and delta > 0 else ('adjustment_in' if delta > 0 else 'adjustment_out')
+        # تطبيق الفرق على الكمية الحالية وتحديث الكمية الافتتاحية
+        sq.quantity = (sq.quantity or Decimal('0')) + delta
+        sq.opening_quantity = new_qty
+        sq.save(update_fields=['quantity', 'opening_quantity'])
+
+        # سجل الحركة
+        if is_first_entry:
+            movement_type = 'opening_in'
+            notes = 'إدخال الكمية الافتتاحية'
+        else:
+            movement_type = 'opening_correction'
+            notes = f'تصحيح الكمية الافتتاحية: {old_opening:g} ← {new_qty:g}'
+
         direction = 'in' if delta > 0 else 'out'
         StockMovement.objects.create(
             tenant=tenant,
@@ -491,7 +504,7 @@ def opening_balance_save_api(request):
             reference_type='opening_balance',
             reference_id=sq.id,
             balance_after=sq.quantity,
-            notes='تحديث من شاشة الكميات الافتتاحية',
+            notes=notes,
         )
 
         updated_count += 1

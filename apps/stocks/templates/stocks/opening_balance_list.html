@@ -85,9 +85,9 @@
                     <th>المنتج</th>
                     <th>SKU</th>
                     <th>الباركود</th>
-                    <th>الكمية الحالية</th>
-                    <th>الكمية المتاحة</th>
-                    <th>الكمية الافتتاحية الجديدة</th>
+                    <th>الافتتاحية</th>
+                    <th>الحالية</th>
+                    <th>تصحيح الافتتاحية</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -135,14 +135,14 @@
     }
 
     function buildInput(row) {
-        const baseQty = parseFloat(row.current_qty_raw || row.current_qty) || 0;
+        const openingQty = parseFloat(row.opening_qty_raw || row.opening_qty) || 0;
         const changed = changedMap.get(String(row.item_id));
-        const value   = changed !== undefined ? changed : baseQty;
+        const value   = changed !== undefined ? changed : openingQty;
         const unit    = baseUnitName(row);
         return `<div class="opening-input-wrap">
             <input type="number" class="cx-input cx-input--sm opening-qty-input"
                 data-item-id="${row.item_id}"
-                data-original="${baseQty}"
+                data-original="${openingQty}"
                 value="${value || ''}" min="0" step="0.0001">
             <span class="inv-unit-badge opening-input-unit-badge">${unit}</span>
         </div>`;
@@ -154,8 +154,9 @@
         if (!$cards.length) return;
         if (!rows || !rows.length) { $cards.html('<div class="cx-empty-state">لا توجد منتجات للعرض</div>'); return; }
         $cards.html(rows.map(r => {
-            const baseQty   = parseFloat(r.current_qty_raw || r.current_qty) || 0;
-            const isChanged = changedMap.has(String(r.item_id));
+            const openingQty = parseFloat(r.opening_qty_raw || r.opening_qty) || 0;
+            const currentQty = parseFloat(r.current_qty_raw || r.current_qty) || 0;
+            const isChanged  = changedMap.has(String(r.item_id));
             return `<article class="cx-opening-card">
                 <div class="cx-opening-card-head">
                     <div class="cx-opening-card-title-wrap">
@@ -169,16 +170,16 @@
                 </div>
                 <div class="cx-opening-card-meta">
                     <div>
-                        <span class="cx-opening-card-meta-label">الكمية الحالية</span>
-                        <strong class="cx-opening-card-meta-value">${fmtQty(baseQty, r)}</strong>
+                        <span class="cx-opening-card-meta-label">الافتتاحية</span>
+                        <strong class="cx-opening-card-meta-value">${fmtQty(openingQty, r)}</strong>
                     </div>
                     <div>
-                        <span class="cx-opening-card-meta-label">المتاحة</span>
-                        <strong class="cx-opening-card-meta-value">${fmtQty(parseFloat(r.available_qty) || 0, r)}</strong>
+                        <span class="cx-opening-card-meta-label">الحالية</span>
+                        <strong class="cx-opening-card-meta-value">${fmtQty(currentQty, r)}</strong>
                     </div>
                 </div>
                 <div class="cx-opening-card-input">
-                    <label class="cx-opening-card-input-label">الكمية الافتتاحية الجديدة</label>
+                    <label class="cx-opening-card-input-label">تصحيح الكمية الافتتاحية</label>
                     ${buildInput(r)}
                 </div>
             </article>`;
@@ -198,10 +199,10 @@
             { data: 'item_name' },
             { data: 'sku',     render: v => `<code class="cxr-code">${v || '—'}</code>` },
             { data: 'barcode', render: v => `<code class="cxr-code">${v || '—'}</code>` },
-            { data: 'current_qty',  className: 'text-end',
+            { data: 'opening_qty', className: 'text-end',
+              render: (v, _, row) => fmtQty(parseFloat(row.opening_qty_raw || v) || 0, row) },
+            { data: 'current_qty', className: 'text-end',
               render: (v, _, row) => fmtQty(parseFloat(row.current_qty_raw || v) || 0, row) },
-            { data: 'available_qty', className: 'text-end',
-              render: (v, _, row) => fmtQty(parseFloat(v) || 0, row) },
             { data: null, orderable: false, searchable: false,
               render: (_, __, row) => buildInput(row) }
         ],
