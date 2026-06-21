@@ -762,15 +762,23 @@
 {% endif %}
 <script>
 (function () {
+    const tz = '{{ tenant.timezone|default:"UTC" }}';
     const days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
     const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
     const dateEl = document.getElementById('dbDate');
     const timeEl = document.getElementById('dbTime');
-    function pad(n) { return String(n).padStart(2, '0'); }
     function tick() {
         const now = new Date();
-        dateEl.textContent = days[now.getDay()] + '، ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
-        timeEl.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+        const parts = new Intl.DateTimeFormat('en', {
+            timeZone: tz,
+            weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+        }).formatToParts(now);
+        const get = t => parts.find(p => p.type === t)?.value ?? '';
+        const dayIndex = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(get('weekday'));
+        const month = parseInt(get('month'), 10) - 1;
+        dateEl.textContent = days[dayIndex] + '، ' + parseInt(get('day'), 10) + ' ' + months[month] + ' ' + get('year');
+        timeEl.textContent = get('hour') + ':' + get('minute') + ':' + get('second');
     }
     tick();
     setInterval(tick, 1000);
