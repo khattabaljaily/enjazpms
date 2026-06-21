@@ -38,31 +38,12 @@
     }
   },
   {
-    "name": "Fashion & Apparel",
-    "name_ar": "أزياء وملابس",
-    "slug": "fashion-apparel",
-    "icon": "fa-shirt",
-    "description": "ملابس، أحذية، اكسسوارات — منتجات متنوعة بكميات صحيحة",
-    "display_order": 3,
-    "is_active": true,
-    "features": {
-      "has_expiry_dates": false,
-      "has_batch_numbers": false,
-      "has_serial_numbers": false,
-      "has_weight_items": false,
-      "has_variants": false,
-      "has_services": false,
-      "has_manufacturing": false,
-      "has_work_orders": false
-    }
-  },
-  {
     "name": "Restaurant & Cafe",
     "name_ar": "مطاعم ومقاهي",
     "slug": "restaurant-cafe",
     "icon": "fa-utensils",
     "description": "مطاعم، كافيهات، مخابز — إنتاج من مواد خام ووصفات وبيع سريع",
-    "display_order": 4,
+    "display_order": 3,
     "is_active": true,
     "features": {
       "has_expiry_dates": true,
@@ -73,25 +54,6 @@
       "has_services": true,
       "has_manufacturing": true,
       "has_work_orders": false
-    }
-  },
-  {
-    "name": "Services & Maintenance",
-    "name_ar": "خدمات وصيانة",
-    "slug": "services-maintenance",
-    "icon": "fa-screwdriver-wrench",
-    "description": "ورش، عيادات، صالونات، مغاسل — خدمات مع أو بدون منتجات مصاحبة",
-    "display_order": 5,
-    "is_active": true,
-    "features": {
-      "has_expiry_dates": false,
-      "has_batch_numbers": false,
-      "has_serial_numbers": true,
-      "has_weight_items": false,
-      "has_variants": false,
-      "has_services": true,
-      "has_manufacturing": false,
-      "has_work_orders": true
     }
   }
 ]
