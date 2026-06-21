@@ -7,7 +7,9 @@ from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Subquery, OuterRef
+from django.db.models.functions import Coalesce
+from django.db.models import DecimalField as DjDecimalField
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -107,16 +109,15 @@ def order_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status_filter = request.GET.get('status', '').strip()
     try:
-        # Query only fields used by the table to avoid breakage if pending migrations exist.
-        qs = PurchaseInvoice.objects.filter(tenant=tenant).values(
-            'id',
-            'invoice_number',
-            'invoice_date',
-            'status',
-            'grand_total',
-            'supplier__name',
-            'stock__name',
+        _returned_sq = (
+            PurchaseReturn.objects
+            .filter(original_invoice=OuterRef('pk'), status='confirmed')
+            .values('original_invoice')
+            .annotate(t=Sum('total_returned'))
+            .values('t')
         )
+
+        qs = PurchaseInvoice.objects.filter(tenant=tenant).select_related('supplier', 'stock')
         total = qs.count()
 
         if status_filter:
@@ -130,6 +131,12 @@ def order_table_api(request):
             )
 
         filtered = qs.count()
+        qs = qs.annotate(
+            returned_amt=Coalesce(
+                Subquery(_returned_sq, output_field=DjDecimalField(max_digits=14, decimal_places=2)),
+                Decimal('0')
+            )
+        )
         rows = list(qs.order_by('-invoice_date', '-id')[start:start + length])
 
         status_labels = {
@@ -142,16 +149,19 @@ def order_table_api(request):
 
         data = []
         for inv in rows:
-            status_label, status_color = status_labels.get(inv.get('status'), ('—', 'secondary'))
-            inv_date = inv.get('invoice_date')
+            status_label, status_color = status_labels.get(inv.status, ('—', 'secondary'))
+            returned_amt = inv.returned_amt or Decimal('0')
+            net_total = inv.grand_total - returned_amt
             data.append({
-                'id': inv.get('id'),
-                'invoice_number': inv.get('invoice_number') or '—',
-                'invoice_date': inv_date.strftime('%Y-%m-%d') if inv_date else '—',
-                'supplier': inv.get('supplier__name') or '—',
-                'stock': inv.get('stock__name') or '—',
-                'grand_total': str(inv.get('grand_total') or 0),
-                'status': inv.get('status') or 'draft',
+                'id': inv.id,
+                'invoice_number': inv.invoice_number or '—',
+                'invoice_date': inv.invoice_date.strftime('%Y-%m-%d') if inv.invoice_date else '—',
+                'supplier': inv.supplier.name if inv.supplier else '—',
+                'stock': inv.stock.name if inv.stock else '—',
+                'grand_total': str(inv.grand_total or 0),
+                'returned_amount': str(returned_amt),
+                'net_total': str(net_total),
+                'status': inv.status or 'draft',
                 'status_label': status_label,
                 'status_color': status_color,
             })
@@ -385,12 +395,20 @@ def order_detail(request, pk):
         (l.returnable_quantity or Decimal('0')) > 0 for l in lines
     )
 
+    returns = invoice.purchase_returns.filter(status='confirmed').order_by('return_date', 'id')
+
     from apps.core.models import Settings as TenantSettings
     settings_obj, _ = TenantSettings.objects.get_or_create(tenant=tenant)
+
+    returned_amount = sum(r.total_returned for r in returns)
+    net_total = invoice.grand_total - returned_amount
 
     return render(request, 'purchases/order_detail.html', {
         'invoice': invoice,
         'lines': lines,
+        'returns': returns,
+        'returned_amount': returned_amount,
+        'net_total': net_total,
         'can_confirm': invoice.status == 'draft',
         'can_cancel': invoice.status == 'confirmed',
         'can_edit': invoice.status in ('draft', 'confirmed'),

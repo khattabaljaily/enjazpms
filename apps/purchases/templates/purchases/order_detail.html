@@ -142,11 +142,12 @@
                         <th class="text-end">سعر الشراء</th>
                         <th class="text-end">الضريبة</th>
                         <th class="text-end">الإجمالي</th>
+                        {% if invoice.status != 'draft' %}<th class="text-center">مرتجع</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for line in lines %}
-                    <tr>
+                    <tr{% if line.returned_quantity >= line.quantity %} class="doc-row-faded"{% endif %}>
                         <td style="color:var(--text-tertiary);font-size:.75rem;font-weight:600">{{ forloop.counter }}</td>
                         <td>
                             <div class="doc-line-name">{{ line.item.name }}</div>
@@ -157,14 +158,53 @@
                         <td class="text-end">{{ line.unit_cost|money }}</td>
                         <td class="text-end text-muted">{{ line.tax_amount|money }}</td>
                         <td class="text-end doc-line-total">{{ line.line_total|money }}</td>
+                        {% if invoice.status != 'draft' %}
+                        <td class="text-center">
+                            {% if line.returned_quantity > 0 %}
+                            <span class="doc-ret-badge">{{ line.returned_quantity|floatformat:"-2" }}</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        {% endif %}
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center text-muted py-4">لا توجد بنود</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted py-4">لا توجد بنود</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+
+    {% if returns %}
+    <div class="doc-panel">
+        <div class="doc-panel-head">
+            <span class="doc-panel-title"><i class="fas fa-rotate-left"></i> المرتجعات</span>
+            <span class="doc-panel-badge">{{ returns|length }}</span>
+        </div>
+        <table class="doc-mini-table">
+            <thead>
+                <tr>
+                    <th>رقم المرتجع</th>
+                    <th>التاريخ</th>
+                    <th class="text-end">الإجمالي</th>
+                    <th>طريقة الاسترداد</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in returns %}
+                <tr>
+                    <td class="fw-bold">{{ r.return_number }}</td>
+                    <td>{{ r.return_date }}</td>
+                    <td class="text-end fw-bold" style="color:#d97706">{{ r.total_returned|money }}</td>
+                    <td>{{ r.get_refund_method_display }}</td>
+                    <td><a href="{% url 'purchases:return_detail' r.pk %}" class="cx-btn-icon"><i class="fas fa-eye"></i></a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
 </div><!-- col-lg-8 -->
 
 <!-- ── RIGHT COLUMN ── -->
@@ -184,6 +224,16 @@
                 <span class="doc-grand-lbl">الإجمالي النهائي</span>
                 <span class="doc-grand-val">{{ invoice.grand_total|money }}</span>
             </div>
+            {% if returned_amount %}
+            <div class="doc-trow">
+                <span class="doc-trow-lbl">المرتجع</span>
+                <span class="doc-trow-val doc-trow-val--red">- {{ returned_amount|money }}</span>
+            </div>
+            <div class="doc-grand">
+                <span class="doc-grand-lbl">صافي بعد الإرجاع</span>
+                <span class="doc-grand-val" style="color:#11998e">{{ net_total|money }}</span>
+            </div>
+            {% endif %}
             <div class="doc-trow">
                 <span class="doc-trow-lbl">طريقة الدفع</span>
                 <span class="doc-trow-val">{{ invoice.get_payment_method_display }}</span>

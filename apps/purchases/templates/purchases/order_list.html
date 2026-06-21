@@ -101,7 +101,7 @@
         }
 
         const cardsHtml = rows.map(function (r) {
-            const total = EnjazIMS.formatMoney(r.grand_total || 0);
+            const total = EnjazIMS.formatMoney(r.net_total || r.grand_total || 0);
             const statusClass = statusMap[r.status] || r.status_color || 'secondary';
             const statusLabel = r.status_label || '—';
             const confirmBtn = r.status === 'draft' && hasPerm('change_purchases')
@@ -174,9 +174,16 @@
             { data: 'supplier', defaultContent: '—' },
             { data: 'stock', defaultContent: '—' },
             {
-                data: 'grand_total',
+                data: 'net_total',
                 className: 'text-end',
-                render: function(v) { return EnjazIMS.formatMoney(v || 0); }
+                render: function(v, t, row) {
+                    const net = EnjazIMS.formatMoney(v || 0);
+                    if (row.returned_amount && parseFloat(row.returned_amount) > 0) {
+                        const orig = EnjazIMS.formatMoney(row.grand_total || 0);
+                        return `<span style="text-decoration:line-through;color:var(--text-tertiary);font-size:.8rem">${orig}</span><br><strong>${net}</strong>`;
+                    }
+                    return net;
+                }
             },
             {
                 data: 'status',
