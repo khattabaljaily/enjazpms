@@ -420,10 +420,36 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
 
     if pm == 'cash':
         _apply_payment(tenant, invoice, 'cash', total, invoice.invoice_date)
+        if invoice.customer:
+            _apply_customer_ledger(
+                tenant=tenant, customer=invoice.customer, amount=total,
+                entry_type='invoice', reference_type='sale_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f"فاتورة {invoice.invoice_number}",
+            )
+            _apply_customer_ledger(
+                tenant=tenant, customer=invoice.customer, amount=-total,
+                entry_type='payment', reference_type='sale_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f"سداد نقدي — {invoice.invoice_number}",
+            )
 
     elif pm == 'bank':
         _apply_payment(tenant, invoice, 'bank', total, invoice.invoice_date,
                        reference=invoice.bank_reference)
+        if invoice.customer:
+            _apply_customer_ledger(
+                tenant=tenant, customer=invoice.customer, amount=total,
+                entry_type='invoice', reference_type='sale_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f"فاتورة {invoice.invoice_number}",
+            )
+            _apply_customer_ledger(
+                tenant=tenant, customer=invoice.customer, amount=-total,
+                entry_type='payment', reference_type='sale_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f"سداد بنكي — {invoice.invoice_number}",
+            )
 
     elif pm == 'credit':
         _apply_customer_ledger(
@@ -450,17 +476,27 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
         if bank_amt > 0:
             _apply_payment(tenant, invoice, 'bank', bank_amt, invoice.invoice_date,
                            reference=invoice.bank_reference)
-        if credit_amt > Decimal('0.005'):
+        if invoice.customer:
             _apply_customer_ledger(
-                tenant=tenant,
-                customer=invoice.customer,
-                amount=credit_amt,
-                entry_type='invoice',
-                reference_type='sale_invoice',
-                reference_id=invoice.id,
-                date=invoice.invoice_date,
-                notes=f"فاتورة {invoice.invoice_number} — الجزء الآجل",
+                tenant=tenant, customer=invoice.customer, amount=total,
+                entry_type='invoice', reference_type='sale_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f"فاتورة {invoice.invoice_number}",
             )
+            if cash_amt > 0:
+                _apply_customer_ledger(
+                    tenant=tenant, customer=invoice.customer, amount=-cash_amt,
+                    entry_type='payment', reference_type='sale_invoice',
+                    reference_id=invoice.id, date=invoice.invoice_date,
+                    notes=f"سداد نقدي — {invoice.invoice_number}",
+                )
+            if bank_amt > 0:
+                _apply_customer_ledger(
+                    tenant=tenant, customer=invoice.customer, amount=-bank_amt,
+                    entry_type='payment', reference_type='sale_invoice',
+                    reference_id=invoice.id, date=invoice.invoice_date,
+                    notes=f"سداد بنكي — {invoice.invoice_number}",
+                )
 
     # ── 3. تحديث الحالة ─────────────────────────────────
     invoice.status = 'pending_delivery' if deferred else 'confirmed'
