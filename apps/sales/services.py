@@ -391,6 +391,33 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
     if pm == 'credit' and not invoice.customer:
         raise ValueError('الفاتورة الآجلة تتطلب اختيار عميل قبل التأكيد.')
 
+    # ── فحص الحد الائتماني ──────────────────────────────
+    if invoice.customer and pm in ('credit', 'mixed'):
+        customer = invoice.customer
+        credit_limit = customer.credit_limit or Decimal('0')
+        if credit_limit > 0:
+            from django.db.models import Sum as _CLSum
+            current_balance = (
+                CustomerLedger.objects
+                .filter(tenant=tenant, customer=customer)
+                .aggregate(s=_CLSum('amount'))['s'] or Decimal('0')
+            )
+            if pm == 'credit':
+                credit_amount = total
+            else:
+                cash_amt = invoice.cash_amount or Decimal('0')
+                bank_amt = invoice.bank_amount or Decimal('0')
+                credit_amount = max(total - cash_amt - bank_amt, Decimal('0'))
+
+            if credit_amount > 0 and (current_balance + credit_amount) > credit_limit:
+                available = credit_limit - current_balance
+                raise ValueError(
+                    f'تجاوز الحد الائتماني للعميل «{customer.name}». '
+                    f'الحد: {credit_limit:,.2f} | '
+                    f'المديونية الحالية: {current_balance:,.2f} | '
+                    f'المتاح: {max(available, Decimal("0")):,.2f}'
+                )
+
     if pm == 'cash':
         _apply_payment(tenant, invoice, 'cash', total, invoice.invoice_date)
 
