@@ -119,7 +119,6 @@
         "view_sales_by_customer_report": "تقرير المبيعات حسب العميل",
         "view_sales_by_item_report": "تقرير المبيعات حسب المنتج",
         "view_sales_by_date_report": "تقرير المبيعات حسب التاريخ",
-        "view_sales_by_user_report": "تقرير المبيعات حسب المستخدم",
         "view_sales_profit_margin_report": "تقرير هامش الربح (حساس)",
         "view_sales_by_payment_method_report": "تقرير المبيعات حسب طريقة الدفع"
     },
@@ -128,7 +127,6 @@
         "view_purchases_by_supplier_report": "تقرير المشتريات حسب المورد",
         "view_purchases_by_item_report": "تقرير المشتريات حسب المنتج",
         "view_purchases_by_date_report": "تقرير المشتريات حسب التاريخ",
-        "view_purchases_by_user_report": "تقرير المشتريات حسب المستخدم",
         "view_purchases_price_history_report": "تقرير تاريخ أسعار الشراء"
     },
     "تقارير المخزن": {
