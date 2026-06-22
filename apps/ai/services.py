@@ -186,6 +186,21 @@ def collect_business_context(tenant) -> dict:
     except Exception:
         pass
 
+    # ── Hard currency info ────────────────────────────────────
+    hc_info = {}
+    if getattr(tenant, 'hard_currency_mode', False):
+        try:
+            from apps.treasury.models import Treasury
+            hc_treasury = Treasury.objects.filter(tenant=tenant, is_hard_currency=True).first()
+            hc_info = {
+                'enabled': True,
+                'currency': tenant.hard_currency or 'USD',
+                'exchange_rate': float(tenant.exchange_rate or 1),
+                'hc_balance': float(hc_treasury.current_balance) if hc_treasury else 0,
+            }
+        except Exception:
+            pass
+
     return {
         'period': f"{month_ago} → {now}",
         'currency': tenant.currency or 'SDG',
@@ -199,6 +214,7 @@ def collect_business_context(tenant) -> dict:
         'low_stock_items': low_stock,
         'top_debtors': top_debtors,
         'employee_data': employee_data,
+        'hc_info': hc_info,
     }
 
 
@@ -257,6 +273,14 @@ def _build_context_message(context: dict) -> str:
             lines.append(f"  • رواتب مدفوعة هذا الشهر: {emp['monthly_salaries']:,.0f} {cur_label}")
         if emp.get('pending_advances'):
             lines.append(f"  • سلف معلقة: {emp['pending_advances']:,.0f} {cur_label}")
+
+    hc = ctx.get('hc_info', {})
+    if hc.get('enabled'):
+        hc_cur = str(hc.get('currency', '')).strip().upper()
+        hc_label = CURRENCY_AR.get(hc_cur, hc_cur)
+        lines.append(f"\n💱 وضع العملة الصعبة: مفعّل — {hc_label}")
+        lines.append(f"  • سعر الصرف الحالي: 1 {hc_label} = {hc.get('exchange_rate', 1):,.2f} {cur_label}")
+        lines.append(f"  • رصيد خزينة {hc_label}: {hc.get('hc_balance', 0):,.2f} {hc_label}")
 
     return "\n".join(lines)
 

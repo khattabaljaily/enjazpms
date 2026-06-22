@@ -357,7 +357,44 @@ class Step3SettingsForm(forms.Form):
             'class': 'form-check-input'
         })
     )
-    
+
+    hard_currency_mode = forms.BooleanField(
+        label='تفعيل وضع العملة الصعبة',
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+
+    hard_currency = forms.ChoiceField(
+        label='العملة الصعبة',
+        choices=[
+            ('USD', 'دولار أمريكي — USD'),
+            ('CNY', 'يوان صيني — CNY'),
+            ('AED', 'درهم إماراتي — AED'),
+            ('SAR', 'ريال سعودي — SAR'),
+            ('EGP', 'جنيه مصري — EGP'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+
+    exchange_rate = forms.DecimalField(
+        label='سعر الصرف الحالي',
+        min_value=0.0001,
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'مثال: 5500'
+        }),
+        help_text='كم وحدة من عملتك المحلية تعادل وحدة واحدة من العملة الصعبة؟'
+    )
+
     def clean(self):
         cleaned_data = super().clean()
         version_type = cleaned_data.get('version_type')
@@ -373,7 +410,11 @@ class Step3SettingsForm(forms.Form):
         else:
             # للنسخة الفردية، اجعل num_stocks = 1
             cleaned_data['num_stocks'] = 1
-        
+
+        if cleaned_data.get('hard_currency_mode'):
+            if not cleaned_data.get('exchange_rate'):
+                self.add_error('exchange_rate', 'يرجى إدخال سعر الصرف الحالي')
+
         return cleaned_data
 
 

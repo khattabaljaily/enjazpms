@@ -104,3 +104,57 @@ def post_treasury_disbursement(tenant, amount, date, reference_type='', referenc
         user=user,
         treasury=treasury,
     )
+
+
+@transaction.atomic
+def post_treasury_transfer(
+    tenant,
+    from_treasury,
+    to_treasury,
+    from_amount,
+    to_amount,
+    exchange_rate,
+    transfer_date,
+    notes='',
+    user=None,
+):
+    """يُنشئ تحويلاً بين خزينتين: خصم من المصدر وإيداع في الوجهة."""
+    from .models import TreasuryTransfer
+
+    from_amount = Decimal(str(from_amount))
+    to_amount = Decimal(str(to_amount))
+    exchange_rate = Decimal(str(exchange_rate))
+
+    from_currency = from_treasury.currency or tenant.currency
+    to_currency = to_treasury.currency or tenant.currency
+    desc_out = f'تحويل إلى {to_treasury.name} ({to_amount} {to_currency}) — سعر الصرف: {exchange_rate}'
+    desc_in = f'تحويل من {from_treasury.name} ({from_amount} {from_currency}) — سعر الصرف: {exchange_rate}'
+
+    mv_out = post_treasury_movement(
+        tenant=tenant, movement_type='disbursement',
+        amount=from_amount, date=transfer_date,
+        description=desc_out, reference_type='transfer',
+        user=user, treasury=from_treasury,
+    )
+    mv_in = post_treasury_movement(
+        tenant=tenant, movement_type='receipt',
+        amount=to_amount, date=transfer_date,
+        description=desc_in, reference_type='transfer',
+        user=user, treasury=to_treasury,
+    )
+
+    transfer = TreasuryTransfer.objects.create(
+        tenant=tenant,
+        from_treasury=from_treasury,
+        to_treasury=to_treasury,
+        from_amount=from_amount,
+        to_amount=to_amount,
+        exchange_rate=exchange_rate,
+        transfer_date=transfer_date,
+        notes=notes,
+        from_movement=mv_out,
+        to_movement=mv_in,
+        created_by=user,
+        updated_by=user,
+    )
+    return transfer

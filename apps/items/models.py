@@ -179,6 +179,20 @@ class Item(TenantMixin):
         'الحد الأدنى للسعر', max_digits=14, decimal_places=2, default=0,
         help_text='أقل سعر يُسمح بالبيع به'
     )
+
+    # ------ أسعار العملة الصعبة (تُستخدم فقط عند تفعيل وضع العملة الصعبة) ------
+    cost_price_hc = models.DecimalField(
+        'سعر التكلفة بالعملة الصعبة', max_digits=14, decimal_places=4,
+        null=True, blank=True
+    )
+    selling_price_hc = models.DecimalField(
+        'سعر البيع بالعملة الصعبة', max_digits=14, decimal_places=4,
+        null=True, blank=True
+    )
+    min_selling_price_hc = models.DecimalField(
+        'الحد الأدنى بالعملة الصعبة', max_digits=14, decimal_places=4,
+        null=True, blank=True
+    )
     tax_rate = models.DecimalField(
         'نسبة الضريبة %', max_digits=5, decimal_places=2, default=0
     )

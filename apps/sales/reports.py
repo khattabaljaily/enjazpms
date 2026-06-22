@@ -534,7 +534,7 @@ class SalesReportGenerator:
             for line in lines:
                 qty = line.quantity or Decimal('0')
                 price = line.unit_price or Decimal('0')
-                cost = line.item.cost_price or Decimal('0')
+                cost = line.cost_price_snapshot if line.cost_price_snapshot else (line.item.cost_price or Decimal('0'))
                 revenue = qty * price
                 cogs = qty * cost
                 profit = revenue - cogs
@@ -580,10 +580,10 @@ class SalesReportGenerator:
             iid = line.item_id
             agg[iid]['item_name'] = line.item.name
             agg[iid]['unit'] = line.item.base_unit_name
-            agg[iid]['cost_price'] = line.item.cost_price or Decimal('0')
             qty = line.quantity or Decimal('0')
             price = line.unit_price or Decimal('0')
-            cost = line.item.cost_price or Decimal('0')
+            cost = line.cost_price_snapshot if line.cost_price_snapshot else (line.item.cost_price or Decimal('0'))
+            agg[iid]['cost_price'] = cost
             agg[iid]['total_qty'] += qty
             agg[iid]['total_revenue'] += qty * price
             agg[iid]['total_cogs'] += qty * cost

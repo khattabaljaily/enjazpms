@@ -90,7 +90,7 @@
                 </label>
             </div>
         </div>
-        
+
         <div class="mb-3 field-span-2">
             {{ form.tax_value.label_tag }}
             {{ form.tax_value }}
@@ -98,6 +98,42 @@
             <div class="text-danger small js-field-errors" data-field="tax_value">{{ form.tax_value.errors }}</div>
             {% endif %}
             <small class="text-muted">يمكنك تغيير هذه القيمة لاحقاً من الإعدادات</small>
+        </div>
+
+        <!-- Hard Currency Mode -->
+        <div class="mb-3 field-span-2">
+            <hr>
+            <div class="form-check mb-2">
+                {{ form.hard_currency_mode }}
+                <label class="form-check-label fw-semibold" for="{{ form.hard_currency_mode.id_for_label }}">
+                    وضع العملة الصعبة
+                </label>
+            </div>
+            <small class="text-muted d-block mb-2">
+                أسعار منتجاتك مرتبطة بعملة صعبة (دولار/يورو...)؟ فعّل هذا الوضع ليتولى النظام تحديث جميع أسعارك تلقائياً عند تغيير سعر الصرف.
+            </small>
+        </div>
+
+        <div class="js-hc-fields field-span-2" style="display:none;">
+            <div class="auth-form-grid">
+                <div class="mb-3">
+                    {{ form.hard_currency.label_tag }}
+                    {{ form.hard_currency }}
+                    {% if form.hard_currency.errors %}
+                    <div class="text-danger small">{{ form.hard_currency.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    {{ form.exchange_rate.label_tag }}
+                    {{ form.exchange_rate }}
+                    {% if form.exchange_rate.help_text %}
+                    <small class="text-muted">{{ form.exchange_rate.help_text }}</small>
+                    {% endif %}
+                    {% if form.exchange_rate.errors %}
+                    <div class="text-danger small">{{ form.exchange_rate.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
     
@@ -139,6 +175,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     toggleNumStocksField();
     versionTypeField.addEventListener('change', toggleNumStocksField);
+
+    // ── Hard Currency Mode toggle ─────────────────────────────
+    const hcCheckbox = document.querySelector('#{{ form.hard_currency_mode.id_for_label }}');
+    const hcFields   = document.querySelector('.js-hc-fields');
+
+    function toggleHcFields() {
+        if (hcCheckbox.checked) {
+            hcFields.style.display = 'block';
+            hcFields.querySelector('select[name="hard_currency"]').required = true;
+            hcFields.querySelector('input[name="exchange_rate"]').required = true;
+        } else {
+            hcFields.style.display = 'none';
+            hcFields.querySelector('select[name="hard_currency"]').required = false;
+            hcFields.querySelector('input[name="exchange_rate"]').required = false;
+        }
+    }
+    if (hcCheckbox) {
+        toggleHcFields();
+        hcCheckbox.addEventListener('change', toggleHcFields);
+    }
 
     // ── Auto-select currency ──────────────────────────────────
     const TZ_CURRENCY = {{ timezone_currency_map_json|safe }};

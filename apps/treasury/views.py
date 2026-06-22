@@ -1,9 +1,14 @@
+import json
+from decimal import Decimal, InvalidOperation
+
 from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone as dj_tz
+from django.views.decorators.http import require_POST
 
 from .forms import TreasuryForm
 from .models import Treasury, TreasuryMovement
@@ -12,6 +17,9 @@ from .reports import REFERENCE_TYPE_AR
 
 def _ensure_tenant(request):
     return getattr(request, 'tenant', None)
+
+
+from apps.core.utils import CURRENCY_SYMBOLS as _CURRENCY_SYMBOLS, currency_symbol as _currency_symbol
 
 
 def _serialize_form_errors(form):
@@ -30,8 +38,27 @@ def treasury_list(request):
     active = qs.filter(is_active=True).count()
     default = qs.filter(is_default=True).count()
 
+    # Auto-create HC treasury if tenant has HC mode but treasury doesn't exist yet
+    if tenant.hard_currency_mode and tenant.hard_currency:
+        from apps.core.signals import _ensure_hc_treasury
+        _ensure_hc_treasury(tenant)
+
+    hc_treasury = Treasury.objects.for_tenant(tenant).filter(is_hard_currency=True).first()
+    other_treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True)
+
+    local_cur = tenant.currency or 'SDG'
+    hc_cur = tenant.hard_currency if tenant.hard_currency_mode else ''
+
     context = {
         'form': TreasuryForm(),
+        'hc_mode': tenant.hard_currency_mode,
+        'hc_currency': hc_cur,
+        'hc_currency_symbol': _currency_symbol(hc_cur),
+        'hc_treasury': hc_treasury,
+        'local_currency': local_cur,
+        'local_currency_symbol': _currency_symbol(local_cur),
+        'transfer_treasuries': list(other_treasuries.values('id', 'name', 'currency', 'is_hard_currency')),
+        'currency_symbols_json': {k: v for k, v in _CURRENCY_SYMBOLS.items()},
         'stats': {
             'total': total,
             'active': active,
@@ -56,6 +83,8 @@ def treasury_table_api(request):
     status = request.GET.get('status', '').strip()
 
     queryset = Treasury.objects.for_tenant(tenant)
+    if not tenant.hard_currency_mode:
+        queryset = queryset.filter(is_hard_currency=False)
     records_total = queryset.count()
 
     if status == 'active':
@@ -90,15 +119,18 @@ def treasury_table_api(request):
 
     queryset = queryset.order_by(order_field)[start:start + length]
 
+    local_currency = tenant.currency or 'SDG'
     data = [
         {
             'id': treasury.id,
             'name': treasury.name,
             'code': treasury.code or '—',
             'current_balance': str(treasury.current_balance),
+            'currency': treasury.currency or local_currency,
             'is_active': treasury.is_active,
             'is_default': treasury.is_default,
             'is_system_default': treasury.is_system_default,
+            'is_hard_currency': treasury.is_hard_currency,
         }
         for treasury in queryset
     ]
@@ -257,6 +289,9 @@ def treasury_delete_api(request, pk):
     if treasury.is_system_default:
         return JsonResponse({'success': False, 'message': 'لا يمكن حذف الخزينة الافتراضية النظامية.'}, status=400)
 
+    if treasury.is_hard_currency:
+        return JsonResponse({'success': False, 'message': 'لا يمكن حذف خزينة العملة الصعبة.'}, status=400)
+
     if treasury.is_default:
         return JsonResponse({'success': False, 'message': 'لا يمكن حذف الخزينة الافتراضية. عيّن خزينة أخرى كافتراضية أولاً.'}, status=400)
 
@@ -270,6 +305,73 @@ def treasury_delete_api(request, pk):
     treasury.delete()
     return JsonResponse({'success': True, 'message': 'تم حذف الخزينة بنجاح'})
 
+
+@login_required
+@require_permission('transfer_treasuries')
+@require_POST
+def treasury_transfer_api(request):
+    """تحويل بين خزينتين مع سعر صرف — يُنشئ خصماً وإيداعاً تلقائياً."""
+    from .services import post_treasury_transfer
+
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    try:
+        payload = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'بيانات غير صالحة'}, status=400)
+
+    # ── تحقق من الحقول ──
+    try:
+        from_id = int(payload['from_treasury'])
+        to_id = int(payload['to_treasury'])
+        from_amount = Decimal(str(payload['from_amount']).replace(',', '.'))
+        to_amount = Decimal(str(payload['to_amount']).replace(',', '.'))
+        exchange_rate = Decimal(str(payload['exchange_rate']).replace(',', '.'))
+        transfer_date = payload['transfer_date']
+        notes = str(payload.get('notes', '')).strip()
+    except (KeyError, ValueError, TypeError, InvalidOperation):
+        return JsonResponse({'success': False, 'message': 'يرجى تعبئة جميع الحقول بشكل صحيح'}, status=400)
+
+    if from_id == to_id:
+        return JsonResponse({'success': False, 'message': 'لا يمكن التحويل من الخزينة إلى نفسها'}, status=400)
+    if from_amount <= 0 or to_amount <= 0:
+        return JsonResponse({'success': False, 'message': 'يجب أن تكون المبالغ أكبر من صفر'}, status=400)
+
+    from_treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=from_id)
+    to_treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=to_id)
+
+    # ── قيد: التحويل يجب أن يشمل خزينة العملة الصعبة عندها ──
+    hc_treasuries = {from_treasury.is_hard_currency, to_treasury.is_hard_currency}
+    if True in hc_treasuries and exchange_rate <= 0:
+        return JsonResponse({'success': False, 'message': 'يجب إدخال سعر صرف صحيح عند التحويل مع خزينة العملة الصعبة'}, status=400)
+
+    try:
+        transfer = post_treasury_transfer(
+            tenant=tenant,
+            from_treasury=from_treasury,
+            to_treasury=to_treasury,
+            from_amount=from_amount,
+            to_amount=to_amount,
+            exchange_rate=exchange_rate,
+            transfer_date=transfer_date,
+            notes=notes,
+            user=request.user,
+        )
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e) or 'تعذر تنفيذ التحويل'}, status=400)
+
+    log_activity(
+        request, 'تحويل بين الخزائن',
+        f'من: {from_treasury.name} ({from_amount}) → إلى: {to_treasury.name} ({to_amount}) | سعر الصرف: {exchange_rate}',
+        'create',
+    )
+    return JsonResponse({
+        'success': True,
+        'message': f'تم التحويل بنجاح — {from_treasury.name} ← {to_treasury.name}',
+        'transfer_id': transfer.id,
+    })
 
 
 # ─────────────────────────────────────────────────────────────────

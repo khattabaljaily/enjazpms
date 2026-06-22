@@ -25,6 +25,7 @@ class TenantForm(forms.ModelForm):
             'subscription_expires', 'version_type', 'max_users',
             'max_stocks', 'max_branches', 'timezone', 'currency',
             'is_active', 'is_demo',
+            'hard_currency_mode', 'hard_currency', 'exchange_rate',
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم النشاط التجاري'}),
@@ -43,6 +44,15 @@ class TenantForm(forms.ModelForm):
             'currency': forms.HiddenInput(),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_demo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'hard_currency_mode': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'id_hard_currency_mode'}),
+            'hard_currency': forms.Select(attrs={'class': 'form-select'}, choices=[
+                ('USD', 'دولار أمريكي (USD)'),
+                ('CNY', 'يوان صيني (CNY)'),
+                ('AED', 'درهم إماراتي (AED)'),
+                ('SAR', 'ريال سعودي (SAR)'),
+                ('EGP', 'جنيه مصري (EGP)'),
+            ]),
+            'exchange_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0.0001', 'placeholder': 'مثال: 5500'}),
         }
 
     def __init__(self, *args, **kwargs):

@@ -1491,6 +1491,57 @@ def tenant_settings_update_api(request):
 @login_required
 @require_permission('change_tenant_settings')
 @require_POST
+def exchange_rate_update_api(request):
+    """API: تحديث سعر الصرف وإعادة حساب أسعار كل المنتجات تلقائياً."""
+    from apps.items.models import Item
+    from django.db import transaction as db_transaction
+
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط مرتبط'}, status=400)
+
+    if not tenant.hard_currency_mode:
+        return JsonResponse({'success': False, 'message': 'وضع العملة الصعبة غير مفعّل'}, status=400)
+
+    try:
+        payload = json.loads(request.body or '{}')
+        new_rate = Decimal(str(payload.get('exchange_rate', '')).replace(',', '.').strip())
+        if new_rate <= 0:
+            raise ValueError
+    except (InvalidOperation, ValueError, TypeError):
+        return JsonResponse({'success': False, 'message': 'سعر الصرف غير صالح'}, status=400)
+
+    with db_transaction.atomic():
+        tenant.exchange_rate = new_rate
+        tenant.exchange_rate_updated_at = dj_timezone.now()
+        tenant.save(update_fields=['exchange_rate', 'exchange_rate_updated_at', 'updated_at'])
+
+        items = Item.objects.for_tenant(tenant).filter(selling_price_hc__isnull=False)
+        updated = 0
+        bulk = []
+        for item in items:
+            if item.selling_price_hc:
+                item.selling_price = (item.selling_price_hc * new_rate).quantize(Decimal('0.01'))
+            if item.cost_price_hc:
+                item.cost_price = (item.cost_price_hc * new_rate).quantize(Decimal('0.01'))
+            if item.min_selling_price_hc:
+                item.min_selling_price = (item.min_selling_price_hc * new_rate).quantize(Decimal('0.01'))
+            bulk.append(item)
+            updated += 1
+        if bulk:
+            Item.objects.bulk_update(bulk, ['selling_price', 'cost_price', 'min_selling_price'])
+
+    return JsonResponse({
+        'success': True,
+        'message': f'تم تحديث سعر الصرف وإعادة تسعير {updated} منتج',
+        'updated_items': updated,
+        'new_rate': str(new_rate),
+    })
+
+
+@login_required
+@require_permission('change_tenant_settings')
+@require_POST
 def tenant_logo_upload_api(request):
     """رفع شعار النشاط التجاري — يحذف القديم ويحفظ بـ tenant_<id>.<ext>"""
     tenant = getattr(request, 'tenant', None)
@@ -1875,6 +1926,9 @@ def tenant_detail_api(request, pk):
             'admin_full_name': admin_user.get_full_name() if admin_user else '',
             'tax_enabled': settings_obj.tax_enabled if settings_obj else False,
             'tax_value': float(settings_obj.tax_value) if settings_obj else 0,
+            'hard_currency_mode': tenant.hard_currency_mode,
+            'hard_currency': tenant.hard_currency or 'USD',
+            'exchange_rate': float(tenant.exchange_rate) if tenant.exchange_rate else 1,
         }
     })
 

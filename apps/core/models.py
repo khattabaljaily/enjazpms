@@ -140,6 +140,16 @@ class Tenant(models.Model):
     timezone = models.CharField('المنطقة الزمنية', max_length=50, default=DEFAULT_TIMEZONE)
     language = models.CharField('اللغة', max_length=10, default='ar')
     currency = models.CharField('العملة', max_length=3, default='SDG')
+
+    # Hard Currency Mode
+    hard_currency_mode = models.BooleanField('وضع العملة الصعبة', default=False)
+    hard_currency = models.CharField('العملة الصعبة', max_length=3, default='USD', blank=True)
+    exchange_rate = models.DecimalField(
+        'سعر الصرف',
+        max_digits=12, decimal_places=2, default=1,
+        help_text='سعر العملة المحلية مقابل وحدة واحدة من العملة الصعبة'
+    )
+    exchange_rate_updated_at = models.DateTimeField('آخر تحديث للسعر', null=True, blank=True)
     
     # Meta
     created_at = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True)

@@ -256,7 +256,33 @@
                         </div>
                     </div>
 
-                    <!-- ⑤ بيانات مدير النشاط -->
+                    <!-- ⑤ وضع العملة الصعبة -->
+                    <div class="cx-form-group-label">
+                        <span class="cx-form-group-icon"><i class="fas fa-dollar-sign"></i></span> وضع العملة الصعبة
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="cx-toggle-card" for="id_hard_currency_mode">
+                                <div class="cx-toggle-info">
+                                    <span class="cx-toggle-title">{{ form.hard_currency_mode.label }}</span>
+                                    <span class="cx-toggle-desc">تفعيل تسعير المنتجات بعملة صعبة</span>
+                                </div>
+                                {{ form.hard_currency_mode }}
+                                <div class="cx-toggle-switch"></div>
+                            </label>
+                        </div>
+                        <div class="col-md-4 js-hc-fields" style="display:none;">
+                            <label class="cx-label" for="id_hard_currency">{{ form.hard_currency.label }}</label>
+                            {{ form.hard_currency }}
+                        </div>
+                        <div class="col-md-4 js-hc-fields" style="display:none;">
+                            <label class="cx-label" for="id_exchange_rate">{{ form.exchange_rate.label }}</label>
+                            {{ form.exchange_rate }}
+                            <small class="text-muted">كم وحدة محلية تعادل وحدة واحدة من العملة الصعبة</small>
+                        </div>
+                    </div>
+
+                    <!-- ⑥ بيانات مدير النشاط -->
                     <div id="adminUserSection">
                         <div class="cx-form-group-label">
                             <span class="cx-form-group-icon"><i class="fas fa-user-shield"></i></span>
@@ -778,12 +804,26 @@
     });
 
     /* ── Form helpers ── */
+    function toggleHcAdminFields(enabled) {
+        if (enabled) {
+            $('.js-hc-fields').show();
+        } else {
+            $('.js-hc-fields').hide();
+        }
+    }
+
+    $('#id_hard_currency_mode').on('change', function () {
+        toggleHcAdminFields(this.checked);
+    });
+
     function resetForm() {
         $form[0].reset();
         $idInput.val('');
         $('#id_is_active').prop('checked', true);
         $('#id_is_demo').prop('checked', false);
         $('#id_tax_enabled').prop('checked', false);
+        $('#id_hard_currency_mode').prop('checked', false);
+        toggleHcAdminFields(false);
         $('#admin_full_name, #admin_username, #admin_email, #admin_password, #admin_password2').val('');
         $('#admin_username').prop('readonly', false);
         $('#adminUserSectionNote').text('سيُنشأ حساب مدير تلقائياً');
@@ -838,6 +878,10 @@
                 $('#id_is_active').prop('checked', !!d.is_active);
                 $('#id_is_demo').prop('checked', !!d.is_demo);
                 $('#id_tax_enabled').prop('checked', !!d.tax_enabled);
+                $('#id_hard_currency_mode').prop('checked', !!d.hard_currency_mode);
+                $('#id_hard_currency').val(d.hard_currency || 'USD');
+                $('#id_exchange_rate').val(d.exchange_rate || '');
+                toggleHcAdminFields(!!d.hard_currency_mode);
                 $('#id_tax_value').val(d.tax_value || 0);
                 $('#admin_full_name').val(d.admin_full_name || '');
                 $('#admin_username').val(d.admin_username || '').prop('readonly', true);

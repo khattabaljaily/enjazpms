@@ -5,6 +5,32 @@ from django.dispatch import receiver
 from apps.core.models import Tenant, TenantCapabilities
 
 
+from apps.core.utils import CURRENCY_NAMES_AR as _HC_CURRENCY_NAMES
+
+
+def _ensure_hc_treasury(tenant):
+    """ينشئ أو يحدّث خزينة العملة الصعبة للـ tenant."""
+    from apps.treasury.models import Treasury
+    hc = (tenant.hard_currency or 'USD').upper()
+    hc_name = _HC_CURRENCY_NAMES.get(hc, hc)
+    treasury, created = Treasury.objects.get_or_create(
+        tenant=tenant,
+        is_hard_currency=True,
+        defaults={
+            'name': f'خزينة {hc_name}',
+            'code': f'TR-{hc}',
+            'currency': hc,
+            'is_active': True,
+            'current_balance': 0,
+        },
+    )
+    if not created and treasury.currency != hc:
+        treasury.name = f'خزينة {hc_name}'
+        treasury.code = f'TR-{hc}'
+        treasury.currency = hc
+        treasury.save(update_fields=['name', 'code', 'currency', 'updated_at'])
+
+
 # ── Admin Notification helpers ─────────────────────────────────────────────
 
 def _admin_notify(notification_type, title, message, link='', priority='medium', ref_key=''):
@@ -17,6 +43,18 @@ def _admin_notify(notification_type, title, message, link='', priority='medium',
         )
     except Exception:
         pass
+
+
+@receiver(post_save, sender=Tenant)
+def on_tenant_hc_mode_changed(sender, instance, created, **kwargs):
+    """ينشئ أو يُعطّل خزينة العملة الصعبة عند تغيير HC mode."""
+    if created:
+        return
+    from apps.treasury.models import Treasury
+    if instance.hard_currency_mode and instance.hard_currency:
+        _ensure_hc_treasury(instance)
+    else:
+        Treasury.objects.filter(tenant=instance, is_hard_currency=True).update(is_active=False)
 
 
 @receiver(post_save, sender=Tenant)
@@ -176,6 +214,7 @@ def create_tenant_defaults(sender, instance, created, **kwargs):
             'is_default': True,
             'is_active': True,
             'current_balance': 0,
+            'currency': instance.currency or '',
         },
     )
 
@@ -184,6 +223,10 @@ def create_tenant_defaults(sender, instance, created, **kwargs):
         if fallback_treasury:
             fallback_treasury.is_default = True
             fallback_treasury.save(update_fields=['is_default', 'updated_at'])
+
+    # Hard currency treasury — created only when HC mode is enabled
+    if instance.hard_currency_mode and instance.hard_currency:
+        _ensure_hc_treasury(instance)
 
     # Capabilities derived from business type
     caps = TenantCapabilities.from_business_type(instance)

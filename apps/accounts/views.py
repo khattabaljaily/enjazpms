@@ -292,8 +292,18 @@ def permission_group_list(request):
     # تمرير المستخدمين والمجموعات إلى الـ template
     users = User.objects.for_tenant(tenant).filter(is_active=True).values('id', 'username', 'first_name', 'last_name')
     
+    schema = get_permission_schema()
+
+    # Remove permissions for features the tenant doesn't have enabled
+    if not getattr(tenant, 'hard_currency_mode', False):
+        hc_keys = {'transfer_treasuries'}
+        schema = {
+            section: {k: v for k, v in perms.items() if k not in hc_keys}
+            for section, perms in schema.items()
+        }
+
     return render(request, 'accounts/permission_group_list.html', {
-        'permission_schema': json.dumps(get_permission_schema(), ensure_ascii=False),
+        'permission_schema': json.dumps(schema, ensure_ascii=False),
         'users': json.dumps(list(users), ensure_ascii=False),
     })
 
@@ -620,6 +630,7 @@ def register_step3(request):
                     subscription_plan = form.cleaned_data.get('subscription_plan', 'trial')
                     trial_duration = 30
 
+                    hard_currency_mode = form.cleaned_data.get('hard_currency_mode', False)
                     tenant = Tenant.objects.create(
                         name=step2_data['business_name'],
                         business_type=business_type,
@@ -633,6 +644,10 @@ def register_step3(request):
                         max_stocks=form.cleaned_data['num_stocks'],
                         timezone=form.cleaned_data['timezone'],
                         currency=form.cleaned_data['currency'],
+                        hard_currency_mode=hard_currency_mode,
+                        hard_currency=form.cleaned_data.get('hard_currency', 'USD') if hard_currency_mode else 'USD',
+                        exchange_rate=form.cleaned_data.get('exchange_rate') or 1,
+                        exchange_rate_updated_at=_tz.now() if hard_currency_mode else None,
                     )
                     
                     # 2. إنشاء User

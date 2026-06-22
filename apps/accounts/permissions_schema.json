@@ -99,7 +99,8 @@
         "change_treasuries": "تعديل بيانات الخزينة",
         "delete_treasuries": "حذف خزينة",
         "view_treasuries": "عرض الخزائن وأرصدتها",
-        "view_treasury_transactions": "عرض حركات وسجل معاملات الخزينة"
+        "view_treasury_transactions": "عرض حركات وسجل معاملات الخزينة",
+        "transfer_treasuries": "تحويل الأموال بين الخزائن (بما فيها خزينة العملة الصعبة)"
     },
     "الذكاء الاصطناعي": {
         "use_ai_chat": "استخدام المساعد الذكي (الدردشة)",

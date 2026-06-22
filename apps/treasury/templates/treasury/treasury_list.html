@@ -4,6 +4,60 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/treasury.css' %}?v=1.0">
+<style>
+.hc-treasury-banner {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    background: linear-gradient(135deg, #78350f 0%, #92400e 50%, #b45309 100%);
+    border-radius: .875rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 4px 20px rgba(217,119,6,.25);
+    flex-wrap: wrap;
+}
+.hc-treasury-banner__icon {
+    width: 3.5rem; height: 3.5rem;
+    background: rgba(255,255,255,.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; color: #fcd34d;
+    flex-shrink: 0;
+}
+.hc-treasury-banner__body { flex: 1; min-width: 160px; }
+.hc-treasury-banner__label {
+    font-size: .8rem; color: #fde68a; font-weight: 500;
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: .2rem;
+}
+.hc-treasury-banner__balance {
+    font-size: 1.8rem; font-weight: 700; color: #fff;
+    line-height: 1.1; direction: ltr; display: inline-flex; align-items: baseline; gap: .4rem;
+}
+.hc-treasury-banner__currency {
+    font-size: .9rem; font-weight: 600; color: #fcd34d;
+}
+.hc-treasury-banner__sub {
+    font-size: .8rem; color: rgba(255,255,255,.7); margin-top: .3rem;
+}
+.hc-treasury-banner__sub strong { color: #fde68a; }
+.hc-treasury-banner__actions {
+    display: flex; gap: .6rem; flex-shrink: 0;
+}
+.hc-treasury-banner__btn {
+    background: rgba(255,255,255,.2);
+    border: 1px solid rgba(255,255,255,.3);
+    color: #fff; border-radius: .5rem;
+    padding: .45rem 1rem; font-size: .85rem; font-weight: 600; cursor: pointer;
+    transition: background .15s;
+}
+.hc-treasury-banner__btn:hover { background: rgba(255,255,255,.3); }
+.hc-treasury-banner__btn--ghost {
+    background: transparent;
+    border-color: rgba(255,255,255,.2);
+    color: rgba(255,255,255,.8);
+}
+.hc-treasury-banner__btn--ghost:hover { background: rgba(255,255,255,.1); }
+</style>
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -22,6 +76,11 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
+                {% if hc_mode %}
+                <button type="button" class="cx-btn-secondary" id="btnOpenTransfer" data-require-perm="transfer_treasuries" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;">
+                    <i class="fas fa-exchange-alt"></i><span>تحويل {{ hc_currency_symbol }} ⇄ {{ local_currency_symbol }}</span>
+                </button>
+                {% endif %}
                 <button type="button" class="cx-btn-add" id="btnOpenCreateTreasury" data-require-perm="add_treasuries">
                     <i class="fas fa-plus"></i><span>إضافة خزينة</span>
                 </button>
@@ -36,6 +95,32 @@
         <span class="cx-stat-badge cx-stat-badge--info"><i class="fas fa-star"></i><strong id="kpiDefault">{{ stats.default }}</strong><span>افتراضية</span></span>
     </div>
 </div>
+
+{% if hc_mode and hc_treasury %}
+<div class="hc-treasury-banner">
+    <div class="hc-treasury-banner__icon">
+        <i class="fas fa-dollar-sign"></i>
+    </div>
+    <div class="hc-treasury-banner__body">
+        <div class="hc-treasury-banner__label">خزينة {{ hc_currency_symbol }}</div>
+        <div class="hc-treasury-banner__balance" id="hcTreasuryBalance">
+            <span id="hcBalanceHc">—</span>
+            <span class="hc-treasury-banner__currency">{{ hc_currency_symbol }}</span>
+        </div>
+        <div class="hc-treasury-banner__sub">
+            ≈ <strong id="hcBalanceLocal">—</strong> {{ local_currency_symbol }}
+        </div>
+    </div>
+    <div class="hc-treasury-banner__actions">
+        <button type="button" class="hc-treasury-banner__btn" id="btnOpenTransferBanner">
+            <i class="fas fa-exchange-alt me-1"></i>تحويل
+        </button>
+        <button type="button" class="hc-treasury-banner__btn hc-treasury-banner__btn--ghost" onclick="window.openTreasuryLedger({{ hc_treasury.id }})">
+            <i class="fas fa-list me-1"></i>الحركات
+        </button>
+    </div>
+</div>
+{% endif %}
 
 <div class="cx-panel">
     <div class="cx-toolbar">
@@ -59,6 +144,7 @@
                     <th>الخزينة</th>
                     <th>الرمز</th>
                     <th>الرصيد الحالي</th>
+                    <th>العملة</th>
                     <th>الحالة</th>
                     <th>الافتراضية</th>
                     <th></th>
@@ -148,6 +234,111 @@
         </div>
     </div>
 </div>
+
+{% if hc_mode %}
+<div class="modal fade" id="transferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-main">
+                <div class="cx-modal-header">
+                    <div>
+                        <h5 class="cx-modal-title">
+                            <i class="fas fa-exchange-alt me-2" style="color:#d97706;"></i>
+                            تحويل بين الخزائن
+                        </h5>
+                    </div>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cx-modal-body">
+                    <div class="alert alert-danger d-none js-transfer-errors mb-3"></div>
+
+                    <!-- Direction selector -->
+                    <div class="d-flex gap-2 mb-4" id="transferDirectionBtns">
+                        <button type="button" class="flex-fill btn btn-outline-warning fw-semibold js-dir-btn active" data-dir="to_hc">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            تحويل إلى خزينة {{ hc_currency_symbol }}
+                            <small class="d-block fw-normal opacity-75">شراء {{ hc_currency_symbol }} بالعملة المحلية</small>
+                        </button>
+                        <button type="button" class="flex-fill btn btn-outline-primary fw-semibold js-dir-btn" data-dir="from_hc">
+                            <i class="fas fa-arrow-right me-1"></i>
+                            تحويل من خزينة {{ hc_currency_symbol }}
+                            <small class="d-block fw-normal opacity-75">صرف {{ hc_currency_symbol }} للعملة المحلية</small>
+                        </button>
+                    </div>
+
+                    <input type="hidden" id="transferDirection" value="to_hc">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="cx-label" id="transferLocalLabel">المبلغ بالعملة المحلية ({{ local_currency_symbol }})</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-money-bill"></i></span>
+                                <input type="number" id="transferLocalAmount" class="form-control cx-input" step="0.01" min="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">المبلغ بـ {{ hc_currency_symbol }}</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-dollar-sign" style="color:#d97706;"></i></span>
+                                <input type="number" id="transferHcAmount" class="form-control cx-input" step="0.0001" min="0.0001" placeholder="0.0000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">سعر الصرف المُستخدَم</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-chart-line"></i></span>
+                                <input type="number" id="transferRate" class="form-control cx-input" step="0.01" min="0.01"
+                                       value="{{ current_tenant.exchange_rate|default:'1' }}"
+                                       placeholder="مثال: 5500">
+                            </div>
+                            <small class="text-muted">السعر الافتراضي من الإعدادات — يمكن تغييره</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">الخزينة المحلية</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-piggy-bank"></i></span>
+                                <select id="transferLocalTreasury" class="form-select cx-input">
+                                    {% for t in transfer_treasuries %}
+                                    {% if not t.is_hard_currency %}
+                                    <option value="{{ t.id }}">{{ t.name }}</option>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">تاريخ التحويل</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-calendar"></i></span>
+                                <input type="date" id="transferDate" class="form-control cx-input">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">ملاحظات (اختياري)</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-align-left"></i></span>
+                                <input type="text" id="transferNotes" class="form-control cx-input" placeholder="مثال: شراء دولار من الصراف">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="xr-info-banner mt-3" id="transferSummary" style="display:none;">
+                        <div class="xr-info-banner__icon"><i class="fas fa-receipt"></i></div>
+                        <div class="xr-info-banner__text" id="transferSummaryText"></div>
+                    </div>
+                </div>
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="cx-btn-primary" id="confirmTransferBtn">
+                        <i class="fas fa-exchange-alt me-1"></i> تنفيذ التحويل
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="modal fade" id="treasuryLedgerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered cx-view-dialog cx-ledger-dialog">
@@ -366,7 +557,9 @@
             const status = r.is_active
                 ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشطة</span>'
                 : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوفة</span>';
-            const defaultBadge = r.is_system_default
+            const defaultBadge = r.is_hard_currency
+                ? `<span class="cx-treasury-card-badge" style="background:#f59e0b22;color:#d97706;border:1px solid #f59e0b40;">خزينة ${curSym(r.currency)}</span>`
+                : r.is_system_default
                 ? '<span class="cx-treasury-card-badge cx-treasury-card-badge--system">خزينة النظام</span>'
                 : r.is_default
                 ? '<span class="cx-treasury-card-badge cx-treasury-card-badge--default">افتراضية</span>'
@@ -389,8 +582,8 @@
                 </div>
                 <div class="cx-treasury-card-actions">
                     <button class="cxr-act cxr-act--view js-view-treasury" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>
-                    ${hasPerm('change_treasuries') ? `<button class="cxr-act js-edit-treasury" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
-                    ${hasPerm('delete_treasuries') ? (r.is_system_default ? '<button class="cxr-act" disabled aria-label="لا يمكن الحذف" title="لا يمكن الحذف"><i class="fas fa-trash"></i></button>' : `<button class="cxr-act cxr-act--del js-delete-treasury" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>`) : ''}
+                    ${hasPerm('change_treasuries') && !r.is_hard_currency ? `<button class="cxr-act js-edit-treasury" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${hasPerm('delete_treasuries') ? (!r.is_system_default && !r.is_hard_currency ? `<button class="cxr-act cxr-act--del js-delete-treasury" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : '') : ''}
                 </div>
             </article>`;
         }).join('');
@@ -418,21 +611,33 @@
             }
         },
         columns: [
-            { data: 'name' },
+            { data: 'name', render: (v, _, row) => row.is_hard_currency
+                ? `<span>${v}</span> <span class="cx-badge" style="background:#f59e0b22;color:#d97706;border:1px solid #f59e0b40;font-size:.7rem;padding:.15rem .45rem;border-radius:.3rem;">${curSym(row.currency)}</span>`
+                : v
+            },
             { data: 'code' },
-            { data: 'current_balance', className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
+            { data: 'current_balance', className: 'text-end', render: (v, _, row) => `${EnjazIMS.formatMoney(v || 0)} <span class="text-muted" style="font-size:.8rem;">${curSym(row.currency)}</span>` },
+            { data: 'currency', render: (v, _, row) => row.is_hard_currency
+                ? `<span class="cx-badge" style="background:#f59e0b22;color:#d97706;border:1px solid #f59e0b40;">${curSym(v)}</span>`
+                : `<span class="cx-badge cx-badge--muted">${curSym(v)}</span>`
+            },
             { data: 'is_active', render: v => v ? '<span class="cx-badge cx-badge--success">نشطة</span>' : '<span class="cx-badge cx-badge--muted">موقوفة</span>' },
-            { data: 'is_default', render: (v, _, row) => row.is_system_default ? '<span class="cx-badge cx-badge--info">خزينة النظام</span>' : (v ? '<span class="cx-badge cx-badge--primary">افتراضية</span>' : '—') },
+            { data: 'is_default', render: (v, _, row) => {
+                if (row.is_hard_currency) return '<span class="cx-badge" style="background:#f59e0b22;color:#d97706;">عملة صعبة</span>';
+                if (row.is_system_default) return '<span class="cx-badge cx-badge--info">خزينة النظام</span>';
+                return v ? '<span class="cx-badge cx-badge--primary">افتراضية</span>' : '—';
+            }},
             {
                 data: null,
                 orderable: false,
                 searchable: false,
                 className: 'text-center',
                 render: function(_, __, row) {
+                    const canDelete = !row.is_system_default && !row.is_hard_currency;
                     return `<div class="cx-actions">
                         <button class="cx-btn-icon" onclick="window.openTreasuryLedger(${row.id})" title="السجل"><i class="fas fa-list"></i></button>
-                        ${hasPerm('change_treasuries') ? `<button class="cx-btn-icon" onclick="window.openEdit(${row.id})" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
-                        ${hasPerm('delete_treasuries') ? (row.is_system_default ? '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>' : `<button class="cx-btn-icon cx-btn-icon--danger" onclick="window.openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>`) : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
+                        ${hasPerm('change_treasuries') && !row.is_hard_currency ? `<button class="cx-btn-icon" onclick="window.openEdit(${row.id})" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
+                        ${hasPerm('delete_treasuries') ? (canDelete ? `<button class="cx-btn-icon cx-btn-icon--danger" onclick="window.openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>') : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
                     </div>`;
                 }
             }
@@ -516,6 +721,199 @@
     window.openEdit = openEdit;
     window.openDelete = openDelete;
     window.openTreasuryLedger = openTreasuryLedger;
+
+    /* ── Currency symbols map ────────────────────────────────────── */
+    const CURRENCY_SYMBOLS = {{ currency_symbols_json|safe }};
+    function curSym(code) {
+        return CURRENCY_SYMBOLS[(code || '').toUpperCase()] || code || '';
+    }
+
+    {% if hc_mode %}
+    /* ── Transfer Modal ─────────────────────────────────────────── */
+    const TRANSFER_API = "{% url 'treasury:transfer_api' %}";
+    const transferModalEl = document.getElementById('transferModal');
+    const transferModal = transferModalEl ? new bootstrap.Modal(transferModalEl) : null;
+
+    // Pre-fill today's date
+    const transferDateEl = document.getElementById('transferDate');
+    if (transferDateEl) {
+        const today = new Date().toISOString().split('T')[0];
+        transferDateEl.value = today;
+    }
+
+    // Direction toggle
+    document.querySelectorAll('.js-dir-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.js-dir-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById('transferDirection').value = this.dataset.dir;
+            updateTransferSummary();
+        });
+    });
+
+    function updateTransferSummary() {
+        const dir = document.getElementById('transferDirection').value;
+        const local = parseFloat(document.getElementById('transferLocalAmount').value) || 0;
+        const hc = parseFloat(document.getElementById('transferHcAmount').value) || 0;
+        const rate = parseFloat(document.getElementById('transferRate').value) || 0;
+        const summary = document.getElementById('transferSummary');
+        const summaryText = document.getElementById('transferSummaryText');
+        if (!local || !hc || !rate) { if (summary) summary.style.display = 'none'; return; }
+        const localCur = '{{ local_currency_symbol }}';
+        const hcCur = '{{ hc_currency_symbol }}';
+        let txt = '';
+        if (dir === 'to_hc') {
+            txt = `سيتم صرف ${EnjazIMS.formatMoney(local)} ${localCur} من الخزينة المحلية لشراء ${EnjazIMS.formatMoney(hc)} ${hcCur} — السعر: ${EnjazIMS.formatMoney(rate)} ${localCur}/${hcCur}`;
+        } else {
+            txt = `سيتم صرف ${EnjazIMS.formatMoney(hc)} ${hcCur} وإيداع ${EnjazIMS.formatMoney(local)} ${localCur} في الخزينة المحلية — السعر: ${EnjazIMS.formatMoney(rate)} ${localCur}/${hcCur}`;
+        }
+        if (summary) { summary.style.display = ''; summaryText.textContent = txt; }
+    }
+
+    // Auto-compute HC amount when local changes (and vice versa)
+    document.getElementById('transferLocalAmount')?.addEventListener('input', function () {
+        const rate = parseFloat(document.getElementById('transferRate').value) || 0;
+        const local = parseFloat(this.value) || 0;
+        if (rate > 0 && local > 0) {
+            document.getElementById('transferHcAmount').value = (local / rate).toFixed(4);
+        }
+        updateTransferSummary();
+    });
+    document.getElementById('transferHcAmount')?.addEventListener('input', function () {
+        const rate = parseFloat(document.getElementById('transferRate').value) || 0;
+        const hc = parseFloat(this.value) || 0;
+        if (rate > 0 && hc > 0) {
+            document.getElementById('transferLocalAmount').value = (hc * rate).toFixed(2);
+        }
+        updateTransferSummary();
+    });
+    document.getElementById('transferRate')?.addEventListener('input', function () {
+        const rate = parseFloat(this.value) || 0;
+        const local = parseFloat(document.getElementById('transferLocalAmount').value) || 0;
+        if (rate > 0 && local > 0) {
+            document.getElementById('transferHcAmount').value = (local / rate).toFixed(4);
+        }
+        updateTransferSummary();
+    });
+
+    // Compute local equivalent for HC banner
+    {% if hc_treasury %}
+    (function () {
+        const hcBal = parseFloat('{{ hc_treasury.current_balance|floatformat:4 }}') || 0;
+        const rate = parseFloat('{{ current_tenant.exchange_rate|floatformat:2 }}') || 1;
+        const balHcEl = document.getElementById('hcBalanceHc');
+        const balLocEl = document.getElementById('hcBalanceLocal');
+        if (balHcEl) balHcEl.textContent = EnjazIMS.formatMoney(hcBal);
+        if (balLocEl) balLocEl.textContent = EnjazIMS.formatMoney(hcBal * rate);
+    })();
+    {% endif %}
+
+    const SAVED_EXCHANGE_RATE = parseFloat('{{ current_tenant.exchange_rate|floatformat:2 }}') || 1;
+
+    function openTransferModal() {
+        document.getElementById('transferDirection').value = 'to_hc';
+        document.querySelectorAll('.js-dir-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.js-dir-btn[data-dir="to_hc"]')?.classList.add('active');
+        document.getElementById('transferLocalAmount').value = '';
+        document.getElementById('transferHcAmount').value = '';
+        document.getElementById('transferRate').value = SAVED_EXCHANGE_RATE;
+        document.getElementById('transferNotes').value = '';
+        document.querySelector('.js-transfer-errors')?.classList.add('d-none');
+        document.getElementById('transferSummary').style.display = 'none';
+        transferModal?.show();
+    }
+
+    // Open transfer modal
+    document.getElementById('btnOpenTransfer')?.addEventListener('click', openTransferModal);
+    document.getElementById('btnOpenTransferBanner')?.addEventListener('click', openTransferModal);
+
+    // Confirm transfer
+    document.getElementById('confirmTransferBtn')?.addEventListener('click', function () {
+        const dir = document.getElementById('transferDirection').value;
+        const localAmount = parseFloat(document.getElementById('transferLocalAmount').value) || 0;
+        const hcAmount = parseFloat(document.getElementById('transferHcAmount').value) || 0;
+        const rate = parseFloat(document.getElementById('transferRate').value) || 0;
+        const localTreasuryId = document.getElementById('transferLocalTreasury').value;
+        const transferDate = document.getElementById('transferDate').value;
+        const notes = document.getElementById('transferNotes').value.trim();
+        const errEl = document.querySelector('.js-transfer-errors');
+
+        function showErr(msg) { if (errEl) { errEl.textContent = msg; errEl.classList.remove('d-none'); } }
+        if (!localAmount || !hcAmount || !rate) { showErr('يرجى تعبئة المبالغ وسعر الصرف'); return; }
+        if (!localTreasuryId) { showErr('يرجى اختيار الخزينة المحلية'); return; }
+        if (!transferDate) { showErr('يرجى تحديد تاريخ التحويل'); return; }
+        errEl?.classList.add('d-none');
+
+        // from/to depends on direction
+        let fromId, toId, fromAmt, toAmt;
+        {% if hc_treasury %}
+        const HC_ID = {{ hc_treasury.id }};
+        {% else %}
+        const HC_ID = null;
+        {% endif %}
+
+        if (HC_ID === null) { showErr('خزينة العملة الصعبة غير موجودة — أعد تحميل الصفحة'); return; }
+
+        if (dir === 'to_hc') {
+            fromId = localTreasuryId; toId = HC_ID;
+            fromAmt = localAmount;   toAmt = hcAmount;
+        } else {
+            fromId = HC_ID;           toId = localTreasuryId;
+            fromAmt = hcAmount;       toAmt = localAmount;
+        }
+
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري التحويل...';
+
+        fetch(TRANSFER_API, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+                from_treasury: fromId, to_treasury: toId,
+                from_amount: fromAmt, to_amount: toAmt,
+                exchange_rate: rate, transfer_date: transferDate, notes: notes,
+            }),
+        })
+        .then(r => r.json().catch(() => ({ success: false, message: `خطأ من الخادم (${r.status})` })))
+        .then(resp => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-exchange-alt me-1"></i> تنفيذ التحويل';
+            if (resp.success) {
+                transferModal?.hide();
+                EnjazIMS.toast('تم التحويل بنجاح', 'success');
+                treasuryTable.ajax.reload(null, false);
+                // Refresh HC banner balance from table
+                {% if hc_treasury %}
+                const HC_ID_REF = {{ hc_treasury.id }};
+                fetch(`/treasury/api/${HC_ID_REF}/detail/`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(r => r.json()).then(d => {
+                        if (d.current_balance !== undefined) {
+                            const rate2 = parseFloat('{{ current_tenant.exchange_rate|floatformat:2 }}') || 1;
+                            const bal = parseFloat(d.current_balance) || 0;
+                            const balHcEl = document.getElementById('hcBalanceHc');
+                            const locEl = document.getElementById('hcBalanceLocal');
+                            if (balHcEl) balHcEl.textContent = EnjazIMS.formatMoney(bal);
+                            if (locEl) locEl.textContent = EnjazIMS.formatMoney(bal * rate2);
+                        }
+                    }).catch(() => {});
+                {% endif %}
+            } else {
+                showErr(resp.message || 'تعذر التحويل');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-exchange-alt me-1"></i> تنفيذ التحويل';
+            showErr('تعذر الاتصال بالخادم — تحقق من الاتصال وأعد المحاولة');
+            console.error('Transfer error:', err);
+        });
+    });
+    {% endif %}
 })();
 </script>
 {% endblock %}
