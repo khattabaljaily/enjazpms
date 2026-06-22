@@ -710,15 +710,20 @@ class IncomeStatementGenerator:
         )
         total_expenses = float(expenses.aggregate(t=__import__('django').db.models.Sum('amount'))['t'] or 0)
 
-        # COGS: purchase invoices in the period
-        from apps.purchases.models import PurchaseInvoice
-        purchases = PurchaseInvoice.objects.filter(
+        # COGS: actual cost of goods sold (cost_price_snapshot × qty from confirmed sale lines)
+        from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+        from .models import SaleInvoiceLine
+        cogs_qs = SaleInvoiceLine.objects.filter(
             tenant=self.tenant,
-            status='confirmed',
-            invoice_date__gte=self.start_date,
-            invoice_date__lte=self.end_date,
+            invoice__status='confirmed',
+            invoice__invoice_date__gte=self.start_date,
+            invoice__invoice_date__lte=self.end_date,
+        ).aggregate(
+            total=Sum(
+                ExpressionWrapper(F('quantity') * F('cost_price_snapshot'), output_field=DecimalField())
+            )
         )
-        total_purchases = sum(float(p.grand_total or 0) for p in purchases)
+        total_purchases = float(cogs_qs['total'] or 0)
 
         gross_profit = net_revenue - total_purchases
         net_profit = gross_profit - total_expenses
