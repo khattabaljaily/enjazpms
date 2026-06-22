@@ -6,7 +6,7 @@
 {% block page_description %}تعديل بيانات النشاط التجاري والإعدادات الأساسية وحفظها مباشرة{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/tenant_settings.css' %}?v=3.1">
+<link rel="stylesheet" href="{% static 'css/tenant_settings.css' %}?v=4.0">
 {% endblock %}
 
 {% block breadcrumb_items %}
@@ -80,251 +80,347 @@
         </div>
     </div>
 
-    <!-- ─── Two-column Forms ────────────────────────────────────── -->
-    <div class="row g-3">
+    <!-- ─── Tab Navigation ────────────────────────────────────── -->
+    <div class="ts-tabs" role="tablist">
+        <button class="ts-tab ts-tab--active" data-tab="business" role="tab" aria-selected="true">
+            <i class="fas fa-store"></i>
+            <span>بيانات النشاط</span>
+        </button>
+        <button class="ts-tab" data-tab="system" role="tab" aria-selected="false">
+            <i class="fas fa-sliders-h"></i>
+            <span>إعدادات النظام</span>
+        </button>
+        <button class="ts-tab" data-tab="appearance" role="tab" aria-selected="false">
+            <i class="fas fa-palette"></i>
+            <span>الشعار والمظهر</span>
+        </button>
+    </div>
 
-        <!-- Business Data -->
-        <div class="col-lg-6 d-flex">
-            <div class="ts-card ts-card--business w-100">
-                <div class="ts-card__header">
-                    <div class="ts-card__icon ts-card__icon--blue">
-                        <i class="fas fa-store"></i>
-                    </div>
-                    <div>
-                        <div class="ts-card__title">بيانات النشاط التجاري</div>
-                        <div class="ts-card__subtitle">المعلومات الأساسية عن نشاطك التجاري</div>
-                    </div>
+    <!-- ══════════ TAB: بيانات النشاط ══════════ -->
+    <div class="ts-tab-pane ts-tab-pane--active" id="tab-business">
+        <div class="ts-card ts-card--business">
+            <div class="ts-card__header">
+                <div class="ts-card__icon ts-card__icon--blue">
+                    <i class="fas fa-store"></i>
                 </div>
-                <div class="ts-card__body">
-                    <form id="tenantBusinessForm" class="row g-3">
-                        <div class="col-12">
-                            <label class="ts-label">اسم النشاط</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-building"></i></span>
-                                <input class="form-control ts-input" name="name" value="{{ current_tenant.name|default:'' }}" required>
+                <div>
+                    <div class="ts-card__title">بيانات النشاط التجاري</div>
+                    <div class="ts-card__subtitle">المعلومات الأساسية عن نشاطك التجاري</div>
+                </div>
+            </div>
+            <div class="ts-card__body">
+                <form id="tenantBusinessForm" class="row g-3">
+                    <div class="col-12">
+                        <label class="ts-label">اسم النشاط</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-building"></i></span>
+                            <input class="form-control ts-input" name="name" value="{{ current_tenant.name|default:'' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">البريد الإلكتروني</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-envelope"></i></span>
+                            <input class="form-control ts-input" type="email" name="email" value="{{ current_tenant.email|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">الهاتف</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-phone"></i></span>
+                            <input class="form-control ts-input" name="phone" value="{{ current_tenant.phone|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">المدينة</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-city"></i></span>
+                            <input class="form-control ts-input" name="city" value="{{ current_tenant.city|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">البلد</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-globe"></i></span>
+                            <select id="tenantCountrySelect" class="form-select ts-input" name="country">
+                                {% for value,label in country_choices %}
+                                <option value="{{ value }}" {% if current_tenant.country == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">المنطقة الزمنية</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-clock"></i></span>
+                            <input class="form-control ts-input" name="timezone" value="{{ current_tenant.timezone|default:'Africa/Khartoum' }}" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">العملة <small class="text-muted fw-normal">(تُضبط تلقائياً من البلد)</small></label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-coins"></i></span>
+                            <input id="currencyDisplay" class="form-control ts-input" readonly
+                                   value="{{ current_tenant.currency|default:'SDG'|currency_ar }} — {{ current_tenant.currency|default:'SDG' }}"
+                                   style="background:var(--surface-hover);cursor:default;">
+                            <input type="hidden" name="currency" id="currencyCode"
+                                   value="{{ current_tenant.currency|default:'SDG' }}">
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="ts-label">العنوان</label>
+                        <div class="ts-field ts-field--textarea">
+                            <span class="ts-field__icon ts-field__icon--top"><i class="fas fa-map-marker-alt"></i></span>
+                            <textarea class="form-control ts-input" name="address" rows="2">{{ current_tenant.address|default:'' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end ts-actions">
+                        <button type="button" class="ts-btn ts-btn--primary" onclick="saveTenantBusiness()">
+                            <i class="fas fa-save"></i>
+                            حفظ بيانات النشاط
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════ TAB: إعدادات النظام ══════════ -->
+    <div class="ts-tab-pane" id="tab-system">
+        <div class="ts-card ts-card--system">
+            <div class="ts-card__header">
+                <div class="ts-card__icon ts-card__icon--green">
+                    <i class="fas fa-sliders-h"></i>
+                </div>
+                <div>
+                    <div class="ts-card__title">إعدادات النظام</div>
+                    <div class="ts-card__subtitle">التحكم في سلوك الفواتير والمخزون</div>
+                </div>
+            </div>
+            <div class="ts-card__body">
+                <form id="tenantSystemForm" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="ts-label">بادئة الفاتورة</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-file-invoice"></i></span>
+                            <input class="form-control ts-input" name="invoice_prefix" maxlength="10" value="{{ tenant_settings.invoice_prefix|default:'INV' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">العناصر في الصفحة</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-list-ol"></i></span>
+                            <input class="form-control ts-input" type="number" min="5" max="200" name="items_per_page" value="{{ tenant_settings.items_per_page|default:25 }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">قيمة الضريبة (%)</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-percent"></i></span>
+                            <input class="form-control ts-input" type="number" step="0.01" min="0" name="tax_value" value="{{ tenant_settings.tax_value|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">الرقم الضريبي</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-hashtag"></i></span>
+                            <input class="form-control ts-input" name="tax_number" value="{{ tenant_settings.tax_number|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">تنسيق التاريخ</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-calendar-alt"></i></span>
+                            <input class="form-control ts-input" name="date_format" value="{{ tenant_settings.date_format|default:'%Y-%m-%d' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="ts-label">تذييل الفاتورة</label>
+                        <div class="ts-field">
+                            <span class="ts-field__icon"><i class="fas fa-align-left"></i></span>
+                            <input class="form-control ts-input" name="invoice_footer" value="{{ tenant_settings.invoice_footer|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="ts-switches">
+                            <div class="ts-switches__head">
+                                <div class="ts-switches__title">خيارات التشغيل</div>
+                                <div class="ts-switches__subtitle">تحكم في سلوك النظام والطباعة والمخزون</div>
+                            </div>
+                            <div class="ts-switches__list">
+                                <label class="ts-switch" for="taxEnabled">
+                                    <div class="ts-switch__info">
+                                        <span class="ts-switch__name">تفعيل الضرائب</span>
+                                        <span class="ts-switch__hint">تضمين إعدادات الضريبة داخل الفواتير والتقارير.</span>
+                                    </div>
+                                    <div class="ts-switch__toggle">
+                                        <input type="checkbox" id="taxEnabled" name="tax_enabled" {% if tenant_settings.tax_enabled %}checked{% endif %}>
+                                        <span class="ts-switch__track"></span>
+                                    </div>
+                                </label>
+                                <label class="ts-switch" for="printSaleInvoice">
+                                    <div class="ts-switch__info">
+                                        <span class="ts-switch__name">طباعة فاتورة البيع</span>
+                                        <span class="ts-switch__hint">إتاحة مستند الطباعة لفواتير المبيعات بشكل افتراضي.</span>
+                                    </div>
+                                    <div class="ts-switch__toggle">
+                                        <input type="checkbox" id="printSaleInvoice" name="print_sale_invoice" {% if tenant_settings.print_sale_invoice %}checked{% endif %}>
+                                        <span class="ts-switch__track"></span>
+                                    </div>
+                                </label>
+                                <label class="ts-switch" for="printPurchaseInvoice">
+                                    <div class="ts-switch__info">
+                                        <span class="ts-switch__name">طباعة فاتورة الشراء</span>
+                                        <span class="ts-switch__hint">إظهار مستندات الطباعة الخاصة بأوامر وفواتير الشراء.</span>
+                                    </div>
+                                    <div class="ts-switch__toggle">
+                                        <input type="checkbox" id="printPurchaseInvoice" name="print_purchase_invoice" {% if tenant_settings.print_purchase_invoice %}checked{% endif %}>
+                                        <span class="ts-switch__track"></span>
+                                    </div>
+                                </label>
+                                <label class="ts-switch" for="showZeroStock">
+                                    <div class="ts-switch__info">
+                                        <span class="ts-switch__name">إظهار منتجات بمخزون صفر</span>
+                                        <span class="ts-switch__hint">عرض المنتجات غير المتاحة داخل القوائم ونتائج البحث.</span>
+                                    </div>
+                                    <div class="ts-switch__toggle">
+                                        <input type="checkbox" id="showZeroStock" name="show_zero_stock" {% if tenant_settings.show_zero_stock %}checked{% endif %}>
+                                        <span class="ts-switch__track"></span>
+                                    </div>
+                                </label>
+                                <label class="ts-switch ts-switch--last" for="lowStockAlert">
+                                    <div class="ts-switch__info">
+                                        <span class="ts-switch__name">تنبيه المخزون المنخفض</span>
+                                        <span class="ts-switch__hint">تشغيل التنبيهات عند اقتراب الكميات من الحد الأدنى.</span>
+                                    </div>
+                                    <div class="ts-switch__toggle">
+                                        <input type="checkbox" id="lowStockAlert" name="low_stock_alert" {% if tenant_settings.low_stock_alert %}checked{% endif %}>
+                                        <span class="ts-switch__track"></span>
+                                    </div>
+                                </label>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">البريد الإلكتروني</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-envelope"></i></span>
-                                <input class="form-control ts-input" type="email" name="email" value="{{ current_tenant.email|default:'' }}">
+                    </div>
+
+                    <div class="col-12 d-flex justify-content-end ts-actions">
+                        <button type="button" class="ts-btn ts-btn--success" onclick="saveTenantSystem()">
+                            <i class="fas fa-save"></i>
+                            حفظ إعدادات النظام
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════ TAB: الشعار والمظهر ══════════ -->
+    <div class="ts-tab-pane" id="tab-appearance">
+
+        <!-- Logo Upload -->
+        <div class="ts-card ts-card--logo">
+            <div class="ts-card__header">
+                <div class="ts-card__icon ts-card__icon--violet">
+                    <i class="fas fa-image"></i>
+                </div>
+                <div>
+                    <div class="ts-card__title">شعار النشاط التجاري</div>
+                    <div class="ts-card__subtitle">يظهر في رأس الفواتير والتقارير المطبوعة</div>
+                </div>
+            </div>
+            <div class="ts-card__body">
+                <div class="ts-logo-zone" id="logoDropZone">
+                    <div class="ts-logo-zone__preview" id="logoPreview">
+                        {% if current_tenant.logo %}
+                        <img src="{{ current_tenant.logo.url }}" alt="شعار النشاط" id="logoImg">
+                        <div class="ts-logo-zone__overlay">
+                            <i class="fas fa-camera"></i>
+                            <span>تغيير الشعار</span>
+                        </div>
+                        {% else %}
+                        <div class="ts-logo-zone__empty" id="logoPlaceholder">
+                            <div class="ts-logo-zone__empty-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
                             </div>
+                            <div class="ts-logo-zone__empty-title">اسحب الشعار هنا</div>
+                            <div class="ts-logo-zone__empty-sub">أو انقر لاختيار ملف</div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">الهاتف</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-phone"></i></span>
-                                <input class="form-control ts-input" name="phone" value="{{ current_tenant.phone|default:'' }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">المدينة</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-city"></i></span>
-                                <input class="form-control ts-input" name="city" value="{{ current_tenant.city|default:'' }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">البلد</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-globe"></i></span>
-                                <select id="tenantCountrySelect" class="form-select ts-input" name="country">
-                                    {% for value,label in country_choices %}
-                                    <option value="{{ value }}" {% if current_tenant.country == value %}selected{% endif %}>{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">المنطقة الزمنية</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-clock"></i></span>
-                                <input class="form-control ts-input" name="timezone" value="{{ current_tenant.timezone|default:'Africa/Khartoum' }}" readonly>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">العملة <small class="text-muted fw-normal">(تُضبط تلقائياً من البلد)</small></label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-coins"></i></span>
-                                <input id="currencyDisplay" class="form-control ts-input" readonly
-                                       value="{{ current_tenant.currency|default:'SDG'|currency_ar }} — {{ current_tenant.currency|default:'SDG' }}"
-                                       style="background:var(--surface-hover);cursor:default;">
-                                <input type="hidden" name="currency" id="currencyCode"
-                                       value="{{ current_tenant.currency|default:'SDG' }}">
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <label class="ts-label">العنوان</label>
-                            <div class="ts-field ts-field--textarea">
-                                <span class="ts-field__icon ts-field__icon--top"><i class="fas fa-map-marker-alt"></i></span>
-                                <textarea class="form-control ts-input" name="address" rows="2">{{ current_tenant.address|default:'' }}</textarea>
-                            </div>
-                        </div>
-                        <div class="col-12 d-flex justify-content-end ts-actions">
-                            <button type="button" class="ts-btn ts-btn--primary" onclick="saveTenantBusiness()">
-                                <i class="fas fa-save"></i>
-                                حفظ بيانات النشاط
-                            </button>
-                        </div>
-                    </form>
+                        {% endif %}
+                    </div>
+                    <input type="file" id="logoFileInput" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" style="display:none">
+                </div>
+                <div class="ts-logo-zone__actions">
+                    <label for="logoFileInput" class="ts-btn ts-btn--primary" id="logoUploadBtn" style="cursor:pointer">
+                        <i class="fas fa-upload"></i>
+                        اختر شعاراً
+                    </label>
+                    {% if current_tenant.logo %}
+                    <button type="button" class="ts-btn ts-btn--danger-soft" id="logoDeleteBtn">
+                        <i class="fas fa-trash-alt"></i>
+                        حذف الشعار
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="ts-logo-zone__hints">
+                    <span><i class="fas fa-check-circle"></i> PNG · JPEG · WEBP · SVG</span>
+                    <span><i class="fas fa-check-circle"></i> حجم أقصى 2 ميجابايت</span>
+                    <span><i class="fas fa-check-circle"></i> خلفية شفافة مُفضَّلة</span>
                 </div>
             </div>
         </div>
 
-        <!-- System Settings -->
-        <div class="col-lg-6 d-flex">
-            <div class="ts-card ts-card--system w-100">
-                <div class="ts-card__header">
-                    <div class="ts-card__icon ts-card__icon--green">
-                        <i class="fas fa-sliders-h"></i>
-                    </div>
-                    <div>
-                        <div class="ts-card__title">إعدادات النظام</div>
-                        <div class="ts-card__subtitle">التحكم في سلوك الفواتير والمخزون</div>
-                    </div>
+        <!-- Invoice Color -->
+        <div class="ts-card ts-card--color mt-3">
+            <div class="ts-card__header">
+                <div class="ts-card__icon ts-card__icon--rose">
+                    <i class="fas fa-palette"></i>
                 </div>
-                <div class="ts-card__body">
-                    <form id="tenantSystemForm" class="row g-3">
-                        <div class="col-md-6">
-                            <label class="ts-label">بادئة الفاتورة</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-file-invoice"></i></span>
-                                <input class="form-control ts-input" name="invoice_prefix" maxlength="10" value="{{ tenant_settings.invoice_prefix|default:'INV' }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">العناصر في الصفحة</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-list-ol"></i></span>
-                                <input class="form-control ts-input" type="number" min="5" max="200" name="items_per_page" value="{{ tenant_settings.items_per_page|default:25 }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">قيمة الضريبة (%)</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-percent"></i></span>
-                                <input class="form-control ts-input" type="number" step="0.01" min="0" name="tax_value" value="{{ tenant_settings.tax_value|default:'' }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">الرقم الضريبي</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-hashtag"></i></span>
-                                <input class="form-control ts-input" name="tax_number" value="{{ tenant_settings.tax_number|default:'' }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">تنسيق التاريخ</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-calendar-alt"></i></span>
-                                <input class="form-control ts-input" name="date_format" value="{{ tenant_settings.date_format|default:'%Y-%m-%d' }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">تذييل الفاتورة</label>
-                            <div class="ts-field">
-                                <span class="ts-field__icon"><i class="fas fa-align-left"></i></span>
-                                <input class="form-control ts-input" name="invoice_footer" value="{{ tenant_settings.invoice_footer|default:'' }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="ts-label">لون الفاتورة</label>
-                            <div class="ts-field" style="gap:10px;">
-                                <span class="ts-field__icon"><i class="fas fa-palette"></i></span>
-                                <input type="color" id="invoiceColorPicker" name="invoice_color" value="{{ tenant_settings.invoice_color|default:'#6366f1' }}"
-                                    style="width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;background:none;padding:2px;">
-                                <input class="form-control ts-input" id="invoiceColorHex" name="invoice_color_hex" maxlength="7"
-                                    value="{{ tenant_settings.invoice_color|default:'#6366f1' }}"
-                                    style="font-family:monospace;" placeholder="#6366f1">
-                            </div>
-                        </div>
-
-                        <div class="col-12">
-                            <div class="ts-switches">
-                                <div class="ts-switches__head">
-                                    <div class="ts-switches__title">خيارات التشغيل</div>
-                                    <div class="ts-switches__subtitle">تحكم في سلوك النظام والطباعة والمخزون</div>
-                                </div>
-                                <div class="ts-switches__list">
-
-                                    <label class="ts-switch" for="taxEnabled">
-                                        <div class="ts-switch__info">
-                                            <span class="ts-switch__name">تفعيل الضرائب</span>
-                                            <span class="ts-switch__hint">تضمين إعدادات الضريبة داخل الفواتير والتقارير.</span>
-                                        </div>
-                                        <div class="ts-switch__toggle">
-                                            <input type="checkbox" id="taxEnabled" name="tax_enabled" {% if tenant_settings.tax_enabled %}checked{% endif %}>
-                                            <span class="ts-switch__track"></span>
-                                        </div>
-                                    </label>
-
-                                    <label class="ts-switch" for="printSaleInvoice">
-                                        <div class="ts-switch__info">
-                                            <span class="ts-switch__name">طباعة فاتورة البيع</span>
-                                            <span class="ts-switch__hint">إتاحة مستند الطباعة لفواتير المبيعات بشكل افتراضي.</span>
-                                        </div>
-                                        <div class="ts-switch__toggle">
-                                            <input type="checkbox" id="printSaleInvoice" name="print_sale_invoice" {% if tenant_settings.print_sale_invoice %}checked{% endif %}>
-                                            <span class="ts-switch__track"></span>
-                                        </div>
-                                    </label>
-
-                                    <label class="ts-switch" for="printPurchaseInvoice">
-                                        <div class="ts-switch__info">
-                                            <span class="ts-switch__name">طباعة فاتورة الشراء</span>
-                                            <span class="ts-switch__hint">إظهار مستندات الطباعة الخاصة بأوامر وفواتير الشراء.</span>
-                                        </div>
-                                        <div class="ts-switch__toggle">
-                                            <input type="checkbox" id="printPurchaseInvoice" name="print_purchase_invoice" {% if tenant_settings.print_purchase_invoice %}checked{% endif %}>
-                                            <span class="ts-switch__track"></span>
-                                        </div>
-                                    </label>
-
-                                    <label class="ts-switch" for="showZeroStock">
-                                        <div class="ts-switch__info">
-                                            <span class="ts-switch__name">إظهار منتجات بمخزون صفر</span>
-                                            <span class="ts-switch__hint">عرض المنتجات غير المتاحة داخل القوائم ونتائج البحث.</span>
-                                        </div>
-                                        <div class="ts-switch__toggle">
-                                            <input type="checkbox" id="showZeroStock" name="show_zero_stock" {% if tenant_settings.show_zero_stock %}checked{% endif %}>
-                                            <span class="ts-switch__track"></span>
-                                        </div>
-                                    </label>
-
-                                    <label class="ts-switch ts-switch--last" for="lowStockAlert">
-                                        <div class="ts-switch__info">
-                                            <span class="ts-switch__name">تنبيه المخزون المنخفض</span>
-                                            <span class="ts-switch__hint">تشغيل التنبيهات عند اقتراب الكميات من الحد الأدنى.</span>
-                                        </div>
-                                        <div class="ts-switch__toggle">
-                                            <input type="checkbox" id="lowStockAlert" name="low_stock_alert" {% if tenant_settings.low_stock_alert %}checked{% endif %}>
-                                            <span class="ts-switch__track"></span>
-                                        </div>
-                                    </label>
-
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-12 d-flex justify-content-end ts-actions">
-                            <button type="button" class="ts-btn ts-btn--success" onclick="saveTenantSystem()">
-                                <i class="fas fa-save"></i>
-                                حفظ إعدادات النظام
-                            </button>
-                        </div>
-                    </form>
+                <div>
+                    <div class="ts-card__title">لون الفاتورة</div>
+                    <div class="ts-card__subtitle">اللون الرئيسي المستخدم في رأس الفواتير المطبوعة</div>
                 </div>
+            </div>
+            <div class="ts-card__body">
+                <form id="tenantColorForm" class="ts-color-form">
+                    <div class="ts-color-picker-wrap">
+                        <div class="ts-color-swatch" id="colorSwatch" style="background:{{ tenant_settings.invoice_color|default:'#6366f1' }}"></div>
+                        <input type="color" id="invoiceColorPicker" name="invoice_color"
+                               value="{{ tenant_settings.invoice_color|default:'#6366f1' }}"
+                               class="ts-color-native">
+                        <input class="form-control ts-input ts-color-hex" id="invoiceColorHex"
+                               name="invoice_color_hex" maxlength="7"
+                               value="{{ tenant_settings.invoice_color|default:'#6366f1' }}"
+                               placeholder="#6366f1">
+                    </div>
+                    <div class="ts-color-presets">
+                        <button type="button" class="ts-color-preset" data-color="#6366f1" style="background:#6366f1" title="بنفسجي"></button>
+                        <button type="button" class="ts-color-preset" data-color="#0ea5e9" style="background:#0ea5e9" title="أزرق"></button>
+                        <button type="button" class="ts-color-preset" data-color="#10b981" style="background:#10b981" title="أخضر"></button>
+                        <button type="button" class="ts-color-preset" data-color="#f59e0b" style="background:#f59e0b" title="ذهبي"></button>
+                        <button type="button" class="ts-color-preset" data-color="#ef4444" style="background:#ef4444" title="أحمر"></button>
+                        <button type="button" class="ts-color-preset" data-color="#8b5cf6" style="background:#8b5cf6" title="بنفسجي غامق"></button>
+                        <button type="button" class="ts-color-preset" data-color="#ec4899" style="background:#ec4899" title="وردي"></button>
+                        <button type="button" class="ts-color-preset" data-color="#1a1a2e" style="background:#1a1a2e" title="أسود"></button>
+                    </div>
+                    <div class="d-flex justify-content-end ts-actions mt-3">
+                        <button type="button" class="ts-btn ts-btn--primary" onclick="saveTenantColor()">
+                            <i class="fas fa-save"></i>
+                            حفظ اللون
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
     </div>
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 const TENANT_SETTINGS_UPDATE_API_URL = "{% url 'core:tenant_settings_update_api' %}";
+const TENANT_LOGO_UPLOAD_URL = "{% url 'core:tenant_logo_upload_api' %}";
 
 function getCookie(name) {
     const match = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
@@ -360,6 +456,34 @@ function saveSection(section, formId, btn) {
     .finally(function () { btn.disabled = false; btn.innerHTML = original; });
 }
 
+// ── Tabs ──────────────────────────────────────────────────────────
+(function () {
+    const tabs = document.querySelectorAll('.ts-tab');
+    const panes = document.querySelectorAll('.ts-tab-pane');
+
+    // restore last tab
+    const saved = sessionStorage.getItem('ts_active_tab');
+    if (saved) activateTab(saved);
+
+    tabs.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            activateTab(btn.dataset.tab);
+            sessionStorage.setItem('ts_active_tab', btn.dataset.tab);
+        });
+    });
+
+    function activateTab(name) {
+        tabs.forEach(function (b) {
+            b.classList.toggle('ts-tab--active', b.dataset.tab === name);
+            b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false');
+        });
+        panes.forEach(function (p) {
+            p.classList.toggle('ts-tab-pane--active', p.id === 'tab-' + name);
+        });
+    }
+})();
+
+// ── Country → Timezone / Currency ────────────────────────────────
 var COUNTRY_TIMEZONE_MAP = {{ country_timezone_map_json|safe }};
 var COUNTRY_CURRENCY_MAP = {{ country_currency_map_json|safe }};
 var CURRENCY_AR          = {{ currency_ar_json|safe }};
@@ -369,7 +493,6 @@ function updateTenantTimezone() {
     var tz  = document.querySelector('input[name="timezone"]');
     if (sel && tz) tz.value = COUNTRY_TIMEZONE_MAP[sel.value] || COUNTRY_TIMEZONE_MAP['السودان'];
 }
-
 function updateTenantCurrency() {
     var sel  = document.getElementById('tenantCountrySelect');
     var code = sel ? COUNTRY_CURRENCY_MAP[sel.value] : null;
@@ -379,7 +502,6 @@ function updateTenantCurrency() {
     if (display) display.value = (CURRENCY_AR[code] || code) + ' — ' + code;
     if (hidden)  hidden.value  = code;
 }
-
 var countryEl = document.getElementById('tenantCountrySelect');
 if (countryEl) {
     countryEl.addEventListener('change', function() {
@@ -395,22 +517,126 @@ function saveTenantBusiness() {
 function saveTenantSystem() {
     saveSection('system', 'tenantSystemForm', document.querySelector('button[onclick="saveTenantSystem()"]'));
 }
+function saveTenantColor() {
+    saveSection('system', 'tenantColorForm', document.querySelector('button[onclick="saveTenantColor()"]'));
+}
 
-// Sync invoice color picker ↔ hex text input
+// ── Logo Upload ──────────────────────────────────────────────────
+(function () {
+    var dropZone  = document.getElementById('logoDropZone');
+    var input     = document.getElementById('logoFileInput');
+    var uploadBtn = document.getElementById('logoUploadBtn');
+    var deleteBtn = document.getElementById('logoDeleteBtn');
+    if (!input) return;
+
+    // click on dropzone (when no image) also opens file picker
+    if (dropZone) {
+        dropZone.addEventListener('click', function (e) {
+            if (e.target === dropZone || e.target.closest('.ts-logo-zone__empty')) {
+                input.click();
+            }
+        });
+        dropZone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            dropZone.classList.add('ts-logo-zone--drag');
+        });
+        dropZone.addEventListener('dragleave', function () {
+            dropZone.classList.remove('ts-logo-zone--drag');
+        });
+        dropZone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            dropZone.classList.remove('ts-logo-zone--drag');
+            var file = e.dataTransfer.files[0];
+            if (file) uploadLogo(file);
+        });
+    }
+
+    input.addEventListener('change', function () {
+        if (input.files[0]) uploadLogo(input.files[0]);
+    });
+
+    function uploadLogo(file) {
+        if (file.size > 2 * 1024 * 1024) {
+            EnjazIMS.toast('حجم الملف يتجاوز 2 ميجابايت', 'error');
+            input.value = '';
+            return;
+        }
+        var fd = new FormData();
+        fd.append('logo', file);
+        if (uploadBtn) { uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الرفع...'; uploadBtn.style.pointerEvents = 'none'; }
+        fetch(TENANT_LOGO_UPLOAD_URL, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body: fd
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            if (!d.success) throw new Error(d.message || 'فشل الرفع');
+            var preview     = document.getElementById('logoPreview');
+            var placeholder = document.getElementById('logoPlaceholder');
+            var img         = document.getElementById('logoImg');
+            if (placeholder) placeholder.style.display = 'none';
+            if (!img) {
+                img = document.createElement('img');
+                img.id = 'logoImg';
+                preview.appendChild(img);
+                // add overlay if not present
+                if (!preview.querySelector('.ts-logo-zone__overlay')) {
+                    var ov = document.createElement('div');
+                    ov.className = 'ts-logo-zone__overlay';
+                    ov.innerHTML = '<i class="fas fa-camera"></i><span>تغيير الشعار</span>';
+                    preview.appendChild(ov);
+                }
+                // show delete button
+                if (!deleteBtn) {
+                    var db = document.createElement('button');
+                    db.type = 'button';
+                    db.className = 'ts-btn ts-btn--danger-soft';
+                    db.id = 'logoDeleteBtn';
+                    db.innerHTML = '<i class="fas fa-trash-alt"></i> حذف الشعار';
+                    db.addEventListener('click', deleteLogo);
+                    document.querySelector('.ts-logo-zone__actions').appendChild(db);
+                }
+            }
+            img.src = d.logo_url + '?t=' + Date.now();
+            img.style.display = '';
+            EnjazIMS.toast(d.message, 'success');
+        })
+        .catch(function (err) { EnjazIMS.toast(err.message || 'حدث خطأ', 'error'); })
+        .finally(function () {
+            if (uploadBtn) { uploadBtn.innerHTML = '<i class="fas fa-upload"></i> اختر شعاراً'; uploadBtn.style.pointerEvents = ''; }
+            input.value = '';
+        });
+    }
+
+    function deleteLogo() {
+        // placeholder — reload page or call delete API if exists
+        EnjazIMS.toast('لا تتوفر وظيفة الحذف حالياً', 'info');
+    }
+
+    if (deleteBtn) deleteBtn.addEventListener('click', deleteLogo);
+})();
+
+// ── Invoice Color ────────────────────────────────────────────────
 (function () {
     var picker = document.getElementById('invoiceColorPicker');
     var hex    = document.getElementById('invoiceColorHex');
+    var swatch = document.getElementById('colorSwatch');
     if (!picker || !hex) return;
-    picker.addEventListener('input', function () { hex.value = picker.value; });
+
+    function sync(color) {
+        if (swatch) swatch.style.background = color;
+        picker.value = color;
+        hex.value = color;
+    }
+
+    picker.addEventListener('input', function () { sync(picker.value); });
     hex.addEventListener('input', function () {
-        if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) {
-            picker.value = hex.value;
-        }
+        if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) sync(hex.value);
     });
-    // When form serialises, copy validated hex → picker so server gets correct value
-    var form = document.getElementById('tenantSystemForm');
-    if (form) form.addEventListener('submit', function () {
-        if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) picker.value = hex.value;
+
+    document.querySelectorAll('.ts-color-preset').forEach(function (btn) {
+        btn.addEventListener('click', function () { sync(btn.dataset.color); });
     });
 })();
 </script>

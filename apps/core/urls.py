@@ -14,6 +14,7 @@ urlpatterns = [
     path('no-permission/', views.no_permission, name='no_permission'),
     path('settings/tenant/', views.tenant_settings, name='tenant_settings'),
     path('settings/tenant/api/update/', views.tenant_settings_update_api, name='tenant_settings_update_api'),
+    path('settings/tenant/api/upload-logo/', views.tenant_logo_upload_api, name='tenant_logo_upload_api'),
     path('subscription/', views.subscription_info, name='subscription'),
     path('pricing/', views.pricing, name='pricing'),
     path('about/', views.about, name='about'),

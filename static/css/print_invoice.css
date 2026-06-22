@@ -25,13 +25,7 @@
 }
 
 .print-head::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  right: 0;
-  width: 80px;
-  height: 2px;
-  background: #c7a252;
+  display: none;
 }
 
 .print-brand {
@@ -42,9 +36,11 @@
 }
 
 .print-logo {
-  height: 34px;
+  height: 70px;
   width: auto;
+  max-width: 160px;
   display: block;
+  object-fit: contain;
   margin-bottom: 0;
 }
 
@@ -89,15 +85,7 @@
 }
 
 .print-doc-heading::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 30px;
-  height: 2px;
-  background: #c7a252;
-  border-radius: 2px;
+  display: none;
 }
 
 .print-meta {
@@ -192,13 +180,7 @@
   border-bottom: 1px solid #e5e9f0;
 }
 
-.print-box-icon {
-  display: inline-block;
-  width: 3px;
-  height: 18px;
-  background: #c7a252;
-  border-radius: 1px;
-}
+.print-box-icon { display: none; }
 
 .print-box-title {
   font-size: 10px;
@@ -479,15 +461,23 @@
 @media print {
   html, body {
     background: #fff !important;
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow-x: hidden !important;
+    box-shadow: none !important;
   }
 
   .print-doc {
     display: block !important;
     background: #fff;
     font-family: 'Inter', 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* إخفاء جميع العناصر الخارجية */
@@ -590,8 +580,8 @@
   }
 
   .print-doc--invoice {
-    border-left-width: 3px !important;
-    border-left-style: solid !important;
+    border-left: none !important;
+    box-shadow: none !important;
   }
 
   .print-box {

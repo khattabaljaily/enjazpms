@@ -2,6 +2,7 @@
 Core Views - Dashboard وصفحات النظام الأساسية
 """
 import json
+import os
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
@@ -1485,6 +1486,42 @@ def tenant_settings_update_api(request):
     settings_obj.save()
 
     return JsonResponse({'success': True, 'message': 'تم تحديث إعدادات النظام بنجاح'})
+
+
+@login_required
+@require_permission('change_tenant_settings')
+@require_POST
+def tenant_logo_upload_api(request):
+    """رفع شعار النشاط التجاري — يحذف القديم ويحفظ بـ tenant_<id>.<ext>"""
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط مرتبط'}, status=400)
+
+    if 'logo' not in request.FILES:
+        return JsonResponse({'success': False, 'message': 'لم يتم اختيار ملف'}, status=400)
+
+    uploaded = request.FILES['logo']
+    allowed = ('image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml')
+    if uploaded.content_type not in allowed:
+        return JsonResponse({'success': False, 'message': 'صيغة الملف غير مدعومة'}, status=400)
+
+    ext = os.path.splitext(uploaded.name)[1].lower() or '.png'
+    new_name = f'tenant_{tenant.pk}{ext}'
+
+    # حذف الشعار القديم من القرص إن وجد
+    if tenant.logo:
+        old_path = tenant.logo.path
+        try:
+            if os.path.isfile(old_path):
+                os.remove(old_path)
+        except OSError:
+            pass
+
+    # حفظ الملف الجديد — ImageField يضع المسار ضمن upload_to='tenants/logos/'
+    tenant.logo.save(new_name, uploaded, save=True)
+
+    logo_url = tenant.logo.url if tenant.logo else ''
+    return JsonResponse({'success': True, 'message': 'تم رفع الشعار بنجاح', 'logo_url': logo_url})
 
 
 @login_required
