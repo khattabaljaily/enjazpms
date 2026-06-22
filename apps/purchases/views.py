@@ -414,6 +414,7 @@ def order_detail(request, pk):
         'can_edit': invoice.status in ('draft', 'confirmed'),
         'can_return': can_return,
         'settings_obj': settings_obj,
+        'tenant': tenant,
     })
 
 

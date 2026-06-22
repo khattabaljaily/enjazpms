@@ -8,8 +8,16 @@
 <div class="print-doc print-doc--invoice" dir="rtl">
     <div class="print-head">
         <div class="print-brand">
-            <img src="{% static 'img/logo/logo-161616.png' %}" alt="إنجاز" class="print-logo">
-            <div class="print-brand-name">إنجاز</div>
+            {% if tenant.logo %}
+                <img src="{{ tenant.logo.url }}" alt="{{ tenant.name }}" class="print-logo">
+            {% else %}
+                <img src="{% static 'img/logo/logo-161616.png' %}" alt="{{ tenant.name }}" class="print-logo">
+            {% endif %}
+            <div>
+                <div class="print-brand-name">{{ tenant.name }}</div>
+                {% if tenant.phone %}<div style="font-size:9px;color:#6b7280;margin-top:2px;">{{ tenant.phone }}</div>{% endif %}
+                {% if tenant.address %}<div style="font-size:9px;color:#6b7280;margin-top:1px;">{{ tenant.address }}{% if tenant.city %}، {{ tenant.city }}{% endif %}</div>{% endif %}
+            </div>
         </div>
     </div>
 

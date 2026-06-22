@@ -1386,6 +1386,7 @@ def quote_detail(request, pk):
         'quote': quote,
         'lines': lines,
         'settings_obj': settings_obj,
+        'tenant': tenant,
         'can_edit': quote.status == 'draft',
         'can_send': quote.can_send,
         'can_accept': quote.status == 'sent',
