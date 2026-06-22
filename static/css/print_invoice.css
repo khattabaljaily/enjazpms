@@ -463,95 +463,34 @@
     background: #fff !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow-x: hidden !important;
-    box-shadow: none !important;
   }
 
+  /* Hide every element — sidebar, navbar, cards, everything */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show ONLY the print doc and all its children */
   .print-doc {
     display: block !important;
-    background: #fff;
-    font-family: 'Inter', 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    visibility: visible !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
     box-shadow: none !important;
     border: none !important;
     outline: none !important;
-    max-width: 100% !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    font-family: 'Inter', 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
   }
 
-  /* إخفاء جميع العناصر الخارجية */
-  .navbar, .navbar-shell, .navbar-start, .navbar-actions,
-  .sidebar, .footer, footer, .modal, .cx-modal-backdrop,
-  .cx-btn-primary, .cx-btn-secondary, .cx-btn-danger,
-  .page-head, .sales-sticky-panel,
-  #cancelModalBackdrop, #invoiceDecisionModalBackdrop,
-  #convertModalBackdrop, #quoteDecisionModalBackdrop,
-  #invoiceActionModalBackdrop, #quoteActionModalBackdrop,
-  .sidebar-overlay, .cx-hero-actions {
-    display: none !important;
-  }
-
-  .dashboard-shell,
-  .dashboard-body,
-  .dashboard-main,
-  .content,
-  .cx-scene {
-    margin: 0 !important;
-    padding: 0 !important;
-    min-height: 0 !important;
-    height: auto !important;
-    overflow: visible !important;
-    overflow-x: hidden !important;
-    background: #fff !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-
-  .dashboard-body,
-  .dashboard-main,
-  .content,
-  .cx-scene {
-    display: block !important;
-    width: 100% !important;
-  }
-
-  .dashboard-shell > *:not(.dashboard-body) {
-    display: none !important;
-  }
-
-  .dashboard-main > *:not(.content) {
-    display: none !important;
-  }
-
-  .content > *:not(.cx-scene):not(.print-doc) {
-    display: none !important;
-  }
-
-  .cx-scene:not(.printable-scene) > *:not(.print-doc) {
-    display: none !important;
-  }
-
-  .dashboard-main, .content {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .cx-info-label {
-    font-size: 11px !important;
-    color: #6b7280 !important;
-    font-weight: 700 !important;
-  }
-
-  .cx-info-value {
-    font-size: 12px !important;
-    color: #111827 !important;
-    font-weight: 700 !important;
-  }
-
-  .table-responsive {
-    overflow: visible !important;
+  .print-doc * {
+    visibility: visible !important;
   }
 
   .print-table {
@@ -579,11 +518,6 @@
     page-break-inside: avoid;
   }
 
-  .print-doc--invoice {
-    border-left: none !important;
-    box-shadow: none !important;
-  }
-
   .print-box {
     page-break-inside: avoid;
     border: 1px solid #edf0f5 !important;
@@ -593,12 +527,8 @@
     page-break-inside: avoid;
   }
 
-  .color-danger,
-  .text-danger,
-  .text-warning,
-  .text-success,
-  .text-primary,
-  .text-muted {
+  .color-danger, .text-danger, .text-warning,
+  .text-success, .text-primary, .text-muted {
     color: inherit !important;
   }
 }
