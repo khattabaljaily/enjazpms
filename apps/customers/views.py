@@ -48,8 +48,6 @@ def customer_list(request):
             'active': active,
             'inactive': inactive,
         },
-        'hc_mode': getattr(tenant, 'hard_currency_mode', False),
-        'hc_currency': tenant.hard_currency if getattr(tenant, 'hard_currency_mode', False) else '',
     }
     return render(request, 'customers/customer_list.html', context)
 
@@ -262,9 +260,6 @@ def customer_transactions_api(request, pk):
         'adjustment': 'تعديل',
     }
 
-    hc_mode = getattr(tenant, 'hard_currency_mode', False)
-    hc_sym = tenant.hard_currency if hc_mode else ''
-
     data = [
         {
             'entry_date': e.entry_date.strftime('%Y-%m-%d'),
@@ -275,20 +270,11 @@ def customer_transactions_api(request, pk):
             'notes': e.notes or '—',
             'reference_type': e.reference_type or '',
             'reference_id': e.reference_id,
-            'hc_amount': str(e.hc_amount) if e.hc_amount is not None else None,
-            'hc_running_balance': str(e.hc_running_balance) if e.hc_running_balance is not None else None,
-            'hc_exchange_rate': str(e.hc_exchange_rate) if e.hc_exchange_rate is not None else None,
-            'hc_currency': e.hc_currency or hc_sym,
         }
         for e in entries
     ]
 
-    return JsonResponse({
-        'success': True,
-        'data': data,
-        'hc_mode': hc_mode,
-        'hc_currency': hc_sym,
-    }, json_dumps_params={'ensure_ascii': False})
+    return JsonResponse({'success': True, 'data': data}, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required
@@ -337,9 +323,6 @@ def customer_payments(request):
             'bank_amount': positive(stats['bank']),
         },
         'today': timezone.localdate().isoformat(),
-        'hc_mode': getattr(tenant, 'hard_currency_mode', False),
-        'hc_currency': tenant.hard_currency if getattr(tenant, 'hard_currency_mode', False) else '',
-        'exchange_rate': tenant.exchange_rate if getattr(tenant, 'hard_currency_mode', False) else None,
     }
     return render(request, 'customers/payment_list.html', context)
 
@@ -513,7 +496,6 @@ def customer_payment_create_api(request):
         treasury_id = body.get('treasury_id')
         reference = str(body.get('reference', '') or '').strip()
         notes = str(body.get('notes', '') or '').strip()
-        exchange_rate_input = body.get('exchange_rate')
     except (TypeError, ValueError, json.JSONDecodeError) as e:
         return _json_error(f'بيانات الدفعة غير صالحة: {e}')
 
@@ -528,20 +510,6 @@ def customer_payment_create_api(request):
     if not note_text:
         note_text = 'سداد عميل'
 
-    # HC — حساب المبلغ بالعملة الصعبة
-    hc_pay_amount = None
-    hc_pay_currency = ''
-    hc_pay_rate = None
-    if getattr(tenant, 'hard_currency_mode', False):
-        try:
-            rate = Decimal(str(exchange_rate_input)) if exchange_rate_input else Decimal(str(tenant.exchange_rate or 1))
-            if rate > 0:
-                hc_pay_amount = -(amount / rate).quantize(Decimal('0.01'))
-                hc_pay_currency = tenant.hard_currency or ''
-                hc_pay_rate = rate
-        except Exception:
-            pass
-
     try:
         with transaction.atomic():
             payment_entry = _apply_customer_ledger(
@@ -553,9 +521,6 @@ def customer_payment_create_api(request):
                 reference_id=None,
                 date=payment_date,
                 notes=note_text,
-                hc_amount=hc_pay_amount,
-                hc_currency=hc_pay_currency,
-                hc_exchange_rate=hc_pay_rate,
             )
 
             if method == 'cash':
