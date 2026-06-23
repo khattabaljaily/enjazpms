@@ -692,6 +692,23 @@ class CustomerLedger(TenantMixin):
     )
     is_reversal = models.BooleanField('قيد عكسي', default=False)
 
+    # حقول العملة الصعبة — تُملأ فقط عندما HC mode مفعّل للـ tenant
+    hc_amount = models.DecimalField(
+        'المبلغ بالعملة الصعبة', max_digits=14, decimal_places=2,
+        null=True, blank=True
+    )
+    hc_currency = models.CharField(
+        'رمز العملة الصعبة', max_length=5, blank=True, default=''
+    )
+    hc_exchange_rate = models.DecimalField(
+        'سعر الصرف المستخدم', max_digits=12, decimal_places=4,
+        null=True, blank=True
+    )
+    hc_running_balance = models.DecimalField(
+        'الرصيد التراكمي بالعملة الصعبة', max_digits=14, decimal_places=2,
+        null=True, blank=True
+    )
+
     class Meta:
         db_table = 'customer_ledger'
         verbose_name = 'قيد حساب عميل'

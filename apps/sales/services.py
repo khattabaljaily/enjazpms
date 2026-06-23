@@ -211,22 +211,34 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
 
 
 def _apply_customer_ledger(tenant, customer, amount, entry_type,
-                           reference_type, reference_id, date, notes=''):
+                           reference_type, reference_id, date, notes='',
+                           hc_amount=None, hc_currency='', hc_exchange_rate=None):
     """
     يُنشئ قيداً في CustomerLedger.
     amount موجب = مطالبة على العميل.
     amount سالب = رصيد دائن للعميل.
+    hc_amount يُملأ فقط عندما HC mode مفعّل.
     """
     if not customer:
         return
 
-    # الرصيد التراكمي
     from django.db.models import Sum as _Sum
     prev = (
         CustomerLedger.objects
         .filter(tenant=tenant, customer=customer)
         .aggregate(s=_Sum('amount'))['s'] or Decimal('0')
     )
+
+    hc_prev = None
+    hc_run = None
+    if hc_amount is not None:
+        hc_prev = (
+            CustomerLedger.objects
+            .filter(tenant=tenant, customer=customer, hc_amount__isnull=False)
+            .aggregate(s=_Sum('hc_amount'))['s'] or Decimal('0')
+        )
+        hc_run = hc_prev + hc_amount
+
     entry = CustomerLedger.objects.create(
         tenant=tenant,
         customer=customer,
@@ -237,6 +249,10 @@ def _apply_customer_ledger(tenant, customer, amount, entry_type,
         reference_id=reference_id,
         running_balance=prev + amount,
         notes=notes,
+        hc_amount=hc_amount,
+        hc_currency=hc_currency or '',
+        hc_exchange_rate=hc_exchange_rate,
+        hc_running_balance=hc_run,
     )
     return entry
 
@@ -418,40 +434,60 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
                     f'المتاح: {max(available, Decimal("0")):,.2f}'
                 )
 
+    # ── HC helpers ───────────────────────────────────────────
+    hc_mode = getattr(tenant, 'hard_currency_mode', False)
+    hc_cur  = (tenant.hard_currency or '') if hc_mode else ''
+    hc_rate = Decimal(str(tenant.exchange_rate or 1)) if hc_mode and tenant.exchange_rate else None
+
+    def _hc(local_amount):
+        """Convert local amount → HC amount (None when HC not enabled)."""
+        if not hc_mode or not hc_rate or hc_rate == 0:
+            return None, None, None
+        return (local_amount / hc_rate).quantize(Decimal('0.01')), hc_cur, hc_rate
+
     if pm == 'cash':
         _apply_payment(tenant, invoice, 'cash', total, invoice.invoice_date)
         if invoice.customer:
+            hc_amt, hc_c, hc_r = _hc(total)
             _apply_customer_ledger(
                 tenant=tenant, customer=invoice.customer, amount=total,
                 entry_type='invoice', reference_type='sale_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f"فاتورة {invoice.invoice_number}",
+                hc_amount=hc_amt, hc_currency=hc_c, hc_exchange_rate=hc_r,
             )
+            hc_amt_neg = (-hc_amt) if hc_amt is not None else None
             _apply_customer_ledger(
                 tenant=tenant, customer=invoice.customer, amount=-total,
                 entry_type='payment', reference_type='sale_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f"سداد نقدي — {invoice.invoice_number}",
+                hc_amount=hc_amt_neg, hc_currency=hc_c, hc_exchange_rate=hc_r,
             )
 
     elif pm == 'bank':
         _apply_payment(tenant, invoice, 'bank', total, invoice.invoice_date,
                        reference=invoice.bank_reference)
         if invoice.customer:
+            hc_amt, hc_c, hc_r = _hc(total)
             _apply_customer_ledger(
                 tenant=tenant, customer=invoice.customer, amount=total,
                 entry_type='invoice', reference_type='sale_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f"فاتورة {invoice.invoice_number}",
+                hc_amount=hc_amt, hc_currency=hc_c, hc_exchange_rate=hc_r,
             )
+            hc_amt_neg = (-hc_amt) if hc_amt is not None else None
             _apply_customer_ledger(
                 tenant=tenant, customer=invoice.customer, amount=-total,
                 entry_type='payment', reference_type='sale_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f"سداد بنكي — {invoice.invoice_number}",
+                hc_amount=hc_amt_neg, hc_currency=hc_c, hc_exchange_rate=hc_r,
             )
 
     elif pm == 'credit':
+        hc_amt, hc_c, hc_r = _hc(total)
         _apply_customer_ledger(
             tenant=tenant,
             customer=invoice.customer,
@@ -461,6 +497,7 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
             reference_id=invoice.id,
             date=invoice.invoice_date,
             notes=f"فاتورة {invoice.invoice_number}",
+            hc_amount=hc_amt, hc_currency=hc_c, hc_exchange_rate=hc_r,
         )
 
     elif pm == 'mixed':
@@ -477,25 +514,33 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
             _apply_payment(tenant, invoice, 'bank', bank_amt, invoice.invoice_date,
                            reference=invoice.bank_reference)
         if invoice.customer:
+            hc_total_amt, hc_c, hc_r = _hc(total)
             _apply_customer_ledger(
                 tenant=tenant, customer=invoice.customer, amount=total,
                 entry_type='invoice', reference_type='sale_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f"فاتورة {invoice.invoice_number}",
+                hc_amount=hc_total_amt, hc_currency=hc_c, hc_exchange_rate=hc_r,
             )
             if cash_amt > 0:
+                hc_c_amt, _, _ = _hc(cash_amt)
                 _apply_customer_ledger(
                     tenant=tenant, customer=invoice.customer, amount=-cash_amt,
                     entry_type='payment', reference_type='sale_invoice',
                     reference_id=invoice.id, date=invoice.invoice_date,
                     notes=f"سداد نقدي — {invoice.invoice_number}",
+                    hc_amount=(-hc_c_amt) if hc_c_amt is not None else None,
+                    hc_currency=hc_c, hc_exchange_rate=hc_r,
                 )
             if bank_amt > 0:
+                hc_b_amt, _, _ = _hc(bank_amt)
                 _apply_customer_ledger(
                     tenant=tenant, customer=invoice.customer, amount=-bank_amt,
                     entry_type='payment', reference_type='sale_invoice',
                     reference_id=invoice.id, date=invoice.invoice_date,
                     notes=f"سداد بنكي — {invoice.invoice_number}",
+                    hc_amount=(-hc_b_amt) if hc_b_amt is not None else None,
+                    hc_currency=hc_c, hc_exchange_rate=hc_r,
                 )
 
     # ── 3. تحديث الحالة ─────────────────────────────────

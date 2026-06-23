@@ -347,13 +347,14 @@
                             <tr>
                                 <th>التاريخ</th>
                                 <th>النوع</th>
-                                <th>المبلغ</th>
-                                <th>المديونية</th>
+                                <th>المبلغ (ج.س)</th>
+                                {% if hc_mode %}<th>{{ hc_currency }}</th><th>الرصيد ({{ hc_currency }})</th>{% endif %}
+                                <th>الرصيد (ج.س)</th>
                                 <th>ملاحظة</th>
                             </tr>
                         </thead>
                         <tbody id="supplierLedgerBody">
-                            <tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>
+                            <tr><td colspan="{% if hc_mode %}7{% else %}5{% endif %}" class="text-center text-muted">لا توجد حركات</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -799,16 +800,27 @@
         });
     }
 
+    const LEDGER_HC_MODE = {% if hc_mode %}true{% else %}false{% endif %};
+    const LEDGER_HC_CUR  = '{{ hc_currency }}';
+    const LEDGER_COLS    = LEDGER_HC_MODE ? 7 : 5;
+
+    function fmtHc(val) {
+        if (val === null || val === undefined) return '—';
+        const n = parseFloat(val);
+        if (isNaN(n)) return '—';
+        return Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' ' + LEDGER_HC_CUR;
+    }
+
     function loadSupplierTransactions(id) {
         const $body = $('#supplierLedgerBody');
-        $body.html('<tr><td colspan="5" class="text-center text-muted">جاري التحميل...</td></tr>');
+        $body.html(`<tr><td colspan="${LEDGER_COLS}" class="text-center text-muted">جاري التحميل...</td></tr>`);
 
         $.ajax({
             url: apiUrl(urlTransactions, id),
             method: 'GET',
             success: function(resp) {
                 if (!resp.success || !Array.isArray(resp.data) || !resp.data.length) {
-                    $body.html('<tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>');
+                    $body.html(`<tr><td colspan="${LEDGER_COLS}" class="text-center text-muted">لا توجد حركات</td></tr>`);
                     return;
                 }
 
@@ -817,10 +829,15 @@
                     const isDebit  = tx.entry_type === 'invoice';
                     const rowBg    = isCredit ? 'rgba(16,185,129,.08)' : isDebit ? 'rgba(239,68,68,.06)' : '';
                     const amtColor = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
+                    const hcCols = LEDGER_HC_MODE
+                        ? `<td style="color:${amtColor};font-weight:700;">${fmtHc(tx.hc_amount)}</td>
+                           <td style="font-weight:700;">${fmtHc(tx.hc_running_balance)}</td>`
+                        : '';
                     return `<tr style="background:${rowBg}">
                         <td>${tx.entry_date || '—'}</td>
                         <td>${tx.entry_type_label || tx.entry_type || '—'}</td>
                         <td style="color:${amtColor};font-weight:700;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount || 0)))}</td>
+                        ${hcCols}
                         <td>${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance || 0)))}</td>
                         <td>${tx.notes || '—'}</td>
                     </tr>`;
@@ -829,7 +846,7 @@
                 $body.html(rows);
             },
             error: function() {
-                $body.html('<tr><td colspan="5" class="text-center text-danger">تعذر تحميل الحركات</td></tr>');
+                $body.html(`<tr><td colspan="${LEDGER_COLS}" class="text-center text-danger">تعذر تحميل الحركات</td></tr>`);
             }
         });
     }

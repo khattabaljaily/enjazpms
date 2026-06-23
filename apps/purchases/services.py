@@ -134,7 +134,8 @@ def _reverse_payments(tenant, invoice):
         payment.save(update_fields=['is_reversed', 'updated_at'])
 
 
-def _apply_supplier_ledger(tenant, supplier, amount, entry_type, reference_type, reference_id, date, notes=''):
+def _apply_supplier_ledger(tenant, supplier, amount, entry_type, reference_type, reference_id, date, notes='',
+                           hc_amount=None, hc_currency='', hc_exchange_rate=None):
     if not supplier:
         return
 
@@ -146,6 +147,15 @@ def _apply_supplier_ledger(tenant, supplier, amount, entry_type, reference_type,
         or Decimal('0')
     )
 
+    hc_run = None
+    if hc_amount is not None:
+        hc_prev = (
+            SupplierLedger.objects
+            .filter(tenant=tenant, supplier=supplier, hc_amount__isnull=False)
+            .aggregate(s=Sum('hc_amount'))['s'] or Decimal('0')
+        )
+        hc_run = hc_prev + hc_amount
+
     SupplierLedger.objects.create(
         tenant=tenant,
         supplier=supplier,
@@ -156,6 +166,10 @@ def _apply_supplier_ledger(tenant, supplier, amount, entry_type, reference_type,
         reference_id=reference_id,
         running_balance=prev + amount,
         notes=notes,
+        hc_amount=hc_amount,
+        hc_currency=hc_currency or '',
+        hc_exchange_rate=hc_exchange_rate,
+        hc_running_balance=hc_run,
     )
 
 
@@ -288,48 +302,64 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user) -> PurchaseInvoice:
                     f'المتاح: {available:,.2f}'
                 )
 
+    # ── HC helpers ───────────────────────────────────────────
+    hc_mode = getattr(tenant, 'hard_currency_mode', False)
+    hc_cur  = (tenant.hard_currency or '') if hc_mode else ''
+    hc_rate = Decimal(str(tenant.exchange_rate or 1)) if hc_mode and tenant.exchange_rate else None
+
+    def _hc(local_amount):
+        if not hc_mode or not hc_rate or hc_rate == 0:
+            return None, None, None
+        return (local_amount / hc_rate).quantize(Decimal('0.01')), hc_cur, hc_rate
+
     if pm == 'credit':
+        hc_amt, hc_c, hc_r = _hc(total)
         _apply_supplier_ledger(
-            tenant=tenant,
-            supplier=invoice.supplier,
-            amount=total,
-            entry_type='invoice',
-            reference_type='purchase_invoice',
-            reference_id=invoice.id,
-            date=invoice.invoice_date,
+            tenant=tenant, supplier=invoice.supplier, amount=total,
+            entry_type='invoice', reference_type='purchase_invoice',
+            reference_id=invoice.id, date=invoice.invoice_date,
             notes=f'أمر شراء {invoice.invoice_number}',
+            hc_amount=hc_amt, hc_currency=hc_c, hc_exchange_rate=hc_r,
         )
     elif pm == 'cash':
         _apply_payment(tenant, invoice, 'cash', total, invoice.invoice_date)
         if invoice.supplier:
+            hc_amt, hc_c, hc_r = _hc(total)
             _apply_supplier_ledger(
                 tenant=tenant, supplier=invoice.supplier, amount=total,
                 entry_type='invoice', reference_type='purchase_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f'أمر شراء {invoice.invoice_number}',
+                hc_amount=hc_amt, hc_currency=hc_c, hc_exchange_rate=hc_r,
             )
             _apply_supplier_ledger(
                 tenant=tenant, supplier=invoice.supplier, amount=-total,
                 entry_type='payment', reference_type='purchase_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f'سداد نقدي — {invoice.invoice_number}',
+                hc_amount=(-hc_amt) if hc_amt is not None else None,
+                hc_currency=hc_c, hc_exchange_rate=hc_r,
             )
     elif pm == 'bank':
         if not bank_reference:
             raise ValueError('يرجى إدخال مرجع التحويل البنكي.')
         _apply_payment(tenant, invoice, 'bank', total, invoice.invoice_date, reference=bank_reference)
         if invoice.supplier:
+            hc_amt, hc_c, hc_r = _hc(total)
             _apply_supplier_ledger(
                 tenant=tenant, supplier=invoice.supplier, amount=total,
                 entry_type='invoice', reference_type='purchase_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f'أمر شراء {invoice.invoice_number}',
+                hc_amount=hc_amt, hc_currency=hc_c, hc_exchange_rate=hc_r,
             )
             _apply_supplier_ledger(
                 tenant=tenant, supplier=invoice.supplier, amount=-total,
                 entry_type='payment', reference_type='purchase_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f'سداد بنكي — {invoice.invoice_number} ({bank_reference})',
+                hc_amount=(-hc_amt) if hc_amt is not None else None,
+                hc_currency=hc_c, hc_exchange_rate=hc_r,
             )
     elif pm == 'mixed':
         cash_amt = invoice.cash_amount or Decimal('0')
@@ -356,25 +386,33 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user) -> PurchaseInvoice:
             _apply_payment(tenant, invoice, 'bank', bank_amt, invoice.invoice_date, reference=bank_reference)
 
         if invoice.supplier:
+            hc_total_amt, hc_c, hc_r = _hc(total)
             _apply_supplier_ledger(
                 tenant=tenant, supplier=invoice.supplier, amount=total,
                 entry_type='invoice', reference_type='purchase_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f'أمر شراء {invoice.invoice_number}',
+                hc_amount=hc_total_amt, hc_currency=hc_c, hc_exchange_rate=hc_r,
             )
             if cash_amt > 0:
+                hc_c_amt, _, _ = _hc(cash_amt)
                 _apply_supplier_ledger(
                     tenant=tenant, supplier=invoice.supplier, amount=-cash_amt,
                     entry_type='payment', reference_type='purchase_invoice',
                     reference_id=invoice.id, date=invoice.invoice_date,
                     notes=f'سداد نقدي — {invoice.invoice_number}',
+                    hc_amount=(-hc_c_amt) if hc_c_amt is not None else None,
+                    hc_currency=hc_c, hc_exchange_rate=hc_r,
                 )
             if bank_amt > 0:
+                hc_b_amt, _, _ = _hc(bank_amt)
                 _apply_supplier_ledger(
                     tenant=tenant, supplier=invoice.supplier, amount=-bank_amt,
                     entry_type='payment', reference_type='purchase_invoice',
                     reference_id=invoice.id, date=invoice.invoice_date,
                     notes=f'سداد بنكي — {invoice.invoice_number} ({bank_reference})',
+                    hc_amount=(-hc_b_amt) if hc_b_amt is not None else None,
+                    hc_currency=hc_c, hc_exchange_rate=hc_r,
                 )
 
     invoice.status = 'confirmed'
