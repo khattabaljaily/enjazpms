@@ -84,11 +84,11 @@ class TreasuryTransfer(TenantMixin):
     transfer_date = models.DateField('تاريخ التحويل')
     notes = models.TextField('ملاحظات', blank=True)
     from_movement = models.OneToOneField(
-        TreasuryMovement, on_delete=models.PROTECT,
+        TreasuryMovement, on_delete=models.CASCADE,
         related_name='transfer_as_source', null=True, blank=True,
     )
     to_movement = models.OneToOneField(
-        TreasuryMovement, on_delete=models.PROTECT,
+        TreasuryMovement, on_delete=models.CASCADE,
         related_name='transfer_as_dest', null=True, blank=True,
     )
 
