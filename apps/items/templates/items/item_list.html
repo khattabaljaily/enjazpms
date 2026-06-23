@@ -84,6 +84,12 @@
 [data-theme="dark"] .unit-counter__btn { background: rgba(255,255,255,.07); color: #e2e8f0; }
 [data-theme="dark"] .unit-counter__btn:hover { background: rgba(99,102,241,.18); color: #a5b4fc; }
 [data-theme="dark"] .unit-counter__val { background: rgba(255,255,255,.05); color: #f1f5f9; border-color: rgba(255,255,255,.1); }
+/* ── HC auto-calc hint ────────────────────────────────────── */
+.cx-hc-calc-hint {
+  font-size: .78rem; color: #6366f1; font-weight: 600;
+  min-height: 1.1rem; margin-top: 3px; transition: opacity .15s;
+}
+[data-theme="dark"] .cx-hc-calc-hint { color: #a5b4fc; }
 </style>
 {% endblock %}
 
@@ -320,14 +326,17 @@
                             <div class="col-md-4">
                                 <label class="cx-label text-muted">سعر التكلفة ({{ local_currency_symbol }}) — تلقائي</label>
                                 {{ item_form.cost_price }}
+                                <div class="cx-hc-calc-hint" id="hint_cost_price"></div>
                             </div>
                             <div class="col-md-4">
                                 <label class="cx-label text-muted">سعر البيع ({{ local_currency_symbol }}) — تلقائي</label>
                                 {{ item_form.selling_price }}
+                                <div class="cx-hc-calc-hint" id="hint_selling_price"></div>
                             </div>
                             <div class="col-md-4">
                                 <label class="cx-label text-muted">أدنى سعر ({{ local_currency_symbol }}) — تلقائي</label>
                                 {{ item_form.min_selling_price }}
+                                <div class="cx-hc-calc-hint" id="hint_min_selling_price"></div>
                             </div>
                         </div>
                         {% else %}
@@ -727,6 +736,60 @@
     const hasPerm = window.hasPerm || (function(){ return false; });
     const CURRENCY_SYMBOLS = {{ currency_symbols_json|safe }};
     function curSym(code) { return CURRENCY_SYMBOLS[(code || '').toUpperCase()] || code || ''; }
+
+    {% if hc_mode %}
+    const HC_EXCHANGE_RATE = {{ exchange_rate|stringformat:".4f" }};
+    const LOCAL_SYM = '{{ local_currency_symbol }}';
+
+    function _lockLocalPriceFields() {
+        ['cost_price', 'selling_price', 'min_selling_price'].forEach(function(f) {
+            var el = document.getElementById('id_' + f);
+            if (!el) return;
+            el.readOnly = true;
+            el.style.background = '#f1f5f9';
+            el.style.cursor = 'not-allowed';
+            el.style.color = '#64748b';
+        });
+    }
+
+    function _calcLocal(hcVal) {
+        var n = parseFloat(hcVal);
+        return (isNaN(n) || n === 0) ? '' : (n * HC_EXCHANGE_RATE).toFixed(2);
+    }
+
+    function _updateHint(hintId, localVal) {
+        var el = document.getElementById(hintId);
+        if (!el) return;
+        if (localVal === '') { el.textContent = ''; return; }
+        var fmt = parseFloat(localVal).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        el.textContent = '= ' + fmt + ' ' + LOCAL_SYM;
+    }
+
+    function _syncLocalPrices() {
+        var pairs = [
+            ['id_cost_price_hc',         'id_cost_price',         'hint_cost_price'],
+            ['id_selling_price_hc',      'id_selling_price',      'hint_selling_price'],
+            ['id_min_selling_price_hc',  'id_min_selling_price',  'hint_min_selling_price'],
+        ];
+        pairs.forEach(function(p) {
+            var hcEl    = document.getElementById(p[0]);
+            var localEl = document.getElementById(p[1]);
+            if (!hcEl || !localEl) return;
+            var localVal = _calcLocal(hcEl.value);
+            localEl.value = localVal;
+            _updateHint(p[2], localVal);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        _lockLocalPriceFields();
+
+        ['id_cost_price_hc', 'id_selling_price_hc', 'id_min_selling_price_hc'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('input', _syncLocalPrices);
+        });
+    });
+    {% endif %}
 
     const urlTable       = "{% url 'items:table_api' %}";
     const urlCreate      = "{% url 'items:create_api' %}";
@@ -1140,6 +1203,11 @@
             var el = document.querySelector(sel);
             if (el && parseFloat(el.value) === 0) el.value = '';
         });
+        {% if hc_mode %}
+        ['hint_cost_price','hint_selling_price','hint_min_selling_price'].forEach(function(id) {
+            var el = document.getElementById(id); if (el) el.textContent = '';
+        });
+        {% endif %}
     }
 
     /* ── Open create ───────────────────────────────────────── */
@@ -1177,6 +1245,7 @@
                 $('#id_cost_price_hc').val(d.cost_price_hc ? parseFloat(d.cost_price_hc) : '');
                 $('#id_selling_price_hc').val(d.selling_price_hc ? parseFloat(d.selling_price_hc) : '');
                 $('#id_min_selling_price_hc').val(d.min_selling_price_hc ? parseFloat(d.min_selling_price_hc) : '');
+                _syncLocalPrices();
                 {% endif %}
                 $('#id_tax_rate').val(EnjazIMS.parseNumber(d.tax_rate) || '');
                 $('#id_min_quantity').val(EnjazIMS.parseNumber(d.min_quantity) || '');
