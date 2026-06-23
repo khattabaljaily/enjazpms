@@ -53,7 +53,7 @@ def employee_list(request):
             'active': qs.filter(is_active=True).count(),
             'inactive': qs.filter(is_active=False).count(),
         },
-        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True),
+        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
     }
     return render(request, 'employees/employee_list.html', context)
 
@@ -266,7 +266,7 @@ def advance_list(request):
             'cancelled': qs.filter(status='cancelled').count(),
         },
         'employees':  Employee.objects.filter(tenant=tenant, is_active=True).order_by('name'),
-        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True),
+        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
     }
     return render(request, 'employees/advance_list.html', context)
 
@@ -350,12 +350,12 @@ def advance_create(request):
     if payment_method == 'cash':
         if not treasury_id:
             return _err('يجب اختيار الخزينة للدفع النقدي')
-        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
+        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
         current_balance = treasury.current_balance or Decimal('0')
         if current_balance < amount:
             return _err(f"رصيد الخزينة غير كافٍ. الرصيد الحالي: {current_balance:.2f} والمطلوب صرفه: {amount:.2f}.")
     elif treasury_id:
-        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
+        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
 
     from django.db import transaction
     try:
@@ -429,7 +429,7 @@ def salary_list(request):
             'cancelled': qs.filter(status='cancelled').count(),
         },
         'employees':  Employee.objects.filter(tenant=tenant, is_active=True).order_by('name'),
-        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True),
+        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
     }
     return render(request, 'employees/salary_list.html', context)
 
@@ -521,9 +521,9 @@ def salary_create(request):
     if payment_method == 'cash':
         if not treasury_id:
             return _err('يجب اختيار الخزينة للدفع النقدي')
-        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
+        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
     elif treasury_id:
-        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
+        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
 
     advances_deducted = _dec(data.get('advances_deducted', 0))
 
@@ -666,7 +666,7 @@ def incentive_list(request):
             'cancelled':  qs.filter(status='cancelled').count(),
         },
         'employees':  Employee.objects.filter(tenant=tenant, is_active=True).order_by('name'),
-        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True),
+        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
     }
     return render(request, 'employees/incentive_list.html', context)
 
@@ -773,14 +773,14 @@ def incentive_create(request):
         if payment_method == 'cash':
             if not treasury_id:
                 return _err('الحوافز الفورية النقدية تتطلب تحديد الخزينة')
-            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
+            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
             current_balance = treasury.current_balance or Decimal('0')
             if current_balance < amount:
                 return _err(f"رصيد الخزينة غير كافٍ. الرصيد الحالي: {current_balance:.2f} والمطلوب صرفه: {amount:.2f}.")
         elif treasury_id:
-            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
+            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
     elif treasury_id:
-        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant)
+        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
 
     from django.db import transaction
     try:

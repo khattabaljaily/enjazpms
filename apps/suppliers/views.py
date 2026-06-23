@@ -14,6 +14,7 @@ import io
 import json
 
 from apps.accounts.decorators import require_permission
+from apps.core.utils import CURRENCY_NAMES_AR
 from .forms import SupplierForm
 from .models import Supplier
 from apps.purchases.models import SupplierLedger
@@ -41,6 +42,8 @@ def supplier_list(request):
     active = qs.filter(is_active=True).count()
     inactive = total - active
 
+    hc_mode = getattr(tenant, 'hard_currency_mode', False)
+    hc_currency = tenant.hard_currency if hc_mode else ''
     context = {
         'form': SupplierForm(),
         'stats': {
@@ -48,8 +51,10 @@ def supplier_list(request):
             'active': active,
             'inactive': inactive,
         },
-        'hc_mode': getattr(tenant, 'hard_currency_mode', False),
-        'hc_currency': tenant.hard_currency if getattr(tenant, 'hard_currency_mode', False) else '',
+        'hc_mode': hc_mode,
+        'hc_currency': hc_currency,
+        'hc_currency_name': CURRENCY_NAMES_AR.get(hc_currency, hc_currency),
+        'local_currency_name': 'جنيه سوداني',
     }
     return render(request, 'suppliers/supplier_list.html', context)
 
@@ -120,6 +125,21 @@ def supplier_table_api(request):
 
     queryset = queryset.order_by(order_field)[start:start + length]
 
+    hc_mode_table = getattr(tenant, 'hard_currency_mode', False)
+    current_rate = Decimal(str(tenant.exchange_rate or 1)) if hc_mode_table and tenant.exchange_rate else None
+
+    def _supplier_balance(supplier):
+        ledger_agg = SupplierLedger.objects.filter(tenant=tenant, supplier=supplier).aggregate(
+            local=Sum('amount'), hc=Sum('hc_amount')
+        ) if SupplierLedger else {}
+        opening = supplier.opening_balance or Decimal('0')
+        sup_currency = (supplier.currency or '').strip()
+        if hc_mode_table and sup_currency and current_rate:
+            # HC supplier: balance in local = hc_balance × current rate
+            hc_balance = (ledger_agg.get('hc') or Decimal('0'))
+            return hc_balance * current_rate
+        return opening + (ledger_agg.get('local') or Decimal('0'))
+
     data = [
         {
             'id': supplier.id,
@@ -127,13 +147,9 @@ def supplier_table_api(request):
             'name': supplier.name,
             'phone': supplier.phone or '-',
             'city': supplier.city or '-',
+            'currency': supplier.currency or '',
             'opening_balance': str(supplier.opening_balance),
-            'current_balance': str(
-                (supplier.opening_balance or Decimal('0')) + (
-                    (SupplierLedger.objects.filter(tenant=tenant, supplier=supplier).aggregate(s=Sum('amount'))['s'] or Decimal('0'))
-                    if SupplierLedger else Decimal('0')
-                )
-            ),
+            'current_balance': str(_supplier_balance(supplier).quantize(Decimal('0.01'))),
             'is_active': supplier.is_active,
         }
         for supplier in queryset
@@ -209,6 +225,7 @@ def supplier_detail_api(request, pk):
             'credit_limit': str(supplier.credit_limit),
             'notes': supplier.notes,
             'is_active': supplier.is_active,
+            'currency': supplier.currency or '',
         }
     })
 
@@ -286,14 +303,21 @@ def supplier_payments(request):
     if not tenant:
         return redirect('core:no_tenant')
 
+    hc_mode = getattr(tenant, 'hard_currency_mode', False)
     suppliers = Supplier.objects.for_tenant(tenant).filter(is_active=True).annotate(
         ledger_total=Coalesce(
             Sum('ledger_entries__amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
             Value(0, output_field=DecimalField(max_digits=14, decimal_places=2)),
             output_field=DecimalField(max_digits=14, decimal_places=2),
-        )
+        ),
+        hc_ledger_total=Coalesce(
+            Sum('ledger_entries__hc_amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
+            Value(0, output_field=DecimalField(max_digits=14, decimal_places=2)),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        ),
     ).order_by('name')
-    treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True).order_by('name')
+    treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False).order_by('name')
+    hc_treasury = Treasury.objects.filter(tenant=tenant, is_hard_currency=True, is_active=True).first() if hc_mode else None
     stats = SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment').aggregate(
         total=Coalesce(
             Sum('amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
@@ -325,9 +349,10 @@ def supplier_payments(request):
             'bank_amount': positive(stats['bank']),
         },
         'today': timezone.localdate().isoformat(),
-        'hc_mode': getattr(tenant, 'hard_currency_mode', False),
-        'hc_currency': tenant.hard_currency if getattr(tenant, 'hard_currency_mode', False) else '',
-        'exchange_rate': tenant.exchange_rate if getattr(tenant, 'hard_currency_mode', False) else None,
+        'hc_mode': hc_mode,
+        'hc_currency': tenant.hard_currency if hc_mode else '',
+        'exchange_rate': tenant.exchange_rate if hc_mode else None,
+        'hc_treasury': hc_treasury,
     }
     return render(request, 'suppliers/payment_list.html', context)
 
@@ -486,11 +511,27 @@ def supplier_payment_create_api(request):
     if not note_text:
         note_text = 'سداد مورد'
 
-    # HC — حساب المبلغ بالعملة الصعبة
+    hc_mode = getattr(tenant, 'hard_currency_mode', False)
+    supplier_currency = (supplier.currency or '').strip()
+    is_hc_supplier = hc_mode and bool(supplier_currency)
+
+    # amount = HC amount for HC suppliers, local amount for local suppliers
     hc_pay_amount = None
     hc_pay_currency = ''
     hc_pay_rate = None
-    if getattr(tenant, 'hard_currency_mode', False):
+    local_amount = amount  # amount to debit from treasury (always local)
+
+    if is_hc_supplier:
+        try:
+            rate = Decimal(str(exchange_rate_input)) if exchange_rate_input else Decimal(str(tenant.exchange_rate or 1))
+            if rate > 0:
+                local_amount = (amount * rate).quantize(Decimal('0.01'))
+                hc_pay_amount = -amount
+                hc_pay_currency = supplier_currency
+                hc_pay_rate = rate
+        except Exception:
+            pass
+    elif hc_mode:
         try:
             rate = Decimal(str(exchange_rate_input)) if exchange_rate_input else Decimal(str(tenant.exchange_rate or 1))
             if rate > 0:
@@ -505,7 +546,7 @@ def supplier_payment_create_api(request):
             payment_entry = _apply_supplier_ledger(
                 tenant=tenant,
                 supplier=supplier,
-                amount=-amount,
+                amount=-local_amount,
                 entry_type='payment',
                 reference_type=reference_type,
                 reference_id=None,
@@ -519,10 +560,13 @@ def supplier_payment_create_api(request):
             if method == 'cash':
                 if not treasury_id:
                     raise ValueError('يجب اختيار الخزينة عند دفع نقداً')
-                treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=int(treasury_id))
+                if is_hc_supplier:
+                    treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=True), pk=int(treasury_id))
+                else:
+                    treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False), pk=int(treasury_id))
                 movement = post_treasury_disbursement(
                     tenant=tenant,
-                    amount=amount,
+                    amount=amount if is_hc_supplier else local_amount,
                     date=payment_date,
                     reference_type='supplier_payment_cash',
                     reference_id=payment_entry.id if payment_entry else None,

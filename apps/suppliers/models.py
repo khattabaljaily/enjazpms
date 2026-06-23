@@ -12,6 +12,8 @@ class Supplier(TenantMixin):
     address = models.TextField('العنوان', blank=True)
     notes = models.TextField('ملاحظات', blank=True)
 
+    currency = models.CharField('عملة المورد', max_length=3, blank=True, default='')
+
     opening_balance = models.DecimalField('المديونية الافتتاحية', max_digits=12, decimal_places=2, default=0)
     credit_limit = models.DecimalField('الحد الائتماني', max_digits=12, decimal_places=2, default=0)
 

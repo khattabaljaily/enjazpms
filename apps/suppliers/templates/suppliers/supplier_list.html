@@ -158,6 +158,17 @@
                             <span class="cx-form-group-icon"><i class="fas fa-coins"></i></span> معلومات مالية
                         </div>
                         <div class="row g-3 mb-4">
+                            {% if hc_mode %}
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_currency">عملة المورد</label>
+                                <select id="id_currency" name="currency" class="cx-input">
+                                    <option value="">محلية ({{ local_currency_name }})</option>
+                                    <option value="{{ hc_currency }}">{{ hc_currency_name }} ({{ hc_currency }})</option>
+                                </select>
+                                <small class="text-muted">حدد إذا كان المورد يتعامل بالعملة الصعبة</small>
+                            </div>
+                            <div class="col-md-6"></div>
+                            {% endif %}
                             <div class="col-md-6">
                                 <label class="cx-label" for="id_opening_balance">{{ form.opening_balance.label }}</label>
                                 {{ form.opening_balance }}
@@ -605,11 +616,12 @@
                     : `<span class="cxr-city">${c}</span>`
             },
             {
-                data: 'current_balance',
-                render: function (v) {
-                    const n = EnjazIMS.parseNumber(v);
+                data: null,
+                render: function (_, __, r) {
+                    const n = EnjazIMS.parseNumber(r.current_balance);
                     const cls = n > 0 ? 'cxr-bal--pos' : n < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
-                    return `<span class="cxr-bal ${cls}">${EnjazIMS.formatMoney(v)}</span>`;
+                    const badge = r.currency ? `<span style="font-size:0.65rem;background:#eef2ff;color:#4f46e5;padding:1px 5px;border-radius:4px;margin-right:4px;">${r.currency}</span>` : '';
+                    return `${badge}<span class="cxr-bal ${cls}">${EnjazIMS.formatMoney(r.current_balance)}</span>`;
                 }
             },
             {
@@ -696,6 +708,7 @@
                 $('#id_credit_limit').val(EnjazIMS.parseNumber(d.credit_limit) || '');
                 $('#id_notes').val(d.notes || '');
                 $('#id_is_active').prop('checked', !!d.is_active);
+                $('#id_currency').val(d.currency || '');
 
                 const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
                 const color  = colors[d.name.charCodeAt(0) % colors.length];

@@ -356,10 +356,6 @@
                     <input type="file" id="logoFileInput" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" style="display:none">
                 </div>
                 <div class="ts-logo-zone__actions">
-                    <label for="logoFileInput" class="ts-btn ts-btn--primary" id="logoUploadBtn" style="cursor:pointer">
-                        <i class="fas fa-upload"></i>
-                        اختر شعاراً
-                    </label>
                     {% if current_tenant.logo %}
                     <button type="button" class="ts-btn ts-btn--danger-soft" id="logoDeleteBtn">
                         <i class="fas fa-trash-alt"></i>
@@ -752,16 +748,13 @@ function saveTenantColor() {
 (function () {
     var dropZone  = document.getElementById('logoDropZone');
     var input     = document.getElementById('logoFileInput');
-    var uploadBtn = document.getElementById('logoUploadBtn');
     var deleteBtn = document.getElementById('logoDeleteBtn');
     if (!input) return;
 
-    // click on dropzone (when no image) also opens file picker
     if (dropZone) {
-        dropZone.addEventListener('click', function (e) {
-            if (e.target === dropZone || e.target.closest('.ts-logo-zone__empty')) {
-                input.click();
-            }
+        dropZone.style.cursor = 'pointer';
+        dropZone.addEventListener('click', function () {
+            input.click();
         });
         dropZone.addEventListener('dragover', function (e) {
             e.preventDefault();
@@ -790,7 +783,7 @@ function saveTenantColor() {
         }
         var fd = new FormData();
         fd.append('logo', file);
-        if (uploadBtn) { uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الرفع...'; uploadBtn.style.pointerEvents = 'none'; }
+        if (dropZone) dropZone.style.opacity = '0.6';
         fetch(TENANT_LOGO_UPLOAD_URL, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCookie('csrftoken') },
@@ -831,7 +824,7 @@ function saveTenantColor() {
         })
         .catch(function (err) { EnjazIMS.toast(err.message || 'حدث خطأ', 'error'); })
         .finally(function () {
-            if (uploadBtn) { uploadBtn.innerHTML = '<i class="fas fa-upload"></i> اختر شعاراً'; uploadBtn.style.pointerEvents = ''; }
+            if (dropZone) dropZone.style.opacity = '';
             input.value = '';
         });
     }

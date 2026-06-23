@@ -104,7 +104,7 @@ def expense_list(request):
                 'name': t.name,
                 'current_balance': str(t.current_balance or Decimal('0'))
             }
-            for t in Treasury.objects.filter(tenant=tenant, is_active=True).only('id', 'name', 'current_balance')
+            for t in Treasury.objects.filter(tenant=tenant, is_active=True, is_hard_currency=False).only('id', 'name', 'current_balance')
         ]
         
         return render(request, 'expenses/expense_list.html', {
@@ -254,7 +254,7 @@ def _process_expense_post(request, tenant, expense):
         treasury_id = data.get('treasury_id')
         if treasury_id:
             try:
-                treasury = Treasury.objects.get(pk=int(treasury_id), tenant=tenant, is_active=True)
+                treasury = Treasury.objects.get(pk=int(treasury_id), tenant=tenant, is_active=True, is_hard_currency=False)
             except (Treasury.DoesNotExist, ValueError):
                 return _err('الخزينة غير صالحة')
 

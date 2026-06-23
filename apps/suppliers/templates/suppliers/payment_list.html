@@ -112,7 +112,7 @@
                                             <input type="date" id="paymentModalDate" class="cx-input" value="{{ today }}" required>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="cx-label">المبلغ <span class="text-danger">*</span></label>
+                                            <label class="cx-label" id="paymentModalAmountLabel">المبلغ <span class="text-danger">*</span></label>
                                             <input type="number" id="paymentModalAmount" class="cx-input text-end" min="0" step="0.01" required>
                                         </div>
                                         <div class="col-md-6">
@@ -128,8 +128,11 @@
                                             <select id="paymentModalTreasury" class="cx-input">
                                                 <option value="">— اختر الخزينة —</option>
                                                 {% for treasury in treasuries %}
-                                                <option value="{{ treasury.id }}">{{ treasury.name }}</option>
+                                                <option value="{{ treasury.id }}" data-hc="0">{{ treasury.name }}</option>
                                                 {% endfor %}
+                                                {% if hc_treasury %}
+                                                <option value="{{ hc_treasury.id }}" data-hc="1" style="display:none;">{{ hc_treasury.name }}</option>
+                                                {% endif %}
                                             </select>
                                         </div>
                                         <div class="col-12" id="paymentModalReferenceRow" style="display:none">
@@ -142,7 +145,7 @@
                                             <input type="number" id="paymentModalRate" class="cx-input text-end" min="0.0001" step="0.01" value="{{ exchange_rate|stringformat:'.2f' }}" required>
                                         </div>
                                         <div class="col-md-6" id="paymentModalHcPreviewRow">
-                                            <label class="cx-label">المبلغ بـ {{ hc_currency }}</label>
+                                            <label class="cx-label" id="paymentModalHcPreviewLabel">المبلغ بـ {{ hc_currency }}</label>
                                             <div class="cx-input text-end" id="paymentModalHcPreview" style="background:var(--bg-secondary);color:var(--indigo-600,#4f46e5);font-weight:700;">—</div>
                                         </div>
                                         {% endif %}
@@ -164,7 +167,7 @@
                                             <div style="font-size:0.88rem;font-weight:600;overflow-wrap:break-word;" id="paymentModalSupplierName">—</div>
                                         </div>
                                         <div style="background:#f8f9fa;border-radius:8px;padding:10px 14px;">
-                                            <div style="font-size:0.68rem;color:#6c757d;margin-bottom:3px;">المديونية</div>
+                                            <div style="font-size:0.68rem;color:#6c757d;margin-bottom:3px;" id="paymentModalBalanceLabel">المديونية</div>
                                             <div style="font-size:0.88rem;font-weight:600;" id="paymentModalSupplierBalance">—</div>
                                         </div>
                                     </div>
@@ -395,21 +398,65 @@
     let paymentCancelTargetId = null;
     let selectedPaymentSupplier = null;
 
-    const PAYMENT_SUPPLIERS = [{% for s in suppliers %}{id:{{ s.id }},name:'{{ s.name|escapejs }}',balance:parseFloat('{{ s.opening_balance|default:0 }}')+parseFloat('{{ s.ledger_total|default:0 }}')},{% endfor %}];
+    {% if hc_mode %}
+    const HC_TREASURY_ID = {% if hc_treasury %}{{ hc_treasury.id }}{% else %}null{% endif %};
+    const CURRENT_RATE = {{ exchange_rate|stringformat:".4f" }};
+    {% endif %}
+    const PAYMENT_SUPPLIERS = [{% for s in suppliers %}{id:{{ s.id }},name:'{{ s.name|escapejs }}',currency:'{{ s.currency|default:"" }}',balance:parseFloat('{{ s.opening_balance|default:0 }}')+parseFloat('{{ s.ledger_total|default:0 }}'),hcBalance:parseFloat('{{ s.hc_ledger_total|default:0 }}')},{% endfor %}];
+
+    const paymentModalAmountLabel = document.getElementById('paymentModalAmountLabel');
+    const paymentModalBalanceLabel = document.getElementById('paymentModalBalanceLabel');
+    {% if hc_mode %}
+    const paymentModalHcPreviewLabel = document.getElementById('paymentModalHcPreviewLabel');
+    {% endif %}
+
+    function onSupplierSelected(s) {
+        selectedPaymentSupplier = s;
+        paymentSupplierSearch.value = s.name;
+        paymentModalSupplier.value = s.id;
+        paymentSupplierDrop.style.display = 'none';
+        adaptFormForSupplier(s);
+        updateSupplierInfo();
+    }
+
+    function adaptFormForSupplier(s) {
+        const isHC = s && s.currency;
+        const cur = isHC ? s.currency : '';
+        // Amount label
+        if (paymentModalAmountLabel) paymentModalAmountLabel.innerHTML = isHC
+            ? `المبلغ (${cur}) <span class="text-danger">*</span>`
+            : 'المبلغ <span class="text-danger">*</span>';
+        // Balance label
+        if (paymentModalBalanceLabel) paymentModalBalanceLabel.textContent = isHC ? `المديونية (${cur})` : 'المديونية';
+        {% if hc_mode %}
+        // HC preview label
+        if (paymentModalHcPreviewLabel) paymentModalHcPreviewLabel.textContent = isHC
+            ? 'المعادل بالعملة المحلية'
+            : `المبلغ بـ {{ hc_currency }}`;
+        {% endif %}
+        // Treasury: show HC treasury for HC supplier, local for local
+        Array.from(paymentModalTreasury.options).forEach(opt => {
+            if (!opt.value) return;
+            const isHcOpt = opt.dataset.hc === '1';
+            opt.style.display = (isHC ? isHcOpt : !isHcOpt) ? '' : 'none';
+        });
+        // Pre-select HC treasury for HC supplier if available
+        if (isHC && HC_TREASURY_ID) {
+            paymentModalTreasury.value = HC_TREASURY_ID;
+        } else {
+            paymentModalTreasury.value = '';
+        }
+    }
 
     (function() {
         function renderSupDrop(list) {
             paymentSupplierDrop.innerHTML = list.length
-                ? list.map(s => `<div class="pay-sup-opt" data-id="${s.id}" data-name="${s.name.replace(/"/g,'&quot;')}" data-balance="${s.balance}" style="padding:8px 12px;cursor:pointer;">${s.name}</div>`).join('')
+                ? list.map(s => `<div class="pay-sup-opt" data-id="${s.id}" data-name="${s.name.replace(/"/g,'&quot;')}" data-currency="${s.currency||''}" data-balance="${s.balance}" data-hc-balance="${s.hcBalance||0}" style="padding:8px 12px;cursor:pointer;">${s.name}${s.currency ? `<span style="margin-right:6px;font-size:0.7rem;background:#eef2ff;color:#4f46e5;padding:1px 5px;border-radius:4px;">${s.currency}</span>` : ''}</div>`).join('')
                 : '<div style="padding:8px 12px;color:#6c757d;">لا توجد نتائج</div>';
             paymentSupplierDrop.querySelectorAll('.pay-sup-opt').forEach(el => {
                 el.addEventListener('mousedown', function(e) {
                     e.preventDefault();
-                    selectedPaymentSupplier = { id: this.dataset.id, name: this.dataset.name, balance: parseFloat(this.dataset.balance) };
-                    paymentSupplierSearch.value = selectedPaymentSupplier.name;
-                    paymentModalSupplier.value = selectedPaymentSupplier.id;
-                    paymentSupplierDrop.style.display = 'none';
-                    updateSupplierInfo();
+                    onSupplierSelected({ id: this.dataset.id, name: this.dataset.name, currency: this.dataset.currency, balance: parseFloat(this.dataset.balance), hcBalance: parseFloat(this.dataset.hcBalance||0) });
                 });
             });
         }
@@ -419,6 +466,7 @@
             selectedPaymentSupplier = null;
             paymentModalSupplierName.textContent = '—';
             paymentModalSupplierBalance.textContent = '—';
+            adaptFormForSupplier(null);
             renderSupDrop(PAYMENT_SUPPLIERS.slice(0, 30));
             paymentSupplierDrop.style.display = 'block';
         });
@@ -467,13 +515,28 @@
         paymentModalNotes.value = '';
         paymentModalSupplierName.textContent = '—';
         paymentModalSupplierBalance.textContent = '—';
+        adaptFormForSupplier(null);
         setPaymentMethod('cash');
     }
 
     function updateSupplierInfo() {
         if (selectedPaymentSupplier) {
             paymentModalSupplierName.textContent = selectedPaymentSupplier.name;
-            paymentModalSupplierBalance.textContent = EnjazIMS.formatMoney(selectedPaymentSupplier.balance || 0);
+            const isHC = !!selectedPaymentSupplier.currency;
+            if (isHC) {
+                const hcBal = selectedPaymentSupplier.hcBalance || 0;
+                const hcFmt = hcBal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+                {% if hc_mode %}
+                // Also show local equivalent at current rate
+                const localBal = hcBal * CURRENT_RATE;
+                const localFmt = EnjazIMS.formatMoney(localBal);
+                paymentModalSupplierBalance.innerHTML = `<span>${hcFmt} ${selectedPaymentSupplier.currency}</span><br><small style="color:#6c757d;font-size:0.75rem;">≈ ${localFmt} ج.س</small>`;
+                {% else %}
+                paymentModalSupplierBalance.textContent = hcFmt + ' ' + selectedPaymentSupplier.currency;
+                {% endif %}
+            } else {
+                paymentModalSupplierBalance.textContent = EnjazIMS.formatMoney(selectedPaymentSupplier.balance || 0);
+            }
         } else {
             paymentModalSupplierName.textContent = '—';
             paymentModalSupplierBalance.textContent = '—';
@@ -511,9 +574,17 @@
     function updateHcPreview() {
         const amount = parseFloat(paymentModalAmount?.value) || 0;
         const rate = parseFloat(paymentModalRate?.value) || 0;
+        const isHCSupplier = !!(selectedPaymentSupplier && selectedPaymentSupplier.currency);
         if (amount > 0 && rate > 0) {
-            const hc = (amount / rate).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            paymentModalHcPreview.textContent = hc + ' ' + HC_CUR;
+            if (isHCSupplier) {
+                // HC supplier: amount is in HC, show local equivalent
+                const local = (amount * rate).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                paymentModalHcPreview.textContent = local + ' ج.س';
+            } else {
+                // Local supplier: amount is in local, show HC equivalent
+                const hc = (amount / rate).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                paymentModalHcPreview.textContent = hc + ' ' + HC_CUR;
+            }
         } else {
             paymentModalHcPreview.textContent = '—';
         }
@@ -534,10 +605,11 @@
         const notes = paymentModalNotes.value.trim();
         const exchangeRate = HC_MODE ? (parseFloat(document.getElementById('paymentModalRate')?.value) || null) : null;
 
+        const isHCSupplier = !!(selectedPaymentSupplier && selectedPaymentSupplier.currency);
         if (!supplierId) return EnjazIMS.toast('اختر المورد', 'error');
         if (!paymentDate) return EnjazIMS.toast('اختر التاريخ', 'error');
         if (!amount || amount <= 0) return EnjazIMS.toast('أدخل مبلغاً صحيحاً', 'error');
-        if (HC_MODE && (!exchangeRate || exchangeRate <= 0)) return EnjazIMS.toast('أدخل سعر الصرف', 'error');
+        if ((HC_MODE || isHCSupplier) && (!exchangeRate || exchangeRate <= 0)) return EnjazIMS.toast('أدخل سعر الصرف', 'error');
 
         paymentModalSaveBtn.disabled = true;
         paymentModalSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...';

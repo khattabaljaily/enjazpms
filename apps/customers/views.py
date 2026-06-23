@@ -291,7 +291,7 @@ def customer_payments(request):
             output_field=DecimalField(max_digits=14, decimal_places=2),
         )
     ).order_by('name')
-    treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True).order_by('name')
+    treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False).order_by('name')
     stats = CustomerLedger.objects.for_tenant(tenant).filter(entry_type='payment').aggregate(
         total=Coalesce(
             Sum('amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
@@ -526,7 +526,7 @@ def customer_payment_create_api(request):
             if method == 'cash':
                 if not treasury_id:
                     raise ValueError('يجب اختيار الخزينة عند دفع نقداً')
-                treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=int(treasury_id))
+                treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False), pk=int(treasury_id))
                 movement = post_treasury_receipt(
                     tenant=tenant,
                     amount=amount,
