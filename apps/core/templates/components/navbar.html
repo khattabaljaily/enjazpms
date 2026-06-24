@@ -64,6 +64,11 @@
                     <li><a class="dropdown-item" href="{% url 'core:tenant_settings' %}">
                         <i class="fas fa-sliders me-2 text-primary"></i>إعدادات النشاط
                     </a></li>
+                    {% if current_tenant.hard_currency_mode %}
+                    <li><a class="dropdown-item" href="{% url 'core:exchange_rate_page' %}">
+                        <i class="fas fa-exchange-alt me-2 text-warning"></i>سعر الصرف
+                    </a></li>
+                    {% endif %}
                     <li><a class="dropdown-item" href="{% url 'core:subscription' %}">
                         <i class="fas fa-credit-card me-2 text-info"></i>الاشتراك
                     </a></li>

@@ -1511,10 +1511,27 @@ def exchange_rate_update_api(request):
     except (InvalidOperation, ValueError, TypeError):
         return JsonResponse({'success': False, 'message': 'سعر الصرف غير صالح'}, status=400)
 
+    notes = payload.get('notes', '').strip()[:200]
     with db_transaction.atomic():
+        from .models import ExchangeRateHistory
+        previous_rate = tenant.exchange_rate
         tenant.exchange_rate = new_rate
         tenant.exchange_rate_updated_at = dj_timezone.now()
         tenant.save(update_fields=['exchange_rate', 'exchange_rate_updated_at', 'updated_at'])
+        ExchangeRateHistory.objects.create(
+            tenant=tenant,
+            rate=new_rate,
+            changed_by=request.user,
+            notes=notes or f'السعر السابق: {previous_rate}',
+        )
+
+        from apps.core.models import ExchangeRateHistory
+        ExchangeRateHistory.objects.create(
+            tenant=tenant,
+            rate=new_rate,
+            changed_by=request.user if request.user.is_authenticated else None,
+            notes=notes,
+        )
 
         items = Item.objects.for_tenant(tenant).filter(selling_price_hc__isnull=False)
         updated = 0
@@ -1537,6 +1554,45 @@ def exchange_rate_update_api(request):
         'updated_items': updated,
         'new_rate': str(new_rate),
     })
+
+
+@login_required
+@require_permission('change_tenant_settings')
+def exchange_rate_page(request):
+    """صفحة سعر الصرف المستقلة — فورم + سجل + مخطط."""
+    from apps.core.models import ExchangeRateHistory
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        from django.shortcuts import redirect
+        return redirect('core:dashboard')
+
+    history = ExchangeRateHistory.objects.filter(tenant=tenant).order_by('-changed_at')[:90]
+    return render(request, 'core/exchange_rate.html', {
+        'tenant': tenant,
+        'history': history,
+    })
+
+
+@login_required
+@require_permission('change_tenant_settings')
+def exchange_rate_history_api(request):
+    """JSON: آخر 90 يوم من سجل سعر الصرف للمخطط."""
+    from apps.core.models import ExchangeRateHistory
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'success': False}, status=400)
+
+    qs = ExchangeRateHistory.objects.filter(tenant=tenant).order_by('changed_at')[:90]
+    data = [
+        {
+            'date': e.changed_at.strftime('%Y-%m-%d'),
+            'rate': str(e.rate),
+            'user': e.changed_by.get_full_name() or e.changed_by.username if e.changed_by else '—',
+            'notes': e.notes or '',
+        }
+        for e in qs
+    ]
+    return JsonResponse({'success': True, 'data': data})
 
 
 @login_required

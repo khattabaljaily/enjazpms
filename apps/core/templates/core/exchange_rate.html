@@ -1,0 +1,410 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_title %}سعر الصرف{% endblock %}
+{% block page_description %}تحديث سعر الصرف ومتابعة سجل التغييرات{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'core:tenant_settings' %}">الإعدادات</a></li>
+<li class="breadcrumb-item active">سعر الصرف</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+
+/* Hero */
+.er-hero {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #7c3aed 100%);
+    border-radius: 20px;
+    padding: 1rem 2rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 32px rgba(99,102,241,.25);
+    flex-wrap: wrap;
+}
+.er-hero-left { display: flex; align-items: center; gap: 1rem; }
+.er-hero-icon {
+    width: 56px; height: 56px; border-radius: 16px;
+    background: rgba(255,255,255,.18);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+}
+.er-hero-title { font-size: 1.35rem; font-weight: 800; margin: 0; }
+.er-hero-sub   { font-size: .85rem; opacity: .85; margin: .25rem 0 0; }
+.er-hero-rate  { text-align: left; font-size: 2rem; font-weight: 900; letter-spacing: -1px; }
+.er-hero-rate small { font-size: .75rem; opacity: .8; display: block; margin-top: -.2rem; font-weight: 400; }
+
+/* Card */
+.er-card {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-light);
+    border-radius: 18px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,.04);
+}
+.er-card-title {
+    font-size: .95rem; font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1.1rem;
+    display: flex; align-items: center; gap: .5rem;
+    flex-shrink: 0;
+}
+.er-card-title i { color: #6366f1; }
+
+/* Form */
+.er-form-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
+.er-field { flex: 1; min-width: 180px; }
+.er-label  { font-size: .8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: .35rem; display: block; }
+.er-input  {
+    width: 100%; padding: .5rem .9rem;
+    border: 1.5px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 1rem; font-weight: 700;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: border-color .2s;
+}
+.er-input:focus { outline: none; border-color: #6366f1; background: var(--bg-card,#fff); }
+.er-btn {
+    padding: .65rem 1.6rem;
+    background: linear-gradient(135deg,#6366f1,#4f46e5);
+    color: #fff; border: none; border-radius: 10px;
+    font-size: .9rem; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    transition: opacity .2s, transform .1s;
+    align-self: flex-end;
+}
+.er-btn:hover    { opacity: .9; transform: translateY(-1px); }
+.er-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+.er-hint { font-size: .75rem; color: var(--text-secondary); margin-top: .35rem; }
+
+/* Custom spinner arrows on rate input */
+.er-rate-wrap { position: relative; }
+.er-rate-wrap input[type=number]::-webkit-inner-spin-button,
+.er-rate-wrap input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.er-rate-wrap input[type=number] { -moz-appearance: textfield; appearance: textfield; padding-left: 4.2rem; }
+.er-spinners {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    display: flex; flex-direction: column; overflow: hidden;
+}
+.er-spin-btn {
+    flex: 1; width: 2rem; border: none;
+    border-left: 1.5px solid var(--border-color);
+    background: var(--bg-secondary); color: var(--text-secondary);
+    cursor: pointer; font-size: .7rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s, color .15s;
+}
+.er-spin-btn:first-child { border-bottom: 1px solid var(--border-color); border-radius: 10px 0 0 0; }
+.er-spin-btn:last-child  { border-radius: 0 0 0 10px; }
+.er-spin-btn:hover { background: #6366f1; color: #fff; }
+
+/* Bottom grid: chart RIGHT | table LEFT */
+.er-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    align-items: stretch;
+    margin-bottom: 1.25rem;
+}
+.er-bottom-grid .er-card {
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Chart fills its card */
+.er-chart-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 320px;
+}
+
+/* Table scrolls inside its card */
+.er-table-scroll {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 400px;
+}
+.er-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.er-table thead th {
+    position: sticky; top: 0; z-index: 1;
+    padding: .55rem .8rem; text-align: right;
+    background: var(--bg-secondary);
+    color: var(--text-secondary); font-weight: 600; font-size: .75rem;
+    border-bottom: 1px solid var(--border-light);
+}
+.er-table td {
+    padding: .55rem .8rem; border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary);
+}
+.er-table tbody tr:last-child td { border-bottom: none; }
+.er-table tbody tr:hover { background: var(--bg-secondary); }
+.er-rate-badge { font-weight: 800; font-size: .9rem; color: #6366f1; }
+.er-up   { color: #ef4444; }
+.er-down { color: #11998e; }
+.er-same { color: var(--text-secondary); }
+.er-empty { text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary); font-size: .85rem; }
+
+@media (max-width: 768px) {
+    .er-bottom-grid { grid-template-columns: 1fr; }
+    .er-hero { padding: 1.1rem; border-radius: 14px; }
+    .er-hero-rate { font-size: 1.5rem; }
+    .er-card { padding: 1rem; border-radius: 14px; }
+    .er-form-row { flex-direction: column; }
+    .er-btn { width: 100%; text-align: center; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="er-scene">
+
+    <!-- Hero -->
+    <div class="er-hero">
+        <div class="er-hero-left">
+            <div class="er-hero-icon"><i class="fas fa-exchange-alt"></i></div>
+            <div>
+                <h2 class="er-hero-title">سعر الصرف</h2>
+                <p class="er-hero-sub">{{ tenant.hard_currency|default:"USD" }} مقابل العملة المحلية</p>
+            </div>
+        </div>
+        <div class="er-hero-rate" id="heroCurrentRate">
+            {{ tenant.exchange_rate|default:"—" }}
+            <small>السعر الحالي{% if tenant.exchange_rate_updated_at %} · آخر تحديث {{ tenant.exchange_rate_updated_at|date:"Y-m-d H:i" }}{% endif %}</small>
+        </div>
+    </div>
+
+    <!-- Update form -->
+    <div class="er-card">
+        <div class="er-card-title"><i class="fas fa-pen-to-square"></i> تحديث سعر الصرف</div>
+        <div class="er-form-row">
+            <div class="er-field">
+                <div class="er-rate-wrap">
+                    <div class="er-spinners">
+                        <button type="button" class="er-spin-btn" onclick="stepRate(1)" tabindex="-1">▲</button>
+                        <button type="button" class="er-spin-btn" onclick="stepRate(-1)" tabindex="-1">▼</button>
+                    </div>
+                    <input type="number" id="erRateInput" class="er-input" placeholder="السعر الجديد (ج.س لكل 1 {{ tenant.hard_currency|default:'USD' }})" step="any" min="0" value="{{ tenant.exchange_rate }}">
+                </div>
+            </div>
+            <div>
+                <button class="er-btn" id="erSaveBtn" onclick="saveRate()">
+                    <i class="fas fa-save me-1"></i> حفظ
+                </button>
+            </div>
+        </div>
+        <div id="erMsg" style="margin-top:.75rem; font-size:.82rem; display:none;"></div>
+    </div>
+
+    <!-- Chart (right) + Table (left) -->
+    <div class="er-bottom-grid">
+
+        <!-- RIGHT: Chart -->
+        <div class="er-card">
+            <div class="er-card-title"><i class="fas fa-chart-line"></i> مخطط تغير السعر</div>
+            <div class="er-chart-wrap">
+                <canvas id="erChart"></canvas>
+            </div>
+        </div>
+
+        <!-- LEFT: History table -->
+        <div class="er-card">
+            <div class="er-card-title">
+                <i class="fas fa-history"></i> سجل التغييرات
+                <span id="erHistoryCount" style="font-size:.75rem;font-weight:400;color:var(--text-secondary);margin-right:.5rem;"></span>
+            </div>
+            <div class="er-table-scroll">
+                <table class="er-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>السعر</th>
+                            <th>التغيير</th>
+                            <th>بواسطة</th>
+                            <th>ملاحظة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="erHistoryBody">
+                        <tr><td colspan="5" class="er-empty"><i class="fas fa-spinner fa-spin me-2"></i>جاري التحميل...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const API_UPDATE  = "{% url 'core:exchange_rate_update_api' %}";
+const API_HISTORY = "{% url 'core:exchange_rate_history_api' %}";
+const HC_CUR      = "{{ tenant.hard_currency|default:'USD' }}";
+let erChart = null;
+
+function fmtNum(v) {
+    const n = parseFloat(v);
+    if (isNaN(n)) return '—';
+    const parts = n.toFixed(2).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+}
+
+function stepRate(delta) {
+    const inp = document.getElementById('erRateInput');
+    const cur = parseFloat(inp.value) || 0;
+    inp.value = Math.max(0, cur + delta).toFixed(2);
+    inp.focus();
+}
+
+function saveRate() {
+    const rate = document.getElementById('erRateInput').value.trim();
+    const btn  = document.getElementById('erSaveBtn');
+    if (!rate || parseFloat(rate) < 0) { showMsg('يرجى إدخال سعر صرف صالح', 'error'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الحفظ...';
+    fetch(API_UPDATE, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+        body: JSON.stringify({exchange_rate: rate})
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            showMsg(d.message || 'تم تحديث سعر الصرف', 'success');
+            document.getElementById('heroCurrentRate').childNodes[0].textContent = fmtNum(d.new_rate);
+            loadHistory();
+        } else {
+            showMsg(d.message || 'حدث خطأ', 'error');
+        }
+    })
+    .catch(() => showMsg('تعذر الاتصال بالخادم', 'error'))
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-1"></i> حفظ';
+    });
+}
+
+function showMsg(text, type) {
+    const el = document.getElementById('erMsg');
+    el.style.display = 'block';
+    el.style.color = type === 'success' ? '#11998e' : '#ef4444';
+    el.innerHTML = (type === 'success' ? '✓ ' : '✗ ') + text;
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function getCsrf() {
+    const c = document.cookie.split(';').find(x => x.trim().startsWith('csrftoken='));
+    return c ? c.split('=')[1] : '';
+}
+
+function loadHistory() {
+    fetch(API_HISTORY)
+    .then(r => r.json())
+    .then(d => {
+        if (!d.success) return;
+        document.getElementById('erHistoryCount').textContent = `(${d.data.length} سجل)`;
+        renderTable(d.data);
+        renderChart(d.data);
+    });
+}
+
+function renderTable(rows) {
+    const tbody = document.getElementById('erHistoryBody');
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="er-empty">لا يوجد سجل بعد</td></tr>';
+        return;
+    }
+    // rows from API are oldest→newest; reverse for display (newest first)
+    const rev = rows.slice().reverse();
+    tbody.innerHTML = rev.map((r, i) => {
+        const prev = rev[i + 1];
+        let changeBadge;
+        if (prev) {
+            const diff = parseFloat(r.rate) - parseFloat(prev.rate);
+            if      (diff > 0) changeBadge = `<span class="er-up">▲ ${fmtNum(diff)}</span>`;
+            else if (diff < 0) changeBadge = `<span class="er-down">▼ ${fmtNum(Math.abs(diff))}</span>`;
+            else               changeBadge = `<span class="er-same">—</span>`;
+        } else {
+            changeBadge = '<span class="er-same" style="font-size:.72rem;">أول تسجيل</span>';
+        }
+        return `<tr>
+            <td class="text-muted" style="font-size:.76rem;white-space:nowrap;">${r.date}</td>
+            <td><span class="er-rate-badge">${fmtNum(r.rate)}</span></td>
+            <td>${changeBadge}</td>
+            <td style="font-size:.76rem;">${r.user}</td>
+            <td style="font-size:.76rem;color:var(--text-secondary);">${r.notes || '—'}</td>
+        </tr>`;
+    }).join('');
+}
+
+function renderChart(rows) {
+    const labels = rows.map(r => r.date);
+    const values = rows.map(r => parseFloat(r.rate));
+    const ctx = document.getElementById('erChart').getContext('2d');
+    if (erChart) erChart.destroy();
+
+    const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)';
+    const textColor = isDark ? '#9ca3af' : '#6b7280';
+
+    erChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: `سعر الصرف (${HC_CUR})`,
+                data: values,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99,102,241,.08)',
+                borderWidth: 2.5,
+                pointRadius: rows.length <= 20 ? 4 : 2,
+                pointBackgroundColor: '#6366f1',
+                fill: true,
+                tension: 0.35,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ` ${fmtNum(ctx.parsed.y)} ج.س` } }
+            },
+            scales: {
+                x: {
+                    ticks: { color: textColor, font: {size:10}, maxTicksLimit: 10 },
+                    grid:  { color: gridColor }
+                },
+                y: {
+                    ticks: { color: textColor, font: {size:10}, callback: v => fmtNum(v) },
+                    grid:  { color: gridColor }
+                }
+            }
+        }
+    });
+}
+
+document.getElementById('erRateInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveRate(); });
+
+// Format hero rate on page load (Django renders raw decimal without commas)
+(function() {
+    const heroEl = document.getElementById('heroCurrentRate');
+    if (heroEl) {
+        const raw = heroEl.childNodes[0].textContent.trim();
+        const formatted = fmtNum(raw);
+        if (formatted !== '—') heroEl.childNodes[0].textContent = formatted + ' ';
+    }
+})();
+
+loadHistory();
+</script>
+{% endblock %}
