@@ -352,23 +352,25 @@
                 </button>
             </div>
             <div class="cx-view-body">
-                <div class="table-responsive cx-table-wrap">
-                    <table class="cx-table">
-                        <thead>
-                            <tr>
+                <!-- Desktop table -->
+                <div class="table-responsive d-none d-md-block">
+                    <table class="table table-sm" style="font-size:.82rem;">
+                        <thead class="table-light">
+                            <tr id="supplierLedgerHeadRow">
                                 <th>التاريخ</th>
                                 <th>النوع</th>
                                 <th>المبلغ (ج.س)</th>
-                                {% if hc_mode %}<th>{{ hc_currency }}</th><th>الرصيد ({{ hc_currency }})</th>{% endif %}
-                                <th>الرصيد (ج.س)</th>
+                                <th>المديونية (ج.س)</th>
                                 <th>ملاحظة</th>
                             </tr>
                         </thead>
                         <tbody id="supplierLedgerBody">
-                            <tr><td colspan="{% if hc_mode %}7{% else %}5{% endif %}" class="text-center text-muted">لا توجد حركات</td></tr>
+                            <tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>
                         </tbody>
                     </table>
                 </div>
+                <!-- Mobile cards -->
+                <div class="d-md-none" id="supplierLedgerCards" style="display:flex;flex-direction:column;gap:.6rem;padding:.25rem 0;"></div>
             </div>
             <div class="cx-view-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
@@ -530,11 +532,21 @@
 
         const cardsHtml = rows.map(function (r) {
             const city = r.city || '—';
-            const balance = EnjazIMS.formatMoney(r.current_balance);
-            const balanceClass = EnjazIMS.parseNumber(r.current_balance) > 0 ? 'cxr-bal--pos' : EnjazIMS.parseNumber(r.current_balance) < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
             const status = r.is_active
                 ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
                 : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوف</span>';
+
+            let balanceHtml;
+            if (r.currency && r.hc_balance !== null && r.hc_balance !== undefined) {
+                const hcAmt = EnjazIMS.parseNumber(r.hc_balance);
+                const balCls = hcAmt > 0 ? 'cxr-bal--pos' : hcAmt < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
+                balanceHtml = `<span class="cx-supplier-card-meta-value ${balCls}">${EnjazIMS.formatMoney(r.hc_balance)} <span style="font-size:.72rem;color:#4f46e5;">${r.currency}</span></span>`
+                            + `<span style="display:block;font-size:.7rem;color:var(--text-secondary);">(≈ ${EnjazIMS.formatMoney(r.current_balance)} ج.س)</span>`;
+            } else {
+                const n = EnjazIMS.parseNumber(r.current_balance);
+                const balCls = n > 0 ? 'cxr-bal--pos' : n < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
+                balanceHtml = `<strong class="cx-supplier-card-meta-value ${balCls}">${EnjazIMS.formatMoney(r.current_balance)}</strong>`;
+            }
 
             return `<article class="cx-supplier-card">
                 <div class="cx-supplier-card-head">
@@ -551,7 +563,7 @@
                     </div>
                     <div>
                         <span class="cx-supplier-card-meta-label">المديونية</span>
-                        <strong class="cx-supplier-card-meta-value ${balanceClass}">${balance}</strong>
+                        ${balanceHtml}
                     </div>
                 </div>
                 <div class="cx-supplier-card-actions">
@@ -618,10 +630,17 @@
             {
                 data: null,
                 render: function (_, __, r) {
+                    if (r.currency && r.hc_balance !== null && r.hc_balance !== undefined) {
+                        const hcAmt = EnjazIMS.parseNumber(r.hc_balance);
+                        const localAmt = EnjazIMS.parseNumber(r.current_balance);
+                        const cls = hcAmt > 0 ? 'cxr-bal--pos' : hcAmt < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
+                        const hcFmt = EnjazIMS.formatMoney(r.hc_balance);
+                        const localFmt = EnjazIMS.formatMoney(r.current_balance);
+                        return `<span class="cxr-bal ${cls}">${hcFmt} <span style="font-size:.72rem;font-weight:600;color:#4f46e5;">${r.currency}</span></span><br><small style="color:var(--text-secondary);font-size:.72rem;">(≈ ${localFmt} ج.س)</small>`;
+                    }
                     const n = EnjazIMS.parseNumber(r.current_balance);
                     const cls = n > 0 ? 'cxr-bal--pos' : n < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
-                    const badge = r.currency ? `<span style="font-size:0.65rem;background:#eef2ff;color:#4f46e5;padding:1px 5px;border-radius:4px;margin-right:4px;">${r.currency}</span>` : '';
-                    return `${badge}<span class="cxr-bal ${cls}">${EnjazIMS.formatMoney(r.current_balance)}</span>`;
+                    return `<span class="cxr-bal ${cls}">${EnjazIMS.formatMoney(r.current_balance)}</span>`;
                 }
             },
             {
@@ -792,9 +811,18 @@
                 $('#viewAddress').text(d.address || '—');
                 
                 // Financial info
-                const bal = EnjazIMS.parseNumber(d.current_balance);
-                const balCls = bal > 0 ? 'text-success' : bal < 0 ? 'text-danger' : '';
-                $('#viewBalance').html(`<strong class="${balCls}">${EnjazIMS.formatMoney(d.current_balance)}</strong>`);
+                let balHtml;
+                if (d.currency && d.hc_balance !== null && d.hc_balance !== undefined) {
+                    const hcAmt = EnjazIMS.parseNumber(d.hc_balance);
+                    const balCls = hcAmt > 0 ? 'text-success' : hcAmt < 0 ? 'text-danger' : '';
+                    balHtml = `<strong class="${balCls}">${EnjazIMS.formatMoney(d.hc_balance)} <span style="font-size:.78rem;color:#4f46e5;">${d.currency}</span></strong>`
+                             + `<br><small style="color:var(--text-secondary);font-size:.75rem;">(≈ ${EnjazIMS.formatMoney(d.current_balance)} ج.س)</small>`;
+                } else {
+                    const bal = EnjazIMS.parseNumber(d.current_balance);
+                    const balCls = bal > 0 ? 'text-success' : bal < 0 ? 'text-danger' : '';
+                    balHtml = `<strong class="${balCls}">${EnjazIMS.formatMoney(d.current_balance)}</strong>`;
+                }
+                $('#viewBalance').html(balHtml);
                 $('#viewCreditLimit').html(`<strong>${EnjazIMS.formatMoney(d.credit_limit)}</strong>`);
                 
                 // Additional info
@@ -815,25 +843,81 @@
 
     const LEDGER_HC_MODE = {% if hc_mode %}true{% else %}false{% endif %};
     const LEDGER_HC_CUR  = '{{ hc_currency }}';
-    const LEDGER_COLS    = LEDGER_HC_MODE ? 7 : 5;
 
-    function fmtHc(val) {
+    function fmtCur(val, cur) {
         if (val === null || val === undefined) return '—';
         const n = parseFloat(val);
         if (isNaN(n)) return '—';
-        return Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' ' + LEDGER_HC_CUR;
+        return Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' ' + (cur || LEDGER_HC_CUR);
     }
 
-    function loadSupplierTransactions(id) {
-        const $body = $('#supplierLedgerBody');
-        $body.html(`<tr><td colspan="${LEDGER_COLS}" class="text-center text-muted">جاري التحميل...</td></tr>`);
+    function buildLedgerCard(tx, isHCSup, supCur) {
+        const isCredit = tx.entry_type === 'payment' || tx.entry_type === 'return';
+        const isDebit  = tx.entry_type === 'invoice';
+        const amtColor = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
+        const badgeBg  = isCredit ? 'rgba(17,153,142,.12)' : isDebit ? 'rgba(239,68,68,.1)' : 'rgba(107,114,128,.1)';
+        const badgeColor = isCredit ? '#0d7a72' : isDebit ? '#dc2626' : '#6b7280';
+        const amtFmt   = EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount || 0)));
+        const balFmt   = isHCSup
+            ? fmtCur(tx.hc_running_balance, supCur)
+            : EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance || 0)));
+        const hcLine   = isHCSup && tx.hc_amount != null
+            ? `<div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border-light);">
+                <span style="font-size:.72rem;color:var(--text-secondary);">${supCur}</span>
+                <span style="font-weight:700;color:${amtColor};">${fmtCur(tx.hc_amount, supCur)}</span>
+               </div>` : '';
+        const notesLine = tx.notes && tx.notes !== '—'
+            ? `<div style="font-size:.72rem;color:var(--text-secondary);padding-top:.3rem;">${tx.notes}</div>` : '';
+        return `<div style="background:var(--bg-card,#fff);border:1px solid var(--border-light);border-radius:12px;padding:.7rem .9rem;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem;">
+                <span style="font-size:.72rem;color:var(--text-secondary);">${tx.entry_date || '—'}</span>
+                <span style="font-size:.72rem;font-weight:700;padding:.2rem .55rem;border-radius:6px;background:${badgeBg};color:${badgeColor};">${tx.entry_type_label || tx.entry_type || '—'}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border-light);">
+                <span style="font-size:.72rem;color:var(--text-secondary);">المبلغ (ج.س)</span>
+                <span style="font-weight:700;color:${amtColor};">${amtFmt}</span>
+            </div>
+            ${hcLine}
+            <div style="display:flex;justify-content:space-between;padding:.3rem 0 0;">
+                <span style="font-size:.72rem;color:var(--text-secondary);">المديونية</span>
+                <span style="font-weight:700;color:#6366f1;">${balFmt}${isHCSup ? ` <small style="opacity:.7;font-size:.65rem;">${supCur}</small>` : ''}</span>
+            </div>
+            ${notesLine}
+        </div>`;
+    }
+
+    function loadSupplierTransactions(id, supplierName, supplierCode) {
+        const $body   = $('#supplierLedgerBody');
+        const $cards  = $('#supplierLedgerCards');
+        const $thead  = $('#supplierLedgerHeadRow');
+        $body.html(`<tr><td colspan="6" class="text-center text-muted">جاري التحميل...</td></tr>`);
+        $cards.html(`<div class="text-center text-muted py-3" style="font-size:.85rem;">جاري التحميل...</div>`);
 
         $.ajax({
             url: apiUrl(urlTransactions, id),
             method: 'GET',
             success: function(resp) {
+                const isHCSup  = resp.is_hc_supplier;
+                const supCur   = resp.supplier_currency || LEDGER_HC_CUR;
+                const hcBal    = resp.hc_current_balance;
+
+                if (isHCSup && hcBal !== null) {
+                    const hcFmt = Math.abs(parseFloat(hcBal)).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    $('#supplierLedgerSubtitle').text(
+                        `${supplierName} (${supplierCode}) — المديونية الحالية: ${hcFmt} ${supCur}`
+                    );
+                }
+
+                if (isHCSup) {
+                    $thead.html(`<th>التاريخ</th><th>النوع</th><th>المبلغ (ج.س)</th><th>${supCur}</th><th>المديونية (${supCur})</th><th>ملاحظة</th>`);
+                } else {
+                    $thead.html(`<th>التاريخ</th><th>النوع</th><th>المبلغ (ج.س)</th><th>المديونية (ج.س)</th><th>ملاحظة</th>`);
+                }
+                const cols = isHCSup ? 6 : 5;
+
                 if (!resp.success || !Array.isArray(resp.data) || !resp.data.length) {
-                    $body.html(`<tr><td colspan="${LEDGER_COLS}" class="text-center text-muted">لا توجد حركات</td></tr>`);
+                    $body.html(`<tr><td colspan="${cols}" class="text-center text-muted">لا توجد حركات</td></tr>`);
+                    $cards.html(`<div class="text-center text-muted py-3" style="font-size:.85rem;">لا توجد حركات</div>`);
                     return;
                 }
 
@@ -842,24 +926,25 @@
                     const isDebit  = tx.entry_type === 'invoice';
                     const rowBg    = isCredit ? 'rgba(16,185,129,.08)' : isDebit ? 'rgba(239,68,68,.06)' : '';
                     const amtColor = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
-                    const hcCols = LEDGER_HC_MODE
-                        ? `<td style="color:${amtColor};font-weight:700;">${fmtHc(tx.hc_amount)}</td>
-                           <td style="font-weight:700;">${fmtHc(tx.hc_running_balance)}</td>`
-                        : '';
+                    const midCols = isHCSup
+                        ? `<td style="color:${amtColor};font-weight:700;">${fmtCur(tx.hc_amount, supCur)}</td>
+                           <td style="font-weight:700;">${fmtCur(tx.hc_running_balance, supCur)}</td>`
+                        : `<td>${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance || 0)))}</td>`;
                     return `<tr style="background:${rowBg}">
                         <td>${tx.entry_date || '—'}</td>
                         <td>${tx.entry_type_label || tx.entry_type || '—'}</td>
                         <td style="color:${amtColor};font-weight:700;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount || 0)))}</td>
-                        ${hcCols}
-                        <td>${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance || 0)))}</td>
+                        ${midCols}
                         <td>${tx.notes || '—'}</td>
                     </tr>`;
                 }).join('');
 
                 $body.html(rows);
+                $cards.html(resp.data.map(function(tx){ return buildLedgerCard(tx, isHCSup, supCur); }).join(''));
             },
             error: function() {
-                $body.html(`<tr><td colspan="${LEDGER_COLS}" class="text-center text-danger">تعذر تحميل الحركات</td></tr>`);
+                $body.html(`<tr><td colspan="6" class="text-center text-danger">تعذر تحميل الحركات</td></tr>`);
+                $cards.html(`<div class="text-center text-danger py-3" style="font-size:.85rem;">تعذر تحميل الحركات</div>`);
             }
         });
     }
@@ -871,8 +956,12 @@
             success: function(resp) {
                 if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
-                $('#supplierLedgerSubtitle').text(`${d.name || '—'} (${d.code || '—'}) — المديونية الحالية: ${EnjazIMS.formatMoney(d.current_balance || 0)}`);
-                loadSupplierTransactions(id);
+                // Show initial subtitle with local balance; transactions callback will correct it for HC suppliers
+                const balFmt = d.currency
+                    ? '...'
+                    : EnjazIMS.formatMoney(d.current_balance || 0);
+                $('#supplierLedgerSubtitle').text(`${d.name || '—'} (${d.code || '—'}) — المديونية الحالية: ${balFmt}`);
+                loadSupplierTransactions(id, d.name || '—', d.code || '—');
                 ledgerModal.show();
             },
             error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }

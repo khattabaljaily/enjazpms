@@ -58,17 +58,17 @@
     <div class="rpt-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
         <div class="rpt-kpi-card rpt-kpi--blue">
             <div class="rpt-kpi-icon"><i class="fas fa-file-invoice"></i></div>
-            <div class="rpt-kpi-value">{{ report.summary.total_debit }}</div>
+            <div class="rpt-kpi-value">{{ report.summary.total_debit }}{% if report.is_hc_supplier %} <small style="font-size:.65em;opacity:.8;">{{ report.supplier_currency }}</small>{% endif %}</div>
             <div class="rpt-kpi-label">إجمالي الفواتير</div>
         </div>
         <div class="rpt-kpi-card rpt-kpi--green">
             <div class="rpt-kpi-icon"><i class="fas fa-hand-holding-dollar"></i></div>
-            <div class="rpt-kpi-value">{{ report.summary.total_credit }}</div>
+            <div class="rpt-kpi-value">{{ report.summary.total_credit }}{% if report.is_hc_supplier %} <small style="font-size:.65em;opacity:.8;">{{ report.supplier_currency }}</small>{% endif %}</div>
             <div class="rpt-kpi-label">إجمالي المدفوعات</div>
         </div>
         <div class="rpt-kpi-card rpt-kpi--amber">
             <div class="rpt-kpi-icon"><i class="fas fa-balance-scale"></i></div>
-            <div class="rpt-kpi-value">{{ report.summary.closing_balance }}</div>
+            <div class="rpt-kpi-value">{{ report.summary.closing_balance }}{% if report.is_hc_supplier %} <small style="font-size:.65em;opacity:.8;">{{ report.supplier_currency }}</small>{% endif %}</div>
             <div class="rpt-kpi-label">المديونية الختامية</div>
         </div>
     </div>
@@ -88,8 +88,8 @@
                         <tr>
                             <th>التاريخ</th>
                             <th>نوع القيد</th>
-                            <th class="text-end">المبلغ</th>
-                            <th class="text-end">المديونية التراكمية</th>
+                            <th class="text-end">المبلغ{% if report.is_hc_supplier %} ({{ report.supplier_currency }}){% endif %}</th>
+                            <th class="text-end">المديونية التراكمية{% if report.is_hc_supplier %} ({{ report.supplier_currency }}){% endif %}</th>
                             <th>ملاحظات</th>
                         </tr>
                     </thead>
@@ -108,7 +108,7 @@
                                 <span class="badge" style="background:rgba(107,114,128,.12); color:#6b7280; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ entry.entry_type }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end fw-bold" style="color:{% if entry.amount|first == '-' %}#11998e{% else %}#ef4444{% endif %}">{{ entry.amount|cut:"-" }}</td>
+                            <td class="text-end fw-bold" style="color:{% if entry.entry_type_key == 'payment' or entry.entry_type_key == 'return' %}#11998e{% else %}#ef4444{% endif %}">{{ entry.amount|cut:"-" }}</td>
                             <td class="text-end fw-bold" style="color:#6366f1;">{{ entry.running_balance }}</td>
                             <td class="text-muted" style="font-size:.8rem;">{{ entry.notes|default:"—" }}</td>
                         </tr>

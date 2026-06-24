@@ -30,8 +30,8 @@
     <div class="rpt-filters">
         <form method="get" class="row g-3">
             <div class="col-md-4">
-                <label class="form-label">المورد <sup style="color:#ef4444">*</sup></label>
-                <select name="supplier_id" class="form-select" required>
+                <label class="form-label">المورد</label>
+                <select name="supplier_id" class="form-select">
                     <option value="">-- اختر مورداً --</option>
                     {% for s in suppliers %}
                     <option value="{{ s.id }}" {% if selected_supplier_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
@@ -87,18 +87,16 @@
                     <thead>
                         <tr>
                             <th>التاريخ</th>
-                            <th>رقم الفاتورة</th>
                             <th>المورد</th>
                             <th class="text-center">طريقة الدفع</th>
                             <th class="text-end">المبلغ</th>
-                            <th>رقم مرجعي</th>
+                            <th>مرجع</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in report.data %}
                         <tr>
                             <td class="text-muted">{{ row.payment_date }}</td>
-                            <td style="font-size:.82rem; font-weight:600;">{{ row.invoice_number }}</td>
                             <td class="fw-bold">{{ row.supplier_name }}</td>
                             <td class="text-center">
                                 {% if row.payment_method_key == 'cash' %}
@@ -107,7 +105,7 @@
                                 <span class="badge" style="background:rgba(79,172,254,.12); color:#4facfe; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;"><i class="fas fa-building-columns me-1"></i>{{ row.payment_method }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end fw-bold" style="color:#6366f1;">{{ row.amount }}</td>
+                            <td class="text-end fw-bold" style="color:#6366f1;">{{ row.amount }}{% if row.currency_label %} <span style="font-size:.7rem;opacity:.7;">{{ row.currency_label }}</span>{% endif %}</td>
                             <td class="text-muted" style="font-size:.8rem;">{{ row.reference_number|default:"—" }}</td>
                         </tr>
                         {% endfor %}

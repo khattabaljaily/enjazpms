@@ -2314,3 +2314,8 @@ div.dataTables_wrapper div.dataTables_paginate {
     align-items: flex-start;
 }
 .t-tip i { color: #f59e0b; flex-shrink: 0; margin-top: .1rem; }
+
+/* ── Ledger modal: full-width on mobile ── */
+@media (max-width: 768px) {
+    .modal-dialog.cx-ledger-dialog { max-width: calc(100vw - 1rem) !important; margin: 0.5rem auto; }
+}

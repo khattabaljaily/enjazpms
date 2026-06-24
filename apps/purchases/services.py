@@ -188,6 +188,18 @@ def _reverse_supplier_ledger(tenant, reference_type, reference_id):
             .aggregate(s=_Sum('amount'))['s'] or Decimal('0')
         )
         reversed_amount = -entry.amount
+
+        reversed_hc_amount = None
+        hc_run = None
+        if entry.hc_amount is not None:
+            reversed_hc_amount = -entry.hc_amount
+            hc_prev = (
+                SupplierLedger.objects
+                .filter(tenant=tenant, supplier=entry.supplier, hc_amount__isnull=False)
+                .aggregate(s=_Sum('hc_amount'))['s'] or Decimal('0')
+            )
+            hc_run = hc_prev + reversed_hc_amount
+
         SupplierLedger.objects.create(
             tenant=tenant,
             supplier=entry.supplier,
@@ -199,6 +211,10 @@ def _reverse_supplier_ledger(tenant, reference_type, reference_id):
             running_balance=prev + reversed_amount,
             notes=f'إلغاء: {entry.notes}' if entry.notes else 'إلغاء قيد',
             is_reversal=True,
+            hc_amount=reversed_hc_amount,
+            hc_currency=entry.hc_currency or '',
+            hc_exchange_rate=entry.hc_exchange_rate,
+            hc_running_balance=hc_run,
         )
 
 
@@ -500,6 +516,28 @@ def confirm_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRe
         )
 
     if invoice.supplier:
+        sup_currency = (invoice.supplier.currency or '').strip()
+        _hc_mode = getattr(tenant, 'hard_currency_mode', False)
+        _is_hc_sup = _hc_mode and bool(sup_currency)
+        ret_hc_amt = ret_hc_cur = ret_hc_rate = None
+        if _is_hc_sup:
+            try:
+                _rate = Decimal(str(tenant.exchange_rate or 1))
+                if _rate > 0:
+                    ret_hc_amt = -(total / _rate).quantize(Decimal('0.01'))
+                    ret_hc_cur = sup_currency
+                    ret_hc_rate = _rate
+            except Exception:
+                pass
+        elif _hc_mode:
+            try:
+                _rate = Decimal(str(tenant.exchange_rate or 1))
+                if _rate > 0:
+                    ret_hc_amt = -(total / _rate).quantize(Decimal('0.01'))
+                    ret_hc_cur = tenant.hard_currency or ''
+                    ret_hc_rate = _rate
+            except Exception:
+                pass
         _apply_supplier_ledger(
             tenant=tenant,
             supplier=invoice.supplier,
@@ -509,6 +547,9 @@ def confirm_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRe
             reference_id=purchase_return.id,
             date=purchase_return.return_date,
             notes=f'مرتجع شراء {purchase_return.return_number}',
+            hc_amount=ret_hc_amt,
+            hc_currency=ret_hc_cur or '',
+            hc_exchange_rate=ret_hc_rate,
         )
 
     all_lines = invoice.lines.all()

@@ -128,11 +128,8 @@
                                             <select id="paymentModalTreasury" class="cx-input">
                                                 <option value="">— اختر الخزينة —</option>
                                                 {% for treasury in treasuries %}
-                                                <option value="{{ treasury.id }}" data-hc="0">{{ treasury.name }}</option>
+                                                <option value="{{ treasury.id }}">{{ treasury.name }}</option>
                                                 {% endfor %}
-                                                {% if hc_treasury %}
-                                                <option value="{{ hc_treasury.id }}" data-hc="1" style="display:none;">{{ hc_treasury.name }}</option>
-                                                {% endif %}
                                             </select>
                                         </div>
                                         <div class="col-12" id="paymentModalReferenceRow" style="display:none">
@@ -140,12 +137,12 @@
                                             <input type="text" id="paymentModalReference" class="cx-input" placeholder="رقم المرجع أو التحويل...">
                                         </div>
                                         {% if hc_mode %}
-                                        <div class="col-md-6" id="paymentModalRateRow">
+                                        <div class="col-md-6" id="paymentModalRateRow" style="display:none;">
                                             <label class="cx-label">سعر الصرف ({{ hc_currency }}/ج.س) <span class="text-danger">*</span></label>
-                                            <input type="number" id="paymentModalRate" class="cx-input text-end" min="0.0001" step="0.01" value="{{ exchange_rate|stringformat:'.2f' }}" required>
+                                            <input type="number" id="paymentModalRate" class="cx-input text-end" min="0.0001" step="0.01" value="{{ exchange_rate|stringformat:'.2f' }}">
                                         </div>
-                                        <div class="col-md-6" id="paymentModalHcPreviewRow">
-                                            <label class="cx-label" id="paymentModalHcPreviewLabel">المبلغ بـ {{ hc_currency }}</label>
+                                        <div class="col-md-6" id="paymentModalHcPreviewRow" style="display:none;">
+                                            <label class="cx-label" id="paymentModalHcPreviewLabel">المعادل بالعملة المحلية</label>
                                             <div class="cx-input text-end" id="paymentModalHcPreview" style="background:var(--bg-secondary);color:var(--indigo-600,#4f46e5);font-weight:700;">—</div>
                                         </div>
                                         {% endif %}
@@ -399,7 +396,6 @@
     let selectedPaymentSupplier = null;
 
     {% if hc_mode %}
-    const HC_TREASURY_ID = {% if hc_treasury %}{{ hc_treasury.id }}{% else %}null{% endif %};
     const CURRENT_RATE = {{ exchange_rate|stringformat:".4f" }};
     {% endif %}
     const PAYMENT_SUPPLIERS = [{% for s in suppliers %}{id:{{ s.id }},name:'{{ s.name|escapejs }}',currency:'{{ s.currency|default:"" }}',balance:parseFloat('{{ s.opening_balance|default:0 }}')+parseFloat('{{ s.ledger_total|default:0 }}'),hcBalance:parseFloat('{{ s.hc_ledger_total|default:0 }}')},{% endfor %}];
@@ -429,23 +425,17 @@
         // Balance label
         if (paymentModalBalanceLabel) paymentModalBalanceLabel.textContent = isHC ? `المديونية (${cur})` : 'المديونية';
         {% if hc_mode %}
-        // HC preview label
-        if (paymentModalHcPreviewLabel) paymentModalHcPreviewLabel.textContent = isHC
-            ? 'المعادل بالعملة المحلية'
-            : `المبلغ بـ {{ hc_currency }}`;
-        {% endif %}
-        // Treasury: show HC treasury for HC supplier, local for local
-        Array.from(paymentModalTreasury.options).forEach(opt => {
-            if (!opt.value) return;
-            const isHcOpt = opt.dataset.hc === '1';
-            opt.style.display = (isHC ? isHcOpt : !isHcOpt) ? '' : 'none';
-        });
-        // Pre-select HC treasury for HC supplier if available
-        if (isHC && HC_TREASURY_ID) {
-            paymentModalTreasury.value = HC_TREASURY_ID;
-        } else {
-            paymentModalTreasury.value = '';
+        // Show exchange rate + preview only for HC suppliers
+        const rateRow = document.getElementById('paymentModalRateRow');
+        const previewRow = document.getElementById('paymentModalHcPreviewRow');
+        if (rateRow) rateRow.style.display = isHC ? '' : 'none';
+        if (previewRow) previewRow.style.display = isHC ? '' : 'none';
+        if (!isHC && document.getElementById('paymentModalHcPreview')) {
+            document.getElementById('paymentModalHcPreview').textContent = '—';
         }
+        {% endif %}
+        // Always use local treasury — reset selection on supplier change
+        paymentModalTreasury.value = '';
     }
 
     (function() {
@@ -609,7 +599,7 @@
         if (!supplierId) return EnjazIMS.toast('اختر المورد', 'error');
         if (!paymentDate) return EnjazIMS.toast('اختر التاريخ', 'error');
         if (!amount || amount <= 0) return EnjazIMS.toast('أدخل مبلغاً صحيحاً', 'error');
-        if ((HC_MODE || isHCSupplier) && (!exchangeRate || exchangeRate <= 0)) return EnjazIMS.toast('أدخل سعر الصرف', 'error');
+        if (isHCSupplier && (!exchangeRate || exchangeRate <= 0)) return EnjazIMS.toast('أدخل سعر الصرف', 'error');
 
         paymentModalSaveBtn.disabled = true;
         paymentModalSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...';

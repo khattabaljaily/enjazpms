@@ -303,6 +303,10 @@ class PurchasesReportGenerator:
         except Supplier.DoesNotExist:
             return None
 
+        hc_mode = getattr(self.tenant, 'hard_currency_mode', False)
+        supplier_currency = (supplier.currency or '').strip()
+        is_hc_supplier = hc_mode and bool(supplier_currency)
+
         entries = SupplierLedger.objects.filter(
             tenant=self.tenant,
             supplier=supplier,
@@ -312,26 +316,40 @@ class PurchasesReportGenerator:
 
         data = []
         for e in entries:
+            if is_hc_supplier and e.hc_amount is not None:
+                amt = float(e.hc_amount)
+                bal = float(e.hc_running_balance) if e.hc_running_balance is not None else None
+            else:
+                amt = float(e.amount)
+                bal = float(e.running_balance)
             data.append({
                 'entry_date': e.entry_date,
                 'entry_type': e.get_entry_type_display(),
                 'entry_type_key': e.entry_type,
-                'amount': format_number(float(e.amount), 2),
-                'running_balance': format_number(float(e.running_balance), 2),
+                'amount': format_number(amt, 2),
+                'running_balance': format_number(bal, 2) if bal is not None else '—',
                 'notes': e.notes,
             })
 
-        total_debit = sum(float(e.amount) for e in entries if float(e.amount) > 0)
-        total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
-        closing_balance = entries.last().running_balance if entries.exists() else 0
+        if is_hc_supplier:
+            total_debit  = sum(float(e.hc_amount) for e in entries if e.hc_amount and float(e.hc_amount) > 0)
+            total_credit = abs(sum(float(e.hc_amount) for e in entries if e.hc_amount and float(e.hc_amount) < 0))
+            last = entries.filter(hc_running_balance__isnull=False).order_by('entry_date', 'id').last()
+            closing_balance = float(last.hc_running_balance) if last else 0
+        else:
+            total_debit  = sum(float(e.amount) for e in entries if float(e.amount) > 0)
+            total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
+            closing_balance = float(entries.last().running_balance) if entries.exists() else 0
 
         return {
             'supplier': supplier,
+            'supplier_currency': supplier_currency,
+            'is_hc_supplier': is_hc_supplier,
             'period': {'start': self.start_date, 'end': self.end_date},
             'summary': {
                 'total_debit': format_number(total_debit, 2),
                 'total_credit': format_number(total_credit, 2),
-                'closing_balance': format_number(float(closing_balance), 2),
+                'closing_balance': format_number(closing_balance, 2),
             },
             'data': data,
         }
@@ -340,16 +358,33 @@ class PurchasesReportGenerator:
         """أرصدة الموردين — آخر رصيد تراكمي لكل مورد"""
         from apps.suppliers.models import Supplier
 
+        hc_mode = getattr(self.tenant, 'hard_currency_mode', False)
+
         suppliers = Supplier.objects.filter(tenant=self.tenant).order_by('name')
         data = []
         for s in suppliers:
+            supplier_currency = (s.currency or '').strip()
+            is_hc = hc_mode and bool(supplier_currency)
+
             last_entry = (
                 SupplierLedger.objects
                 .filter(tenant=self.tenant, supplier=s)
                 .order_by('-entry_date', '-id')
                 .first()
             )
-            balance = float(last_entry.running_balance) if last_entry else float(s.opening_balance)
+
+            if is_hc:
+                # Use hc_running_balance from the last entry that has it
+                last_hc = (
+                    SupplierLedger.objects
+                    .filter(tenant=self.tenant, supplier=s, hc_running_balance__isnull=False)
+                    .order_by('-entry_date', '-id')
+                    .first()
+                )
+                balance = float(last_hc.hc_running_balance) if last_hc else 0.0
+            else:
+                balance = float(last_entry.running_balance) if last_entry else float(s.opening_balance)
+
             data.append({
                 'code': s.code,
                 'name': s.name,
@@ -357,9 +392,12 @@ class PurchasesReportGenerator:
                 'credit_limit': format_number(float(s.credit_limit), 2),
                 'balance': format_number(balance, 2),
                 'balance_raw': balance,
+                'currency': supplier_currency,
+                'is_hc': is_hc,
             })
 
-        total_balance = sum(r['balance_raw'] for r in data)
+        # Total balance only for local suppliers (can't mix currencies)
+        total_balance = sum(r['balance_raw'] for r in data if not r['is_hc'])
         total_creditors = sum(1 for r in data if r['balance_raw'] > 0)
         return {
             'data': data,
@@ -371,34 +409,62 @@ class PurchasesReportGenerator:
         }
 
     def get_payments_report(self, supplier_id=None):
-        """تقرير مدفوعات الموردين (PurchasePayment) بالفترة"""
-        payments = PurchasePayment.objects.filter(
+        """تقرير مدفوعات الموردين — من SupplierLedger (يشمل المدفوعات المستقلة والمرتبطة بفواتير)"""
+        entries = SupplierLedger.objects.filter(
             tenant=self.tenant,
-            payment_date__gte=self.start_date,
-            payment_date__lte=self.end_date,
-            is_reversed=False,
-        ).select_related('invoice', 'invoice__supplier').order_by('-payment_date')
+            entry_type='payment',
+            entry_date__gte=self.start_date,
+            entry_date__lte=self.end_date,
+        ).select_related('supplier').order_by('-entry_date', '-id')
 
         if supplier_id:
-            payments = payments.filter(invoice__supplier_id=supplier_id)
+            entries = entries.filter(supplier_id=supplier_id)
 
+        METHOD_MAP = {
+            'supplier_payment_cash': ('نقداً', 'cash'),
+            'supplier_payment_bank': ('تحويل بنكي', 'bank'),
+            'purchase_invoice':      ('نقداً', 'cash'),
+        }
+
+        hc_mode = getattr(self.tenant, 'hard_currency_mode', False)
         data = []
-        for p in payments:
+        total_cash = 0.0
+        total_bank = 0.0
+
+        for e in entries:
+            amt = abs(float(e.amount))
+            method_label, method_key = METHOD_MAP.get(e.reference_type, ('—', ''))
+
+            sup_currency = (e.supplier.currency or '').strip() if e.supplier else ''
+            is_hc = hc_mode and bool(sup_currency) and e.hc_amount is not None
+            if is_hc:
+                display_amount = format_number(abs(float(e.hc_amount)), 2)
+                currency_label = sup_currency
+            else:
+                display_amount = format_number(amt, 2)
+                currency_label = ''
+
+            if method_key == 'cash':
+                total_cash += amt
+            elif method_key == 'bank':
+                total_bank += amt
+
+            ref = ''
+            if e.notes and 'مرجع:' in e.notes:
+                ref = e.notes.split('مرجع:')[-1].strip().split('|')[0].strip()
+
             data.append({
-                'payment_date': p.payment_date,
-                'invoice_number': p.invoice.invoice_number,
-                'supplier_name': p.invoice.supplier.name if p.invoice.supplier else '—',
-                'payment_method': p.get_payment_method_display(),
-                'payment_method_key': p.payment_method,
-                'amount': format_number(float(p.amount), 2),
-                'reference_number': p.reference_number,
-                'notes': p.notes,
+                'payment_date': e.entry_date,
+                'supplier_name': e.supplier.name if e.supplier else '—',
+                'payment_method': method_label,
+                'payment_method_key': method_key,
+                'amount': display_amount,
+                'currency_label': currency_label,
+                'reference_number': ref,
+                'notes': e.notes or '',
             })
 
-        total_cash = sum(float(p.amount) for p in payments if p.payment_method == 'cash')
-        total_bank = sum(float(p.amount) for p in payments if p.payment_method == 'bank')
         total_all = total_cash + total_bank
-
         return {
             'period': {'start': self.start_date, 'end': self.end_date},
             'summary': {

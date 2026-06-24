@@ -70,7 +70,7 @@
                             <td class="text-center text-muted">{{ row.phone|default:"—" }}</td>
                             <td class="text-end text-muted">{{ row.credit_limit }}</td>
                             <td class="text-end fw-bold" style="color:{% if row.balance_raw > 0 %}#6366f1{% elif row.balance_raw < 0 %}#11998e{% else %}var(--text-secondary){% endif %}">
-                                {{ row.balance }}
+                                {{ row.balance }}{% if row.is_hc %} <span style="font-size:.7rem;opacity:.7;">{{ row.currency }}</span>{% endif %}
                             </td>
                         </tr>
                         {% endfor %}
