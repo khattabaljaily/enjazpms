@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404
 from apps.accounts.decorators import require_permission
+from apps.accounts.activity_service import log_activity
 from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta, date as date_type
@@ -1548,6 +1549,7 @@ def exchange_rate_update_api(request):
         if bulk:
             Item.objects.bulk_update(bulk, ['selling_price', 'cost_price', 'min_selling_price'])
 
+    log_activity(request, 'تغيير سعر الصرف', f'{previous_rate} ← {new_rate}', 'update')
     return JsonResponse({
         'success': True,
         'message': f'تم تحديث سعر الصرف وإعادة تسعير {updated} منتج',

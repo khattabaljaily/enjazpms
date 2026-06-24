@@ -599,6 +599,7 @@ def customer_payment_cancel_api(request, pk):
             notes=reverse_notes,
         )
 
+    log_activity(request, 'إلغاء دفعة عميل', f'{payment.customer.name}', 'delete')
     return _json_ok(msg='تم إلغاء الدفعة واستعادة مديونية العميل')
 
 
@@ -619,6 +620,7 @@ def customer_update_api(request, pk):
         customer = form.save(commit=False)
         customer.updated_by = request.user
         customer.save()
+        log_activity(request, 'تعديل عميل', customer.name, 'update')
         return JsonResponse({
             'success': True,
             'message': 'تم تعديل بيانات العميل بنجاح',
@@ -642,7 +644,9 @@ def customer_delete_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
+    cus_name = customer.name
     customer.delete()
+    log_activity(request, 'حذف عميل', cus_name, 'delete')
     return JsonResponse({
         'success': True,
         'message': 'تم حذف العميل بنجاح',

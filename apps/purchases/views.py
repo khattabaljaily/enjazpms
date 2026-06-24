@@ -440,6 +440,7 @@ def order_confirm_ajax(request, pk):
     invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
     try:
         confirm_purchase_invoice(invoice, request.user)
+        log_activity(request, 'تأكيد أمر شراء', f'{invoice.invoice_number} — {invoice.supplier.name}', 'create')
         return JsonResponse({'success': True, 'message': 'تم تأكيد أمر الشراء'}, json_dumps_params={'ensure_ascii': False})
     except ValueError as e:
         return _json_error(str(e))
@@ -462,6 +463,7 @@ def order_cancel_ajax(request, pk):
     reason = body.get('reason', '')
     try:
         cancel_purchase_invoice(invoice, request.user, reason)
+        log_activity(request, 'إلغاء أمر شراء', f'{invoice.invoice_number} — {invoice.supplier.name}', 'delete')
         return JsonResponse({'success': True, 'message': 'تم إلغاء أمر الشراء'}, json_dumps_params={'ensure_ascii': False})
     except ValueError as e:
         return _json_error(str(e))
@@ -690,6 +692,7 @@ def return_confirm_ajax(request, pk):
     purchase_return = get_object_or_404(PurchaseReturn, pk=pk, tenant=tenant)
     try:
         confirm_purchase_return(purchase_return, request.user)
+        log_activity(request, 'تأكيد مرتجع مشتريات', f'{purchase_return.return_number}', 'create')
         return JsonResponse({'success': True, 'message': 'تم تأكيد المرتجع بنجاح'}, json_dumps_params={'ensure_ascii': False})
     except ValueError as e:
         return _json_error(str(e))
@@ -706,6 +709,7 @@ def return_cancel_ajax(request, pk):
     purchase_return = get_object_or_404(PurchaseReturn, pk=pk, tenant=tenant)
     try:
         cancel_purchase_return(purchase_return, request.user)
+        log_activity(request, 'إلغاء مرتجع مشتريات', f'{purchase_return.return_number}', 'delete')
         return JsonResponse({'success': True, 'message': 'تم إلغاء المرتجع'}, json_dumps_params={'ensure_ascii': False})
     except ValueError as e:
         return _json_error(str(e))
@@ -1584,6 +1588,7 @@ def rfq_send_ajax(request, pk):
             return JsonResponse({'success': False, 'message': 'يمكن إرسال المسودات فقط'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'sent'
         rfq.save(update_fields=['status', 'updated_at'])
+        log_activity(request, 'إرسال طلب عرض سعر (RFQ)', f'{rfq.rfq_number} — {rfq.supplier.name}', 'other')
         return JsonResponse({'success': True, 'message': 'تم تحديث الحالة إلى مُرسَل'}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
@@ -1621,6 +1626,7 @@ def rfq_receive_ajax(request, pk):
             rfq.save(update_fields=['status', 'updated_at'])
             rfq.recalculate_total()
 
+        log_activity(request, 'استلام عروض الأسعار (RFQ)', f'{rfq.rfq_number} — {rfq.supplier.name}', 'other')
         return JsonResponse({'success': True, 'message': 'تم تسجيل أسعار المورد'}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
@@ -1637,6 +1643,7 @@ def rfq_accept_ajax(request, pk):
             return JsonResponse({'success': False, 'message': 'الحالة لا تسمح بالقبول'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'accepted'
         rfq.save(update_fields=['status', 'updated_at'])
+        log_activity(request, 'قبول عرض الأسعار (RFQ)', f'{rfq.rfq_number} — {rfq.supplier.name}', 'other')
         return JsonResponse({'success': True, 'message': 'تم قبول عرض الأسعار'}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
@@ -1653,6 +1660,7 @@ def rfq_reject_ajax(request, pk):
             return JsonResponse({'success': False, 'message': 'لا يمكن رفض هذا الطلب'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'rejected'
         rfq.save(update_fields=['status', 'updated_at'])
+        log_activity(request, 'رفض عرض الأسعار (RFQ)', f'{rfq.rfq_number} — {rfq.supplier.name}', 'delete')
         return JsonResponse({'success': True, 'message': 'تم رفض عرض الأسعار'}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
@@ -1669,6 +1677,7 @@ def rfq_cancel_ajax(request, pk):
             return JsonResponse({'success': False, 'message': 'لا يمكن إلغاء طلب محوَّل'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'cancelled'
         rfq.save(update_fields=['status', 'updated_at'])
+        log_activity(request, 'إلغاء طلب عرض سعر (RFQ)', f'{rfq.rfq_number} — {rfq.supplier.name}', 'delete')
         return JsonResponse({'success': True}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'الطلب غير موجود'}, status=404, json_dumps_params={'ensure_ascii': False})
@@ -1712,6 +1721,7 @@ def rfq_convert_ajax(request, pk):
             rfq.converted_invoice = invoice
             rfq.save(update_fields=['status', 'converted_invoice', 'updated_at'])
 
+        log_activity(request, 'تحويل RFQ لأمر شراء', f'{rfq.rfq_number} ← {invoice.invoice_number}', 'create')
         return JsonResponse({'success': True,
                              'redirect': reverse('purchases:order_detail', args=[invoice.id])}, json_dumps_params={'ensure_ascii': False})
     except PurchaseRFQ.DoesNotExist:

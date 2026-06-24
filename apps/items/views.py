@@ -440,6 +440,7 @@ def item_update_api(request, pk):
         _apply_hc_prices(updated, tenant)
         updated.save()
         _save_item_units(item, request.POST.get('units_json', ''), tenant)
+        log_activity(request, 'تعديل منتج', updated.name, 'update')
         return JsonResponse({'success': True, 'message': 'تم تحديث المنتج بنجاح'})
 
     return JsonResponse({
@@ -478,6 +479,7 @@ def item_delete_api(request, pk):
         import logging
         logging.getLogger(__name__).error('item_delete_api error pk=%s: %s', pk, e, exc_info=True)
         return JsonResponse({'success': False, 'message': 'تعذر الحذف: المنتج مرتبط بسجلات لا يمكن حذفها (فواتير، تحويلات، جرد)'}, status=400)
+    log_activity(request, 'حذف منتج', name, 'delete')
     return JsonResponse({'success': True, 'message': f'تم حذف المنتج "{name}" بنجاح'})
 
 

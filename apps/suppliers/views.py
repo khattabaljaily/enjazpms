@@ -663,6 +663,7 @@ def supplier_payment_cancel_api(request, pk):
             notes=reverse_notes,
         )
 
+    log_activity(request, 'إلغاء دفعة مورد', f'{payment.supplier.name}', 'delete')
     return _json_ok(msg='تم إلغاء الدفعة وتحديث مديونية المورد')
 
 
@@ -683,6 +684,7 @@ def supplier_update_api(request, pk):
         supplier = form.save(commit=False)
         supplier.updated_by = request.user
         supplier.save()
+        log_activity(request, 'تعديل مورد', supplier.name, 'update')
         return JsonResponse({
             'success': True,
             'message': 'تم تعديل بيانات المورد بنجاح',
@@ -706,6 +708,7 @@ def supplier_delete_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
+    sup_name = supplier.name
     try:
         supplier.delete()
     except ProtectedError:
@@ -713,6 +716,7 @@ def supplier_delete_api(request, pk):
             'success': False,
             'message': 'لا يمكن حذف المورد لوجود فواتير أو حركات مرتبطة به.',
         }, status=400, json_dumps_params={'ensure_ascii': False})
+    log_activity(request, 'حذف مورد', sup_name, 'delete')
     return JsonResponse({
         'success': True,
         'message': 'تم حذف المورد بنجاح',

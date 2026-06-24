@@ -1269,6 +1269,7 @@ def transfer_confirm_ajax(request, pk):
     try:
         transfer = StockTransfer.objects.for_tenant(tenant).get(pk=pk)
         confirm_stock_transfer(transfer)
+        log_activity(request, 'تأكيد تحويل مخزون', f'{transfer.transfer_number}', 'create')
         return JsonResponse({'success': True, 'message': 'تم تأكيد التحويل بنجاح'})
     except (StockTransfer.DoesNotExist, StockQuantity.DoesNotExist):
         return JsonResponse({'success': False, 'message': 'التحويل أو الكمية غير موجودة'}, status=404)
@@ -1285,6 +1286,7 @@ def transfer_cancel_ajax(request, pk):
     try:
         transfer = StockTransfer.objects.for_tenant(tenant).get(pk=pk)
         cancel_stock_transfer(transfer)
+        log_activity(request, 'إلغاء تحويل مخزون', f'{transfer.transfer_number}', 'delete')
         return JsonResponse({'success': True, 'message': 'تم إلغاء التحويل'})
     except (StockTransfer.DoesNotExist, StockQuantity.DoesNotExist):
         return JsonResponse({'success': False, 'message': 'التحويل غير موجود'}, status=404)

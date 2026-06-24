@@ -626,9 +626,11 @@ def invoice_delete_draft_ajax(request, pk):
     if invoice.sale_returns.exists():
         return _json_error('لا يمكن حذف المسودة لوجود مرتجعات مرتبطة بها')
 
+    inv_num = invoice.invoice_number
     with transaction.atomic():
         invoice.delete()
 
+    log_activity(request, 'حذف مسودة فاتورة مبيعات', inv_num, 'delete')
     return _json_ok(msg='تم حذف مسودة الفاتورة')
 
 
@@ -643,6 +645,7 @@ def invoice_confirm_ajax(request, pk):
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
     try:
         confirm_sale_invoice(invoice, request.user)
+        log_activity(request, 'تأكيد فاتورة مبيعات', f'{invoice.invoice_number} — {invoice.customer.name}', 'create')
         return _json_ok(msg='تم تأكيد الفاتورة بنجاح')
     except ValueError as e:
         return _json_error(str(e))
@@ -667,6 +670,7 @@ def invoice_cancel_ajax(request, pk):
 
     try:
         cancel_sale_invoice(invoice, request.user, reason)
+        log_activity(request, 'إلغاء فاتورة مبيعات', f'{invoice.invoice_number} — {invoice.customer.name}', 'delete')
         return _json_ok(msg='تم إلغاء الفاتورة')
     except ValueError as e:
         return _json_error(str(e))
@@ -682,6 +686,7 @@ def invoice_deliver_ajax(request, pk):
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
     try:
         deliver_sale_invoice(invoice, request.user)
+        log_activity(request, 'تسليم فاتورة مبيعات', f'{invoice.invoice_number} — {invoice.customer.name}', 'other')
         return _json_ok(msg='تم تسليم الفاتورة بنجاح')
     except ValueError as e:
         return _json_error(str(e))
@@ -964,6 +969,7 @@ def return_confirm_ajax(request, pk):
     sale_return = get_object_or_404(SaleReturn, pk=pk, tenant=tenant)
     try:
         confirm_sale_return(sale_return, request.user)
+        log_activity(request, 'تأكيد مرتجع مبيعات', f'{sale_return.return_number}', 'create')
         return _json_ok(msg='تم تأكيد المرتجع بنجاح')
     except ValueError as e:
         return _json_error(str(e))
@@ -979,6 +985,7 @@ def return_cancel_ajax(request, pk):
     sale_return = get_object_or_404(SaleReturn, pk=pk, tenant=tenant)
     try:
         cancel_sale_return(sale_return, request.user)
+        log_activity(request, 'إلغاء مرتجع مبيعات', f'{sale_return.return_number}', 'delete')
         return _json_ok(msg='تم إلغاء المرتجع')
     except ValueError as e:
         return _json_error(str(e))
@@ -1404,6 +1411,7 @@ def quote_send_ajax(request, pk):
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
     try:
         mark_quote_sent(quote, request.user)
+        log_activity(request, 'إرسال عرض سعر', f'{quote.quote_number} — {quote.customer.name}', 'other')
         return _json_ok(msg='تم تغيير حالة العرض إلى مُرسَل')
     except Exception as e:
         return _json_error(str(e))
@@ -1417,6 +1425,7 @@ def quote_accept_ajax(request, pk):
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
     try:
         mark_quote_accepted(quote, request.user)
+        log_activity(request, 'قبول عرض سعر', f'{quote.quote_number} — {quote.customer.name}', 'other')
         return _json_ok(msg='تم قبول العرض')
     except Exception as e:
         return _json_error(str(e))
@@ -1430,6 +1439,7 @@ def quote_reject_ajax(request, pk):
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
     try:
         mark_quote_rejected(quote, request.user)
+        log_activity(request, 'رفض عرض سعر', f'{quote.quote_number} — {quote.customer.name}', 'delete')
         return _json_ok(msg='تم رفض العرض')
     except Exception as e:
         return _json_error(str(e))
@@ -1443,6 +1453,7 @@ def quote_cancel_ajax(request, pk):
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
     try:
         cancel_sale_quote(quote, request.user)
+        log_activity(request, 'إلغاء عرض سعر', f'{quote.quote_number} — {quote.customer.name}', 'delete')
         return _json_ok(msg='تم إلغاء عرض السعر')
     except Exception as e:
         return _json_error(str(e))
@@ -1456,7 +1467,9 @@ def quote_delete_draft_ajax(request, pk):
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
     if quote.status != 'draft':
         return _json_error('لا يمكن حذف إلا المسودات')
+    q_num = quote.quote_number
     quote.delete()
+    log_activity(request, 'حذف مسودة عرض سعر', q_num, 'delete')
     return _json_ok(msg='تم حذف مسودة العرض')
 
 
@@ -1485,6 +1498,7 @@ def quote_convert_ajax(request, pk):
             bank_amount=bank_amount,
             bank_reference=bank_reference,
         )
+        log_activity(request, 'تحويل عرض سعر لفاتورة', f'{quote.quote_number} ← {invoice.invoice_number}', 'create')
         return _json_ok(
             {'invoice_url': f'/sales/{invoice.pk}/'},
             msg=f'تم إنشاء الفاتورة {invoice.invoice_number} من عرض السعر'
