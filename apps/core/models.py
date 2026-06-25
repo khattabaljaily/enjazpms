@@ -151,6 +151,10 @@ class Tenant(models.Model):
     )
     exchange_rate_updated_at = models.DateTimeField('آخر تحديث للسعر', null=True, blank=True)
     
+    # Terms of Service
+    terms_accepted_at = models.DateTimeField('تاريخ قبول الاتفاقية', null=True, blank=True)
+    terms_version     = models.CharField('إصدار الاتفاقية المقبولة', max_length=20, blank=True)
+
     # Meta
     created_at = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True)
     updated_at = models.DateTimeField('تاريخ التحديث', auto_now=True)

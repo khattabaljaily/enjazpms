@@ -94,6 +94,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.core.middleware.MaintenanceModeMiddleware',
     'apps.core.middleware.TenantMiddleware',
+    'apps.core.middleware.TermsMiddleware',
     'apps.core.middleware.TimezoneMiddleware',
     'apps.core.middleware.ActiveTenantMiddleware',
     'apps.accounts.activity_middleware.ActivityLogMiddleware',
@@ -215,3 +216,6 @@ DEEPSEEK_MODEL   = 'deepseek-chat'
 
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False
+
+# ── Terms of Service ───────────────────────────────────────────
+TERMS_VERSION = '2026-06'

@@ -1390,6 +1390,29 @@ def subscription_expired(request):
     return render(request, 'core/subscription_expired.html')
 
 
+def terms_of_service(request):
+    """صفحة اتفاقية الاستخدام — عرض + قبول"""
+    from django.conf import settings as dj_settings
+    from django.utils import timezone as tz
+
+    current_version = dj_settings.TERMS_VERSION
+
+    if request.method == 'POST' and request.user.is_authenticated:
+        tenant = getattr(request, 'tenant', None)
+        if tenant:
+            tenant.terms_accepted_at = tz.now()
+            tenant.terms_version = current_version
+            tenant.save(update_fields=['terms_accepted_at', 'terms_version'])
+            next_url = request.POST.get('next') or '/'
+            return redirect(next_url)
+
+    next_url = request.GET.get('next', '/')
+    return render(request, 'core/terms_of_service.html', {
+        'terms_version': current_version,
+        'next': next_url,
+    })
+
+
 def no_tenant(request):
     """صفحة عدم وجود tenant"""
     return render(request, 'core/no_tenant.html')

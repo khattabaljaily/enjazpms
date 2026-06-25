@@ -237,6 +237,54 @@ class ActivityLogMiddleware:
         return response
 
 
+class TermsMiddleware:
+    """
+    يمنع الدخول للنظام حتى يقبل المشترك اتفاقية الاستخدام.
+    يُطبَّق على tenant_admin فقط عند أول دخول أو عند تحديث الاتفاقية.
+    """
+
+    _EXEMPT = (
+        '/accounts/logout/',
+        '/accounts/login/',
+        '/accounts/api/login/',
+        '/terms/',
+        '/static/',
+        '/media/',
+        '/admin/',
+        '/subscription/',
+        '/no-tenant/',
+        '/no-permission/',
+        '/sw.js',
+        '/manifest.json',
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.conf import settings as dj_settings
+
+        if any(request.path.startswith(p) for p in self._EXEMPT):
+            return self.get_response(request)
+
+        if not request.user.is_authenticated:
+            return self.get_response(request)
+
+        # Platform staff & superusers are exempt
+        if request.user.is_superuser or getattr(request.user, 'is_platform_staff', False):
+            return self.get_response(request)
+
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            return self.get_response(request)
+
+        current_version = dj_settings.TERMS_VERSION
+        if tenant.terms_version != current_version or not tenant.terms_accepted_at:
+            return redirect('/terms/')
+
+        return self.get_response(request)
+
+
 class TimezoneMiddleware:
     """
     تفعيل المنطقة الزمنية للمشترك لكل طلب — يجب أن يأتي بعد TenantMiddleware

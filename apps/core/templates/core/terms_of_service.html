@@ -1,0 +1,362 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اتفاقية الاستخدام — إنجاز IMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    .page-logo {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1.5rem;
+      text-decoration: none;
+    }
+    .page-logo span {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 1.25rem;
+      box-shadow: 0 4px 24px rgba(79,70,229,.10);
+      width: 100%;
+      max-width: 820px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      padding: 2rem 2.5rem;
+      color: #fff;
+    }
+    .card-header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: .35rem;
+    }
+    .card-header p {
+      font-size: .9rem;
+      opacity: .85;
+    }
+    .badge-version {
+      display: inline-block;
+      margin-top: .75rem;
+      background: rgba(255,255,255,.2);
+      border-radius: 2rem;
+      padding: .2rem .85rem;
+      font-size: .78rem;
+    }
+
+    .card-body {
+      padding: 2rem 2.5rem;
+      max-height: 55vh;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #c7d2fe #f1f5f9;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .card-body::-webkit-scrollbar { width: 6px; }
+    .card-body::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 3px; }
+
+    .section { margin-bottom: 1.75rem; }
+    .section h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #4f46e5;
+      margin-bottom: .6rem;
+      padding-bottom: .35rem;
+      border-bottom: 2px solid #e0e7ff;
+    }
+    .section p, .section li {
+      font-size: .92rem;
+      line-height: 1.85;
+      color: #374151;
+    }
+    .section ul {
+      padding-right: 1.25rem;
+      list-style: disc;
+    }
+    .section li { margin-bottom: .3rem; }
+    .highlight {
+      background: #eff6ff;
+      border-right: 3px solid #4f46e5;
+      padding: .6rem 1rem;
+      border-radius: .4rem;
+      margin-top: .75rem;
+      font-size: .88rem;
+    }
+
+    .card-footer {
+      padding: 1.5rem 2.5rem;
+      background: #f8fafc;
+    }
+    .scroll-notice {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: .83rem;
+      color: #64748b;
+      margin-bottom: 1rem;
+    }
+    .scroll-notice svg { flex-shrink: 0; }
+
+    .accept-form { display: flex; flex-direction: column; gap: 1rem; }
+
+    .checkbox-row {
+      display: flex;
+      align-items: flex-start;
+      gap: .75rem;
+      cursor: pointer;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: 1.2rem;
+      height: 1.2rem;
+      margin-top: .15rem;
+      accent-color: #4f46e5;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .checkbox-row label {
+      font-size: .9rem;
+      color: #374151;
+      cursor: pointer;
+      line-height: 1.6;
+    }
+    .checkbox-row label strong { color: #1e1b4b; }
+
+    .btn-accept {
+      width: 100%;
+      padding: .85rem;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #fff;
+      border: none;
+      border-radius: .75rem;
+      font-family: 'Cairo', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-accept:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+    .btn-accept:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .logout-link {
+      text-align: center;
+      margin-top: .6rem;
+      font-size: .83rem;
+      color: #94a3b8;
+    }
+    .logout-link a { color: #64748b; text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .card-header, .card-body, .card-footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-logo">
+    <span>إنجاز IMS</span>
+  </div>
+
+  <div class="card">
+
+    <div class="card-header">
+      <h1>اتفاقية الاستخدام وشروط الخدمة</h1>
+      <p>يرجى قراءة هذه الاتفاقية بعناية قبل الدخول للنظام</p>
+      <span class="badge-version">الإصدار {{ terms_version }}</span>
+    </div>
+
+    <div class="card-body" id="termsBody">
+
+      <div class="section">
+        <h2>١. تعريف الأطراف</h2>
+        <p>
+          هذه الاتفاقية مبرمة بين <strong>منصة إنجاز</strong> (مزوّد الخدمة) وبين
+          <strong>المشترك</strong> (أي شخص أو كيان تجاري يستخدم نظام إنجاز IMS).
+          باستخدامك للنظام فأنت تُقرّ بأنك مفوَّض للموافقة على هذه الاتفاقية باسم
+          نشاطك التجاري.
+        </p>
+      </div>
+
+      <div class="section">
+        <h2>٢. الخدمة المقدمة</h2>
+        <p>
+          توفر منصة إنجاز نظام إدارة مخزون وأعمال (SaaS) يشمل: إدارة المبيعات والمشتريات،
+          تتبع المخزون، إدارة العملاء والموردين، التقارير المالية، وخدمات مساندة أخرى وفقاً
+          للباقة المشترك بها.
+        </p>
+        <div class="highlight">
+          تُحدَّد مميزات كل باقة بشكل منفصل، ولا تلتزم منصة إنجاز بتقديم ميزات خارج
+          نطاق الباقة المختارة.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>٣. ملكية البيانات وحمايتها</h2>
+        <ul>
+          <li>جميع البيانات التي تُدخلها في النظام هي ملكك الحصري.</li>
+          <li>لا تبيع منصة إنجاز بياناتك ولا تُشاركها مع أطراف ثالثة.</li>
+          <li>تلتزم المنصة بعدم الاطلاع على بيانات نشاطك التجاري إلا عند الضرورة
+              القصوى لأغراض الدعم الفني بموافقتك الصريحة.</li>
+          <li>عند إنهاء الاشتراك، تُتاح لك مدة لا تقل عن <strong>١٤ يوماً</strong>
+              لتصدير بياناتك قبل أي حذف نهائي.</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>٤. سرية البيانات والأمان</h2>
+        <p>
+          تعتمد المنصة على عزل تام لبيانات كل مشترك. يستحيل تقنياً على أي مشترك
+          الوصول إلى بيانات مشترك آخر. تُشفَّر كلمات المرور ولا تُخزَّن بصيغتها الأصلية.
+        </p>
+        <div class="highlight">
+          أنت مسؤول عن الحفاظ على سرية بيانات دخول حسابك وعدم مشاركتها مع أشخاص
+          غير مصرح لهم.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>٥. الاستخدام المقبول</h2>
+        <p>توافق على عدم استخدام النظام في:</p>
+        <ul>
+          <li>أي نشاط مخالف للقوانين المحلية أو الدولية.</li>
+          <li>تخزين محتوى مسيء أو يشكّل انتهاكاً لحقوق الآخرين.</li>
+          <li>محاولة اختراق النظام أو الوصول لبيانات مشتركين آخرين.</li>
+          <li>إرسال حمولات بيانات ضارة (فيروسات، برمجيات خبيثة).</li>
+          <li>إعادة بيع الخدمة أو توفير وصول لأطراف ثالثة دون إذن مسبق.</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>٦. الاشتراك والدفع</h2>
+        <ul>
+          <li>رسوم الاشتراك محددة وفق الباقة المختارة وتُدفع مسبقاً.</li>
+          <li>لا يترتب على إلغاء الاشتراك خلال الفترة المدفوعة أي استرداد للرسوم ما لم
+              يُنصّ على خلاف ذلك في اتفاقية مخصصة.</li>
+          <li>تحتفظ المنصة بحق تعديل الأسعار مع إشعار مسبق لا يقل عن <strong>٣٠ يوماً</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>٧. تعليق الخدمة وإنهاؤها</h2>
+        <p>يحق لمنصة إنجاز تعليق أو إنهاء الخدمة في الحالات التالية:</p>
+        <ul>
+          <li>عدم سداد رسوم الاشتراك بعد مرور فترة السماح.</li>
+          <li>انتهاك أي بند من بنود هذه الاتفاقية.</li>
+          <li>صدور حكم قضائي أو أمر رسمي يستوجب ذلك.</li>
+        </ul>
+        <div class="highlight">
+          في حالات الإنهاء بسبب انتهاك الشروط، قد لا يُمنح وقت لتصدير البيانات.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>٨. النسخ الاحتياطية</h2>
+        <p>
+          تحرص المنصة على إجراء نسخ احتياطية منتظمة، غير أن <strong>المشترك يتحمل
+          مسؤولية الاحتفاظ بنسخه الخاصة</strong> من البيانات الحيوية. لا تتحمل المنصة
+          مسؤولية الأضرار الناتجة عن فقدان البيانات الذي خرج عن إرادتها.
+        </p>
+      </div>
+
+      <div class="section">
+        <h2>٩. حدود المسؤولية</h2>
+        <p>
+          منصة إنجاز أداة لإدارة الأعمال وليست مستشاراً مالياً أو قانونياً. القرارات التجارية
+          المبنية على بيانات النظام هي مسؤولية المشترك الكاملة. لا تتجاوز المسؤولية القصوى
+          للمنصة في أي حال مبلغ رسوم اشتراك شهر واحد.
+        </p>
+      </div>
+
+      <div class="section">
+        <h2>١٠. تعديل الاتفاقية</h2>
+        <p>
+          تحتفظ منصة إنجاز بحق تعديل هذه الاتفاقية في أي وقت. في حال وجود تغييرات جوهرية،
+          يُرسَل إشعار بالبريد الإلكتروني المسجَّل أو تظهر إشعار داخل النظام. استمرارك في
+          استخدام النظام بعد التعديل يُعدّ قبولاً للشروط الجديدة.
+        </p>
+      </div>
+
+      <div class="section">
+        <h2>١١. القانون المطبق</h2>
+        <p>
+          تخضع هذه الاتفاقية لقوانين المملكة العربية السعودية (أو البلد الذي تعمل منه المنصة)،
+          وتختص المحاكم المختصة بالنظر في أي نزاع ينشأ عنها.
+        </p>
+      </div>
+
+    </div><!-- /.card-body -->
+
+    <div class="card-footer">
+      <div class="scroll-notice" id="scrollNotice">
+        <svg width="16" height="16" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12l7 7 7-7"/>
+        </svg>
+        <span>مرّر لأسفل لقراءة الاتفاقية كاملة قبل القبول</span>
+      </div>
+
+      <form method="post" class="accept-form" id="acceptForm">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="termsCheck" onchange="toggleBtn()">
+          <span>
+            قرأت اتفاقية الاستخدام كاملاً وأوافق على جميع بنودها.
+            أفهم أن استمراري في استخدام <strong>نظام إنجاز IMS</strong>
+            يُعدّ التزاماً قانونياً بهذه الاتفاقية.
+          </span>
+        </label>
+
+        <button type="submit" class="btn-accept" id="btnAccept" disabled>
+          أوافق وأدخل النظام
+        </button>
+      </form>
+
+      <div class="logout-link">
+        لا توافق؟
+        <a href="{% url 'accounts:logout' %}">تسجيل الخروج</a>
+      </div>
+    </div>
+
+  </div><!-- /.card -->
+
+  <script>
+    const body   = document.getElementById('termsBody');
+    const notice = document.getElementById('scrollNotice');
+
+    body.addEventListener('scroll', function () {
+      const atBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 40;
+      if (atBottom) notice.style.opacity = '0';
+      else notice.style.opacity = '1';
+    }, { passive: true });
+
+    function toggleBtn() {
+      document.getElementById('btnAccept').disabled =
+        !document.getElementById('termsCheck').checked;
+    }
+  </script>
+</body>
+</html>

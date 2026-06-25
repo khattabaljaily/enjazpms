@@ -10,6 +10,7 @@ urlpatterns = [
     path('', views.dashboard, name='dashboard'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('subscription-expired/', views.subscription_expired, name='subscription_expired'),
+    path('terms/', views.terms_of_service, name='terms_of_service'),
     path('no-tenant/', views.no_tenant, name='no_tenant'),
     path('no-permission/', views.no_permission, name='no_permission'),
     path('settings/tenant/', views.tenant_settings, name='tenant_settings'),
