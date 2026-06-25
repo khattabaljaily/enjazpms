@@ -1407,9 +1407,18 @@ def terms_of_service(request):
             return redirect(next_url)
 
     next_url = request.GET.get('next', '/')
+    needs_acceptance = (
+        request.user.is_authenticated
+        and not getattr(request.user, 'is_superuser', False)
+        and not getattr(request.user, 'is_platform_staff', False)
+        and hasattr(request, 'tenant')
+        and request.tenant
+        and (not request.tenant.terms_accepted_at or request.tenant.terms_version != current_version)
+    )
     return render(request, 'core/terms_of_service.html', {
         'terms_version': current_version,
         'next': next_url,
+        'needs_acceptance': needs_acceptance,
     })
 
 
