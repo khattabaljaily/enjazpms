@@ -78,6 +78,10 @@ urlpatterns = [
     # System — Training
     path('system/training/', views.admin_training, name='admin_training'),
 
+    # Tenant Backup (manual — all plans)
+    path('settings/backup/create/', views.tenant_backup_create_api, name='tenant_backup_create_api'),
+    path('settings/backup/download/<int:backup_id>/', views.tenant_backup_download, name='tenant_backup_download'),
+
     # Help panel tracking
     path('help/open/', views.help_open_track, name='help_open_track'),
 ]

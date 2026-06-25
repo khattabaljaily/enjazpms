@@ -94,6 +94,10 @@
             <i class="fas fa-palette"></i>
             <span>الشعار والمظهر</span>
         </button>
+        <button class="ts-tab" data-tab="backup" role="tab" aria-selected="false">
+            <i class="fas fa-database"></i>
+            <span>النسخ الاحتياطي</span>
+        </button>
     </div>
 
     <!-- ══════════ TAB: بيانات النشاط ══════════ -->
@@ -410,6 +414,93 @@
 
     </div>
 
+    <!-- ══════════ TAB: النسخ الاحتياطي ══════════ -->
+    <div class="ts-tab-pane" id="tab-backup">
+        <div class="ts-card">
+            <div class="ts-card__header">
+                <div class="ts-card__icon ts-card__icon--indigo">
+                    <i class="fas fa-database"></i>
+                </div>
+                <div>
+                    <div class="ts-card__title">النسخ الاحتياطي</div>
+                    <div class="ts-card__subtitle">
+                        {% if current_tenant.subscription_plan == 'basic' %}
+                            باقتك تشمل النسخ اليدوي فقط — الملف ينزل على جهازك مباشرة
+                        {% elif current_tenant.subscription_plan == 'pro' %}
+                            باقتك تشمل نسخ يدوي + نسخ آلي تلقائي مرة يومياً
+                        {% elif current_tenant.subscription_plan == 'enterprise' %}
+                            باقتك تشمل نسخ يدوي + نسخ آلي تلقائي مرتين يومياً
+                        {% else %}
+                            نسخ يدوي متاح — الملف ينزل على جهازك مباشرة
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="ts-card__body">
+
+                <!-- زر إنشاء نسخة -->
+                <div style="margin-bottom:1.5rem;">
+                    <button id="btnCreateBackup" class="ts-btn ts-btn--primary" onclick="createBackup()">
+                        <i class="fas fa-plus-circle"></i>
+                        إنشاء نسخة احتياطية الآن
+                    </button>
+                    <span id="backupSpinner" style="display:none;margin-right:.75rem;color:#6366f1;font-size:.85rem;">
+                        <i class="fas fa-spinner fa-spin"></i> جاري إنشاء النسخة...
+                    </span>
+                    <div id="backupMsg" style="margin-top:.6rem;font-size:.85rem;display:none;"></div>
+                </div>
+
+                <!-- جدول النسخ السابقة -->
+                <div id="backupListWrap">
+                {% if backups %}
+                <table class="ts-table" id="backupTable">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>النوع</th>
+                            <th>الحجم</th>
+                            <th>الحالة</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="backupTbody">
+                        {% for b in backups %}
+                        <tr id="brow-{{ b.pk }}">
+                            <td>{{ b.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>{{ b.get_backup_type_display }}</td>
+                            <td>{{ b.file_size_display }}</td>
+                            <td>
+                                {% if b.status == 'completed' %}
+                                    <span class="ts-badge ts-badge--green">مكتمل</span>
+                                {% elif b.status == 'failed' %}
+                                    <span class="ts-badge ts-badge--red">فشل</span>
+                                {% else %}
+                                    <span class="ts-badge ts-badge--yellow">جاري</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if b.status == 'completed' %}
+                                <a href="{% url 'core:tenant_backup_download' b.pk %}"
+                                   class="ts-btn ts-btn--sm ts-btn--outline">
+                                    <i class="fas fa-download"></i> تنزيل
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p id="backupEmpty" style="color:#94a3b8;font-size:.85rem;text-align:center;padding:1.5rem 0;">
+                    <i class="fas fa-inbox" style="display:block;font-size:2rem;margin-bottom:.5rem;"></i>
+                    لا توجد نسخ احتياطية بعد — أنشئ أول نسخة الآن
+                </p>
+                {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
 
 </div>
 {% endblock %}
@@ -634,5 +725,64 @@ function saveTenantColor() {
         btn.addEventListener('click', function () { sync(btn.dataset.color); });
     });
 })();
+
+// ── Tenant Backup ─────────────────────────────────────────────────
+function createBackup() {
+    var btn     = document.getElementById('btnCreateBackup');
+    var spinner = document.getElementById('backupSpinner');
+    var msg     = document.getElementById('backupMsg');
+
+    btn.disabled = true;
+    spinner.style.display = 'inline';
+    msg.style.display = 'none';
+
+    fetch('{% url "core:tenant_backup_create_api" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        btn.disabled = false;
+        spinner.style.display = 'none';
+        if (d.success) {
+            msg.style.display = 'block';
+            msg.innerHTML = '<span style="color:#10b981;"><i class="fas fa-check-circle"></i> تم إنشاء النسخة بنجاح</span>';
+
+            // إضافة الصف الجديد لأعلى الجدول
+            var tbody = document.getElementById('backupTbody');
+            var empty = document.getElementById('backupEmpty');
+            var wrap  = document.getElementById('backupListWrap');
+
+            // إنشاء الجدول إذا لم يكن موجوداً
+            if (!tbody) {
+                wrap.innerHTML = '<table class="ts-table" id="backupTable"><thead><tr><th>التاريخ</th><th>النوع</th><th>الحجم</th><th>الحالة</th><th></th></tr></thead><tbody id="backupTbody"></tbody></table>';
+                tbody = document.getElementById('backupTbody');
+            }
+            if (empty) empty.remove();
+
+            var b = d.backup;
+            var row = '<tr id="brow-' + b.id + '">'
+                + '<td>' + b.created_at + '</td>'
+                + '<td>يدوي</td>'
+                + '<td>' + b.size + '</td>'
+                + '<td><span class="ts-badge ts-badge--green">مكتمل</span></td>'
+                + '<td><a href="/settings/backup/download/' + b.id + '/" class="ts-btn ts-btn--sm ts-btn--outline"><i class="fas fa-download"></i> تنزيل</a></td>'
+                + '</tr>';
+            tbody.insertAdjacentHTML('afterbegin', row);
+        } else {
+            msg.style.display = 'block';
+            msg.innerHTML = '<span style="color:#ef4444;"><i class="fas fa-exclamation-circle"></i> ' + (d.message || 'حدث خطأ') + '</span>';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        spinner.style.display = 'none';
+        msg.style.display = 'block';
+        msg.innerHTML = '<span style="color:#ef4444;"><i class="fas fa-exclamation-circle"></i> تعذّر الاتصال بالخادم</span>';
+    });
+}
 </script>
 {% endblock %}

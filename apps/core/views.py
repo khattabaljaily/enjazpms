@@ -1360,7 +1360,7 @@ def admin_backup_delete_api(request, backup_id):
 
 @login_required
 def admin_backup_download(request, backup_id):
-    """تنزيل ملف النسخة الاحتياطية"""
+    """تنزيل ملف النسخة الاحتياطية — للمشرف"""
     if not request.user.has_platform_perm('manage_backups'):
         return redirect('core:no_permission')
     from django.http import FileResponse, Http404
@@ -1376,6 +1376,56 @@ def admin_backup_download(request, backup_id):
         content_type='application/sql',
     )
     return response
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TENANT BACKUP — يدوي للمشتركين (إنشاء + تنزيل، بدون استرجاع)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+@require_POST
+def tenant_backup_create_api(request):
+    """إنشاء نسخة احتياطية يدوية — متاح لجميع الباقات"""
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط مرتبط بالمستخدم'}, status=400)
+
+    from .backup_service import create_backup
+    try:
+        record = create_backup(tenant, backup_type='manual')
+        if record.status == 'completed':
+            return JsonResponse({
+                'success': True,
+                'backup': {
+                    'id':        record.pk,
+                    'filename':  record.filename,
+                    'size':      record.file_size_display,
+                    'created_at': record.created_at.strftime('%Y-%m-%d %H:%M'),
+                }
+            })
+        return JsonResponse({'success': False, 'message': 'فشل إنشاء النسخة الاحتياطية'}, status=500)
+    except Exception as exc:
+        return JsonResponse({'success': False, 'message': str(exc)}, status=500)
+
+
+@login_required
+def tenant_backup_download(request, backup_id):
+    """تنزيل نسخة احتياطية — للمشترك نفسه فقط"""
+    from django.http import FileResponse, Http404
+    from pathlib import Path
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return redirect('core:no_permission')
+    backup = get_object_or_404(TenantBackup, pk=backup_id, tenant=tenant, status='completed')
+    file_path = Path(backup.file_path)
+    if not file_path.exists():
+        raise Http404("الملف غير موجود")
+    return FileResponse(
+        open(file_path, 'rb'),
+        as_attachment=True,
+        filename=backup.filename,
+        content_type='application/sql',
+    )
 
 
 @login_required
@@ -1436,6 +1486,11 @@ def no_permission(request):
 @require_permission('view_tenant_settings')
 def tenant_settings(request):
     """إعدادات النشاط التجاري"""
+    tenant = getattr(request, 'tenant', None)
+    backups = (
+        TenantBackup.objects.filter(tenant=tenant).order_by('-created_at')[:10]
+        if tenant else []
+    )
     return render(request, 'core/tenant_settings.html', {
         'country_choices': COUNTRY_CHOICES,
         'country_timezone_map_json': json.dumps(COUNTRY_TIMEZONE_MAP, ensure_ascii=False),
@@ -1443,6 +1498,7 @@ def tenant_settings(request):
         'currency_ar_json': json.dumps(CURRENCY_AR, ensure_ascii=False),
         'default_country': DEFAULT_COUNTRY,
         'currency_choices': CURRENCY_CHOICES,
+        'backups': backups,
     })
 
 
