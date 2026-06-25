@@ -109,11 +109,10 @@
                     </div>
 
                     <ul class="pr-card__features">
-                        {% for feature in plan.features %}
-                        <li><i class="fas fa-check"></i>{{ feature }}</li>
-                        {% endfor %}
-                        {% for feature in plan.excluded_features %}
-                        <li class="pr-card__feature--excluded"><i class="fas fa-times"></i>{{ feature }}</li>
+                        {% for f in plan.features %}
+                        <li {% if not f.ok %}class="pr-card__feature--excluded"{% endif %}>
+                            <i class="fas {% if f.ok %}fa-check{% else %}fa-times{% endif %}"></i>{{ f.text }}
+                        </li>
                         {% endfor %}
                     </ul>
 
