@@ -488,11 +488,11 @@
 }
 
 .pr-card__feature--excluded {
-    opacity: 0.4;
+    opacity: 0.55;
 }
 .pr-card__feature--excluded i {
-    color: #94a3b8 !important;
-    background: rgba(148, 163, 184, 0.1) !important;
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.1) !important;
 }
 
 /* ── Features Grid ───────────────────────────────────────── */
