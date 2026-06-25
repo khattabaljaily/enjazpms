@@ -136,7 +136,7 @@
     .wave {
       display: block;
       width: 100%;
-      height: 60px;
+      height: 25px;
       margin-top: -1px;
     }
 
@@ -391,7 +391,13 @@
     <div class="brand">
       <img src="{% static 'img/logo/logo-6547bd.png' %}" alt="إنجاز" height="34">
     </div>
-    <span class="topbar-badge">الإصدار {{ terms_version }}</span>
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <span class="topbar-badge">الإصدار {{ terms_version }}</span>
+      <a href="/" style="display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;font-weight:600;color:var(--indigo);text-decoration:none;background:#eef2ff;border:1px solid #c7d2fe;border-radius:2rem;padding:.3rem .9rem;transition:background .2s;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        الرئيسية
+      </a>
+    </div>
   </header>
 
   <!-- HERO -->
