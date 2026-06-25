@@ -36,9 +36,13 @@ def tenant_context(request):
             from apps.store.models import OnlineOrder
             context['store_pending_count'] = OnlineOrder.objects.filter(
                 tenant=tenant, status='pending'
-            ).count()
+            ).count() if tenant.plan_allows('store') else 0
         except Exception:
             context['store_pending_count'] = 0
+
+        context['plan_allows_ai'] = tenant.plan_allows('ai_assistant')
+        context['plan_allows_store'] = tenant.plan_allows('store')
+        context['plan_allows_smart_tips'] = tenant.plan_allows('smart_tips')
 
     return context
 

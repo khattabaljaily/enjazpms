@@ -115,7 +115,7 @@
     {% block extra_js %}{% endblock %}
 
     {% if request.user.is_authenticated and request.tenant %}
-        {% include "ai/chat_widget.html" %}
+        {% if plan_allows_ai %}{% include "ai/chat_widget.html" %}{% endif %}
         {% include "components/help_widget.html" %}
     {% endif %}
 

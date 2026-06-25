@@ -327,6 +327,10 @@ def manage_settings(request):
     tenant = request.tenant
     if not tenant:
         return redirect('/')
+    if not tenant.plan_allows('store'):
+        from django.contrib import messages as _msgs
+        _msgs.error(request, 'المتجر الإلكتروني متاح للباقة الاحترافية فما فوق.')
+        return redirect('core:subscription')
 
     store, _ = StoreSettings.objects.get_or_create(
         tenant=tenant,
@@ -396,6 +400,10 @@ def manage_orders(request):
     tenant = request.tenant
     if not tenant:
         return redirect('/')
+    if not tenant.plan_allows('store'):
+        from django.contrib import messages as _msgs
+        _msgs.error(request, 'المتجر الإلكتروني متاح للباقة الاحترافية فما فوق.')
+        return redirect('core:subscription')
 
     status_filter = request.GET.get('status', 'pending')
     orders = OnlineOrder.objects.filter(tenant=tenant).select_related('store', 'sale_invoice')

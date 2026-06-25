@@ -48,7 +48,7 @@
 
 {% if request.user|has_perm_key:"view_dashboard" %}
 
-{% if request.user|has_perm_key:"view_ai_insights" %}
+{% if request.user|has_perm_key:"view_ai_insights" and plan_allows_smart_tips %}
 <!-- AI Advices widget -->
 <div class="ai-adv-wrapper">
     <div class="ai-adv-tab" role="heading" aria-level="3">

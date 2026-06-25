@@ -2237,67 +2237,89 @@ def tenant_renew_api(request, pk):
 
 def pricing(request):
     """صفحة خطط التسعير"""
+    trial_days = 30
     plans = [
         {
+            'key': 'basic',
             'name': 'Basic',
             'title_ar': 'أساسي',
             'description': 'محل واحد مع مخزن واحد',
-            'monthly': '$49',
-            'annual': '$499',
-            'perpetual': '$3,999',
-            'stocks': '1 مخزن',
-            'users': 'حتى 5 مستخدمين',
-            'tag': 'مناسب للمتاجر الصغيرة',
+            'monthly': '$35',
+            'annual': '$378',
+            'perpetual': '$3,400',
             'highlight': False,
+            'features': [
+                '1 مخزن',
+                'حتى 5 مستخدمين',
+                f'تجربة مجانية {trial_days} أيام',
+                'مناسب للمتاجر الصغيرة',
+                'فواتير مبيعات وشراء',
+                'تقارير تفصيلية',
+                'نسخ احتياطي يدوي',
+            ],
+            'excluded_features': [
+                'متجر إلكتروني مدمج',
+                'مساعد ذكاء اصطناعي',
+                'نصائح ذكية',
+                'نسخ احتياطي آلي',
+            ],
         },
         {
+            'key': 'pro',
             'name': 'Pro',
             'title_ar': 'احترافي',
             'description': 'محل واحد مع ما يصل إلى 5 مخازن',
-            'monthly': '$89',
-            'annual': '$899',
-            'perpetual': '$6,999',
-            'stocks': 'حتى 5 مخازن',
-            'users': 'حتى 15 مستخدمًا',
-            'tag': 'الحل الأكثر توازناً',
+            'monthly': '$55',
+            'annual': '$594',
+            'perpetual': '$5,340',
             'highlight': True,
+            'features': [
+                'حتى 5 مخازن',
+                'حتى 15 مستخدمًا',
+                f'تجربة مجانية {trial_days} أيام',
+                'الحل الأكثر توازناً',
+                'فواتير مبيعات وشراء',
+                'تقارير تفصيلية',
+                'متجر إلكتروني مدمج',
+                'مساعد ذكاء اصطناعي',
+                'نصائح ذكية',
+                'نسخ احتياطي آلي (مرة يومياً)',
+            ],
+            'excluded_features': [],
         },
         {
+            'key': 'enterprise',
             'name': 'Enterprise',
             'title_ar': 'مؤسسات',
             'description': 'فروع ومخازن متعددة مع تحكم كامل',
-            'monthly': '$159',
-            'annual': '$1,599',
-            'perpetual': '$11,999',
-            'stocks': 'حتى 20 مخزن',
-            'users': 'حتى 40 مستخدمًا',
-            'tag': 'للشركات الكبيرة والموزعين',
+            'monthly': '$149',
+            'annual': '$1,610',
+            'perpetual': '$14,490',
             'highlight': False,
+            'features': [
+                'حتى 20 مخزن',
+                'حتى 40 مستخدمًا',
+                f'تجربة مجانية {trial_days} أيام',
+                'للشركات الكبيرة والموزعين',
+                'فواتير مبيعات وشراء',
+                'تقارير تفصيلية',
+                'متجر إلكتروني مدمج',
+                'مساعد ذكاء اصطناعي',
+                'نصائح ذكية',
+                'نسخ احتياطي آلي (مرتين يومياً)',
+            ],
+            'excluded_features': [],
         },
     ]
 
-    benefits = [
-        'تقارير مبيعات ومشتريات شاملة',
-        'إدارة المخزون بدقة مع تنبيهات المخزون المنخفض',
-        'تشغيل متعدد الفروع والمخازن',
-        'صلاحيات مستخدمين قابلة للتخصيص',
-        'دعم فني وتحديثات مستمرة',
-    ]
-
-    # Determine current tenant's plan to highlight on pricing page
     tenant = getattr(request, 'tenant', None)
     current_plan_key = getattr(tenant, 'subscription_plan', None) if tenant else None
-    # Normalize and mark plans
     for p in plans:
-        p_key = p['name'].lower()
-        p['is_current'] = False
-        if current_plan_key and current_plan_key.lower() == p_key:
-            p['is_current'] = True
+        p['is_current'] = bool(current_plan_key and current_plan_key == p['key'])
 
     return render(request, 'core/pricing.html', {
         'plans': plans,
-        'benefits': benefits,
-        'trial_days': 30,
+        'trial_days': trial_days,
         'current_subscription_plan_display': tenant.get_subscription_plan_display() if tenant else None,
     })
 

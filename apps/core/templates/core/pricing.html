@@ -109,14 +109,12 @@
                     </div>
 
                     <ul class="pr-card__features">
-                        <li><i class="fas fa-check"></i>{{ plan.stocks }}</li>
-                        <li><i class="fas fa-check"></i>{{ plan.users }}</li>
-                        <li><i class="fas fa-check"></i>تجربة مجانية {{ trial_days }} أيام</li>
-                        <li><i class="fas fa-check"></i>{{ plan.tag }}</li>
-                        <li><i class="fas fa-check"></i>فواتير مبيعات وشراء</li>
-                        <li><i class="fas fa-check"></i>تقارير تفصيلية</li>
-                        <li><i class="fas fa-check"></i>متجر إلكتروني مدمج</li>
-                        <li><i class="fas fa-check"></i>مساعد ذكاء اصطناعي</li>
+                        {% for feature in plan.features %}
+                        <li><i class="fas fa-check"></i>{{ feature }}</li>
+                        {% endfor %}
+                        {% for feature in plan.excluded_features %}
+                        <li class="pr-card__feature--excluded"><i class="fas fa-times"></i>{{ feature }}</li>
+                        {% endfor %}
                     </ul>
 
                     <a href="{% url 'accounts:register_step1' %}"

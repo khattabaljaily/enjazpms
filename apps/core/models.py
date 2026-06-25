@@ -94,6 +94,14 @@ class Tenant(models.Model):
         ('pro', 'احترافي'),
         ('enterprise', 'مؤسسات'),
     )
+
+    # Features available per plan
+    PLAN_FEATURES = {
+        'trial':      {'ai_assistant': True,  'smart_tips': True,  'store': True,  'auto_backup': True,  'auto_backup_daily': 1},
+        'basic':      {'ai_assistant': False, 'smart_tips': False, 'store': False, 'auto_backup': False, 'auto_backup_daily': 0},
+        'pro':        {'ai_assistant': True,  'smart_tips': True,  'store': True,  'auto_backup': True,  'auto_backup_daily': 1},
+        'enterprise': {'ai_assistant': True,  'smart_tips': True,  'store': True,  'auto_backup': True,  'auto_backup_daily': 2},
+    }
     
     # Basic Info
     name = models.CharField('اسم النشاط التجاري', max_length=200)
@@ -198,13 +206,21 @@ class Tenant(models.Model):
         if not self.subscription_expires:
             return True
         return self.subscription_expires >= timezone.localdate()
-    
+
     def days_until_expiry(self):
         """عدد الأيام المتبقية على انتهاء الاشتراك"""
         if not self.subscription_expires:
             return None
         delta = self.subscription_expires - timezone.localdate()
         return delta.days
+
+    def plan_allows(self, feature: str) -> bool:
+        """هل الباقة الحالية تتيح ميزة معينة"""
+        return bool(self.PLAN_FEATURES.get(self.subscription_plan, {}).get(feature, False))
+
+    def auto_backup_daily_count(self) -> int:
+        """عدد النسخ الاحتياطية التلقائية يومياً حسب الباقة"""
+        return self.PLAN_FEATURES.get(self.subscription_plan, {}).get('auto_backup_daily', 0)
 
 
 # ============================================

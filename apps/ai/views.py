@@ -15,10 +15,18 @@ from .services import chat, generate_daily_insights
 logger = logging.getLogger(__name__)
 
 
+def _plan_allows_ai(tenant) -> bool:
+    return tenant is not None and tenant.plan_allows('ai_assistant')
+
+
 @login_required
 @require_permission('use_ai_chat')
 @require_POST
 def chat_api(request):
+    tenant = getattr(request, 'tenant', None)
+    if not _plan_allows_ai(tenant):
+        return JsonResponse({"error": "المساعد الذكي متاح للباقة الاحترافية فما فوق"}, status=403)
+
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
@@ -31,10 +39,6 @@ def chat_api(request):
     history = body.get("history") or []
     if not isinstance(history, list):
         history = []
-
-    tenant = getattr(request, 'tenant', None)
-    if tenant is None:
-        return JsonResponse({"error": "لا يوجد tenant مرتبط بالجلسة"}, status=403)
 
     try:
         reply = chat(user_message, history, tenant)
@@ -53,8 +57,8 @@ def chat_api(request):
 @require_GET
 def insights_api(request):
     tenant = getattr(request, 'tenant', None)
-    if tenant is None:
-        return JsonResponse({"error": "لا يوجد tenant مرتبط بالجلسة"}, status=403)
+    if not _plan_allows_ai(tenant):
+        return JsonResponse({"error": "الرؤى الذكية متاحة للباقة الاحترافية فما فوق"}, status=403)
 
     insights = generate_daily_insights(tenant)
     log_activity(request, 'عرض الرؤى الذكية اليومية', '', 'other')
@@ -66,8 +70,8 @@ def insights_api(request):
 @require_GET
 def advices_api(request):
     tenant = getattr(request, 'tenant', None)
-    if tenant is None:
-        return JsonResponse({"error": "لا يوجد tenant مرتبط بالجلسة"}, status=403)
+    if not _plan_allows_ai(tenant):
+        return JsonResponse({"error": "النصائح الذكية متاحة للباقة الاحترافية فما فوق"}, status=403)
 
     try:
         raw = generate_daily_insights(tenant)

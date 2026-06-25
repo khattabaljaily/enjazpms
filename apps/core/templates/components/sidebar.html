@@ -396,6 +396,7 @@
                 إعدادات النشاط التجاري
             </a>
         </li>
+        {% if plan_allows_store %}
         <li class="nav-item">
             <a class="nav-link{% if 'store' in request.path %} active{% endif %}" href="{% url 'store:manage_settings' %}">
                 <span class="nav-icon" style="background:linear-gradient(135deg,#6366f1,#7c3aed);color:#fff;"><i class="fas fa-store"></i></span>
@@ -405,6 +406,7 @@
                 {% endif %}
             </a>
         </li>
+        {% endif %}
     </ul>
 
     <!-- الدعم الفني (للمشتركين) -->
