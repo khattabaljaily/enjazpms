@@ -645,7 +645,8 @@ def invoice_confirm_ajax(request, pk):
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
     try:
         confirm_sale_invoice(invoice, request.user)
-        log_activity(request, 'تأكيد فاتورة مبيعات', f'{invoice.invoice_number} — {invoice.customer.name}', 'create')
+        cust = invoice.customer.name if invoice.customer else 'زبون عابر'
+        log_activity(request, 'تأكيد فاتورة مبيعات', f'{invoice.invoice_number} — {cust}', 'create')
         return _json_ok(msg='تم تأكيد الفاتورة بنجاح')
     except ValueError as e:
         return _json_error(str(e))
@@ -670,7 +671,8 @@ def invoice_cancel_ajax(request, pk):
 
     try:
         cancel_sale_invoice(invoice, request.user, reason)
-        log_activity(request, 'إلغاء فاتورة مبيعات', f'{invoice.invoice_number} — {invoice.customer.name}', 'delete')
+        cust = invoice.customer.name if invoice.customer else 'زبون عابر'
+        log_activity(request, 'إلغاء فاتورة مبيعات', f'{invoice.invoice_number} — {cust}', 'delete')
         return _json_ok(msg='تم إلغاء الفاتورة')
     except ValueError as e:
         return _json_error(str(e))
@@ -686,7 +688,8 @@ def invoice_deliver_ajax(request, pk):
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
     try:
         deliver_sale_invoice(invoice, request.user)
-        log_activity(request, 'تسليم فاتورة مبيعات', f'{invoice.invoice_number} — {invoice.customer.name}', 'other')
+        cust = invoice.customer.name if invoice.customer else 'زبون عابر'
+        log_activity(request, 'تسليم فاتورة مبيعات', f'{invoice.invoice_number} — {cust}', 'other')
         return _json_ok(msg='تم تسليم الفاتورة بنجاح')
     except ValueError as e:
         return _json_error(str(e))
@@ -1411,7 +1414,8 @@ def quote_send_ajax(request, pk):
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
     try:
         mark_quote_sent(quote, request.user)
-        log_activity(request, 'إرسال عرض سعر', f'{quote.quote_number} — {quote.customer.name}', 'other')
+        qcust = quote.customer.name if quote.customer else 'بدون عميل'
+        log_activity(request, 'إرسال عرض سعر', f'{quote.quote_number} — {qcust}', 'other')
         return _json_ok(msg='تم تغيير حالة العرض إلى مُرسَل')
     except Exception as e:
         return _json_error(str(e))
@@ -1425,7 +1429,8 @@ def quote_accept_ajax(request, pk):
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
     try:
         mark_quote_accepted(quote, request.user)
-        log_activity(request, 'قبول عرض سعر', f'{quote.quote_number} — {quote.customer.name}', 'other')
+        qcust = quote.customer.name if quote.customer else 'بدون عميل'
+        log_activity(request, 'قبول عرض سعر', f'{quote.quote_number} — {qcust}', 'other')
         return _json_ok(msg='تم قبول العرض')
     except Exception as e:
         return _json_error(str(e))
@@ -1439,7 +1444,8 @@ def quote_reject_ajax(request, pk):
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
     try:
         mark_quote_rejected(quote, request.user)
-        log_activity(request, 'رفض عرض سعر', f'{quote.quote_number} — {quote.customer.name}', 'delete')
+        qcust = quote.customer.name if quote.customer else 'بدون عميل'
+        log_activity(request, 'رفض عرض سعر', f'{quote.quote_number} — {qcust}', 'delete')
         return _json_ok(msg='تم رفض العرض')
     except Exception as e:
         return _json_error(str(e))
@@ -1453,7 +1459,8 @@ def quote_cancel_ajax(request, pk):
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
     try:
         cancel_sale_quote(quote, request.user)
-        log_activity(request, 'إلغاء عرض سعر', f'{quote.quote_number} — {quote.customer.name}', 'delete')
+        qcust = quote.customer.name if quote.customer else 'بدون عميل'
+        log_activity(request, 'إلغاء عرض سعر', f'{quote.quote_number} — {qcust}', 'delete')
         return _json_ok(msg='تم إلغاء عرض السعر')
     except Exception as e:
         return _json_error(str(e))
