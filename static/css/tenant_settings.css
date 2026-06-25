@@ -480,18 +480,133 @@ select.ts-input {
     padding-top: 0.25rem;
 }
 
-/* ── Backup table & badges ─────────────────────────────── */
-.ts-table { width:100%; border-collapse:collapse; font-size:.84rem; }
-.ts-table th { background:#f8fafc; color:#64748b; font-weight:600; padding:.6rem .8rem; text-align:right; border-bottom:1px solid #e2e8f0; }
-.ts-table td { padding:.6rem .8rem; border-bottom:1px solid #f1f5f9; color:#334155; vertical-align:middle; }
-.ts-table tr:last-child td { border-bottom:none; }
-.ts-badge { display:inline-block; font-size:.72rem; font-weight:700; padding:2px 9px; border-radius:20px; }
-.ts-badge--green  { background:#dcfce7; color:#166534; }
-.ts-badge--red    { background:#fee2e2; color:#991b1b; }
-.ts-badge--yellow { background:#fef9c3; color:#92400e; }
-.ts-btn--sm { padding:.35rem .9rem; font-size:.78rem; }
-.ts-btn--outline { background:transparent; border:1.5px solid #6366f1; color:#6366f1; }
-.ts-btn--outline:hover { background:#6366f1; color:#fff; }
+/* ══════════════════════════════════════════════════════════
+   BACKUP SECTION
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Plan info banner ───────────────────────────────────── */
+.bk-plan-banner {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    padding: .85rem 1.1rem;
+    margin-bottom: 1.4rem;
+    font-size: .84rem;
+    color: #3730a3;
+}
+.bk-plan-banner i { font-size: 1.1rem; flex-shrink: 0; color: #6366f1; }
+
+/* ── Create button row ──────────────────────────────────── */
+.bk-action-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+.bk-spinner {
+    display: none;
+    align-items: center;
+    gap: .4rem;
+    font-size: .82rem;
+    color: #6366f1;
+}
+.bk-msg { font-size: .82rem; width: 100%; }
+
+/* ── Table (desktop) ────────────────────────────────────── */
+.ts-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+.ts-table thead { background: #f8fafc; }
+.ts-table th {
+    color: #64748b;
+    font-weight: 600;
+    padding: .65rem .9rem;
+    text-align: right;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+.ts-table td {
+    padding: .65rem .9rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    vertical-align: middle;
+}
+.ts-table tr:last-child td { border-bottom: none; }
+.ts-table tr:hover td { background: #fafbff; }
+
+/* ── Badges ─────────────────────────────────────────────── */
+.ts-badge {
+    display: inline-block;
+    font-size: .7rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+.ts-badge--green  { background: #dcfce7; color: #166534; }
+.ts-badge--red    { background: #fee2e2; color: #991b1b; }
+.ts-badge--yellow { background: #fef9c3; color: #92400e; }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.ts-btn--sm { padding: .35rem .9rem; font-size: .78rem; }
+.ts-btn--outline {
+    background: transparent;
+    border: 1.5px solid #6366f1;
+    color: #6366f1;
+    cursor: pointer;
+    border-radius: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    transition: background .18s, color .18s;
+}
+.ts-btn--outline:hover { background: #6366f1; color: #fff; }
+
+/* ── Empty state ─────────────────────────────────────────── */
+.bk-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #94a3b8;
+}
+.bk-empty i { font-size: 2.2rem; margin-bottom: .6rem; display: block; color: #cbd5e1; }
+.bk-empty p { font-size: .84rem; margin: 0; }
+
+/* ── Mobile cards (≤ 640 px) ────────────────────────────── */
+@media (max-width: 640px) {
+    .ts-table, .ts-table thead, .ts-table tbody,
+    .ts-table th, .ts-table td, .ts-table tr { display: block; }
+
+    .ts-table thead { display: none; }
+
+    .ts-table tr {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        margin-bottom: .8rem;
+        padding: .9rem 1rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    }
+
+    .ts-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: none;
+        padding: .3rem 0;
+        font-size: .82rem;
+    }
+    .ts-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #64748b;
+        font-size: .76rem;
+        flex-shrink: 0;
+        margin-left: .5rem;
+    }
+    .ts-table td:last-child { padding-top: .6rem; border-top: 1px solid #f1f5f9; margin-top: .3rem; }
+    .ts-table td:last-child .ts-btn--outline { width: 100%; justify-content: center; }
+}
 
 .ts-btn {
     display: inline-flex;

@@ -6,7 +6,7 @@
 {% block page_description %}تعديل بيانات النشاط التجاري والإعدادات الأساسية وحفظها مباشرة{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/tenant_settings.css' %}?v=4.0">
+<link rel="stylesheet" href="{% static 'css/tenant_settings.css' %}?v=5.0">
 {% endblock %}
 
 {% block breadcrumb_items %}
@@ -438,25 +438,41 @@
             </div>
             <div class="ts-card__body">
 
+                <!-- بانر الباقة -->
+                <div class="bk-plan-banner">
+                    <i class="fas fa-info-circle"></i>
+                    <span>
+                        {% if current_tenant.subscription_plan == 'basic' %}
+                            الباقة الأساسية: نسخ احتياطي يدوي فقط — يُنزَّل الملف على جهازك مباشرة.
+                        {% elif current_tenant.subscription_plan == 'pro' %}
+                            الباقة الاحترافية: نسخ يدوي + نسخ آلي تلقائي <strong>مرة يومياً</strong> على خوادم المنصة.
+                        {% elif current_tenant.subscription_plan == 'enterprise' %}
+                            باقة المؤسسات: نسخ يدوي + نسخ آلي تلقائي <strong>مرتين يومياً</strong> على خوادم المنصة.
+                        {% else %}
+                            نسخ احتياطي يدوي متاح — يُنزَّل الملف على جهازك مباشرة.
+                        {% endif %}
+                    </span>
+                </div>
+
                 <!-- زر إنشاء نسخة -->
-                <div style="margin-bottom:1.5rem;">
+                <div class="bk-action-row">
                     <button id="btnCreateBackup" class="ts-btn ts-btn--primary" onclick="createBackup()">
                         <i class="fas fa-plus-circle"></i>
                         إنشاء نسخة احتياطية الآن
                     </button>
-                    <span id="backupSpinner" style="display:none;margin-right:.75rem;color:#6366f1;font-size:.85rem;">
+                    <span id="backupSpinner" class="bk-spinner">
                         <i class="fas fa-spinner fa-spin"></i> جاري إنشاء النسخة...
                     </span>
-                    <div id="backupMsg" style="margin-top:.6rem;font-size:.85rem;display:none;"></div>
+                    <div id="backupMsg" class="bk-msg" style="display:none;"></div>
                 </div>
 
-                <!-- جدول النسخ السابقة -->
+                <!-- قائمة النسخ -->
                 <div id="backupListWrap">
                 {% if backups %}
                 <table class="ts-table" id="backupTable">
                     <thead>
                         <tr>
-                            <th>التاريخ</th>
+                            <th>التاريخ والوقت</th>
                             <th>النوع</th>
                             <th>الحجم</th>
                             <th>الحالة</th>
@@ -466,10 +482,10 @@
                     <tbody id="backupTbody">
                         {% for b in backups %}
                         <tr id="brow-{{ b.pk }}">
-                            <td>{{ b.created_at|date:"Y-m-d H:i" }}</td>
-                            <td>{{ b.get_backup_type_display }}</td>
-                            <td>{{ b.file_size_display }}</td>
-                            <td>
+                            <td data-label="التاريخ">{{ b.created_at|date:"Y-m-d H:i" }}</td>
+                            <td data-label="النوع">{{ b.get_backup_type_display }}</td>
+                            <td data-label="الحجم">{{ b.file_size_display }}</td>
+                            <td data-label="الحالة">
                                 {% if b.status == 'completed' %}
                                     <span class="ts-badge ts-badge--green">مكتمل</span>
                                 {% elif b.status == 'failed' %}
@@ -478,7 +494,7 @@
                                     <span class="ts-badge ts-badge--yellow">جاري</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="">
                                 {% if b.status == 'completed' %}
                                 <a href="{% url 'core:tenant_backup_download' b.pk %}"
                                    class="ts-btn ts-btn--sm ts-btn--outline">
@@ -491,10 +507,10 @@
                     </tbody>
                 </table>
                 {% else %}
-                <p id="backupEmpty" style="color:#94a3b8;font-size:.85rem;text-align:center;padding:1.5rem 0;">
-                    <i class="fas fa-inbox" style="display:block;font-size:2rem;margin-bottom:.5rem;"></i>
-                    لا توجد نسخ احتياطية بعد — أنشئ أول نسخة الآن
-                </p>
+                <div class="bk-empty" id="backupEmpty">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>لا توجد نسخ احتياطية بعد — أنشئ أول نسخة الآن</p>
+                </div>
                 {% endif %}
                 </div>
 
@@ -733,7 +749,7 @@ function createBackup() {
     var msg     = document.getElementById('backupMsg');
 
     btn.disabled = true;
-    spinner.style.display = 'inline';
+    spinner.style.display = 'inline-flex';
     msg.style.display = 'none';
 
     fetch('{% url "core:tenant_backup_create_api" %}', {
@@ -765,11 +781,11 @@ function createBackup() {
 
             var b = d.backup;
             var row = '<tr id="brow-' + b.id + '">'
-                + '<td>' + b.created_at + '</td>'
-                + '<td>يدوي</td>'
-                + '<td>' + b.size + '</td>'
-                + '<td><span class="ts-badge ts-badge--green">مكتمل</span></td>'
-                + '<td><a href="/settings/backup/download/' + b.id + '/" class="ts-btn ts-btn--sm ts-btn--outline"><i class="fas fa-download"></i> تنزيل</a></td>'
+                + '<td data-label="التاريخ">' + b.created_at + '</td>'
+                + '<td data-label="النوع">يدوي</td>'
+                + '<td data-label="الحجم">' + b.size + '</td>'
+                + '<td data-label="الحالة"><span class="ts-badge ts-badge--green">مكتمل</span></td>'
+                + '<td data-label=""><a href="/settings/backup/download/' + b.id + '/" class="ts-btn ts-btn--sm ts-btn--outline"><i class="fas fa-download"></i> تنزيل</a></td>'
                 + '</tr>';
             tbody.insertAdjacentHTML('afterbegin', row);
         } else {
