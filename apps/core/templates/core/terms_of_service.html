@@ -6,374 +6,666 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>اتفاقية الاستخدام — إنجاز IMS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --indigo:    #4f46e5;
+      --indigo-dk: #3730a3;
+      --violet:    #7c3aed;
+      --slate-50:  #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-400: #94a3b8;
+      --slate-500: #64748b;
+      --slate-700: #374151;
+      --slate-900: #0f172a;
+    }
+
+    html { scroll-behavior: smooth; }
+
     body {
       font-family: 'Cairo', sans-serif;
-      background: #f1f5f9;
-      color: #1e293b;
+      background: var(--slate-100);
+      color: var(--slate-700);
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem 1rem;
     }
 
-    .page-logo {
+    /* ─── TOP BAR ─── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--slate-200);
+      padding: .85rem 2rem;
       display: flex;
       align-items: center;
-      gap: .6rem;
-      margin-bottom: 1.5rem;
+      justify-content: space-between;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
       text-decoration: none;
     }
-    .page-logo span {
-      font-size: 1.5rem;
+    .brand-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--indigo), var(--violet));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .brand-icon svg { width: 20px; height: 20px; fill: #fff; }
+    .brand-name {
+      font-size: 1.05rem;
       font-weight: 700;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--slate-900);
+    }
+    .brand-name span { color: var(--indigo); }
+    .topbar-badge {
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--indigo);
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 2rem;
+      padding: .25rem .8rem;
     }
 
-    .card {
-      background: #fff;
-      border-radius: 1.25rem;
-      box-shadow: 0 4px 24px rgba(79,70,229,.10);
-      width: 100%;
-      max-width: 820px;
+    /* ─── HERO ─── */
+    .hero {
+      background: linear-gradient(135deg, var(--indigo) 0%, var(--violet) 100%);
+      padding: 4rem 2rem 5rem;
+      text-align: center;
+      position: relative;
       overflow: hidden;
     }
-
-    .card-header {
-      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-      padding: 2rem 2.5rem;
-      color: #fff;
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 50%, rgba(255,255,255,.08) 0%, transparent 60%),
+        radial-gradient(circle at 80% 20%, rgba(255,255,255,.06) 0%, transparent 50%);
     }
-    .card-header h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: .35rem;
-    }
-    .card-header p {
-      font-size: .9rem;
-      opacity: .85;
-    }
-    .badge-version {
-      display: inline-block;
-      margin-top: .75rem;
-      background: rgba(255,255,255,.2);
+    .hero-label {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
       border-radius: 2rem;
-      padding: .2rem .85rem;
+      padding: .3rem 1rem;
       font-size: .78rem;
+      font-weight: 600;
+      color: rgba(255,255,255,.9);
+      margin-bottom: 1.25rem;
+      position: relative;
+    }
+    .hero-label::before {
+      content: '';
+      width: 7px; height: 7px;
+      background: #86efac;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: .6; transform: scale(1.3); }
+    }
+    .hero h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: .6rem;
+      position: relative;
+    }
+    .hero p {
+      font-size: .95rem;
+      color: rgba(255,255,255,.78);
+      max-width: 500px;
+      margin: 0 auto;
+      line-height: 1.7;
+      position: relative;
     }
 
-    .card-body {
+    /* ─── WAVE ─── */
+    .wave {
+      display: block;
+      width: 100%;
+      height: 60px;
+      margin-top: -1px;
+    }
+
+    /* ─── LAYOUT ─── */
+    .page-wrapper {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+    }
+
+    /* ─── PROGRESS BAR ─── */
+    .progress-wrap {
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      border-radius: 1rem;
+      padding: 1rem 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,.04);
+    }
+    .progress-wrap p { font-size: .82rem; color: var(--slate-500); white-space: nowrap; }
+    .progress-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--slate-200);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--indigo), var(--violet));
+      border-radius: 3px;
+      transition: width .2s;
+    }
+    .progress-pct {
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--indigo);
+      min-width: 2.5rem;
+      text-align: left;
+    }
+
+    /* ─── SECTIONS CARD ─── */
+    .terms-card {
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      border-radius: 1.25rem;
+      box-shadow: 0 2px 16px rgba(0,0,0,.05);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .terms-body {
       padding: 2rem 2.5rem;
-      max-height: 55vh;
-      overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: #c7d2fe #f1f5f9;
-      border-bottom: 1px solid #e2e8f0;
     }
-    .card-body::-webkit-scrollbar { width: 6px; }
-    .card-body::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 3px; }
 
-    .section { margin-bottom: 1.75rem; }
+    .section {
+      padding: 1.5rem 0;
+      border-bottom: 1px solid var(--slate-100);
+    }
+    .section:last-child { border-bottom: none; padding-bottom: 0; }
+    .section:first-child { padding-top: 0; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: .9rem;
+    }
+    .section-num {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--indigo), var(--violet));
+      color: #fff;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .78rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
     .section h2 {
       font-size: 1rem;
       font-weight: 700;
-      color: #4f46e5;
-      margin-bottom: .6rem;
-      padding-bottom: .35rem;
-      border-bottom: 2px solid #e0e7ff;
+      color: var(--slate-900);
     }
+
     .section p, .section li {
-      font-size: .92rem;
-      line-height: 1.85;
-      color: #374151;
+      font-size: .9rem;
+      line-height: 1.9;
+      color: var(--slate-700);
     }
     .section ul {
-      padding-right: 1.25rem;
-      list-style: disc;
+      padding-right: 1rem;
+      list-style: none;
     }
-    .section li { margin-bottom: .3rem; }
-    .highlight {
-      background: #eff6ff;
-      border-right: 3px solid #4f46e5;
-      padding: .6rem 1rem;
-      border-radius: .4rem;
-      margin-top: .75rem;
-      font-size: .88rem;
+    .section ul li {
+      position: relative;
+      padding-right: 1.25rem;
+      margin-bottom: .35rem;
+    }
+    .section ul li::before {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: .65em;
+      width: 6px; height: 6px;
+      background: var(--indigo);
+      border-radius: 50%;
+      opacity: .6;
     }
 
-    .card-footer {
-      padding: 1.5rem 2.5rem;
-      background: #f8fafc;
+    .callout {
+      background: #eef2ff;
+      border-right: 3px solid var(--indigo);
+      border-radius: .5rem;
+      padding: .75rem 1.1rem;
+      margin-top: .85rem;
+      font-size: .87rem;
+      color: #3730a3;
+      line-height: 1.7;
     }
-    .scroll-notice {
+    .callout-warn {
+      background: #fff7ed;
+      border-right-color: #f97316;
+      color: #9a3412;
+    }
+
+    /* ─── ACCEPTANCE FOOTER ─── */
+    .accept-card {
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      border-radius: 1.25rem;
+      box-shadow: 0 2px 16px rgba(0,0,0,.05);
+      overflow: hidden;
+    }
+    .accept-card-top {
+      background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid #ddd6fe;
       display: flex;
       align-items: center;
-      gap: .5rem;
-      font-size: .83rem;
-      color: #64748b;
-      margin-bottom: 1rem;
+      gap: .75rem;
     }
-    .scroll-notice svg { flex-shrink: 0; }
-
-    .accept-form { display: flex; flex-direction: column; gap: 1rem; }
+    .accept-card-top svg { flex-shrink: 0; }
+    .accept-card-top p {
+      font-size: .88rem;
+      color: #4c1d95;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+    .accept-card-body { padding: 1.75rem 2rem; }
 
     .checkbox-row {
       display: flex;
       align-items: flex-start;
-      gap: .75rem;
+      gap: .9rem;
       cursor: pointer;
+      margin-bottom: 1.25rem;
     }
     .checkbox-row input[type="checkbox"] {
-      width: 1.2rem;
-      height: 1.2rem;
-      margin-top: .15rem;
-      accent-color: #4f46e5;
+      width: 1.2rem; height: 1.2rem;
+      margin-top: .2rem;
+      accent-color: var(--indigo);
       flex-shrink: 0;
       cursor: pointer;
     }
     .checkbox-row label {
       font-size: .9rem;
-      color: #374151;
+      color: var(--slate-700);
       cursor: pointer;
-      line-height: 1.6;
+      line-height: 1.7;
     }
-    .checkbox-row label strong { color: #1e1b4b; }
+    .checkbox-row label strong { color: var(--slate-900); }
 
     .btn-accept {
       width: 100%;
-      padding: .85rem;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--indigo), var(--violet));
       color: #fff;
       border: none;
-      border-radius: .75rem;
+      border-radius: .875rem;
       font-family: 'Cairo', sans-serif;
-      font-size: 1rem;
+      font-size: 1.05rem;
       font-weight: 700;
       cursor: pointer;
-      transition: opacity .2s, transform .15s;
+      transition: opacity .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 14px rgba(79,70,229,.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
     }
-    .btn-accept:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
-    .btn-accept:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .btn-accept:hover:not(:disabled) {
+      opacity: .92;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(79,70,229,.4);
+    }
+    .btn-accept:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .btn-accept svg { width: 18px; height: 18px; fill: #fff; }
 
-    .logout-link {
-      text-align: center;
-      margin-top: .6rem;
+    .logout-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .4rem;
+      margin-top: 1rem;
       font-size: .83rem;
-      color: #94a3b8;
+      color: var(--slate-400);
     }
-    .logout-link a { color: #64748b; text-decoration: underline; }
+    .logout-row a { color: var(--slate-500); text-decoration: underline; }
+    .logout-row a:hover { color: var(--indigo); }
 
+    /* ─── READ-ONLY FOOTER ─── */
+    .readonly-footer {
+      text-align: center;
+      padding: 1.25rem 2rem;
+      font-size: .85rem;
+      color: var(--slate-400);
+      border-top: 1px solid var(--slate-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .6rem;
+      flex-wrap: wrap;
+    }
+    .readonly-footer a {
+      color: var(--indigo);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .readonly-footer a:hover { text-decoration: underline; }
+    .dot { color: var(--slate-300); }
+
+    /* ─── RESPONSIVE ─── */
     @media (max-width: 600px) {
-      .card-header, .card-body, .card-footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+      .terms-body, .accept-card-body, .accept-card-top { padding-left: 1.25rem; padding-right: 1.25rem; }
+      .hero { padding: 3rem 1.25rem 4rem; }
+      .topbar { padding: .75rem 1.25rem; }
     }
   </style>
 </head>
 <body>
 
-  <div class="page-logo">
-    <span>إنجاز IMS</span>
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      </div>
+      <span class="brand-name">إنجاز <span>IMS</span></span>
+    </div>
+    <span class="topbar-badge">الإصدار {{ terms_version }}</span>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-label">وثيقة رسمية معتمدة</div>
+    <h1>اتفاقية الاستخدام وشروط الخدمة</h1>
+    <p>يُرجى قراءة هذه الاتفاقية بعناية. تحدد هذه الوثيقة حقوقك والتزاماتك عند استخدام نظام إنجاز.</p>
   </div>
 
-  <div class="card">
+  <!-- WAVE -->
+  <svg class="wave" viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" fill="#f1f5f9"/>
+  </svg>
 
-    <div class="card-header">
-      <h1>اتفاقية الاستخدام وشروط الخدمة</h1>
-      <p>يرجى قراءة هذه الاتفاقية بعناية قبل الدخول للنظام</p>
-      <span class="badge-version">الإصدار {{ terms_version }}</span>
+  <div class="page-wrapper">
+
+    <!-- PROGRESS (only when needs acceptance) -->
+    {% if needs_acceptance %}
+    <div class="progress-wrap">
+      <p>تقدم القراءة</p>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+      <span class="progress-pct" id="progressPct">0%</span>
     </div>
+    {% endif %}
 
-    <div class="card-body" id="termsBody">
+    <!-- TERMS CARD -->
+    <div class="terms-card">
+      <div class="terms-body" id="termsBody">
 
-      <div class="section">
-        <h2>١. تعريف الأطراف</h2>
-        <p>
-          هذه الاتفاقية مبرمة بين <strong>إنجاز لتقنية المعلومات</strong>، كيان مسجَّل
-          في جمهورية السودان برقم تسجيل <strong>120370</strong> (مزوّد الخدمة)، وبين
-          <strong>المشترك</strong> (أي شخص أو كيان تجاري يستخدم نظام إنجاز IMS).
-          باستخدامك للنظام فأنت تُقرّ بأنك مفوَّض للموافقة على هذه الاتفاقية باسم
-          نشاطك التجاري.
-        </p>
-      </div>
-
-      <div class="section">
-        <h2>٢. الخدمة المقدمة</h2>
-        <p>
-          توفر إنجاز لتقنية المعلومات نظام إدارة مخزون وأعمال (SaaS) يشمل: إدارة المبيعات والمشتريات،
-          تتبع المخزون، إدارة العملاء والموردين، التقارير المالية، وخدمات مساندة أخرى وفقاً
-          للباقة المشترك بها.
-        </p>
-        <div class="highlight">
-          تُحدَّد مميزات كل باقة بشكل منفصل، ولا تلتزم إنجاز لتقنية المعلومات بتقديم ميزات خارج
-          نطاق الباقة المختارة.
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>٣. ملكية البيانات وحمايتها</h2>
-        <ul>
-          <li>جميع البيانات التي تُدخلها في النظام هي ملكك الحصري.</li>
-          <li>لا تبيع إنجاز لتقنية المعلومات بياناتك ولا تُشاركها مع أطراف ثالثة.</li>
-          <li>تلتزم المنصة بعدم الاطلاع على بيانات نشاطك التجاري إلا عند الضرورة
-              القصوى لأغراض الدعم الفني بموافقتك الصريحة.</li>
-          <li>عند إنهاء الاشتراك، تُتاح لك مدة لا تقل عن <strong>١٤ يوماً</strong>
-              لتصدير بياناتك قبل أي حذف نهائي.</li>
-        </ul>
-      </div>
-
-      <div class="section">
-        <h2>٤. سرية البيانات والأمان</h2>
-        <p>
-          تعتمد المنصة على عزل تام لبيانات كل مشترك. يستحيل تقنياً على أي مشترك
-          الوصول إلى بيانات مشترك آخر. تُشفَّر كلمات المرور ولا تُخزَّن بصيغتها الأصلية.
-        </p>
-        <div class="highlight">
-          أنت مسؤول عن الحفاظ على سرية بيانات دخول حسابك وعدم مشاركتها مع أشخاص
-          غير مصرح لهم.
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>٥. الاستخدام المقبول</h2>
-        <p>توافق على عدم استخدام النظام في:</p>
-        <ul>
-          <li>أي نشاط مخالف للقوانين المحلية أو الدولية.</li>
-          <li>تخزين محتوى مسيء أو يشكّل انتهاكاً لحقوق الآخرين.</li>
-          <li>محاولة اختراق النظام أو الوصول لبيانات مشتركين آخرين.</li>
-          <li>إرسال حمولات بيانات ضارة (فيروسات، برمجيات خبيثة).</li>
-          <li>إعادة بيع الخدمة أو توفير وصول لأطراف ثالثة دون إذن مسبق.</li>
-        </ul>
-      </div>
-
-      <div class="section">
-        <h2>٦. الاشتراك والدفع</h2>
-        <ul>
-          <li>رسوم الاشتراك محددة وفق الباقة المختارة وتُدفع مسبقاً.</li>
-          <li>لا يترتب على إلغاء الاشتراك خلال الفترة المدفوعة أي استرداد للرسوم ما لم
-              يُنصّ على خلاف ذلك في اتفاقية مخصصة.</li>
-          <li>تحتفظ المنصة بحق تعديل الأسعار مع إشعار مسبق لا يقل عن <strong>٣٠ يوماً</strong>.</li>
-        </ul>
-      </div>
-
-      <div class="section">
-        <h2>٧. تعليق الخدمة وإنهاؤها</h2>
-        <p>يحق لإنجاز لتقنية المعلومات تعليق أو إنهاء الخدمة في الحالات التالية:</p>
-        <ul>
-          <li>عدم سداد رسوم الاشتراك بعد مرور فترة السماح.</li>
-          <li>انتهاك أي بند من بنود هذه الاتفاقية.</li>
-          <li>صدور حكم قضائي أو أمر رسمي يستوجب ذلك.</li>
-        </ul>
-        <div class="highlight">
-          في حالات الإنهاء بسبب انتهاك الشروط، قد لا يُمنح وقت لتصدير البيانات.
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>٨. النسخ الاحتياطية</h2>
-        <p>
-          تحرص المنصة على إجراء نسخ احتياطية منتظمة، غير أن <strong>المشترك يتحمل
-          مسؤولية الاحتفاظ بنسخه الخاصة</strong> من البيانات الحيوية. لا تتحمل المنصة
-          مسؤولية الأضرار الناتجة عن فقدان البيانات الذي خرج عن إرادتها.
-        </p>
-      </div>
-
-      <div class="section">
-        <h2>٩. حدود المسؤولية</h2>
-        <p>
-          إنجاز لتقنية المعلومات أداة لإدارة الأعمال وليست مستشاراً مالياً أو قانونياً. القرارات التجارية
-          المبنية على بيانات النظام هي مسؤولية المشترك الكاملة. لا تتجاوز المسؤولية القصوى
-          للمنصة في أي حال مبلغ رسوم اشتراك شهر واحد.
-        </p>
-      </div>
-
-      <div class="section">
-        <h2>١٠. تعديل الاتفاقية</h2>
-        <p>
-          تحتفظ إنجاز لتقنية المعلومات بحق تعديل هذه الاتفاقية في أي وقت. في حال وجود تغييرات جوهرية،
-          يُرسَل إشعار بالبريد الإلكتروني المسجَّل أو تظهر إشعار داخل النظام. استمرارك في
-          استخدام النظام بعد التعديل يُعدّ قبولاً للشروط الجديدة.
-        </p>
-      </div>
-
-      <div class="section">
-        <h2>١١. القانون المطبق</h2>
-        <p>
-          تخضع هذه الاتفاقية للقوانين المعمول بها في بلد تسجيل الشركة المزوِّدة للخدمة،
-          وهي <strong>إنجاز لتقنية المعلومات</strong> المسجَّلة برقم <strong>120370</strong>.
-          في حال نشوء أي نزاع، تسعى الطرفان أولاً إلى التسوية الودية، وإن تعذّر ذلك
-          يُحسم النزاع وفق الإجراءات القانونية المختصة.
-        </p>
-      </div>
-
-    </div><!-- /.card-body -->
-
-    <div class="card-footer">
-      {% if needs_acceptance %}
-
-        <div class="scroll-notice" id="scrollNotice">
-          <svg width="16" height="16" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24">
-            <path d="M12 5v14M5 12l7 7 7-7"/>
-          </svg>
-          <span>مرّر لأسفل لقراءة الاتفاقية كاملة قبل القبول</span>
+        <!-- 1 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">١</div>
+            <h2>تعريف الأطراف</h2>
+          </div>
+          <p>
+            هذه الاتفاقية مبرمة بين <strong>إنجاز لتقنية المعلومات</strong>، كيان مسجَّل
+            برقم <strong>120370</strong> (مزوّد الخدمة)، وبين <strong>المشترك</strong>
+            (أي شخص أو كيان تجاري يستخدم نظام إنجاز IMS).
+            باستخدامك للنظام فأنت تُقرّ بأنك مفوَّض للموافقة على هذه الاتفاقية باسم نشاطك التجاري.
+          </p>
         </div>
 
-        <form method="post" class="accept-form" id="acceptForm">
+        <!-- 2 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">٢</div>
+            <h2>الخدمة المقدمة</h2>
+          </div>
+          <p>
+            توفر إنجاز لتقنية المعلومات نظام إدارة مخزون وأعمال (SaaS) يشمل: إدارة المبيعات
+            والمشتريات، تتبع المخزون، إدارة العملاء والموردين، التقارير، وخدمات مساندة أخرى
+            وفقاً للباقة المشترك بها.
+          </p>
+          <div class="callout">
+            تُحدَّد مميزات كل باقة بشكل منفصل، ولا يلتزم مزوّد الخدمة بتقديم ميزات خارج نطاق الباقة المختارة.
+          </div>
+        </div>
+
+        <!-- 3 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">٣</div>
+            <h2>ملكية البيانات وحمايتها</h2>
+          </div>
+          <ul>
+            <li>جميع البيانات التي تُدخلها في النظام هي ملكك الحصري.</li>
+            <li>لا تُباع بياناتك ولا تُشارَك مع أطراف ثالثة بأي شكل.</li>
+            <li>لا يُطَّلع على بيانات نشاطك التجاري إلا عند الضرورة القصوى لأغراض الدعم الفني وبموافقتك الصريحة.</li>
+            <li>عند إنهاء الاشتراك، تُتاح لك مدة لا تقل عن <strong>١٤ يوماً</strong> لتصدير بياناتك قبل أي حذف نهائي.</li>
+          </ul>
+        </div>
+
+        <!-- 4 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">٤</div>
+            <h2>سرية البيانات والأمان</h2>
+          </div>
+          <p>
+            يعتمد النظام على عزل تام لبيانات كل مشترك؛ يستحيل تقنياً على أي مشترك الوصول
+            إلى بيانات مشترك آخر. تُشفَّر كلمات المرور ولا تُخزَّن بصيغتها الأصلية.
+          </p>
+          <div class="callout">
+            أنت مسؤول عن الحفاظ على سرية بيانات دخول حسابك وعدم مشاركتها مع أشخاص غير مصرَّح لهم.
+          </div>
+        </div>
+
+        <!-- 5 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">٥</div>
+            <h2>الاستخدام المقبول</h2>
+          </div>
+          <p>توافق على عدم استخدام النظام في:</p>
+          <ul>
+            <li>أي نشاط مخالف للقوانين المحلية أو الدولية.</li>
+            <li>تخزين محتوى مسيء أو يشكّل انتهاكاً لحقوق الآخرين.</li>
+            <li>محاولة اختراق النظام أو الوصول لبيانات مشتركين آخرين.</li>
+            <li>إرسال برمجيات ضارة أو محاولات التلاعب بالبنية التحتية.</li>
+            <li>إعادة بيع الخدمة أو توفير وصول لأطراف ثالثة دون إذن مسبق وخطي.</li>
+          </ul>
+        </div>
+
+        <!-- 6 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">٦</div>
+            <h2>الاشتراك والدفع</h2>
+          </div>
+          <ul>
+            <li>رسوم الاشتراك محددة وفق الباقة المختارة وتُدفع مسبقاً.</li>
+            <li>لا يترتب على إلغاء الاشتراك خلال الفترة المدفوعة أي استرداد للرسوم ما لم يُنصّ على خلاف ذلك.</li>
+            <li>يحق لمزوّد الخدمة تعديل الأسعار مع إشعار مسبق لا يقل عن <strong>٣٠ يوماً</strong>.</li>
+          </ul>
+        </div>
+
+        <!-- 7 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">٧</div>
+            <h2>تعليق الخدمة وإنهاؤها</h2>
+          </div>
+          <p>يحق لإنجاز لتقنية المعلومات تعليق أو إنهاء الخدمة في الحالات التالية:</p>
+          <ul>
+            <li>عدم سداد رسوم الاشتراك بعد مرور فترة السماح.</li>
+            <li>انتهاك أي بند من بنود هذه الاتفاقية.</li>
+            <li>صدور حكم قضائي أو أمر رسمي يستوجب ذلك.</li>
+          </ul>
+          <div class="callout callout-warn">
+            في حالات الإنهاء بسبب انتهاك الشروط، قد لا يُمنح وقت كافٍ لتصدير البيانات.
+          </div>
+        </div>
+
+        <!-- 8 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">٨</div>
+            <h2>النسخ الاحتياطية</h2>
+          </div>
+          <p>
+            يحرص مزوّد الخدمة على إجراء نسخ احتياطية منتظمة، غير أن <strong>المشترك يتحمل
+            مسؤولية الاحتفاظ بنسخه الخاصة</strong> من البيانات الحيوية. لا يُسأل مزوّد الخدمة
+            عن الأضرار الناتجة عن فقدان البيانات الخارج عن إرادته.
+          </p>
+        </div>
+
+        <!-- 9 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">٩</div>
+            <h2>حدود المسؤولية</h2>
+          </div>
+          <p>
+            نظام إنجاز أداة لإدارة الأعمال وليس مستشاراً مالياً أو قانونياً. القرارات التجارية
+            المبنية على بيانات النظام هي مسؤولية المشترك الكاملة. لا تتجاوز المسؤولية القصوى
+            لمزوّد الخدمة في أي حال مبلغ رسوم اشتراك شهر واحد.
+          </p>
+        </div>
+
+        <!-- 10 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">١٠</div>
+            <h2>تعديل الاتفاقية</h2>
+          </div>
+          <p>
+            تحتفظ إنجاز لتقنية المعلومات بحق تعديل هذه الاتفاقية في أي وقت. عند وجود
+            تغييرات جوهرية يُرسَل إشعار بالبريد الإلكتروني المسجَّل أو يظهر تنبيه داخل النظام.
+            استمرارك في استخدام النظام بعد التعديل يُعدّ قبولاً للشروط الجديدة.
+          </p>
+        </div>
+
+        <!-- 11 -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-num">١١</div>
+            <h2>القانون المطبق وتسوية النزاعات</h2>
+          </div>
+          <p>
+            تخضع هذه الاتفاقية للقوانين المعمول بها في بلد تسجيل الشركة المزوِّدة للخدمة،
+            وهي <strong>إنجاز لتقنية المعلومات</strong> المسجَّلة برقم <strong>120370</strong>.
+            في حال نشوء أي نزاع، تسعى الطرفان أولاً إلى التسوية الودية، وإن تعذّر ذلك
+            يُحسم النزاع وفق الإجراءات القانونية المختصة.
+          </p>
+        </div>
+
+      </div><!-- /.terms-body -->
+
+      {% if not needs_acceptance %}
+      <div class="readonly-footer">
+        <span>آخر تحديث: {{ terms_version }}</span>
+        <span class="dot">·</span>
+        <span>إنجاز لتقنية المعلومات</span>
+        <span class="dot">·</span>
+        <span>رقم التسجيل: 120370</span>
+        {% if user.is_authenticated %}
+        <span class="dot">·</span>
+        <a href="/">العودة للنظام</a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div><!-- /.terms-card -->
+
+    <!-- ACCEPTANCE CARD -->
+    {% if needs_acceptance %}
+    <div class="accept-card">
+      <div class="accept-card-top">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <p>بعد مراجعة الاتفاقية، يُرجى تأكيد موافقتك للمتابعة إلى النظام.</p>
+      </div>
+
+      <div class="accept-card-body">
+        <form method="post" id="acceptForm">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ next }}">
 
           <label class="checkbox-row">
             <input type="checkbox" id="termsCheck" onchange="toggleBtn()">
-            <span>
+            <label for="termsCheck">
               قرأت اتفاقية الاستخدام كاملاً وأوافق على جميع بنودها.
-              أفهم أن استمراري في استخدام <strong>نظام إنجاز IMS</strong>
+              أُقرّ بأن استمراري في استخدام <strong>نظام إنجاز IMS</strong>
               يُعدّ التزاماً قانونياً بهذه الاتفاقية.
-            </span>
+            </label>
           </label>
 
           <button type="submit" class="btn-accept" id="btnAccept" disabled>
+            <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             أوافق وأدخل النظام
           </button>
         </form>
 
-        <div class="logout-link">
-          لا توافق؟
+        <div class="logout-row">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+          </svg>
+          لا توافق على الشروط؟
           <a href="{% url 'accounts:logout' %}">تسجيل الخروج</a>
         </div>
+      </div>
+    </div><!-- /.accept-card -->
+    {% endif %}
 
-      {% else %}
-
-        <p style="text-align:center; font-size:.9rem; color:#64748b; padding:.5rem 0;">
-          آخر تحديث: {{ terms_version }}
-          {% if user.is_authenticated %}
-            &nbsp;·&nbsp;
-            <a href="/" style="color:#4f46e5;">العودة للنظام</a>
-          {% endif %}
-        </p>
-
-      {% endif %}
-    </div>
-
-  </div><!-- /.card -->
+  </div><!-- /.page-wrapper -->
 
   <script>
-    const body   = document.getElementById('termsBody');
-    const notice = document.getElementById('scrollNotice');
+    {% if needs_acceptance %}
+    const body       = document.getElementById('termsBody');
+    const fill       = document.getElementById('progressFill');
+    const pct        = document.getElementById('progressPct');
 
-    if (notice) {
-      body.addEventListener('scroll', function () {
-        const atBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 40;
-        notice.style.opacity = atBottom ? '0' : '1';
-      }, { passive: true });
+    function updateProgress() {
+      const scrolled   = body.scrollTop;
+      const scrollable = body.scrollHeight - body.clientHeight;
+      const ratio      = scrollable > 0 ? Math.min(scrolled / scrollable, 1) : 1;
+      const p          = Math.round(ratio * 100);
+      fill.style.width = p + '%';
+      pct.textContent  = p + '%';
     }
 
+    body.addEventListener('scroll', updateProgress, { passive: true });
+    {% endif %}
+
     function toggleBtn() {
-      document.getElementById('btnAccept').disabled =
-        !document.getElementById('termsCheck').checked;
+      const btn = document.getElementById('btnAccept');
+      if (btn) btn.disabled = !document.getElementById('termsCheck').checked;
     }
   </script>
 </body>
