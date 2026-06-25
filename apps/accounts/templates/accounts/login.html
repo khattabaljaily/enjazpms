@@ -70,5 +70,9 @@
 <a href="{% url 'accounts:register_step1' %}">إنشاء حساب</a>
 <br>
 <a href="{% url 'core:pricing' %}">عرض خطط الاشتراك</a>
-<p class="text-muted mt-2"><a href="{% url 'core:about' %}">عن النظام</a></p>
+<p class="text-muted mt-2">
+  <a href="{% url 'core:about' %}">عن النظام</a>
+  &nbsp;·&nbsp;
+  <a href="{% url 'core:terms_of_service' %}">اتفاقية الاستخدام</a>
+</p>
 {% endblock %}
