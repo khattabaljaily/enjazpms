@@ -463,7 +463,8 @@ def order_cancel_ajax(request, pk):
     reason = body.get('reason', '')
     try:
         cancel_purchase_invoice(invoice, request.user, reason)
-        log_activity(request, 'إلغاء أمر شراء', f'{invoice.invoice_number} — {invoice.supplier.name}', 'delete')
+        supplier_name = invoice.supplier.name if invoice.supplier else 'مورد محذوف'
+        log_activity(request, 'إلغاء أمر شراء', f'{invoice.invoice_number} — {supplier_name}', 'delete')
         return JsonResponse({'success': True, 'message': 'تم إلغاء أمر الشراء'}, json_dumps_params={'ensure_ascii': False})
     except ValueError as e:
         return _json_error(str(e))

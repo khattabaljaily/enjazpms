@@ -1483,7 +1483,7 @@ def stocktake_create(request):
             StocktakeLine.objects.bulk_create(lines_to_create)
 
         log_activity(request, 'إنشاء جرد مخزون',
-                     f"الجرد: {stocktake.reference}\nالمخزن: {stock.name}\nعدد الأصناف: {len(lines_to_create)}", 'create')
+                     f"الجرد: {stocktake.stocktake_number}\nالمخزن: {stock.name}\nعدد الأصناف: {len(lines_to_create)}", 'create')
         return JsonResponse({'success': True, 'id': stocktake.id,
                              'redirect': f'/stocks/stocktakes/{stocktake.id}/'})
 

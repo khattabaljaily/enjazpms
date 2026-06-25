@@ -279,6 +279,7 @@ def item_create_api(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
+    from django.db import IntegrityError
     form = ItemForm(request.POST, request.FILES, tenant=tenant, capabilities=_get_capabilities(tenant))
     if form.is_valid():
         item = form.save(commit=False)
@@ -286,7 +287,10 @@ def item_create_api(request):
         item.created_by = request.user
         item.updated_by = request.user
         _apply_hc_prices(item, tenant)
-        item.save()
+        try:
+            item.save()
+        except IntegrityError:
+            return JsonResponse({'success': False, 'message': 'رمز المنتج (SKU) مستخدم بالفعل، يرجى اختيار رمز آخر', 'errors': {'sku': ['رمز المنتج مستخدم بالفعل']}}, status=400)
         _save_item_units(item, request.POST.get('units_json', ''), tenant)
         log_activity(request, 'إضافة منتج جديد',
                      f"المنتج: {item.name}\nكود: {item.sku or '—'}\nالنوع: {item.get_item_type_display()}", 'create')
@@ -627,12 +631,16 @@ def category_create_api(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    form = CategoryForm(request.POST, tenant=tenant)
+    post_data = request.POST.copy()
+    if not post_data.get('display_order'):
+        post_data['display_order'] = '0'
+    form = CategoryForm(post_data, tenant=tenant)
     if form.is_valid():
         cat = form.save(commit=False)
         cat.tenant = tenant
         cat.created_by = request.user
         cat.updated_by = request.user
+        cat.display_order = cat.display_order or 0
         cat.save()
         return JsonResponse({'success': True, 'message': 'تم إضافة التصنيف بنجاح', 'id': cat.id})
 

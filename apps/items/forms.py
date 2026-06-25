@@ -6,6 +6,12 @@ from .models import Category, Unit, Item
 
 
 class CategoryForm(forms.ModelForm):
+    display_order = forms.IntegerField(
+        required=False, initial=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+        label='ترتيب العرض',
+    )
+
     class Meta:
         model = Category
         fields = ['name', 'parent', 'icon', 'description', 'display_order', 'is_active']
@@ -14,7 +20,6 @@ class CategoryForm(forms.ModelForm):
             'parent': forms.Select(attrs={'class': 'form-select'}),
             'icon': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'fa-tag'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'display_order': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
