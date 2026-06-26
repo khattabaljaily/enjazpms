@@ -85,7 +85,7 @@
     total += parseFloat(txt) || 0;
   });
   const el = document.getElementById('payTotal');
-  if (el && total > 0) el.textContent = total.toFixed(2);
+  if (el && total > 0) el.textContent = total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 })();
 </script>
 {% endblock %}
