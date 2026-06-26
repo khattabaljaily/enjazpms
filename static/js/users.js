@@ -188,6 +188,24 @@ document.addEventListener('DOMContentLoaded', function () {
             $('#id_password').val('');
             $('#id_password_confirm').val('');
             renderPermissionGroupCheckboxes(user.permission_groups || []);
+
+            /* ── Agent-linked user restrictions ── */
+            if (user.is_agent_user) {
+                $('#id_username').prop('readonly', true).attr('title', 'لا يمكن تغيير اسم مستخدم مندوب');
+                $('#id_is_tenant_admin').closest('.col-md-4').hide();
+                $('#permissionGroupsCheckboxes').closest('.col-md-6').hide();
+                $('#agentUserNote').remove();
+                userForm.find('.cx-modal-body').prepend(
+                    '<div id="agentUserNote" class="alert alert-warning py-2 px-3 mb-3" style="font-size:.85rem;">' +
+                    '<i class="fas fa-user-tie me-1"></i> هذا المستخدم مرتبط بمندوب — لا يمكن تغيير اسم المستخدم أو تعيينه مديراً.</div>'
+                );
+            } else {
+                $('#id_username').prop('readonly', false).removeAttr('title');
+                $('#id_is_tenant_admin').closest('.col-md-4').show();
+                $('#permissionGroupsCheckboxes').closest('.col-md-6').show();
+                $('#agentUserNote').remove();
+            }
+
             userModal.show();
         }).fail(function () {
             EnjazIMS.toast('تعذر جلب بيانات المستخدم', 'error');

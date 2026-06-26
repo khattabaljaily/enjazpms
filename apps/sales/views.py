@@ -178,6 +178,8 @@ def invoice_list(request):
     # للفلترة في الـ DataTable
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
     stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
+    from apps.agents.models import Agent as _Agent
+    agents_qs = _Agent.objects.filter(tenant=tenant, is_active=True).values('id', 'name')
 
     context = {
         'stats': {
@@ -193,6 +195,8 @@ def invoice_list(request):
         },
         'customers': list(customers),
         'stocks': list(stocks),
+        'agents': list(agents_qs),
+        'active_agent_id': request.GET.get('agent', ''),
     }
     return render(request, 'sales/invoice_list.html', context)
 
@@ -211,6 +215,7 @@ def invoice_table_api(request):
     status_filter = request.GET.get('status', '')
     customer_filter = request.GET.get('customer_id', '')
     payment_filter = request.GET.get('payment_method', '')
+    agent_filter = request.GET.get('agent', '')
 
     _returned_sq = (
         SaleReturn.objects
@@ -229,6 +234,8 @@ def invoice_table_api(request):
         qs = qs.filter(customer_id=customer_filter)
     if payment_filter:
         qs = qs.filter(payment_method=payment_filter)
+    if agent_filter:
+        qs = qs.filter(agent_id=agent_filter)
 
     if search_value:
         qs = qs.filter(

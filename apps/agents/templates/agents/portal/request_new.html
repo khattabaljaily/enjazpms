@@ -1,0 +1,256 @@
+{% extends "agents/portal/layout.html" %}
+{% load static number_format %}
+{% block title %}طلب فاتورة جديد{% endblock %}
+{% block tab_new_request %}active{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+  <!-- Customer info -->
+  <div class="col-12">
+    <div class="p-panel">
+      <div class="p-panel-head"><i class="fas fa-user"></i> بيانات العميل</div>
+      <div style="padding:1.25rem;">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" style="font-size:.85rem;font-weight:600;">العميل <span class="text-danger">*</span></label>
+            <div style="position:relative;">
+              <input type="text" id="customerSearch" class="form-control" placeholder="ابحث باسم العميل..." autocomplete="off">
+              <input type="hidden" id="customerId">
+              <div id="customerDropdown" style="display:none;position:absolute;top:100%;right:0;left:0;background:#fff;border:1.5px solid #c7d2fe;border-radius:10px;box-shadow:0 8px 24px rgba(99,102,241,.15);z-index:200;max-height:220px;overflow-y:auto;"></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" style="font-size:.85rem;font-weight:600;">رقم الهاتف</label>
+            <input type="tel" id="customerPhone" class="form-control" placeholder="يُملأ تلقائياً" readonly style="background:#f8fafc;text-align:right;direction:ltr;">
+          </div>
+          <div class="col-12">
+            <label class="form-label" style="font-size:.85rem;font-weight:600;">ملاحظات</label>
+            <textarea id="reqNotes" class="form-control" rows="2" placeholder="أي ملاحظات للمدير"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div class="col-12">
+    <div class="p-panel">
+      <div class="p-panel-head">
+        <i class="fas fa-box"></i> المنتجات
+        <button type="button" class="p-btn p-btn--outline ms-auto" style="padding:.3rem .85rem;font-size:.8rem;" onclick="openItemPicker()">
+          <i class="fas fa-plus me-1"></i>إضافة منتج
+        </button>
+      </div>
+      <div style="padding:0;" class="table-responsive">
+        <table class="p-table" id="linesTable">
+          <thead>
+            <tr>
+              <th>المنتج</th>
+              <th class="text-end hide-mobile">السعر</th>
+              <th class="text-end">الكمية</th>
+              <th class="text-end">الإجمالي</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="linesBody">
+            <tr id="emptyRow">
+              <td colspan="5" style="text-align:center;padding:2rem;color:#94a3b8;font-size:.88rem;">
+                <i class="fas fa-box" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.3;"></i>
+                لم تُضِف أي منتج بعد
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="padding:1rem 1.25rem;border-top:1px solid #f1f5f9;text-align:left;">
+          <strong style="font-size:1rem;color:#6366f1;">الإجمالي: <span id="grandTotal">0.00</span></strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <div class="col-12">
+    <div class="d-flex gap-2 flex-wrap">
+      <button type="button" class="p-btn p-btn--primary" onclick="submitRequest()">
+        <i class="fas fa-paper-plane me-1"></i>إرسال الطلب
+      </button>
+      <a href="{% url 'agents:portal_requests' %}" class="p-btn p-btn--outline">إلغاء</a>
+    </div>
+  </div>
+</div>
+
+<!-- Item Picker Modal -->
+<div id="itemPickerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:.75rem;">
+  <div style="background:#fff;border-radius:16px;padding:1.25rem;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <strong>اختر منتجاً</strong>
+      <button onclick="closeItemPicker()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#64748b;">×</button>
+    </div>
+    <input type="text" id="itemSearch" class="form-control mb-3" placeholder="ابحث عن منتج...">
+    <div id="itemList" style="display:flex;flex-direction:column;gap:.4rem;">
+      {% for item in items %}
+      <div class="item-option" data-id="{{ item.id }}" data-name="{{ item.name }}" data-price="{{ item.selling_price }}"
+           style="padding:.75rem 1rem;border:1.5px solid #e5e7eb;border-radius:10px;cursor:pointer;transition:border-color .15s;"
+           onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#e5e7eb'"
+           onclick="selectItem(this)">
+        <div style="font-weight:600;font-size:.9rem;">{{ item.name }}</div>
+        <div style="font-size:.8rem;color:#64748b;">{{ item.sku }} — <strong dir="ltr">{{ item.selling_price|money }}</strong></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+const CUSTOMERS = [
+  {% for c in customers %}{ id: '{{ c.id }}', name: '{{ c.name|escapejs }}', phone: '{{ c.phone|default:""| escapejs }}' },{% endfor %}
+];
+const lines = [];
+
+// ── Customer Search ───────────────────────────────────────────
+(function() {
+  const searchInput = document.getElementById('customerSearch');
+  const hiddenInput = document.getElementById('customerId');
+  const phoneInput  = document.getElementById('customerPhone');
+  const dropdown    = document.getElementById('customerDropdown');
+
+  function renderCustomers(list) {
+    if (!list.length) {
+      dropdown.innerHTML = '<div style="padding:.75rem 1rem;color:#94a3b8;font-size:.85rem;">لا توجد نتائج</div>';
+    } else {
+      dropdown.innerHTML = list.map(c =>
+        `<div class="customer-opt" data-id="${c.id}" data-phone="${c.phone}"
+          style="padding:.65rem 1rem;cursor:pointer;font-size:.88rem;border-bottom:1px solid #f1f5f9;"
+          onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background=''">${c.name}
+          ${c.phone ? `<span style="color:#94a3b8;font-size:.78rem;margin-right:.5rem;">${c.phone}</span>` : ''}
+        </div>`
+      ).join('');
+    }
+    dropdown.querySelectorAll('.customer-opt').forEach(el => {
+      el.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        hiddenInput.value = this.dataset.id;
+        searchInput.value = this.textContent.trim().split('\n')[0].trim();
+        phoneInput.value  = this.dataset.phone || '';
+        dropdown.style.display = 'none';
+      });
+    });
+  }
+
+  searchInput.addEventListener('focus', function() {
+    renderCustomers(CUSTOMERS);
+    dropdown.style.display = 'block';
+  });
+  searchInput.addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    renderCustomers(CUSTOMERS.filter(c => c.name.toLowerCase().includes(q)));
+    dropdown.style.display = 'block';
+  });
+  searchInput.addEventListener('blur', function() {
+    setTimeout(() => { dropdown.style.display = 'none'; }, 150);
+    // validate selection
+    if (!hiddenInput.value) { searchInput.value = ''; phoneInput.value = ''; }
+  });
+})();
+
+function openItemPicker() {
+  document.getElementById('itemPickerModal').style.display = 'flex';
+  document.getElementById('itemSearch').value = '';
+  filterItems('');
+  document.getElementById('itemSearch').focus();
+}
+function closeItemPicker() {
+  document.getElementById('itemPickerModal').style.display = 'none';
+}
+
+document.getElementById('itemSearch').addEventListener('input', e => filterItems(e.target.value));
+function filterItems(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.item-option').forEach(el => {
+    el.style.display = el.dataset.name.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function selectItem(el) {
+  const id = el.dataset.id, name = el.dataset.name, price = parseFloat(el.dataset.price);
+  const existing = lines.find(l => l.id === id);
+  if (existing) {
+    existing.qty += 1;
+    refreshTable();
+  } else {
+    lines.push({ id, name, price, qty: 1 });
+    refreshTable();
+  }
+  closeItemPicker();
+}
+
+function refreshTable() {
+  const tbody = document.getElementById('linesBody');
+  if (!lines.length) {
+    tbody.innerHTML = `<tr id="emptyRow"><td colspan="5" style="text-align:center;padding:2rem;color:#94a3b8;font-size:.88rem;"><i class="fas fa-box" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.3;"></i>لم تُضِف أي منتج بعد</td></tr>`;
+    document.getElementById('grandTotal').textContent = '0.00';
+    return;
+  }
+  let total = 0;
+  tbody.innerHTML = lines.map((l, i) => {
+    const lineTotal = l.price * l.qty;
+    total += lineTotal;
+    return `<tr>
+      <td><span style="font-size:.9rem;font-weight:600;">${l.name}</span></td>
+      <td class="text-end hide-mobile" dir="ltr" style="font-size:.88rem;">${l.price.toFixed(2)}</td>
+      <td class="text-end">
+        <input type="number" min="1" step="1" value="${l.qty}"
+          style="width:70px;max-width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:.3rem .5rem;text-align:center;font-size:.88rem;"
+          onchange="updateQty(${i}, this.value)">
+      </td>
+      <td class="text-end fw-bold" dir="ltr" style="color:#6366f1;">${lineTotal.toFixed(2)}</td>
+      <td><button onclick="removeLine(${i})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:.9rem;">✕</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('grandTotal').textContent = total.toFixed(2);
+}
+
+function updateQty(i, val) {
+  const q = parseFloat(val) || 1;
+  lines[i].qty = Math.max(1, q);
+  refreshTable();
+}
+function removeLine(i) {
+  lines.splice(i, 1);
+  refreshTable();
+}
+
+function submitRequest() {
+  const customerId = document.getElementById('customerId').value;
+  if (!customerId) { alert('يرجى اختيار عميل من القائمة'); return; }
+  if (!lines.length) { alert('يرجى إضافة منتج واحد على الأقل'); return; }
+
+  const payload = {
+    customer_id:  customerId,
+    notes:        document.getElementById('reqNotes').value.trim(),
+    lines: lines.map(l => ({ item_id: l.id, quantity: l.qty })),
+  };
+
+  fetch('{% url "agents:portal_request_new" %}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      window.location.href = '{% url "agents:portal_requests" %}';
+    } else {
+      alert(data.message || 'حدث خطأ');
+    }
+  });
+}
+
+function getCsrf() {
+  return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+</script>
+{% endblock %}
+{% endblock %}

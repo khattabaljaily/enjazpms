@@ -102,6 +102,40 @@
         "view_treasury_transactions": "عرض حركات وسجل معاملات الخزينة",
         "transfer_treasuries": "تحويل الأموال بين الخزائن (بما فيها خزينة العملة الصعبة)"
     },
+    "المناديب": {
+        "add_agents": "إضافة مندوب جديد",
+        "change_agents": "تعديل بيانات المندوب",
+        "delete_agents": "حذف مندوب",
+        "view_agents": "عرض قائمة المناديب",
+        "import_agents": "استيراد مناديب من ملف",
+        "export_agents": "تصدير بيانات المناديب",
+        "view_agent_payments": "عرض دفعات المناديب",
+        "add_agent_payments": "تسجيل دفعة مندوب",
+        "cancel_agent_payments": "إلغاء دفعة مندوب",
+        "view_agent_transactions": "عرض حركات حساب المندوب"
+    },
+    "الموظفين": {
+        "view_employees": "عرض قائمة الموظفين",
+        "add_employees": "إضافة موظف جديد",
+        "edit_employees": "تعديل بيانات موظف",
+        "delete_employees": "حذف موظف"
+    },
+    "رواتب الموظفين": {
+        "view_employee_salaries": "عرض كشوف الرواتب",
+        "add_employee_salaries": "إنشاء كشف راتب",
+        "pay_employee_salaries": "دفع الراتب",
+        "cancel_employee_salaries": "إلغاء كشف الراتب"
+    },
+    "سلف الموظفين": {
+        "view_employee_advances": "عرض سلف الموظفين",
+        "add_employee_advances": "إضافة سلفة موظف",
+        "cancel_employee_advances": "إلغاء سلفة موظف"
+    },
+    "حوافز الموظفين": {
+        "view_employee_incentives": "عرض الحوافز والخصومات",
+        "add_employee_incentives": "تسجيل حافز أو خصم",
+        "cancel_employee_incentives": "إلغاء حافز أو خصم"
+    },
     "الذكاء الاصطناعي": {
         "use_ai_chat": "استخدام المساعد الذكي (الدردشة)",
         "view_ai_insights": "عرض التحليلات والتوصيات الذكية"
@@ -158,38 +192,8 @@
         "view_treasury_movements_report": "تقرير حركة الخزائن",
         "view_income_statement_report": "قائمة الدخل (الأرباح والخسائر)"
     },
-    "المناديب": {
-        "add_agents": "إضافة مندوب جديد",
-        "change_agents": "تعديل بيانات المندوب",
-        "delete_agents": "حذف مندوب",
-        "view_agents": "عرض قائمة المناديب",
-        "import_agents": "استيراد مناديب من ملف",
-        "export_agents": "تصدير بيانات المناديب",
-        "view_agent_payments": "عرض دفعات المناديب",
-        "add_agent_payments": "تسجيل دفعة مندوب",
-        "cancel_agent_payments": "إلغاء دفعة مندوب",
-        "view_agent_transactions": "عرض حركات حساب المندوب"
-    },
-    "الموظفين": {
-        "view_employees": "عرض قائمة الموظفين",
-        "add_employees": "إضافة موظف جديد",
-        "edit_employees": "تعديل بيانات موظف",
-        "delete_employees": "حذف موظف"
-    },
-    "رواتب الموظفين": {
-        "view_employee_salaries": "عرض كشوف الرواتب",
-        "add_employee_salaries": "إنشاء كشف راتب",
-        "pay_employee_salaries": "دفع الراتب",
-        "cancel_employee_salaries": "إلغاء كشف الراتب"
-    },
-    "سلف الموظفين": {
-        "view_employee_advances": "عرض سلف الموظفين",
-        "add_employee_advances": "إضافة سلفة موظف",
-        "cancel_employee_advances": "إلغاء سلفة موظف"
-    },
-    "حوافز الموظفين": {
-        "view_employee_incentives": "عرض الحوافز والخصومات",
-        "add_employee_incentives": "تسجيل حافز أو خصم",
-        "cancel_employee_incentives": "إلغاء حافز أو خصم"
+    "تقارير المناديب": {
+        "view_agent_statement_report": "كشف حساب مندوب",
+        "view_agent_balances_report": "تقرير مستحقات المناديب"
     }
 }

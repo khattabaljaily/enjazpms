@@ -36,17 +36,17 @@ document.addEventListener('DOMContentLoaded', function () {
 document.addEventListener('DOMContentLoaded', function () {
     // Highlight active nav link and open parent submenus
     const currentPath = window.location.pathname;
-    const navLinks = document.querySelectorAll('.sidebar a[href]');
-    
+    const sidebar     = document.querySelector('.sidebar');
+    const navLinks    = document.querySelectorAll('.sidebar a[href]');
+
+    let activeLink = null;
     navLinks.forEach(function(link) {
         const href = link.getAttribute('href');
-        if (href && (currentPath === href || currentPath.startsWith(href + '/'))) {
-            // Mark the link as active
+        if (href && href !== '#' && (currentPath === href || currentPath.startsWith(href + '/'))) {
             link.classList.add('active');
-            
-            // If it's a sublink, also mark parent as submenu-active and open submenu
+            activeLink = link;
+
             if (link.classList.contains('nav-sublink')) {
-                // Find all parent has-submenu elements and open them
                 let parent = link.closest('.has-submenu');
                 while (parent) {
                     parent.classList.add('open');
@@ -57,6 +57,15 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     });
+
+    // Scroll sidebar so active link is visible (keeps position after navigation)
+    if (activeLink && sidebar) {
+        setTimeout(function () {
+            const linkOffsetTop = activeLink.offsetTop;
+            const target = Math.max(0, linkOffsetTop - sidebar.clientHeight / 3);
+            sidebar.scrollTo({ top: target, behavior: 'smooth' });
+        }, 80);
+    }
 });
 
 document.addEventListener('DOMContentLoaded', function () {

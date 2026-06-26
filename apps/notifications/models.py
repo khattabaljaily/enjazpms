@@ -15,6 +15,7 @@ class Notification(TenantMixin):
         ('transfer_done',    'اكتمال تحويل مخزون'),
         ('stocktake_done',   'اكتمال جرد مخزون'),
         ('online_order',     'طلب جديد من المتجر'),
+        ('agent_request',    'طلب مندوب جديد'),
         ('general',          'إشعار عام'),
     )
 

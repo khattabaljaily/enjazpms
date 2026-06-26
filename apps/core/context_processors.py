@@ -43,6 +43,7 @@ def tenant_context(request):
         context['plan_allows_ai'] = tenant.plan_allows('ai_assistant')
         context['plan_allows_store'] = tenant.plan_allows('store')
         context['plan_allows_smart_tips'] = tenant.plan_allows('smart_tips')
+        context['plan_allows_agents'] = tenant.plan_allows('agents')
 
     return context
 

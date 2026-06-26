@@ -97,13 +97,14 @@
                         <tr>
                             <th>التاريخ</th>
                             <th>المنتج</th>
-                            <th class="text-center">الوحدة</th>
-                            <th>المخزن</th>
+                            <th class="d-none d-md-table-cell text-center">الوحدة</th>
+                            <th class="d-none d-lg-table-cell">المخزن</th>
                             <th>نوع الحركة</th>
+                            <th>رقم المستند</th>
                             <th class="text-center" style="color:#11998e;">دخول +</th>
                             <th class="text-center" style="color:#ef4444;">خروج −</th>
-                            <th class="text-end">الرصيد بعد</th>
-                            <th>ملاحظات</th>
+                            <th class="d-none d-md-table-cell text-end">الرصيد بعد</th>
+                            <th class="d-none d-lg-table-cell">ملاحظات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -111,8 +112,13 @@
                         <tr{% if row.is_reversal %} style="opacity:.75;"{% endif %}>
                             <td class="text-muted" style="font-size:.8rem;">{{ row.movement_date }}</td>
                             <td class="fw-bold">{{ row.item_name }}</td>
-                            <td class="text-center text-muted">{{ row.item_unit|default:"—" }}</td>
-                            <td class="text-muted">{{ row.stock_name }}</td>
+                            <td class="d-none d-md-table-cell text-center text-muted">{{ row.item_unit|default:"—" }}</td>
+                            <td class="d-none d-lg-table-cell text-muted">{{ row.stock_name }}</td>
+                            <td>
+                                {% if row.source_ref %}
+                                <code style="background:rgba(99,102,241,.08);color:#6366f1;border-radius:5px;padding:.15rem .45rem;font-size:.78rem;">{{ row.source_ref }}</code>
+                                {% else %}—{% endif %}
+                            </td>
                             <td>
                                 <span class="badge" style="background:{% if row.direction == 'in' %}rgba(17,153,142,.12){% else %}rgba(239,68,68,.12){% endif %}; color:{% if row.direction == 'in' %}#11998e{% else %}#ef4444{% endif %}; font-size:.72rem; border-radius:6px; padding:.2rem .5rem;">
                                     {% if row.direction == 'in' %}دخول{% else %}خروج{% endif %}
@@ -121,8 +127,8 @@
                             </td>
                             <td class="text-center fw-bold" style="color:#11998e;">{% if row.direction == 'in' %}{{ row.quantity_in }}{% else %}—{% endif %}</td>
                             <td class="text-center fw-bold" style="color:#ef4444;">{% if row.direction == 'out' %}{{ row.quantity_out }}{% else %}—{% endif %}</td>
-                            <td class="text-end text-muted">{{ row.balance_after }}</td>
-<td class="text-muted" style="font-size:.78rem;max-width:180px;">{{ row.notes|default:"—" }}</td>
+                            <td class="d-none d-md-table-cell text-end text-muted">{{ row.balance_after }}</td>
+                            <td class="d-none d-lg-table-cell text-muted" style="font-size:.78rem;">{{ row.notes|default:"—" }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

@@ -1,0 +1,20 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block title %}ميزة غير متاحة | إنجاز{% endblock %}
+
+{% block content %}
+<div style="min-height:60vh;display:flex;align-items:center;justify-content:center;">
+    <div style="text-align:center;max-width:480px;padding:2rem;">
+        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#818cf8);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:2rem;color:#fff;">
+            <i class="fas fa-id-badge"></i>
+        </div>
+        <h2 style="font-weight:700;color:#1e293b;margin-bottom:.5rem;">{{ feature }}</h2>
+        <p style="color:#64748b;margin-bottom:.25rem;">هذه الميزة غير متاحة في باقتك الحالية.</p>
+        <p style="color:#64748b;margin-bottom:2rem;">تتوفر في باقة <strong style="color:#6366f1;">{{ required_plan }}</strong>.</p>
+        <a href="{% url 'core:pricing' %}" class="btn btn-primary" style="background:linear-gradient(135deg,#6366f1,#818cf8);border:none;border-radius:10px;padding:.65rem 2rem;font-weight:600;">
+            <i class="fas fa-arrow-up me-2"></i>ترقية الباقة
+        </a>
+    </div>
+</div>
+{% endblock %}

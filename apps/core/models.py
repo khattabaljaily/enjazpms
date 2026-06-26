@@ -97,10 +97,10 @@ class Tenant(models.Model):
 
     # Features available per plan
     PLAN_FEATURES = {
-        'trial':      {'ai_assistant': True,  'smart_tips': True,  'store': True,  'auto_backup': True,  'auto_backup_daily': 1},
-        'basic':      {'ai_assistant': False, 'smart_tips': False, 'store': False, 'auto_backup': False, 'auto_backup_daily': 0},
-        'pro':        {'ai_assistant': True,  'smart_tips': True,  'store': True,  'auto_backup': True,  'auto_backup_daily': 1},
-        'enterprise': {'ai_assistant': True,  'smart_tips': True,  'store': True,  'auto_backup': True,  'auto_backup_daily': 2},
+        'trial':      {'ai_assistant': True,  'smart_tips': True,  'store': True,  'agents': True,  'auto_backup': True,  'auto_backup_daily': 1},
+        'basic':      {'ai_assistant': False, 'smart_tips': False, 'store': False, 'agents': False, 'auto_backup': False, 'auto_backup_daily': 0},
+        'pro':        {'ai_assistant': True,  'smart_tips': True,  'store': True,  'agents': True,  'auto_backup': True,  'auto_backup_daily': 1},
+        'enterprise': {'ai_assistant': True,  'smart_tips': True,  'store': True,  'agents': True,  'auto_backup': True,  'auto_backup_daily': 2},
     }
     
     # Basic Info

@@ -26,12 +26,10 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
-                <button type="button" class="cx-btn-secondary" id="btnImportAgents" data-require-perm="import_agents">
-                    <i class="fas fa-arrow-down"></i><span>استيراد</span>
+                <button type="button" id="btnCopyPortalUrl" class="cx-btn-secondary" title="نسخ رابط بوابة المناديب">
+                    <i class="fas fa-link"></i><span>رابط البوابة</span><i class="fas fa-copy" style="opacity:.65;font-size:.8rem;"></i>
                 </button>
-                <button type="button" class="cx-btn-secondary" id="btnExportAgents" data-require-perm="export_agents">
-                    <i class="fas fa-arrow-up"></i><span>تصدير</span>
-                </button>
+                <span id="heroPortalUrl" style="display:none;"></span>
                 <button type="button" class="cx-btn-add" id="btnOpenCreateAgent" data-require-perm="add_agents">
                     <i class="fas fa-plus"></i><span>إضافة مندوب</span>
                 </button>
@@ -290,9 +288,44 @@
                         </div>
                     </div>
                 </div>
+                <!-- حساب بوابة المندوب -->
+                <div class="cx-view-section" id="viewUserSection">
+                    <div class="cx-view-section-title"><i class="fas fa-user-shield"></i> حساب البوابة</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card" id="viewUserCard">
+                            <div class="cx-info-card-icon" style="background:rgba(99,102,241,.1);color:#6366f1;"><i class="fas fa-at"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">اسم المستخدم</span>
+                                <span class="cx-info-card-value" id="viewUsername" style="font-family:monospace;"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card" id="viewPortalCard">
+                            <div class="cx-info-card-icon" style="background:rgba(99,102,241,.1);color:#6366f1;"><i class="fas fa-link"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">رابط بوابة المندوب</span>
+                                <span class="cx-info-card-value">
+                                    <span id="viewPortalUrl" style="font-size:.8rem;word-break:break-all;"></span>
+                                    <button onclick="copyEl('viewPortalUrl')" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:.8rem;margin-right:.25rem;" title="نسخ الرابط"><i class="fas fa-copy"></i></button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="viewNoUserRow" style="padding:.5rem 0 0; display:none;">
+                        <span style="font-size:.82rem;color:#94a3b8;">لم يُنشأ حساب بعد — انقر "إنشاء حساب" لإنشائه</span>
+                    </div>
+                </div>
             </div>
             <div class="cx-view-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="cx-btn-secondary" id="viewCreateUserBtn" data-require-perm="change_agents" title="إنشاء حساب دخول للمندوب">
+                    <i class="fas fa-user-plus me-1"></i> إنشاء حساب
+                </button>
+                <button type="button" class="cx-btn-secondary" id="viewAccountInfoBtn" style="display:none;" data-require-perm="change_agents" title="عرض بيانات الحساب">
+                    <i class="fas fa-id-card me-1"></i> بيانات الحساب
+                </button>
+                <button type="button" class="cx-btn-secondary" id="viewResetPasswordFooterBtn" style="display:none;" data-require-perm="change_agents" title="إعادة ضبط كلمة المرور">
+                    <i class="fas fa-key me-1"></i> إعادة الضبط
+                </button>
                 <button type="button" class="cx-btn-primary" id="viewEditAgentBtn" data-require-perm="change_agents">
                     <i class="fas fa-pen-to-square me-1"></i> تعديل
                 </button>
@@ -414,6 +447,49 @@
     </div>
 </div>
 
+<!-- ══════════════════════════ USER CREDENTIALS MODAL ══════════════════════════ -->
+<div class="modal fade" id="agentUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content" style="border-radius:16px;overflow:hidden;border:none;">
+            <div style="background:linear-gradient(135deg,#6366f1,#818cf8);padding:1.5rem;color:#fff;text-align:center;">
+                <i id="userModalIcon" class="fas fa-user-check" style="font-size:2rem;margin-bottom:.5rem;display:block;"></i>
+                <h5 id="userModalTitle" style="margin:0;font-weight:700;">بيانات دخول المندوب</h5>
+                <p id="userModalSubtitle" style="margin:.25rem 0 0;font-size:.83rem;opacity:.85;">احفظ هذه البيانات قبل إغلاق النافذة</p>
+            </div>
+            <div style="padding:1.5rem;">
+                <div style="margin-bottom:1rem;">
+                    <label style="font-size:.78rem;color:#64748b;font-weight:600;display:block;margin-bottom:.3rem;">اسم المستخدم</label>
+                    <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:.65rem 1rem;font-family:monospace;font-size:.95rem;font-weight:700;color:#1e293b;display:flex;justify-content:space-between;align-items:center;">
+                        <span id="createdUsername"></span>
+                        <button onclick="copyText('createdUsername')" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:.8rem;" title="نسخ"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+                <div id="passwordRow" style="margin-bottom:1.5rem;">
+                    <label style="font-size:.78rem;color:#64748b;font-weight:600;display:block;margin-bottom:.3rem;">كلمة المرور</label>
+                    <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:.65rem 1rem;font-family:monospace;font-size:.95rem;font-weight:700;color:#1e293b;display:flex;justify-content:space-between;align-items:center;">
+                        <span id="createdPassword"></span>
+                        <button id="copyPasswordBtn" onclick="copyText('createdPassword')" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:.8rem;" title="نسخ"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+                <div id="passwordWarning" style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:.65rem 1rem;font-size:.82rem;color:#92400e;margin-bottom:1.25rem;">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    لن تتمكن من رؤية كلمة المرور مرة أخرى. أبلغ المندوب بها الآن.
+                </div>
+                <div id="viewOnlyNote" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:.65rem 1rem;font-size:.82rem;color:#0369a1;margin-bottom:1.25rem;">
+                    <i class="fas fa-info-circle me-1"></i>
+                    لعرض كلمة المرور أو تغييرها — استخدم زر "إعادة ضبط كلمة المرور".
+                </div>
+                <div style="display:flex;gap:.75rem;">
+                    <a id="portalLoginLink" href="" target="_blank" class="btn btn-sm" style="background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;border-radius:8px;flex:1;font-size:.83rem;font-weight:600;padding:.5rem;">
+                        <i class="fas fa-external-link-alt me-1"></i>بوابة المندوب
+                    </a>
+                    <button data-bs-dismiss="modal" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;flex:1;font-size:.83rem;">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -427,6 +503,12 @@
     const urlTransactions = "{% url 'agents:transactions_api' 0 %}";
     const urlUpdate       = "{% url 'agents:update_api' 0 %}";
     const urlDelete       = "{% url 'agents:delete_api' 0 %}";
+    const urlPayments     = "{% url 'agents:payments' %}";
+    const urlInvoices     = "{% url 'sales:invoice_list' %}";
+    const urlCreateUser    = "{% url 'agents:create_user_api' 0 %}";
+    const urlResetPassword = "{% url 'agents:reset_password_api' 0 %}";
+    const urlPortalLogin   = "{% url 'agents:portal_login' %}";
+    const CAN_PAY         = {% if request.user|has_perm_key:"add_agent_payments" %}true{% else %}false{% endif %};
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
     const CAN_VIEW_TXN = {% if request.user|has_perm_key:"view_agent_transactions" %}true{% else %}false{% endif %};
@@ -440,7 +522,7 @@
     };
 
     // Move modals to body
-    ['agentModal','deleteAgentModal','viewAgentModal','agentLedgerModal','importAgentsModal'].forEach(function(id) {
+    ['agentModal','deleteAgentModal','viewAgentModal','agentLedgerModal','importAgentsModal','agentUserModal'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el && el.parentElement !== document.body) document.body.appendChild(el);
     });
@@ -450,6 +532,7 @@
     const viewModal       = new bootstrap.Modal(document.getElementById('viewAgentModal'));
     const ledgerModal     = new bootstrap.Modal(document.getElementById('agentLedgerModal'));
     const importModal     = new bootstrap.Modal(document.getElementById('importAgentsModal'));
+    const userModal       = new bootstrap.Modal(document.getElementById('agentUserModal'));
 
     const $form      = $('#agentForm');
     const $submitBtn = $('#agentSubmitBtn');
@@ -492,9 +575,12 @@
                 <div class="cx-supplier-card-meta">
                     <div><span class="cx-supplier-card-meta-label">المدينة</span><strong class="cx-supplier-card-meta-value">${r.city || '—'}</strong></div>
                     <div><span class="cx-supplier-card-meta-label">المستحقات</span><strong class="cx-supplier-card-meta-value ${balCls}">${EnjazIMS.formatMoney(r.current_balance)}</strong></div>
+                    <div><span class="cx-supplier-card-meta-label">بوابة المندوب</span><strong class="cx-supplier-card-meta-value">${r.has_user ? '<span style="color:#059669;font-size:.78rem;"><i class="fas fa-check-circle"></i> مفعّل</span>' : '<span style="color:#94a3b8;font-size:.78rem;"><i class="fas fa-times-circle"></i> غير مفعّل</span>'}</strong></div>
                 </div>
                 <div class="cx-supplier-card-actions">
-                    ${CAN_VIEW_TXN ? `<button class="cxr-act js-ledger-agent" data-id="${r.id}" title="السجل"><i class="fas fa-list"></i></button>` : ''}
+                    ${CAN_VIEW_TXN ? `<button class="cxr-act js-ledger-agent" data-id="${r.id}" title="كشف الحساب"><i class="fas fa-file-invoice-dollar"></i></button>` : ''}
+                    ${CAN_CHANGE ? `<button class="cxr-act js-create-user-agent" data-id="${r.id}" title="${r.has_user ? 'إدارة الحساب' : 'إنشاء حساب'}"><i class="fas ${r.has_user ? 'fa-user-cog' : 'fa-user-plus'}"></i></button>` : ''}
+                    <a class="cxr-act" href="${urlInvoices}?agent=${r.id}" title="فواتير المندوب"><i class="fas fa-file-invoice"></i></a>
                     <button class="cxr-act cxr-act--view js-view-agent" data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
                     ${CAN_CHANGE ? `<button class="cxr-act js-edit-agent" data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
                     ${CAN_DELETE ? `<button class="cxr-act cxr-act--del js-delete-agent" data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
@@ -524,8 +610,12 @@
             { data: 'city', render: c => (!c||c==='-') ? `<span class="cxr-empty">—</span>` : `<span class="cxr-city">${c}</span>` },
             { data: null, render: function(_, __, r) {
                 if (r.commission_type === 'none') return '<span class="cxr-empty">بدون عمولة</span>';
-                const suffix = r.commission_type === 'percentage' ? '%' : '';
-                return `<span style="font-size:.8rem;"><strong>${r.commission_rate}${suffix}</strong> <span class="text-muted" style="font-size:.72rem;">${COMMISSION_LABELS[r.commission_type]||''}</span></span>`;
+                const rate = parseFloat(r.commission_rate);
+                const rateStr = Number.isInteger(rate) ? rate : parseFloat(rate.toFixed(2));
+                if (r.commission_type === 'percentage') {
+                    return `<span style="font-size:.85rem;font-weight:600;">${rateStr}%</span>`;
+                }
+                return `<span style="font-size:.85rem;font-weight:600;">${rateStr}</span> <span class="text-muted" style="font-size:.75rem;">ثابت</span>`;
             }},
             { data: 'current_balance', render: function(v) {
                 const n = EnjazIMS.parseNumber(v);
@@ -538,7 +628,9 @@
             },
             { data: null, orderable: false, searchable: false, render: function(_, __, r) {
                 return `<div class="cxr-actions">
-                    ${CAN_VIEW_TXN ? `<button class="cxr-act js-ledger-agent" data-id="${r.id}" title="السجل"><i class="fas fa-list"></i></button>` : ''}
+                    ${CAN_VIEW_TXN ? `<button class="cxr-act js-ledger-agent" data-id="${r.id}" title="كشف الحساب"><i class="fas fa-file-invoice-dollar"></i></button>` : ''}
+                    ${CAN_CHANGE ? `<button class="cxr-act js-create-user-agent" data-id="${r.id}" title="إنشاء حساب"><i class="fas fa-user-plus"></i></button>` : ''}
+                    <a class="cxr-act" href="${urlInvoices}?agent=${r.id}" title="فواتير المندوب"><i class="fas fa-file-invoice"></i></a>
                     <button class="cxr-act cxr-act--view js-view-agent" data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
                     ${CAN_CHANGE ? `<button class="cxr-act js-edit-agent" data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
                     ${CAN_DELETE ? `<button class="cxr-act cxr-act--del js-delete-agent" data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
@@ -647,12 +739,35 @@
             } else {
                 $('#viewCommissionRateCard').show();
                 const suffix = d.commission_type === 'percentage' ? ' %' : '';
-                $('#viewCommissionRate').text(d.commission_rate + suffix);
+                const rateVal = parseFloat(d.commission_rate);
+                const rateDisplay = Number.isInteger(rateVal) ? rateVal : parseFloat(rateVal.toFixed(2));
+                $('#viewCommissionRate').text(rateDisplay + suffix);
             }
             $('#viewNotes').text(d.notes || '—');
             $('#viewStatus').html(d.is_active
                 ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
                 : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>');
+
+            /* ── User account section ── */
+            const portalUrl = window.location.origin + urlPortalLogin;
+            $('#viewPortalUrl').text(portalUrl);
+            if (d.has_user) {
+                $('#viewUserCard').show();
+                $('#viewUsername').text(d.username || '—');
+                $('#viewResetPasswordRow').show();
+                $('#viewNoUserRow').hide();
+                $('#viewCreateUserBtn').hide();
+                $('#viewAccountInfoBtn').show().data('username', d.username).data('password', d.portal_password || '');
+                $('#viewResetPasswordFooterBtn').show().data('id', d.id);
+            } else {
+                $('#viewUserCard').hide();
+                $('#viewResetPasswordRow').hide();
+                $('#viewNoUserRow').show();
+                $('#viewCreateUserBtn').show();
+                $('#viewAccountInfoBtn').hide();
+                $('#viewResetPasswordFooterBtn').hide();
+            }
+            $('#viewResetPasswordBtn').data('id', d.id);
             $('#viewEditAgentBtn').data('id', d.id);
             viewModal.show();
         }, error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }});
@@ -746,6 +861,111 @@
     $('#agentsTable, #agentsCardsMobile').on('click', '.js-delete-agent', function() { confirmDelete($(this).data('id'), $(this).data('name')); });
     $('#viewEditAgentBtn').on('click', function() { viewModal.hide(); openEdit($(this).data('id')); });
 
+    /* ── Create User ── */
+    function createUserForAgent(id, $btn) {
+        if (!id) return;
+        const orig = $btn ? $btn.html() : null;
+        if ($btn) $btn.html('<i class="fas fa-spinner fa-spin me-1"></i> جاري...').prop('disabled', true);
+        $.ajax({
+            url: apiUrl(urlCreateUser, id),
+            method: 'POST',
+            headers: { 'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val() || getCsrfToken() },
+            success: function(resp) {
+                if ($btn) $btn.html(orig).prop('disabled', false);
+                if (resp.success) {
+                    showUserModal(resp.data.username, resp.data.password, false);
+                    if (document.querySelector('.modal.show')) {
+                        $(document).one('hidden.bs.modal', '.modal', function() { userModal.show(); });
+                        bootstrap.Modal.getInstance(document.querySelector('.modal.show'))?.hide();
+                    } else {
+                        userModal.show();
+                    }
+                } else {
+                    EnjazIMS.toast(resp.message || 'حدث خطأ', 'error');
+                }
+            },
+            error: function(xhr) {
+                if ($btn) $btn.html(orig).prop('disabled', false);
+                EnjazIMS.toast((xhr.responseJSON || {}).message || 'حدث خطأ', 'error');
+            }
+        });
+    }
+
+    $('#viewCreateUserBtn').on('click', function() {
+        createUserForAgent($('#viewEditAgentBtn').data('id'), $(this));
+    });
+
+    /* ── View Account Info (no password reset) ── */
+    function showUserModal(username, password, isViewOnly) {
+        $('#createdUsername').text(username || '—');
+        $('#portalLoginLink').attr('href', window.location.origin + urlPortalLogin);
+        if (isViewOnly) {
+            $('#userModalIcon').attr('class', 'fas fa-id-card');
+            $('#userModalTitle').text('بيانات حساب المندوب');
+            $('#userModalSubtitle').text('اسم المستخدم ورابط بوابة المندوب');
+            $('#passwordRow').hide();
+            $('#passwordWarning').hide();
+            $('#viewOnlyNote').show();
+        } else {
+            $('#userModalIcon').attr('class', 'fas fa-user-check');
+            $('#userModalTitle').text('بيانات دخول المندوب');
+            $('#userModalSubtitle').text('احفظ هذه البيانات قبل إغلاق النافذة');
+            $('#createdPassword').text(password || '');
+            $('#passwordRow').show();
+            $('#passwordWarning').show();
+            $('#viewOnlyNote').hide();
+        }
+    }
+
+    $('#viewAccountInfoBtn').on('click', function() {
+        const username = $(this).data('username');
+        const password = $(this).data('password') || '';
+        showUserModal(username, password || null, !password);
+        $(document).one('hidden.bs.modal', '.modal', function() { userModal.show(); });
+        bootstrap.Modal.getInstance(document.querySelector('.modal.show'))?.hide();
+    });
+
+    /* ── Reset Password (footer btn mirrors body btn) ── */
+    function doResetPassword(id, $btn) {
+        if (!id) return;
+        const orig = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin me-1"></i>').prop('disabled', true);
+        $.ajax({
+            url: apiUrl(urlResetPassword, id),
+            method: 'POST',
+            headers: { 'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val() || getCsrfToken() },
+            success: function(resp) {
+                $btn.html(orig).prop('disabled', false);
+                if (resp.success) {
+                    showUserModal(resp.data.username, resp.data.password, false);
+                    /* update stored password on the info btn */
+                    $('#viewAccountInfoBtn').data('password', resp.data.password);
+                    $(document).one('hidden.bs.modal', '.modal', function() { userModal.show(); });
+                    bootstrap.Modal.getInstance(document.querySelector('.modal.show'))?.hide();
+                } else {
+                    EnjazIMS.toast(resp.message || 'حدث خطأ', 'error');
+                }
+            },
+            error: function(xhr) {
+                $btn.html(orig).prop('disabled', false);
+                EnjazIMS.toast((xhr.responseJSON || {}).message || 'حدث خطأ', 'error');
+            }
+        });
+    }
+
+    $('#viewResetPasswordFooterBtn').on('click', function() {
+        doResetPassword($(this).data('id'), $(this));
+    });
+
+    /* ── Reset Password (body section btn) ── */
+    $('#viewResetPasswordBtn').on('click', function() {
+        doResetPassword($(this).data('id'), $(this));
+    });
+
+    $('#agentsTable, #agentsCardsMobile').on('click', '.js-create-user-agent', function() {
+        createUserForAgent($(this).data('id'), $(this));
+    });
+
     /* ── Import / Export ── */
     let selectedFile = null;
     $('#btnImportAgents').on('click', function() {
@@ -803,6 +1023,43 @@
         EnjazIMS.toast('جاري تصدير البيانات...', 'info');
     });
 
+    /* ── Hero portal URL ── */
+    const portalFullUrl = window.location.origin + urlPortalLogin;
+    const heroUrlEl = document.getElementById('heroPortalUrl');
+    if (heroUrlEl) heroUrlEl.textContent = portalFullUrl;
+    document.getElementById('btnCopyPortalUrl')?.addEventListener('click', function() {
+        copyRaw(portalFullUrl);
+    });
+
 })();
+
+function getCsrfToken() {
+    return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('csrftoken='))?.split('=')[1] || '';
+}
+
+function copyRaw(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+            EnjazIMS.toast('تم النسخ', 'success');
+        }).catch(function() {
+            _fallbackCopy(text);
+        });
+    } else {
+        _fallbackCopy(text);
+    }
+}
+
+function _fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); EnjazIMS.toast('تم النسخ', 'success'); } catch(e) { EnjazIMS.toast('تعذر النسخ', 'error'); }
+    document.body.removeChild(ta);
+}
+
+function copyText(elId) { copyRaw(document.getElementById(elId)?.textContent || ''); }
+function copyEl(elId) { copyText(elId); }
 </script>
 {% endblock %}

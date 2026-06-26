@@ -238,6 +238,7 @@ def user_detail_api(request, pk):
         'is_tenant_admin': getattr(user, 'is_tenant_admin', False),
         'is_active': user.is_active,
         'permission_groups': active_groups,
+        'is_agent_user': hasattr(user, 'agent_profile'),
     })
 
 
@@ -278,6 +279,8 @@ def user_delete_api(request, pk):
         return _json_error('لا يمكن حذف المستخدم الحالي')
 
     user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
+    if hasattr(user, 'agent_profile'):
+        return _json_error('لا يمكن حذف هذا المستخدم لأنه مرتبط بمندوب. احذف المندوب أولاً أو افصل الحساب منه.')
     user.delete()
     return _json_ok(None, 'تم حذف المستخدم بنجاح')
 

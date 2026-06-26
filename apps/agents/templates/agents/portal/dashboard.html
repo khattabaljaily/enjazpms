@@ -1,0 +1,62 @@
+{% extends "agents/portal/layout.html" %}
+{% load number_format %}
+{% block title %}الرئيسية{% endblock %}
+{% block tab_dashboard %}active{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="p-stat">
+      <div class="p-stat-icon p-stat-icon--primary"><i class="fas fa-file-invoice"></i></div>
+      <div>
+        <div class="p-stat-label">فواتيري</div>
+        <div class="p-stat-value">{{ total_invoices }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="p-stat">
+      <div class="p-stat-icon p-stat-icon--success"><i class="fas fa-money-bill-wave"></i></div>
+      <div>
+        <div class="p-stat-label">مستحقاتي</div>
+        <div class="p-stat-value" dir="ltr">{{ balance|money }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="p-stat">
+      <div class="p-stat-icon p-stat-icon--warning"><i class="fas fa-clock"></i></div>
+      <div>
+        <div class="p-stat-label">طلبات معلقة</div>
+        <div class="p-stat-value">{{ pending_requests }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{% url 'agents:portal_request_new' %}" style="text-decoration:none;">
+    <div class="p-stat" style="background:linear-gradient(135deg,#6366f1,#818cf8);cursor:pointer;">
+      <div class="p-stat-icon" style="background:rgba(255,255,255,.2);color:#fff;"><i class="fas fa-plus"></i></div>
+      <div>
+        <div class="p-stat-label" style="color:rgba(255,255,255,.8);">إنشاء طلب</div>
+        <div class="p-stat-value" style="color:#fff;font-size:1rem;">فاتورة جديدة</div>
+      </div>
+    </div>
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="p-panel">
+      <div class="p-panel-head"><i class="fas fa-file-invoice"></i> آخر الفواتير</div>
+      <div style="padding:1rem;"><a href="{% url 'agents:portal_invoices' %}" class="p-btn p-btn--outline" style="font-size:.82rem;">عرض الكل</a></div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="p-panel">
+      <div class="p-panel-head"><i class="fas fa-paper-plane"></i> آخر الطلبات</div>
+      <div style="padding:1rem;"><a href="{% url 'agents:portal_requests' %}" class="p-btn p-btn--outline" style="font-size:.82rem;">عرض الكل</a></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

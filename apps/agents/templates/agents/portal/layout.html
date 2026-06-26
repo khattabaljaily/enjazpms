@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}بوابة المندوب{% endblock %} — {{ tenant.name }}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --p-primary: #6366f1;
+  --p-primary-dark: #4f46e5;
+  --p-accent: #818cf8;
+  --p-surface: #ffffff;
+  --p-bg: #f1f5f9;
+  --p-border: #e2e8f0;
+  --p-text: #1e293b;
+  --p-muted: #64748b;
+  --p-success: #059669;
+  --p-warning: #d97706;
+  --p-danger: #dc2626;
+}
+* { box-sizing: border-box; }
+body { background: var(--p-bg); font-family: 'Cairo','Segoe UI',Tahoma,sans-serif; color: var(--p-text); min-height: 100vh; }
+.portal-nav {
+  background: linear-gradient(135deg, var(--p-primary) 0%, var(--p-accent) 100%);
+  padding: .75rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 12px rgba(99,102,241,.3);
+  position: sticky; top: 0; z-index: 100;
+}
+.portal-nav-brand { display:flex;align-items:center;gap:.6rem;color:#fff;font-size:1.05rem;font-weight:700;text-decoration:none; }
+.portal-nav-brand i { font-size:1.3rem;opacity:.9; }
+.portal-nav-user { display:flex;align-items:center;gap:.75rem; }
+.portal-nav-agent { color:rgba(255,255,255,.9);font-size:.88rem; }
+.portal-nav-agent strong { color:#fff;display:block;font-size:.95rem; }
+.portal-logout { background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:.35rem .75rem;font-size:.83rem;text-decoration:none;transition:background .15s; }
+.portal-logout:hover { background:rgba(255,255,255,.25);color:#fff; }
+.portal-tabs { background:var(--p-surface);border-bottom:1px solid var(--p-border);padding:0 1rem; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.portal-tabs::-webkit-scrollbar { display:none; }
+.portal-tabs .nav { flex-wrap:nowrap; min-width:max-content; }
+.portal-tabs .nav-link { color:var(--p-muted);font-size:.88rem;padding:.7rem .9rem;border:none;border-bottom:2px solid transparent;border-radius:0;transition:color .15s;white-space:nowrap; }
+.portal-tabs .nav-link:hover { color:var(--p-primary); }
+.portal-tabs .nav-link.active { color:var(--p-primary);border-bottom-color:var(--p-primary);font-weight:600;background:none; }
+.portal-main { padding:1.5rem;max-width:1100px;margin:0 auto; }
+.p-stat { background:var(--p-surface);border-radius:14px;padding:1.25rem 1.5rem;box-shadow:0 1px 6px rgba(0,0,0,.06);display:flex;align-items:center;gap:1rem; }
+.p-stat-icon { width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0; }
+.p-stat-icon--primary { background:rgba(99,102,241,.1);color:var(--p-primary); }
+.p-stat-icon--success { background:rgba(5,150,105,.1);color:var(--p-success); }
+.p-stat-icon--warning { background:rgba(217,119,6,.1);color:var(--p-warning); }
+.p-stat-icon--danger  { background:rgba(220,38,38,.1);color:var(--p-danger); }
+.p-stat-label { font-size:.8rem;color:var(--p-muted);margin-bottom:.15rem; }
+.p-stat-value { font-size:1.4rem;font-weight:700;color:var(--p-text);line-height:1.1; }
+.p-panel { background:var(--p-surface);border-radius:14px;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:hidden; }
+.p-panel-head { padding:1rem 1.25rem;border-bottom:1px solid var(--p-border);font-weight:600;font-size:.95rem;display:flex;align-items:center;gap:.5rem; }
+.p-panel-head i { color:var(--p-primary); }
+.p-table { width:100%;border-collapse:collapse; }
+.p-table th { background:#f8fafc;font-size:.78rem;font-weight:600;letter-spacing:.03em;color:var(--p-muted);padding:.65rem 1rem;border-bottom:1px solid var(--p-border); }
+.p-table td { padding:.75rem 1rem;border-bottom:1px solid var(--p-border);font-size:.9rem;vertical-align:middle; }
+.p-table tr:last-child td { border-bottom:none; }
+.p-table tr:hover td { background:#fafbff; }
+.p-badge { display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;border-radius:20px;font-size:.78rem;font-weight:600; }
+.p-badge--pending  { background:rgba(217,119,6,.1);color:var(--p-warning); }
+.p-badge--approved { background:rgba(5,150,105,.1);color:var(--p-success); }
+.p-badge--rejected { background:rgba(220,38,38,.1);color:var(--p-danger); }
+.p-badge--confirmed { background:rgba(99,102,241,.1);color:var(--p-primary); }
+.p-empty { text-align:center;padding:3rem 1rem;color:var(--p-muted); }
+.p-empty i { font-size:2.5rem;margin-bottom:.75rem;opacity:.4;display:block; }
+.p-empty p { font-size:.95rem; }
+.p-btn { display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.25rem;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;border:none;transition:opacity .15s; }
+.p-btn:hover { opacity:.88; }
+.p-btn--primary { background:linear-gradient(135deg,var(--p-primary),var(--p-accent));color:#fff; }
+.p-btn--outline { background:transparent;color:var(--p-primary);border:1.5px solid var(--p-primary); }
+.p-badge-count { display:inline-flex;align-items:center;justify-content:center;background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.7rem;font-weight:700;margin-right:.25rem; }
+@media (max-width:576px) {
+  .portal-nav { padding:.6rem 1rem; }
+  .portal-nav-brand span { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .portal-nav-agent { display:none; }
+  .portal-main { padding:.75rem .5rem; }
+  .p-stat-value { font-size:1.1rem; }
+  .p-stat { padding:1rem; gap:.75rem; }
+  .p-stat-icon { width:40px; height:40px; font-size:1rem; }
+  .p-table th,.p-table td { padding:.5rem .6rem; font-size:.8rem; }
+  .portal-tabs .nav-link { padding:.6rem .75rem; font-size:.82rem; }
+  .portal-tabs .nav-link i { display:none; }
+  .hide-mobile { display:none!important; }
+  .p-btn { padding:.45rem 1rem; font-size:.83rem; }
+}
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<nav class="portal-nav">
+  <a href="{% url 'agents:portal_dashboard' %}" class="portal-nav-brand">
+    <i class="fas fa-id-badge"></i>
+    <span>{{ tenant.name }}</span>
+  </a>
+  <div class="portal-nav-user">
+    <div class="portal-nav-agent">
+      <strong>{{ agent.name }}</strong>
+      بوابة المندوب
+    </div>
+    <a href="{% url 'agents:portal_logout' %}" class="portal-logout">
+      <i class="fas fa-sign-out-alt me-1"></i>خروج
+    </a>
+  </div>
+</nav>
+
+<div class="portal-tabs">
+  <ul class="nav">
+    <li class="nav-item">
+      <a class="nav-link {% block tab_dashboard %}{% endblock %}" href="{% url 'agents:portal_dashboard' %}">
+        <i class="fas fa-gauge-high me-1"></i>الرئيسية
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% block tab_invoices %}{% endblock %}" href="{% url 'agents:portal_invoices' %}">
+        <i class="fas fa-file-invoice me-1"></i>فواتيري
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% block tab_statement %}{% endblock %}" href="{% url 'agents:portal_statement' %}">
+        <i class="fas fa-file-invoice-dollar me-1"></i>كشف حسابي
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% block tab_payments %}{% endblock %}" href="{% url 'agents:portal_payments' %}">
+        <i class="fas fa-money-bill-transfer me-1"></i>دفعاتي
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% block tab_requests %}{% endblock %}" href="{% url 'agents:portal_requests' %}">
+        <i class="fas fa-paper-plane me-1"></i>طلباتي
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% block tab_new_request %}{% endblock %}" href="{% url 'agents:portal_request_new' %}">
+        <i class="fas fa-plus me-1"></i>طلب جديد
+      </a>
+    </li>
+  </ul>
+</div>
+
+<div class="portal-main">
+  {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

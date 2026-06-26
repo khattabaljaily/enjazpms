@@ -20,6 +20,30 @@ urlpatterns = [
     path('payments/<int:pk>/detail/',     views.agent_payment_detail_api,     name='payment_detail'),
     path('payments/<int:pk>/cancel/',     views.agent_payment_cancel_api,     name='payment_cancel'),
 
+    path('statement/',  views.agent_statement, name='statement'),
+    path('balances/',   views.agent_balances,  name='balances'),
+
+    # ── Admin: manage agent invoice requests ──
+    path('requests/',                   views.agent_requests_list,    name='requests_list'),
+    path('requests/<int:pk>/',          views.agent_request_detail,   name='request_detail'),
+    path('requests/<int:pk>/approve/',  views.agent_request_approve,  name='request_approve'),
+    path('requests/<int:pk>/reject/',   views.agent_request_reject,   name='request_reject'),
+
+    # ── Agent user creation / reset ──
+    path('api/<int:pk>/create-user/',   views.agent_create_user_api,    name='create_user_api'),
+    path('api/<int:pk>/reset-password/', views.agent_reset_password_api, name='reset_password_api'),
+
+    # ── Agent Portal ──
+    path('portal/login/',                       views.agent_portal_login,           name='portal_login'),
+    path('portal/logout/',                      views.agent_portal_logout,          name='portal_logout'),
+    path('portal/',                             views.agent_portal_dashboard,       name='portal_dashboard'),
+    path('portal/invoices/',                    views.agent_portal_invoices,        name='portal_invoices'),
+    path('portal/statement/',                   views.agent_portal_statement,       name='portal_statement'),
+    path('portal/payments/',                    views.agent_portal_payments,        name='portal_payments'),
+    path('portal/requests/',                    views.agent_portal_requests,        name='portal_requests'),
+    path('portal/requests/new/',                views.agent_portal_request_new,     name='portal_request_new'),
+    path('portal/requests/<int:pk>/',           views.agent_portal_request_detail,  name='portal_request_detail'),
+
     path('',        views.agent_list,   name='list'),
     path('create/', views.agent_create, name='create'),
 ]

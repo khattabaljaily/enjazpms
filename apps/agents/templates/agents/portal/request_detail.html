@@ -1,0 +1,91 @@
+{% extends "agents/portal/layout.html" %}
+{% load number_format %}
+{% block title %}تفاصيل الطلب {{ req.request_number }}{% endblock %}
+{% block tab_requests %}active{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  <a href="{% url 'agents:portal_requests' %}" style="color:#6366f1;text-decoration:none;font-size:.88rem;">
+    <i class="fas fa-arrow-right me-1"></i>العودة للطلبات
+  </a>
+</div>
+
+<div class="p-panel mb-3">
+  <div class="p-panel-head">
+    <i class="fas fa-file-alt"></i>
+    {{ req.request_number }}
+    <span class="p-badge p-badge--{{ req.status }} ms-2">{{ req.get_status_display }}</span>
+  </div>
+  <div style="padding:1.25rem;">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div style="font-size:.8rem;color:#64748b;">التاريخ</div>
+        <div style="font-weight:600;">{{ req.created_at|date:"Y-m-d" }}</div>
+      </div>
+      <div class="col-md-4">
+        <div style="font-size:.8rem;color:#64748b;">العميل</div>
+        <div style="font-weight:600;">{{ req.customer_name }}</div>
+      </div>
+      {% if req.customer_phone %}
+      <div class="col-md-4">
+        <div style="font-size:.8rem;color:#64748b;">الهاتف</div>
+        <div style="font-weight:600;">{{ req.customer_phone }}</div>
+      </div>
+      {% endif %}
+      {% if req.notes %}
+      <div class="col-12">
+        <div style="font-size:.8rem;color:#64748b;">ملاحظاتك</div>
+        <div>{{ req.notes }}</div>
+      </div>
+      {% endif %}
+      {% if req.admin_comment %}
+      <div class="col-12">
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:.75rem 1rem;">
+          <div style="font-size:.8rem;color:#92400e;font-weight:600;margin-bottom:.25rem;"><i class="fas fa-comment me-1"></i>تعليق المدير</div>
+          <div style="color:#78350f;">{{ req.admin_comment }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if req.sale_invoice %}
+      <div class="col-12">
+        <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:.75rem 1rem;">
+          <div style="font-size:.85rem;color:#065f46;font-weight:600;">
+            <i class="fas fa-check-circle me-1"></i>
+            تم اعتماد الطلب — الفاتورة: {{ req.sale_invoice.invoice_number }}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="p-panel">
+  <div class="p-panel-head"><i class="fas fa-box"></i> المنتجات</div>
+  <div class="table-responsive">
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th>المنتج</th>
+          <th class="text-end">السعر</th>
+          <th class="text-end">الكمية</th>
+          <th class="text-end">الإجمالي</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for line in lines %}
+        <tr>
+          <td style="font-weight:600;">{{ line.item.name }}</td>
+          <td class="text-end" dir="ltr">{{ line.unit_price|money }}</td>
+          <td class="text-end">{{ line.quantity|floatformat:0 }}</td>
+          <td class="text-end fw-bold" style="color:#6366f1;" dir="ltr">{{ line.line_total|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="padding:.85rem 1.25rem;text-align:left;border-top:1px solid #f1f5f9;">
+    <strong style="color:#6366f1;">الإجمالي: {{ req.total_amount|money }}</strong>
+  </div>
+</div>
+{% endblock %}

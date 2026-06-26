@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django import forms
 from .models import Agent
 
@@ -35,3 +37,11 @@ class AgentForm(forms.ModelForm):
             'notes':           forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'is_active':       forms.CheckboxInput(attrs={'class': 'cx-toggle-input'}),
         }
+
+    def clean_opening_balance(self):
+        value = self.cleaned_data.get('opening_balance')
+        return value if value is not None else Decimal('0')
+
+    def clean_commission_rate(self):
+        value = self.cleaned_data.get('commission_rate')
+        return value if value is not None else Decimal('0')

@@ -1,0 +1,51 @@
+{% extends "agents/portal/layout.html" %}
+{% load number_format %}
+{% block title %}فواتيري{% endblock %}
+{% block tab_invoices %}active{% endblock %}
+
+{% block content %}
+<div class="p-panel">
+  <div class="p-panel-head"><i class="fas fa-file-invoice"></i> فواتيري المسجلة</div>
+  {% if invoices %}
+  <div class="table-responsive">
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th>رقم الفاتورة</th>
+          <th class="hide-mobile">التاريخ</th>
+          <th class="hide-mobile">العميل</th>
+          <th class="text-end">الإجمالي</th>
+          <th class="text-end hide-mobile">المدفوع</th>
+          <th>الحالة</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr>
+          <td><code style="color:#6366f1;font-size:.85rem;">{{ inv.invoice_number }}</code></td>
+          <td class="text-muted hide-mobile">{{ inv.invoice_date }}</td>
+          <td class="hide-mobile">{{ inv.customer.name|default:"زبون عابر" }}</td>
+          <td class="text-end fw-bold" dir="ltr">{{ inv.grand_total|money }}</td>
+          <td class="text-end hide-mobile" dir="ltr">{{ inv.paid_amount|money }}</td>
+          <td>
+            {% if inv.status == 'confirmed' %}
+            <span class="p-badge p-badge--confirmed">مؤكدة</span>
+            {% elif inv.status == 'draft' %}
+            <span class="p-badge p-badge--pending">مسودة</span>
+            {% else %}
+            <span class="p-badge" style="background:#f1f5f9;color:#64748b;">{{ inv.get_status_display }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="p-empty">
+    <i class="fas fa-file-invoice"></i>
+    <p>لا توجد فواتير مسجلة باسمك حتى الآن</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

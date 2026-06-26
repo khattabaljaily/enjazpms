@@ -55,6 +55,12 @@ def agent_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
+    if not tenant.plan_allows('agents'):
+        return render(request, 'agents/plan_upgrade.html', {
+            'feature': 'إدارة المناديب',
+            'required_plan': 'Pro أو Enterprise',
+        })
+
     qs = Agent.objects.for_tenant(tenant)
     total = qs.count()
     active = qs.filter(is_active=True).count()
@@ -125,6 +131,7 @@ def agent_table_api(request):
             'commission_rate':  str(agent.commission_rate),
             'current_balance':  str(balance.quantize(Decimal('0.01'))),
             'is_active':        agent.is_active,
+            'has_user':         agent.user_id is not None,
         })
 
     return JsonResponse({
@@ -187,6 +194,9 @@ def agent_detail_api(request, pk):
         'current_balance': str(balance.quantize(Decimal('0.01'))),
         'notes':           agent.notes,
         'is_active':       agent.is_active,
+        'has_user':          agent.user_id is not None,
+        'username':          agent.user.username if agent.user_id else None,
+        'portal_password':   agent.portal_password if agent.user_id else None,
     })
 
 
@@ -678,3 +688,578 @@ def download_template(request):
     writer.writerow(['الاسم', 'الهاتف', 'البريد', 'المدينة', 'العنوان', 'المستحقات الافتتاحية'])
     writer.writerow(['أحمد محمد', '0912345678', 'ahmed@example.com', 'الخرطوم', 'شارع النيل', '0'])
     return response
+
+
+# ─────────────────────────────────────────────
+#   كشف حساب المندوب
+# ─────────────────────────────────────────────
+
+@login_required
+@require_permission('view_agent_statement_report')
+def agent_statement(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    from datetime import timedelta
+    agent_id = request.GET.get('agent_id', '')
+    start_date = request.GET.get('start_date') or (timezone.localdate() - timedelta(days=30)).isoformat()
+    end_date = request.GET.get('end_date') or timezone.localdate().isoformat()
+
+    agents = Agent.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    report = None
+
+    if agent_id:
+        try:
+            agent = Agent.objects.get(pk=agent_id, tenant=tenant)
+        except Agent.DoesNotExist:
+            agent = None
+
+        if agent:
+            entries = AgentLedger.objects.filter(
+                tenant=tenant,
+                agent=agent,
+                entry_date__gte=start_date,
+                entry_date__lte=end_date,
+            ).order_by('entry_date', 'id')
+
+            total_debit = sum(float(e.amount) for e in entries if float(e.amount) > 0)
+            total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
+            last_entry = entries.last()
+            closing_balance = float(last_entry.running_balance) if last_entry else float(_agent_balance(tenant, agent))
+
+            report = {
+                'agent': agent,
+                'period': {'start': start_date, 'end': end_date},
+                'summary': {
+                    'total_debit': total_debit,
+                    'total_credit': total_credit,
+                    'closing_balance': closing_balance,
+                },
+                'entries': entries,
+            }
+
+    return render(request, 'agents/statement.html', {
+        'agents': agents,
+        'selected_agent_id': agent_id,
+        'start_date': start_date,
+        'end_date': end_date,
+        'report': report,
+    })
+
+
+# ─────────────────────────────────────────────
+#   مستحقات المناديب
+# ─────────────────────────────────────────────
+
+@login_required
+@require_permission('view_agent_balances_report')
+def agent_balances(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    agents = Agent.objects.filter(tenant=tenant).order_by('name')
+    rows = []
+    total_dues = Decimal('0')
+    for agent in agents:
+        bal = _agent_balance(tenant, agent)
+        rows.append({'agent': agent, 'balance': bal})
+        if bal > 0:
+            total_dues += bal
+
+    return render(request, 'agents/balances.html', {
+        'rows': rows,
+        'total_dues': total_dues,
+    })
+
+
+# ═════════════════════════════════════════════════════
+#   إنشاء / ربط مستخدم بالمندوب
+# ═════════════════════════════════════════════════════
+
+@login_required
+@require_permission('change_agents')
+@require_POST
+def agent_create_user_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    agent = get_object_or_404(Agent, pk=pk, tenant=tenant)
+
+    if agent.user_id:
+        return _json_error('المندوب مرتبط بمستخدم بالفعل')
+
+    from django.contrib.auth import get_user_model
+    import secrets, string
+
+    User = get_user_model()
+
+    base = agent.code.lower().replace('-', '')
+    username = base
+    counter = 1
+    while User.objects.filter(username=username).exists():
+        username = f'{base}{counter}'
+        counter += 1
+
+    alphabet = string.ascii_letters + string.digits
+    password = ''.join(secrets.choice(alphabet) for _ in range(12))
+
+    user = User.objects.create_user(
+        username=username,
+        password=password,
+        first_name=agent.name,
+        email=agent.email or '',
+        is_active=True,
+        is_staff=False,
+    )
+    user.tenant = tenant
+    user.save(update_fields=['tenant'])
+
+    agent.user = user
+    agent.portal_password = password
+    agent.save(update_fields=['user', 'portal_password', 'updated_at'])
+
+    log_activity(request, 'إنشاء حساب مستخدم للمندوب',
+                 f"المندوب: {agent.name}\nاسم المستخدم: {username}", 'create')
+
+    return _json_ok(data={'username': username, 'password': password}, msg='تم إنشاء حساب المندوب بنجاح')
+
+
+@login_required
+@require_permission('change_agents')
+@require_POST
+def agent_reset_password_api(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    agent = get_object_or_404(Agent, pk=pk, tenant=tenant)
+    if not agent.user_id:
+        return _json_error('لا يوجد حساب مرتبط بهذا المندوب')
+
+    import secrets, string
+    alphabet = string.ascii_letters + string.digits
+    password = ''.join(secrets.choice(alphabet) for _ in range(12))
+    agent.user.set_password(password)
+    agent.user.save(update_fields=['password'])
+    agent.portal_password = password
+    agent.save(update_fields=['portal_password', 'updated_at'])
+
+    log_activity(request, 'إعادة ضبط كلمة مرور المندوب',
+                 f"المندوب: {agent.name}\nاسم المستخدم: {agent.user.username}", 'update')
+
+    return _json_ok(data={'username': agent.user.username, 'password': password},
+                    msg='تم إعادة ضبط كلمة المرور بنجاح')
+
+
+# ═════════════════════════════════════════════════════
+#   AGENT PORTAL — مصادقة وجلسة
+# ═════════════════════════════════════════════════════
+
+_SESS_AGENT  = 'agent_portal_id'
+_SESS_TENANT = 'agent_portal_tenant_id'
+
+
+def _portal_required(view_fn):
+    """Decorator: ensures agent is logged into portal."""
+    from functools import wraps
+    @wraps(view_fn)
+    def wrapper(request, *args, **kwargs):
+        if not request.session.get(_SESS_AGENT):
+            return redirect('agents:portal_login')
+        return view_fn(request, *args, **kwargs)
+    return wrapper
+
+
+def _get_portal_ctx(request):
+    """Return (agent, tenant) from portal session, or (None, None)."""
+    from apps.core.models import Tenant
+    aid = request.session.get(_SESS_AGENT)
+    tid = request.session.get(_SESS_TENANT)
+    if not aid or not tid:
+        return None, None
+    try:
+        tenant = Tenant.objects.get(pk=tid)
+        agent  = Agent.objects.get(pk=aid, tenant=tenant, is_active=True)
+        return agent, tenant
+    except Exception:
+        return None, None
+
+
+def agent_portal_login(request):
+    from django.contrib.auth import authenticate
+    error = None
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        user = authenticate(request, username=username, password=password)
+        if user and hasattr(user, 'agent_profile') and user.agent_profile:
+            agent = user.agent_profile
+            if agent.is_active and agent.tenant_id:
+                request.session[_SESS_AGENT]  = agent.pk
+                request.session[_SESS_TENANT] = agent.tenant_id
+                request.session.set_expiry(60 * 60 * 24 * 30)
+                return redirect('agents:portal_dashboard')
+        error = 'اسم المستخدم أو كلمة المرور غير صحيحة'
+
+    return render(request, 'agents/portal/login.html', {'error': error})
+
+
+def agent_portal_logout(request):
+    request.session.pop(_SESS_AGENT,  None)
+    request.session.pop(_SESS_TENANT, None)
+    return redirect('agents:portal_login')
+
+
+# ═════════════════════════════════════════════════════
+#   AGENT PORTAL — الصفحات
+# ═════════════════════════════════════════════════════
+
+@_portal_required
+def agent_portal_dashboard(request):
+    agent, tenant = _get_portal_ctx(request)
+    if not agent:
+        return redirect('agents:portal_login')
+
+    from apps.sales.models import SaleInvoice
+    from .models import AgentInvoiceRequest
+
+    invoices = SaleInvoice.objects.filter(tenant=tenant, agent=agent).exclude(status='cancelled')
+    total_invoices = invoices.count()
+    balance = _agent_balance(tenant, agent)
+
+    pending_requests = AgentInvoiceRequest.objects.filter(
+        tenant=tenant, agent=agent, status='pending'
+    ).count()
+
+    return render(request, 'agents/portal/dashboard.html', {
+        'agent': agent, 'tenant': tenant,
+        'total_invoices': total_invoices,
+        'balance': balance,
+        'pending_requests': pending_requests,
+    })
+
+
+@_portal_required
+def agent_portal_invoices(request):
+    agent, tenant = _get_portal_ctx(request)
+    if not agent:
+        return redirect('agents:portal_login')
+
+    from apps.sales.models import SaleInvoice
+    invoices = (
+        SaleInvoice.objects
+        .filter(tenant=tenant, agent=agent)
+        .exclude(status='cancelled')
+        .select_related('customer')
+        .order_by('-invoice_date', '-id')
+    )
+    return render(request, 'agents/portal/invoices.html', {
+        'agent': agent, 'tenant': tenant, 'invoices': invoices,
+    })
+
+
+@_portal_required
+def agent_portal_statement(request):
+    agent, tenant = _get_portal_ctx(request)
+    if not agent:
+        return redirect('agents:portal_login')
+
+    from datetime import timedelta
+    start_date = request.GET.get('start_date') or (timezone.localdate() - timedelta(days=30)).isoformat()
+    end_date   = request.GET.get('end_date') or timezone.localdate().isoformat()
+
+    entries = AgentLedger.objects.filter(
+        tenant=tenant, agent=agent,
+        entry_date__gte=start_date, entry_date__lte=end_date,
+    ).order_by('entry_date', 'id')
+
+    balance          = _agent_balance(tenant, agent)
+    total_commission = sum(e.amount for e in entries if e.amount > 0)
+    total_paid       = abs(sum(e.amount for e in entries if e.amount < 0))
+
+    return render(request, 'agents/portal/statement.html', {
+        'agent': agent, 'tenant': tenant,
+        'entries': entries, 'balance': balance,
+        'total_commission': total_commission,
+        'total_paid': total_paid,
+        'start_date': start_date, 'end_date': end_date,
+    })
+
+
+@_portal_required
+def agent_portal_payments(request):
+    agent, tenant = _get_portal_ctx(request)
+    if not agent:
+        return redirect('agents:portal_login')
+
+    payments = AgentLedger.objects.filter(
+        tenant=tenant, agent=agent, entry_type='payment',
+    ).order_by('-entry_date', '-id')
+
+    return render(request, 'agents/portal/payments.html', {
+        'agent': agent, 'tenant': tenant, 'payments': payments,
+    })
+
+
+@_portal_required
+def agent_portal_requests(request):
+    agent, tenant = _get_portal_ctx(request)
+    if not agent:
+        return redirect('agents:portal_login')
+
+    from .models import AgentInvoiceRequest
+    requests_qs = AgentInvoiceRequest.objects.filter(
+        tenant=tenant, agent=agent,
+    ).order_by('-created_at')
+
+    return render(request, 'agents/portal/requests.html', {
+        'agent': agent, 'tenant': tenant, 'requests': requests_qs,
+    })
+
+
+@_portal_required
+def agent_portal_request_new(request):
+    agent, tenant = _get_portal_ctx(request)
+    if not agent:
+        return redirect('agents:portal_login')
+
+    from apps.items.models import Item
+    from .models import AgentInvoiceRequest, AgentInvoiceRequestLine
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return _json_error('بيانات غير صالحة')
+
+        customer_id    = body.get('customer_id', '')
+        notes          = body.get('notes', '').strip()
+        lines_raw      = body.get('lines', [])
+
+        # resolve customer
+        customer_obj   = None
+        customer_name  = ''
+        customer_phone = ''
+        if customer_id:
+            from apps.customers.models import Customer as CustomerModel
+            try:
+                customer_obj   = CustomerModel.objects.get(pk=customer_id, tenant=tenant)
+                customer_name  = customer_obj.name
+                customer_phone = customer_obj.phone or ''
+            except CustomerModel.DoesNotExist:
+                return _json_error('العميل غير موجود')
+        else:
+            return _json_error('يرجى اختيار عميل من القائمة')
+
+        if not lines_raw:
+            return _json_error('لا يمكن إرسال طلب بدون منتجات')
+
+        with transaction.atomic():
+            req = AgentInvoiceRequest.objects.create(
+                tenant=tenant, agent=agent,
+                customer=customer_obj,
+                customer_name=customer_name,
+                customer_phone=customer_phone,
+                notes=notes,
+                status='pending',
+            )
+            subtotal = Decimal('0')
+            for lr in lines_raw:
+                item = Item.objects.get(id=lr['item_id'], tenant=tenant)
+                qty  = Decimal(str(lr['quantity']))
+                price = item.selling_price
+                line = AgentInvoiceRequestLine.objects.create(
+                    tenant=tenant, request=req,
+                    item=item, quantity=qty, unit_price=price,
+                )
+                subtotal += line.line_total
+            req.subtotal     = subtotal
+            req.total_amount = subtotal
+            req.save(update_fields=['subtotal', 'total_amount', 'updated_at'])
+
+        # إشعار لجميع مديري النظام في المؤسسة
+        try:
+            from apps.notifications.models import Notification
+            from django.urls import reverse
+            admin_users = tenant.users.filter(is_active=True, is_tenant_admin=True)
+            detail_url = reverse('agents:request_detail', args=[req.pk])
+            for u in admin_users:
+                Notification.objects.create(
+                    tenant=tenant,
+                    user=u,
+                    notification_type='agent_request',
+                    priority='medium',
+                    title=f'طلب فاتورة جديد من {agent.name}',
+                    message=f'المندوب {agent.name} أرسل طلب فاتورة جديد ({req.request_number}) للعميل {req.customer_name}.',
+                    link=detail_url,
+                )
+        except Exception:
+            pass
+
+        return _json_ok(data={'id': req.id, 'number': req.request_number},
+                        msg='تم إرسال الطلب بنجاح وسيصلك الرد قريباً')
+
+    from apps.customers.models import Customer as CustomerModel
+    items     = Item.objects.filter(tenant=tenant, is_active=True, is_sellable=True).order_by('name')
+    customers = CustomerModel.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    return render(request, 'agents/portal/request_new.html', {
+        'agent': agent, 'tenant': tenant, 'items': items, 'customers': customers,
+    })
+
+
+@_portal_required
+def agent_portal_request_detail(request, pk):
+    agent, tenant = _get_portal_ctx(request)
+    if not agent:
+        return redirect('agents:portal_login')
+
+    from .models import AgentInvoiceRequest
+    req = get_object_or_404(AgentInvoiceRequest, pk=pk, tenant=tenant, agent=agent)
+    lines = req.lines.select_related('item').all()
+
+    return render(request, 'agents/portal/request_detail.html', {
+        'agent': agent, 'tenant': tenant, 'req': req, 'lines': lines,
+    })
+
+
+# ═════════════════════════════════════════════════════
+#   ADMIN — إدارة طلبات المناديب
+# ═════════════════════════════════════════════════════
+
+@login_required
+@require_permission('change_sales')
+def agent_requests_list(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    from .models import AgentInvoiceRequest
+    status_filter = request.GET.get('status', 'pending')
+    qs = AgentInvoiceRequest.objects.filter(tenant=tenant).select_related('agent', 'sale_invoice')
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    qs = qs.order_by('-created_at')
+
+    pending_count  = AgentInvoiceRequest.objects.filter(tenant=tenant, status='pending').count()
+    approved_count = AgentInvoiceRequest.objects.filter(tenant=tenant, status='approved').count()
+    rejected_count = AgentInvoiceRequest.objects.filter(tenant=tenant, status='rejected').count()
+
+    return render(request, 'agents/manage_requests.html', {
+        'requests': qs,
+        'status_filter': status_filter,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
+    })
+
+
+@login_required
+@require_permission('change_sales')
+def agent_request_detail(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    from .models import AgentInvoiceRequest
+    from apps.stocks.models import Stock
+    req   = get_object_or_404(AgentInvoiceRequest, pk=pk, tenant=tenant)
+    lines = req.lines.select_related('item').all()
+    stocks = Stock.objects.filter(tenant=tenant, is_active=True).order_by('name')
+
+    return render(request, 'agents/manage_request_detail.html', {
+        'req': req, 'lines': lines, 'stocks': stocks,
+    })
+
+
+@login_required
+@require_permission('change_sales')
+@require_POST
+def agent_request_approve(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    from .models import AgentInvoiceRequest
+    req = get_object_or_404(AgentInvoiceRequest, pk=pk, tenant=tenant, status='pending')
+
+    try:
+        with transaction.atomic():
+            from apps.sales.models import SaleInvoice, SaleInvoiceLine
+            from apps.stocks.models import Stock
+
+            stock_id = request.POST.get('stock_id')
+            if stock_id:
+                stock = get_object_or_404(Stock, pk=stock_id, tenant=tenant)
+            else:
+                stock = Stock.objects.filter(tenant=tenant, is_default=True).first() \
+                    or Stock.objects.filter(tenant=tenant).first()
+            if not stock:
+                raise ValueError('لا يوجد مخزن مُعرَّف في النظام')
+
+            customer = req.customer  # FK set when agent picks from customer list
+
+            invoice = SaleInvoice.objects.create(
+                tenant=tenant,
+                customer=customer,
+                agent=req.agent,
+                stock=stock,
+                invoice_date=timezone.localdate(),
+                payment_method='credit',
+                status='draft',
+                notes=req.notes or f'طلب مندوب {req.request_number}',
+            )
+
+            for line in req.lines.select_related('item').all():
+                inv_line = SaleInvoiceLine(
+                    tenant=tenant, invoice=invoice,
+                    item=line.item,
+                    quantity=line.quantity,
+                    unit_price=line.unit_price,
+                    discount_percent=Decimal('0'),
+                    tax_rate=line.item.tax_rate,
+                    cost_price_snapshot=line.item.cost_price,
+                )
+                inv_line.calculate()
+                inv_line.save()
+
+            invoice.recalculate_totals()
+            invoice.save()
+
+            req.status       = 'approved'
+            req.sale_invoice = invoice
+            req.save(update_fields=['status', 'sale_invoice', 'updated_at'])
+
+        log_activity(request, 'اعتماد طلب فاتورة مندوب',
+                     f"الطلب: {req.request_number}\nالمندوب: {req.agent.name}\nالفاتورة: {invoice.invoice_number}", 'create')
+        from django.contrib import messages
+        messages.success(request, f'تم اعتماد الطلب وإنشاء الفاتورة {invoice.invoice_number}')
+    except Exception as e:
+        from django.contrib import messages
+        messages.error(request, str(e))
+    return redirect('agents:request_detail', pk=pk)
+
+
+@login_required
+@require_permission('change_sales')
+@require_POST
+def agent_request_reject(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    from .models import AgentInvoiceRequest
+    req = get_object_or_404(AgentInvoiceRequest, pk=pk, tenant=tenant, status='pending')
+
+    comment = request.POST.get('comment', '').strip()
+    req.status        = 'rejected'
+    req.admin_comment = comment
+    req.save(update_fields=['status', 'admin_comment', 'updated_at'])
+
+    log_activity(request, 'رفض طلب فاتورة مندوب',
+                 f"الطلب: {req.request_number}\nالمندوب: {req.agent.name}", 'delete')
+    from django.contrib import messages
+    messages.success(request, 'تم رفض الطلب')
+    return redirect('agents:request_detail', pk=pk)

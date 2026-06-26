@@ -116,6 +116,15 @@
                 <option value="{{ c.id }}">{{ c.name }}</option>
                 {% endfor %}
             </select>
+
+            {% if agents %}
+            <select id="filterAgent" class="cx-select-sm">
+                <option value="">كل المناديب</option>
+                {% for a in agents %}
+                <option value="{{ a.id }}" {% if active_agent_id == a.id|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
         </div>
     </div>
 
@@ -379,6 +388,8 @@ function initTable() {
                 d.status = document.getElementById('filterStatus').value;
                 d.payment_method = document.getElementById('filterPayment').value;
                 d.customer_id = document.getElementById('filterCustomer').value;
+                const agentEl = document.getElementById('filterAgent');
+                d.agent = agentEl ? agentEl.value : '';
             }
         },
         columns: [
@@ -486,6 +497,8 @@ function initFilters() {
     ['filterStatus', 'filterPayment', 'filterCustomer'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => salesTable.ajax.reload());
     });
+    const agentFilterEl = document.getElementById('filterAgent');
+    if (agentFilterEl) agentFilterEl.addEventListener('change', () => salesTable.ajax.reload());
     document.getElementById('saleSearchInput').addEventListener('input', function () {
         salesTable.search(this.value).draw();
     });

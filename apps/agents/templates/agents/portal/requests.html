@@ -1,0 +1,54 @@
+{% extends "agents/portal/layout.html" %}
+{% load number_format %}
+{% block title %}طلباتي{% endblock %}
+{% block tab_requests %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h5 class="mb-0" style="font-weight:700;">طلبات الفواتير</h5>
+  <a href="{% url 'agents:portal_request_new' %}" class="p-btn p-btn--primary">
+    <i class="fas fa-plus"></i> طلب جديد
+  </a>
+</div>
+
+<div class="p-panel">
+  {% if requests %}
+  <div class="table-responsive">
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th>رقم الطلب</th>
+          <th class="hide-mobile">التاريخ</th>
+          <th class="hide-mobile">العميل</th>
+          <th class="text-end">الإجمالي</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+        <tr>
+          <td><code style="color:#6366f1;font-size:.85rem;">{{ req.request_number }}</code></td>
+          <td class="text-muted hide-mobile">{{ req.created_at|date:"Y-m-d" }}</td>
+          <td class="hide-mobile">{{ req.customer_name }}</td>
+          <td class="text-end fw-bold" dir="ltr">{{ req.total_amount|money }}</td>
+          <td>
+            <span class="p-badge p-badge--{{ req.status }}">{{ req.get_status_display }}</span>
+          </td>
+          <td>
+            <a href="{% url 'agents:portal_request_detail' req.pk %}" class="p-btn p-btn--outline" style="padding:.25rem .75rem;font-size:.78rem;">عرض</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="p-empty">
+    <i class="fas fa-paper-plane"></i>
+    <p>لا توجد طلبات حتى الآن</p>
+    <a href="{% url 'agents:portal_request_new' %}" class="p-btn p-btn--primary mt-2">إنشاء أول طلب</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

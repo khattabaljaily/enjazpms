@@ -1,0 +1,102 @@
+{% extends "agents/portal/layout.html" %}
+{% load number_format %}
+{% block title %}كشف حسابي{% endblock %}
+{% block tab_statement %}active{% endblock %}
+
+{% block content %}
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="p-stat">
+      <div class="p-stat-icon p-stat-icon--primary"><i class="fas fa-percent"></i></div>
+      <div>
+        <div class="p-stat-label">إجمالي العمولات</div>
+        <div class="p-stat-value" dir="ltr">{{ total_commission|money }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="p-stat">
+      <div class="p-stat-icon" style="background:rgba(17,153,142,.12);color:#11998e;"><i class="fas fa-money-bill-transfer"></i></div>
+      <div>
+        <div class="p-stat-label">إجمالي المصروفات</div>
+        <div class="p-stat-value" dir="ltr" style="color:#11998e;">{{ total_paid|money }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="p-stat">
+      <div class="p-stat-icon" style="background:rgba(245,158,11,.12);color:#d97706;"><i class="fas fa-balance-scale"></i></div>
+      <div>
+        <div class="p-stat-label">مستحقاتي الحالية</div>
+        <div class="p-stat-value" dir="ltr" style="color:#d97706;">{{ balance|money }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="p-panel mb-3">
+  <div class="p-panel-head"><i class="fas fa-filter"></i> فلترة الفترة</div>
+  <div style="padding:1rem;">
+    <form method="get" class="row g-2">
+      <div class="col-md-4">
+        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
+      </div>
+      <div class="col-md-4">
+        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="p-btn p-btn--primary" style="padding:.4rem 1rem;font-size:.83rem;">عرض</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="p-panel">
+  <div class="p-panel-head"><i class="fas fa-list"></i> الحركات ({{ start_date }} — {{ end_date }})</div>
+  {% if entries %}
+  <div class="table-responsive">
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th>التاريخ</th>
+          <th>نوع القيد</th>
+          <th class="text-end">المبلغ</th>
+          <th class="text-end hide-mobile">المستحقات التراكمية</th>
+          <th class="hide-mobile">ملاحظات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td class="text-muted">{{ e.entry_date }}</td>
+          <td>
+            {% if e.entry_type == 'commission' %}
+            <span class="p-badge" style="background:rgba(99,102,241,.12);color:#6366f1;">{{ e.get_entry_type_display }}</span>
+            {% elif e.entry_type == 'payment' %}
+            <span class="p-badge" style="background:rgba(17,153,142,.12);color:#11998e;">{{ e.get_entry_type_display }}</span>
+            {% elif e.entry_type == 'return' %}
+            <span class="p-badge" style="background:rgba(239,68,68,.12);color:#ef4444;">{{ e.get_entry_type_display }}</span>
+            {% else %}
+            <span class="p-badge" style="background:rgba(107,114,128,.12);color:#6b7280;">{{ e.get_entry_type_display }}</span>
+            {% endif %}
+          </td>
+          <td class="text-end fw-bold" dir="ltr"
+              style="color:{% if e.entry_type == 'payment' %}#11998e{% elif e.entry_type == 'return' %}#ef4444{% else %}#6366f1{% endif %};">
+            {{ e.amount|cut:"-"|money }}
+          </td>
+          <td class="text-end fw-bold hide-mobile" dir="ltr" style="color:#6366f1;">{{ e.running_balance|cut:"-"|money }}</td>
+          <td class="text-muted hide-mobile" style="font-size:.82rem;">{{ e.notes|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="p-empty">
+    <i class="fas fa-file-invoice-dollar"></i>
+    <p>لا توجد حركات في هذه الفترة</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

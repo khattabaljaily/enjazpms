@@ -227,6 +227,9 @@ class StocksReportGenerator:
         if stock_id:
             movements = movements.filter(stock_id=stock_id)
 
+        import re as _re
+        _ref_pattern = _re.compile(r'\b([A-Z]{2,6}-\d{3,7})\b')
+
         data = []
         total_in = 0
         total_out = 0
@@ -248,6 +251,7 @@ class StocksReportGenerator:
                 'balance_after': format_number(float(m.balance_after), 2),
                 'unit_cost': format_number(float(m.unit_cost), 2),
                 'notes': m.notes,
+                'source_ref': (_ref_pattern.search(m.notes or '').group(1) if _ref_pattern.search(m.notes or '') else ''),
                 'is_reversal': m.is_reversal,
             })
 

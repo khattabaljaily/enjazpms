@@ -1,5 +1,7 @@
+import uuid
 from decimal import Decimal
 
+from django.conf import settings
 from django.db import models
 
 from apps.core.models import TenantMixin
@@ -34,6 +36,18 @@ class Agent(TenantMixin):
     )
 
     is_active = models.BooleanField('نشط', default=True)
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='agent_profile',
+        verbose_name='حساب المستخدم',
+    )
+    portal_password = models.CharField(
+        'كلمة مرور البوابة', max_length=64, blank=True,
+        help_text='آخر كلمة مرور مُنشأة للبوابة — للعرض الإداري فقط'
+    )
 
     class Meta:
         db_table = 'agents'
@@ -111,3 +125,83 @@ class AgentLedger(TenantMixin):
 
     def __str__(self):
         return f'{self.agent.name} — {self.entry_type} — {self.amount}'
+
+
+class AgentInvoiceRequest(TenantMixin):
+    STATUS_CHOICES = (
+        ('pending',  'في الانتظار'),
+        ('approved', 'تم الاعتماد'),
+        ('rejected', 'مرفوض'),
+    )
+
+    request_number = models.CharField('رقم الطلب', max_length=20, blank=True)
+    agent = models.ForeignKey(
+        Agent, on_delete=models.PROTECT,
+        related_name='invoice_requests', verbose_name='المندوب',
+    )
+
+    customer = models.ForeignKey(
+        'customers.Customer',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='agent_requests',
+        verbose_name='العميل',
+    )
+    customer_name  = models.CharField('اسم العميل', max_length=200)
+    customer_phone = models.CharField('هاتف العميل', max_length=30, blank=True)
+    notes          = models.TextField('ملاحظات', blank=True)
+    admin_comment  = models.TextField('تعليق المدير', blank=True)
+
+    status = models.CharField('الحالة', max_length=10, choices=STATUS_CHOICES, default='pending')
+
+    subtotal     = models.DecimalField('المجموع', max_digits=14, decimal_places=2, default=0)
+    total_amount = models.DecimalField('الإجمالي', max_digits=14, decimal_places=2, default=0)
+
+    sale_invoice = models.OneToOneField(
+        'sales.SaleInvoice',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='agent_request',
+        verbose_name='الفاتورة المُنشأة',
+    )
+
+    class Meta:
+        db_table  = 'agent_invoice_requests'
+        verbose_name = 'طلب فاتورة مندوب'
+        verbose_name_plural = 'طلبات فواتير المناديب'
+        ordering = ['-created_at']
+        indexes  = [models.Index(fields=['tenant', 'status', '-created_at'])]
+
+    def __str__(self):
+        return f'{self.request_number} — {self.agent.name}'
+
+    def save(self, *args, **kwargs):
+        if not self.request_number:
+            last = AgentInvoiceRequest.objects.filter(tenant=self.tenant).exclude(request_number='').order_by('-id').first()
+            n = 1
+            if last and last.request_number.startswith('AGR-'):
+                try:
+                    n = int(last.request_number.split('-')[-1]) + 1
+                except ValueError:
+                    n = AgentInvoiceRequest.objects.filter(tenant=self.tenant).count() + 1
+            self.request_number = f'AGR-{n:05d}'
+        super().save(*args, **kwargs)
+
+    @property
+    def is_pending(self):
+        return self.status == 'pending'
+
+
+class AgentInvoiceRequestLine(TenantMixin):
+    request    = models.ForeignKey(AgentInvoiceRequest, on_delete=models.CASCADE, related_name='lines')
+    item       = models.ForeignKey('items.Item', on_delete=models.PROTECT, verbose_name='المنتج')
+    quantity   = models.DecimalField('الكمية', max_digits=14, decimal_places=4)
+    unit_price = models.DecimalField('سعر الوحدة', max_digits=14, decimal_places=2)
+    line_total = models.DecimalField('الإجمالي', max_digits=14, decimal_places=2, default=0)
+
+    class Meta:
+        db_table = 'agent_invoice_request_lines'
+
+    def save(self, *args, **kwargs):
+        self.line_total = (self.quantity * self.unit_price).quantize(Decimal('0.01'))
+        super().save(*args, **kwargs)

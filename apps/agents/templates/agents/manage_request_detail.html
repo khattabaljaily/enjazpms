@@ -1,0 +1,199 @@
+{% extends "layouts/dashboard.html" %}
+{% load static number_format %}
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- Hero -->
+<div class="cx-hero" style="background:linear-gradient(135deg,#6366f1,#818cf8);">
+  <div class="cx-hero-inner">
+    <div class="cx-hero-left">
+      <div class="cx-hero-icon-wrap"><i class="fas fa-file-alt"></i></div>
+      <div>
+        <h1 class="cx-hero-title">{{ req.request_number }}</h1>
+        <p class="cx-hero-desc">طلب فاتورة — المندوب: {{ req.agent.name }}</p>
+      </div>
+    </div>
+    <div class="cx-hero-right" style="flex-shrink:0;">
+      <a href="{% url 'agents:requests_list' %}" class="cx-btn-secondary">
+        <i class="fas fa-arrow-right"></i><span class="d-none d-sm-inline">رجوع</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}success{% endif %} mt-3" style="border-radius:10px;">
+  <i class="fas fa-{% if msg.tags == 'error' %}exclamation-circle{% else %}check-circle{% endif %} me-2"></i>{{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="row g-3 mt-1">
+
+  <!-- Left: request info + items -->
+  <div class="col-lg-8">
+
+    <!-- Status + basic info -->
+    <div class="cx-panel mb-3">
+      <div class="cx-panel-head">
+        <i class="fas fa-info-circle" style="color:#6366f1;"></i> بيانات الطلب
+        <span class="ms-auto">
+          {% if req.status == 'pending' %}
+          <span style="background:rgba(217,119,6,.1);color:#d97706;border-radius:20px;padding:.25rem .85rem;font-size:.82rem;font-weight:600;">⏳ في الانتظار</span>
+          {% elif req.status == 'approved' %}
+          <span style="background:rgba(5,150,105,.1);color:#059669;border-radius:20px;padding:.25rem .85rem;font-size:.82rem;font-weight:600;">✓ معتمد</span>
+          {% else %}
+          <span style="background:rgba(220,38,38,.1);color:#dc2626;border-radius:20px;padding:.25rem .85rem;font-size:.82rem;font-weight:600;">✕ مرفوض</span>
+          {% endif %}
+        </span>
+      </div>
+      <div style="padding:1.25rem;">
+        <div class="row g-3">
+          <div class="col-6 col-md-3">
+            <div style="font-size:.75rem;color:#94a3b8;margin-bottom:.2rem;">المندوب</div>
+            <div style="font-weight:700;">{{ req.agent.name }}</div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div style="font-size:.75rem;color:#94a3b8;margin-bottom:.2rem;">العميل</div>
+            <div style="font-weight:700;">{{ req.customer_name }}</div>
+          </div>
+          {% if req.customer_phone %}
+          <div class="col-6 col-md-3">
+            <div style="font-size:.75rem;color:#94a3b8;margin-bottom:.2rem;">الهاتف</div>
+            <div style="font-weight:600;" dir="ltr">{{ req.customer_phone }}</div>
+          </div>
+          {% endif %}
+          <div class="col-6 col-md-3">
+            <div style="font-size:.75rem;color:#94a3b8;margin-bottom:.2rem;">تاريخ الطلب</div>
+            <div style="font-size:.88rem;">{{ req.created_at|date:"Y-m-d H:i" }}</div>
+          </div>
+          {% if req.notes %}
+          <div class="col-12">
+            <div style="font-size:.75rem;color:#94a3b8;margin-bottom:.35rem;">ملاحظات المندوب</div>
+            <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:.75rem 1rem;font-size:.9rem;line-height:1.6;">{{ req.notes }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Items table -->
+    <div class="cx-panel p-0">
+      <div class="cx-panel-head" style="padding:1rem 1.25rem;">
+        <i class="fas fa-box" style="color:#6366f1;"></i> المنتجات المطلوبة
+      </div>
+      <div class="table-responsive">
+        <table class="cx-table">
+          <thead>
+            <tr>
+              <th>المنتج</th>
+              <th class="text-end">السعر</th>
+              <th class="text-end">الكمية</th>
+              <th class="text-end">الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for line in lines %}
+            <tr>
+              <td style="font-weight:600;">{{ line.item.name }}</td>
+              <td class="text-end text-muted" dir="ltr">{{ line.unit_price|money }}</td>
+              <td class="text-end">{{ line.quantity|floatformat:0 }}</td>
+              <td class="text-end fw-bold" style="color:#6366f1;" dir="ltr">{{ line.line_total|money }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:.85rem 1.5rem;text-align:left;border-top:2px solid #f1f5f9;background:#fafbff;border-radius:0 0 12px 12px;">
+        <strong style="font-size:1.1rem;color:#6366f1;">الإجمالي: <span dir="ltr">{{ req.total_amount|money }}</span></strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: actions -->
+  <div class="col-lg-4">
+    {% if req.status == 'pending' %}
+
+    <!-- Approve -->
+    <div class="cx-panel mb-3">
+      <div class="cx-panel-head">
+        <i class="fas fa-check-circle" style="color:#059669;"></i> اعتماد الطلب
+      </div>
+      <div style="padding:1.25rem;">
+        <p style="font-size:.83rem;color:#64748b;margin-bottom:1rem;line-height:1.6;">
+          سيتم إنشاء فاتورة مبيعات مسودة تلقائياً وربطها بهذا الطلب.
+        </p>
+        <form method="post" action="{% url 'agents:request_approve' req.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label style="font-size:.83rem;font-weight:600;display:block;margin-bottom:.4rem;">المخزن</label>
+            <select name="stock_id" class="form-select form-select-sm">
+              <option value="">— المخزن الافتراضي —</option>
+              {% for s in stocks %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="cx-btn-primary w-100">
+            <i class="fas fa-check me-1"></i>اعتماد وإنشاء الفاتورة
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Reject -->
+    <div class="cx-panel">
+      <div class="cx-panel-head">
+        <i class="fas fa-times-circle" style="color:#dc2626;"></i> رفض الطلب
+      </div>
+      <div style="padding:1.25rem;">
+        <form method="post" action="{% url 'agents:request_reject' req.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label style="font-size:.83rem;font-weight:600;display:block;margin-bottom:.4rem;">سبب الرفض</label>
+            <textarea name="comment" class="form-control form-control-sm" rows="3" placeholder="سيُرسل هذا التعليق للمندوب"></textarea>
+          </div>
+          <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+            <i class="fas fa-times me-1"></i>رفض الطلب
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {% else %}
+    <!-- Result card -->
+    <div class="cx-panel">
+      <div class="cx-panel-head">
+        {% if req.status == 'approved' %}
+        <i class="fas fa-check-circle" style="color:#059669;"></i> تم الاعتماد
+        {% else %}
+        <i class="fas fa-times-circle" style="color:#dc2626;"></i> مرفوض
+        {% endif %}
+      </div>
+      <div style="padding:1.25rem;">
+        {% if req.sale_invoice %}
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;">
+          <div style="font-size:.75rem;color:#166534;margin-bottom:.3rem;">الفاتورة المُنشأة</div>
+          <a href="{% url 'sales:invoice_detail' req.sale_invoice.pk %}"
+             style="font-size:.92rem;color:#059669;font-weight:700;text-decoration:none;">
+            <i class="fas fa-file-invoice me-1"></i>{{ req.sale_invoice.invoice_number }}
+          </a>
+        </div>
+        {% endif %}
+        {% if req.admin_comment %}
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:.85rem 1rem;">
+          <div style="font-size:.75rem;color:#92400e;font-weight:600;margin-bottom:.3rem;"><i class="fas fa-comment me-1"></i>التعليق</div>
+          <div style="font-size:.88rem;color:#78350f;line-height:1.6;">{{ req.admin_comment }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+</div>
+{% endblock %}

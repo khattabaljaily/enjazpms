@@ -1,0 +1,37 @@
+{% extends "agents/portal/layout.html" %}
+{% load number_format %}
+{% block title %}دفعاتي{% endblock %}
+{% block tab_payments %}active{% endblock %}
+
+{% block content %}
+<div class="p-panel">
+  <div class="p-panel-head"><i class="fas fa-money-bill-transfer"></i> سجل الدفعات المستلمة</div>
+  {% if payments %}
+  <div class="table-responsive">
+    <table class="p-table">
+      <thead>
+        <tr>
+          <th>التاريخ</th>
+          <th class="text-end">المبلغ</th>
+          <th class="hide-mobile">ملاحظات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td class="text-muted">{{ p.entry_date }}</td>
+          <td class="text-end fw-bold" dir="ltr" style="color:#059669;">{{ p.amount|cut:"-"|money }}</td>
+          <td class="text-muted hide-mobile" style="font-size:.82rem;">{{ p.notes|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="p-empty">
+    <i class="fas fa-money-bill-transfer"></i>
+    <p>لا توجد دفعات مسجلة حتى الآن</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
