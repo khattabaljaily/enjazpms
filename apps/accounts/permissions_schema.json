@@ -158,6 +158,18 @@
         "view_treasury_movements_report": "تقرير حركة الخزائن",
         "view_income_statement_report": "قائمة الدخل (الأرباح والخسائر)"
     },
+    "المناديب": {
+        "add_agents": "إضافة مندوب جديد",
+        "change_agents": "تعديل بيانات المندوب",
+        "delete_agents": "حذف مندوب",
+        "view_agents": "عرض قائمة المناديب",
+        "import_agents": "استيراد مناديب من ملف",
+        "export_agents": "تصدير بيانات المناديب",
+        "view_agent_payments": "عرض دفعات المناديب",
+        "add_agent_payments": "تسجيل دفعة مندوب",
+        "cancel_agent_payments": "إلغاء دفعة مندوب",
+        "view_agent_transactions": "عرض حركات حساب المندوب"
+    },
     "الموظفين": {
         "view_employees": "عرض قائمة الموظفين",
         "add_employees": "إضافة موظف جديد",

@@ -92,6 +92,13 @@ class SaleInvoice(TenantMixin):
         related_name='sale_invoices',
         verbose_name='المخزن'
     )
+    agent = models.ForeignKey(
+        'agents.Agent',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='sale_invoices',
+        verbose_name='المندوب',
+    )
 
     # ── التواريخ ───────────────────────────────────────────
     invoice_date = models.DateField('تاريخ الفاتورة')

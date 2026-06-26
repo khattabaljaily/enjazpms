@@ -87,7 +87,7 @@
                 <p class="sales-panel-note">حدد بيانات العميل والدفع قبل إضافة البنود لتجنب أخطاء التسعير.</p>
                 <div class="row g-3">
                     <!-- العميل -->
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="cx-label">العميل</label>
                         <div class="cx-searchable-select" id="customerSelectWrap">
                             <input type="text" id="customerSearch" class="cx-input" placeholder="ابحث عن عميل..." autocomplete="off">
@@ -96,8 +96,19 @@
                         </div>
                     </div>
 
+                    <!-- المندوب -->
+                    <div class="col-md-4">
+                        <label class="cx-label">المندوب</label>
+                        <select id="agentId" name="agent_id" class="cx-input">
+                            <option value="">-- بدون مندوب --</option>
+                            {% for a in agents %}
+                            <option value="{{ a.id }}" {% if invoice and invoice.agent_id == a.id %}selected{% endif %}>{{ a.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
                     <!-- المخزن -->
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="cx-label">المخزن <span class="text-danger">*</span></label>
                         <select id="stockId" name="stock_id" class="cx-input" required>
                             {% for s in stocks %}
@@ -779,6 +790,7 @@ function submitForm(action) {
 
     const header = {
         customer_id: document.getElementById('customerId').value || null,
+        agent_id: document.getElementById('agentId').value || null,
         stock_id: document.getElementById('stockId').value,
         invoice_date: document.getElementById('invoiceDate').value,
         due_date: document.getElementById('dueDate').value || null,

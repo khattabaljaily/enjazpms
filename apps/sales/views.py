@@ -318,6 +318,8 @@ def invoice_create(request):
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True)
     stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
     items = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
+    from apps.agents.models import Agent as _Agent
+    agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name')
 
     # default stock
     default_stock = stocks.filter(is_default=True).first() or stocks.first()
@@ -340,6 +342,7 @@ def invoice_create(request):
         'customers': customers,
         'stocks': stocks,
         'items': items,
+        'agents': agents,
         'default_stock': default_stock,
         'today': timezone.localdate().isoformat(),
         'action': 'create',
@@ -362,6 +365,8 @@ def invoice_edit(request, pk):
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True)
     stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
     items = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
+    from apps.agents.models import Agent as _Agent
+    agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name')
 
     if request.method == 'POST':
         result = _process_invoice_post(request, tenant, invoice=invoice)
@@ -410,6 +415,7 @@ def invoice_edit(request, pk):
         'customers': customers,
         'stocks': stocks,
         'items': items,
+        'agents': agents,
         'today': timezone.localdate().isoformat(),
         'action': 'edit',
     }
@@ -487,6 +493,16 @@ def _process_invoice_post(request, tenant, invoice):
                     if stock_raw:
                         confirmed_header['stock'] = Stock.objects.get(id=stock_raw, tenant=tenant)
 
+                    agent_raw = header.get('agent_id')
+                    if agent_raw:
+                        from apps.agents.models import Agent as _Agent
+                        try:
+                            confirmed_header['agent'] = _Agent.objects.get(id=agent_raw, tenant=tenant, is_active=True)
+                        except _Agent.DoesNotExist:
+                            confirmed_header['agent'] = None
+                    else:
+                        confirmed_header['agent'] = None
+
                     inv = edit_confirmed_invoice(
                         invoice, confirmed_header, lines_data, request.user
                     )
@@ -539,6 +555,18 @@ def _process_invoice_post(request, tenant, invoice):
                         except Stock.DoesNotExist:
                             return _json_error('المخزن المحدد غير موجود')
 
+                    # المندوب
+                    if 'agent_id' in header:
+                        agent_raw = header.get('agent_id')
+                        if agent_raw:
+                            from apps.agents.models import Agent as _Agent
+                            try:
+                                invoice.agent = _Agent.objects.get(id=agent_raw, tenant=tenant, is_active=True)
+                            except _Agent.DoesNotExist:
+                                invoice.agent = None
+                        else:
+                            invoice.agent = None
+
                     invoice.recalculate_totals()
                     invoice.save()
                     inv = invoice
@@ -566,7 +594,7 @@ def invoice_detail(request, pk):
         return redirect('core:no_tenant')
 
     invoice = get_object_or_404(
-        SaleInvoice.objects.select_related('customer', 'stock', 'confirmed_by', 'cancelled_by'),
+        SaleInvoice.objects.select_related('customer', 'stock', 'agent', 'confirmed_by', 'cancelled_by'),
         pk=pk, tenant=tenant,
     )
     lines = list(invoice.lines.select_related('item').prefetch_related('item__item_units').all())

@@ -521,6 +521,19 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
     except Exception:
         pass
     invoice.save(update_fields=['status', 'confirmed_by', 'updated_at'])
+
+    # ── 4. عمولة المندوب ─────────────────────────────────
+    if invoice.agent_id:
+        from apps.agents.services import _apply_agent_ledger
+        commission = invoice.agent.calculate_commission(invoice.grand_total)
+        if commission > 0:
+            _apply_agent_ledger(
+                tenant=tenant, agent=invoice.agent, amount=commission,
+                entry_type='commission', reference_type='sale_invoice',
+                reference_id=invoice.id, date=invoice.invoice_date,
+                notes=f'عمولة فاتورة {invoice.invoice_number}',
+            )
+
     return invoice
 
 
@@ -627,6 +640,11 @@ def cancel_sale_invoice(invoice: SaleInvoice, user, reason: str = '') -> SaleInv
     # عكس قيود العميل
     _reverse_customer_ledger(tenant, 'sale_invoice', invoice.id)
 
+    # عكس عمولة المندوب
+    if invoice.agent_id:
+        from apps.agents.services import _reverse_agent_ledger
+        _reverse_agent_ledger(tenant, 'sale_invoice', invoice.id)
+
     # تحديث الحالة
     invoice.status = 'cancelled'
     invoice.cancellation_reason = reason
@@ -694,10 +712,13 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
     _reverse_stock_movements(tenant, invoice)
     _reverse_payments(tenant, invoice)
     _reverse_customer_ledger(tenant, 'sale_invoice', invoice.id)
+    if invoice.agent_id:
+        from apps.agents.services import _reverse_agent_ledger
+        _reverse_agent_ledger(tenant, 'sale_invoice', invoice.id)
 
     # ── الخطوة 2: تحديث البيانات ─────────────────────────
     allowed_header_fields = {
-        'customer', 'stock', 'invoice_date', 'due_date',
+        'customer', 'stock', 'agent', 'invoice_date', 'due_date',
         'payment_method', 'invoice_discount_type', 'invoice_discount_value',
         'cash_amount', 'bank_amount', 'bank_reference', 'notes',
         'reference_number',
@@ -859,6 +880,20 @@ def confirm_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
     all_returned = all(l.returned_quantity >= l.quantity for l in all_lines)
     invoice.status = 'returned' if all_returned else 'partially_returned'
     invoice.save(update_fields=['status', 'updated_at'])
+
+    # ── عكس عمولة المندوب بنسبة المرتجع ─────────────────
+    if invoice.agent_id and total_returned > 0 and invoice.grand_total > 0:
+        from apps.agents.services import _apply_agent_ledger
+        original_commission = invoice.agent.calculate_commission(invoice.grand_total)
+        if original_commission > 0:
+            ratio = total_returned / invoice.grand_total
+            reversal = (original_commission * ratio).quantize(Decimal('0.01'))
+            _apply_agent_ledger(
+                tenant=tenant, agent=invoice.agent, amount=-reversal,
+                entry_type='return', reference_type='sale_return',
+                reference_id=sale_return.id, date=sale_return.return_date,
+                notes=f'عكس عمولة مرتجع {sale_return.return_number}',
+            )
 
     # ── تأكيد المرتجع ─────────────────────────────────────
     sale_return.status = 'confirmed'
@@ -1054,9 +1089,18 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
     if data.get('customer_id'):
         customer = Customer.objects.get(id=data['customer_id'], tenant=tenant)
 
+    agent = None
+    if data.get('agent_id'):
+        from apps.agents.models import Agent
+        try:
+            agent = Agent.objects.get(id=data['agent_id'], tenant=tenant, is_active=True)
+        except Agent.DoesNotExist:
+            pass
+
     invoice = SaleInvoice(
         tenant=tenant,
         customer=customer,
+        agent=agent,
         stock=stock,
         invoice_date=data['invoice_date'],
         due_date=data.get('due_date'),

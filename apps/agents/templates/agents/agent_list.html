@@ -1,0 +1,808 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+{% load permission_tags %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/suppliers.css' %}?v=2.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<!-- ══════════════════════════ PAGE HERO ══════════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-id-badge"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">المناديب</h1>
+                <p class="cx-hero-desc">إدارة وتتبع سجلات المناديب والوكلاء</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <button type="button" class="cx-btn-secondary" id="btnImportAgents" data-require-perm="import_agents">
+                    <i class="fas fa-arrow-down"></i><span>استيراد</span>
+                </button>
+                <button type="button" class="cx-btn-secondary" id="btnExportAgents" data-require-perm="export_agents">
+                    <i class="fas fa-arrow-up"></i><span>تصدير</span>
+                </button>
+                <button type="button" class="cx-btn-add" id="btnOpenCreateAgent" data-require-perm="add_agents">
+                    <i class="fas fa-plus"></i><span>إضافة مندوب</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-id-badge"></i>
+            <strong>{{ stats.total }}</strong><span>مندوب</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--success">
+            <i class="fas fa-check-circle"></i>
+            <strong>{{ stats.active }}</strong><span>نشط</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-pause-circle"></i>
+            <strong>{{ stats.inactive }}</strong><span>موقوف</span>
+        </span>
+    </div>
+</div>
+
+<!-- ══════════════════════════ TABLE ══════════════════════════ -->
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="agentSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو الكود أو الهاتف...">
+        </div>
+        <div class="cx-toolbar-end">
+            <div class="cx-filter-tabs" role="group">
+                <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
+                <button type="button" class="cx-filter-tab" data-status="active">نشط</button>
+                <button type="button" class="cx-filter-tab" data-status="inactive">موقوف</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="agentsTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>المندوب</th>
+                    <th>الكود</th>
+                    <th>المدينة</th>
+                    <th>العمولة</th>
+                    <th>المستحقات</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div id="agentsCardsMobile" class="suppliers-mobile-card-list d-none p-3" aria-live="polite"></div>
+</div>
+
+</div>
+
+<!-- ══════════════════════════ ADD / EDIT MODAL ══════════════════════════ -->
+<div class="modal fade" id="agentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="agentForm" novalidate>
+                {% csrf_token %}
+                <input type="hidden" id="agentId" value="">
+                <div class="cx-modal-main">
+                    <div class="cx-modal-header">
+                        <div>
+                            <h5 class="cx-modal-title" id="agentModalTitle">إضافة مندوب جديد</h5>
+                        </div>
+                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="cx-modal-body">
+                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
+
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-icon"><i class="fas fa-user"></i></span> معلومات التواصل
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_name">{{ form.name.label }} <sup class="cx-required">*</sup></label>
+                                {{ form.name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_phone">{{ form.phone.label }}</label>
+                                {{ form.phone }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_email">{{ form.email.label }}</label>
+                                {{ form.email }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_city">{{ form.city.label }}</label>
+                                {{ form.city }}
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-label" for="id_address">{{ form.address.label }}</label>
+                                {{ form.address }}
+                            </div>
+                        </div>
+
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-icon"><i class="fas fa-percent"></i></span> إعدادات العمولة
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_commission_type">{{ form.commission_type.label }}</label>
+                                {{ form.commission_type }}
+                            </div>
+                            <div class="col-md-6" id="commissionRateRow">
+                                <label class="cx-label" for="id_commission_rate" id="commissionRateLabel">{{ form.commission_rate.label }}</label>
+                                {{ form.commission_rate }}
+                                <small class="text-muted" id="commissionRateHint">نسبة % من إجمالي الفاتورة</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_opening_balance">{{ form.opening_balance.label }}</label>
+                                {{ form.opening_balance }}
+                                <small class="text-muted">مستحقات المندوب عند بداية التسجيل</small>
+                            </div>
+                        </div>
+
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-icon"><i class="fas fa-list-check"></i></span> ملاحظات وحالة
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="cx-label" for="id_notes">{{ form.notes.label }}</label>
+                                {{ form.notes }}
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-toggle-card" for="id_is_active">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ form.is_active.label }}</span>
+                                        <span class="cx-toggle-desc">المندوب نشط ومتاح في الفواتير والتقارير</span>
+                                    </div>
+                                    {{ form.is_active }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cx-modal-footer">
+                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="cx-btn-primary" id="agentSubmitBtn">
+                            <i class="fas fa-check me-1"></i> حفظ
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ VIEW MODAL ══════════════════════════ -->
+<div class="modal fade" id="viewAgentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar" id="viewAgentAvatar"></div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewAgentName"></h5>
+                        <p class="cx-view-subtitle" id="viewAgentCode"></p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="cx-view-body">
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-user"></i> المعلومات الشخصية</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--name"><i class="fas fa-id-card"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الاسم</span>
+                                <span class="cx-info-card-value" id="viewName"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--phone"><i class="fas fa-phone"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">رقم الهاتف</span>
+                                <span class="cx-info-card-value" id="viewPhone"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--email"><i class="fas fa-envelope"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">البريد الإلكتروني</span>
+                                <span class="cx-info-card-value" id="viewEmail"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--city"><i class="fas fa-city"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المدينة</span>
+                                <span class="cx-info-card-value" id="viewCity"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--full">
+                            <div class="cx-info-card-icon cx-info-icon--address"><i class="fas fa-location-dot"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">العنوان</span>
+                                <span class="cx-info-card-value" id="viewAddress"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-money-bill-wave"></i> المعلومات المالية</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card cx-info-card--money">
+                            <div class="cx-info-card-icon cx-info-icon--balance"><i class="fas fa-wallet"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المستحقات الحالية</span>
+                                <span class="cx-info-card-value cx-info-card-value--money" id="viewBalance"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon" style="background:rgba(99,102,241,.1);color:#6366f1;"><i class="fas fa-percent"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">نوع العمولة</span>
+                                <span class="cx-info-card-value" id="viewCommissionType"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card" id="viewCommissionRateCard">
+                            <div class="cx-info-card-icon" style="background:rgba(99,102,241,.1);color:#6366f1;"><i class="fas fa-tag"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label" id="viewCommissionRateLabel">معدل العمولة</span>
+                                <span class="cx-info-card-value" id="viewCommissionRate"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-info-circle"></i> معلومات إضافية</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card cx-info-card--full">
+                            <div class="cx-info-card-icon cx-info-icon--notes"><i class="fas fa-note-sticky"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الملاحظات</span>
+                                <span class="cx-info-card-value" id="viewNotes"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon cx-info-icon--status"><i class="fas fa-circle-check"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الحالة</span>
+                                <span class="cx-info-card-value" id="viewStatus"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="cx-btn-primary" id="viewEditAgentBtn" data-require-perm="change_agents">
+                    <i class="fas fa-pen-to-square me-1"></i> تعديل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ LEDGER MODAL ══════════════════════════ -->
+<div class="modal fade" id="agentLedgerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered cx-view-dialog cx-ledger-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div>
+                        <h5 class="cx-view-title">سجل حركات حساب المندوب</h5>
+                        <p class="cx-view-subtitle" id="agentLedgerSubtitle">—</p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="cx-view-body">
+                <div class="table-responsive d-none d-md-block">
+                    <table class="table table-sm" style="font-size:.82rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>النوع</th>
+                                <th>المبلغ</th>
+                                <th>المستحقات</th>
+                                <th>ملاحظة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agentLedgerBody">
+                            <tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-md-none" id="agentLedgerCards" style="display:flex;flex-direction:column;gap:.6rem;padding:.25rem 0;"></div>
+            </div>
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ DELETE MODAL ══════════════════════════ -->
+<div class="modal fade" id="deleteAgentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+                <h5 class="cx-delete-title">حذف المندوب؟</h5>
+                <p class="cx-delete-desc">
+                    ستقوم بحذف <strong id="deleteAgentName"></strong> بشكل نهائي.<br>
+                    لا يمكن التراجع عن هذا الإجراء.
+                </p>
+                <input type="hidden" id="deleteAgentId" value="">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteAgentBtn">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ IMPORT MODAL ══════════════════════════ -->
+<div class="modal fade" id="importAgentsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-import-dialog">
+        <div class="modal-content cx-import-modal">
+            <div class="cx-import-header">
+                <div>
+                    <h5 class="cx-import-title"><i class="fas fa-upload"></i> استيراد المناديب</h5>
+                    <p class="cx-import-subtitle">قم برفع ملف Excel أو CSV يحتوي على بيانات المناديب</p>
+                </div>
+                <button type="button" class="cx-import-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="cx-import-body">
+                <div class="cx-upload-area" id="uploadArea">
+                    <div class="cx-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                    <h6 class="cx-upload-title">اسحب وأفلت الملف هنا</h6>
+                    <p class="cx-upload-text">أو اضغط لاختيار ملف</p>
+                    <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" hidden>
+                    <button type="button" class="cx-btn-upload" id="btnChooseFile"><i class="fas fa-folder-open me-1"></i> اختر ملف</button>
+                    <p class="cx-upload-hint">يدعم ملفات Excel و CSV</p>
+                </div>
+                <div class="cx-file-selected" id="fileSelected" style="display:none;">
+                    <div class="cx-file-info">
+                        <div class="cx-file-icon"><i class="fas fa-file-excel"></i></div>
+                        <div class="cx-file-details">
+                            <div class="cx-file-name" id="fileName"></div>
+                            <div class="cx-file-size" id="fileSize"></div>
+                        </div>
+                    </div>
+                    <button type="button" class="cx-file-remove" id="btnRemoveFile"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cx-import-instructions">
+                    <h6 class="cx-instructions-title"><i class="fas fa-info-circle"></i> تعليمات هامة</h6>
+                    <ul class="cx-instructions-list">
+                        <li>يجب أن يحتوي الملف على الأعمدة التالية: الاسم، الهاتف، المدينة</li>
+                        <li>يمكنك تحميل نموذج ملف من هنا: <a href="#" class="cx-template-link" id="btnDownloadTemplate">نموذج Excel</a></li>
+                        <li>الحد الأقصى لحجم الملف: 5 MB</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="cx-import-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-primary" id="btnStartImport" disabled>
+                    <i class="fas fa-check me-1"></i> بدء الاستيراد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const urlTable        = "{% url 'agents:table_api' %}";
+    const urlCreate       = "{% url 'agents:create_api' %}";
+    const urlDetail       = "{% url 'agents:detail_api' 0 %}";
+    const urlTransactions = "{% url 'agents:transactions_api' 0 %}";
+    const urlUpdate       = "{% url 'agents:update_api' 0 %}";
+    const urlDelete       = "{% url 'agents:delete_api' 0 %}";
+    function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+
+    const CAN_VIEW_TXN = {% if request.user|has_perm_key:"view_agent_transactions" %}true{% else %}false{% endif %};
+    const CAN_CHANGE   = {% if request.user|has_perm_key:"change_agents" %}true{% else %}false{% endif %};
+    const CAN_DELETE   = {% if request.user|has_perm_key:"delete_agents" %}true{% else %}false{% endif %};
+
+    const COMMISSION_LABELS = {
+        none: 'بدون عمولة',
+        percentage: 'نسبة %',
+        fixed: 'مبلغ ثابت',
+    };
+
+    // Move modals to body
+    ['agentModal','deleteAgentModal','viewAgentModal','agentLedgerModal','importAgentsModal'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== document.body) document.body.appendChild(el);
+    });
+
+    const agentModal      = new bootstrap.Modal(document.getElementById('agentModal'));
+    const deleteModal     = new bootstrap.Modal(document.getElementById('deleteAgentModal'));
+    const viewModal       = new bootstrap.Modal(document.getElementById('viewAgentModal'));
+    const ledgerModal     = new bootstrap.Modal(document.getElementById('agentLedgerModal'));
+    const importModal     = new bootstrap.Modal(document.getElementById('importAgentsModal'));
+
+    const $form      = $('#agentForm');
+    const $submitBtn = $('#agentSubmitBtn');
+    const $idInput   = $('#agentId');
+    let activeStatus = '';
+
+    /* ── Commission rate UI ─── */
+    function updateCommissionRateUI(type) {
+        const row   = document.getElementById('commissionRateRow');
+        const hint  = document.getElementById('commissionRateHint');
+        if (type === 'none') {
+            row.style.display = 'none';
+        } else {
+            row.style.display = '';
+            hint.textContent = type === 'percentage' ? 'نسبة % من إجمالي الفاتورة' : 'مبلغ ثابت لكل فاتورة';
+        }
+    }
+    document.getElementById('id_commission_type').addEventListener('change', function () {
+        updateCommissionRateUI(this.value);
+    });
+
+    /* ── Mobile cards ── */
+    function renderMobileCards(rows) {
+        const $cards = $('#agentsCardsMobile');
+        if (!rows || !rows.length) { $cards.html('<div class="cx-empty-state">لا توجد مناديب للعرض</div>'); return; }
+        $cards.html(rows.map(function(r) {
+            const status = r.is_active
+                ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
+                : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوف</span>';
+            const n = EnjazIMS.parseNumber(r.current_balance);
+            const balCls = n > 0 ? 'cxr-bal--pos' : n < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
+            return `<article class="cx-supplier-card">
+                <div class="cx-supplier-card-head">
+                    <div class="cx-supplier-card-title-wrap">
+                        <h2 class="cx-supplier-card-title">${r.name || '—'}</h2>
+                        <p class="cx-supplier-card-code"><code>${r.code || '—'}</code></p>
+                    </div>
+                    ${status}
+                </div>
+                <div class="cx-supplier-card-meta">
+                    <div><span class="cx-supplier-card-meta-label">المدينة</span><strong class="cx-supplier-card-meta-value">${r.city || '—'}</strong></div>
+                    <div><span class="cx-supplier-card-meta-label">المستحقات</span><strong class="cx-supplier-card-meta-value ${balCls}">${EnjazIMS.formatMoney(r.current_balance)}</strong></div>
+                </div>
+                <div class="cx-supplier-card-actions">
+                    ${CAN_VIEW_TXN ? `<button class="cxr-act js-ledger-agent" data-id="${r.id}" title="السجل"><i class="fas fa-list"></i></button>` : ''}
+                    <button class="cxr-act cxr-act--view js-view-agent" data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
+                    ${CAN_CHANGE ? `<button class="cxr-act js-edit-agent" data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${CAN_DELETE ? `<button class="cxr-act cxr-act--del js-delete-agent" data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
+            </article>`;
+        }).join(''));
+    }
+
+    /* ── DataTable ── */
+    const dt = $('#agentsTable').DataTable({
+        processing: true, serverSide: true, searching: true, ordering: true,
+        pageLength: 25, dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        language: {
+            emptyTable: 'لا توجد بيانات متاحة',
+            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_ مندوب',
+            infoEmpty: 'عرض 0 إلى 0 من أصل 0 مندوب',
+            infoFiltered: '(تمت التصفية من إجمالي _MAX_ مندوب)',
+            loadingRecords: 'جاري التحميل...', processing: 'جاري المعالجة...',
+            zeroRecords: 'لم يتم العثور على نتائج',
+            paginate: { first: 'الأول', last: 'الأخير', next: 'التالي', previous: 'السابق' }
+        },
+        ajax: { url: urlTable, data: function(d) { d.status = activeStatus; } },
+        drawCallback: function() { renderMobileCards(dt.rows({ page: 'current' }).data().toArray()); },
+        columns: [
+            { data: 'name', render: n => `<span class="cxr-name">${n}</span>` },
+            { data: 'code', render: c => `<code class="cxr-code">${c}</code>` },
+            { data: 'city', render: c => (!c||c==='-') ? `<span class="cxr-empty">—</span>` : `<span class="cxr-city">${c}</span>` },
+            { data: null, render: function(_, __, r) {
+                if (r.commission_type === 'none') return '<span class="cxr-empty">بدون عمولة</span>';
+                const suffix = r.commission_type === 'percentage' ? '%' : '';
+                return `<span style="font-size:.8rem;"><strong>${r.commission_rate}${suffix}</strong> <span class="text-muted" style="font-size:.72rem;">${COMMISSION_LABELS[r.commission_type]||''}</span></span>`;
+            }},
+            { data: 'current_balance', render: function(v) {
+                const n = EnjazIMS.parseNumber(v);
+                const cls = n > 0 ? 'cxr-bal--pos' : n < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
+                return `<span class="cxr-bal ${cls}">${EnjazIMS.formatMoney(v)}</span>`;
+            }},
+            { data: 'is_active', render: a => a
+                ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
+                : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>`
+            },
+            { data: null, orderable: false, searchable: false, render: function(_, __, r) {
+                return `<div class="cxr-actions">
+                    ${CAN_VIEW_TXN ? `<button class="cxr-act js-ledger-agent" data-id="${r.id}" title="السجل"><i class="fas fa-list"></i></button>` : ''}
+                    <button class="cxr-act cxr-act--view js-view-agent" data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
+                    ${CAN_CHANGE ? `<button class="cxr-act js-edit-agent" data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${CAN_DELETE ? `<button class="cxr-act cxr-act--del js-delete-agent" data-id="${r.id}" data-name="${r.name}" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                </div>`;
+            }}
+        ]
+    });
+
+    /* ── Search / filter ── */
+    let searchTimer;
+    $('#agentSearchInput').on('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+    $('.cx-filter-tab').on('click', function() {
+        $('.cx-filter-tab').removeClass('active');
+        $(this).addClass('active');
+        activeStatus = $(this).data('status');
+        dt.ajax.reload();
+    });
+
+    /* ── Form helpers ── */
+    function resetForm() {
+        $form[0].reset();
+        $idInput.val('');
+        $('#id_is_active').prop('checked', true);
+        $('#id_commission_type').val('none');
+        updateCommissionRateUI('none');
+        EnjazIMS.clearFormErrors($form);
+    }
+
+    function openCreate() {
+        resetForm();
+        $('#agentModalTitle').text('إضافة مندوب جديد');
+        $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
+        agentModal.show();
+    }
+
+    function openEdit(id) {
+        resetForm();
+        $.ajax({ url: apiUrl(urlDetail, id), method: 'GET', success: function(resp) {
+            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+            const d = resp.data;
+            $idInput.val(d.id);
+            $('#id_name').val(d.name || '');
+            $('#id_phone').val(d.phone || '');
+            $('#id_email').val(d.email || '');
+            $('#id_city').val(d.city || '');
+            $('#id_address').val(d.address || '');
+            $('#id_commission_type').val(d.commission_type || 'none');
+            $('#id_commission_rate').val(parseFloat(d.commission_rate) || '');
+            $('#id_opening_balance').val(parseFloat(d.opening_balance) || '');
+            $('#id_notes').val(d.notes || '');
+            $('#id_is_active').prop('checked', !!d.is_active);
+            updateCommissionRateUI(d.commission_type || 'none');
+            $('#agentModalTitle').text('تعديل بيانات المندوب');
+            $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
+            agentModal.show();
+        }, error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }});
+    }
+
+    /* ── Save ── */
+    $form.on('submit', function(e) {
+        e.preventDefault();
+        EnjazIMS.clearFormErrors($form);
+        const id  = $idInput.val();
+        const url = id ? apiUrl(urlUpdate, id) : urlCreate;
+        const orig = $submitBtn.html();
+        EnjazIMS.showLoading($submitBtn);
+        $.ajax({ url, method: 'POST', data: $form.serialize(),
+            success: function(resp) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                if (resp.success) { agentModal.hide(); dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); return; }
+                EnjazIMS.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
+            },
+            error: function(xhr) {
+                EnjazIMS.hideLoading($submitBtn, orig);
+                const r = xhr.responseJSON || {};
+                if (r.errors) EnjazIMS.renderFieldErrors($form, r.errors);
+                EnjazIMS.showFormError($form, r.message || 'حدث خطأ');
+            }
+        });
+    });
+
+    /* ── View ── */
+    function openView(id) {
+        $.ajax({ url: apiUrl(urlDetail, id), method: 'GET', success: function(resp) {
+            if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
+            const d = resp.data;
+            const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
+            const color  = colors[d.name.charCodeAt(0) % colors.length];
+            $('#viewAgentAvatar').html(d.name.trim().charAt(0).toUpperCase()).css('background', color);
+            $('#viewAgentName').text(d.name);
+            $('#viewAgentCode').html(`<code class="cxr-code">${d.code}</code>`);
+            $('#viewName').text(d.name || '—');
+            $('#viewPhone').text(d.phone || '—');
+            $('#viewEmail').text(d.email || '—');
+            $('#viewCity').text(d.city || '—');
+            $('#viewAddress').text(d.address || '—');
+            const bal = EnjazIMS.parseNumber(d.current_balance);
+            const balCls = bal > 0 ? 'text-success' : bal < 0 ? 'text-danger' : '';
+            $('#viewBalance').html(`<strong class="${balCls}">${EnjazIMS.formatMoney(d.current_balance)}</strong>`);
+            $('#viewCommissionType').text(COMMISSION_LABELS[d.commission_type] || '—');
+            if (d.commission_type === 'none') {
+                $('#viewCommissionRateCard').hide();
+            } else {
+                $('#viewCommissionRateCard').show();
+                const suffix = d.commission_type === 'percentage' ? ' %' : '';
+                $('#viewCommissionRate').text(d.commission_rate + suffix);
+            }
+            $('#viewNotes').text(d.notes || '—');
+            $('#viewStatus').html(d.is_active
+                ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+                : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوف</span>');
+            $('#viewEditAgentBtn').data('id', d.id);
+            viewModal.show();
+        }, error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }});
+    }
+
+    /* ── Ledger ── */
+    function loadAgentTransactions(id, agentName) {
+        const $body  = $('#agentLedgerBody');
+        const $cards = $('#agentLedgerCards');
+        $body.html(`<tr><td colspan="5" class="text-center text-muted">جاري التحميل...</td></tr>`);
+        $cards.html(`<div class="text-center text-muted py-3">جاري التحميل...</div>`);
+        $.ajax({ url: apiUrl(urlTransactions, id), method: 'GET', success: function(resp) {
+            if (!resp.success || !Array.isArray(resp.data) || !resp.data.length) {
+                $body.html(`<tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>`);
+                $cards.html(`<div class="text-center text-muted py-3">لا توجد حركات</div>`);
+                return;
+            }
+            const rows = resp.data.map(function(tx) {
+                const isCredit = tx.entry_type === 'payment' || tx.entry_type === 'return';
+                const isDebit  = tx.entry_type === 'commission';
+                const amtColor = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
+                const rowBg    = isCredit ? 'rgba(16,185,129,.08)' : isDebit ? 'rgba(239,68,68,.06)' : '';
+                return `<tr style="background:${rowBg}">
+                    <td>${tx.entry_date||'—'}</td>
+                    <td>${tx.entry_type_label||tx.entry_type||'—'}</td>
+                    <td style="color:${amtColor};font-weight:700;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount||0)))}</td>
+                    <td style="font-weight:700;color:#6366f1;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance||0)))}</td>
+                    <td>${tx.notes||'—'}</td>
+                </tr>`;
+            }).join('');
+            $body.html(rows);
+            const cardHtml = resp.data.map(function(tx) {
+                const isCredit = tx.entry_type === 'payment' || tx.entry_type === 'return';
+                const isDebit  = tx.entry_type === 'commission';
+                const amtColor = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
+                return `<div style="background:#fff;border:1px solid var(--border-light);border-radius:12px;padding:.7rem .9rem;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">
+                        <span style="font-size:.72rem;color:var(--text-secondary);">${tx.entry_date||'—'}</span>
+                        <span style="font-size:.72rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;background:rgba(99,102,241,.1);color:#4f46e5;">${tx.entry_type_label||'—'}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border-light);">
+                        <span style="font-size:.72rem;color:var(--text-secondary);">المبلغ</span>
+                        <span style="font-weight:700;color:${amtColor};">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount||0)))}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:.3rem 0 0;">
+                        <span style="font-size:.72rem;color:var(--text-secondary);">المستحقات</span>
+                        <span style="font-weight:700;color:#6366f1;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance||0)))}</span>
+                    </div>
+                    ${tx.notes && tx.notes!=='—' ? `<div style="font-size:.72rem;color:var(--text-secondary);padding-top:.3rem;">${tx.notes}</div>` : ''}
+                </div>`;
+            }).join('');
+            $cards.html(cardHtml);
+        }, error: function() {
+            $body.html(`<tr><td colspan="5" class="text-center text-danger">تعذر تحميل الحركات</td></tr>`);
+        }});
+    }
+
+    function openLedger(id) {
+        $.ajax({ url: apiUrl(urlDetail, id), method: 'GET', success: function(resp) {
+            if (!resp.success) { EnjazIMS.toast(resp.message, 'error'); return; }
+            const d = resp.data;
+            $('#agentLedgerSubtitle').text(`${d.name} (${d.code}) — المستحقات: ${EnjazIMS.formatMoney(d.current_balance)}`);
+            loadAgentTransactions(id, d.name);
+            ledgerModal.show();
+        }, error: function() { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }});
+    }
+
+    /* ── Delete ── */
+    function confirmDelete(id, name) {
+        $('#deleteAgentId').val(id);
+        $('#deleteAgentName').text(name);
+        deleteModal.show();
+    }
+    $('#confirmDeleteAgentBtn').on('click', function() {
+        const id = $('#deleteAgentId').val();
+        if (!id) return;
+        $.ajax({ url: apiUrl(urlDelete, id), method: 'POST', success: function(resp) {
+            if (resp.success) { deleteModal.hide(); dt.ajax.reload(null, false); EnjazIMS.toast(resp.message, 'success'); return; }
+            EnjazIMS.toast(resp.message || 'تعذر الحذف', 'error');
+        }, error: function(xhr) {
+            const r = xhr.responseJSON || {};
+            EnjazIMS.toast(r.message || 'تعذر الحذف', 'error');
+        }});
+    });
+
+    /* ── Bindings ── */
+    $('#btnOpenCreateAgent').on('click', openCreate);
+    $('#agentsTable, #agentsCardsMobile').on('click', '.js-view-agent',   function() { openView($(this).data('id')); });
+    $('#agentsTable, #agentsCardsMobile').on('click', '.js-ledger-agent', function() { openLedger($(this).data('id')); });
+    $('#agentsTable, #agentsCardsMobile').on('click', '.js-edit-agent',   function() { openEdit($(this).data('id')); });
+    $('#agentsTable, #agentsCardsMobile').on('click', '.js-delete-agent', function() { confirmDelete($(this).data('id'), $(this).data('name')); });
+    $('#viewEditAgentBtn').on('click', function() { viewModal.hide(); openEdit($(this).data('id')); });
+
+    /* ── Import / Export ── */
+    let selectedFile = null;
+    $('#btnImportAgents').on('click', function() {
+        selectedFile = null;
+        $('#importFileInput').val('');
+        $('#fileSelected').hide(); $('#uploadArea').show();
+        $('#btnStartImport').prop('disabled', true);
+        importModal.show();
+    });
+    $('#btnChooseFile, #uploadArea').on('click', function(e) {
+        if (e.target === this || $(e.target).closest('.cx-upload-icon, .cx-upload-title, .cx-upload-text, .cx-upload-hint, .cx-btn-upload').length)
+            $('#importFileInput').click();
+    });
+    $('#importFileInput').on('change', function(e) { const f = e.target.files[0]; if (f) handleFile(f); });
+
+    const uploadAreaEl = document.getElementById('uploadArea');
+    ['dragenter','dragover','dragleave','drop'].forEach(ev => uploadAreaEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
+    ['dragenter','dragover'].forEach(ev => uploadAreaEl.addEventListener(ev, () => uploadAreaEl.classList.add('drag-over')));
+    ['dragleave','drop'].forEach(ev => uploadAreaEl.addEventListener(ev, () => uploadAreaEl.classList.remove('drag-over')));
+    uploadAreaEl.addEventListener('drop', function(e) { const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
+
+    function handleFile(file) {
+        const valid = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-excel','text/csv'];
+        if (!valid.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) { EnjazIMS.toast('نوع الملف غير مدعوم', 'error'); return; }
+        if (file.size > 5*1024*1024) { EnjazIMS.toast('حجم الملف كبير جداً. الحد الأقصى 5 MB', 'error'); return; }
+        selectedFile = file;
+        $('#fileName').text(file.name);
+        const kb = file.size/1024;
+        $('#fileSize').text(kb < 1024 ? kb.toFixed(1)+' KB' : (kb/1024).toFixed(1)+' MB');
+        $('#uploadArea').hide(); $('#fileSelected').show();
+        $('#btnStartImport').prop('disabled', false);
+    }
+    $('#btnRemoveFile').on('click', function() {
+        selectedFile = null; $('#importFileInput').val('');
+        $('#fileSelected').hide(); $('#uploadArea').show();
+        $('#btnStartImport').prop('disabled', true);
+    });
+    $('#btnStartImport').on('click', function() {
+        if (!selectedFile) return;
+        const fd = new FormData(); fd.append('file', selectedFile);
+        $.ajax({ url: '{% url "agents:import_api" %}', method: 'POST', data: fd, processData: false, contentType: false,
+            success: function(resp) {
+                if (resp.success) {
+                    if (resp.imported > 0) { importModal.hide(); dt.ajax.reload(); }
+                    EnjazIMS.toast(resp.message, resp.imported > 0 ? 'success' : 'error');
+                    if (resp.errors && resp.errors.length) resp.errors.forEach(e => EnjazIMS.toast(e, 'error'));
+                } else { EnjazIMS.toast(resp.message || 'فشل الاستيراد', 'error'); }
+            },
+            error: function(xhr) { EnjazIMS.toast((xhr.responseJSON||{}).message || 'خطأ أثناء الاستيراد', 'error'); }
+        });
+    });
+    $('#btnDownloadTemplate').on('click', function(e) { e.preventDefault(); window.location.href = '{% url "agents:download_template" %}'; });
+    $('#btnExportAgents').on('click', function() {
+        window.location.href = '{% url "agents:export_api" %}';
+        EnjazIMS.toast('جاري تصدير البيانات...', 'info');
+    });
+
+})();
+</script>
+{% endblock %}

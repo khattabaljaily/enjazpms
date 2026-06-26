@@ -119,6 +119,15 @@
             <span class="doc-card-value">{{ invoice.customer.name|default:"زبون عابر" }}</span>
         </div>
     </div>
+    {% if invoice.agent %}
+    <div class="doc-card">
+        <div class="doc-card-icon" style="background:rgba(99,102,241,.12);color:#6366f1;"><i class="fas fa-id-badge"></i></div>
+        <div class="doc-card-body">
+            <span class="doc-card-label">المندوب</span>
+            <span class="doc-card-value">{{ invoice.agent.name }}</span>
+        </div>
+    </div>
+    {% endif %}
     <div class="doc-card">
         <div class="doc-card-icon doc-card-icon--emerald"><i class="fas fa-warehouse"></i></div>
         <div class="doc-card-body">
