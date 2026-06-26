@@ -1645,6 +1645,8 @@ div.dataTables_wrapper div.dataTables_paginate {
     .cx-view-footer   .cx-btn-ghost,
     .cx-view-footer   .cx-btn-warning,
     .cx-view-footer   .cx-btn-success { width: 100%; justify-content: center; }
+    .cx-footer-pair   { display: flex; gap: 0.5rem; width: 100%; }
+    .cx-footer-pair   .cx-btn-secondary { flex: 1; justify-content: center; }
 
     .cx-confirm-footer { flex-direction: column; gap: 0.5rem; padding-bottom: 1.25rem; }
     .cx-confirm-footer button { width: 100%; justify-content: center; }
