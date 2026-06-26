@@ -4,45 +4,229 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>بوابة المندوب — تسجيل الدخول</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-body { background: linear-gradient(135deg,#6366f1,#818cf8); min-height:100vh; display:flex; align-items:center; justify-content:center; font-family:'Cairo',sans-serif; }
-.login-card { background:#fff; border-radius:20px; padding:2.5rem; width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
-.login-icon { width:72px;height:72px;background:linear-gradient(135deg,#6366f1,#818cf8);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;color:#fff;font-size:2rem; }
-.login-title { text-align:center;font-size:1.3rem;font-weight:700;color:#1e293b;margin-bottom:.25rem; }
-.login-sub { text-align:center;font-size:.85rem;color:#64748b;margin-bottom:1.75rem; }
-.login-label { font-size:.85rem;font-weight:600;color:#374151;margin-bottom:.35rem; }
-.login-input { border:1.5px solid #e5e7eb;border-radius:10px;padding:.65rem 1rem;font-size:.9rem;width:100%;transition:border .15s;font-family:'Cairo',sans-serif; }
-.login-input:focus { border-color:#6366f1;outline:none;box-shadow:0 0 0 3px rgba(99,102,241,.12); }
-.login-btn { background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;border:none;border-radius:10px;padding:.75rem;font-size:.95rem;font-weight:700;width:100%;cursor:pointer;transition:opacity .15s;font-family:'Cairo',sans-serif; }
-.login-btn:hover { opacity:.9; }
-.login-error { background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:10px;padding:.65rem 1rem;font-size:.85rem;margin-bottom:1rem; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Cairo', sans-serif;
+  min-height: 100vh;
+  background: #0d0b22;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; position: relative;
+}
+
+/* ─── Animated background ─── */
+.bg-scene {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: linear-gradient(135deg, #0d0b22 0%, #1a1745 40%, #0d0b22 100%);
+}
+
+.orb {
+  position: absolute; border-radius: 50%;
+  filter: blur(60px); opacity: .55; animation: float 8s ease-in-out infinite;
+}
+.orb-1 { width: 400px; height: 400px; top: -100px; right: -100px; background: radial-gradient(circle, #4338ca, #312e81); animation-delay: 0s; }
+.orb-2 { width: 320px; height: 320px; bottom: -80px; left: -80px; background: radial-gradient(circle, #7c3aed, #4c1d95); animation-delay: -3s; }
+.orb-3 { width: 220px; height: 220px; top: 40%; left: 30%; background: radial-gradient(circle, #6366f1, #818cf8); animation-delay: -6s; opacity: .3; }
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(20px, -30px) scale(1.05); }
+  66%       { transform: translate(-15px, 15px) scale(.96); }
+}
+
+/* Grid lines */
+.bg-grid {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(99,102,241,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,102,241,.08) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ─── Login card ─── */
+.login-wrap {
+  position: relative; z-index: 10;
+  width: 100%; max-width: 420px; padding: 1rem;
+  animation: slideUp .5s cubic-bezier(.25,.8,.25,1) both;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.login-card {
+  background: rgba(255,255,255,.97);
+  border-radius: 22px;
+  padding: 2.5rem 2.25rem;
+  box-shadow: 0 30px 80px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.1);
+}
+
+/* Logo */
+.login-logo-wrap { text-align: center; margin-bottom: 2rem; }
+.login-logo-ring {
+  width: 70px; height: 70px; border-radius: 20px; margin: 0 auto 1rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.85rem; color: #fff;
+  box-shadow: 0 8px 28px rgba(99,102,241,.45);
+  position: relative;
+}
+.login-logo-ring::after {
+  content: '';
+  position: absolute; inset: -4px;
+  border-radius: 24px;
+  border: 1.5px solid rgba(99,102,241,.25);
+}
+
+.login-title { font-size: 1.35rem; font-weight: 800; color: #1e293b; margin-bottom: .2rem; }
+.login-sub   { font-size: .83rem; color: #94a3b8; font-weight: 400; }
+
+/* Tenant badge */
+.login-tenant {
+  display: inline-flex; align-items: center; gap: .35rem;
+  background: #eef2ff; color: #4338ca; border-radius: 100px;
+  font-size: .75rem; font-weight: 700; padding: .22rem .7rem;
+  margin-top: .5rem;
+}
+
+/* Error */
+.login-error {
+  background: #fff1f2; border: 1px solid #fecdd3;
+  border-radius: 10px; padding: .65rem 1rem;
+  font-size: .84rem; color: #be123c; margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+
+/* Input group */
+.input-group-p { margin-bottom: 1.1rem; }
+.input-label { font-size: .82rem; font-weight: 700; color: #374151; margin-bottom: .38rem; display: block; }
+.input-wrap { position: relative; }
+.input-icon {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  right: .9rem; color: #94a3b8; font-size: .88rem; pointer-events: none;
+  transition: color .18s;
+}
+.input-eye {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  left: .9rem; color: #94a3b8; font-size: .88rem; cursor: pointer;
+  transition: color .18s; background: none; border: none; padding: 0;
+}
+.input-field {
+  width: 100%; border: 1.5px solid #e0dcff; border-radius: 11px;
+  padding: .68rem 2.5rem .68rem 1rem; font-size: .9rem;
+  font-family: 'Cairo', sans-serif; color: #1e293b;
+  background: #fff; outline: none;
+  transition: border-color .18s, box-shadow .18s;
+}
+.input-field:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3.5px rgba(99,102,241,.12);
+}
+.input-field:focus ~ .input-icon { color: #6366f1; }
+
+/* Submit button */
+.login-btn {
+  width: 100%; padding: .8rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff; font-size: .95rem; font-weight: 800;
+  border: none; border-radius: 11px; cursor: pointer;
+  font-family: 'Cairo', sans-serif;
+  box-shadow: 0 6px 20px rgba(99,102,241,.4);
+  transition: all .2s; position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+}
+.login-btn::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.1), transparent);
+  opacity: 0; transition: opacity .2s;
+}
+.login-btn:hover { box-shadow: 0 8px 28px rgba(99,102,241,.55); transform: translateY(-1px); }
+.login-btn:hover::before { opacity: 1; }
+.login-btn:active { transform: translateY(0); }
+
+/* Footer */
+.login-footer {
+  text-align: center; margin-top: 1.5rem;
+  font-size: .76rem; color: #94a3b8;
+}
 </style>
 </head>
 <body>
-<div class="login-card">
-  <div class="login-icon"><i class="fas fa-id-badge"></i></div>
-  <h1 class="login-title">بوابة المندوب</h1>
-  <p class="login-sub">أدخل بيانات دخولك للمتابعة</p>
 
-  {% if error %}
-  <div class="login-error"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
-  {% endif %}
-
-  <form method="post">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label class="login-label">اسم المستخدم</label>
-      <input type="text" name="username" class="login-input" placeholder="اسم المستخدم" autocomplete="username" required>
-    </div>
-    <div class="mb-4">
-      <label class="login-label">كلمة المرور</label>
-      <input type="password" name="password" class="login-input" placeholder="••••••••" autocomplete="current-password" required>
-    </div>
-    <button type="submit" class="login-btn"><i class="fas fa-sign-in-alt me-2"></i>دخول</button>
-  </form>
+<div class="bg-scene">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
 </div>
+<div class="bg-grid"></div>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      <div class="login-logo-ring"><i class="fas fa-id-badge"></i></div>
+      <h1 class="login-title">بوابة المندوب</h1>
+      <p class="login-sub">أدخل بياناتك للدخول إلى حسابك</p>
+      {% if tenant %}
+      <div class="login-tenant"><i class="fas fa-building"></i> {{ tenant.name }}</div>
+      {% endif %}
+    </div>
+
+    {% if error %}
+    <div class="login-error"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>
+    {% endif %}
+
+    <form method="post" autocomplete="on">
+      {% csrf_token %}
+
+      <div class="input-group-p">
+        <label class="input-label" for="id_username">اسم المستخدم</label>
+        <div class="input-wrap">
+          <input type="text" id="id_username" name="username" class="input-field"
+                 placeholder="أدخل اسم المستخدم" autocomplete="username" required>
+          <i class="fas fa-user input-icon"></i>
+        </div>
+      </div>
+
+      <div class="input-group-p" style="margin-bottom:1.5rem;">
+        <label class="input-label" for="id_password">كلمة المرور</label>
+        <div class="input-wrap">
+          <input type="password" id="id_password" name="password" class="input-field"
+                 placeholder="••••••••" autocomplete="current-password" required>
+          <i class="fas fa-lock input-icon"></i>
+          <button type="button" class="input-eye" id="togglePwd" tabindex="-1">
+            <i class="fas fa-eye-slash" id="togglePwdIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="login-btn">
+        <i class="fas fa-sign-in-alt"></i>
+        دخول
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <i class="fas fa-shield-alt me-1"></i> بوابة مؤمنة وخاصة بك
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('togglePwd').addEventListener('click', function () {
+  const pw = document.getElementById('id_password');
+  const ic = document.getElementById('togglePwdIcon');
+  if (pw.type === 'password') {
+    pw.type = 'text';
+    ic.className = 'fas fa-eye';
+  } else {
+    pw.type = 'password';
+    ic.className = 'fas fa-eye-slash';
+  }
+});
+</script>
 </body>
 </html>

@@ -1,62 +1,248 @@
 {% extends "agents/portal/layout.html" %}
 {% load number_format %}
-{% block title %}الرئيسية{% endblock %}
+{% block title %}لوحة التحكم{% endblock %}
+{% block page_title %}لوحة التحكم{% endblock %}
+{% block page_icon %}fas fa-chart-pie{% endblock %}
+{% block page_heading %}لوحة التحكم{% endblock %}
 {% block tab_dashboard %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+/* ─── Greeting hero ─── */
+.dash-hero {
+  border-radius: 18px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #a855f7 100%);
+  padding: 1.6rem 2rem;
+  color: #fff; position: relative; overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+.dash-hero::before {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 220px; height: 220px; border-radius: 50%;
+  background: rgba(255,255,255,.06); pointer-events: none;
+}
+.dash-hero::after {
+  content: '';
+  position: absolute; bottom: -80px; left: 10%;
+  width: 260px; height: 260px; border-radius: 50%;
+  background: rgba(255,255,255,.04); pointer-events: none;
+}
+.dash-hero-content { position: relative; z-index: 1; }
+.dash-greeting { font-size: 1.4rem; font-weight: 800; margin-bottom: .25rem; }
+.dash-greeting-sub { font-size: .86rem; opacity: .72; }
+.dash-hero-badge {
+  display: inline-flex; align-items: center; gap: .4rem;
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
+  border-radius: 100px; padding: .28rem .8rem;
+  font-size: .75rem; font-weight: 600; margin-top: .75rem;
+}
+.dash-hero-bg-icon {
+  position: absolute; left: 1.75rem; top: 50%; transform: translateY(-50%);
+  font-size: 5rem; opacity: .07; pointer-events: none;
+}
+
+/* ─── Quick actions bar ─── */
+.dash-actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.dash-action {
+  display: flex; align-items: center; gap: .55rem;
+  padding: .6rem 1.1rem; border-radius: 10px;
+  font-size: .84rem; font-weight: 600; text-decoration: none;
+  transition: all .18s; white-space: nowrap;
+}
+.dash-action--primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff; box-shadow: 0 4px 14px rgba(99,102,241,.35);
+}
+.dash-action--primary:hover { box-shadow: 0 6px 20px rgba(99,102,241,.5); transform: translateY(-1px); color: #fff; }
+.dash-action--soft {
+  background: #fff; color: #6366f1;
+  border: 1.5px solid #c7d2fe;
+}
+.dash-action--soft:hover { background: #eef2ff; border-color: #6366f1; color: #6366f1; }
+
+/* ─── Panel quick links ─── */
+.dash-panel-row { display: grid; gap: .6rem; padding: .85rem 1.2rem; }
+.dash-quick-link {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .65rem .9rem; border-radius: 10px;
+  text-decoration: none; color: var(--text); font-size: .86rem; font-weight: 500;
+  background: #faf9ff; border: 1px solid #f0eeff;
+  transition: all .15s;
+}
+.dash-quick-link:hover { background: #eef2ff; border-color: var(--brand-200); color: var(--brand-600); }
+.dash-quick-link-icon {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: .78rem;
+}
+.dash-quick-link-label { flex: 1; }
+.dash-quick-link-arrow { color: var(--text-muted); font-size: .72rem; }
+
+/* ─── Stat card accent ─── */
+.p-stat--gradient {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-color: transparent;
+  box-shadow: 0 6px 20px rgba(99,102,241,.35);
+}
+.p-stat--gradient .p-stat-label  { color: rgba(255,255,255,.75); }
+.p-stat--gradient .p-stat-value  { color: #fff; font-size: .95rem; }
+.p-stat--gradient .p-stat-icon   { background: rgba(255,255,255,.18); color: #fff; }
+.p-stat--gradient:hover { box-shadow: 0 8px 28px rgba(99,102,241,.5); }
+</style>
+{% endblock %}
+
 {% block content %}
+<!-- ─── Hero greeting ─── -->
+<div class="dash-hero">
+  <div class="dash-hero-content">
+    <div class="dash-greeting" id="greetingText">أهلاً، {{ agent.name }} 👋</div>
+    <div class="dash-greeting-sub">مرحباً بك في بوابتك الشخصية — إليك ملخص حسابك</div>
+    <div class="dash-hero-badge">
+      <i class="fas fa-circle" style="font-size:.45rem;color:#4ade80;"></i>
+      متصل الآن
+    </div>
+  </div>
+  <i class="fas fa-id-badge dash-hero-bg-icon"></i>
+</div>
+
+<!-- ─── Stats row ─── -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
     <div class="p-stat">
-      <div class="p-stat-icon p-stat-icon--primary"><i class="fas fa-file-invoice"></i></div>
+      <div class="p-stat-icon si-indigo"><i class="fas fa-file-invoice"></i></div>
       <div>
-        <div class="p-stat-label">فواتيري</div>
-        <div class="p-stat-value">{{ total_invoices }}</div>
+        <div class="p-stat-label">إجمالي فواتيري</div>
+        <div class="p-stat-value" data-count="{{ total_invoices }}">{{ total_invoices }}</div>
       </div>
     </div>
   </div>
+
   <div class="col-6 col-md-3">
     <div class="p-stat">
-      <div class="p-stat-icon p-stat-icon--success"><i class="fas fa-money-bill-wave"></i></div>
+      <div class="p-stat-icon si-emerald"><i class="fas fa-coins"></i></div>
       <div>
         <div class="p-stat-label">مستحقاتي</div>
-        <div class="p-stat-value" dir="ltr">{{ balance|money }}</div>
+        <div class="p-stat-value" dir="ltr" style="font-size:1.05rem;">{{ balance|money }}</div>
       </div>
     </div>
   </div>
+
   <div class="col-6 col-md-3">
     <div class="p-stat">
-      <div class="p-stat-icon p-stat-icon--warning"><i class="fas fa-clock"></i></div>
+      <div class="p-stat-icon si-amber"><i class="fas fa-hourglass-half"></i></div>
       <div>
         <div class="p-stat-label">طلبات معلقة</div>
-        <div class="p-stat-value">{{ pending_requests }}</div>
+        <div class="p-stat-value" data-count="{{ pending_requests }}">{{ pending_requests }}</div>
       </div>
     </div>
   </div>
+
   <div class="col-6 col-md-3">
-    <a href="{% url 'agents:portal_request_new' %}" style="text-decoration:none;">
-    <div class="p-stat" style="background:linear-gradient(135deg,#6366f1,#818cf8);cursor:pointer;">
-      <div class="p-stat-icon" style="background:rgba(255,255,255,.2);color:#fff;"><i class="fas fa-plus"></i></div>
+    <a href="{% url 'agents:portal_request_new' %}" class="p-stat p-stat--gradient" style="border-radius:var(--radius);">
+      <div class="p-stat-icon"><i class="fas fa-plus"></i></div>
       <div>
-        <div class="p-stat-label" style="color:rgba(255,255,255,.8);">إنشاء طلب</div>
-        <div class="p-stat-value" style="color:#fff;font-size:1rem;">فاتورة جديدة</div>
+        <div class="p-stat-label">إنشاء طلب</div>
+        <div class="p-stat-value">فاتورة جديدة</div>
       </div>
-    </div>
     </a>
   </div>
 </div>
 
+<!-- ─── Quick actions ─── -->
+<div class="dash-actions mb-4 hide-mobile">
+  <a href="{% url 'agents:portal_request_new' %}" class="dash-action dash-action--primary">
+    <i class="fas fa-plus"></i> طلب فاتورة جديد
+  </a>
+  <a href="{% url 'agents:portal_invoices' %}" class="dash-action dash-action--soft">
+    <i class="fas fa-file-invoice"></i> فواتيري
+  </a>
+  <a href="{% url 'agents:portal_statement' %}" class="dash-action dash-action--soft">
+    <i class="fas fa-file-invoice-dollar"></i> كشف حسابي
+  </a>
+  <a href="{% url 'agents:portal_payments' %}" class="dash-action dash-action--soft">
+    <i class="fas fa-wallet"></i> دفعاتي
+  </a>
+</div>
+
+<!-- ─── Panels ─── -->
 <div class="row g-3">
   <div class="col-md-6">
-    <div class="p-panel">
-      <div class="p-panel-head"><i class="fas fa-file-invoice"></i> آخر الفواتير</div>
-      <div style="padding:1rem;"><a href="{% url 'agents:portal_invoices' %}" class="p-btn p-btn--outline" style="font-size:.82rem;">عرض الكل</a></div>
+    <div class="p-panel h-100">
+      <div class="p-panel-head">
+        <i class="fas fa-file-invoice"></i> فواتيري
+        <a href="{% url 'agents:portal_invoices' %}" class="p-btn p-btn--ghost ms-auto" style="padding:.28rem .7rem;font-size:.76rem;">عرض الكل</a>
+      </div>
+      <div class="dash-panel-row">
+        <a href="{% url 'agents:portal_invoices' %}" class="dash-quick-link">
+          <div class="dash-quick-link-icon si-indigo" style="border-radius:8px;background:#eef2ff;color:#6366f1;"><i class="fas fa-file-invoice"></i></div>
+          <div class="dash-quick-link-label">
+            <div style="font-weight:600;">فواتيري المسجلة</div>
+            <div style="font-size:.75rem;color:var(--text-muted);">{{ total_invoices }} فاتورة</div>
+          </div>
+          <i class="fas fa-chevron-left dash-quick-link-arrow"></i>
+        </a>
+        <a href="{% url 'agents:portal_statement' %}" class="dash-quick-link">
+          <div class="dash-quick-link-icon" style="border-radius:8px;background:#ecfdf5;color:#059669;"><i class="fas fa-file-invoice-dollar"></i></div>
+          <div class="dash-quick-link-label">
+            <div style="font-weight:600;">كشف الحساب</div>
+            <div style="font-size:.75rem;color:var(--text-muted);">عرض المستحقات والحركات</div>
+          </div>
+          <i class="fas fa-chevron-left dash-quick-link-arrow"></i>
+        </a>
+      </div>
     </div>
   </div>
+
   <div class="col-md-6">
-    <div class="p-panel">
-      <div class="p-panel-head"><i class="fas fa-paper-plane"></i> آخر الطلبات</div>
-      <div style="padding:1rem;"><a href="{% url 'agents:portal_requests' %}" class="p-btn p-btn--outline" style="font-size:.82rem;">عرض الكل</a></div>
+    <div class="p-panel h-100">
+      <div class="p-panel-head">
+        <i class="fas fa-paper-plane"></i> طلباتي
+        <a href="{% url 'agents:portal_requests' %}" class="p-btn p-btn--ghost ms-auto" style="padding:.28rem .7rem;font-size:.76rem;">عرض الكل</a>
+      </div>
+      <div class="dash-panel-row">
+        <a href="{% url 'agents:portal_requests' %}" class="dash-quick-link">
+          <div class="dash-quick-link-icon" style="border-radius:8px;background:#fff7ed;color:#c2410c;"><i class="fas fa-clock"></i></div>
+          <div class="dash-quick-link-label">
+            <div style="font-weight:600;">طلبات معلقة</div>
+            <div style="font-size:.75rem;color:var(--text-muted);">{{ pending_requests }} طلب بانتظار المراجعة</div>
+          </div>
+          <i class="fas fa-chevron-left dash-quick-link-arrow"></i>
+        </a>
+        <a href="{% url 'agents:portal_request_new' %}" class="dash-quick-link" style="background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(139,92,246,.06));border-color:rgba(99,102,241,.15);">
+          <div class="dash-quick-link-icon" style="border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;"><i class="fas fa-plus"></i></div>
+          <div class="dash-quick-link-label">
+            <div style="font-weight:700;color:#4338ca;">إنشاء طلب فاتورة جديد</div>
+            <div style="font-size:.75rem;color:var(--text-muted);">اختر العميل والمنتجات</div>
+          </div>
+          <i class="fas fa-chevron-left dash-quick-link-arrow" style="color:#6366f1;"></i>
+        </a>
+      </div>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Animated number counters
+document.querySelectorAll('[data-count]').forEach(el => {
+  const target = parseInt(el.dataset.count, 10);
+  if (!target || target < 2) return;
+  let current = 0;
+  const step = Math.max(1, Math.ceil(target / 30));
+  const timer = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = current;
+    if (current >= target) clearInterval(timer);
+  }, 30);
+});
+
+// Greeting by time of day
+(function () {
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'صباح الخير' : h < 17 ? 'مساء الخير' : 'مساء النور';
+  const el = document.getElementById('greetingText');
+  if (el) el.textContent = `${greet}، {{ agent.name|escapejs }} 👋`;
+})();
+</script>
 {% endblock %}

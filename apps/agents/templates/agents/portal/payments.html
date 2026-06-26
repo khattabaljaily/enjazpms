@@ -1,37 +1,91 @@
 {% extends "agents/portal/layout.html" %}
 {% load number_format %}
 {% block title %}دفعاتي{% endblock %}
+{% block page_title %}دفعاتي{% endblock %}
+{% block page_icon %}fas fa-wallet{% endblock %}
+{% block page_heading %}الدفعات المستلمة{% endblock %}
 {% block tab_payments %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+.payment-row td:first-child { color: var(--text-muted); font-size: .84rem; }
+.payment-amount { font-weight: 800; color: var(--success); font-size: .95rem; }
+.payment-notes  { font-size: .82rem; color: var(--text-muted); }
+
+/* Total strip */
+.pay-total-strip {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .9rem 1.35rem;
+  background: linear-gradient(135deg, rgba(16,185,129,.06), rgba(16,185,129,.02));
+  border-top: 2px solid rgba(16,185,129,.12);
+}
+.pay-total-label { font-size: .82rem; font-weight: 600; color: var(--text-subtle); }
+.pay-total-value { font-size: 1.1rem; font-weight: 800; color: var(--success); }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="p-panel">
-  <div class="p-panel-head"><i class="fas fa-money-bill-transfer"></i> سجل الدفعات المستلمة</div>
+  <div class="p-panel-head">
+    <i class="fas fa-wallet"></i>
+    سجل الدفعات المستلمة
+    {% if payments %}
+    <span style="margin-right:.4rem;background:#ecfdf5;color:#15803d;border-radius:100px;font-size:.7rem;font-weight:700;padding:.15rem .55rem;">{{ payments|length }}</span>
+    {% endif %}
+  </div>
+
   {% if payments %}
-  <div class="table-responsive">
+  <div class="scroll-x">
     <table class="p-table">
       <thead>
         <tr>
           <th>التاريخ</th>
-          <th class="text-end">المبلغ</th>
+          <th class="text-end">المبلغ المستلم</th>
           <th class="hide-mobile">ملاحظات</th>
         </tr>
       </thead>
       <tbody>
         {% for p in payments %}
-        <tr>
-          <td class="text-muted">{{ p.entry_date }}</td>
-          <td class="text-end fw-bold" dir="ltr" style="color:#059669;">{{ p.amount|cut:"-"|money }}</td>
-          <td class="text-muted hide-mobile" style="font-size:.82rem;">{{ p.notes|default:"—" }}</td>
+        <tr class="payment-row">
+          <td>{{ p.entry_date }}</td>
+          <td class="text-end">
+            <span class="payment-amount" dir="ltr">
+              <i class="fas fa-arrow-down-to-line" style="font-size:.75rem;opacity:.7;margin-left:.3rem;"></i>
+              {{ p.amount|cut:"-"|money }}
+            </span>
+          </td>
+          <td class="payment-notes hide-mobile">{{ p.notes|default:"—" }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  <div class="pay-total-strip">
+    <span class="pay-total-label"><i class="fas fa-sigma me-1"></i>إجمالي المستلم</span>
+    <span class="pay-total-value" dir="ltr" id="payTotal">—</span>
+  </div>
+
   {% else %}
   <div class="p-empty">
-    <i class="fas fa-money-bill-transfer"></i>
-    <p>لا توجد دفعات مسجلة حتى الآن</p>
+    <div class="p-empty-icon"><i class="fas fa-wallet"></i></div>
+    <h6>لا توجد دفعات بعد</h6>
+    <p>لم يتم تسجيل أي دفعات مستلمة حتى الآن</p>
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  let total = 0;
+  document.querySelectorAll('.payment-amount').forEach(el => {
+    const txt = el.textContent.replace(/[^\d.]/g, '');
+    total += parseFloat(txt) || 0;
+  });
+  const el = document.getElementById('payTotal');
+  if (el && total > 0) el.textContent = total.toFixed(2);
+})();
+</script>
 {% endblock %}

@@ -1,92 +1,159 @@
 {% extends "agents/portal/layout.html" %}
 {% load number_format %}
 {% block title %}كشف حسابي{% endblock %}
+{% block page_title %}كشف حسابي{% endblock %}
+{% block page_icon %}fas fa-file-invoice-dollar{% endblock %}
+{% block page_heading %}كشف الحساب{% endblock %}
 {% block tab_statement %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Financial summary cards with colored left border */
+.fin-card {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+  padding: 1.25rem 1.4rem; display: flex; gap: 1rem; align-items: center;
+  border-right: 4px solid transparent;
+}
+.fin-card--commission { border-right-color: #6366f1; }
+.fin-card--paid       { border-right-color: #10b981; }
+.fin-card--balance    { border-right-color: #f59e0b; }
+
+.fin-card-icon {
+  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+}
+.fin-card-label { font-size: .76rem; color: var(--text-muted); font-weight: 500; margin-bottom: .2rem; }
+.fin-card-value { font-size: 1.35rem; font-weight: 800; line-height: 1.1; letter-spacing: -.02em; }
+
+/* Filter bar */
+.filter-bar {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+  padding: 1rem 1.4rem; margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+}
+.filter-bar label { font-size: .8rem; font-weight: 700; color: var(--text-subtle); white-space: nowrap; }
+.filter-date {
+  border: 1.5px solid #e0dcff; border-radius: 9px;
+  padding: .5rem .9rem; font-size: .85rem;
+  font-family: 'Cairo', sans-serif; color: var(--text);
+  background: #fff; outline: none; flex: 1; min-width: 120px;
+  transition: border-color .18s;
+}
+.filter-date:focus { border-color: var(--brand-400); }
+
+/* Entry type badge */
+.entry-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .2rem .65rem; border-radius: 100px;
+  font-size: .72rem; font-weight: 700;
+}
+.entry-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.entry-commission { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.entry-payment    { background: #ecfdf5; color: #15803d; border: 1px solid #bbf7d0; }
+.entry-return     { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+.entry-other      { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+
+/* Running balance column */
+.run-balance { font-weight: 700; color: #4338ca; }
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- Summary cards -->
+<!-- Financial Summary -->
 <div class="row g-3 mb-4">
   <div class="col-md-4">
-    <div class="p-stat">
-      <div class="p-stat-icon p-stat-icon--primary"><i class="fas fa-percent"></i></div>
+    <div class="fin-card fin-card--commission">
+      <div class="fin-card-icon" style="background:#eef2ff;color:#4338ca;"><i class="fas fa-percent"></i></div>
       <div>
-        <div class="p-stat-label">إجمالي العمولات</div>
-        <div class="p-stat-value" dir="ltr">{{ total_commission|money }}</div>
+        <div class="fin-card-label">إجمالي العمولات</div>
+        <div class="fin-card-value" dir="ltr" style="color:#4338ca;">{{ total_commission|money }}</div>
       </div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="p-stat">
-      <div class="p-stat-icon" style="background:rgba(17,153,142,.12);color:#11998e;"><i class="fas fa-money-bill-transfer"></i></div>
+    <div class="fin-card fin-card--paid">
+      <div class="fin-card-icon" style="background:#ecfdf5;color:#15803d;"><i class="fas fa-money-bill-transfer"></i></div>
       <div>
-        <div class="p-stat-label">إجمالي المصروفات</div>
-        <div class="p-stat-value" dir="ltr" style="color:#11998e;">{{ total_paid|money }}</div>
+        <div class="fin-card-label">إجمالي المصروف</div>
+        <div class="fin-card-value" dir="ltr" style="color:#15803d;">{{ total_paid|money }}</div>
       </div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="p-stat">
-      <div class="p-stat-icon" style="background:rgba(245,158,11,.12);color:#d97706;"><i class="fas fa-balance-scale"></i></div>
+    <div class="fin-card fin-card--balance">
+      <div class="fin-card-icon" style="background:#fffbeb;color:#d97706;"><i class="fas fa-balance-scale"></i></div>
       <div>
-        <div class="p-stat-label">مستحقاتي الحالية</div>
-        <div class="p-stat-value" dir="ltr" style="color:#d97706;">{{ balance|money }}</div>
+        <div class="fin-card-label">صافي المستحقات</div>
+        <div class="fin-card-value" dir="ltr" style="color:#d97706;">{{ balance|money }}</div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="p-panel mb-3">
-  <div class="p-panel-head"><i class="fas fa-filter"></i> فلترة الفترة</div>
-  <div style="padding:1rem;">
-    <form method="get" class="row g-2">
-      <div class="col-md-4">
-        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
-      </div>
-      <div class="col-md-4">
-        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
-      </div>
-      <div class="col-md-2">
-        <button type="submit" class="p-btn p-btn--primary" style="padding:.4rem 1rem;font-size:.83rem;">عرض</button>
-      </div>
-    </form>
-  </div>
+<!-- Filter bar -->
+<div class="filter-bar">
+  <i class="fas fa-calendar-alt" style="color:var(--brand-400);"></i>
+  <label>من:</label>
+  <form method="get" id="filterForm" style="display:contents;">
+    <input type="date" name="start_date" value="{{ start_date }}" class="filter-date" onchange="document.getElementById('filterForm').submit()">
+    <label>إلى:</label>
+    <input type="date" name="end_date" value="{{ end_date }}" class="filter-date" onchange="document.getElementById('filterForm').submit()">
+    <button type="submit" class="p-btn p-btn--primary" style="padding:.48rem 1.1rem;font-size:.82rem;">
+      <i class="fas fa-search"></i> عرض
+    </button>
+  </form>
 </div>
 
+<!-- Entries table -->
 <div class="p-panel">
-  <div class="p-panel-head"><i class="fas fa-list"></i> الحركات ({{ start_date }} — {{ end_date }})</div>
+  <div class="p-panel-head">
+    <i class="fas fa-list-ul"></i>
+    الحركات
+    <span style="font-size:.78rem;color:var(--text-muted);font-weight:400;margin-right:.35rem;">({{ start_date }} — {{ end_date }})</span>
+    {% if entries %}
+    <span style="margin-right:auto;background:#eef2ff;color:#4338ca;border-radius:100px;font-size:.7rem;font-weight:700;padding:.15rem .55rem;">{{ entries|length }}</span>
+    {% endif %}
+  </div>
+
   {% if entries %}
-  <div class="table-responsive">
+  <div class="scroll-x">
     <table class="p-table">
       <thead>
         <tr>
           <th>التاريخ</th>
-          <th>نوع القيد</th>
+          <th>نوع الحركة</th>
           <th class="text-end">المبلغ</th>
-          <th class="text-end hide-mobile">المستحقات التراكمية</th>
+          <th class="text-end hide-mobile">الرصيد التراكمي</th>
           <th class="hide-mobile">ملاحظات</th>
         </tr>
       </thead>
       <tbody>
         {% for e in entries %}
         <tr>
-          <td class="text-muted">{{ e.entry_date }}</td>
+          <td style="font-size:.83rem;color:var(--text-muted);">{{ e.entry_date }}</td>
           <td>
             {% if e.entry_type == 'commission' %}
-            <span class="p-badge" style="background:rgba(99,102,241,.12);color:#6366f1;">{{ e.get_entry_type_display }}</span>
+            <span class="entry-badge entry-commission">{{ e.get_entry_type_display }}</span>
             {% elif e.entry_type == 'payment' %}
-            <span class="p-badge" style="background:rgba(17,153,142,.12);color:#11998e;">{{ e.get_entry_type_display }}</span>
+            <span class="entry-badge entry-payment">{{ e.get_entry_type_display }}</span>
             {% elif e.entry_type == 'return' %}
-            <span class="p-badge" style="background:rgba(239,68,68,.12);color:#ef4444;">{{ e.get_entry_type_display }}</span>
+            <span class="entry-badge entry-return">{{ e.get_entry_type_display }}</span>
             {% else %}
-            <span class="p-badge" style="background:rgba(107,114,128,.12);color:#6b7280;">{{ e.get_entry_type_display }}</span>
+            <span class="entry-badge entry-other">{{ e.get_entry_type_display }}</span>
             {% endif %}
           </td>
-          <td class="text-end fw-bold" dir="ltr"
-              style="color:{% if e.entry_type == 'payment' %}#11998e{% elif e.entry_type == 'return' %}#ef4444{% else %}#6366f1{% endif %};">
-            {{ e.amount|cut:"-"|money }}
+          <td class="text-end" dir="ltr">
+            <span style="font-weight:700;
+              color:{% if e.entry_type == 'payment' %}var(--success){% elif e.entry_type == 'return' %}var(--danger){% else %}var(--brand-500){% endif %};">
+              {{ e.amount|cut:"-"|money }}
+            </span>
           </td>
-          <td class="text-end fw-bold hide-mobile" dir="ltr" style="color:#6366f1;">{{ e.running_balance|cut:"-"|money }}</td>
-          <td class="text-muted hide-mobile" style="font-size:.82rem;">{{ e.notes|default:"—" }}</td>
+          <td class="text-end hide-mobile">
+            <span class="run-balance" dir="ltr">{{ e.running_balance|cut:"-"|money }}</span>
+          </td>
+          <td class="hide-mobile" style="font-size:.82rem;color:var(--text-muted);">{{ e.notes|default:"—" }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -94,8 +161,9 @@
   </div>
   {% else %}
   <div class="p-empty">
-    <i class="fas fa-file-invoice-dollar"></i>
-    <p>لا توجد حركات في هذه الفترة</p>
+    <div class="p-empty-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+    <h6>لا توجد حركات</h6>
+    <p>لا توجد حركات في هذه الفترة الزمنية</p>
   </div>
   {% endif %}
 </div>

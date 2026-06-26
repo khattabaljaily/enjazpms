@@ -1,73 +1,138 @@
 {% extends "agents/portal/layout.html" %}
 {% load number_format %}
-{% block title %}تفاصيل الطلب {{ req.request_number }}{% endblock %}
+{% block title %}طلب {{ req.request_number }}{% endblock %}
+{% block page_title %}تفاصيل الطلب{% endblock %}
+{% block page_icon %}fas fa-file-alt{% endblock %}
+{% block page_heading %}تفاصيل الطلب{% endblock %}
 {% block tab_requests %}active{% endblock %}
 
+{% block extra_css %}
+<style>
+.req-header {
+  display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.req-back {
+  display: inline-flex; align-items: center; gap: .4rem;
+  color: var(--brand-500); text-decoration: none;
+  font-size: .84rem; font-weight: 600;
+  padding: .4rem .75rem; border-radius: 8px;
+  background: var(--brand-50); border: 1px solid var(--brand-200);
+  transition: all .15s;
+}
+.req-back:hover { background: var(--brand-100); color: var(--brand-700); }
+
+/* Meta grid */
+.req-meta-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem; padding: 1.25rem 1.35rem;
+}
+.req-meta-item {}
+.req-meta-label { font-size: .72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .3rem; }
+.req-meta-value { font-size: .9rem; font-weight: 700; color: var(--text); }
+
+/* Alert boxes */
+.req-alert {
+  display: flex; align-items: flex-start; gap: .75rem;
+  border-radius: 11px; padding: .85rem 1rem; margin: 0 1.35rem 1.1rem;
+}
+.req-alert-icon { font-size: 1rem; flex-shrink: 0; margin-top: .05rem; }
+.req-alert-title { font-size: .8rem; font-weight: 700; margin-bottom: .18rem; }
+.req-alert-body  { font-size: .85rem; }
+.req-alert--warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+.req-alert--success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; }
+
+/* Product line total */
+.line-total { font-weight: 800; color: var(--brand-600); }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="mb-3">
-  <a href="{% url 'agents:portal_requests' %}" style="color:#6366f1;text-decoration:none;font-size:.88rem;">
-    <i class="fas fa-arrow-right me-1"></i>العودة للطلبات
+<!-- Back nav -->
+<div class="req-header">
+  <a href="{% url 'agents:portal_requests' %}" class="req-back">
+    <i class="fas fa-arrow-right"></i> العودة للطلبات
   </a>
+  <code class="inv-num">{{ req.request_number }}</code>
+  <span class="p-badge p-badge--{{ req.status }}">{{ req.get_status_display }}</span>
 </div>
 
+<!-- Request details panel -->
 <div class="p-panel mb-3">
   <div class="p-panel-head">
-    <i class="fas fa-file-alt"></i>
-    {{ req.request_number }}
-    <span class="p-badge p-badge--{{ req.status }} ms-2">{{ req.get_status_display }}</span>
+    <i class="fas fa-info-circle"></i> معلومات الطلب
   </div>
-  <div style="padding:1.25rem;">
-    <div class="row g-3">
-      <div class="col-md-4">
-        <div style="font-size:.8rem;color:#64748b;">التاريخ</div>
-        <div style="font-weight:600;">{{ req.created_at|date:"Y-m-d" }}</div>
-      </div>
-      <div class="col-md-4">
-        <div style="font-size:.8rem;color:#64748b;">العميل</div>
-        <div style="font-weight:600;">{{ req.customer_name }}</div>
-      </div>
-      {% if req.customer_phone %}
-      <div class="col-md-4">
-        <div style="font-size:.8rem;color:#64748b;">الهاتف</div>
-        <div style="font-weight:600;">{{ req.customer_phone }}</div>
-      </div>
-      {% endif %}
-      {% if req.notes %}
-      <div class="col-12">
-        <div style="font-size:.8rem;color:#64748b;">ملاحظاتك</div>
-        <div>{{ req.notes }}</div>
-      </div>
-      {% endif %}
-      {% if req.admin_comment %}
-      <div class="col-12">
-        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:.75rem 1rem;">
-          <div style="font-size:.8rem;color:#92400e;font-weight:600;margin-bottom:.25rem;"><i class="fas fa-comment me-1"></i>تعليق المدير</div>
-          <div style="color:#78350f;">{{ req.admin_comment }}</div>
-        </div>
-      </div>
-      {% endif %}
-      {% if req.sale_invoice %}
-      <div class="col-12">
-        <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:.75rem 1rem;">
-          <div style="font-size:.85rem;color:#065f46;font-weight:600;">
-            <i class="fas fa-check-circle me-1"></i>
-            تم اعتماد الطلب — الفاتورة: {{ req.sale_invoice.invoice_number }}
-          </div>
-        </div>
-      </div>
-      {% endif %}
+
+  <div class="req-meta-grid">
+    <div class="req-meta-item">
+      <div class="req-meta-label">رقم الطلب</div>
+      <div class="req-meta-value"><code class="inv-num">{{ req.request_number }}</code></div>
+    </div>
+    <div class="req-meta-item">
+      <div class="req-meta-label">التاريخ</div>
+      <div class="req-meta-value">{{ req.created_at|date:"Y-m-d" }}</div>
+    </div>
+    <div class="req-meta-item">
+      <div class="req-meta-label">العميل</div>
+      <div class="req-meta-value">{{ req.customer_name }}</div>
+    </div>
+    {% if req.customer_phone %}
+    <div class="req-meta-item">
+      <div class="req-meta-label">الهاتف</div>
+      <div class="req-meta-value" dir="ltr" style="text-align:right;">{{ req.customer_phone }}</div>
+    </div>
+    {% endif %}
+    <div class="req-meta-item">
+      <div class="req-meta-label">الحالة</div>
+      <div class="req-meta-value"><span class="p-badge p-badge--{{ req.status }}">{{ req.get_status_display }}</span></div>
+    </div>
+    <div class="req-meta-item">
+      <div class="req-meta-label">إجمالي الطلب</div>
+      <div class="req-meta-value" dir="ltr" style="color:var(--brand-600);">{{ req.total_amount|money }}</div>
     </div>
   </div>
+
+  {% if req.notes %}
+  <div style="padding:0 1.35rem 1.1rem;">
+    <div class="req-meta-label" style="margin-bottom:.4rem;">ملاحظاتك</div>
+    <div style="background:#faf9ff;border:1px solid #f0eeff;border-radius:9px;padding:.7rem .95rem;font-size:.87rem;color:var(--text);">
+      {{ req.notes }}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if req.admin_comment %}
+  <div class="req-alert req-alert--warning">
+    <i class="fas fa-comment-dots req-alert-icon"></i>
+    <div>
+      <div class="req-alert-title">تعليق المدير</div>
+      <div class="req-alert-body">{{ req.admin_comment }}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if req.sale_invoice %}
+  <div class="req-alert req-alert--success">
+    <i class="fas fa-check-circle req-alert-icon"></i>
+    <div>
+      <div class="req-alert-title">تم اعتماد الطلب</div>
+      <div class="req-alert-body">
+        الفاتورة: <code class="inv-num">{{ req.sale_invoice.invoice_number }}</code>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
+<!-- Products panel -->
 <div class="p-panel">
-  <div class="p-panel-head"><i class="fas fa-box"></i> المنتجات</div>
-  <div class="table-responsive">
+  <div class="p-panel-head"><i class="fas fa-boxes"></i> المنتجات المطلوبة</div>
+  <div class="scroll-x">
     <table class="p-table">
       <thead>
         <tr>
           <th>المنتج</th>
-          <th class="text-end">السعر</th>
+          <th class="text-end">سعر الوحدة</th>
           <th class="text-end">الكمية</th>
           <th class="text-end">الإجمالي</th>
         </tr>
@@ -76,16 +141,17 @@
         {% for line in lines %}
         <tr>
           <td style="font-weight:600;">{{ line.item.name }}</td>
-          <td class="text-end" dir="ltr">{{ line.unit_price|money }}</td>
-          <td class="text-end">{{ line.quantity|floatformat:0 }}</td>
-          <td class="text-end fw-bold" style="color:#6366f1;" dir="ltr">{{ line.line_total|money }}</td>
+          <td class="text-end" dir="ltr" style="color:var(--text-muted);font-size:.84rem;">{{ line.unit_price|money }}</td>
+          <td class="text-end" style="font-weight:600;">{{ line.quantity|floatformat:0 }}</td>
+          <td class="text-end"><span class="line-total" dir="ltr">{{ line.line_total|money }}</span></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  <div style="padding:.85rem 1.25rem;text-align:left;border-top:1px solid #f1f5f9;">
-    <strong style="color:#6366f1;">الإجمالي: {{ req.total_amount|money }}</strong>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.35rem;background:linear-gradient(135deg,rgba(99,102,241,.05),rgba(139,92,246,.03));border-top:2px solid rgba(99,102,241,.1);">
+    <span style="font-size:.84rem;font-weight:600;color:var(--text-subtle);"><i class="fas fa-calculator me-1"></i>الإجمالي الكلي</span>
+    <span style="font-size:1.2rem;font-weight:800;color:var(--brand-600);" dir="ltr">{{ req.total_amount|money }}</span>
   </div>
 </div>
 {% endblock %}
