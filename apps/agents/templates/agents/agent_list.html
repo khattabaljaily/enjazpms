@@ -805,20 +805,25 @@
                 const isCredit = tx.entry_type === 'payment' || tx.entry_type === 'return';
                 const isDebit  = tx.entry_type === 'commission';
                 const amtColor = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
-                return `<div style="background:#fff;border:1px solid var(--border-light);border-radius:12px;padding:.7rem .9rem;">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">
-                        <span style="font-size:.72rem;color:var(--text-secondary);">${tx.entry_date||'—'}</span>
-                        <span style="font-size:.72rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;background:rgba(99,102,241,.1);color:#4f46e5;">${tx.entry_type_label||'—'}</span>
+                return `<div style="background:#fff;border:1px solid var(--border-light);border-radius:12px;overflow:hidden;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .9rem;border-bottom:1px solid var(--border-light);background:rgba(99,102,241,.04);">
+                        <div>
+                            <div style="font-size:.65rem;color:var(--text-secondary);margin-bottom:.15rem;">المستحقات</div>
+                            <div style="font-weight:800;color:#6366f1;font-size:.95rem;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance||0)))}</div>
+                        </div>
+                        <span style="font-size:.72rem;font-weight:700;padding:.25rem .6rem;border-radius:6px;background:rgba(99,102,241,.12);color:#4f46e5;">${tx.entry_type_label||'—'}</span>
                     </div>
-                    <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border-light);">
-                        <span style="font-size:.72rem;color:var(--text-secondary);">المبلغ</span>
-                        <span style="font-weight:700;color:${amtColor};">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount||0)))}</span>
+                    <div style="padding:.55rem .9rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;">
+                            <span style="font-size:.72rem;color:var(--text-secondary);">المبلغ</span>
+                            <span style="font-weight:700;color:${amtColor};">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount||0)))}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-size:.72rem;color:var(--text-secondary);">التاريخ</span>
+                            <span style="font-size:.78rem;color:var(--text-secondary);">${tx.entry_date||'—'}</span>
+                        </div>
+                        ${tx.notes && tx.notes!=='—' ? `<div style="font-size:.72rem;color:var(--text-secondary);padding-top:.3rem;border-top:1px solid var(--border-light);margin-top:.3rem;">${tx.notes}</div>` : ''}
                     </div>
-                    <div style="display:flex;justify-content:space-between;padding:.3rem 0 0;">
-                        <span style="font-size:.72rem;color:var(--text-secondary);">المستحقات</span>
-                        <span style="font-weight:700;color:#6366f1;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance||0)))}</span>
-                    </div>
-                    ${tx.notes && tx.notes!=='—' ? `<div style="font-size:.72rem;color:var(--text-secondary);padding-top:.3rem;">${tx.notes}</div>` : ''}
                 </div>`;
             }).join('');
             $cards.html(cardHtml);
