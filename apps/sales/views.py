@@ -179,7 +179,7 @@ def invoice_list(request):
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
     stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
     from apps.agents.models import Agent as _Agent
-    agents_qs = _Agent.objects.filter(tenant=tenant, is_active=True).values('id', 'name')
+    agents_qs = _Agent.objects.filter(tenant=tenant, is_active=True).values('id', 'name') if tenant.plan_allows('agents') else []
 
     context = {
         'stats': {
@@ -326,7 +326,7 @@ def invoice_create(request):
     stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
     items = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
     from apps.agents.models import Agent as _Agent
-    agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name') if tenant.plan_allows('agents') else []
 
     # default stock
     default_stock = stocks.filter(is_default=True).first() or stocks.first()
@@ -373,7 +373,7 @@ def invoice_edit(request, pk):
     stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
     items = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
     from apps.agents.models import Agent as _Agent
-    agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name') if tenant.plan_allows('agents') else []
 
     if request.method == 'POST':
         result = _process_invoice_post(request, tenant, invoice=invoice)

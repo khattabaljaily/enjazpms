@@ -97,6 +97,7 @@
                     </div>
 
                     <!-- المندوب -->
+                    {% if plan_allows_agents %}
                     <div class="col-md-4">
                         <label class="cx-label">المندوب</label>
                         <select id="agentId" name="agent_id" class="cx-input">
@@ -106,6 +107,9 @@
                             {% endfor %}
                         </select>
                     </div>
+                    {% else %}
+                    <input type="hidden" id="agentId" name="agent_id" value="">
+                    {% endif %}
 
                     <!-- المخزن -->
                     <div class="col-md-4">
