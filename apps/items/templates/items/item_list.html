@@ -90,6 +90,17 @@
   min-height: 1.1rem; margin-top: 3px; transition: opacity .15s;
 }
 [data-theme="dark"] .cx-hc-calc-hint { color: #a5b4fc; }
+
+/* ── Ledger modal: restore real table layout on mobile ─── */
+@media (max-width: 768px) {
+  .cx-ledger-dialog .cx-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .cx-ledger-dialog .cx-table { display: table !important; min-width: 640px !important; }
+  .cx-ledger-dialog .cx-table thead { display: table-header-group !important; }
+  .cx-ledger-dialog .cx-table tbody { display: table-row-group !important; flex-direction: unset !important; gap: 0 !important; }
+  .cx-ledger-dialog .cx-table tbody tr { display: table-row !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important; overflow: visible !important; }
+  .cx-ledger-dialog .cx-table tbody tr::before { display: none !important; }
+  .cx-ledger-dialog .cx-table tbody td { display: table-cell !important; padding: .5rem .7rem !important; border-bottom: 1px solid var(--border-light, #e5e7eb) !important; font-size: .8rem !important; }
+}
 </style>
 {% endblock %}
 
