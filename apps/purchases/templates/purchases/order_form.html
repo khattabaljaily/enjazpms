@@ -6,6 +6,24 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.1">
 <link rel="stylesheet" href="{% static 'css/sales_invoice_form.css' %}?v=1.1">
+<style>
+.cx-searchable-select { position: relative; }
+.cx-searchable-select-dropdown {
+  position: absolute; z-index: 1050; width: 100%;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.12);
+  max-height: 220px; overflow-y: auto;
+  top: calc(100% + 4px);
+}
+.cx-searchable-option {
+  padding: .55rem 1rem; cursor: pointer; font-size: .875rem;
+  color: var(--text-primary, #111827);
+}
+.cx-searchable-option:hover { background: var(--surface-alt, #f3f4f6); }
+.cx-searchable-no-results { padding: .75rem 1rem; font-size: .8rem; color: var(--text-muted, #9ca3af); }
+</style>
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -40,12 +58,11 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="cx-label">المورد</label>
-                            <select id="supplierId" class="cx-input">
-                                <option value="">— بدون مورد —</option>
-                                {% for s in suppliers %}
-                                <option value="{{ s.id }}" {% if invoice and invoice.supplier_id == s.id %}selected{% endif %}>{{ s.name }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="cx-searchable-select" id="supplierSelectWrap">
+                                <input type="text" id="supplierSearch" class="cx-input" placeholder="ابحث عن مورد..." autocomplete="off">
+                                <input type="hidden" id="supplierId" name="supplier_id" value="{% if invoice and invoice.supplier_id %}{{ invoice.supplier_id }}{% endif %}">
+                                <div id="supplierDropdown" class="cx-searchable-select-dropdown" style="display:none;"></div>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label class="cx-label">المخزن <span class="text-danger">*</span></label>
@@ -174,12 +191,58 @@ const ITEM_SEARCH_URL = "{% url 'items:search_api' %}";
 const FORM_ACTION = "{{ action|default:'create' }}";
 const INVOICE_ID = "{{ invoice.id|default:'' }}";
 const EXISTING_LINES = {{ existing_lines|default:'[]'|safe }};
+const SUPPLIERS_DATA = [
+    { id: '', name: '— بدون مورد —' },
+    {% for s in suppliers %}{ id: '{{ s.id }}', name: '{{ s.name|escapejs }}' },{% endfor %}
+];
 const CAP = {
     hasExpiryDates:  {{ tenant_capabilities.has_expiry_dates|yesno:"true,false" }},
     hasBatchNumbers: {{ tenant_capabilities.has_batch_numbers|yesno:"true,false" }},
     hasSerialNumbers:{{ tenant_capabilities.has_serial_numbers|yesno:"true,false" }},
 };
 let lineCounter = 0;
+
+(function () {
+    const searchInput = document.getElementById('supplierSearch');
+    const hiddenInput = document.getElementById('supplierId');
+    const dropdown = document.getElementById('supplierDropdown');
+
+    function renderOptions(list) {
+        if (!list.length) {
+            dropdown.innerHTML = '<div class="cx-searchable-no-results">لا توجد نتائج</div>';
+        } else {
+            dropdown.innerHTML = list.map(s => `<div class="cx-searchable-option" data-id="${s.id}">${s.name}</div>`).join('');
+        }
+        dropdown.querySelectorAll('.cx-searchable-option').forEach(el => {
+            el.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                hiddenInput.value = this.dataset.id;
+                searchInput.value = this.textContent;
+                dropdown.style.display = 'none';
+            });
+        });
+    }
+
+    function openDropdown() {
+        const q = searchInput.value.toLowerCase();
+        const filtered = SUPPLIERS_DATA.filter(s => s.name.toLowerCase().includes(q));
+        renderOptions(filtered);
+        dropdown.style.display = 'block';
+    }
+
+    searchInput.addEventListener('focus', function () {
+        this.value = '';
+        hiddenInput.value = '';
+        openDropdown();
+    });
+    searchInput.addEventListener('input', openDropdown);
+    searchInput.addEventListener('blur', function () {
+        setTimeout(() => { dropdown.style.display = 'none'; }, 150);
+    });
+
+    const preSelected = SUPPLIERS_DATA.find(s => String(s.id) === String(hiddenInput.value));
+    if (preSelected) searchInput.value = preSelected.name;
+})();
 
 function toggleHidden(id, hidden) {
     const el = document.getElementById(id);

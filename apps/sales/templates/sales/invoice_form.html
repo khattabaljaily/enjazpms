@@ -100,12 +100,11 @@
                     {% if plan_allows_agents %}
                     <div class="col-md-4">
                         <label class="cx-label">المندوب</label>
-                        <select id="agentId" name="agent_id" class="cx-input">
-                            <option value="">-- بدون مندوب --</option>
-                            {% for a in agents %}
-                            <option value="{{ a.id }}" {% if invoice and invoice.agent_id == a.id %}selected{% endif %}>{{ a.name }}</option>
-                            {% endfor %}
-                        </select>
+                        <div class="cx-searchable-select" id="agentSelectWrap">
+                            <input type="text" id="agentSearch" class="cx-input" placeholder="ابحث عن مندوب..." autocomplete="off">
+                            <input type="hidden" id="agentId" name="agent_id" value="{% if invoice and invoice.agent_id %}{{ invoice.agent_id }}{% endif %}">
+                            <div id="agentDropdown" class="cx-searchable-select-dropdown" style="display:none;"></div>
+                        </div>
                     </div>
                     {% else %}
                     <input type="hidden" id="agentId" name="agent_id" value="">
@@ -355,6 +354,10 @@ const CUSTOMERS_DATA = [
     { id: '', name: '— زبون عابر —' },
     {% for c in customers %}{ id: '{{ c.id }}', name: '{{ c.name|escapejs }}' },{% endfor %}
 ];
+const AGENTS_DATA = [
+    { id: '', name: '-- بدون مندوب --' },
+    {% for a in agents %}{ id: '{{ a.id }}', name: '{{ a.name|escapejs }}' },{% endfor %}
+];
 const INVOICE_ID = "{{ invoice.id|default:'' }}";
 const CAP = {
     hasExpiryDates:  {{ tenant_capabilities.has_expiry_dates|yesno:"true,false" }},
@@ -421,6 +424,50 @@ let lineCounter = 0;
     // Pre-fill if editing existing invoice
     const preSelected = CUSTOMERS_DATA.find(c => c.id == hiddenInput.value);
     if (preSelected) searchInput.value = preSelected.name;
+})();
+
+(function () {
+    const agentSearchInput = document.getElementById('agentSearch');
+    const agentHiddenInput = document.getElementById('agentId');
+    const agentDropdown = document.getElementById('agentDropdown');
+
+    if (!agentSearchInput || !agentHiddenInput || !agentDropdown) return;
+
+    function renderAgentOptions(list) {
+        if (!list.length) {
+            agentDropdown.innerHTML = '<div class="cx-searchable-no-results">لا توجد نتائج</div>';
+        } else {
+            agentDropdown.innerHTML = list.map(a => `<div class="cx-searchable-option" data-id="${a.id}">${a.name}</div>`).join('');
+        }
+        agentDropdown.querySelectorAll('.cx-searchable-option').forEach(el => {
+            el.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                agentHiddenInput.value = this.dataset.id;
+                agentSearchInput.value = this.textContent;
+                agentDropdown.style.display = 'none';
+            });
+        });
+    }
+
+    function openAgentDropdown() {
+        const q = agentSearchInput.value.toLowerCase();
+        const filtered = AGENTS_DATA.filter(a => a.name.toLowerCase().includes(q));
+        renderAgentOptions(filtered);
+        agentDropdown.style.display = 'block';
+    }
+
+    agentSearchInput.addEventListener('focus', function () {
+        this.value = '';
+        agentHiddenInput.value = '';
+        openAgentDropdown();
+    });
+    agentSearchInput.addEventListener('input', openAgentDropdown);
+    agentSearchInput.addEventListener('blur', function () {
+        setTimeout(() => { agentDropdown.style.display = 'none'; }, 150);
+    });
+
+    const preSelectedAgent = AGENTS_DATA.find(a => String(a.id) === String(agentHiddenInput.value));
+    if (preSelectedAgent) agentSearchInput.value = preSelectedAgent.name;
 })();
 
 document.addEventListener('DOMContentLoaded', function () {
