@@ -135,7 +135,7 @@ def supplier_table_api(request):
         opening = supplier.opening_balance or Decimal('0')
         sup_currency = (supplier.currency or '').strip()
         if hc_mode_table and sup_currency and current_rate:
-            hc_balance = (ledger_agg.get('hc') or Decimal('0'))
+            hc_balance = (ledger_agg.get('hc') or Decimal('0')) + opening
             local_equiv = hc_balance * current_rate
             return {
                 'current_balance': str(local_equiv.quantize(Decimal('0.01'))),
@@ -224,7 +224,7 @@ def supplier_detail_api(request, pk):
     hc_balance_val = None
     if hc_mode and sup_currency:
         current_rate = Decimal(str(tenant.exchange_rate or 1)) if tenant.exchange_rate else Decimal('1')
-        hc_bal = (ledger_agg.get('hc') or Decimal('0'))
+        hc_bal = (ledger_agg.get('hc') or Decimal('0')) + opening
         current_balance_val = (hc_bal * current_rate).quantize(Decimal('0.01'))
         hc_balance_val = str(hc_bal.quantize(Decimal('0.01')))
     else:
@@ -277,7 +277,9 @@ def supplier_transactions_api(request, pk):
 
     hc_mode = getattr(tenant, 'hard_currency_mode', False)
     hc_sym  = tenant.hard_currency if hc_mode else ''
-    hc_running = Decimal('0')
+    supplier_currency = (supplier.currency or '').strip()
+    is_hc_supplier = hc_mode and bool(supplier_currency)
+    hc_running = opening if is_hc_supplier else Decimal('0')
 
     if SupplierLedger:
         entries = SupplierLedger.objects.filter(tenant=tenant, supplier=supplier).order_by('entry_date', 'id')
@@ -306,9 +308,6 @@ def supplier_transactions_api(request, pk):
                 'hc_exchange_rate': str(e.hc_exchange_rate) if e.hc_exchange_rate is not None else None,
                 'hc_currency': e.hc_currency or hc_sym,
             })
-
-    supplier_currency = (supplier.currency or '').strip()
-    is_hc_supplier = hc_mode and bool(supplier_currency)
 
     # For HC suppliers: current balance is hc_running (in their currency), not SDG residual
     hc_current_balance = str(hc_running) if is_hc_supplier else None

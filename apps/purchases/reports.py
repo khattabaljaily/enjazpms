@@ -314,7 +314,7 @@ class PurchasesReportGenerator:
                 entry_date__lt=self.start_date,
                 hc_running_balance__isnull=False,
             ).order_by('entry_date', 'id').last()
-            opening_balance = float(pre_entry.hc_running_balance) if pre_entry else 0.0
+            opening_balance = float(pre_entry.hc_running_balance) if pre_entry else float(supplier.opening_balance or 0)
         else:
             pre_entry = SupplierLedger.objects.filter(
                 tenant=self.tenant, supplier=supplier,
