@@ -276,10 +276,8 @@ def supplier_transactions_api(request, pk):
     hc_sym  = tenant.hard_currency if hc_mode else ''
     supplier_currency = (supplier.currency or '').strip()
     is_hc_supplier = hc_mode and bool(supplier_currency)
-    hc_running = opening if is_hc_supplier else Decimal('0')
 
     data = []
-    running = opening
     if opening != Decimal('0'):
         entry_date = supplier.created_at.date().strftime('%Y-%m-%d') if supplier.created_at else ''
         data.append({
@@ -291,14 +289,16 @@ def supplier_transactions_api(request, pk):
             'notes': 'مديونية افتتاحية للمورد',
             'reference_type': 'supplier_opening',
             'reference_id': supplier.id,
+            'is_edited': False,
             'hc_amount': str(opening) if is_hc_supplier else None,
             'hc_running_balance': str(opening) if is_hc_supplier else None,
             'hc_exchange_rate': None,
             'hc_currency': hc_sym if is_hc_supplier else '',
         })
+    last_hc_balance = opening if is_hc_supplier else None
 
     if SupplierLedger:
-        entries = SupplierLedger.objects.filter(tenant=tenant, supplier=supplier).order_by('entry_date', 'id')
+        entries = list(SupplierLedger.objects.filter(tenant=tenant, supplier=supplier).order_by('entry_date', 'id'))
         labels = {
             'invoice': 'فاتورة/أمر شراء آجل',
             'payment': 'سداد مورد',
@@ -306,27 +306,45 @@ def supplier_transactions_api(request, pk):
             'adjustment': 'تعديل',
             'opening': 'مديونية افتتاحية',
         }
+
+        # Collapse edit patterns: find groups that have reversals, keep only the latest non-reversal
+        max_reversal_id = {}
         for e in entries:
-            running += (e.amount or Decimal('0'))
-            if hc_mode and e.hc_amount is not None:
-                hc_running += e.hc_amount
+            if e.is_reversal and e.reference_type and e.reference_id:
+                key = (e.reference_type, e.reference_id)
+                max_reversal_id[key] = max(max_reversal_id.get(key, 0), e.id)
+
+        for e in entries:
+            if e.is_reversal:
+                continue  # always skip reversal entries from display
+            key = (e.reference_type, e.reference_id) if (e.reference_type and e.reference_id) else None
+            rev_id = max_reversal_id.get(key, 0) if key else 0
+            if rev_id > 0 and e.id < rev_id:
+                continue  # this entry was superseded by an edit — skip it
+            is_edited = rev_id > 0
+            # use stored running_balance (sum of ledger entries) + opening for the true balance
+            true_balance = (e.running_balance or Decimal('0')) + opening
+            hc_true_balance = None
+            if is_hc_supplier and e.hc_running_balance is not None:
+                hc_true_balance = e.hc_running_balance
+                last_hc_balance = hc_true_balance
             data.append({
                 'entry_date': e.entry_date.strftime('%Y-%m-%d') if e.entry_date else '',
                 'entry_type': e.entry_type,
                 'entry_type_label': labels.get(e.entry_type, e.entry_type),
-                'amount': str(e.amount),
-                'running_balance': str(running),
+                'amount': str(abs(e.amount)),
+                'running_balance': str(true_balance),
                 'notes': e.notes or '—',
                 'reference_type': e.reference_type or '—',
                 'reference_id': e.reference_id,
-                'hc_amount': str(e.hc_amount) if e.hc_amount is not None else None,
-                'hc_running_balance': str(e.hc_running_balance) if e.hc_running_balance is not None else None,
+                'is_edited': is_edited,
+                'hc_amount': str(abs(e.hc_amount)) if e.hc_amount is not None else None,
+                'hc_running_balance': str(hc_true_balance) if hc_true_balance is not None else None,
                 'hc_exchange_rate': str(e.hc_exchange_rate) if e.hc_exchange_rate is not None else None,
                 'hc_currency': e.hc_currency or hc_sym,
             })
 
-    # For HC suppliers: current balance is hc_running (in their currency), not SDG residual
-    hc_current_balance = str(hc_running) if is_hc_supplier else None
+    hc_current_balance = str(last_hc_balance) if is_hc_supplier and last_hc_balance is not None else None
 
     data.reverse()
     return JsonResponse({

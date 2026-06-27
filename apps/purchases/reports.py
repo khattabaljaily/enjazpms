@@ -322,12 +322,32 @@ class PurchasesReportGenerator:
             ).order_by('entry_date', 'id').last()
             opening_balance = float(pre_entry.running_balance) if pre_entry else float(supplier.opening_balance or 0)
 
-        entries = SupplierLedger.objects.filter(
+        all_entries = list(SupplierLedger.objects.filter(
             tenant=self.tenant,
             supplier=supplier,
             entry_date__gte=self.start_date,
             entry_date__lte=self.end_date,
-        ).order_by('entry_date', 'id')
+        ).order_by('entry_date', 'id'))
+
+        # Collapse edit patterns within the date range
+        max_reversal_id = {}
+        for e in all_entries:
+            if e.is_reversal and e.reference_type and e.reference_id:
+                key = (e.reference_type, e.reference_id)
+                max_reversal_id[key] = max(max_reversal_id.get(key, 0), e.id)
+
+        entries = []
+        for e in all_entries:
+            if e.is_reversal:
+                continue
+            key = (e.reference_type, e.reference_id) if (e.reference_type and e.reference_id) else None
+            rev_id = max_reversal_id.get(key, 0) if key else 0
+            if rev_id > 0 and e.id < rev_id:
+                continue
+            e._is_edited = rev_id > 0
+            entries.append(e)
+
+        supplier_opening = float(supplier.opening_balance or 0)
 
         data = [{
             'entry_date': self.start_date,
@@ -336,6 +356,7 @@ class PurchasesReportGenerator:
             'amount': format_number(opening_balance, 2),
             'running_balance': format_number(opening_balance, 2),
             'notes': 'رصيد أول المدة',
+            'is_edited': False,
         }]
         for e in entries:
             if is_hc_supplier and e.hc_amount is not None:
@@ -343,25 +364,30 @@ class PurchasesReportGenerator:
                 bal = float(e.hc_running_balance) if e.hc_running_balance is not None else None
             else:
                 amt = float(e.amount)
-                bal = float(e.running_balance)
+                bal = float(e.running_balance) + supplier_opening
             data.append({
                 'entry_date': e.entry_date,
                 'entry_type': e.get_entry_type_display(),
                 'entry_type_key': e.entry_type,
-                'amount': format_number(amt, 2),
+                'amount': format_number(abs(amt), 2),
                 'running_balance': format_number(bal, 2) if bal is not None else '—',
                 'notes': e.notes,
+                'is_edited': getattr(e, '_is_edited', False),
             })
 
-        if is_hc_supplier:
-            total_debit  = sum(float(e.hc_amount) for e in entries if e.hc_amount and float(e.hc_amount) > 0)
-            total_credit = abs(sum(float(e.hc_amount) for e in entries if e.hc_amount and float(e.hc_amount) < 0))
-            last = entries.filter(hc_running_balance__isnull=False).order_by('entry_date', 'id').last()
-            closing_balance = float(last.hc_running_balance) if last else opening_balance
+        if entries:
+            last = entries[-1]
+            if is_hc_supplier and last.hc_running_balance is not None:
+                total_debit  = sum(float(e.hc_amount) for e in entries if e.hc_amount and float(e.hc_amount) > 0)
+                total_credit = abs(sum(float(e.hc_amount) for e in entries if e.hc_amount and float(e.hc_amount) < 0))
+                closing_balance = float(last.hc_running_balance)
+            else:
+                total_debit  = sum(float(e.amount) for e in entries if float(e.amount) > 0)
+                total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
+                closing_balance = float(last.running_balance) + supplier_opening
         else:
-            total_debit  = sum(float(e.amount) for e in entries if float(e.amount) > 0)
-            total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
-            closing_balance = float(entries.last().running_balance) if entries.exists() else opening_balance
+            total_debit = total_credit = 0.0
+            closing_balance = opening_balance
 
         return {
             'supplier': supplier,

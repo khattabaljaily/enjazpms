@@ -256,7 +256,6 @@ def customer_transactions_api(request, pk):
     }
 
     data = []
-    running = opening
     if opening != Decimal('0'):
         entry_date = customer.created_at.date().strftime('%Y-%m-%d') if customer.created_at else ''
         data.append({
@@ -268,25 +267,42 @@ def customer_transactions_api(request, pk):
             'notes': 'مديونية افتتاحية للعميل',
             'reference_type': 'customer_opening',
             'reference_id': customer.id,
+            'is_edited': False,
         })
 
-    entries = (
+    entries = list(
         CustomerLedger.objects
         .for_tenant(tenant)
         .filter(customer=customer)
         .order_by('entry_date', 'id')
     )
+
+    # Collapse edit patterns: find groups that have reversals, keep only the latest non-reversal
+    max_reversal_id = {}
     for e in entries:
-        running += (e.amount or Decimal('0'))
+        if e.is_reversal and e.reference_type and e.reference_id:
+            key = (e.reference_type, e.reference_id)
+            max_reversal_id[key] = max(max_reversal_id.get(key, 0), e.id)
+
+    for e in entries:
+        if e.is_reversal:
+            continue
+        key = (e.reference_type, e.reference_id) if (e.reference_type and e.reference_id) else None
+        rev_id = max_reversal_id.get(key, 0) if key else 0
+        if rev_id > 0 and e.id < rev_id:
+            continue  # superseded by edit
+        is_edited = rev_id > 0
+        true_balance = (e.running_balance or Decimal('0')) + opening
         data.append({
             'entry_date': e.entry_date.strftime('%Y-%m-%d'),
             'entry_type': e.entry_type,
             'entry_type_label': type_labels.get(e.entry_type, e.entry_type),
-            'amount': str(e.amount),
-            'running_balance': str(running),
+            'amount': str(abs(e.amount)),
+            'running_balance': str(true_balance),
             'notes': e.notes or '—',
             'reference_type': e.reference_type or '',
             'reference_id': e.reference_id,
+            'is_edited': is_edited,
         })
 
     data.reverse()

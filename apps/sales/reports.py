@@ -313,12 +313,32 @@ class SalesReportGenerator:
         else:
             opening_balance = float(customer.opening_balance or 0)
 
-        entries = CustomerLedger.objects.filter(
+        all_entries = list(CustomerLedger.objects.filter(
             tenant=self.tenant,
             customer=customer,
             entry_date__gte=self.start_date,
             entry_date__lte=self.end_date,
-        ).order_by('entry_date', 'id')
+        ).order_by('entry_date', 'id'))
+
+        # Collapse edit patterns within the date range
+        max_reversal_id = {}
+        for e in all_entries:
+            if e.is_reversal and e.reference_type and e.reference_id:
+                key = (e.reference_type, e.reference_id)
+                max_reversal_id[key] = max(max_reversal_id.get(key, 0), e.id)
+
+        entries = []
+        for e in all_entries:
+            if e.is_reversal:
+                continue
+            key = (e.reference_type, e.reference_id) if (e.reference_type and e.reference_id) else None
+            rev_id = max_reversal_id.get(key, 0) if key else 0
+            if rev_id > 0 and e.id < rev_id:
+                continue
+            e._is_edited = rev_id > 0
+            entries.append(e)
+
+        customer_opening = float(customer.opening_balance or 0)
 
         data = [{
             'entry_date': self.start_date,
@@ -327,20 +347,28 @@ class SalesReportGenerator:
             'amount': format_number(opening_balance, 2),
             'running_balance': format_number(opening_balance, 2),
             'notes': 'رصيد أول المدة',
+            'is_edited': False,
         }]
         for e in entries:
+            bal = float(e.running_balance) + customer_opening
             data.append({
                 'entry_date': e.entry_date,
                 'entry_type': e.get_entry_type_display(),
                 'entry_type_key': e.entry_type,
-                'amount': format_number(float(e.amount), 2),
-                'running_balance': format_number(float(e.running_balance), 2),
+                'amount': format_number(abs(float(e.amount)), 2),
+                'running_balance': format_number(bal, 2),
                 'notes': e.notes,
+                'is_edited': getattr(e, '_is_edited', False),
             })
 
-        total_debit = sum(float(e.amount) for e in entries if float(e.amount) > 0)
-        total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
-        closing_balance = float(entries.last().running_balance) if entries.exists() else opening_balance
+        if entries:
+            last = entries[-1]
+            total_debit = sum(float(e.amount) for e in entries if float(e.amount) > 0)
+            total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
+            closing_balance = float(last.running_balance) + customer_opening
+        else:
+            total_debit = total_credit = 0.0
+            closing_balance = opening_balance
 
         return {
             'customer': customer,

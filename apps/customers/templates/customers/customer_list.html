@@ -828,20 +828,28 @@
         });
     }
 
+    function custLedgerStyle(tx) {
+        const t = tx.entry_type;
+        if (t === 'payment')    return { amtColor:'#11998e', badgeBg:'rgba(17,153,142,.13)', badgeColor:'#0d7a72', rowBg:'rgba(16,185,129,.07)' };
+        if (t === 'return')     return { amtColor:'#0891b2', badgeBg:'rgba(8,145,178,.13)',  badgeColor:'#0369a1', rowBg:'rgba(6,182,212,.07)'  };
+        if (t === 'invoice')    return { amtColor:'#dc2626', badgeBg:'rgba(239,68,68,.11)',  badgeColor:'#dc2626', rowBg:'rgba(239,68,68,.05)'  };
+        if (t === 'opening')    return { amtColor:'#6366f1', badgeBg:'rgba(99,102,241,.13)', badgeColor:'#4f46e5', rowBg:'rgba(99,102,241,.06)' };
+        if (t === 'adjustment') return { amtColor:'#d97706', badgeBg:'rgba(251,191,36,.18)', badgeColor:'#b45309', rowBg:'rgba(251,191,36,.06)' };
+        return { amtColor:'inherit', badgeBg:'rgba(107,114,128,.1)', badgeColor:'#6b7280', rowBg:'' };
+    }
+
     function buildCustomerLedgerCard(tx) {
-        const isCredit = tx.entry_type === 'payment' || tx.entry_type === 'return';
-        const isDebit  = tx.entry_type === 'invoice';
-        const amtColor   = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
-        const badgeBg    = isCredit ? 'rgba(17,153,142,.12)' : isDebit ? 'rgba(239,68,68,.1)' : 'rgba(107,114,128,.1)';
-        const badgeColor = isCredit ? '#0d7a72' : isDebit ? '#dc2626' : '#6b7280';
+        const s = custLedgerStyle(tx);
+        const amtColor = s.amtColor, badgeBg = s.badgeBg, badgeColor = s.badgeColor;
         const amtFmt  = EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount || 0)));
         const balFmt  = EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance || 0)));
+        const editedBadge = tx.is_edited ? `<span style="font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:5px;background:rgba(251,191,36,.2);color:#b45309;margin-right:.35rem;">تم التعديل</span>` : '';
         const notesLine = tx.notes && tx.notes !== '—'
             ? `<div style="font-size:.72rem;color:var(--text-secondary);padding-top:.3rem;">${tx.notes}</div>` : '';
         return `<div style="background:var(--bg-card,#fff);border:1px solid var(--border-light);border-radius:12px;padding:.7rem .9rem;box-shadow:0 1px 4px rgba(0,0,0,.05);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem;">
                 <span style="font-size:.72rem;color:var(--text-secondary);">${tx.entry_date || '—'}</span>
-                <span style="font-size:.72rem;font-weight:700;padding:.2rem .55rem;border-radius:6px;background:${badgeBg};color:${badgeColor};">${tx.entry_type_label || tx.entry_type || '—'}</span>
+                <span style="display:flex;align-items:center;gap:.3rem;">${editedBadge}<span style="font-size:.72rem;font-weight:700;padding:.2rem .55rem;border-radius:6px;background:${badgeBg};color:${badgeColor};">${tx.entry_type_label || tx.entry_type || '—'}</span></span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border-light);">
                 <span style="font-size:.72rem;color:var(--text-secondary);">المبلغ</span>
@@ -872,15 +880,14 @@
                 }
 
                 const rows = resp.data.map(function(tx) {
-                    const isCredit = tx.entry_type === 'payment' || tx.entry_type === 'return';
-                    const isDebit  = tx.entry_type === 'invoice';
-                    const rowBg    = isCredit ? 'rgba(16,185,129,.08)' : isDebit ? 'rgba(239,68,68,.06)' : '';
-                    const amtColor = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
-                    return `<tr style="background:${rowBg}">
+                    const s = custLedgerStyle(tx);
+                    const editedBadge = tx.is_edited ? `<span style="font-size:.65rem;font-weight:700;padding:.15rem .4rem;border-radius:5px;background:rgba(251,191,36,.2);color:#b45309;margin-left:.3rem;">تم التعديل</span>` : '';
+                    const typeCell = `<span style="font-size:.75rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;background:${s.badgeBg};color:${s.badgeColor};">${tx.entry_type_label || tx.entry_type || '—'}</span>${editedBadge}`;
+                    return `<tr style="background:${s.rowBg}">
                         <td>${tx.entry_date || '—'}</td>
-                        <td>${tx.entry_type_label || tx.entry_type || '—'}</td>
-                        <td style="color:${amtColor};font-weight:700;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount || 0)))}</td>
-                        <td>${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance || 0)))}</td>
+                        <td>${typeCell}</td>
+                        <td style="color:${s.amtColor};font-weight:700;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount || 0)))}</td>
+                        <td style="color:#6366f1;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance || 0)))}</td>
                         <td>${tx.notes || '—'}</td>
                     </tr>`;
                 }).join('');
