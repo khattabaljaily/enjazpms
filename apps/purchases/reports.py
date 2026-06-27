@@ -445,6 +445,7 @@ class PurchasesReportGenerator:
 
         METHOD_MAP = {
             'supplier_payment_cash': ('نقداً', 'cash'),
+            'supplier_payment_hc_cash': ('نقداً', 'cash'),
             'supplier_payment_bank': ('تحويل بنكي', 'bank'),
             'purchase_invoice':      ('نقداً', 'cash'),
         }

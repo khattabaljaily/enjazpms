@@ -343,7 +343,11 @@
             {
                 data: 'amount',
                 className: 'text-end',
-                render: v => EnjazIMS.formatMoney(Math.abs(v || 0))
+                render: (v, type, row) => {
+                    const amount = Math.abs(parseFloat(v || 0));
+                    const currency = row.currency || '';
+                    return `${EnjazIMS.formatMoney(amount)}${currency ? ` ${currency}` : ''}`;
+                }
             },
             { data: 'payment_method' },
             { data: 'notes' },
@@ -421,32 +425,27 @@
     function adaptFormForSupplier(s) {
         const isHC = s && s.currency;
         const cur = isHC ? s.currency : '';
-        // Amount label
-        if (paymentModalAmountLabel) paymentModalAmountLabel.innerHTML = isHC
-            ? `المبلغ (${cur}) <span class="text-danger">*</span>`
-            : 'المبلغ <span class="text-danger">*</span>';
-        // Balance label
+        // Reset amount label (treasury selection will refine it for HC suppliers)
+        if (paymentModalAmountLabel) paymentModalAmountLabel.innerHTML = 'المبلغ <span class="text-danger">*</span>';
         if (paymentModalBalanceLabel) paymentModalBalanceLabel.textContent = isHC ? `المديونية (${cur})` : 'المديونية';
         {% if hc_mode %}
-        // Show exchange rate + preview only for HC suppliers
+        // Hide rate/preview until treasury is chosen
         const rateRow = document.getElementById('paymentModalRateRow');
         const previewRow = document.getElementById('paymentModalHcPreviewRow');
-        if (rateRow) rateRow.style.display = isHC ? '' : 'none';
-        if (previewRow) previewRow.style.display = isHC ? '' : 'none';
-        if (!isHC && document.getElementById('paymentModalHcPreview')) {
-            document.getElementById('paymentModalHcPreview').textContent = '—';
-        }
+        if (rateRow) rateRow.style.display = 'none';
+        if (previewRow) previewRow.style.display = 'none';
+        const hcPrev = document.getElementById('paymentModalHcPreview');
+        if (hcPrev) hcPrev.textContent = '—';
         {% endif %}
-        // Filter treasury options: HC suppliers → show only HC treasuries; local → show only local
         const treasuryLabel = document.getElementById('paymentModalTreasuryLabel');
-        if (treasuryLabel) treasuryLabel.innerHTML = isHC
-            ? `خزينة ${cur} <span class="text-danger">*</span>`
-            : 'الخزينة <span class="text-danger">*</span>';
+        if (treasuryLabel) treasuryLabel.innerHTML = 'الخزينة <span class="text-danger">*</span>';
+        // HC suppliers: show all treasuries (local + HC). Local suppliers: hide HC options.
         Array.from(paymentModalTreasury.options).forEach(opt => {
             if (!opt.value) return;
-            opt.hidden = isHC ? opt.dataset.hc !== '1' : opt.dataset.hc === '1';
+            opt.hidden = !isHC && opt.dataset.hc === '1';
         });
         paymentModalTreasury.value = '';
+        paymentModalAmount.value = '';
     }
 
     (function() {
@@ -572,20 +571,56 @@
     const paymentModalRate = document.getElementById('paymentModalRate');
     const paymentModalHcPreview = document.getElementById('paymentModalHcPreview');
 
+    function selectedTreasuryIsHC() {
+        const opt = paymentModalTreasury.options[paymentModalTreasury.selectedIndex];
+        return opt && opt.value && opt.dataset.hc === '1';
+    }
+
+    function onTreasuryTypeChange() {
+        const isHCSupplier = !!(selectedPaymentSupplier && selectedPaymentSupplier.currency);
+        const cur = isHCSupplier ? selectedPaymentSupplier.currency : '';
+        const rateRow = document.getElementById('paymentModalRateRow');
+        const previewRow = document.getElementById('paymentModalHcPreviewRow');
+        const hcPreviewLabel = document.getElementById('paymentModalHcPreviewLabel');
+        const isHCTreasury = selectedTreasuryIsHC();
+
+        if (isHCSupplier && paymentModalTreasury.value) {
+            if (isHCTreasury) {
+                // HC supplier + HC treasury → amount in HC currency, no rate needed
+                if (paymentModalAmountLabel) paymentModalAmountLabel.innerHTML =
+                    `المبلغ (${cur}) <span class="text-danger">*</span>`;
+                if (rateRow) rateRow.style.display = 'none';
+                if (previewRow) previewRow.style.display = 'none';
+            } else {
+                // HC supplier + local treasury → amount in LC, rate required, show HC equivalent
+                if (paymentModalAmountLabel) paymentModalAmountLabel.innerHTML =
+                    'المبلغ (ج.س) <span class="text-danger">*</span>';
+                if (rateRow) rateRow.style.display = '';
+                if (previewRow) previewRow.style.display = '';
+                if (hcPreviewLabel) hcPreviewLabel.textContent = `المعادل بـ ${cur}`;
+            }
+        }
+        paymentModalAmount.value = '';
+        if (paymentModalHcPreview) paymentModalHcPreview.textContent = '—';
+    }
+
+    paymentModalTreasury.addEventListener('change', onTreasuryTypeChange);
+
     function updateHcPreview() {
         const amount = parseFloat(paymentModalAmount?.value) || 0;
         const rate = parseFloat(paymentModalRate?.value) || 0;
         const isHCSupplier = !!(selectedPaymentSupplier && selectedPaymentSupplier.currency);
-        if (amount > 0 && rate > 0) {
-            if (isHCSupplier) {
-                // HC supplier: amount is in HC, show local equivalent
-                const local = (amount * rate).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                paymentModalHcPreview.textContent = local + ' ج.س';
-            } else {
-                // Local supplier: amount is in local, show HC equivalent
-                const hc = (amount / rate).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                paymentModalHcPreview.textContent = hc + ' ' + HC_CUR;
-            }
+        const isHCTreasury = selectedTreasuryIsHC();
+        if (!paymentModalHcPreview) return;
+
+        if (isHCSupplier && !isHCTreasury && amount > 0 && rate > 0) {
+            // HC supplier + local treasury: show HC equivalent of LC amount
+            const hc = (amount / rate).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            paymentModalHcPreview.textContent = hc + ' ' + (selectedPaymentSupplier.currency || HC_CUR);
+        } else if (!isHCSupplier && amount > 0 && rate > 0) {
+            // Local supplier in HC mode: show HC equivalent
+            const hc = (amount / rate).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            paymentModalHcPreview.textContent = hc + ' ' + HC_CUR;
         } else {
             paymentModalHcPreview.textContent = '—';
         }
@@ -594,6 +629,7 @@
     paymentModalRate?.addEventListener('input', updateHcPreview);
     {% else %}
     const HC_MODE = false;
+    function selectedTreasuryIsHC() { return false; }
     {% endif %}
 
     function savePayment() {
@@ -607,16 +643,32 @@
         const exchangeRate = HC_MODE ? (parseFloat(document.getElementById('paymentModalRate')?.value) || null) : null;
 
         const isHCSupplier = !!(selectedPaymentSupplier && selectedPaymentSupplier.currency);
+        const isHCTreasury = selectedTreasuryIsHC();
+        const payInHC = isHCSupplier && isHCTreasury;
         if (!supplierId) return EnjazIMS.toast('اختر المورد', 'error');
         if (!paymentDate) return EnjazIMS.toast('اختر التاريخ', 'error');
         if (!amount || amount <= 0) return EnjazIMS.toast('أدخل مبلغاً صحيحاً', 'error');
-        if (isHCSupplier && (!exchangeRate || exchangeRate <= 0)) return EnjazIMS.toast('أدخل سعر الصرف', 'error');
+        // Rate required only when HC supplier paying from local treasury
+        if (isHCSupplier && !isHCTreasury && HC_MODE && (!exchangeRate || exchangeRate <= 0)) {
+            return EnjazIMS.toast('أدخل سعر الصرف لحساب المعادل بالعملة الصعبة', 'error');
+        }
         // Balance check
         if (selectedPaymentSupplier) {
-            const bal = isHCSupplier ? (selectedPaymentSupplier.hcBalance || 0) : (selectedPaymentSupplier.balance || 0);
-            const cur = isHCSupplier ? (' ' + selectedPaymentSupplier.currency) : ' ج.س';
-            if (amount > bal + 0.005) {
-                return EnjazIMS.toast(`المبلغ (${amount.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}${cur}) يتجاوز المديونية (${bal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}${cur})`, 'error');
+            if (isHCSupplier) {
+                const hcBal = selectedPaymentSupplier.hcBalance || 0;
+                const cur = ' ' + selectedPaymentSupplier.currency;
+                // Convert entered amount to HC for comparison
+                const hcEquiv = payInHC ? amount : (exchangeRate > 0 ? amount / exchangeRate : amount);
+                if (hcEquiv > hcBal + 0.005) {
+                    const fmt = hcEquiv.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+                    const balFmt = hcBal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+                    return EnjazIMS.toast(`المبلغ (${fmt}${cur}) يتجاوز المديونية (${balFmt}${cur})`, 'error');
+                }
+            } else {
+                const bal = selectedPaymentSupplier.balance || 0;
+                if (amount > bal + 0.005) {
+                    return EnjazIMS.toast(`المبلغ يتجاوز المديونية (${EnjazIMS.formatMoney(bal)})`, 'error');
+                }
             }
         }
 
@@ -636,7 +688,8 @@
                 treasury_id: method === 'cash' ? parseInt(treasuryId, 10) : null,
                 reference,
                 notes,
-                ...(HC_MODE && exchangeRate ? { exchange_rate: exchangeRate } : {}),
+                pay_in_hc: payInHC,
+                ...(HC_MODE && exchangeRate && !payInHC ? { exchange_rate: exchangeRate } : {}),
             }),
         })
         .then(data => {
@@ -679,7 +732,8 @@
                 paymentDetailsFields.id.textContent = payment.id;
                 paymentDetailsFields.date.textContent = payment.entry_date;
                 paymentDetailsFields.supplier.textContent = payment.supplier;
-                paymentDetailsFields.amount.textContent = EnjazIMS.formatMoney(Math.abs(parseFloat(payment.amount) || 0));
+                const paymentCurrency = payment.currency || '';
+                paymentDetailsFields.amount.textContent = `${EnjazIMS.formatMoney(Math.abs(parseFloat(payment.amount) || 0))}${paymentCurrency ? ` ${paymentCurrency}` : ''}`;
                 paymentDetailsFields.method.textContent = payment.payment_method;
                 paymentDetailsFields.treasury.textContent = payment.cash_treasury || '—';
                 paymentDetailsFields.notes.textContent = payment.notes;

@@ -927,14 +927,12 @@
                 const HC_ID_REF = {{ hc_treasury.id }};
                 fetch(`/treasury/api/${HC_ID_REF}/detail/`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(r => r.json()).then(d => {
-                        if (d.current_balance !== undefined) {
-                            const rate2 = parseFloat('{{ current_tenant.exchange_rate|floatformat:2 }}') || 1;
-                            const bal = parseFloat(d.current_balance) || 0;
-                            const balHcEl = document.getElementById('hcBalanceHc');
-                            const locEl = document.getElementById('hcBalanceLocal');
-                            if (balHcEl) balHcEl.textContent = EnjazIMS.formatMoney(bal);
-                            if (locEl) locEl.textContent = EnjazIMS.formatMoney(bal * rate2);
-                        }
+                        const bal = parseFloat((d.data || {}).current_balance) || 0;
+                        const rate2 = parseFloat('{{ current_tenant.exchange_rate|floatformat:2 }}') || 1;
+                        const balHcEl = document.getElementById('hcBalanceHc');
+                        const locEl = document.getElementById('hcBalanceLocal');
+                        if (balHcEl) balHcEl.textContent = EnjazIMS.formatMoney(bal);
+                        if (locEl) locEl.textContent = EnjazIMS.formatMoney(bal * rate2);
                     }).catch(() => {});
                 {% endif %}
             } else {

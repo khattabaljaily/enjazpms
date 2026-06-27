@@ -137,7 +137,7 @@ def _reverse_payments(tenant, invoice):
 def _apply_supplier_ledger(tenant, supplier, amount, entry_type, reference_type, reference_id, date, notes='',
                            hc_amount=None, hc_currency='', hc_exchange_rate=None):
     if not supplier:
-        return
+        return None
 
     from django.db.models import Sum
 
@@ -158,7 +158,7 @@ def _apply_supplier_ledger(tenant, supplier, amount, entry_type, reference_type,
             hc_prev += (supplier.opening_balance or Decimal('0'))
         hc_run = hc_prev + hc_amount
 
-    SupplierLedger.objects.create(
+    return SupplierLedger.objects.create(
         tenant=tenant,
         supplier=supplier,
         entry_type=entry_type,

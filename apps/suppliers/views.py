@@ -357,7 +357,7 @@ def supplier_payments(request):
             output_field=DecimalField(max_digits=14, decimal_places=2),
         ),
         cash=Coalesce(
-            Sum('amount', filter=Q(reference_type='supplier_payment_cash'), output_field=DecimalField(max_digits=14, decimal_places=2)),
+            Sum('amount', filter=Q(reference_type__in=['supplier_payment_cash', 'supplier_payment_hc_cash']), output_field=DecimalField(max_digits=14, decimal_places=2)),
             Value(0, output_field=DecimalField(max_digits=14, decimal_places=2)),
             output_field=DecimalField(max_digits=14, decimal_places=2),
         ),
@@ -409,7 +409,10 @@ def supplier_payments_table_api(request):
     if supplier_filter:
         qs = qs.filter(supplier_id=supplier_filter)
     if method_filter:
-        qs = qs.filter(reference_type=f'supplier_payment_{method_filter}')
+        if method_filter == 'cash':
+            qs = qs.filter(reference_type__in=['supplier_payment_cash', 'supplier_payment_hc_cash'])
+        else:
+            qs = qs.filter(reference_type=f'supplier_payment_{method_filter}')
 
     if search_value:
         qs = qs.filter(
@@ -445,14 +448,18 @@ def supplier_payments_table_api(request):
     page_qs = qs[start: start + length]
     data = []
     for entry in page_qs:
-        method_label = 'نقداً' if entry.reference_type == 'supplier_payment_cash' else 'بنكي'
+        payment_currency = entry.hc_currency or (entry.supplier.currency or '')
+        display_amount = entry.hc_amount if entry.hc_amount is not None and payment_currency else entry.amount
+        display_amount = abs(display_amount) if display_amount is not None else None
+        method_label = 'نقداً' if entry.reference_type in ('supplier_payment_cash', 'supplier_payment_hc_cash') else 'بنكي'
         if entry.is_canceled:
             method_label += ' — ملغاة'
         data.append({
             'id': entry.id,
             'entry_date': entry.entry_date.strftime('%Y-%m-%d'),
             'supplier': entry.supplier.name,
-            'amount': str(entry.amount),
+            'amount': str(display_amount),
+            'currency': payment_currency,
             'payment_method': method_label,
             'notes': entry.notes or '—',
             'entry_type': entry.entry_type,
@@ -485,20 +492,24 @@ def supplier_payment_detail_api(request, pk):
         reference_id=payment.id,
     ).first()
     cash_treasury = None
-    if payment.reference_type == 'supplier_payment_cash':
+    if payment.reference_type in ('supplier_payment_cash', 'supplier_payment_hc_cash'):
         treasury_movement = TreasuryMovement.objects.for_tenant(tenant).filter(
-            reference_type='supplier_payment_cash',
+            reference_type=payment.reference_type,
             reference_id=payment.id,
         ).select_related('treasury').first()
         if treasury_movement:
             cash_treasury = treasury_movement.treasury.name
 
+    payment_currency = payment.hc_currency or (payment.supplier.currency or '')
+    display_amount = payment.hc_amount if payment.hc_amount is not None and payment_currency else payment.amount
+    display_amount = abs(display_amount) if display_amount is not None else None
     response_data = {
         'id': payment.id,
         'entry_date': payment.entry_date.strftime('%Y-%m-%d'),
         'supplier': payment.supplier.name,
-        'amount': str(payment.amount),
-        'payment_method': 'نقداً' if payment.reference_type == 'supplier_payment_cash' else 'بنكي',
+        'amount': str(display_amount),
+        'currency': payment_currency,
+        'payment_method': 'نقداً' if payment.reference_type in ('supplier_payment_cash', 'supplier_payment_hc_cash') else 'بنكي',
         'notes': payment.notes or '—',
         'is_canceled': bool(cancellation),
         'cancellation_note': cancellation.notes if cancellation else '',
@@ -529,6 +540,7 @@ def supplier_payment_create_api(request):
         reference = str(body.get('reference', '') or '').strip()
         notes = str(body.get('notes', '') or '').strip()
         exchange_rate_input = body.get('exchange_rate')
+        pay_in_hc = bool(body.get('pay_in_hc', False))
     except (TypeError, ValueError, json.JSONDecodeError) as e:
         return _json_error(f'بيانات الدفعة غير صالحة: {e}')
 
@@ -536,7 +548,6 @@ def supplier_payment_create_api(request):
         return _json_error('المبلغ يجب أن يكون أكبر من الصفر')
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=supplier_id)
-    reference_type = 'supplier_payment_bank' if method == 'bank' else 'supplier_payment_cash'
     note_text = notes
     if reference:
         note_text = f"{note_text} | مرجع: {reference}" if note_text else f"مرجع: {reference}"
@@ -547,22 +558,44 @@ def supplier_payment_create_api(request):
     supplier_currency = (supplier.currency or '').strip()
     is_hc_supplier = hc_mode and bool(supplier_currency)
 
-    # amount = HC amount for HC suppliers, local amount for local suppliers
+    # Determine reference type based on payment path
+    if method == 'bank':
+        reference_type = 'supplier_payment_bank'
+    elif is_hc_supplier and pay_in_hc:
+        reference_type = 'supplier_payment_hc_cash'
+    else:
+        reference_type = 'supplier_payment_cash'
+
     hc_pay_amount = None
     hc_pay_currency = ''
     hc_pay_rate = None
-    local_amount = amount  # amount to debit from treasury (always local)
+    local_amount = amount
 
     if is_hc_supplier:
-        try:
-            rate = Decimal(str(exchange_rate_input)) if exchange_rate_input else Decimal(str(tenant.exchange_rate or 1))
-            if rate > 0:
-                local_amount = (amount * rate).quantize(Decimal('0.01'))
+        if pay_in_hc:
+            # User entered HC amount and will pay from HC treasury
+            try:
+                rate = Decimal(str(exchange_rate_input)) if exchange_rate_input else Decimal(str(tenant.exchange_rate or 1))
                 hc_pay_amount = -amount
                 hc_pay_currency = supplier_currency
+                if rate > 0:
+                    hc_pay_rate = rate
+                    local_amount = (amount * rate).quantize(Decimal('0.01'))
+            except Exception:
+                hc_pay_amount = -amount
+                hc_pay_currency = supplier_currency
+        else:
+            # User entered LOCAL amount and will pay from local treasury; rate required
+            try:
+                rate = Decimal(str(exchange_rate_input)) if exchange_rate_input else Decimal(str(tenant.exchange_rate or 1))
+                if rate <= 0:
+                    return _json_error('سعر الصرف غير صالح')
+                hc_pay_amount = -(amount / rate).quantize(Decimal('0.01'))
+                hc_pay_currency = supplier_currency
                 hc_pay_rate = rate
-        except Exception:
-            pass
+                local_amount = amount
+            except Exception as e:
+                return _json_error(f'خطأ في حساب المعادل: {e}')
     elif hc_mode:
         try:
             rate = Decimal(str(exchange_rate_input)) if exchange_rate_input else Decimal(str(tenant.exchange_rate or 1))
@@ -592,19 +625,17 @@ def supplier_payment_create_api(request):
             if method == 'cash':
                 if not treasury_id:
                     raise ValueError('يجب اختيار الخزينة عند دفع نقداً')
-                if is_hc_supplier:
-                    # HC supplier: debit HC treasury with the HC amount
+                if is_hc_supplier and pay_in_hc:
                     treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=True), pk=int(treasury_id))
-                    disburse_amount = amount
+                    disburse_amount = amount  # HC amount debited from HC treasury
                 else:
-                    # Local supplier: debit local treasury with local amount
                     treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False), pk=int(treasury_id))
                     disburse_amount = local_amount
                 movement = post_treasury_disbursement(
                     tenant=tenant,
                     amount=disburse_amount,
                     date=payment_date,
-                    reference_type='supplier_payment_cash',
+                    reference_type=reference_type,
                     reference_id=payment_entry.id if payment_entry else None,
                     description=f'دفعة مورد {supplier.name}',
                     user=request.user,
@@ -652,17 +683,18 @@ def supplier_payment_cancel_api(request, pk):
     )
     reverse_notes = f"إلغاء دفعة مورد — {payment.notes or ''}".strip()
     with transaction.atomic():
-        if payment.reference_type == 'supplier_payment_cash':
+        cash_ref_types = ('supplier_payment_cash', 'supplier_payment_hc_cash')
+        if payment.reference_type in cash_ref_types:
             treasury_movement = TreasuryMovement.objects.for_tenant(tenant).filter(
-                reference_type='supplier_payment_cash',
+                reference_type=payment.reference_type,
                 reference_id=payment.id,
             ).first()
             if treasury_movement:
                 post_treasury_receipt(
                     tenant=tenant,
-                    amount=abs(payment.amount),
+                    amount=treasury_movement.amount,
                     date=timezone.localdate(),
-                    reference_type='supplier_payment_cash_cancel',
+                    reference_type=f'{payment.reference_type}_cancel',
                     reference_id=payment.id,
                     description=f'إلغاء دفعة مورد {payment.supplier.name}',
                     user=request.user,
@@ -678,6 +710,9 @@ def supplier_payment_cancel_api(request, pk):
             reference_id=payment.id,
             date=timezone.localdate(),
             notes=reverse_notes,
+            hc_amount=(-payment.hc_amount) if payment.hc_amount is not None else None,
+            hc_currency=payment.hc_currency or '',
+            hc_exchange_rate=payment.hc_exchange_rate,
         )
 
     log_activity(request, 'إلغاء دفعة مورد', f'{payment.supplier.name}', 'delete')
