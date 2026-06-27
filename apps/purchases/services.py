@@ -51,6 +51,69 @@ def _add_stock(tenant, stock, item, qty, unit_cost, invoice):
     )
 
 
+def _adjust_stock_for_purchase_edit(tenant, invoice, old_lines, new_lines):
+    if not old_lines and not new_lines:
+        return
+
+    old_qty_by_item = {}
+    for line in old_lines:
+        if not _is_stock_tracked_item(line.item):
+            continue
+        qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
+        old_qty_by_item[line.item_id] = old_qty_by_item.get(line.item_id, Decimal('0')) + qty_base
+
+    new_qty_by_item = {}
+    for line in new_lines:
+        if not _is_stock_tracked_item(line.item):
+            continue
+        qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
+        new_qty_by_item[line.item_id] = new_qty_by_item.get(line.item_id, Decimal('0')) + qty_base
+
+    item_lookup = {line.item_id: line.item for line in old_lines + new_lines if getattr(line, 'item_id', None)}
+
+    for item_id in sorted(set(old_qty_by_item) | set(new_qty_by_item)):
+        item = item_lookup.get(item_id)
+        if not item:
+            continue
+        old_qty = old_qty_by_item.get(item_id, Decimal('0'))
+        new_qty = new_qty_by_item.get(item_id, Decimal('0'))
+        delta = new_qty - old_qty
+
+        if delta == 0:
+            continue
+
+        sq = _get_stock_qty(tenant, invoice.stock, item)
+        if delta > 0:
+            adjustment = delta
+            sq.quantity += adjustment
+            movement_type = 'adjustment_in'
+            direction = 'in'
+        else:
+            adjustment = min(abs(delta), sq.quantity)
+            if adjustment <= 0:
+                continue
+            sq.quantity -= adjustment
+            movement_type = 'adjustment_out'
+            direction = 'out'
+
+        sq.save(update_fields=['quantity', 'updated_at'])
+        StockMovement.objects.create(
+            tenant=tenant,
+            item=item,
+            stock=invoice.stock,
+            movement_type=movement_type,
+            direction=direction,
+            quantity=adjustment,
+            unit_cost=Decimal('0'),
+            movement_date=timezone.localdate(),
+            balance_after=sq.quantity,
+            reference_type='purchase_invoice',
+            reference_id=invoice.id,
+            notes='تعديل أمر شراء (تعديل الكمية)',
+            is_reversal=False,
+        )
+
+
 def _reverse_stock_movements(tenant, invoice):
     movements = StockMovement.objects.filter(
         tenant=tenant,
@@ -249,7 +312,7 @@ def _deduct_stock(tenant, stock, item, qty, unit_cost, reference_type, reference
 
 
 @transaction.atomic
-def confirm_purchase_invoice(invoice: PurchaseInvoice, user) -> PurchaseInvoice:
+def confirm_purchase_invoice(invoice: PurchaseInvoice, user, reapply_stock=True) -> PurchaseInvoice:
     if invoice.status != 'draft':
         raise ValueError(f"لا يمكن تأكيد أمر شراء بحالة «{invoice.get_status_display()}»." )
 
@@ -258,28 +321,29 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user) -> PurchaseInvoice:
     if not lines:
         raise ValueError('لا يمكن تأكيد أمر شراء فارغ.')
 
-    from apps.items.models import ItemBatch
-    for line in lines:
-        qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
-        _add_stock(
-            tenant=tenant,
-            stock=invoice.stock,
-            item=line.item,
-            qty=qty_base,
-            unit_cost=line.unit_cost,
-            invoice=invoice,
-        )
-        if line.batch_number or line.expiry_date:
-            ItemBatch.objects.create(
+    if reapply_stock:
+        from apps.items.models import ItemBatch
+        for line in lines:
+            qty_base = (line.quantity * (line.unit_factor or Decimal('1'))).quantize(Decimal('0.0001'))
+            _add_stock(
                 tenant=tenant,
-                item=line.item,
                 stock=invoice.stock,
-                batch_number=line.batch_number or '',
-                expiry_date=line.expiry_date,
-                quantity_received=qty_base,
-                quantity_remaining=qty_base,
-                purchase_date=invoice.invoice_date,
+                item=line.item,
+                qty=qty_base,
+                unit_cost=line.unit_cost,
+                invoice=invoice,
             )
+            if line.batch_number or line.expiry_date:
+                ItemBatch.objects.create(
+                    tenant=tenant,
+                    item=line.item,
+                    stock=invoice.stock,
+                    batch_number=line.batch_number or '',
+                    expiry_date=line.expiry_date,
+                    quantity_received=qty_base,
+                    quantity_remaining=qty_base,
+                    purchase_date=invoice.invoice_date,
+                )
 
     total = invoice.grand_total
     pm = invoice.payment_method
@@ -641,8 +705,8 @@ def edit_confirmed_purchase_invoice(invoice: PurchaseInvoice, header_data: dict,
         raise ValueError('تعديل هذا الأمر مسموح للحالة المؤكدة فقط.')
 
     tenant = invoice.tenant
+    old_lines = list(invoice.lines.select_related('item'))
 
-    _reverse_stock_movements(tenant, invoice)
     _reverse_payments(tenant, invoice)
     _reverse_supplier_ledger(tenant, 'purchase_invoice', invoice.id)
 
@@ -680,7 +744,8 @@ def edit_confirmed_purchase_invoice(invoice: PurchaseInvoice, header_data: dict,
     invoice.status = 'draft'
     invoice.save()
 
-    confirm_purchase_invoice(invoice, user)
+    _adjust_stock_for_purchase_edit(tenant, invoice, old_lines, new_lines)
+    confirm_purchase_invoice(invoice, user, reapply_stock=False)
     return invoice
 
 
