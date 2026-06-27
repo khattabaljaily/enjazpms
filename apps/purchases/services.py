@@ -88,6 +88,7 @@ def _adjust_stock_for_purchase_edit(tenant, invoice, old_lines, new_lines):
             sq.quantity += adjustment
             movement_type = 'adjustment_in'
             direction = 'in'
+            action_label = 'زيادة'
         else:
             adjustment = min(abs(delta), sq.quantity)
             if adjustment <= 0:
@@ -95,8 +96,20 @@ def _adjust_stock_for_purchase_edit(tenant, invoice, old_lines, new_lines):
             sq.quantity -= adjustment
             movement_type = 'adjustment_out'
             direction = 'out'
+            action_label = 'تقليل'
 
         sq.save(update_fields=['quantity', 'updated_at'])
+        def _fmt_qty(value: Decimal) -> str:
+            normalized = value.normalize()
+            if normalized == normalized.to_integral():
+                return str(normalized.quantize(Decimal('1')))
+            return format(normalized, 'f').rstrip('0').rstrip('.') if '.' in format(normalized, 'f') else format(normalized, 'f')
+
+        note_text = (
+            f"تعديل أمر شراء بعد التحرير — {action_label} الكمية "
+            f"من {_fmt_qty(old_qty)} إلى {_fmt_qty(new_qty)}"
+            f" ({invoice.invoice_number})"
+        )
         StockMovement.objects.create(
             tenant=tenant,
             item=item,
@@ -107,9 +120,9 @@ def _adjust_stock_for_purchase_edit(tenant, invoice, old_lines, new_lines):
             unit_cost=Decimal('0'),
             movement_date=timezone.localdate(),
             balance_after=sq.quantity,
-            reference_type='purchase_invoice',
+            reference_type='purchase_invoice_edit',
             reference_id=invoice.id,
-            notes='تعديل أمر شراء (تعديل الكمية)',
+            notes=note_text,
             is_reversal=False,
         )
 

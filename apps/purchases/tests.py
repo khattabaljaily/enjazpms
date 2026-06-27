@@ -94,3 +94,13 @@ class PurchaseInvoiceEditTests(TestCase):
 
         stock_qty.refresh_from_db()
         self.assertEqual(stock_qty.quantity, Decimal('3.0000'))
+
+        movement = self.item.stock_movements.filter(
+            tenant=self.tenant,
+            reference_type='purchase_invoice_edit',
+            reference_id=invoice.id,
+        ).latest('id')
+        self.assertIn('تعديل أمر شراء بعد التحرير', movement.notes)
+        self.assertIn('تقليل', movement.notes)
+        self.assertNotIn('2.0000', movement.notes)
+        self.assertNotIn('1.0000', movement.notes)
