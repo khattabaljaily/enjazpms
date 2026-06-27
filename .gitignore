@@ -52,6 +52,13 @@ perms.json
 .DS_Store
 
 # Testing
+tests/
+pytest.ini
+test_report.txt
+arabic_report.txt
+TESTING_GUIDE.md
+run_tests.sh
+generate_report.py
 .coverage
 .pytest_cache/
 htmlcov/
