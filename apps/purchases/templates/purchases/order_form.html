@@ -56,7 +56,7 @@
                         <h3 class="cx-panel-title"><i class="fas fa-info-circle me-2"></i>بيانات الأمر</h3>
                     </div>
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <label class="cx-label">المورد</label>
                             <div class="cx-searchable-select" id="supplierSelectWrap">
                                 <input type="text" id="supplierSearch" class="cx-input" placeholder="ابحث عن مورد..." autocomplete="off">
@@ -64,7 +64,7 @@
                                 <div id="supplierDropdown" class="cx-searchable-select-dropdown" style="display:none;"></div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-3">
                             <label class="cx-label">المخزن <span class="text-danger">*</span></label>
                             <select id="stockId" class="cx-input" required>
                                 {% for s in stocks %}
@@ -72,7 +72,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-3">
                             <label class="cx-label">التاريخ <span class="text-danger">*</span></label>
                             <input type="date" id="invoiceDate" class="cx-input" value="{{ invoice.invoice_date|date:'Y-m-d'|default:today }}" required>
                         </div>

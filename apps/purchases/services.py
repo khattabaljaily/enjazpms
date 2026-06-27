@@ -52,7 +52,12 @@ def _add_stock(tenant, stock, item, qty, unit_cost, invoice):
 
     if unit_cost and unit_cost > 0 and item.cost_price != unit_cost:
         item.cost_price = unit_cost
-        item.save(update_fields=['cost_price'])
+        update_fields = ['cost_price']
+        if getattr(tenant, 'hard_currency_mode', False) and tenant.exchange_rate:
+            hc_rate = Decimal(str(tenant.exchange_rate))
+            item.cost_price_hc = (unit_cost / hc_rate).quantize(Decimal('0.0001'))
+            update_fields.append('cost_price_hc')
+        item.save(update_fields=update_fields)
 
 
 def _adjust_stock_for_purchase_edit(tenant, invoice, old_lines, new_lines):
@@ -762,10 +767,16 @@ def edit_confirmed_purchase_invoice(invoice: PurchaseInvoice, header_data: dict,
     invoice.save()
 
     # Update item cost prices based on new line unit costs
+    hc_mode = getattr(tenant, 'hard_currency_mode', False)
+    hc_rate = Decimal(str(tenant.exchange_rate)) if hc_mode and tenant.exchange_rate else None
     for line in new_lines:
         if line.unit_cost and line.unit_cost > 0 and line.item.cost_price != line.unit_cost:
             line.item.cost_price = line.unit_cost
-            line.item.save(update_fields=['cost_price'])
+            update_fields = ['cost_price']
+            if hc_rate:
+                line.item.cost_price_hc = (line.unit_cost / hc_rate).quantize(Decimal('0.0001'))
+                update_fields.append('cost_price_hc')
+            line.item.save(update_fields=update_fields)
 
     _adjust_stock_for_purchase_edit(tenant, invoice, old_lines, new_lines)
     confirm_purchase_invoice(invoice, user, reapply_stock=False)
