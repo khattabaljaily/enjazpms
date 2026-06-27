@@ -54,8 +54,13 @@
     </div>
 
     {% if report %}
-    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
         <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-clock-rotate-left"></i></div>
+            <div class="rpt-kpi-value">{{ report.opening_balance|money }}</div>
+            <div class="rpt-kpi-label">رصيد أول المدة</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--purple">
             <div class="rpt-kpi-icon"><i class="fas fa-percent"></i></div>
             <div class="rpt-kpi-value">{{ report.summary.total_debit|money }}</div>
             <div class="rpt-kpi-label">إجمالي العمولات المستحقة</div>
@@ -93,8 +98,21 @@
                         </tr>
                     </thead>
                     <tbody>
+                        <tr style="background:rgba(99,102,241,.08); font-weight:700; border-bottom:2px solid rgba(99,102,241,.2);">
+                            <td class="text-muted">{{ start_date }}</td>
+                            <td><span class="badge" style="background:rgba(99,102,241,.15);color:#6366f1;font-size:.75rem;border-radius:6px;padding:.25rem .6rem;">رصيد أول المدة</span></td>
+                            <td class="text-end fw-bold" style="color:#6366f1;">{{ report.opening_balance|money }}</td>
+                            <td class="text-end fw-bold" style="color:#6366f1;">{{ report.opening_balance|money }}</td>
+                            <td class="text-muted" style="font-size:.8rem;">رصيد أول المدة</td>
+                        </tr>
                         {% for entry in report.entries %}
+                        {% if entry.entry_type == 'payment' %}
+                        <tr style="background:rgba(16,185,129,.07);">
+                        {% elif entry.entry_type == 'return' %}
+                        <tr style="background:rgba(239,68,68,.06);">
+                        {% else %}
                         <tr>
+                        {% endif %}
                             <td class="text-muted">{{ entry.entry_date }}</td>
                             <td>
                                 {% if entry.entry_type == 'commission' %}

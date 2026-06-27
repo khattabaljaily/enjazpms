@@ -307,6 +307,21 @@ class PurchasesReportGenerator:
         supplier_currency = (supplier.currency or '').strip()
         is_hc_supplier = hc_mode and bool(supplier_currency)
 
+        # Opening balance = last entry before start_date
+        if is_hc_supplier:
+            pre_entry = SupplierLedger.objects.filter(
+                tenant=self.tenant, supplier=supplier,
+                entry_date__lt=self.start_date,
+                hc_running_balance__isnull=False,
+            ).order_by('entry_date', 'id').last()
+            opening_balance = float(pre_entry.hc_running_balance) if pre_entry else 0.0
+        else:
+            pre_entry = SupplierLedger.objects.filter(
+                tenant=self.tenant, supplier=supplier,
+                entry_date__lt=self.start_date,
+            ).order_by('entry_date', 'id').last()
+            opening_balance = float(pre_entry.running_balance) if pre_entry else float(supplier.opening_balance or 0)
+
         entries = SupplierLedger.objects.filter(
             tenant=self.tenant,
             supplier=supplier,
@@ -314,7 +329,14 @@ class PurchasesReportGenerator:
             entry_date__lte=self.end_date,
         ).order_by('entry_date', 'id')
 
-        data = []
+        data = [{
+            'entry_date': self.start_date,
+            'entry_type': 'رصيد افتتاحي',
+            'entry_type_key': 'opening',
+            'amount': format_number(opening_balance, 2),
+            'running_balance': format_number(opening_balance, 2),
+            'notes': 'رصيد أول المدة',
+        }]
         for e in entries:
             if is_hc_supplier and e.hc_amount is not None:
                 amt = float(e.hc_amount)
@@ -335,11 +357,11 @@ class PurchasesReportGenerator:
             total_debit  = sum(float(e.hc_amount) for e in entries if e.hc_amount and float(e.hc_amount) > 0)
             total_credit = abs(sum(float(e.hc_amount) for e in entries if e.hc_amount and float(e.hc_amount) < 0))
             last = entries.filter(hc_running_balance__isnull=False).order_by('entry_date', 'id').last()
-            closing_balance = float(last.hc_running_balance) if last else 0
+            closing_balance = float(last.hc_running_balance) if last else opening_balance
         else:
             total_debit  = sum(float(e.amount) for e in entries if float(e.amount) > 0)
             total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
-            closing_balance = float(entries.last().running_balance) if entries.exists() else 0
+            closing_balance = float(entries.last().running_balance) if entries.exists() else opening_balance
 
         return {
             'supplier': supplier,
@@ -347,6 +369,7 @@ class PurchasesReportGenerator:
             'is_hc_supplier': is_hc_supplier,
             'period': {'start': self.start_date, 'end': self.end_date},
             'summary': {
+                'opening_balance': format_number(opening_balance, 2),
                 'total_debit': format_number(total_debit, 2),
                 'total_credit': format_number(total_credit, 2),
                 'closing_balance': format_number(closing_balance, 2),

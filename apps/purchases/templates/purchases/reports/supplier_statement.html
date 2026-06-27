@@ -55,8 +55,13 @@
     </div>
 
     {% if report %}
-    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
         <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-clock-rotate-left"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.opening_balance }}{% if report.is_hc_supplier %} <small style="font-size:.65em;opacity:.8;">{{ report.supplier_currency }}</small>{% endif %}</div>
+            <div class="rpt-kpi-label">رصيد أول المدة</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--purple">
             <div class="rpt-kpi-icon"><i class="fas fa-file-invoice"></i></div>
             <div class="rpt-kpi-value">{{ report.summary.total_debit }}{% if report.is_hc_supplier %} <small style="font-size:.65em;opacity:.8;">{{ report.supplier_currency }}</small>{% endif %}</div>
             <div class="rpt-kpi-label">إجمالي الفواتير</div>
@@ -95,10 +100,20 @@
                     </thead>
                     <tbody>
                         {% for entry in report.data %}
+                        {% if entry.entry_type_key == 'opening' %}
+                        <tr style="background:rgba(99,102,241,.08); font-weight:700; border-bottom:2px solid rgba(99,102,241,.2);">
+                        {% elif entry.entry_type_key == 'payment' or entry.entry_type_key == 'return' %}
+                        <tr style="background:rgba(16,185,129,.07);">
+                        {% elif entry.entry_type_key == 'invoice' %}
+                        <tr style="background:rgba(79,172,254,.06);">
+                        {% else %}
                         <tr>
+                        {% endif %}
                             <td class="text-muted">{{ entry.entry_date }}</td>
                             <td>
-                                {% if entry.entry_type_key == 'invoice' %}
+                                {% if entry.entry_type_key == 'opening' %}
+                                <span class="badge" style="background:rgba(99,102,241,.15); color:#6366f1; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ entry.entry_type }}</span>
+                                {% elif entry.entry_type_key == 'invoice' %}
                                 <span class="badge" style="background:rgba(79,172,254,.12); color:#4facfe; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ entry.entry_type }}</span>
                                 {% elif entry.entry_type_key == 'payment' %}
                                 <span class="badge" style="background:rgba(17,153,142,.12); color:#11998e; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ entry.entry_type }}</span>
@@ -108,7 +123,7 @@
                                 <span class="badge" style="background:rgba(107,114,128,.12); color:#6b7280; font-size:.75rem; border-radius:6px; padding:.25rem .6rem;">{{ entry.entry_type }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end fw-bold" style="color:{% if entry.entry_type_key == 'payment' or entry.entry_type_key == 'return' %}#11998e{% else %}#ef4444{% endif %}">{{ entry.amount|cut:"-" }}</td>
+                            <td class="text-end fw-bold" style="color:{% if entry.entry_type_key == 'opening' %}#6366f1{% elif entry.entry_type_key == 'payment' or entry.entry_type_key == 'return' %}#11998e{% else %}#ef4444{% endif %}">{{ entry.amount|cut:"-" }}</td>
                             <td class="text-end fw-bold" style="color:#6366f1;">{{ entry.running_balance }}</td>
                             <td class="text-muted" style="font-size:.8rem;">{{ entry.notes|default:"—" }}</td>
                         </tr>

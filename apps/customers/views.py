@@ -245,12 +245,7 @@ def customer_transactions_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
-    entries = (
-        CustomerLedger.objects
-        .for_tenant(tenant)
-        .filter(customer=customer)
-        .order_by('-entry_date', '-created_at')[:100]
-    )
+    opening = customer.opening_balance or Decimal('0')
 
     type_labels = {
         'opening': 'مديونية افتتاحية',
@@ -260,20 +255,41 @@ def customer_transactions_api(request, pk):
         'adjustment': 'تعديل',
     }
 
-    data = [
-        {
+    data = []
+    running = opening
+    if opening != Decimal('0'):
+        entry_date = customer.created_at.date().strftime('%Y-%m-%d') if customer.created_at else ''
+        data.append({
+            'entry_date': entry_date,
+            'entry_type': 'opening',
+            'entry_type_label': 'مديونية افتتاحية',
+            'amount': str(opening),
+            'running_balance': str(opening),
+            'notes': 'مديونية افتتاحية للعميل',
+            'reference_type': 'customer_opening',
+            'reference_id': customer.id,
+        })
+
+    entries = (
+        CustomerLedger.objects
+        .for_tenant(tenant)
+        .filter(customer=customer)
+        .order_by('entry_date', 'id')
+    )
+    for e in entries:
+        running += (e.amount or Decimal('0'))
+        data.append({
             'entry_date': e.entry_date.strftime('%Y-%m-%d'),
             'entry_type': e.entry_type,
             'entry_type_label': type_labels.get(e.entry_type, e.entry_type),
             'amount': str(e.amount),
-            'running_balance': str(e.running_balance),
+            'running_balance': str(running),
             'notes': e.notes or '—',
             'reference_type': e.reference_type or '',
             'reference_id': e.reference_id,
-        }
-        for e in entries
-    ]
+        })
 
+    data.reverse()
     return JsonResponse({'success': True, 'data': data}, json_dumps_params={'ensure_ascii': False})
 
 

@@ -201,8 +201,8 @@
                     <div class="col-5">
                         <label class="cx-label">خصم الفاتورة</label>
                         <select id="discountType" name="invoice_discount_type" class="cx-input" onchange="recalcTotals()">
-                            <option value="percent">نسبة %</option>
-                            <option value="amount">مبلغ ثابت</option>
+                            <option value="percent" {% if invoice and invoice.invoice_discount_type == 'percent' %}selected{% endif %}>نسبة %</option>
+                            <option value="amount" {% if invoice and invoice.invoice_discount_type == 'amount' %}selected{% endif %}>مبلغ ثابت</option>
                         </select>
                     </div>
                     <div class="col-7">

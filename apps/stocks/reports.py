@@ -230,6 +230,26 @@ class StocksReportGenerator:
         import re as _re
         _ref_pattern = _re.compile(r'\b([A-Z]{2,6}-\d{3,7})\b')
 
+        # Opening quantity: balance_after of last movement before start_date
+        opening_qty = None
+        if item_id:
+            pre_qs = StockMovement.objects.filter(
+                tenant=self.tenant,
+                item_id=item_id,
+                movement_date__lt=self.start_date,
+            )
+            if stock_id:
+                pre_qs = pre_qs.filter(stock_id=stock_id)
+            pre_mv = pre_qs.order_by('movement_date', 'id').last()
+            if pre_mv:
+                opening_qty = float(pre_mv.balance_after)
+            else:
+                from apps.stocks.models import StockQuantity
+                sq_qs = StockQuantity.objects.filter(tenant=self.tenant, item_id=item_id)
+                if stock_id:
+                    sq_qs = sq_qs.filter(stock_id=stock_id)
+                opening_qty = float(sq_qs.aggregate(s=Sum('opening_quantity'))['s'] or 0)
+
         data = []
         total_in = 0
         total_out = 0
@@ -262,6 +282,7 @@ class StocksReportGenerator:
         return {
             'period': {'start': self.start_date, 'end': self.end_date},
             'summary': {
+                'opening_qty': format_number(opening_qty, 2) if opening_qty is not None else None,
                 'movement_count': format_number(len(data), 0),
                 'total_in': format_number(total_in, 2),
                 'total_out': format_number(total_out, 2),

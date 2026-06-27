@@ -61,7 +61,14 @@
         </form>
     </div>
 
-    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat({% if report.summary.opening_qty %}5{% else %}4{% endif %}, 1fr);">
+        {% if report.summary.opening_qty %}
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-clock-rotate-left"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.opening_qty }}</div>
+            <div class="rpt-kpi-label">رصيد أول المدة</div>
+        </div>
+        {% endif %}
         <div class="rpt-kpi-card rpt-kpi--purple">
             <div class="rpt-kpi-icon"><i class="fas fa-list"></i></div>
             <div class="rpt-kpi-value">{{ report.summary.movement_count }}</div>

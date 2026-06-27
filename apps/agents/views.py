@@ -716,6 +716,16 @@ def agent_statement(request):
             agent = None
 
         if agent:
+            # Opening balance = running_balance of last entry before start_date
+            pre_entry = AgentLedger.objects.filter(
+                tenant=tenant, agent=agent,
+                entry_date__lt=start_date,
+            ).order_by('entry_date', 'id').last()
+            if pre_entry:
+                opening_balance = float(pre_entry.running_balance)
+            else:
+                opening_balance = float(agent.opening_balance or 0)
+
             entries = AgentLedger.objects.filter(
                 tenant=tenant,
                 agent=agent,
@@ -726,16 +736,18 @@ def agent_statement(request):
             total_debit = sum(float(e.amount) for e in entries if float(e.amount) > 0)
             total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
             last_entry = entries.last()
-            closing_balance = float(last_entry.running_balance) if last_entry else float(_agent_balance(tenant, agent))
+            closing_balance = float(last_entry.running_balance) if last_entry else opening_balance
 
             report = {
                 'agent': agent,
                 'period': {'start': start_date, 'end': end_date},
                 'summary': {
+                    'opening_balance': opening_balance,
                     'total_debit': total_debit,
                     'total_credit': total_credit,
                     'closing_balance': closing_balance,
                 },
+                'opening_balance': opening_balance,
                 'entries': entries,
             }
 

@@ -302,6 +302,17 @@ class SalesReportGenerator:
         except Customer.DoesNotExist:
             return None
 
+        # Opening balance = last entry before start_date, or customer.opening_balance
+        pre_entry = CustomerLedger.objects.filter(
+            tenant=self.tenant,
+            customer=customer,
+            entry_date__lt=self.start_date,
+        ).order_by('entry_date', 'id').last()
+        if pre_entry:
+            opening_balance = float(pre_entry.running_balance)
+        else:
+            opening_balance = float(customer.opening_balance or 0)
+
         entries = CustomerLedger.objects.filter(
             tenant=self.tenant,
             customer=customer,
@@ -309,7 +320,14 @@ class SalesReportGenerator:
             entry_date__lte=self.end_date,
         ).order_by('entry_date', 'id')
 
-        data = []
+        data = [{
+            'entry_date': self.start_date,
+            'entry_type': 'رصيد افتتاحي',
+            'entry_type_key': 'opening',
+            'amount': format_number(opening_balance, 2),
+            'running_balance': format_number(opening_balance, 2),
+            'notes': 'رصيد أول المدة',
+        }]
         for e in entries:
             data.append({
                 'entry_date': e.entry_date,
@@ -322,15 +340,16 @@ class SalesReportGenerator:
 
         total_debit = sum(float(e.amount) for e in entries if float(e.amount) > 0)
         total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
-        closing_balance = entries.last().running_balance if entries.exists() else 0
+        closing_balance = float(entries.last().running_balance) if entries.exists() else opening_balance
 
         return {
             'customer': customer,
             'period': {'start': self.start_date, 'end': self.end_date},
             'summary': {
+                'opening_balance': format_number(opening_balance, 2),
                 'total_debit': format_number(total_debit, 2),
                 'total_credit': format_number(total_credit, 2),
-                'closing_balance': format_number(float(closing_balance), 2),
+                'closing_balance': format_number(closing_balance, 2),
             },
             'data': data,
         }
