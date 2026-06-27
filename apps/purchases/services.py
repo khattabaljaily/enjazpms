@@ -50,6 +50,10 @@ def _add_stock(tenant, stock, item, qty, unit_cost, invoice):
         balance_after=sq.quantity,
     )
 
+    if unit_cost and unit_cost > 0 and item.cost_price != unit_cost:
+        item.cost_price = unit_cost
+        item.save(update_fields=['cost_price'])
+
 
 def _adjust_stock_for_purchase_edit(tenant, invoice, old_lines, new_lines):
     if not old_lines and not new_lines:
@@ -756,6 +760,12 @@ def edit_confirmed_purchase_invoice(invoice: PurchaseInvoice, header_data: dict,
     invoice.recalculate_totals()
     invoice.status = 'draft'
     invoice.save()
+
+    # Update item cost prices based on new line unit costs
+    for line in new_lines:
+        if line.unit_cost and line.unit_cost > 0 and line.item.cost_price != line.unit_cost:
+            line.item.cost_price = line.unit_cost
+            line.item.save(update_fields=['cost_price'])
 
     _adjust_stock_for_purchase_edit(tenant, invoice, old_lines, new_lines)
     confirm_purchase_invoice(invoice, user, reapply_stock=False)
