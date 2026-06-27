@@ -51,6 +51,7 @@ def treasury_list(request):
 
     context = {
         'form': TreasuryForm(),
+        'today': dj_tz.localdate().isoformat(),
         'hc_mode': tenant.hard_currency_mode,
         'hc_currency': hc_cur,
         'hc_currency_symbol': _currency_symbol(hc_cur),
@@ -166,6 +167,27 @@ def treasury_create_api(request):
             Treasury.objects.for_tenant(tenant).filter(is_default=True).update(is_default=False)
 
         treasury.save()
+
+        # Opening balance
+        ob_amount = request.POST.get('opening_balance', '').strip()
+        ob_date   = request.POST.get('opening_balance_date', '').strip()
+        if ob_amount:
+            try:
+                ob_amount_dec = Decimal(ob_amount)
+                if ob_amount_dec > 0:
+                    from .services import set_opening_balance
+                    import datetime
+                    if not ob_date:
+                        ob_date = dj_tz.localdate().isoformat()
+                    set_opening_balance(
+                        tenant, treasury,
+                        amount=ob_amount_dec,
+                        date=datetime.date.fromisoformat(ob_date),
+                        user=request.user,
+                    )
+            except Exception:
+                pass
+
         log_activity(request, 'إضافة خزينة جديدة',
                      f"الخزينة: {treasury.name}", 'create')
 
@@ -191,6 +213,10 @@ def treasury_detail_api(request, pk):
 
     treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=pk)
 
+    ob_mv = TreasuryMovement.objects.filter(
+        treasury=treasury, reference_type='opening_balance'
+    ).first()
+
     return JsonResponse({
         'success': True,
         'data': {
@@ -202,6 +228,8 @@ def treasury_detail_api(request, pk):
             'is_default': treasury.is_default,
             'is_system_default': treasury.is_system_default,
             'current_balance': str(treasury.current_balance),
+            'opening_balance': str(ob_mv.amount) if ob_mv else '0',
+            'opening_balance_date': ob_mv.movement_date.isoformat() if ob_mv else '',
         }
     })
 
@@ -262,6 +290,25 @@ def treasury_update_api(request, pk):
             Treasury.objects.for_tenant(tenant).exclude(pk=treasury.pk).filter(is_default=True).update(is_default=False)
 
         treasury.save()
+
+        # Opening balance update
+        ob_amount = request.POST.get('opening_balance', '').strip()
+        ob_date   = request.POST.get('opening_balance_date', '').strip()
+        try:
+            ob_amount_dec = Decimal(ob_amount) if ob_amount else Decimal('0')
+            from .services import set_opening_balance
+            import datetime
+            if not ob_date:
+                ob_date = dj_tz.localdate().isoformat()
+            set_opening_balance(
+                tenant, treasury,
+                amount=ob_amount_dec,
+                date=datetime.date.fromisoformat(ob_date),
+                user=request.user,
+            )
+        except Exception:
+            pass
+
         return JsonResponse({
             'success': True,
             'message': 'تم تعديل الخزينة بنجاح',

@@ -516,6 +516,13 @@
                                 <span class="cx-info-card-value" id="viewItemNameVal"></span>
                             </div>
                         </div>
+                        <div class="cx-info-card" id="viewItemNameEnCard">
+                            <div class="cx-info-card-icon cx-info-icon--notes"><i class="fas fa-language"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الاسم بالإنجليزية</span>
+                                <span class="cx-info-card-value" id="viewItemNameEn"></span>
+                            </div>
+                        </div>
                         <div class="cx-info-card">
                             <div class="cx-info-card-icon cx-info-icon--phone"><i class="fas fa-barcode"></i></div>
                             <div class="cx-info-card-content">
@@ -535,6 +542,13 @@
                             <div class="cx-info-card-content">
                                 <span class="cx-info-card-label">وحدة البيع</span>
                                 <span class="cx-info-card-value" id="viewItemUnit"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card" id="viewItemPurchaseUnitCard">
+                            <div class="cx-info-card-icon cx-info-icon--email"><i class="fas fa-ruler-combined"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">وحدة الشراء</span>
+                                <span class="cx-info-card-value" id="viewItemPurchaseUnit"></span>
                             </div>
                         </div>
                         <div class="cx-info-card">
@@ -595,6 +609,38 @@
                             </div>
                         </div>
                         {% endif %}
+                    </div>
+                </div>
+
+                {# ── حدود المخزون ── #}
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-warehouse"></i> حدود المخزون</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon" style="background:rgba(239,68,68,.12)"><i class="fas fa-arrow-down-wide-short" style="color:#ef4444"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الحد الأدنى</span>
+                                <span class="cx-info-card-value" id="viewItemMinQty"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon" style="background:rgba(16,185,129,.12)"><i class="fas fa-arrow-up-wide-short" style="color:#10b981"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الحد الأقصى</span>
+                                <span class="cx-info-card-value" id="viewItemMaxQty"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# ── وحدات متعددة ── #}
+                <div class="cx-view-section" id="viewItemUnitsSection" style="display:none">
+                    <div class="cx-view-section-title"><i class="fas fa-scale-balanced"></i> الوحدات المتعددة</div>
+                    <div class="table-responsive">
+                        <table class="cx-table" style="margin:0">
+                            <thead><tr><th>الوحدة</th><th>معامل التحويل</th></tr></thead>
+                            <tbody id="viewItemUnitsBody"></tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -1350,9 +1396,29 @@
                 $('#viewItemName').text(d.name);
                 $('#viewItemSku').html(`<code class="cxr-code">${d.sku}</code>`);
                 $('#viewItemNameVal').text(d.name || '—');
+
+                // English name
+                const nameEnCard = document.getElementById('viewItemNameEnCard');
+                if (d.name_en) {
+                    $('#viewItemNameEn').text(d.name_en);
+                    nameEnCard.style.display = '';
+                } else {
+                    nameEnCard.style.display = 'none';
+                }
+
                 $('#viewItemBarcode').text(d.barcode || '—');
-                $('#viewItemCategory').text(d.category || '—');
-                $('#viewItemUnit').text(d.unit || '—');
+                $('#viewItemCategory').text(d.category_name || '—');
+                $('#viewItemUnit').text(d.unit_name || '—');
+
+                // Purchase unit
+                const puCard = document.getElementById('viewItemPurchaseUnitCard');
+                if (d.purchase_unit_name) {
+                    $('#viewItemPurchaseUnit').text(d.purchase_unit_name);
+                    puCard.style.display = '';
+                } else {
+                    puCard.style.display = 'none';
+                }
+
                 $('#viewItemType').text(d.item_type || '—');
                 $('#viewItemCostPrice').text(EnjazIMS.formatMoney(d.cost_price));
                 $('#viewItemSellingPrice').text(EnjazIMS.formatMoney(d.selling_price));
@@ -1365,6 +1431,24 @@
                 }
                 {% endif %}
                 $('#viewItemDescription').text(d.description || '—');
+
+                // Stock limits
+                const minQty = parseFloat(d.min_quantity || 0);
+                const maxQty = parseFloat(d.max_quantity || 0);
+                $('#viewItemMinQty').text(minQty > 0 ? minQty : '—');
+                $('#viewItemMaxQty').text(maxQty > 0 ? maxQty : '—');
+
+                // Multiple units
+                const unitsSection = document.getElementById('viewItemUnitsSection');
+                if (d.has_multiple_units && d.item_units && d.item_units.length > 0) {
+                    const rows = d.item_units.map(u =>
+                        `<tr><td>${u.name}</td><td>${u.factor}</td></tr>`
+                    ).join('');
+                    document.getElementById('viewItemUnitsBody').innerHTML = rows;
+                    unitsSection.style.display = '';
+                } else {
+                    unitsSection.style.display = 'none';
+                }
 
                 const yesHtml = '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نعم</span>';
                 const noHtml  = '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>لا</span>';

@@ -95,7 +95,7 @@ class TreasuryReportGenerator:
         total_disbursements = Decimal('0')
 
         for m in movements:
-            is_receipt = m.movement_type == 'receipt'
+            is_receipt = m.movement_type in ('receipt', 'adjustment')
             receipt_amt = float(m.amount) if is_receipt else 0
             disb_amt = float(m.amount) if not is_receipt else 0
             total_receipts += Decimal(str(receipt_amt))
@@ -139,7 +139,7 @@ class TreasuryReportGenerator:
         total_disbursements = Decimal('0')
 
         for m in movements:
-            is_receipt = m.movement_type == 'receipt'
+            is_receipt = m.movement_type in ('receipt', 'adjustment')
             r = float(m.amount) if is_receipt else 0
             d = float(m.amount) if not is_receipt else 0
             total_receipts += Decimal(str(r))

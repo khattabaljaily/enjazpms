@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils import timezone as dj_tz
 
 from .models import Treasury, TreasuryMovement
 
@@ -104,6 +105,71 @@ def post_treasury_disbursement(tenant, amount, date, reference_type='', referenc
         user=user,
         treasury=treasury,
     )
+
+
+def recalculate_treasury_running_balances(tenant, treasury, user=None):
+    """Recalculate running_balance for every movement of a treasury in chronological order."""
+    movements = list(
+        TreasuryMovement.objects.for_tenant(tenant)
+        .filter(treasury=treasury)
+        .order_by('movement_date', 'id')
+    )
+    running = Decimal('0')
+    for mv in movements:
+        if mv.movement_type in ('receipt', 'adjustment'):
+            running += mv.amount
+        else:
+            running -= mv.amount
+        mv.running_balance = running
+        mv.save(update_fields=['running_balance'])
+
+    treasury_obj = Treasury.objects.select_for_update().get(pk=treasury.pk)
+    treasury_obj.current_balance = running
+    if user:
+        treasury_obj.updated_by = user
+    treasury_obj.save(update_fields=['current_balance', 'updated_by', 'updated_at'])
+    return running
+
+
+@transaction.atomic
+def set_opening_balance(tenant, treasury, amount, date, user=None):
+    """Create or update the opening-balance adjustment movement for a treasury."""
+    amount = Decimal(str(amount or 0))
+
+    existing = TreasuryMovement.objects.for_tenant(tenant).filter(
+        treasury=treasury,
+        reference_type='opening_balance',
+    ).first()
+
+    if existing:
+        if amount == 0:
+            existing.delete()
+        else:
+            existing.amount = amount
+            existing.movement_date = date
+            if user:
+                existing.updated_by = user
+            existing.save(update_fields=['amount', 'movement_date', 'updated_by', 'updated_at'])
+    else:
+        if amount == 0:
+            return None
+        TreasuryMovement.objects.create(
+            tenant=tenant,
+            treasury=treasury,
+            movement_type='adjustment',
+            amount=amount,
+            movement_date=date,
+            description='رصيد افتتاحي',
+            reference_type='opening_balance',
+            running_balance=Decimal('0'),  # will be fixed by recalculate below
+            created_by=user,
+            updated_by=user,
+        )
+
+    recalculate_treasury_running_balances(tenant, treasury, user=user)
+    return TreasuryMovement.objects.for_tenant(tenant).filter(
+        treasury=treasury, reference_type='opening_balance'
+    ).first()
 
 
 @transaction.atomic

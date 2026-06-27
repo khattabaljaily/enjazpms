@@ -300,11 +300,17 @@ def dashboard(request):
         }
         stats['stock_status_json'] = json.dumps([available_count, low_stock_count])
     
+    store = None
+    if tenant:
+        from apps.store.models import StoreSettings
+        store = StoreSettings.objects.filter(tenant=tenant).first()
+
     context = {
         'stats': stats,
         'tenant': tenant,
+        'store': store,
     }
-    
+
     return render(request, 'core/dashboard.html', context)
 
 

@@ -42,6 +42,9 @@
         <a href="{% url 'store:storefront' slug=store.slug %}" target="_blank" class="cx-btn-secondary">
           <i class="fas fa-external-link-alt"></i><span>عرض المتجر</span>
         </a>
+        <button type="button" class="cx-btn-secondary" onclick="openStoreQR('{{ request.scheme }}://{{ request.META.HTTP_HOST }}{% url "store:storefront" slug=store.slug %}', '{{ store.display_name|default:request.tenant.name }}')">
+          <i class="fas fa-qrcode"></i><span>رمز QR</span>
+        </button>
         {% endif %}
         <a href="{% url 'store:manage_orders' %}" class="cx-btn-primary st-orders-btn">
           <i class="fas fa-inbox"></i><span>الطلبات</span>
@@ -231,6 +234,11 @@
                   title="نسخ الرابط الكامل">
             <i class="fas fa-copy"></i>
           </button>
+          <button type="button" class="st-copy-btn st-copy-btn--field"
+                  onclick="openStoreQR('{{ request.scheme }}://{{ request.META.HTTP_HOST }}/store/{{ store.slug }}/', '{{ store.display_name|default:request.tenant.name }}')"
+                  title="رمز QR وطباعة">
+            <i class="fas fa-qrcode"></i>
+          </button>
         </div>
         <div class="st-field-hint">الرابط الكامل: {{ request.scheme }}://{{ request.META.HTTP_HOST }}/store/{{ store.slug }}/</div>
       </div>
@@ -392,6 +400,8 @@
 {% block extra_js %}
 <!-- Copy toast -->
 <div id="copyToast" class="st-copy-toast" aria-live="polite"></div>
+
+{% include "store/partials/qr_print_modal.html" %}
 
 <script>
 // ── Copy link ──────────────────────────────────────────

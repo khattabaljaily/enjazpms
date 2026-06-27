@@ -315,7 +315,7 @@ def item_detail_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
 
     try:
-        item = Item.objects.for_tenant(tenant).get(pk=pk)
+        item = Item.objects.for_tenant(tenant).select_related('category', 'unit', 'purchase_unit').get(pk=pk)
     except Item.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المنتج غير موجود'}, status=404)
 
@@ -330,8 +330,11 @@ def item_detail_api(request, pk):
             'barcode': item.barcode,
             'item_type': item.item_type,
             'category': item.category_id,
+            'category_name': item.category.name if item.category else '',
             'unit': item.unit_id,
+            'unit_name': item.unit.name if item.unit else '',
             'purchase_unit': item.purchase_unit_id,
+            'purchase_unit_name': item.purchase_unit.name if item.purchase_unit else '',
             'cost_price': str(item.cost_price),
             'selling_price': str(item.selling_price),
             'min_selling_price': str(item.min_selling_price),

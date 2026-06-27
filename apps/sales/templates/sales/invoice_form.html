@@ -132,17 +132,6 @@
                                value="{{ invoice.invoice_date|date:'Y-m-d'|default:today }}">
                     </div>
 
-                    <!-- طريقة الدفع -->
-                    <div class="col-md-4">
-                        <label class="cx-label">طريقة الدفع</label>
-                        <select id="paymentMethod" name="payment_method" class="cx-input" onchange="handlePaymentMethodChange()">
-                            <option value="cash" {% if invoice and invoice.payment_method == 'cash' %}selected{% endif %}>نقداً</option>
-                            <option value="bank" {% if invoice and invoice.payment_method == 'bank' %}selected{% endif %}>تحويل بنكي</option>
-                            <option value="credit" {% if invoice and invoice.payment_method == 'credit' %}selected{% endif %}>آجل</option>
-                            <option value="mixed" {% if invoice and invoice.payment_method == 'mixed' %}selected{% endif %}>مختلط</option>
-                        </select>
-                    </div>
-
                     <!-- نوع التسليم -->
                     <div class="col-md-4">
                         <label class="cx-label">نوع التسليم</label>
@@ -150,40 +139,6 @@
                             <option value="immediate" {% if not invoice or invoice.delivery_type == 'immediate' %}selected{% endif %}>تسليم فوري</option>
                             <option value="deferred" {% if invoice and invoice.delivery_type == 'deferred' %}selected{% endif %}>تسليم لاحق</option>
                         </select>
-                    </div>
-
-                    <!-- تاريخ الاستحقاق (للآجل) -->
-                    <div class="col-md-4 sales-field-hidden" id="dueDateWrap">
-                        <label class="cx-label">تاريخ الاستحقاق</label>
-                        <input type="date" id="dueDate" name="due_date" class="cx-input"
-                               value="{{ invoice.due_date|date:'Y-m-d'|default:'' }}">
-                    </div>
-
-                    <!-- المبالغ المختلطة -->
-                    <div id="mixedPaymentWrap" class="col-12 sales-field-hidden">
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <label class="cx-label">المبلغ نقداً</label>
-                                <input type="number" id="cashAmount" name="cash_amount" class="cx-input" min="0" step="0.01"
-                                       value="{{ invoice.cash_amount|default:'' }}" oninput="recalcTotals()">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="cx-label">المبلغ بنكياً</label>
-                                <input type="number" id="bankAmount" name="bank_amount" class="cx-input" min="0" step="0.01"
-                                       value="{{ invoice.bank_amount|default:'' }}" oninput="recalcTotals()">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="cx-label">الآجل (محسوب)</label>
-                                <input type="text" id="creditAmount" class="cx-input sales-readonly-input" readonly>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- مرجع التحويل البنكي -->
-                    <div class="col-md-6 sales-field-hidden" id="bankRefWrap">
-                        <label class="cx-label">مرجع التحويل البنكي</label>
-                        <input type="text" id="bankReference" name="bank_reference" class="cx-input"
-                               value="{{ invoice.bank_reference|default:'' }}">
                     </div>
 
                     <!-- ملاحظات -->
@@ -278,6 +233,48 @@
                     <div class="cx-totals-row text-muted sales-field-hidden" id="creditRow">
                         <span>الجزء الآجل</span>
                         <span id="displayCredit">0.00</span>
+                    </div>
+                </div>
+
+                <!-- طريقة الدفع وحقول الدفع -->
+                <hr style="margin:1rem 0;border-color:var(--border-color,#e5e7eb);">
+                <div class="row g-2">
+                    <div class="col-12">
+                        <label class="cx-label">طريقة الدفع</label>
+                        <select id="paymentMethod" name="payment_method" class="cx-input" onchange="handlePaymentMethodChange()">
+                            <option value="cash" {% if invoice and invoice.payment_method == 'cash' %}selected{% endif %}>نقداً</option>
+                            <option value="bank" {% if invoice and invoice.payment_method == 'bank' %}selected{% endif %}>تحويل بنكي</option>
+                            <option value="credit" {% if invoice and invoice.payment_method == 'credit' %}selected{% endif %}>آجل</option>
+                            <option value="mixed" {% if invoice and invoice.payment_method == 'mixed' %}selected{% endif %}>مختلط</option>
+                        </select>
+                    </div>
+                    <div class="col-12 sales-field-hidden" id="dueDateWrap">
+                        <label class="cx-label">تاريخ الاستحقاق</label>
+                        <input type="date" id="dueDate" name="due_date" class="cx-input"
+                               value="{{ invoice.due_date|date:'Y-m-d'|default:'' }}">
+                    </div>
+                    <div id="mixedPaymentWrap" class="col-12 sales-field-hidden">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="cx-label">نقداً</label>
+                                <input type="number" id="cashAmount" name="cash_amount" class="cx-input" min="0" step="0.01"
+                                       value="{{ invoice.cash_amount|default:'' }}" oninput="recalcTotals()">
+                            </div>
+                            <div class="col-6">
+                                <label class="cx-label">بنكياً</label>
+                                <input type="number" id="bankAmount" name="bank_amount" class="cx-input" min="0" step="0.01"
+                                       value="{{ invoice.bank_amount|default:'' }}" oninput="recalcTotals()">
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-label">الآجل (محسوب)</label>
+                                <input type="text" id="creditAmount" class="cx-input sales-readonly-input" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 sales-field-hidden" id="bankRefWrap">
+                        <label class="cx-label">مرجع التحويل البنكي</label>
+                        <input type="text" id="bankReference" name="bank_reference" class="cx-input"
+                               value="{{ invoice.bank_reference|default:'' }}">
                     </div>
                 </div>
 

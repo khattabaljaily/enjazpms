@@ -186,6 +186,21 @@
                                 <label class="cx-label" for="id_notes">{{ form.notes.label }}</label>
                                 {{ form.notes }}
                             </div>
+                            <!-- الرصيد الافتتاحي -->
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_opening_balance">الرصيد الافتتاحي</label>
+                                <input type="number" id="id_opening_balance" name="opening_balance"
+                                       class="form-control cx-input text-end" min="0" step="0.01" placeholder="0.00">
+                                <div class="form-text text-muted" style="font-size:.78rem;margin-top:.3rem;">
+                                    يظهر كأول حركة في كشف الخزينة
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_opening_balance_date">تاريخ الرصيد الافتتاحي</label>
+                                <input type="date" id="id_opening_balance_date" name="opening_balance_date"
+                                       class="form-control cx-input" value="{{ today }}">
+                            </div>
+
                             <div class="col-md-6">
                                 <label class="cx-toggle-card" for="id_is_default">
                                     <div class="cx-toggle-info">
@@ -427,6 +442,8 @@
         document.getElementById('id_is_default').checked = false;
         document.getElementById('id_is_default').disabled = false;
         document.getElementById('id_is_active').disabled = false;
+        document.getElementById('id_opening_balance').value = '';
+        document.getElementById('id_opening_balance_date').value = '{{ today }}';
         EnjazIMS.clearFormErrors($form);
     }
 
@@ -453,6 +470,9 @@
                 document.getElementById('id_notes').value = d.notes || '';
                 document.getElementById('id_is_default').checked = !!d.is_default;
                 document.getElementById('id_is_active').checked = !!d.is_active;
+                const obVal = parseFloat(d.opening_balance || 0);
+                document.getElementById('id_opening_balance').value = obVal > 0 ? obVal : '';
+                document.getElementById('id_opening_balance_date').value = d.opening_balance_date || '';
 
                 if (d.is_system_default) {
                     document.getElementById('id_is_default').checked = true;
