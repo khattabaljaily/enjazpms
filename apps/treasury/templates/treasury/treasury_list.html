@@ -270,14 +270,12 @@
                     <!-- Direction selector -->
                     <div class="d-flex gap-2 mb-4" id="transferDirectionBtns">
                         <button type="button" class="flex-fill btn btn-outline-warning fw-semibold js-dir-btn active" data-dir="to_hc">
-                            <i class="fas fa-arrow-left me-1"></i>
-                            تحويل إلى خزينة {{ hc_currency_symbol }}
-                            <small class="d-block fw-normal opacity-75">شراء {{ hc_currency_symbol }} بالعملة المحلية</small>
+                            <span style="font-size:1.05rem;letter-spacing:.5px;">{{ local_currency_symbol }} <i class="fas fa-arrow-left mx-1"></i> {{ hc_currency_symbol }}</span>
+                            <small class="d-block fw-normal opacity-75 mt-1">أدفع {{ local_currency_symbol }} وأستلم {{ hc_currency_symbol }}</small>
                         </button>
-                        <button type="button" class="flex-fill btn btn-outline-primary fw-semibold js-dir-btn" data-dir="from_hc">
-                            <i class="fas fa-arrow-right me-1"></i>
-                            تحويل من خزينة {{ hc_currency_symbol }}
-                            <small class="d-block fw-normal opacity-75">صرف {{ hc_currency_symbol }} للعملة المحلية</small>
+                        <button type="button" class="flex-fill btn btn-outline-success fw-semibold js-dir-btn" data-dir="from_hc">
+                            <span style="font-size:1.05rem;letter-spacing:.5px;">{{ hc_currency_symbol }} <i class="fas fa-arrow-left mx-1"></i> {{ local_currency_symbol }}</span>
+                            <small class="d-block fw-normal opacity-75 mt-1">أدفع {{ hc_currency_symbol }} وأستلم {{ local_currency_symbol }}</small>
                         </button>
                     </div>
 
@@ -285,17 +283,17 @@
 
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="cx-label" id="transferLocalLabel">المبلغ بالعملة المحلية ({{ local_currency_symbol }})</label>
+                            <label class="cx-label" id="transferLocalLabel">المبلغ المدفوع ({{ local_currency_symbol }})</label>
                             <div class="cx-field">
                                 <span class="cx-field__icon"><i class="fas fa-money-bill"></i></span>
                                 <input type="number" id="transferLocalAmount" class="form-control cx-input" step="0.01" min="0.01" placeholder="0.00">
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label class="cx-label">المبلغ بـ {{ hc_currency_symbol }}</label>
+                            <label class="cx-label" id="transferHcLabel">المبلغ المُستَلَم ({{ hc_currency_symbol }})</label>
                             <div class="cx-field">
                                 <span class="cx-field__icon"><i class="fas fa-dollar-sign" style="color:#d97706;"></i></span>
-                                <input type="number" id="transferHcAmount" class="form-control cx-input" step="0.0001" min="0.0001" placeholder="0.0000">
+                                <input type="number" id="transferHcAmount" class="form-control cx-input" step="0.01" min="0.01" placeholder="0.00">
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -761,12 +759,29 @@
         transferDateEl.value = today;
     }
 
+    const LOCAL_SYM = '{{ local_currency_symbol }}';
+    const HC_SYM    = '{{ hc_currency_symbol }}';
+
+    function updateTransferLabels(dir) {
+        const localLbl = document.getElementById('transferLocalLabel');
+        const hcLbl    = document.getElementById('transferHcLabel');
+        if (dir === 'to_hc') {
+            if (localLbl) localLbl.textContent = `المبلغ المدفوع (${LOCAL_SYM})`;
+            if (hcLbl)    hcLbl.textContent    = `المبلغ المُستَلَم (${HC_SYM})`;
+        } else {
+            if (hcLbl)    hcLbl.textContent    = `المبلغ المدفوع (${HC_SYM})`;
+            if (localLbl) localLbl.textContent = `المبلغ المُستَلَم (${LOCAL_SYM})`;
+        }
+    }
+
     // Direction toggle
     document.querySelectorAll('.js-dir-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             document.querySelectorAll('.js-dir-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-            document.getElementById('transferDirection').value = this.dataset.dir;
+            const dir = this.dataset.dir;
+            document.getElementById('transferDirection').value = dir;
+            updateTransferLabels(dir);
             updateTransferSummary();
         });
     });
@@ -795,7 +810,7 @@
         const rate = parseFloat(document.getElementById('transferRate').value) || 0;
         const local = parseFloat(this.value) || 0;
         if (rate > 0 && local > 0) {
-            document.getElementById('transferHcAmount').value = (local / rate).toFixed(4);
+            document.getElementById('transferHcAmount').value = (local / rate).toFixed(2);
         }
         updateTransferSummary();
     });
@@ -811,7 +826,7 @@
         const rate = parseFloat(this.value) || 0;
         const local = parseFloat(document.getElementById('transferLocalAmount').value) || 0;
         if (rate > 0 && local > 0) {
-            document.getElementById('transferHcAmount').value = (local / rate).toFixed(4);
+            document.getElementById('transferHcAmount').value = (local / rate).toFixed(2);
         }
         updateTransferSummary();
     });
