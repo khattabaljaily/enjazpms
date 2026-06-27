@@ -69,6 +69,40 @@ class SupplierPaymentTests(TestCase):
         self.assertEqual(row['amount'], '50.00')
         self.assertEqual(row['currency'], 'USD')
 
+    def test_lc_supplier_payment_list_stays_in_supplier_currency(self):
+        supplier = Supplier.objects.create(
+            tenant=self.tenant,
+            name='LC Supplier',
+            currency='SDG',
+            opening_balance=Decimal('0.00'),
+        )
+        SupplierLedger.objects.create(
+            tenant=self.tenant,
+            supplier=supplier,
+            entry_type='payment',
+            amount=Decimal('-5000.00'),
+            entry_date='2026-06-27',
+            reference_type='supplier_payment_cash',
+            notes='سداد',
+            hc_amount=Decimal('-50.00'),
+            hc_currency='USD',
+            hc_exchange_rate=Decimal('100.00'),
+            running_balance=Decimal('-5000.00'),
+            hc_running_balance=Decimal('-50.00'),
+        )
+
+        request = self.factory.get('/suppliers/payments/api/')
+        request.user = self.user
+        request.tenant = self.tenant
+
+        response = supplier_payments_table_api(request)
+        self.assertEqual(response.status_code, 200)
+
+        payload = json.loads(response.content.decode())
+        row = payload['data'][0]
+        self.assertEqual(row['amount'], '5000.00')
+        self.assertEqual(row['currency'], 'SDG')
+
     def test_hc_supplier_cash_payment_cancel_restores_hc_treasury(self):
         supplier = Supplier.objects.create(
             tenant=self.tenant,

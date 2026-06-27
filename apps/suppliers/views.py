@@ -30,6 +30,18 @@ def _ensure_tenant(request):
     return tenant
 
 
+def _is_hc_supplier(tenant, supplier_currency):
+    if not getattr(tenant, 'hard_currency_mode', False):
+        return False
+
+    supplier_currency = (supplier_currency or '').strip()
+    if not supplier_currency:
+        return False
+
+    tenant_currency = (getattr(tenant, 'currency', '') or '').strip()
+    return supplier_currency != tenant_currency
+
+
 @login_required
 @require_permission('view_suppliers')
 def supplier_list(request):
@@ -448,8 +460,10 @@ def supplier_payments_table_api(request):
     page_qs = qs[start: start + length]
     data = []
     for entry in page_qs:
-        payment_currency = entry.hc_currency or (entry.supplier.currency or '')
-        display_amount = entry.hc_amount if entry.hc_amount is not None and payment_currency else entry.amount
+        supplier_currency = (entry.supplier.currency or '').strip()
+        is_hc_supplier = _is_hc_supplier(tenant, supplier_currency)
+        payment_currency = entry.hc_currency if is_hc_supplier and entry.hc_currency else supplier_currency
+        display_amount = entry.hc_amount if is_hc_supplier and entry.hc_amount is not None and payment_currency else entry.amount
         display_amount = abs(display_amount) if display_amount is not None else None
         method_label = 'نقداً' if entry.reference_type in ('supplier_payment_cash', 'supplier_payment_hc_cash') else 'بنكي'
         if entry.is_canceled:
@@ -500,8 +514,10 @@ def supplier_payment_detail_api(request, pk):
         if treasury_movement:
             cash_treasury = treasury_movement.treasury.name
 
-    payment_currency = payment.hc_currency or (payment.supplier.currency or '')
-    display_amount = payment.hc_amount if payment.hc_amount is not None and payment_currency else payment.amount
+    supplier_currency = (payment.supplier.currency or '').strip()
+    is_hc_supplier = _is_hc_supplier(tenant, supplier_currency)
+    payment_currency = payment.hc_currency if is_hc_supplier and payment.hc_currency else supplier_currency
+    display_amount = payment.hc_amount if is_hc_supplier and payment.hc_amount is not None and payment_currency else payment.amount
     display_amount = abs(display_amount) if display_amount is not None else None
     response_data = {
         'id': payment.id,
@@ -554,9 +570,8 @@ def supplier_payment_create_api(request):
     if not note_text:
         note_text = 'سداد مورد'
 
-    hc_mode = getattr(tenant, 'hard_currency_mode', False)
     supplier_currency = (supplier.currency or '').strip()
-    is_hc_supplier = hc_mode and bool(supplier_currency)
+    is_hc_supplier = _is_hc_supplier(tenant, supplier_currency)
 
     # Determine reference type based on payment path
     if method == 'bank':
