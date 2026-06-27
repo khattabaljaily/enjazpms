@@ -124,11 +124,14 @@
                                             <input type="hidden" id="paymentModalMethod" value="cash">
                                         </div>
                                         <div class="col-md-6" id="paymentModalTreasuryRow">
-                                            <label class="cx-label">الخزينة <span class="text-danger">*</span></label>
+                                            <label class="cx-label" id="paymentModalTreasuryLabel">الخزينة <span class="text-danger">*</span></label>
                                             <select id="paymentModalTreasury" class="cx-input">
                                                 <option value="">— اختر الخزينة —</option>
                                                 {% for treasury in treasuries %}
-                                                <option value="{{ treasury.id }}">{{ treasury.name }}</option>
+                                                <option value="{{ treasury.id }}" data-hc="0">{{ treasury.name }}</option>
+                                                {% endfor %}
+                                                {% for treasury in hc_treasuries %}
+                                                <option value="{{ treasury.id }}" data-hc="1">{{ treasury.name }} ({{ hc_currency }})</option>
                                                 {% endfor %}
                                             </select>
                                         </div>
@@ -398,7 +401,7 @@
     {% if hc_mode %}
     const CURRENT_RATE = {{ exchange_rate|stringformat:".4f" }};
     {% endif %}
-    const PAYMENT_SUPPLIERS = [{% for s in suppliers %}{id:{{ s.id }},name:'{{ s.name|escapejs }}',currency:'{{ s.currency|default:"" }}',balance:parseFloat('{{ s.opening_balance|default:0 }}')+parseFloat('{{ s.ledger_total|default:0 }}'),hcBalance:parseFloat('{{ s.hc_ledger_total|default:0 }}')},{% endfor %}];
+    const PAYMENT_SUPPLIERS = [{% for s in suppliers %}{id:{{ s.id }},name:'{{ s.name|escapejs }}',currency:'{{ s.currency|default:"" }}',balance:parseFloat('{{ s.opening_balance|default:0 }}')+parseFloat('{{ s.ledger_total|default:0 }}'),hcBalance:'{{ s.currency|default:"" }}'?(parseFloat('{{ s.hc_ledger_total|default:0 }}')+parseFloat('{{ s.opening_balance|default:0 }}')):0},{% endfor %}];
 
     const paymentModalAmountLabel = document.getElementById('paymentModalAmountLabel');
     const paymentModalBalanceLabel = document.getElementById('paymentModalBalanceLabel');
@@ -434,7 +437,15 @@
             document.getElementById('paymentModalHcPreview').textContent = '—';
         }
         {% endif %}
-        // Always use local treasury — reset selection on supplier change
+        // Filter treasury options: HC suppliers → show only HC treasuries; local → show only local
+        const treasuryLabel = document.getElementById('paymentModalTreasuryLabel');
+        if (treasuryLabel) treasuryLabel.innerHTML = isHC
+            ? `خزينة ${cur} <span class="text-danger">*</span>`
+            : 'الخزينة <span class="text-danger">*</span>';
+        Array.from(paymentModalTreasury.options).forEach(opt => {
+            if (!opt.value) return;
+            opt.hidden = isHC ? opt.dataset.hc !== '1' : opt.dataset.hc === '1';
+        });
         paymentModalTreasury.value = '';
     }
 
@@ -600,6 +611,14 @@
         if (!paymentDate) return EnjazIMS.toast('اختر التاريخ', 'error');
         if (!amount || amount <= 0) return EnjazIMS.toast('أدخل مبلغاً صحيحاً', 'error');
         if (isHCSupplier && (!exchangeRate || exchangeRate <= 0)) return EnjazIMS.toast('أدخل سعر الصرف', 'error');
+        // Balance check
+        if (selectedPaymentSupplier) {
+            const bal = isHCSupplier ? (selectedPaymentSupplier.hcBalance || 0) : (selectedPaymentSupplier.balance || 0);
+            const cur = isHCSupplier ? (' ' + selectedPaymentSupplier.currency) : ' ج.س';
+            if (amount > bal + 0.005) {
+                return EnjazIMS.toast(`المبلغ (${amount.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}${cur}) يتجاوز المديونية (${bal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}${cur})`, 'error');
+            }
+        }
 
         paymentModalSaveBtn.disabled = true;
         paymentModalSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...';

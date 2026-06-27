@@ -404,7 +404,7 @@ class PurchasesReportGenerator:
                     .order_by('-entry_date', '-id')
                     .first()
                 )
-                balance = float(last_hc.hc_running_balance) if last_hc else 0.0
+                balance = float(last_hc.hc_running_balance) if last_hc else float(s.opening_balance or 0)
             else:
                 balance = float(last_entry.running_balance) if last_entry else float(s.opening_balance)
 

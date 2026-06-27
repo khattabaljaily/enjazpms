@@ -154,6 +154,8 @@ def _apply_supplier_ledger(tenant, supplier, amount, entry_type, reference_type,
             .filter(tenant=tenant, supplier=supplier, hc_amount__isnull=False)
             .aggregate(s=Sum('hc_amount'))['s'] or Decimal('0')
         )
+        if supplier and getattr(supplier, 'currency', ''):
+            hc_prev += (supplier.opening_balance or Decimal('0'))
         hc_run = hc_prev + hc_amount
 
     SupplierLedger.objects.create(
