@@ -9,7 +9,7 @@
 <style>
 .cx-searchable-select { position: relative; }
 .cx-searchable-select-dropdown {
-  position: absolute; z-index: 1050; width: 100%;
+  position: absolute; z-index: 9500; width: 100%;
   background: var(--surface, #fff);
   border: 1px solid var(--border-light, #e5e7eb);
   border-radius: 10px;
@@ -23,6 +23,8 @@
 }
 .cx-searchable-option:hover { background: var(--surface-alt, #f3f4f6); }
 .cx-searchable-no-results { padding: .75rem 1rem; font-size: .8rem; color: var(--text-muted, #9ca3af); }
+.cx-hc-hint { display:block; font-size:.68rem; font-weight:700; color:#e05c2a; margin-top:2px; }
+.cx-hc-hint-inline { font-size:.72rem; font-weight:700; color:#e05c2a; margin-right:.35rem; }
 </style>
 {% endblock %}
 
@@ -580,6 +582,160 @@ function submitOrder(action) {
         });
         recalc();
     }
+})();
+</script>
+
+{% if hc_mode and hc_rate %}
+<script>
+(function () {
+    var HC_RATE_V = {{ hc_rate }};
+    var HC_CUR_MAP = {};
+    {% for s in suppliers %}{% if s.currency %}HC_CUR_MAP['{{ s.id }}'] = '{{ s.currency|escapejs }}';{% endif %}{% endfor %}
+    var TENANT_CUR = '{{ tenant_currency|escapejs }}';
+
+    function getHCCur() {
+        var sid = (document.getElementById('supplierId') || {}).value || '';
+        var cur = HC_CUR_MAP[sid] || '';
+        return (cur && cur !== TENANT_CUR) ? cur : '';
+    }
+
+    function fmt(amount, cur) {
+        return (amount / HC_RATE_V).toFixed(2) + ' ' + cur;
+    }
+
+    function setHint(el, val) {
+        if (!el) return;
+        if (val) { el.textContent = val; el.style.display = ''; }
+        else { el.style.display = 'none'; }
+    }
+
+    function refreshHints() {
+        var cur = getHCCur();
+        // grand total hint
+        var grandEl = document.getElementById('cx-hc-grand');
+        if (grandEl) {
+            if (cur) {
+                var g = EnjazIMS.parseNumber((document.getElementById('displayGrand') || {}).textContent || '0');
+                setHint(grandEl, fmt(g, cur));
+            } else { setHint(grandEl, ''); }
+        }
+        // per-line hints
+        document.querySelectorAll('#linesBody tr').forEach(function (row) {
+            var id = row.id.replace('line-', '');
+            var costHint = document.getElementById('cx-hc-cost-' + id);
+            var totalHint = document.getElementById('cx-hc-total-' + id);
+            if (!cur) { setHint(costHint, ''); setHint(totalHint, ''); return; }
+            var cost  = EnjazIMS.parseNumber((document.getElementById('cost-' + id) || {}).value || '0');
+            var qty   = EnjazIMS.parseNumber((document.getElementById('qty-' + id) || {}).value || '1');
+            var tax   = EnjazIMS.parseNumber((document.getElementById('tax-' + id) || {}).value || '0');
+            var sub   = qty * cost;
+            var total = sub + sub * (tax / 100);
+            setHint(costHint,  fmt(cost, cur));
+            setHint(totalHint, fmt(total, cur));
+        });
+    }
+
+    // Inject hint spans into DOM without touching any existing JS
+    function injectSpans() {
+        // Grand total hint — sibling of displayGrand strong
+        if (!document.getElementById('cx-hc-grand')) {
+            var grandStrong = document.getElementById('displayGrand');
+            if (grandStrong) {
+                var sp = document.createElement('span');
+                sp.id = 'cx-hc-grand';
+                sp.className = 'cx-hc-hint-inline';
+                sp.style.display = 'none';
+                grandStrong.parentNode.insertBefore(sp, grandStrong.nextSibling);
+            }
+        }
+        // Per-line hints — appended to cost/total cells
+        document.querySelectorAll('#linesBody tr').forEach(function (row) {
+            var id = row.id.replace('line-', '');
+            var costInput = document.getElementById('cost-' + id);
+            if (costInput && !document.getElementById('cx-hc-cost-' + id)) {
+                var sp = document.createElement('span');
+                sp.id = 'cx-hc-cost-' + id;
+                sp.className = 'cx-hc-hint';
+                sp.style.display = 'none';
+                costInput.parentNode.appendChild(sp);
+            }
+            var totalEl = document.getElementById('total-' + id);
+            if (totalEl && !document.getElementById('cx-hc-total-' + id)) {
+                var sp2 = document.createElement('span');
+                sp2.id = 'cx-hc-total-' + id;
+                sp2.className = 'cx-hc-hint';
+                sp2.style.display = 'none';
+                totalEl.parentNode.appendChild(sp2);
+            }
+        });
+    }
+
+    // Patch recalc to also refresh hints
+    var _origRecalc = recalc;
+    recalc = function () { _origRecalc(); injectSpans(); refreshHints(); };
+
+    // Patch addLine to inject spans after each new line
+    var _origAddLine = addLine;
+    addLine = function (a, b, c, d, e) { _origAddLine(a, b, c, d, e); injectSpans(); refreshHints(); };
+
+    // Initial injection for edit mode
+    injectSpans();
+    refreshHints();
+})();
+</script>
+{% endif %}
+
+<script>
+// Portal the supplier dropdown to <body> so it's never clipped by ancestor stacking contexts
+(function () {
+    var input   = document.getElementById('supplierSearch');
+    var origDrop = document.getElementById('supplierDropdown');
+    if (!input || !origDrop) return;
+
+    // Create a floating clone anchored to <body>
+    var portal = document.createElement('div');
+    portal.id = 'supplierDropdownPortal';
+    portal.className = origDrop.className;
+    portal.style.cssText = 'position:fixed; z-index:9999; display:none; overflow-y:auto; max-height:220px;';
+    document.body.appendChild(portal);
+
+    function reposition() {
+        var r = input.getBoundingClientRect();
+        portal.style.top  = (r.bottom + 4) + 'px';
+        portal.style.left = r.left + 'px';
+        portal.style.width = r.width + 'px';
+    }
+
+    // Mirror mutations from origDrop → portal
+    var mo = new MutationObserver(function () {
+        portal.innerHTML = origDrop.innerHTML;
+        // Re-bind mousedown on portal items to also close portal
+        portal.querySelectorAll('.cx-searchable-option').forEach(function (el) {
+            el.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                document.getElementById('supplierId').value = this.dataset.id;
+                input.value = this.textContent;
+                portal.style.display = 'none';
+                origDrop.style.display = 'none';
+                if (typeof recalc === 'function') recalc();
+            });
+        });
+    });
+    mo.observe(origDrop, { childList: true, subtree: false });
+
+    // Mirror display changes
+    var displayObs = new MutationObserver(function () {
+        if (origDrop.style.display === 'none') {
+            portal.style.display = 'none';
+        } else {
+            reposition();
+            portal.style.display = origDrop.style.display;
+        }
+    });
+    displayObs.observe(origDrop, { attributes: true, attributeFilter: ['style'] });
+
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
 })();
 </script>
 {% endblock %}

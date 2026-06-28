@@ -27,21 +27,16 @@
         </div>
     </div>
 
-    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
-        <div class="rpt-kpi-card rpt-kpi--blue">
-            <div class="rpt-kpi-icon"><i class="fas fa-truck"></i></div>
-            <div class="rpt-kpi-value">{{ report.summary.total_suppliers }}</div>
-            <div class="rpt-kpi-label">إجمالي الموردين</div>
-        </div>
-        <div class="rpt-kpi-card rpt-kpi--amber">
-            <div class="rpt-kpi-icon"><i class="fas fa-clock"></i></div>
-            <div class="rpt-kpi-value">{{ report.summary.total_creditors }}</div>
-            <div class="rpt-kpi-label">موردون بمديونيات</div>
-        </div>
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(2, 1fr);">
         <div class="rpt-kpi-card rpt-kpi--purple">
             <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
-            <div class="rpt-kpi-value">{{ report.summary.total_balance }}</div>
-            <div class="rpt-kpi-label">إجمالي المديونيات</div>
+            <div class="rpt-kpi-value">{{ report.summary.total_local }}</div>
+            <div class="rpt-kpi-label">إجمالي مديونيات الموردين المحليين</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--amber">
+            <div class="rpt-kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_hc }} {% if report.summary.hc_currency %}<span style="font-size:.75rem;opacity:.7;">{{ report.summary.hc_currency }}</span>{% endif %}</div>
+            <div class="rpt-kpi-label">إجمالي مديونيات موردين العملة الصعبة</div>
         </div>
     </div>
 

@@ -2527,15 +2527,32 @@ def analytics(request):
             payment_method__in=('credit', 'mixed'),
         ).aggregate(t=Sum(F('grand_total') - F('paid_amount')))['t'] or 0
     )
-    # supplier debt = sum of unpaid confirmed purchase invoices (credit/mixed)
-    from apps.purchases.models import PurchaseInvoice
-    supplier_debt = float(
-        PurchaseInvoice.objects.filter(
-            tenant=tenant,
-            status='confirmed',
-            payment_method__in=('credit', 'mixed'),
-        ).aggregate(t=Sum('grand_total'))['t'] or 0
-    )
+    # supplier debt — calculated per-supplier to handle HC vs local correctly
+    from apps.purchases.models import SupplierLedger
+    from apps.suppliers.models import Supplier as SupplierModel
+    _hc_mode = getattr(tenant, 'hard_currency_mode', False)
+    _hc_rate = Decimal(str(tenant.exchange_rate or 1)) if _hc_mode and tenant.exchange_rate else Decimal('1')
+    _tenant_currency = (getattr(tenant, 'currency', '') or '').strip()
+    supplier_debt = Decimal('0')
+    for _sup in SupplierModel.objects.filter(tenant=tenant):
+        _sup_cur = (_sup.currency or '').strip()
+        _is_hc_sup = _hc_mode and bool(_sup_cur) and _sup_cur != _tenant_currency
+        if _is_hc_sup:
+            # balance in HC currency — use hc_amount field (same as payment view)
+            _hc_bal = (
+                SupplierLedger.objects.filter(tenant=tenant, supplier=_sup, hc_amount__isnull=False)
+                .aggregate(s=Sum('hc_amount'))['s'] or Decimal('0')
+            ) + (_sup.opening_balance or Decimal('0'))
+            if _hc_bal > 0:
+                supplier_debt += (_hc_bal * _hc_rate).quantize(Decimal('0.01'))
+        else:
+            _local_bal = (
+                SupplierLedger.objects.filter(tenant=tenant, supplier=_sup)
+                .aggregate(s=Sum('amount'))['s'] or Decimal('0')
+            ) + (_sup.opening_balance or Decimal('0'))
+            if _local_bal > 0:
+                supplier_debt += _local_bal
+    supplier_debt = float(supplier_debt)
 
     context = {
         'kpis': kpis,

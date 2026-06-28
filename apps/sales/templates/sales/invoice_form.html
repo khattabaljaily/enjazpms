@@ -87,7 +87,7 @@
                 <p class="sales-panel-note">حدد بيانات العميل والدفع قبل إضافة البنود لتجنب أخطاء التسعير.</p>
                 <div class="row g-3">
                     <!-- العميل -->
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="cx-label">العميل</label>
                         <div class="cx-searchable-select" id="customerSelectWrap">
                             <input type="text" id="customerSearch" class="cx-input" placeholder="ابحث عن عميل..." autocomplete="off">
@@ -98,7 +98,7 @@
 
                     <!-- المندوب -->
                     {% if plan_allows_agents %}
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="cx-label">المندوب</label>
                         <div class="cx-searchable-select" id="agentSelectWrap">
                             <input type="text" id="agentSearch" class="cx-input" placeholder="ابحث عن مندوب..." autocomplete="off">
@@ -111,7 +111,7 @@
                     {% endif %}
 
                     <!-- المخزن -->
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="cx-label">المخزن <span class="text-danger">*</span></label>
                         <select id="stockId" name="stock_id" class="cx-input" required>
                             {% for s in stocks %}
@@ -125,19 +125,10 @@
                     </div>
 
                     <!-- تاريخ الفاتورة -->
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="cx-label">تاريخ الفاتورة <span class="text-danger">*</span></label>
                         <input type="date" id="invoiceDate" name="invoice_date" class="cx-input" required
                                value="{{ invoice.invoice_date|date:'Y-m-d'|default:today }}">
-                    </div>
-
-                    <!-- نوع التسليم -->
-                    <div class="col-md-4">
-                        <label class="cx-label">نوع التسليم</label>
-                        <select id="deliveryType" name="delivery_type" class="cx-input">
-                            <option value="immediate" {% if not invoice or invoice.delivery_type == 'immediate' %}selected{% endif %}>تسليم فوري</option>
-                            <option value="deferred" {% if invoice and invoice.delivery_type == 'deferred' %}selected{% endif %}>تسليم لاحق</option>
-                        </select>
                     </div>
 
                     <!-- ملاحظات -->
@@ -238,7 +229,14 @@
                 <!-- طريقة الدفع وحقول الدفع -->
                 <hr style="margin:1rem 0;border-color:var(--border-color,#e5e7eb);">
                 <div class="row g-2">
-                    <div class="col-12">
+                    <div class="col-6">
+                        <label class="cx-label">نوع التسليم</label>
+                        <select id="deliveryType" name="delivery_type" class="cx-input">
+                            <option value="immediate" {% if not invoice or invoice.delivery_type == 'immediate' %}selected{% endif %}>تسليم فوري</option>
+                            <option value="deferred" {% if invoice and invoice.delivery_type == 'deferred' %}selected{% endif %}>تسليم لاحق</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
                         <label class="cx-label">طريقة الدفع</label>
                         <select id="paymentMethod" name="payment_method" class="cx-input" onchange="handlePaymentMethodChange()">
                             <option value="cash" {% if invoice and invoice.payment_method == 'cash' %}selected{% endif %}>نقداً</option>

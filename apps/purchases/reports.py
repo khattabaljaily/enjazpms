@@ -404,62 +404,63 @@ class PurchasesReportGenerator:
         }
 
     def get_supplier_balances(self):
-        """أرصدة الموردين — آخر رصيد تراكمي لكل مورد"""
+        """أرصدة الموردين — مجموع حركات الدفتر + الرصيد الافتتاحي لكل مورد"""
         from apps.suppliers.models import Supplier
+        from django.db.models import Sum as _Sum
 
         hc_mode = getattr(self.tenant, 'hard_currency_mode', False)
+        hc_rate = Decimal(str(self.tenant.exchange_rate or 1)) if hc_mode and self.tenant.exchange_rate else None
 
         suppliers = Supplier.objects.filter(tenant=self.tenant).order_by('name')
         data = []
         for s in suppliers:
             supplier_currency = (s.currency or '').strip()
-            is_hc = hc_mode and bool(supplier_currency)
+            # Mirror exact logic from suppliers list page: HC = has currency + hc_mode + rate exists
+            is_hc = hc_mode and bool(supplier_currency) and hc_rate is not None
 
-            last_entry = (
-                SupplierLedger.objects
-                .filter(tenant=self.tenant, supplier=s)
-                .order_by('-entry_date', '-id')
-                .first()
-            )
-
+            opening = float(s.opening_balance or 0)
             if is_hc:
-                # Use hc_running_balance from the last entry that has it
-                last_hc = (
+                hc_sum = float(
                     SupplierLedger.objects
-                    .filter(tenant=self.tenant, supplier=s, hc_running_balance__isnull=False)
-                    .order_by('-entry_date', '-id')
-                    .first()
+                    .filter(tenant=self.tenant, supplier=s, hc_amount__isnull=False)
+                    .aggregate(s=_Sum('hc_amount'))['s'] or 0
                 )
-                balance = float(last_hc.hc_running_balance) if last_hc else float(s.opening_balance or 0)
+                balance = hc_sum + opening
             else:
-                balance = float(last_entry.running_balance) if last_entry else float(s.opening_balance)
+                local_sum = float(
+                    SupplierLedger.objects
+                    .filter(tenant=self.tenant, supplier=s)
+                    .aggregate(s=_Sum('amount'))['s'] or 0
+                )
+                balance = local_sum + opening
 
-            data.append({
-                'code': s.code,
-                'name': s.name,
-                'phone': s.phone,
-                'credit_limit': format_number(float(s.credit_limit), 2),
-                'balance': format_number(balance, 2),
-                'balance_raw': balance,
-                'currency': supplier_currency,
-                'is_hc': is_hc,
-            })
+            if balance > 0:
+                data.append({
+                    'code': s.code,
+                    'name': s.name,
+                    'phone': s.phone,
+                    'credit_limit': format_number(float(s.credit_limit), 2),
+                    'balance': format_number(balance, 2),
+                    'balance_raw': balance,
+                    'currency': supplier_currency,
+                    'is_hc': is_hc,
+                })
 
-        # Total balance only for local suppliers (can't mix currencies)
-        total_balance = sum(r['balance_raw'] for r in data if not r['is_hc'])
-        total_creditors = sum(1 for r in data if r['balance_raw'] > 0)
+        total_local = sum(r['balance_raw'] for r in data if not r['is_hc'])
+        total_hc = sum(r['balance_raw'] for r in data if r['is_hc'])
+        hc_currency = next((r['currency'] for r in data if r['is_hc']), '')
         return {
             'data': data,
             'summary': {
-                'total_suppliers': format_number(len(data), 0),
-                'total_creditors': format_number(total_creditors, 0),
-                'total_balance': format_number(total_balance, 2),
+                'total_local': format_number(total_local, 2),
+                'total_hc': format_number(total_hc, 2),
+                'hc_currency': hc_currency,
             },
         }
 
     def get_payments_report(self, supplier_id=None):
         """تقرير مدفوعات الموردين — من SupplierLedger (يشمل المدفوعات المستقلة والمرتبطة بفواتير)"""
-        entries = SupplierLedger.objects.filter(
+        qs = SupplierLedger.objects.filter(
             tenant=self.tenant,
             entry_type='payment',
             entry_date__gte=self.start_date,
@@ -467,41 +468,72 @@ class PurchasesReportGenerator:
         ).select_related('supplier').order_by('-entry_date', '-id')
 
         if supplier_id:
-            entries = entries.filter(supplier_id=supplier_id)
+            qs = qs.filter(supplier_id=supplier_id)
+
+        entries = list(qs)
 
         METHOD_MAP = {
-            'supplier_payment_cash': ('نقداً', 'cash'),
-            'supplier_payment_hc_cash': ('نقداً', 'cash'),
-            'supplier_payment_bank': ('تحويل بنكي', 'bank'),
-            'purchase_invoice':      ('نقداً', 'cash'),
+            'supplier_payment_cash':   ('نقداً', 'cash'),
+            'supplier_payment_hc_cash':('نقداً', 'cash'),
+            'supplier_payment_bank':   ('تحويل بنكي', 'bank'),
+            'purchase_payment_cash':   ('نقداً', 'cash'),
+            'purchase_payment_bank':   ('تحويل بنكي', 'bank'),
+            'purchase_invoice':        ('نقداً', 'cash'),  # legacy entries
         }
 
+        # Bulk-fetch invoice numbers for purchase_payment_* entries
+        invoice_ref_ids = {
+            e.reference_id for e in entries
+            if e.reference_type in ('purchase_payment_cash', 'purchase_payment_bank', 'purchase_invoice')
+            and e.reference_id
+        }
+        invoice_map = {}
+        if invoice_ref_ids:
+            invoice_map = {
+                inv.id: inv.invoice_number
+                for inv in PurchaseInvoice.objects.filter(id__in=invoice_ref_ids).only('id', 'invoice_number')
+            }
+
         hc_mode = getattr(self.tenant, 'hard_currency_mode', False)
+        tenant_currency = (getattr(self.tenant, 'currency', '') or '').strip()
+        # totals keyed by currency string ('' = local)
+        totals: dict = {}  # currency -> {'cash': float, 'bank': float}
         data = []
-        total_cash = 0.0
-        total_bank = 0.0
 
         for e in entries:
-            amt = abs(float(e.amount))
             method_label, method_key = METHOD_MAP.get(e.reference_type, ('—', ''))
 
             sup_currency = (e.supplier.currency or '').strip() if e.supplier else ''
-            is_hc = hc_mode and bool(sup_currency) and e.hc_amount is not None
+            # HC supplier: hc_mode on, has a currency different from tenant's local currency
+            is_hc = hc_mode and bool(sup_currency) and sup_currency != tenant_currency
+
             if is_hc:
-                display_amount = format_number(abs(float(e.hc_amount)), 2)
+                amt_in_currency = abs(float(e.hc_amount or 0))
                 currency_label = sup_currency
             else:
-                display_amount = format_number(amt, 2)
+                amt_in_currency = abs(float(e.amount))
                 currency_label = ''
 
-            if method_key == 'cash':
-                total_cash += amt
-            elif method_key == 'bank':
-                total_bank += amt
+            display_amount = format_number(amt_in_currency, 2)
 
-            ref = ''
-            if e.notes and 'مرجع:' in e.notes:
-                ref = e.notes.split('مرجع:')[-1].strip().split('|')[0].strip()
+            # Track totals per currency
+            cur_key = currency_label or '__local__'
+            if cur_key not in totals:
+                totals[cur_key] = {'currency': currency_label, 'cash': 0.0, 'bank': 0.0}
+            if method_key == 'cash':
+                totals[cur_key]['cash'] += amt_in_currency
+            elif method_key == 'bank':
+                totals[cur_key]['bank'] += amt_in_currency
+
+            # Invoice number linked to this payment
+            invoice_number = ''
+            if e.reference_type in ('purchase_payment_cash', 'purchase_payment_bank', 'purchase_invoice') and e.reference_id:
+                invoice_number = invoice_map.get(e.reference_id, '')
+
+            # Clean notes
+            notes_clean = (e.notes or '').strip()
+            if 'مرجع:' in notes_clean:
+                notes_clean = notes_clean.split('|')[0].replace('مرجع:', '').strip().strip(' |')
 
             data.append({
                 'payment_date': e.entry_date,
@@ -510,18 +542,26 @@ class PurchasesReportGenerator:
                 'payment_method_key': method_key,
                 'amount': display_amount,
                 'currency_label': currency_label,
-                'reference_number': ref,
-                'notes': e.notes or '',
+                'invoice_number': invoice_number,
+                'notes': notes_clean,
             })
 
-        total_all = total_cash + total_bank
+        # Build summary list per currency for template
+        currency_summaries = []
+        for cur_key, t in totals.items():
+            cur_label = t['currency']
+            currency_summaries.append({
+                'currency': cur_label,
+                'cash': format_number(t['cash'], 2),
+                'bank': format_number(t['bank'], 2),
+                'total': format_number(t['cash'] + t['bank'], 2),
+            })
+
         return {
             'period': {'start': self.start_date, 'end': self.end_date},
             'summary': {
                 'payment_count': format_number(len(data), 0),
-                'total_cash': format_number(total_cash, 2),
-                'total_bank': format_number(total_bank, 2),
-                'total_amount': format_number(total_all, 2),
+                'currency_summaries': currency_summaries,
             },
             'data': data,
         }

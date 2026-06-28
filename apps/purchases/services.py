@@ -438,7 +438,7 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user, reapply_stock=True)
             )
             _apply_supplier_ledger(
                 tenant=tenant, supplier=invoice.supplier, amount=-total,
-                entry_type='payment', reference_type='purchase_invoice',
+                entry_type='payment', reference_type='purchase_payment_cash',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f'سداد نقدي — {invoice.invoice_number}',
                 hc_amount=(-hc_amt) if hc_amt is not None else None,
@@ -459,7 +459,7 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user, reapply_stock=True)
             )
             _apply_supplier_ledger(
                 tenant=tenant, supplier=invoice.supplier, amount=-total,
-                entry_type='payment', reference_type='purchase_invoice',
+                entry_type='payment', reference_type='purchase_payment_bank',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f'سداد بنكي — {invoice.invoice_number} ({bank_reference})',
                 hc_amount=(-hc_amt) if hc_amt is not None else None,
@@ -502,7 +502,7 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user, reapply_stock=True)
                 hc_c_amt, _, _ = _hc(cash_amt)
                 _apply_supplier_ledger(
                     tenant=tenant, supplier=invoice.supplier, amount=-cash_amt,
-                    entry_type='payment', reference_type='purchase_invoice',
+                    entry_type='payment', reference_type='purchase_payment_cash',
                     reference_id=invoice.id, date=invoice.invoice_date,
                     notes=f'سداد نقدي — {invoice.invoice_number}',
                     hc_amount=(-hc_c_amt) if hc_c_amt is not None else None,
@@ -512,7 +512,7 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user, reapply_stock=True)
                 hc_b_amt, _, _ = _hc(bank_amt)
                 _apply_supplier_ledger(
                     tenant=tenant, supplier=invoice.supplier, amount=-bank_amt,
-                    entry_type='payment', reference_type='purchase_invoice',
+                    entry_type='payment', reference_type='purchase_payment_bank',
                     reference_id=invoice.id, date=invoice.invoice_date,
                     notes=f'سداد بنكي — {invoice.invoice_number} ({bank_reference})',
                     hc_amount=(-hc_b_amt) if hc_b_amt is not None else None,

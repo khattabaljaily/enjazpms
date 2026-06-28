@@ -192,6 +192,8 @@ def order_create(request):
     if request.method == 'POST':
         return _process_order_post(request, tenant, invoice=None)
 
+    _hc_mode = getattr(tenant, 'hard_currency_mode', False)
+    _hc_rate = float(tenant.exchange_rate) if _hc_mode and getattr(tenant, 'exchange_rate', None) else 0
     context = {
         'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'stocks': Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name'),
@@ -199,6 +201,9 @@ def order_create(request):
         'action': 'create',
         'existing_lines': '[]',
         'invoice': None,
+        'hc_mode': _hc_mode,
+        'hc_rate': _hc_rate,
+        'tenant_currency': (getattr(tenant, 'currency', '') or '').strip(),
     }
     return render(request, 'purchases/order_form.html', context)
 
@@ -241,6 +246,8 @@ def order_edit(request, pk):
             'expiry_date': line.expiry_date.isoformat() if line.expiry_date else '',
         })
 
+    _hc_mode = getattr(tenant, 'hard_currency_mode', False)
+    _hc_rate = float(tenant.exchange_rate) if _hc_mode and getattr(tenant, 'exchange_rate', None) else 0
     context = {
         'invoice': invoice,
         'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
@@ -248,6 +255,9 @@ def order_edit(request, pk):
         'today': timezone.localdate().isoformat(),
         'action': 'edit',
         'existing_lines': json.dumps(existing_lines, ensure_ascii=False),
+        'hc_mode': _hc_mode,
+        'hc_rate': _hc_rate,
+        'tenant_currency': (getattr(tenant, 'currency', '') or '').strip(),
     }
     return render(request, 'purchases/order_form.html', context)
 

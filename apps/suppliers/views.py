@@ -440,7 +440,9 @@ def supplier_payments_table_api(request):
         qs = qs.filter(supplier_id=supplier_filter)
     if method_filter:
         if method_filter == 'cash':
-            qs = qs.filter(reference_type__in=['supplier_payment_cash', 'supplier_payment_hc_cash'])
+            qs = qs.filter(reference_type__in=['supplier_payment_cash', 'supplier_payment_hc_cash', 'purchase_payment_cash'])
+        elif method_filter == 'bank':
+            qs = qs.filter(reference_type__in=['supplier_payment_bank', 'purchase_payment_bank'])
         else:
             qs = qs.filter(reference_type=f'supplier_payment_{method_filter}')
 
@@ -483,7 +485,18 @@ def supplier_payments_table_api(request):
         payment_currency = entry.hc_currency if is_hc_supplier and entry.hc_currency else supplier_currency
         display_amount = entry.hc_amount if is_hc_supplier and entry.hc_amount is not None and payment_currency else entry.amount
         display_amount = abs(display_amount) if display_amount is not None else None
-        method_label = 'نقداً' if entry.reference_type in ('supplier_payment_cash', 'supplier_payment_hc_cash') else 'بنكي'
+        cash_types = ('supplier_payment_cash', 'supplier_payment_hc_cash', 'purchase_payment_cash')
+        bank_types = ('supplier_payment_bank', 'purchase_payment_bank')
+        if entry.reference_type in cash_types:
+            method_label = 'نقداً'
+        elif entry.reference_type in bank_types:
+            method_label = 'بنكي'
+        elif entry.reference_type == 'purchase_invoice' and entry.notes and 'نقدي' in entry.notes:
+            method_label = 'نقداً'
+        elif entry.reference_type == 'purchase_invoice':
+            method_label = 'بنكي'
+        else:
+            method_label = 'غير محدد'
         if entry.is_canceled:
             method_label += ' — ملغاة'
         data.append({
@@ -590,6 +603,7 @@ def supplier_payment_create_api(request):
 
     supplier_currency = (supplier.currency or '').strip()
     is_hc_supplier = _is_hc_supplier(tenant, supplier_currency)
+    hc_mode = getattr(tenant, 'hard_currency_mode', False)
 
     # Determine reference type based on payment path
     if method == 'bank':

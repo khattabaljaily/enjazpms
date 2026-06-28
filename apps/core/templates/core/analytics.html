@@ -281,10 +281,20 @@
 
     <div class="anl-kpi anl-kpi--profit">
         <div class="anl-kpi-accent"></div>
-        <div class="anl-kpi-label"><i class="fas fa-coins" style="margin-left:.3rem;"></i> صافي الربح</div>
+        <div class="anl-kpi-label" style="display:flex;align-items:center;justify-content:space-between;">
+            <span><i class="fas fa-coins" style="margin-left:.3rem;"></i> {% if kpis.profit.value >= 0 %}صافي الربح{% else %}صافي الخسارة{% endif %}</span>
+            <span title="الحساب: المبيعات − المشتريات − المصروفات" style="cursor:help;color:var(--text-tertiary);font-size:.85rem;">
+                <i class="fas fa-circle-question"></i>
+            </span>
+        </div>
         <div class="anl-kpi-value" style="color:{% if kpis.profit.value >= 0 %}var(--success){% else %}var(--danger){% endif %}">
             {{ kpis.profit.value|money }}
         </div>
+        {% if kpis.profit.value < 0 %}
+        <div style="font-size:.74rem;color:var(--danger);margin-bottom:.35rem;font-weight:600;">
+            <i class="fas fa-triangle-exclamation" style="margin-left:.25rem;"></i>المشتريات تتجاوز المبيعات هذا الشهر
+        </div>
+        {% endif %}
         <div class="anl-kpi-footer">
             <span class="anl-kpi-prev">الشهر السابق: {{ kpis.profit.prev|money }}</span>
             {% if kpis.profit.change is not None %}
@@ -399,15 +409,17 @@
                     <div class="anl-balance-item anl-balance-item--recv">
                         <div class="anl-balance-icon"><i class="fas fa-arrow-down"></i></div>
                         <div>
-                            <div class="anl-balance-lbl">ذمم العملاء</div>
+                            <div class="anl-balance-lbl">مستحقات على العملاء</div>
                             <div class="anl-balance-val">{{ customer_debt|money }}</div>
+                            <div style="font-size:.68rem;color:var(--text-tertiary);margin-top:.15rem;">مبالغ لم يدفعها العملاء بعد</div>
                         </div>
                     </div>
                     <div class="anl-balance-item anl-balance-item--pay">
                         <div class="anl-balance-icon"><i class="fas fa-arrow-up"></i></div>
                         <div>
-                            <div class="anl-balance-lbl">ذمم الموردين</div>
+                            <div class="anl-balance-lbl">مستحقات للموردين</div>
                             <div class="anl-balance-val">{{ supplier_debt|money }}</div>
+                            <div style="font-size:.68rem;color:var(--text-tertiary);margin-top:.15rem;">مبالغ لم تُسدَّد للموردين بعد</div>
                         </div>
                     </div>
                 </div>
