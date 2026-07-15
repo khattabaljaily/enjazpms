@@ -3,6 +3,24 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+<style>
+.cx-searchable-select { position: relative; }
+.cx-searchable-select-dropdown {
+  position: absolute; z-index: 1050; width: 100%;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.12);
+  max-height: 220px; overflow-y: auto;
+  top: calc(100% + 4px);
+}
+.cx-searchable-option {
+  padding: .55rem 1rem; cursor: pointer; font-size: .875rem;
+  color: var(--text-primary, #111827);
+}
+.cx-searchable-option:hover { background: var(--surface-alt, #f3f4f6); }
+.cx-searchable-no-results { padding: .75rem 1rem; font-size: .8rem; color: var(--text-muted, #9ca3af); }
+</style>
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -31,12 +49,11 @@
         <form method="get" class="row g-3">
             <div class="col-md-3">
                 <label class="form-label">المنتج</label>
-                <select name="item_id" class="form-select">
-                    <option value="">كل المنتجات</option>
-                    {% for item in report.items %}
-                    <option value="{{ item.id }}" {% if item.id|stringformat:"s" == selected_item_id %}selected{% endif %}>{{ item.name }}</option>
-                    {% endfor %}
-                </select>
+                <div class="cx-searchable-select" id="itemSelectWrap">
+                    <input type="text" id="itemSearch" class="form-control" placeholder="كل المنتجات" autocomplete="off" value="{{ selected_item_name }}">
+                    <input type="hidden" id="itemId" name="item_id" value="{{ selected_item_id|default:'' }}">
+                    <div id="itemDropdown" class="cx-searchable-select-dropdown" style="display:none;"></div>
+                </div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">المخزن</label>
@@ -106,8 +123,8 @@
                             <th>المنتج</th>
                             <th class="d-none d-md-table-cell text-center">الوحدة</th>
                             <th class="d-none d-lg-table-cell">المخزن</th>
-                            <th>نوع الحركة</th>
                             <th>رقم المستند</th>
+                            <th>نوع الحركة</th>
                             <th class="text-center" style="color:#11998e;">دخول +</th>
                             <th class="text-center" style="color:#ef4444;">خروج −</th>
                             <th class="d-none d-md-table-cell text-end">الرصيد بعد</th>
@@ -151,4 +168,54 @@
     </div>
 
 </div>
+
+<script>
+const ITEMS_DATA = [
+    {% for item in report.items %}{ id: '{{ item.id }}', name: '{{ item.name|escapejs }}' },{% endfor %}
+];
+
+(function () {
+    const searchInput = document.getElementById('itemSearch');
+    const hiddenInput = document.getElementById('itemId');
+    const dropdown = document.getElementById('itemDropdown');
+
+    function renderOptions(list) {
+        if (!list.length) {
+            dropdown.innerHTML = '<div class="cx-searchable-no-results">لا توجد نتائج</div>';
+        } else {
+            dropdown.innerHTML = list.map(i =>
+                `<div class="cx-searchable-option" data-id="${i.id}">${i.name}</div>`
+            ).join('');
+        }
+        dropdown.querySelectorAll('.cx-searchable-option').forEach(el => {
+            el.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                hiddenInput.value = this.dataset.id;
+                searchInput.value = this.textContent;
+                dropdown.style.display = 'none';
+            });
+        });
+    }
+
+    function openDropdown() {
+        const q = searchInput.value.toLowerCase();
+        const filtered = ITEMS_DATA.filter(i => i.name.toLowerCase().includes(q));
+        renderOptions(filtered);
+        dropdown.style.display = 'block';
+    }
+
+    searchInput.addEventListener('focus', function () {
+        this.value = '';
+        hiddenInput.value = '';
+        openDropdown();
+    });
+    searchInput.addEventListener('input', openDropdown);
+    searchInput.addEventListener('blur', function () {
+        setTimeout(() => {
+            dropdown.style.display = 'none';
+            if (!hiddenInput.value) searchInput.value = '';
+        }, 150);
+    });
+})();
+</script>
 {% endblock %}

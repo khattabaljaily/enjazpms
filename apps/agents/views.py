@@ -15,7 +15,7 @@ import json
 from apps.accounts.decorators import require_permission
 from .forms import AgentForm
 from .models import Agent, AgentLedger
-from .services import _apply_agent_ledger
+from .services import _apply_agent_ledger, agent_ledger_display_label
 from apps.treasury.models import Treasury, TreasuryMovement
 from apps.treasury.services import post_treasury_disbursement
 
@@ -120,18 +120,22 @@ def agent_table_api(request):
     for agent in qs:
         balance = _agent_balance(tenant, agent)
         commission_label = dict(Agent.COMMISSION_TYPE_CHOICES).get(agent.commission_type, '—')
+        commission_basis_label = dict(Agent.COMMISSION_BASIS_CHOICES).get(agent.commission_basis, '—')
         data.append({
-            'id':               agent.id,
-            'code':             agent.code,
-            'name':             agent.name,
-            'phone':            agent.phone or '-',
-            'city':             agent.city or '-',
-            'commission_type':  agent.commission_type,
-            'commission_label': commission_label,
-            'commission_rate':  str(agent.commission_rate),
-            'current_balance':  str(balance.quantize(Decimal('0.01'))),
-            'is_active':        agent.is_active,
-            'has_user':         agent.user_id is not None,
+            'id':                        agent.id,
+            'code':                      agent.code,
+            'name':                      agent.name,
+            'phone':                     agent.phone or '-',
+            'city':                      agent.city or '-',
+            'commission_type':           agent.commission_type,
+            'commission_label':          commission_label,
+            'commission_basis':          agent.commission_basis,
+            'commission_basis_label':    commission_basis_label,
+            'commission_rate':           str(agent.commission_rate),
+            'commission_rate_collection': str(agent.commission_rate_collection),
+            'current_balance':           str(balance.quantize(Decimal('0.01'))),
+            'is_active':                 agent.is_active,
+            'has_user':                  agent.user_id is not None,
         })
 
     return JsonResponse({
@@ -189,7 +193,9 @@ def agent_detail_api(request, pk):
         'city':            agent.city,
         'address':         agent.address,
         'commission_type': agent.commission_type,
+        'commission_basis': agent.commission_basis,
         'commission_rate': str(agent.commission_rate),
+        'commission_rate_collection': str(agent.commission_rate_collection),
         'opening_balance': str(agent.opening_balance),
         'current_balance': str(balance.quantize(Decimal('0.01'))),
         'notes':           agent.notes,
@@ -225,15 +231,8 @@ def agent_transactions_api(request, pk):
             'notes':             'مستحقات افتتاحية للمندوب',
             'reference_type':    'agent_opening',
             'reference_id':      agent.id,
+            'is_reversal':       False,
         })
-
-    labels = {
-        'commission': 'عمولة مبيعات',
-        'payment':    'دفعة للمندوب',
-        'return':     'مرتجع مبيعات',
-        'adjustment': 'تعديل',
-        'opening':    'مستحقات افتتاحية',
-    }
 
     entries = AgentLedger.objects.filter(tenant=tenant, agent=agent).order_by('entry_date', 'id')
     for e in entries:
@@ -241,12 +240,13 @@ def agent_transactions_api(request, pk):
         data.append({
             'entry_date':       e.entry_date.strftime('%Y-%m-%d') if e.entry_date else '',
             'entry_type':       e.entry_type,
-            'entry_type_label': labels.get(e.entry_type, e.entry_type),
+            'entry_type_label': agent_ledger_display_label(e.entry_type, e.reference_type),
             'amount':           str(e.amount),
             'running_balance':  str(running),
             'notes':            e.notes or '—',
             'reference_type':   e.reference_type or '—',
             'reference_id':     e.reference_id,
+            'is_reversal':      e.is_reversal,
         })
 
     data.reverse()
@@ -598,12 +598,13 @@ def agent_export_api(request):
     response['Content-Disposition'] = 'attachment; filename="agents.csv"'
     response.write('﻿')
     writer = csv.writer(response)
-    writer.writerow(['الاسم', 'الكود', 'الهاتف', 'البريد', 'المدينة', 'نوع العمولة', 'معدل العمولة', 'الملاحظات', 'نشط'])
+    writer.writerow(['الاسم', 'الكود', 'الهاتف', 'البريد', 'المدينة', 'نوع العمولة', 'أساس العمولة', 'معدل العمولة', 'معدل عمولة التحصيل', 'الملاحظات', 'نشط'])
     for agent in Agent.objects.for_tenant(tenant).order_by('name'):
         writer.writerow([
             agent.name, agent.code, agent.phone or '', agent.email or '',
             agent.city or '', agent.get_commission_type_display(),
-            agent.commission_rate, agent.notes or '',
+            agent.get_commission_basis_display(),
+            agent.commission_rate, agent.commission_rate_collection, agent.notes or '',
             'نعم' if agent.is_active else 'لا',
         ])
     return response
@@ -726,16 +727,18 @@ def agent_statement(request):
             else:
                 opening_balance = float(agent.opening_balance or 0)
 
-            entries = AgentLedger.objects.filter(
+            entries = list(AgentLedger.objects.filter(
                 tenant=tenant,
                 agent=agent,
                 entry_date__gte=start_date,
                 entry_date__lte=end_date,
-            ).order_by('entry_date', 'id')
+            ).order_by('entry_date', 'id'))
+            for e in entries:
+                e.display_label = agent_ledger_display_label(e.entry_type, e.reference_type)
 
             total_debit = sum(float(e.amount) for e in entries if float(e.amount) > 0)
             total_credit = abs(sum(float(e.amount) for e in entries if float(e.amount) < 0))
-            last_entry = entries.last()
+            last_entry = entries[-1] if entries else None
             closing_balance = float(last_entry.running_balance) if last_entry else opening_balance
 
             report = {
@@ -983,10 +986,12 @@ def agent_portal_statement(request):
     start_date = request.GET.get('start_date') or (timezone.localdate() - timedelta(days=30)).isoformat()
     end_date   = request.GET.get('end_date') or timezone.localdate().isoformat()
 
-    entries = AgentLedger.objects.filter(
+    entries = list(AgentLedger.objects.filter(
         tenant=tenant, agent=agent,
         entry_date__gte=start_date, entry_date__lte=end_date,
-    ).order_by('entry_date', 'id')
+    ).order_by('entry_date', 'id'))
+    for e in entries:
+        e.display_label = agent_ledger_display_label(e.entry_type, e.reference_type)
 
     balance          = _agent_balance(tenant, agent)
     total_commission = sum(e.amount for e in entries if e.amount > 0)

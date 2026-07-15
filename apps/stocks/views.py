@@ -898,11 +898,18 @@ def stocks_item_movement_report(request):
     generator = StocksReportGenerator(tenant, start_date, end_date)
     report = generator.get_item_movement_report(item_id=item_id, stock_id=stock_id)
 
+    selected_item_name = ''
+    if item_id:
+        selected_item = next((i for i in report['items'] if str(i.id) == str(item_id)), None)
+        if selected_item:
+            selected_item_name = selected_item.name
+
     return render(request, 'stocks/reports/item_movement.html', {
         'report': report,
         'start_date': start_date,
         'end_date': end_date,
         'selected_item_id': item_id,
+        'selected_item_name': selected_item_name,
         'selected_stock_id': stock_id,
         'section': 'stocks_reports',
     })

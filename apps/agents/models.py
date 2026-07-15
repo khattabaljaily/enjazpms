@@ -10,8 +10,8 @@ from apps.core.models import TenantMixin
 class Agent(TenantMixin):
     COMMISSION_TYPE_CHOICES = (
         ('none',       'بدون عمولة'),
-        ('percentage', 'نسبة مئوية من الفاتورة'),
-        ('fixed',      'مبلغ ثابت لكل فاتورة'),
+        ('percentage', 'نسبة مئوية'),
+        ('fixed',      'مبلغ ثابت'),
     )
 
     code = models.CharField('كود المندوب', max_length=20, blank=True)
@@ -22,13 +22,28 @@ class Agent(TenantMixin):
     address = models.TextField('العنوان', blank=True)
     notes = models.TextField('ملاحظات', blank=True)
 
+    COMMISSION_BASIS_CHOICES = (
+        ('invoice',    'نسبة من الفاتورة'),
+        ('collection', 'نسبة من التحصيل'),
+        ('both',       'نسبة من الفاتورة والتحصيل معاً'),
+    )
+
     commission_type = models.CharField(
         'نوع العمولة', max_length=15,
         choices=COMMISSION_TYPE_CHOICES, default='none'
     )
+    commission_basis = models.CharField(
+        'أساس العمولة', max_length=10,
+        choices=COMMISSION_BASIS_CHOICES, default='invoice',
+        help_text='هل تُحسب العمولة على إجمالي الفاتورة أم على المبالغ المُحصَّلة فعلياً أم الاثنين'
+    )
     commission_rate = models.DecimalField(
         'معدل العمولة', max_digits=10, decimal_places=4, default=0,
-        help_text='نسبة % أو مبلغ ثابت حسب نوع العمولة'
+        help_text='نسبة % أو مبلغ ثابت حسب نوع العمولة (على الفاتورة، أو على التحصيل عند اختيار أساس واحد)'
+    )
+    commission_rate_collection = models.DecimalField(
+        'معدل عمولة التحصيل', max_digits=10, decimal_places=4, default=0,
+        help_text='يُستخدم فقط عند اختيار أساس «الفاتورة والتحصيل معاً» — معدل الشق الخاص بالتحصيل'
     )
 
     opening_balance = models.DecimalField(
@@ -81,12 +96,23 @@ class Agent(TenantMixin):
             self.code = f'AGT-{next_num:05d}'
         super().save(*args, **kwargs)
 
-    def calculate_commission(self, invoice_total: Decimal) -> Decimal:
+    def _commission_amount(self, base_amount: Decimal, rate: Decimal) -> Decimal:
         if self.commission_type == 'percentage':
-            return (invoice_total * self.commission_rate / Decimal('100')).quantize(Decimal('0.01'))
+            return (base_amount * rate / Decimal('100')).quantize(Decimal('0.01'))
         if self.commission_type == 'fixed':
-            return self.commission_rate.quantize(Decimal('0.01'))
+            return rate.quantize(Decimal('0.01'))
         return Decimal('0')
+
+    def invoice_commission(self, grand_total: Decimal) -> Decimal:
+        if self.commission_basis not in ('invoice', 'both'):
+            return Decimal('0')
+        return self._commission_amount(grand_total, self.commission_rate)
+
+    def collection_commission(self, paid_amount: Decimal) -> Decimal:
+        if self.commission_basis not in ('collection', 'both'):
+            return Decimal('0')
+        rate = self.commission_rate_collection if self.commission_basis == 'both' else self.commission_rate
+        return self._commission_amount(paid_amount, rate)
 
 
 class AgentLedger(TenantMixin):

@@ -283,6 +283,16 @@
                                         <span class="ts-switch__track"></span>
                                     </div>
                                 </label>
+                                <label class="ts-switch" for="printAgentName">
+                                    <div class="ts-switch__info">
+                                        <span class="ts-switch__name">طباعة اسم المندوب في الفاتورة</span>
+                                        <span class="ts-switch__hint">إظهار اسم المندوب المرتبط بالفاتورة عند طباعتها.</span>
+                                    </div>
+                                    <div class="ts-switch__toggle">
+                                        <input type="checkbox" id="printAgentName" name="print_agent_name" {% if tenant_settings.print_agent_name %}checked{% endif %}>
+                                        <span class="ts-switch__track"></span>
+                                    </div>
+                                </label>
                                 <label class="ts-switch" for="showZeroStock">
                                     <div class="ts-switch__info">
                                         <span class="ts-switch__name">إظهار منتجات بمخزون صفر</span>

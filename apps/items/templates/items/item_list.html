@@ -321,33 +321,36 @@
                         {% if hc_mode %}
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="cx-label" for="id_cost_price_hc">سعر التكلفة ({{ hc_currency_symbol }})</label>
-                                {{ item_form.cost_price_hc }}
+                                <label class="cx-label" for="id_cost_price">سعر التكلفة ({{ local_currency_symbol }})</label>
+                                {{ item_form.cost_price }}
                             </div>
                             <div class="col-md-4">
-                                <label class="cx-label" for="id_selling_price_hc">سعر البيع ({{ hc_currency_symbol }}) <sup class="cx-required">*</sup></label>
-                                {{ item_form.selling_price_hc }}
+                                <label class="cx-label" for="id_selling_price">سعر البيع ({{ local_currency_symbol }}) <sup class="cx-required">*</sup></label>
+                                {{ item_form.selling_price }}
                             </div>
                             <div class="col-md-4">
-                                <label class="cx-label" for="id_min_selling_price_hc">أدنى سعر ({{ hc_currency_symbol }})</label>
-                                {{ item_form.min_selling_price_hc }}
+                                <label class="cx-label" for="id_min_selling_price">أدنى سعر ({{ local_currency_symbol }})</label>
+                                {{ item_form.min_selling_price }}
                             </div>
                         </div>
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
-                                <label class="cx-label text-muted">سعر التكلفة ({{ local_currency_symbol }}) — تلقائي</label>
-                                {{ item_form.cost_price }}
-                                <div class="cx-hc-calc-hint" id="hint_cost_price"></div>
+                                <label class="cx-label text-muted">سعر التكلفة ({{ hc_currency_symbol }}) — تلقائي</label>
+                                <input type="text" class="form-control" id="id_cost_price_hc_display" readonly>
+                                <input type="hidden" id="id_cost_price_hc" name="cost_price_hc">
+                                <div class="cx-hc-calc-hint" id="hint_cost_price_hc"></div>
                             </div>
                             <div class="col-md-4">
-                                <label class="cx-label text-muted">سعر البيع ({{ local_currency_symbol }}) — تلقائي</label>
-                                {{ item_form.selling_price }}
-                                <div class="cx-hc-calc-hint" id="hint_selling_price"></div>
+                                <label class="cx-label text-muted">سعر البيع ({{ hc_currency_symbol }}) — تلقائي</label>
+                                <input type="text" class="form-control" id="id_selling_price_hc_display" readonly>
+                                <input type="hidden" id="id_selling_price_hc" name="selling_price_hc">
+                                <div class="cx-hc-calc-hint" id="hint_selling_price_hc"></div>
                             </div>
                             <div class="col-md-4">
-                                <label class="cx-label text-muted">أدنى سعر ({{ local_currency_symbol }}) — تلقائي</label>
-                                {{ item_form.min_selling_price }}
-                                <div class="cx-hc-calc-hint" id="hint_min_selling_price"></div>
+                                <label class="cx-label text-muted">أدنى سعر ({{ hc_currency_symbol }}) — تلقائي</label>
+                                <input type="text" class="form-control" id="id_min_selling_price_hc_display" readonly>
+                                <input type="hidden" id="id_min_selling_price_hc" name="min_selling_price_hc">
+                                <div class="cx-hc-calc-hint" id="hint_min_selling_price_hc"></div>
                             </div>
                         </div>
                         {% else %}
@@ -797,10 +800,11 @@
     {% if hc_mode %}
     const HC_EXCHANGE_RATE = {{ exchange_rate|stringformat:".4f" }};
     const LOCAL_SYM = '{{ local_currency_symbol }}';
+    const HC_SYM = '{{ hc_currency_symbol }}';
 
-    function _lockLocalPriceFields() {
-        ['cost_price', 'selling_price', 'min_selling_price'].forEach(function(f) {
-            var el = document.getElementById('id_' + f);
+    function _lockHcPriceFields() {
+        ['cost_price_hc', 'selling_price_hc', 'min_selling_price_hc'].forEach(function(f) {
+            var el = document.getElementById('id_' + f + '_display');
             if (!el) return;
             el.readOnly = true;
             el.style.background = '#f1f5f9';
@@ -809,41 +813,46 @@
         });
     }
 
-    function _calcLocal(hcVal) {
-        var n = parseFloat(hcVal);
-        return (isNaN(n) || n === 0) ? '' : (n * HC_EXCHANGE_RATE).toFixed(2);
+    // القيمة الدقيقة (4 خانات عشرية) هي اللي بتتحفظ فعلياً وتُستخدم لإعادة حساب
+    // السعر المحلي في السيرفر — لازم تفضل دقيقة عشان السعر المحلي المحفوظ يطابق
+    // اللي المشترك كتبه بالظبط. العرض للمستخدم بس بيتقرّب لخانتين عشريتين.
+    function _calcHcPrecise(localVal) {
+        var n = parseFloat(localVal);
+        return (isNaN(n) || n === 0 || !HC_EXCHANGE_RATE) ? '' : (n / HC_EXCHANGE_RATE).toFixed(4);
     }
 
-    function _updateHint(hintId, localVal) {
+    function _updateHint(hintId, hcVal) {
         var el = document.getElementById(hintId);
         if (!el) return;
-        if (localVal === '') { el.textContent = ''; return; }
-        var fmt = parseFloat(localVal).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        el.textContent = '= ' + fmt + ' ' + LOCAL_SYM;
+        if (hcVal === '') { el.textContent = ''; return; }
+        var fmt = parseFloat(hcVal).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        el.textContent = '= ' + fmt + ' ' + HC_SYM;
     }
 
-    function _syncLocalPrices() {
+    function _syncHcPrices() {
         var pairs = [
-            ['id_cost_price_hc',         'id_cost_price',         'hint_cost_price'],
-            ['id_selling_price_hc',      'id_selling_price',      'hint_selling_price'],
-            ['id_min_selling_price_hc',  'id_min_selling_price',  'hint_min_selling_price'],
+            ['id_cost_price',         'id_cost_price_hc',         'hint_cost_price_hc'],
+            ['id_selling_price',      'id_selling_price_hc',      'hint_selling_price_hc'],
+            ['id_min_selling_price',  'id_min_selling_price_hc',  'hint_min_selling_price_hc'],
         ];
         pairs.forEach(function(p) {
-            var hcEl    = document.getElementById(p[0]);
-            var localEl = document.getElementById(p[1]);
-            if (!hcEl || !localEl) return;
-            var localVal = _calcLocal(hcEl.value);
-            localEl.value = localVal;
-            _updateHint(p[2], localVal);
+            var localEl   = document.getElementById(p[0]);
+            var hcEl      = document.getElementById(p[1]);
+            var displayEl = document.getElementById(p[1] + '_display');
+            if (!localEl || !hcEl) return;
+            var hcVal = _calcHcPrecise(localEl.value);
+            hcEl.value = hcVal;
+            if (displayEl) displayEl.value = hcVal === '' ? '' : parseFloat(hcVal).toFixed(2);
+            _updateHint(p[2], hcVal);
         });
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        _lockLocalPriceFields();
+        _lockHcPriceFields();
 
-        ['id_cost_price_hc', 'id_selling_price_hc', 'id_min_selling_price_hc'].forEach(function(id) {
+        ['id_cost_price', 'id_selling_price', 'id_min_selling_price'].forEach(function(id) {
             var el = document.getElementById(id);
-            if (el) el.addEventListener('input', _syncLocalPrices);
+            if (el) el.addEventListener('input', _syncHcPrices);
         });
     });
     {% endif %}
@@ -1261,7 +1270,7 @@
             if (el && parseFloat(el.value) === 0) el.value = '';
         });
         {% if hc_mode %}
-        ['hint_cost_price','hint_selling_price','hint_min_selling_price'].forEach(function(id) {
+        ['hint_cost_price_hc','hint_selling_price_hc','hint_min_selling_price_hc'].forEach(function(id) {
             var el = document.getElementById(id); if (el) el.textContent = '';
         });
         {% endif %}
@@ -1299,10 +1308,7 @@
                 $('#id_selling_price').val(EnjazIMS.parseNumber(d.selling_price) || '');
                 $('#id_min_selling_price').val(EnjazIMS.parseNumber(d.min_selling_price) || '');
                 {% if hc_mode %}
-                $('#id_cost_price_hc').val(d.cost_price_hc ? parseFloat(d.cost_price_hc) : '');
-                $('#id_selling_price_hc').val(d.selling_price_hc ? parseFloat(d.selling_price_hc) : '');
-                $('#id_min_selling_price_hc').val(d.min_selling_price_hc ? parseFloat(d.min_selling_price_hc) : '');
-                _syncLocalPrices();
+                _syncHcPrices();
                 {% endif %}
                 $('#id_tax_rate').val(EnjazIMS.parseNumber(d.tax_rate) || '');
                 $('#id_min_quantity').val(EnjazIMS.parseNumber(d.min_quantity) || '');

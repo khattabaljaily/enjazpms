@@ -62,6 +62,7 @@ def confirm_stock_transfer(transfer):
             movement_date=transfer.transfer_date,
             reference_type='stock_transfer', reference_id=transfer.id,
             balance_after=sq_out.quantity,
+            notes=f'تحويل {transfer.transfer_number} — إلى {transfer.to_stock.name}',
         )
 
         sq_in = _get_sq(tenant, transfer.to_stock, item)
@@ -75,6 +76,7 @@ def confirm_stock_transfer(transfer):
             movement_date=transfer.transfer_date,
             reference_type='stock_transfer', reference_id=transfer.id,
             balance_after=sq_in.quantity,
+            notes=f'تحويل {transfer.transfer_number} — من {transfer.from_stock.name}',
         )
 
     transfer.status = 'confirmed'
@@ -172,6 +174,7 @@ def confirm_stocktake(stocktake):
 
         direction = 'in' if diff > 0 else 'out'
         mv_type   = 'adjustment_in' if diff > 0 else 'adjustment_out'
+        diff_label = 'زيادة' if diff > 0 else 'نقص'
 
         StockMovement.objects.create(
             tenant=tenant, item=item, stock=stocktake.stock,
@@ -180,6 +183,7 @@ def confirm_stocktake(stocktake):
             movement_date=stocktake.stocktake_date,
             reference_type='stocktake', reference_id=stocktake.id,
             balance_after=sq.quantity,
+            notes=f'جرد {stocktake.stocktake_number} — {diff_label} (فعلي {line.counted_quantity:g} / نظام {line.system_quantity:g})',
         )
 
     stocktake.status = 'confirmed'
@@ -225,7 +229,7 @@ def confirm_manufacturing_order(order):
             reference_type='manufacturing_order',
             reference_id=order.id,
             movement_date=order.order_date,
-            notes=f"خصم مكوّن: {order.order_number}",
+            notes=f"استهلاك في تصنيع {recipe.item.name} — أمر {order.order_number}",
         )
         total_cost += (bom_line.component.cost_price * needed)
 
@@ -247,7 +251,7 @@ def confirm_manufacturing_order(order):
         reference_type='manufacturing_order',
         reference_id=order.id,
         movement_date=order.order_date,
-        notes=f"إنتاج: {order.order_number}",
+        notes=f"إنتاج {order.quantity:g} {recipe.item.name} — أمر {order.order_number}",
     )
 
     order.cost = total_cost

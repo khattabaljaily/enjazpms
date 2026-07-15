@@ -16,10 +16,13 @@ from django.views.decorators.http import require_POST
 from apps.accounts.decorators import require_permission, require_any_permission
 from .forms import CustomerForm
 from .models import Customer
-from apps.sales.models import CustomerLedger
-from apps.sales.services import _apply_customer_ledger
+from apps.sales.models import CustomerLedger, SalePayment
+from apps.sales.services import (
+    build_customer_statement_timeline,
+    record_customer_payment_allocated,
+    reverse_customer_payment_by_ledger_entry,
+)
 from apps.treasury.models import Treasury, TreasuryMovement
-from apps.treasury.services import post_treasury_disbursement, post_treasury_receipt
 
 
 def _ensure_tenant(request):
@@ -277,21 +280,7 @@ def customer_transactions_api(request, pk):
         .order_by('entry_date', 'id')
     )
 
-    # Collapse edit patterns: find groups that have reversals, keep only the latest non-reversal
-    max_reversal_id = {}
-    for e in entries:
-        if e.is_reversal and e.reference_type and e.reference_id:
-            key = (e.reference_type, e.reference_id)
-            max_reversal_id[key] = max(max_reversal_id.get(key, 0), e.id)
-
-    for e in entries:
-        if e.is_reversal:
-            continue
-        key = (e.reference_type, e.reference_id) if (e.reference_type and e.reference_id) else None
-        rev_id = max_reversal_id.get(key, 0) if key else 0
-        if rev_id > 0 and e.id < rev_id:
-            continue  # superseded by edit
-        is_edited = rev_id > 0
+    for e in build_customer_statement_timeline(tenant, entries):
         true_balance = (e.running_balance or Decimal('0')) + opening
         data.append({
             'entry_date': e.entry_date.strftime('%Y-%m-%d'),
@@ -302,7 +291,8 @@ def customer_transactions_api(request, pk):
             'notes': e.notes or '—',
             'reference_type': e.reference_type or '',
             'reference_id': e.reference_id,
-            'is_edited': is_edited,
+            'is_edited': e.is_edited,
+            'is_reversal': e.is_reversal,
         })
 
     data.reverse()
@@ -480,25 +470,44 @@ def customer_payment_detail_api(request, pk):
         pk=pk,
     )
 
-    cancellation = CustomerLedger.objects.for_tenant(tenant).filter(
-        reference_type='customer_payment_cancel',
-        reference_id=payment.id,
-    ).first()
+    # لو القيد مرتبط بفاتورة حقيقية (SalePayment)، الأصل عن حالة الإلغاء وحركة
+    # الخزينة موجود عند تلك الدفعة نفسها (مُعرَّفة برقمها هي، لا بمعرّف قيد العميل).
+    linked_sale_payment = None
+    if payment.reference_type in ('customer_payment_cash', 'customer_payment_bank') and payment.reference_id:
+        linked_sale_payment = SalePayment.objects.for_tenant(tenant).filter(pk=payment.reference_id).first()
+
+    is_hard = payment.reference_type.endswith('_cash')
     cash_treasury = None
-    if payment.reference_type == 'customer_payment_cash':
-        treasury_movement = TreasuryMovement.objects.for_tenant(tenant).filter(
-            reference_type='customer_payment_cash',
+    cancellation = None
+    if linked_sale_payment:
+        if is_hard:
+            treasury_movement = TreasuryMovement.objects.for_tenant(tenant).filter(
+                reference_type='sale_payment', reference_id=linked_sale_payment.id,
+            ).select_related('treasury').first()
+            if treasury_movement:
+                cash_treasury = treasury_movement.treasury.name
+        if linked_sale_payment.is_reversed:
+            cancellation = CustomerLedger.objects.for_tenant(tenant).filter(
+                reference_type=payment.reference_type, reference_id=payment.reference_id, is_reversal=True,
+            ).first()
+    else:
+        cancellation = CustomerLedger.objects.for_tenant(tenant).filter(
+            reference_type='customer_payment_cancel',
             reference_id=payment.id,
-        ).select_related('treasury').first()
-        if treasury_movement:
-            cash_treasury = treasury_movement.treasury.name
+        ).first()
+        if is_hard:
+            treasury_movement = TreasuryMovement.objects.for_tenant(tenant).filter(
+                reference_type=payment.reference_type, reference_id=payment.id,
+            ).select_related('treasury').first()
+            if treasury_movement:
+                cash_treasury = treasury_movement.treasury.name
 
     response_data = {
         'id': payment.id,
         'entry_date': payment.entry_date.strftime('%Y-%m-%d'),
         'customer': payment.customer.name,
         'amount': str(payment.amount),
-        'payment_method': 'نقداً' if payment.reference_type == 'customer_payment_cash' else 'بنكي',
+        'payment_method': 'نقداً' if is_hard else 'بنكي',
         'notes': payment.notes or '—',
         'is_canceled': bool(cancellation),
         'cancellation_note': cancellation.notes if cancellation else '',
@@ -535,45 +544,25 @@ def customer_payment_create_api(request):
         return _json_error('المبلغ يجب أن يكون أكبر من الصفر')
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=customer_id)
-    reference_type = 'customer_payment_bank' if method == 'bank' else 'customer_payment_cash'
     note_text = notes
     if reference:
         note_text = f"{note_text} | مرجع: {reference}" if note_text else f"مرجع: {reference}"
-    if not note_text:
-        note_text = 'سداد عميل'
+
+    treasury = None
+    if method == 'cash':
+        if not treasury_id:
+            return _json_error('يجب اختيار الخزينة عند دفع نقداً')
+        treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False), pk=int(treasury_id))
 
     try:
-        with transaction.atomic():
-            payment_entry = _apply_customer_ledger(
-                tenant=tenant,
-                customer=customer,
-                amount=-amount,
-                entry_type='payment',
-                reference_type=reference_type,
-                reference_id=None,
-                date=payment_date,
-                notes=note_text,
-            )
-
-            if method == 'cash':
-                if not treasury_id:
-                    raise ValueError('يجب اختيار الخزينة عند دفع نقداً')
-                treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False), pk=int(treasury_id))
-                movement = post_treasury_receipt(
-                    tenant=tenant,
-                    amount=amount,
-                    date=payment_date,
-                    reference_type='customer_payment_cash',
-                    reference_id=payment_entry.id if payment_entry else None,
-                    description=f'دفعة عميل {customer.name}',
-                    user=request.user,
-                    treasury=treasury,
-                )
-                if not movement:
-                    raise ValueError('تعذر تسجيل حركة الخزينة')
+        allocation = record_customer_payment_allocated(
+            tenant=tenant, customer=customer, amount=amount, method=method,
+            date=payment_date, reference=reference, notes=note_text,
+            user=request.user, treasury=treasury,
+        )
     except ValueError as e:
         return _json_error(str(e), status=400)
-    except Exception as e:
+    except Exception:
         return _json_error('تعذر تسجيل الدفعة، حاول مرة أخرى')
 
     balance = (
@@ -583,10 +572,20 @@ def customer_payment_create_api(request):
     )
     current_balance = (customer.opening_balance or 0) + balance
 
-    log_activity(request, 'تسجيل دفعة من عميل',
-                 f"العميل: {customer.name}\nالمبلغ: {amount}\nطريقة الدفع: {method}", 'create')
+    parts = []
+    for item in allocation['invoices']:
+        parts.append(f"فاتورة {item['invoice'].invoice_number} ({item['amount']})")
+    if allocation['opening_balance'] > 0:
+        parts.append(f"مستحقات افتتاحية ({allocation['opening_balance']})")
+    if allocation['credit'] > 0:
+        parts.append(f"رصيد دائن ({allocation['credit']})")
+    breakdown = ' — '.join(parts) if parts else ''
+    success_msg = f'تم تسجيل دفعة العميل بنجاح: {breakdown}' if breakdown else 'تم تسجيل دفعة العميل بنجاح'
 
-    return _json_ok(data={'current_balance': str(current_balance)}, msg='تم تسجيل دفعة العميل بنجاح')
+    log_activity(request, 'تسجيل دفعة من عميل',
+                 f"العميل: {customer.name}\nالمبلغ: {amount}\nطريقة الدفع: {method}\nالتوزيع: {breakdown}", 'create')
+
+    return _json_ok(data={'current_balance': str(current_balance), 'breakdown': breakdown}, msg=success_msg)
 
 
 @login_required
@@ -601,35 +600,11 @@ def customer_payment_cancel_api(request, pk):
         CustomerLedger.objects.for_tenant(tenant).filter(entry_type='payment'),
         pk=pk,
     )
-    reverse_notes = f"إلغاء دفعة عميل — {payment.notes or ''}".strip()
-    with transaction.atomic():
-        if payment.reference_type == 'customer_payment_cash':
-            treasury_movement = TreasuryMovement.objects.for_tenant(tenant).filter(
-                reference_type='customer_payment_cash',
-                reference_id=payment.id,
-            ).first()
-            if treasury_movement:
-                post_treasury_disbursement(
-                    tenant=tenant,
-                    amount=abs(payment.amount),
-                    date=timezone.localdate(),
-                    reference_type='customer_payment_cash_cancel',
-                    reference_id=payment.id,
-                    description=f'إلغاء دفعة عميل {payment.customer.name}',
-                    user=request.user,
-                    treasury=treasury_movement.treasury,
-                )
-
-        _apply_customer_ledger(
-            tenant=tenant,
-            customer=payment.customer,
-            amount=-payment.amount,
-            entry_type='adjustment',
-            reference_type='customer_payment_cancel',
-            reference_id=payment.id,
-            date=timezone.localdate(),
-            notes=reverse_notes,
-        )
+    try:
+        with transaction.atomic():
+            reverse_customer_payment_by_ledger_entry(tenant, payment, user=request.user)
+    except ValueError as e:
+        return _json_error(str(e), status=400)
 
     log_activity(request, 'إلغاء دفعة عميل', f'{payment.customer.name}', 'delete')
     return _json_ok(msg='تم إلغاء الدفعة واستعادة مديونية العميل')

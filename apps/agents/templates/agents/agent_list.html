@@ -142,10 +142,19 @@
                                 <label class="cx-label" for="id_commission_type">{{ form.commission_type.label }}</label>
                                 {{ form.commission_type }}
                             </div>
+                            <div class="col-md-6" id="commissionBasisRow">
+                                <label class="cx-label" for="id_commission_basis">{{ form.commission_basis.label }}</label>
+                                {{ form.commission_basis }}
+                            </div>
                             <div class="col-md-6" id="commissionRateRow">
                                 <label class="cx-label" for="id_commission_rate" id="commissionRateLabel">{{ form.commission_rate.label }}</label>
                                 {{ form.commission_rate }}
                                 <small class="text-muted" id="commissionRateHint">نسبة % من إجمالي الفاتورة</small>
+                            </div>
+                            <div class="col-md-6 d-none" id="commissionRateCollectionRow">
+                                <label class="cx-label" for="id_commission_rate_collection">{{ form.commission_rate_collection.label }}</label>
+                                {{ form.commission_rate_collection }}
+                                <small class="text-muted">نسبة/مبلغ عمولة شق التحصيل فقط</small>
                             </div>
                             <div class="col-md-6">
                                 <label class="cx-label" for="id_opening_balance">{{ form.opening_balance.label }}</label>
@@ -260,11 +269,25 @@
                                 <span class="cx-info-card-value" id="viewCommissionType"></span>
                             </div>
                         </div>
+                        <div class="cx-info-card" id="viewCommissionBasisCard">
+                            <div class="cx-info-card-icon" style="background:rgba(99,102,241,.1);color:#6366f1;"><i class="fas fa-scale-balanced"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">أساس العمولة</span>
+                                <span class="cx-info-card-value" id="viewCommissionBasis"></span>
+                            </div>
+                        </div>
                         <div class="cx-info-card" id="viewCommissionRateCard">
                             <div class="cx-info-card-icon" style="background:rgba(99,102,241,.1);color:#6366f1;"><i class="fas fa-tag"></i></div>
                             <div class="cx-info-card-content">
                                 <span class="cx-info-card-label" id="viewCommissionRateLabel">معدل العمولة</span>
                                 <span class="cx-info-card-value" id="viewCommissionRate"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card d-none" id="viewCommissionRateCollectionCard">
+                            <div class="cx-info-card-icon" style="background:rgba(99,102,241,.1);color:#6366f1;"><i class="fas fa-tag"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">معدل عمولة التحصيل</span>
+                                <span class="cx-info-card-value" id="viewCommissionRateCollection"></span>
                             </div>
                         </div>
                     </div>
@@ -522,6 +545,11 @@
         percentage: 'نسبة %',
         fixed: 'مبلغ ثابت',
     };
+    const COMMISSION_BASIS_LABELS = {
+        invoice: 'الفاتورة',
+        collection: 'التحصيل',
+        both: 'الفاتورة والتحصيل',
+    };
 
     // Move modals to body
     ['agentModal','deleteAgentModal','viewAgentModal','agentLedgerModal','importAgentsModal','agentUserModal'].forEach(function(id) {
@@ -542,18 +570,45 @@
     let activeStatus = '';
 
     /* ── Commission rate UI ─── */
-    function updateCommissionRateUI(type) {
-        const row   = document.getElementById('commissionRateRow');
-        const hint  = document.getElementById('commissionRateHint');
+    function updateCommissionRateUI(type, basis) {
+        const basisRow  = document.getElementById('commissionBasisRow');
+        const row       = document.getElementById('commissionRateRow');
+        const label     = document.getElementById('commissionRateLabel');
+        const hint      = document.getElementById('commissionRateHint');
+        const collRow   = document.getElementById('commissionRateCollectionRow');
+        basis = basis || 'invoice';
+
         if (type === 'none') {
+            basisRow.style.display = 'none';
             row.style.display = 'none';
-        } else {
+            collRow.classList.add('d-none');
+            return;
+        }
+        basisRow.style.display = '';
+
+        const unit = type === 'percentage' ? 'نسبة %' : 'مبلغ ثابت';
+        if (basis === 'both') {
+            label.textContent = 'معدل عمولة الفاتورة';
+            hint.textContent = unit + ' من إجمالي الفاتورة';
             row.style.display = '';
-            hint.textContent = type === 'percentage' ? 'نسبة % من إجمالي الفاتورة' : 'مبلغ ثابت لكل فاتورة';
+            collRow.classList.remove('d-none');
+        } else if (basis === 'collection') {
+            label.textContent = 'معدل عمولة التحصيل';
+            hint.textContent = unit + ' من المبالغ المُحصَّلة فعلياً';
+            row.style.display = '';
+            collRow.classList.add('d-none');
+        } else {
+            label.textContent = 'معدل عمولة الفاتورة';
+            hint.textContent = unit + ' من إجمالي الفاتورة';
+            row.style.display = '';
+            collRow.classList.add('d-none');
         }
     }
     document.getElementById('id_commission_type').addEventListener('change', function () {
-        updateCommissionRateUI(this.value);
+        updateCommissionRateUI(this.value, $('#id_commission_basis').val());
+    });
+    document.getElementById('id_commission_basis').addEventListener('change', function () {
+        updateCommissionRateUI($('#id_commission_type').val(), this.value);
     });
 
     /* ── Mobile cards ── */
@@ -612,12 +667,16 @@
             { data: 'city', render: c => (!c||c==='-') ? `<span class="cxr-empty">—</span>` : `<span class="cxr-city">${c}</span>` },
             { data: null, render: function(_, __, r) {
                 if (r.commission_type === 'none') return '<span class="cxr-empty">بدون عمولة</span>';
-                const rate = parseFloat(r.commission_rate);
-                const rateStr = Number.isInteger(rate) ? rate : parseFloat(rate.toFixed(2));
-                if (r.commission_type === 'percentage') {
-                    return `<span style="font-size:.85rem;font-weight:600;">${rateStr}%</span>`;
+                const suffix = r.commission_type === 'percentage' ? '%' : '';
+                const fmt = v => { const n = parseFloat(v); return Number.isInteger(n) ? n : parseFloat(n.toFixed(2)); };
+                const basisLabel = COMMISSION_BASIS_LABELS[r.commission_basis] || '';
+                let rateHtml;
+                if (r.commission_basis === 'both') {
+                    rateHtml = `${fmt(r.commission_rate)}${suffix} فاتورة + ${fmt(r.commission_rate_collection)}${suffix} تحصيل`;
+                } else {
+                    rateHtml = `${fmt(r.commission_rate)}${suffix} — ${basisLabel}`;
                 }
-                return `<span style="font-size:.85rem;font-weight:600;">${rateStr}</span> <span class="text-muted" style="font-size:.75rem;">ثابت</span>`;
+                return `<span style="font-size:.82rem;font-weight:600;">${rateHtml}</span>`;
             }},
             { data: 'current_balance', render: function(v) {
                 const n = EnjazIMS.parseNumber(v);
@@ -660,7 +719,8 @@
         $idInput.val('');
         $('#id_is_active').prop('checked', true);
         $('#id_commission_type').val('none');
-        updateCommissionRateUI('none');
+        $('#id_commission_basis').val('invoice');
+        updateCommissionRateUI('none', 'invoice');
         EnjazIMS.clearFormErrors($form);
     }
 
@@ -683,11 +743,13 @@
             $('#id_city').val(d.city || '');
             $('#id_address').val(d.address || '');
             $('#id_commission_type').val(d.commission_type || 'none');
+            $('#id_commission_basis').val(d.commission_basis || 'invoice');
             $('#id_commission_rate').val(parseFloat(d.commission_rate) || '');
+            $('#id_commission_rate_collection').val(parseFloat(d.commission_rate_collection) || '');
             $('#id_opening_balance').val(parseFloat(d.opening_balance) || '');
             $('#id_notes').val(d.notes || '');
             $('#id_is_active').prop('checked', !!d.is_active);
-            updateCommissionRateUI(d.commission_type || 'none');
+            updateCommissionRateUI(d.commission_type || 'none', d.commission_basis || 'invoice');
             $('#agentModalTitle').text('تعديل بيانات المندوب');
             $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
             agentModal.show();
@@ -737,13 +799,23 @@
             $('#viewBalance').html(`<strong class="${balCls}">${EnjazIMS.formatMoney(d.current_balance)}</strong>`);
             $('#viewCommissionType').text(COMMISSION_LABELS[d.commission_type] || '—');
             if (d.commission_type === 'none') {
+                $('#viewCommissionBasisCard').hide();
                 $('#viewCommissionRateCard').hide();
+                $('#viewCommissionRateCollectionCard').addClass('d-none');
             } else {
-                $('#viewCommissionRateCard').show();
+                const fmt = v => { const n = parseFloat(v); return Number.isInteger(n) ? n : parseFloat(n.toFixed(2)); };
                 const suffix = d.commission_type === 'percentage' ? ' %' : '';
-                const rateVal = parseFloat(d.commission_rate);
-                const rateDisplay = Number.isInteger(rateVal) ? rateVal : parseFloat(rateVal.toFixed(2));
-                $('#viewCommissionRate').text(rateDisplay + suffix);
+                $('#viewCommissionBasisCard').show();
+                $('#viewCommissionBasis').text(COMMISSION_BASIS_LABELS[d.commission_basis] || '—');
+                $('#viewCommissionRateCard').show();
+                $('#viewCommissionRateLabel').text(d.commission_basis === 'collection' ? 'معدل عمولة التحصيل' : 'معدل عمولة الفاتورة');
+                $('#viewCommissionRate').text(fmt(d.commission_rate) + suffix);
+                if (d.commission_basis === 'both') {
+                    $('#viewCommissionRateCollectionCard').removeClass('d-none');
+                    $('#viewCommissionRateCollection').text(fmt(d.commission_rate_collection) + suffix);
+                } else {
+                    $('#viewCommissionRateCollectionCard').addClass('d-none');
+                }
             }
             $('#viewNotes').text(d.notes || '—');
             $('#viewStatus').html(d.is_active
@@ -787,36 +859,41 @@
                 $cards.html(`<div class="text-center text-muted py-3">لا توجد حركات</div>`);
                 return;
             }
+            function ledgerBadge(tx) {
+                const isDebit = EnjazIMS.parseNumber(tx.amount || 0) >= 0;
+                const amtColor = isDebit ? '#11998e' : '#ef4444';
+                const badgeBg = isDebit ? 'rgba(17,153,142,.12)' : 'rgba(239,68,68,.12)';
+                const typeBadge = `<span style="font-size:.72rem;font-weight:700;padding:.2rem .55rem;border-radius:6px;background:${badgeBg};color:${amtColor};">${tx.entry_type_label || tx.entry_type || '—'}</span>`;
+                const reversalBadge = tx.is_reversal ? ` <span style="font-size:.65rem;font-weight:700;padding:.15rem .4rem;border-radius:5px;background:rgba(107,114,128,.15);color:#6b7280;">إلغاء</span>` : '';
+                const sign = isDebit ? '+' : '−';
+                return { isDebit, amtColor, typeBadge, reversalBadge, sign };
+            }
             const rows = resp.data.map(function(tx) {
-                const isCredit = tx.entry_type === 'payment' || tx.entry_type === 'return';
-                const isDebit  = tx.entry_type === 'commission';
-                const amtColor = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
-                const rowBg    = isCredit ? 'rgba(16,185,129,.08)' : isDebit ? 'rgba(239,68,68,.06)' : '';
+                const b = ledgerBadge(tx);
+                const rowBg = b.isDebit ? 'rgba(16,185,129,.08)' : 'rgba(239,68,68,.05)';
                 return `<tr style="background:${rowBg}">
                     <td>${tx.entry_date||'—'}</td>
-                    <td>${tx.entry_type_label||tx.entry_type||'—'}</td>
-                    <td style="color:${amtColor};font-weight:700;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount||0)))}</td>
+                    <td>${b.typeBadge}${b.reversalBadge}</td>
+                    <td style="color:${b.amtColor};font-weight:700;">${b.sign}${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount||0)))}</td>
                     <td style="font-weight:700;color:#6366f1;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance||0)))}</td>
                     <td>${tx.notes||'—'}</td>
                 </tr>`;
             }).join('');
             $body.html(rows);
             const cardHtml = resp.data.map(function(tx) {
-                const isCredit = tx.entry_type === 'payment' || tx.entry_type === 'return';
-                const isDebit  = tx.entry_type === 'commission';
-                const amtColor = isCredit ? '#11998e' : isDebit ? '#ef4444' : 'inherit';
+                const b = ledgerBadge(tx);
                 return `<div style="background:#fff;border:1px solid var(--border-light);border-radius:12px;overflow:hidden;">
                     <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem .9rem;border-bottom:1px solid var(--border-light);background:rgba(99,102,241,.04);">
                         <div>
                             <div style="font-size:.65rem;color:var(--text-secondary);margin-bottom:.15rem;">المستحقات</div>
                             <div style="font-weight:800;color:#6366f1;font-size:.95rem;">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance||0)))}</div>
                         </div>
-                        <span style="font-size:.72rem;font-weight:700;padding:.25rem .6rem;border-radius:6px;background:rgba(99,102,241,.12);color:#4f46e5;">${tx.entry_type_label||'—'}</span>
+                        <span>${b.typeBadge}${b.reversalBadge}</span>
                     </div>
                     <div style="padding:.55rem .9rem;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;">
                             <span style="font-size:.72rem;color:var(--text-secondary);">المبلغ</span>
-                            <span style="font-weight:700;color:${amtColor};">${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount||0)))}</span>
+                            <span style="font-weight:700;color:${b.amtColor};">${b.sign}${EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount||0)))}</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;">
                             <span style="font-size:.72rem;color:var(--text-secondary);">التاريخ</span>

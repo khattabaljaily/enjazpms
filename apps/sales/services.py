@@ -36,6 +36,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.stocks.models import StockQuantity
+from apps.treasury.models import TreasuryMovement
 from apps.treasury.services import post_treasury_disbursement, post_treasury_receipt
 
 from .models import (
@@ -135,11 +136,12 @@ def _deduct_stock(tenant, stock, item, qty, unit_cost, invoice):
         reference_type='sale_invoice',
         reference_id=invoice.id,
         balance_after=sq.quantity,
+        notes=f'بيع — فاتورة {invoice.invoice_number}',
     )
 
 
 def _restore_stock(tenant, stock, item, qty, unit_cost, reference_type, reference_id,
-                   movement_date, movement_type='sale_return_in'):
+                   movement_date, movement_type='sale_return_in', notes=''):
     """
     يُعيد qty إلى المخزون ويُسجِّل حركة دخول.
     """
@@ -162,10 +164,11 @@ def _restore_stock(tenant, stock, item, qty, unit_cost, reference_type, referenc
         reference_type=reference_type,
         reference_id=reference_id,
         balance_after=sq.quantity,
+        notes=notes,
     )
 
 
-def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''):
+def _apply_payment(tenant, invoice, method, amount, date, reference='', notes='', treasury=None):
     """
     يُنشئ SalePayment ويُحدِّث paid_amount في الفاتورة.
     """
@@ -184,6 +187,10 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
     invoice.paid_amount = (invoice.paid_amount or Decimal('0')) + amount
     invoice.save(update_fields=['paid_amount', 'updated_at'])
 
+    if invoice.agent_id:
+        from apps.agents.services import apply_collection_commission
+        apply_collection_commission(tenant, invoice, payment)
+
     if method == 'cash':
         treasury_notes = notes or f'فاتورة {invoice.invoice_number}'
         if amount > 0:
@@ -195,6 +202,7 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
                 reference_id=payment.id,
                 description=treasury_notes,
                 user=getattr(invoice, 'confirmed_by', None) or getattr(invoice, 'updated_by', None) or getattr(invoice, 'created_by', None),
+                treasury=treasury,
             )
         else:
             post_treasury_disbursement(
@@ -205,6 +213,7 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
                 reference_id=payment.id,
                 description=treasury_notes,
                 user=getattr(invoice, 'confirmed_by', None) or getattr(invoice, 'updated_by', None) or getattr(invoice, 'created_by', None),
+                treasury=treasury,
             )
 
     return payment
@@ -292,32 +301,64 @@ def _reverse_stock_movements(tenant, invoice):
         )
 
 
+def _reverse_single_payment(tenant, invoice, payment):
+    """
+    يعكس دفعة واحدة بشكل كامل ومتّسق (تُستخدم من _reverse_payments ومن
+    إلغاء دفعة فردية من شاشة دفعيات العملاء):
+      1. يعكس حركة الخزينة على نفس الخزينة الأصلية (وليس الافتراضية).
+      2. يعكس عمولة تحصيل المندوب المرتبطة بهذه الدفعة تحديداً.
+      3. يعكس قيد CustomerLedger المرتبط بهذه الدفعة (يُبقي رصيد العميل متّسقاً).
+      4. ينقص paid_amount ويُعلّم الدفعة كمعكوسة.
+    """
+    from apps.agents.services import _reverse_agent_ledger
+
+    if payment.payment_method == 'cash':
+        reverse_notes = f"عكس حركة دفعة {invoice.invoice_number}"
+        original_movement = TreasuryMovement.objects.filter(
+            tenant=tenant, reference_type='sale_payment', reference_id=payment.id,
+        ).first()
+        movement_treasury = original_movement.treasury if original_movement else None
+        if payment.amount > 0:
+            post_treasury_disbursement(
+                tenant=tenant,
+                amount=abs(payment.amount),
+                date=timezone.localdate(),
+                reference_type='sale_payment',
+                reference_id=payment.id,
+                description=reverse_notes,
+                treasury=movement_treasury,
+            )
+        elif payment.amount < 0:
+            post_treasury_receipt(
+                tenant=tenant,
+                amount=abs(payment.amount),
+                date=timezone.localdate(),
+                reference_type='sale_payment',
+                reference_id=payment.id,
+                description=reverse_notes,
+                treasury=movement_treasury,
+            )
+
+    if invoice.agent_id:
+        _reverse_agent_ledger(tenant, 'sale_payment', payment.id)
+        _reverse_agent_ledger(tenant, 'sale_invoice_collection', invoice.id)
+
+    if invoice.customer_id:
+        ledger_reference_type = 'customer_payment_bank' if payment.payment_method == 'bank' else 'customer_payment_cash'
+        _reverse_customer_ledger(tenant, ledger_reference_type, payment.id)
+
+    invoice.paid_amount = max(Decimal('0'), (invoice.paid_amount or Decimal('0')) - payment.amount)
+    invoice.save(update_fields=['paid_amount', 'updated_at'])
+
+    payment.is_reversed = True
+    payment.save(update_fields=['is_reversed', 'updated_at'])
+
+
 def _reverse_payments(tenant, invoice):
-    """يحذف SalePayments المرتبطة ويُعيد paid_amount إلى صفر."""
+    """يعكس كل SalePayments النشطة المرتبطة بالفاتورة بالكامل (خزينة + عمولة + قيد عميل)."""
     active_payments = list(invoice.payments.filter(is_reversed=False))
     for payment in active_payments:
-        if payment.payment_method == 'cash':
-            reverse_notes = f"عكس حركة دفعة {invoice.invoice_number}"
-            if payment.amount > 0:
-                post_treasury_disbursement(
-                    tenant=tenant,
-                    amount=abs(payment.amount),
-                    date=timezone.localdate(),
-                    reference_type='sale_payment',
-                    reference_id=payment.id,
-                    description=reverse_notes,
-                )
-            elif payment.amount < 0:
-                post_treasury_receipt(
-                    tenant=tenant,
-                    amount=abs(payment.amount),
-                    date=timezone.localdate(),
-                    reference_type='sale_payment',
-                    reference_id=payment.id,
-                    description=reverse_notes,
-                )
-        payment.is_reversed = True
-        payment.save(update_fields=['is_reversed', 'updated_at'])
+        _reverse_single_payment(tenant, invoice, payment)
     invoice.paid_amount = Decimal('0')
     invoice.save(update_fields=['paid_amount', 'updated_at'])
 
@@ -524,15 +565,8 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
 
     # ── 4. عمولة المندوب ─────────────────────────────────
     if invoice.agent_id:
-        from apps.agents.services import _apply_agent_ledger
-        commission = invoice.agent.calculate_commission(invoice.grand_total)
-        if commission > 0:
-            _apply_agent_ledger(
-                tenant=tenant, agent=invoice.agent, amount=commission,
-                entry_type='commission', reference_type='sale_invoice',
-                reference_id=invoice.id, date=invoice.invoice_date,
-                notes=f'عمولة فاتورة {invoice.invoice_number}',
-            )
+        from apps.agents.services import apply_invoice_commission
+        apply_invoice_commission(tenant, invoice)
 
     return invoice
 
@@ -585,6 +619,7 @@ def deliver_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
             reference_type='sale_invoice',
             reference_id=invoice.id,
             balance_after=sq.quantity,
+            notes=f'تسليم فاتورة {invoice.invoice_number}',
         )
 
     invoice.status = 'confirmed'
@@ -833,6 +868,7 @@ def confirm_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
             reference_type='sale_return',
             reference_id=sale_return.id,
             movement_date=sale_return.return_date,
+            notes=f'مرتجع بيع {sale_return.return_number} — فاتورة {invoice.invoice_number}',
         )
 
         # تحديث returned_quantity في سطر الفاتورة
@@ -881,10 +917,11 @@ def confirm_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
     invoice.status = 'returned' if all_returned else 'partially_returned'
     invoice.save(update_fields=['status', 'updated_at'])
 
-    # ── عكس عمولة المندوب بنسبة المرتجع ─────────────────
-    if invoice.agent_id and total_returned > 0 and invoice.grand_total > 0:
+    # ── عكس عمولة المندوب بنسبة المرتجع (أساس: فاتورة/الاثنين فقط) ──
+    if (invoice.agent_id and total_returned > 0 and invoice.grand_total > 0
+            and invoice.agent.commission_basis in ('invoice', 'both')):
         from apps.agents.services import _apply_agent_ledger
-        original_commission = invoice.agent.calculate_commission(invoice.grand_total)
+        original_commission = invoice.agent.invoice_commission(invoice.grand_total)
         if original_commission > 0:
             ratio = total_returned / invoice.grand_total
             reversal = (original_commission * ratio).quantize(Decimal('0.01'))
@@ -972,14 +1009,16 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
         inv_line.save(update_fields=['returned_quantity', 'updated_at'])
 
     # ── عكس التأثيرات المالية ─────────────────────────────
+    from apps.agents.services import _reverse_agent_ledger, apply_collection_commission
+
     refund = sale_return.refund_method
     if refund in ('cash', 'bank'):
-        refund_payments = SalePayment.objects.filter(
+        refund_payments = list(SalePayment.objects.filter(
             tenant=tenant,
             invoice=invoice,
             notes__contains=sale_return.return_number,
             is_reversed=False,
-        )
+        ))
         for payment in refund_payments:
             if payment.payment_method == 'cash':
                 reverse_notes = f"عكس استرداد مرتجع {sale_return.return_number}"
@@ -1001,12 +1040,22 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
                         reference_id=payment.id,
                         description=reverse_notes,
                     )
+            # استعادة عمولة التحصيل (النسبية) التي عُكست عند تأكيد المرتجع
+            if invoice.agent_id:
+                _reverse_agent_ledger(tenant, 'sale_payment', payment.id)
             payment.is_reversed = True
             payment.save(update_fields=['is_reversed', 'updated_at'])
         invoice.sync_paid_amount()
         invoice.save(update_fields=['paid_amount', 'updated_at'])
+        # إعادة تقييم عمولة "تحصيل كامل" الثابتة بعد عودة paid_amount
+        if invoice.agent_id and refund_payments:
+            apply_collection_commission(tenant, invoice, refund_payments[-1])
     elif refund == 'balance':
         _reverse_customer_ledger(tenant, 'sale_return', sale_return.id)
+
+    # ── استعادة عمولة الفاتورة التناسبية التي عُكست عند تأكيد المرتجع ──
+    if invoice.agent_id:
+        _reverse_agent_ledger(tenant, 'sale_return', sale_return.id)
 
     # ── إعادة حالة الفاتورة ──────────────────────────────
     invoice.status = 'confirmed'
@@ -1025,7 +1074,7 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
 @transaction.atomic
 def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
                             method: str, date, reference: str = '',
-                            notes: str = '', user=None) -> SalePayment:
+                            notes: str = '', user=None, treasury=None) -> SalePayment:
     """
     تسجيل دفعة جديدة من عميل على فاتورة آجلة (credit).
     يُحدِّث paid_amount ويُنشئ قيداً عكسياً في CustomerLedger.
@@ -1053,6 +1102,7 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
         date=date,
         reference=reference,
         notes=notes or f"دفعة على فاتورة {invoice.invoice_number}",
+        treasury=treasury,
     )
 
     # تقليل المطالبة في حساب العميل
@@ -1070,6 +1120,248 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
         )
 
     return payment
+
+
+def _post_customer_direct_payment(tenant, customer, amount, method, date, reference, notes, user, treasury, kind):
+    """
+    يسجّل جزءاً من دفعة عميل غير مرتبط بأي فاتورة: إما تسديد مستحقات
+    افتتاحية (kind='opening') أو رصيد دائن لدفعة زائدة (kind='credit').
+    """
+    method_suffix = 'bank' if method == 'bank' else 'cash'
+    reference_type = f'customer_payment_{kind}_{method_suffix}'
+    label = 'مستحقات افتتاحية' if kind == 'opening' else 'رصيد دائن (دفعة زائدة)'
+    note_text = notes or f'دفعة عميل — {label}'
+
+    entry = _apply_customer_ledger(
+        tenant=tenant, customer=customer, amount=-amount,
+        entry_type='payment', reference_type=reference_type, reference_id=None,
+        date=date, notes=note_text,
+    )
+    if method == 'cash' and entry:
+        post_treasury_receipt(
+            tenant=tenant, amount=amount, date=date,
+            reference_type=reference_type, reference_id=entry.id,
+            description=note_text, user=user, treasury=treasury,
+        )
+    return entry
+
+
+@transaction.atomic
+def record_customer_payment_allocated(tenant, customer, amount: Decimal, method: str, date,
+                                      reference: str = '', notes: str = '', user=None, treasury=None) -> dict:
+    """
+    يوزّع دفعة عميل تلقائياً بدل خصم رقم عام من رصيده:
+      1. على فواتيره الآجلة/المختلطة المفتوحة، الأقدم أولاً (عبر record_customer_payment
+         الفعلية — فتُحدَّث paid_amount وعمولة تحصيل المندوب وقيد العميل لكل فاتورة كالمعتاد).
+      2. ما تبقّى من مبلغ ضد مستحقاته غير المرتبطة بفاتورة (مستحقات افتتاحية قديمة).
+      3. ما يزيد عن كامل مديونيته يُسجَّل كرصيد دائن له.
+    يُرجع تفصيل التوزيع لعرضه للمستخدم.
+    """
+    from django.db.models import Sum
+
+    amount = Decimal(str(amount or 0))
+    if amount <= 0:
+        raise ValueError('المبلغ يجب أن يكون أكبر من الصفر')
+
+    remaining = amount
+    allocation = {'invoices': [], 'opening_balance': Decimal('0'), 'credit': Decimal('0')}
+
+    open_invoices = (
+        SaleInvoice.objects.select_for_update()
+        .filter(
+            tenant=tenant, customer=customer,
+            status__in=('confirmed', 'partially_returned'),
+            payment_method__in=('credit', 'mixed'),
+        )
+        .order_by('invoice_date', 'id')
+    )
+
+    for invoice in open_invoices:
+        if remaining <= Decimal('0.005'):
+            break
+        due = invoice.remaining_amount
+        if due <= Decimal('0.005'):
+            continue
+        chunk = min(due, remaining)
+        payment = record_customer_payment(
+            invoice, chunk, method, date,
+            reference=reference, notes=notes, user=user, treasury=treasury,
+        )
+        allocation['invoices'].append({'invoice': invoice, 'amount': chunk, 'payment': payment})
+        remaining -= chunk
+
+    if remaining > Decimal('0.005'):
+        ledger_total = (
+            CustomerLedger.objects.filter(tenant=tenant, customer=customer)
+            .aggregate(s=Sum('amount'))['s'] or Decimal('0')
+        )
+        current_balance = (customer.opening_balance or Decimal('0')) + ledger_total
+        invoices_due_total = sum(
+            (inv.remaining_amount for inv in SaleInvoice.objects.filter(
+                tenant=tenant, customer=customer,
+                status__in=('confirmed', 'partially_returned'),
+                payment_method__in=('credit', 'mixed'),
+            )),
+            Decimal('0'),
+        )
+        non_invoice_dues = max(Decimal('0'), current_balance - invoices_due_total)
+
+        if non_invoice_dues > Decimal('0.005'):
+            chunk = min(non_invoice_dues, remaining)
+            _post_customer_direct_payment(
+                tenant, customer, chunk, method, date, reference, notes, user, treasury, kind='opening',
+            )
+            allocation['opening_balance'] = chunk
+            remaining -= chunk
+
+    if remaining > Decimal('0.005'):
+        _post_customer_direct_payment(
+            tenant, customer, remaining, method, date, reference, notes, user, treasury, kind='credit',
+        )
+        allocation['credit'] = remaining
+
+    return allocation
+
+
+def reverse_customer_payment_by_ledger_entry(tenant, ledger_entry, user=None):
+    """
+    يعكس قيد دفعة عميل واحد (زر إلغاء دفعة في شاشة دفعيات العملاء).
+    لو القيد مرتبط بدفعة فاتورة حقيقية (SalePayment غير معكوسة) يعكسها
+    بالكامل عبر _reverse_single_payment (خزينة + عمولة مندوب + قيد العميل +
+    paid_amount)، وإلا (مستحقات افتتاحية / رصيد دائن / قيد قديم من قبل هذا
+    الإصلاح بلا فاتورة مرتبطة) يعكس القيد وحركة الخزينة المرتبطة فقط.
+    """
+    if ledger_entry.entry_type != 'payment':
+        raise ValueError('هذا القيد ليس دفعة قابلة للإلغاء.')
+
+    linked_payment = None
+    if ledger_entry.reference_type in ('customer_payment_cash', 'customer_payment_bank') and ledger_entry.reference_id:
+        linked_payment = SalePayment.objects.filter(
+            tenant=tenant, pk=ledger_entry.reference_id, is_reversed=False,
+        ).select_related('invoice').first()
+
+    if linked_payment:
+        _reverse_single_payment(tenant, linked_payment.invoice, linked_payment)
+        return
+
+    reverse_notes = f"إلغاء دفعة عميل — {ledger_entry.notes or ''}".strip()
+    if ledger_entry.reference_type.endswith('_cash'):
+        movement = TreasuryMovement.objects.filter(
+            tenant=tenant, reference_type=ledger_entry.reference_type, reference_id=ledger_entry.id,
+        ).first()
+        if movement:
+            post_treasury_disbursement(
+                tenant=tenant, amount=abs(ledger_entry.amount), date=timezone.localdate(),
+                reference_type=f'{ledger_entry.reference_type}_cancel', reference_id=ledger_entry.id,
+                description=reverse_notes, user=user, treasury=movement.treasury,
+            )
+
+    _apply_customer_ledger(
+        tenant=tenant, customer=ledger_entry.customer, amount=-ledger_entry.amount,
+        entry_type='adjustment', reference_type='customer_payment_cancel', reference_id=ledger_entry.id,
+        date=timezone.localdate(), notes=reverse_notes,
+    )
+
+
+def build_customer_statement_timeline(tenant, entries):
+    """
+    يبني قائمة حركات كشف حساب العميل من قيود CustomerLedger خام، بعد تجميع
+    أنماط الإلغاء/التعديل بدل عرضها كقيود متفرقة مربكة:
+      - مجموعة قيود بنفس (reference_type, reference_id) لو آخرها قيد غير
+        معكوس (تعديل فاتورة: عكس ثم إعادة إنشاء) → تُعرض النسخة الأخيرة فقط.
+      - لو آخرها معكوس (إلغاء بلا إعادة إنشاء بعده) → تُلخَّص في قيد واحد.
+      - إلغاء فاتورة آجلة بالكامل (الفاتورة + كل دفعاتها معكوسة) يُلخَّص في
+        سطر واحد للفاتورة كلها، بدل عرض الفاتورة وكل دفعة وكل عكس منفصلين.
+
+    entries: قائمة CustomerLedger لعميل واحد، مرتبة تصاعدياً (entry_date, id)
+    — هذا الترتيب ضروري لضمان معالجة قيد الفاتورة قبل قيود دفعاتها.
+
+    يُرجع قائمة عناصر (SimpleNamespace) بنفس حقول CustomerLedger المعروضة
+    (entry_date, entry_type, amount, running_balance, notes, reference_type,
+    reference_id) بالإضافة إلى is_edited و is_reversal، مرتبة تصاعدياً.
+    """
+    from types import SimpleNamespace
+
+    groups = {}
+    ungrouped = []
+    for e in entries:
+        if e.reference_type and e.reference_id:
+            groups.setdefault((e.reference_type, e.reference_id), []).append(e)
+        else:
+            ungrouped.append(e)
+    for group_entries in groups.values():
+        group_entries.sort(key=lambda x: x.id)
+
+    payment_id_to_invoice_id = {}
+    sale_payment_ids = [
+        ref_id for (ref_type, ref_id) in groups
+        if ref_type in ('customer_payment_cash', 'customer_payment_bank')
+    ]
+    if sale_payment_ids:
+        for sp_id, inv_id in SalePayment.objects.filter(
+            tenant=tenant, pk__in=sale_payment_ids,
+        ).values_list('id', 'invoice_id'):
+            payment_id_to_invoice_id[sp_id] = inv_id
+
+    def item(e, sort_id, is_edited=False, is_reversal=None, amount=None,
+             running_balance=None, notes=None, entry_date=None):
+        return SimpleNamespace(
+            entry_date=e.entry_date if entry_date is None else entry_date,
+            entry_type=e.entry_type,
+            amount=e.amount if amount is None else amount,
+            running_balance=e.running_balance if running_balance is None else running_balance,
+            notes=(e.notes or '') if notes is None else notes,
+            reference_type=e.reference_type, reference_id=e.reference_id,
+            is_edited=is_edited, is_reversal=e.is_reversal if is_reversal is None else is_reversal,
+            _sort_id=sort_id,
+        )
+
+    consumed_keys = set()
+    result = [item(e, e.id) for e in ungrouped]
+
+    for key, group_entries in groups.items():
+        if key in consumed_keys:
+            continue
+        ref_type, ref_id = key
+        last = group_entries[-1]
+
+        if not last.is_reversal:
+            result.append(item(last, last.id, is_edited=len(group_entries) > 1))
+            continue
+
+        # آخر قيد في المجموعة معكوس = المجموعة مُلغاة بالكامل
+        if ref_type == 'sale_invoice':
+            merged = list(group_entries)
+            for pid, inv_id in payment_id_to_invoice_id.items():
+                if inv_id != ref_id:
+                    continue
+                for pkey in (('customer_payment_cash', pid), ('customer_payment_bank', pid)):
+                    p_group = groups.get(pkey)
+                    if p_group and p_group[-1].is_reversal:
+                        merged.extend(p_group)
+                        consumed_keys.add(pkey)
+            merged.sort(key=lambda x: x.id)
+            final = merged[-1]
+            base = group_entries[0]
+            result.append(item(
+                base, final.id,
+                is_reversal=True,
+                entry_date=final.entry_date,
+                running_balance=final.running_balance,
+                notes=f'تم إلغاء الفاتورة بالكامل — {base.notes}'.strip(' —'),
+            ))
+        else:
+            base = group_entries[0]
+            result.append(item(
+                base, last.id,
+                is_reversal=True,
+                entry_date=last.entry_date,
+                running_balance=last.running_balance,
+                notes=last.notes,
+            ))
+
+    result.sort(key=lambda it: it._sort_id)
+    return result
 
 
 # ─────────────────────────────────────────────

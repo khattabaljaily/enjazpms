@@ -48,6 +48,7 @@ def _add_stock(tenant, stock, item, qty, unit_cost, invoice):
         reference_type='purchase_invoice',
         reference_id=invoice.id,
         balance_after=sq.quantity,
+        notes=f'شراء — أمر شراء {invoice.invoice_number}',
     )
 
     if unit_cost and unit_cost > 0 and item.cost_price != unit_cost:
@@ -305,7 +306,7 @@ def _reverse_supplier_ledger(tenant, reference_type, reference_id):
         )
 
 
-def _deduct_stock(tenant, stock, item, qty, unit_cost, reference_type, reference_id, movement_date):
+def _deduct_stock(tenant, stock, item, qty, unit_cost, reference_type, reference_id, movement_date, notes=''):
     if not _is_stock_tracked_item(item):
         return
 
@@ -330,6 +331,7 @@ def _deduct_stock(tenant, stock, item, qty, unit_cost, reference_type, reference
         reference_type=reference_type,
         reference_id=reference_id,
         balance_after=sq.quantity,
+        notes=notes,
     )
 
 
@@ -580,6 +582,7 @@ def confirm_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRe
             reference_type='purchase_return',
             reference_id=purchase_return.id,
             movement_date=purchase_return.return_date,
+            notes=f'مرتجع شراء {purchase_return.return_number} — أمر شراء {invoice.invoice_number}',
         )
 
         inv_line.returned_quantity += rl.returned_quantity

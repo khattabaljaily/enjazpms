@@ -133,6 +133,9 @@
                                 {% if entry.is_edited %}
                                 <span class="badge" style="background:rgba(251,191,36,.2); color:#b45309; font-size:.7rem; border-radius:5px; padding:.2rem .5rem; margin-right:.3rem;">تم التعديل</span>
                                 {% endif %}
+                                {% if entry.is_reversal %}
+                                <span class="badge" style="background:rgba(239,68,68,.15); color:#dc2626; font-size:.7rem; border-radius:5px; padding:.2rem .5rem; margin-right:.3rem;">إلغاء</span>
+                                {% endif %}
                             </td>
                             <td class="text-end fw-bold" style="color:{% if entry.entry_type_key == 'opening' %}#6366f1{% elif entry.entry_type_key == 'payment' or entry.entry_type_key == 'return' %}#11998e{% elif entry.entry_type_key == 'adjustment' %}#d97706{% else %}#dc2626{% endif %}">{{ entry.amount }}</td>
                             <td class="text-end fw-bold" style="color:#6366f1;">{{ entry.running_balance }}</td>

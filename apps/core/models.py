@@ -300,6 +300,7 @@ class Settings(models.Model):
     invoice_color = models.CharField('لون الفاتورة', max_length=7, default='#6366f1')
     print_sale_invoice = models.BooleanField('طباعة فاتورة البيع', default=True)
     print_purchase_invoice = models.BooleanField('طباعة فاتورة الشراء', default=True)
+    print_agent_name = models.BooleanField('طباعة اسم المندوب في الفاتورة', default=False)
     
     # Tax Settings
     tax_enabled = models.BooleanField('تفعيل الضرائب', default=False)

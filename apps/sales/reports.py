@@ -320,23 +320,9 @@ class SalesReportGenerator:
             entry_date__lte=self.end_date,
         ).order_by('entry_date', 'id'))
 
-        # Collapse edit patterns within the date range
-        max_reversal_id = {}
-        for e in all_entries:
-            if e.is_reversal and e.reference_type and e.reference_id:
-                key = (e.reference_type, e.reference_id)
-                max_reversal_id[key] = max(max_reversal_id.get(key, 0), e.id)
-
-        entries = []
-        for e in all_entries:
-            if e.is_reversal:
-                continue
-            key = (e.reference_type, e.reference_id) if (e.reference_type and e.reference_id) else None
-            rev_id = max_reversal_id.get(key, 0) if key else 0
-            if rev_id > 0 and e.id < rev_id:
-                continue
-            e._is_edited = rev_id > 0
-            entries.append(e)
+        from apps.sales.services import build_customer_statement_timeline
+        entry_type_labels = dict(CustomerLedger.ENTRY_TYPE_CHOICES)
+        entries = build_customer_statement_timeline(self.tenant, all_entries)
 
         customer_opening = float(customer.opening_balance or 0)
 
@@ -353,12 +339,13 @@ class SalesReportGenerator:
             bal = float(e.running_balance) + customer_opening
             data.append({
                 'entry_date': e.entry_date,
-                'entry_type': e.get_entry_type_display(),
+                'entry_type': entry_type_labels.get(e.entry_type, e.entry_type),
                 'entry_type_key': e.entry_type,
                 'amount': format_number(abs(float(e.amount)), 2),
                 'running_balance': format_number(bal, 2),
                 'notes': e.notes,
-                'is_edited': getattr(e, '_is_edited', False),
+                'is_edited': e.is_edited,
+                'is_reversal': e.is_reversal,
             })
 
         if entries:

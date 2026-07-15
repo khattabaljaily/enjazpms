@@ -45,6 +45,12 @@
                 <span class="print-info-label">الرقم المرجعي</span>
                 <span class="print-info-value">{{ invoice.reference_number|default:"—" }}</span>
             </div>
+            {% if settings_obj.print_agent_name and invoice.agent %}
+            <div class="print-info-item">
+                <span class="print-info-label">المندوب</span>
+                <span class="print-info-value">{{ invoice.agent.name }}</span>
+            </div>
+            {% endif %}
             {% if invoice.due_date %}
             <div class="print-info-item">
                 <span class="print-info-label">تاريخ الاستحقاق</span>

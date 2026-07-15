@@ -66,10 +66,16 @@
                             <td class="fw-semibold">{{ row.agent.name }}</td>
                             <td class="text-muted">{{ row.agent.phone|default:"—" }}</td>
                             <td>
-                                {% if row.agent.commission_type == 'percentage' %}
-                                <span style="font-size:.8rem;">{{ row.agent.commission_rate|qty }}%</span>
-                                {% elif row.agent.commission_type == 'fixed' %}
-                                <span style="font-size:.8rem;">{{ row.agent.commission_rate|qty }} ثابت</span>
+                                {% if row.agent.commission_type == 'percentage' or row.agent.commission_type == 'fixed' %}
+                                <span style="font-size:.8rem;">
+                                    {% if row.agent.commission_basis == 'both' %}
+                                        {{ row.agent.commission_rate|qty }}{% if row.agent.commission_type == 'percentage' %}%{% endif %} فاتورة
+                                        + {{ row.agent.commission_rate_collection|qty }}{% if row.agent.commission_type == 'percentage' %}%{% endif %} تحصيل
+                                    {% else %}
+                                        {{ row.agent.commission_rate|qty }}{% if row.agent.commission_type == 'percentage' %}%{% endif %}
+                                        — {{ row.agent.get_commission_basis_display }}
+                                    {% endif %}
+                                </span>
                                 {% else %}
                                 <span class="text-muted" style="font-size:.8rem;">بدون عمولة</span>
                                 {% endif %}

@@ -844,12 +844,13 @@
         const amtFmt  = EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.amount || 0)));
         const balFmt  = EnjazIMS.formatMoney(Math.abs(EnjazIMS.parseNumber(tx.running_balance || 0)));
         const editedBadge = tx.is_edited ? `<span style="font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:5px;background:rgba(251,191,36,.2);color:#b45309;margin-right:.35rem;">تم التعديل</span>` : '';
+        const reversedBadge = tx.is_reversal ? `<span style="font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:5px;background:rgba(239,68,68,.15);color:#dc2626;margin-right:.35rem;">إلغاء</span>` : '';
         const notesLine = tx.notes && tx.notes !== '—'
             ? `<div style="font-size:.72rem;color:var(--text-secondary);padding-top:.3rem;">${tx.notes}</div>` : '';
         return `<div style="background:var(--bg-card,#fff);border:1px solid var(--border-light);border-radius:12px;padding:.7rem .9rem;box-shadow:0 1px 4px rgba(0,0,0,.05);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem;">
                 <span style="font-size:.72rem;color:var(--text-secondary);">${tx.entry_date || '—'}</span>
-                <span style="display:flex;align-items:center;gap:.3rem;">${editedBadge}<span style="font-size:.72rem;font-weight:700;padding:.2rem .55rem;border-radius:6px;background:${badgeBg};color:${badgeColor};">${tx.entry_type_label || tx.entry_type || '—'}</span></span>
+                <span style="display:flex;align-items:center;gap:.3rem;">${editedBadge}${reversedBadge} <span style="font-size:.72rem;font-weight:700;padding:.2rem .55rem;border-radius:6px;background:${badgeBg};color:${badgeColor};">${tx.entry_type_label || tx.entry_type || '—'}</span></span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border-light);">
                 <span style="font-size:.72rem;color:var(--text-secondary);">المبلغ</span>
@@ -882,7 +883,8 @@
                 const rows = resp.data.map(function(tx) {
                     const s = custLedgerStyle(tx);
                     const editedBadge = tx.is_edited ? `<span style="font-size:.65rem;font-weight:700;padding:.15rem .4rem;border-radius:5px;background:rgba(251,191,36,.2);color:#b45309;margin-left:.3rem;">تم التعديل</span>` : '';
-                    const typeCell = `<span style="font-size:.75rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;background:${s.badgeBg};color:${s.badgeColor};">${tx.entry_type_label || tx.entry_type || '—'}</span>${editedBadge}`;
+                    const reversedBadge = tx.is_reversal ? `<span style="font-size:.65rem;font-weight:700;padding:.15rem .4rem;border-radius:5px;background:rgba(239,68,68,.15);color:#dc2626;margin-left:.3rem;">إلغاء</span>` : '';
+                    const typeCell = `<span style="font-size:.75rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;background:${s.badgeBg};color:${s.badgeColor};">${tx.entry_type_label || tx.entry_type || '—'}</span> ${editedBadge}${reversedBadge}`;
                     return `<tr style="background:${s.rowBg}">
                         <td>${tx.entry_date || '—'}</td>
                         <td>${typeCell}</td>
