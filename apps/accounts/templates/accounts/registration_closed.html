@@ -1,0 +1,456 @@
+{% extends "layouts/auth.html" %}
+{% load humanize %}
+
+{% block auth_content %}
+<div class="text-center mb-4">
+    <h1 class="auth-title">إنشاء حساب جديد</h1>
+    <p class="auth-subtitle">التسجيل الذاتي متوقف مؤقتاً — تواصل معنا لإتمام إنشاء حسابك</p>
+</div>
+
+<!-- Pause notice -->
+<div class="reg-notice">
+    <div class="reg-notice__icon"><i class="fas fa-pause-circle"></i></div>
+    <div class="reg-notice__text">
+        نعمل حالياً على تحسين تجربة إنشاء الحساب، لذا تم إيقاف التسجيل المباشر مؤقتاً.
+        يمكنك التواصل معنا مباشرة عبر واتساب أو البريد الإلكتروني، أو تعبئة النموذج أدناه وسنتواصل معك لإتمام إنشاء الحساب.
+    </div>
+</div>
+
+<!-- Quick contact -->
+<div class="reg-quick">
+    <a class="reg-quick__btn reg-quick__btn--wa"
+       id="regWaLink"
+       href="https://wa.me/{{ whatsapp_number }}?text={% filter urlencode %}مرحباً، أرغب في إنشاء حساب جديد في إنجاز.{% endfilter %}"
+       target="_blank" rel="noopener">
+        <i class="fab fa-whatsapp"></i>
+        <span>تواصل عبر واتساب</span>
+    </a>
+    <button type="button" class="reg-quick__qr-btn" title="امسح الرمز للتواصل عبر واتساب"
+            data-bs-toggle="modal" data-bs-target="#regWaQrModal">
+        <i class="fas fa-qrcode"></i>
+    </button>
+    <a class="reg-quick__btn reg-quick__btn--email"
+       href="mailto:{{ contact_email }}?subject={% filter urlencode %}طلب إنشاء حساب جديد - إنجاز{% endfilter %}">
+        <i class="fas fa-envelope"></i>
+        <span>{{ contact_email }}</span>
+    </a>
+</div>
+
+<div class="reg-divider"><span>أو أرسل بياناتك مباشرة</span></div>
+
+<!-- Form -->
+<form method="post" action="{% url 'accounts:registration_request_api' %}" id="regRequestForm" class="animate-fade-in" autocomplete="off" data-lpignore="true" novalidate>
+    {% csrf_token %}
+    <div class="alert alert-danger auth-alert js-form-errors d-none mb-3"></div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            {{ form.personal_email.label_tag }}
+            {{ form.personal_email }}
+            <div class="text-danger small mt-1 js-field-errors" data-field="personal_email"></div>
+        </div>
+
+        <div class="col-md-6">
+            {{ form.phone.label_tag }}
+            {{ form.phone }}
+            <div class="text-danger small mt-1 js-field-errors" data-field="phone"></div>
+        </div>
+
+        <div class="col-md-6">
+            {{ form.business_type.label_tag }}
+            {{ form.business_type }}
+            <div class="text-danger small mt-1 js-field-errors" data-field="business_type"></div>
+        </div>
+
+        <div class="col-md-6">
+            {{ form.business_name.label_tag }}
+            {{ form.business_name }}
+            <div class="text-danger small mt-1 js-field-errors" data-field="business_name"></div>
+        </div>
+
+        <div class="col-md-6">
+            {{ form.version_type.label_tag }}
+            {{ form.version_type }}
+            <div class="text-danger small mt-1 js-field-errors" data-field="version_type"></div>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label d-block">وضع العملة الصعبة</label>
+            <div class="reg-hc-check">
+                {{ form.hard_currency_mode }}
+                <label class="form-check-label" for="{{ form.hard_currency_mode.id_for_label }}">
+                    {{ form.hard_currency_mode.label }}
+                </label>
+            </div>
+            <div class="text-danger small mt-1 js-field-errors" data-field="hard_currency_mode"></div>
+        </div>
+
+        <div class="col-12">
+            {{ form.address.label_tag }}
+            {{ form.address }}
+            <div class="text-danger small mt-1 js-field-errors" data-field="address"></div>
+        </div>
+    </div>
+
+    <div class="reg-links-line">
+        <span>لديك حساب بالفعل؟ <a href="{% url 'accounts:login' %}">تسجيل الدخول</a></span>
+        <span class="reg-links-line__sep">•</span>
+        <a href="{% url 'core:pricing' %}">عرض خطط الاشتراك</a>
+        <span class="reg-links-line__sep">•</span>
+        <a href="{% url 'core:about' %}">عن النظام</a>
+        <span class="reg-links-line__sep">·</span>
+        <a href="{% url 'core:terms_of_service' %}">اتفاقية الاستخدام</a>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100 auth-form-actions mt-3">
+        <i class="fas fa-paper-plane me-2"></i> إرسال الطلب
+    </button>
+</form>
+
+<!-- Success panel -->
+<div id="regSuccessPanel" class="reg-success d-none">
+    <div class="reg-success__icon"><i class="fas fa-check"></i></div>
+    <h3 class="reg-success__title">تم استلام طلبك بنجاح</h3>
+    <p class="reg-success__text">
+        أرسلنا بياناتك إلى فريقنا، وفتحنا لك محادثة واتساب لتأكيد الطلب مباشرة.
+        بمجرد إنشاء حسابك، ستصلك <strong>رسالة تأكيد على بريدك الإلكتروني</strong> و<strong>رسالة على واتساب</strong>.
+    </p>
+    <a href="{% url 'core:pricing' %}" class="btn btn-outline-primary mt-2">
+        <i class="fas fa-arrow-right me-2"></i> عرض خطط الاشتراك
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Full-width layout: this page has no brand/logo panel, just a wide centered form */
+.auth-brand-panel { display: none; }
+.auth-split-page { min-height: calc(100vh - 60px); }
+.auth-form-panel { flex: 1 1 100%; padding: 2.5rem 1.5rem; }
+.auth-card { max-width: 780px; }
+
+@media (max-width: 991px) {
+    .auth-card { max-width: 100%; }
+}
+
+.reg-hc-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 44px;
+    padding: 0 0.95rem;
+    background: var(--bg-tertiary);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+[data-theme="dark"] .reg-hc-check { background: rgba(255, 255, 255, 0.04); }
+.reg-hc-check .form-check-label {
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    margin: 0;
+    cursor: pointer;
+}
+.reg-hc-check input[type="checkbox"] { cursor: pointer; margin: 0; }
+
+.reg-links-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+.reg-links-line a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+.reg-links-line a:hover { text-decoration: underline; }
+.reg-links-line__sep {
+    color: var(--border-color);
+}
+
+.reg-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    background: color-mix(in srgb, var(--warning) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1.25rem;
+}
+.reg-notice__icon {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--warning) 22%, transparent);
+    color: var(--warning);
+    font-size: 1.1rem;
+}
+.reg-notice__text {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.7;
+}
+
+.reg-quick {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+.reg-quick__btn {
+    flex: 1 1 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    text-decoration: none;
+    border: 1px solid var(--border-color);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.reg-quick__btn:hover { transform: translateY(-2px); }
+.reg-quick__btn--wa {
+    background: color-mix(in srgb, #25D366 14%, transparent);
+    color: #128C4A;
+    border-color: color-mix(in srgb, #25D366 40%, transparent);
+}
+.reg-quick__btn--wa:hover { box-shadow: 0 8px 18px color-mix(in srgb, #25D366 30%, transparent); }
+[data-theme="dark"] .reg-quick__btn--wa { color: #4ade80; }
+.reg-quick__btn--email {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+    direction: ltr;
+}
+.reg-quick__btn--email:hover { box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 25%, transparent); }
+
+.reg-quick__qr-btn {
+    flex: 0 0 auto;
+    width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.15rem;
+    background: color-mix(in srgb, #25D366 14%, transparent);
+    color: #128C4A;
+    border: 1px solid color-mix(in srgb, #25D366 40%, transparent);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.reg-quick__qr-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 18px color-mix(in srgb, #25D366 30%, transparent); }
+[data-theme="dark"] .reg-quick__qr-btn { color: #4ade80; }
+
+.reg-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    margin: 0.5rem 0 1.25rem;
+}
+.reg-divider::before, .reg-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+}
+.reg-divider span { padding: 0 0.85rem; white-space: nowrap; }
+
+.reg-success {
+    text-align: center;
+    padding: 1.5rem 0.5rem 0.5rem;
+}
+.reg-success__icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--success) 18%, transparent);
+    color: var(--success);
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.reg-success__title {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.6rem;
+}
+.reg-success__text {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.8;
+    max-width: 440px;
+    margin: 0 auto;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- WhatsApp QR modal (kept outside .auth-card so it isn't trapped by its transform/animation containing block) -->
+<div class="modal fade" id="regWaQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:340px;">
+        <div class="modal-content" style="border-radius:20px;overflow:hidden;border:none;">
+            <div style="background:linear-gradient(135deg,#14532d,#166534);padding:1.1rem 1.25rem;display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;">
+                <div>
+                    <h5 style="color:#fff;margin:0;font-size:1.05rem;font-weight:700;">
+                        <i class="fab fa-whatsapp me-2" style="color:#4ade80;"></i>
+                        تواصل عبر واتساب
+                    </h5>
+                    <p style="color:rgba(255,255,255,.65);margin:0.25rem 0 0;font-size:0.8rem;">امسح الكود بكاميرا جوالك</p>
+                </div>
+                <button type="button" data-bs-dismiss="modal" aria-label="إغلاق"
+                        style="width:32px;height:32px;border-radius:9px;border:1.5px solid rgba(255,255,255,.25);
+                               background:rgba(255,255,255,.12);color:#fff;cursor:pointer;
+                               display:inline-flex;align-items:center;justify-content:center;
+                               font-size:.8rem;flex-shrink:0;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;padding:1.5rem;">
+                <canvas id="regWaQrCanvas" style="border-radius:14px;background:#fff;padding:8px;box-shadow:0 2px 16px rgba(0,0,0,.15);"></canvas>
+                <p style="font-size:.78rem;color:var(--text-secondary);text-align:center;margin:0;">
+                    أو افتح الرابط مباشرة من جوالك
+                </p>
+                <a id="regWaDirectLink" href="#" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:700;color:#15803d;text-decoration:none;">
+                    <i class="fab fa-whatsapp"></i> افتح المحادثة
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('regRequestForm');
+    var successPanel = document.getElementById('regSuccessPanel');
+    var alertBox = form.querySelector('.js-form-errors');
+    var submitBtn = form.querySelector('button[type=submit]');
+    var whatsappNumber = '{{ whatsapp_number }}';
+
+    // ── WhatsApp QR modal ───────────────────────────────────
+    var waLink = document.getElementById('regWaLink');
+    var qrModalEl = document.getElementById('regWaQrModal');
+    if (waLink && qrModalEl) {
+        var waGenericUrl = waLink.getAttribute('href');
+        qrModalEl.addEventListener('show.bs.modal', function () {
+            var canvas = document.getElementById('regWaQrCanvas');
+            var link = document.getElementById('regWaDirectLink');
+            if (link) link.href = waGenericUrl;
+            if (canvas && !canvas.dataset.loaded) {
+                var img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function () {
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    canvas.getContext('2d').drawImage(img, 0, 0);
+                    canvas.dataset.loaded = '1';
+                };
+                img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=6&color=15803d&data=' + encodeURIComponent(waGenericUrl);
+            }
+        });
+    }
+
+    function clearErrors() {
+        alertBox.classList.add('d-none');
+        alertBox.innerHTML = '';
+        form.querySelectorAll('.js-field-errors').forEach(function (el) { el.textContent = ''; });
+    }
+
+    function fieldText(name) {
+        var field = form.querySelector('[name="' + name + '"]');
+        if (!field) return '';
+        if (field.tagName === 'SELECT') {
+            return field.options[field.selectedIndex] ? field.options[field.selectedIndex].text.trim() : '';
+        }
+        if (field.type === 'checkbox') {
+            return field.checked ? 'مفعّل' : 'غير مفعّل';
+        }
+        return field.value.trim();
+    }
+
+    function buildWhatsAppUrl() {
+        var lines = [
+            'مرحباً، أرغب في إنشاء حساب جديد في إنجاز.',
+            'البريد الإلكتروني الشخصي: ' + fieldText('personal_email'),
+            'نوع النشاط التجاري: ' + fieldText('business_type'),
+            'اسم النشاط التجاري: ' + fieldText('business_name'),
+            'رقم الهاتف: ' + fieldText('phone'),
+            'العنوان: ' + fieldText('address'),
+            'نوع النسخة: ' + fieldText('version_type'),
+            'وضع العملة الصعبة: ' + fieldText('hard_currency_mode')
+        ];
+        return 'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent(lines.join('\n'));
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        clearErrors();
+
+        // Open the tab synchronously (on the click) so browsers don't block it later.
+        var waTab = window.open('', '_blank');
+
+        var originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> جارٍ الإرسال...';
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new FormData(form)
+        })
+        .then(function (response) {
+            return response.json().then(function (data) { return data; });
+        })
+        .then(function (data) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+
+            if (data.success) {
+                if (waTab) {
+                    waTab.location.href = buildWhatsAppUrl();
+                }
+                form.classList.add('d-none');
+                successPanel.classList.remove('d-none');
+                successPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                if (waTab) waTab.close();
+                if (data.errors) {
+                    Object.keys(data.errors).forEach(function (field) {
+                        var el = form.querySelector('.js-field-errors[data-field="' + field + '"]');
+                        if (el) el.textContent = data.errors[field].join('، ');
+                    });
+                }
+                alertBox.textContent = data.message || 'يرجى التحقق من الحقول المطلوبة';
+                alertBox.classList.remove('d-none');
+            }
+        })
+        .catch(function () {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            if (waTab) waTab.close();
+            alertBox.textContent = 'تعذر إرسال الطلب، يرجى المحاولة لاحقاً أو التواصل مباشرة عبر واتساب أو البريد الإلكتروني.';
+            alertBox.classList.remove('d-none');
+        });
+    });
+});
+</script>
+{% endblock %}

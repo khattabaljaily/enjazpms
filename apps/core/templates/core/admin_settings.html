@@ -33,6 +33,9 @@
                 {% if ps.announcement_active %}
                 <span class="asy-badge asy-badge--amber"><i class="fas fa-bullhorn"></i> إشعار نشط</span>
                 {% endif %}
+                {% if not ps.self_registration_enabled %}
+                <span class="asy-badge asy-badge--danger"><i class="fas fa-user-slash"></i> التسجيل الذاتي متوقف</span>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -88,6 +91,53 @@
                         <div class="col-12 text-end">
                             <button type="submit" class="asy-btn asy-btn--danger">
                                 <i class="fas fa-save"></i> حفظ إعدادات الصيانة
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ التسجيل الذاتي ═══════════════════════════════ -->
+        <div class="col-lg-6 d-flex">
+            <div class="asy-card w-100">
+                <div class="asy-card__header">
+                    <div class="asy-card__icon asy-card__icon--teal"><i class="fas fa-user-plus"></i></div>
+                    <div>
+                        <div class="asy-card__title">التسجيل الذاتي للمشتركين الجدد</div>
+                        <div class="asy-card__sub">التحكم في ظهور صفحة إنشاء حساب جديد للزوار</div>
+                    </div>
+                </div>
+                <div class="asy-card__body">
+                    <div class="asy-maintenance-alert {% if not ps.self_registration_enabled %}asy-maintenance-alert--on{% endif %}">
+                        <i class="fas {% if ps.self_registration_enabled %}fa-info-circle{% else %}fa-exclamation-triangle{% endif %}"></i>
+                        {% if ps.self_registration_enabled %}
+                        التسجيل الذاتي مفعّل — يمكن للزوار إنشاء حساب مباشرة من صفحة "إنشاء حساب".
+                        {% else %}
+                        التسجيل الذاتي متوقف الآن — الزوار يشاهدون صفحة تواصل (واتساب/بريد إلكتروني) بدلاً من فورم التسجيل.
+                        {% endif %}
+                    </div>
+
+                    <form id="registrationForm" class="row g-3 mt-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="section" value="registration">
+
+                        <div class="col-12">
+                            <div class="asy-toggle-row">
+                                <div>
+                                    <div class="asy-toggle-label">تفعيل صفحة التسجيل الذاتي</div>
+                                    <div class="asy-toggle-sub">عند الإيقاف تظهر صفحة تواصل بديلة بدلاً من فورم التسجيل</div>
+                                </div>
+                                <label class="asy-toggle">
+                                    <input type="checkbox" id="registrationToggle" name="self_registration_enabled"
+                                           {% if ps.self_registration_enabled %}checked{% endif %}>
+                                    <span class="asy-toggle__slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="asy-btn asy-btn--teal">
+                                <i class="fas fa-save"></i> حفظ إعدادات التسجيل
                             </button>
                         </div>
                     </form>
@@ -281,6 +331,7 @@ function bindForm(formId, files = false) {
 
 bindForm('maintenanceForm');
 bindForm('announcementForm');
+bindForm('registrationForm');
 bindForm('defaultsForm');
 
 // Store original button labels

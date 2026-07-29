@@ -418,6 +418,81 @@ class Step3SettingsForm(forms.Form):
         return cleaned_data
 
 
+class RegistrationRequestForm(forms.Form):
+    """طلب تواصل لإنشاء حساب (أثناء إيقاف التسجيل الذاتي المؤقت)"""
+
+    VERSION_CHOICES = Step3SettingsForm.VERSION_CHOICES
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_arabic_error_messages(self)
+        for field in self.fields.values():
+            field.widget.attrs['autocomplete'] = 'off'
+
+    personal_email = forms.EmailField(
+        label='البريد الإلكتروني الشخصي',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'example@email.com',
+            'dir': 'ltr'
+        })
+    )
+
+    business_type = forms.ModelChoiceField(
+        label='نوع النشاط التجاري',
+        queryset=BusinessType.objects.filter(is_active=True),
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        }),
+        empty_label='-- اختر نوع النشاط --'
+    )
+
+    business_name = forms.CharField(
+        label='اسم النشاط التجاري',
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'مثال: اسم النشاط التجاري'
+        })
+    )
+
+    phone = forms.CharField(
+        label='رقم الهاتف',
+        max_length=20,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '+000 000 000000',
+            'dir': 'ltr'
+        })
+    )
+
+    address = forms.CharField(
+        label='العنوان',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'أدخل العنوان الكامل'
+        })
+    )
+
+    version_type = forms.ChoiceField(
+        label='نوع النسخة',
+        choices=VERSION_CHOICES,
+        initial='single_store',
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+
+    hard_currency_mode = forms.BooleanField(
+        label='تفعيل وضع العملة الصعبة',
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+
+
 class LoginForm(AuthenticationForm):
     """نموذج تسجيل الدخول"""
 

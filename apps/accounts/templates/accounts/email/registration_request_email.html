@@ -1,0 +1,198 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طلب إنشاء حساب جديد - Enjaz</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            direction: rtl;
+            text-align: right;
+            unicode-bidi: embed;
+        }
+
+        .email-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            direction: rtl;
+            text-align: right;
+        }
+
+        .email-container {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin: 20px 0;
+            direction: rtl;
+            text-align: right;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 36px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.9);
+            margin: 0;
+        }
+
+        .content {
+            padding: 35px 30px;
+            direction: rtl;
+            text-align: right;
+        }
+
+        .message {
+            font-size: 15px;
+            color: #4a5568;
+            margin-bottom: 22px;
+            line-height: 1.7;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .data-table tr:nth-child(even) { background: #f8fafc; }
+
+        .data-table td {
+            padding: 14px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .data-table td:first-child {
+            font-weight: 700;
+            color: #667eea;
+            width: 42%;
+            white-space: nowrap;
+        }
+
+        .data-table td:last-child {
+            color: #2d3748;
+        }
+
+        .data-table tr:last-child td { border-bottom: none; }
+
+        .cta-row {
+            margin-top: 28px;
+            text-align: center;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #25D366 0%, #128C4A 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 30px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            margin: 6px;
+        }
+
+        .cta-button--secondary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .footer {
+            background: #f8fafc;
+            padding: 26px 30px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .footer p {
+            margin: 6px 0;
+            color: #718096;
+            font-size: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .email-wrapper { padding: 10px; }
+            .content { padding: 22px 18px; }
+            .data-table td { padding: 12px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper" dir="rtl">
+        <div class="email-container" dir="rtl">
+            <div class="header">
+                <div class="logo">Enjaz</div>
+                <p class="subtitle">طلب إنشاء حساب جديد — التسجيل الذاتي متوقف مؤقتاً</p>
+            </div>
+
+            <div class="content">
+                <div class="message">
+                    وصل طلب جديد من صفحة التسجيل، يرجى مراجعة البيانات أدناه والتواصل مع العميل عبر واتساب أو البريد الإلكتروني لإكمال إنشاء الحساب.
+                </div>
+
+                <table class="data-table">
+                    <tr>
+                        <td>البريد الإلكتروني الشخصي</td>
+                        <td dir="ltr" style="text-align:right;">{{ personal_email }}</td>
+                    </tr>
+                    <tr>
+                        <td>نوع النشاط التجاري</td>
+                        <td>{{ business_type }}</td>
+                    </tr>
+                    <tr>
+                        <td>اسم النشاط التجاري</td>
+                        <td>{{ business_name }}</td>
+                    </tr>
+                    <tr>
+                        <td>رقم الهاتف</td>
+                        <td dir="ltr" style="text-align:right;">{{ phone }}</td>
+                    </tr>
+                    <tr>
+                        <td>العنوان</td>
+                        <td>{{ address }}</td>
+                    </tr>
+                    <tr>
+                        <td>نوع النسخة</td>
+                        <td>{{ version_type }}</td>
+                    </tr>
+                    <tr>
+                        <td>وضع العملة الصعبة</td>
+                        <td>{{ hard_currency_mode }}</td>
+                    </tr>
+                </table>
+
+                <div class="cta-row">
+                    <a href="mailto:{{ personal_email }}" class="cta-button cta-button--secondary">✉️ الرد بالبريد الإلكتروني</a>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>هذا البريد الإلكتروني مرسل تلقائياً من نموذج التسجيل في Enjaz</p>
+                <p>&copy; {{ now|date:"Y" }} Enjaz - جميع الحقوق محفوظة</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

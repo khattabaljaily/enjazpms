@@ -1227,6 +1227,9 @@ def admin_settings_update_api(request):
         ps.announcement_text   = request.POST.get('announcement_text', '').strip()
         ps.announcement_type   = request.POST.get('announcement_type', 'info')
 
+    elif section == 'registration':
+        ps.self_registration_enabled = request.POST.get('self_registration_enabled') == 'true'
+
     elif section == 'defaults':
         currency = request.POST.get('default_currency', '').strip()
         if currency:
@@ -2199,7 +2202,13 @@ def _delete_tenant_data(tenant):
         from apps.purchases.models import PurchaseRFQLine, PurchaseRFQ
         from apps.items.models import BOMRecipe
         from apps.store.models import OnlineOrderLine, OnlineOrder
+        from apps.agents.models import AgentInvoiceRequestLine, AgentInvoiceRequest, AgentLedger
 
+        # --- agent sub-documents (AgentLedger.agent / AgentInvoiceRequest.agent PROTECT Agent,
+        #     AgentInvoiceRequestLine.item PROTECT Item) ---
+        AgentInvoiceRequestLine.objects.filter(**t).delete()
+        AgentInvoiceRequest.objects.filter(**t).delete()
+        AgentLedger.objects.filter(**t).delete()
         # --- stock sub-documents (all PROTECT Stock or Item) ---
         StocktakeLine.objects.filter(**t).delete()
         Stocktake.objects.filter(**t).delete()

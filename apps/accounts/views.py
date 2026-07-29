@@ -28,7 +28,7 @@ from .models import UserActivity
 from .activity_service import log_activity
 from apps.core.constants import COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country
 from .models import PermissionGroup, User
-from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, LoginForm, UserManagementForm, PasswordResetForm, SetPasswordForm
+from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, RegistrationRequestForm, LoginForm, UserManagementForm, PasswordResetForm, SetPasswordForm
 from .permissions import get_permission_keys, get_permission_schema
 
 
@@ -492,8 +492,74 @@ def permission_group_delete_api(request, pk):
 
 
 
+REGISTRATION_WHATSAPP_NUMBER = '249110100110'
+REGISTRATION_CONTACT_EMAIL = 'info@enjaztechnology.com'
+REGISTRATION_REQUEST_RECIPIENT = 'khattabaljaily@gmail.com'
+
+
+def registration_closed(request):
+    """صفحة إيقاف التسجيل الذاتي المؤقت - نموذج طلب تواصل بديل"""
+    _clear_messages(request)
+    form = RegistrationRequestForm()
+    return render(request, 'accounts/registration_closed.html', {
+        'form': form,
+        'whatsapp_number': REGISTRATION_WHATSAPP_NUMBER,
+        'contact_email': REGISTRATION_CONTACT_EMAIL,
+    })
+
+
+def registration_request_api(request):
+    """استقبال طلب التواصل لإنشاء حساب أثناء إيقاف التسجيل الذاتي"""
+    if request.method != 'POST':
+        return _json_error('الطريقة غير مسموحة', status=405)
+
+    form = RegistrationRequestForm(request.POST)
+    if not form.is_valid():
+        errors = _serialize_form_errors(form)
+        return JsonResponse({
+            'success': False,
+            'message': _first_error_message(errors),
+            'errors': errors,
+        }, status=400, json_dumps_params={'ensure_ascii': False})
+
+    data = form.cleaned_data
+    version_label = dict(RegistrationRequestForm.VERSION_CHOICES).get(data['version_type'], data['version_type'])
+
+    email_context = {
+        'personal_email': data['personal_email'],
+        'business_type': data['business_type'].name_ar,
+        'business_name': data['business_name'],
+        'phone': data['phone'],
+        'address': data['address'],
+        'version_type': version_label,
+        'hard_currency_mode': 'مفعّل' if data['hard_currency_mode'] else 'غير مفعّل',
+        'now': _tz.now(),
+    }
+
+    subject = f"طلب إنشاء حساب جديد - {data['business_name']}"
+    html_message = render_to_string('accounts/email/registration_request_email.html', email_context)
+
+    try:
+        send_mail(
+            subject=subject,
+            message='',
+            html_message=html_message,
+            from_email=None,
+            recipient_list=[REGISTRATION_REQUEST_RECIPIENT],
+            fail_silently=False,
+        )
+    except Exception:
+        pass
+
+    return _json_ok(None, 'تم استلام طلبك بنجاح')
+
+
 def register_step1(request):
     """الخطوة 1: معلومات المستخدم"""
+    from apps.core.models import PlatformSettings
+    if not PlatformSettings.get().self_registration_enabled:
+        return registration_closed(request)
+
     _clear_messages(request)
     if request.method == 'POST':
         form = Step1UserForm(request.POST)

@@ -364,6 +364,9 @@ class PlatformSettings(models.Model):
     maintenance_message = models.TextField('رسالة الصيانة', blank=True,
                                            default='النظام قيد الصيانة حالياً. سنعود قريباً.')
 
+    # ── التسجيل الذاتي ──────────────────────────
+    self_registration_enabled = models.BooleanField('تفعيل التسجيل الذاتي', default=True)
+
     # ── الإشعار العام ───────────────────────────
     announcement_active = models.BooleanField('تفعيل الإشعار', default=False)
     announcement_text   = models.CharField('نص الإشعار', max_length=500, blank=True)
