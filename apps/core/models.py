@@ -744,9 +744,20 @@ class SocialMediaPost(models.Model):
         ('sudan_context',  'السياق السوداني'),
     ]
 
+    PUBLISH_CHANNEL_CHOICES = [
+        ('facebook',  'فيسبوك'),
+        ('instagram', 'إنستقرام'),
+        ('whatsapp',  'واتساب'),
+        ('tiktok',    'تيك توك'),
+        ('other',     'أخرى'),
+    ]
+
     category        = models.CharField('التصنيف', max_length=20, choices=CATEGORY_CHOICES, default='feature', db_index=True)
     content         = models.TextField('المحتوى')
     is_ai_generated = models.BooleanField('مولّد بالذكاء الاصطناعي', default=False)
+    is_published    = models.BooleanField('تم النشر', default=False, db_index=True)
+    published_at    = models.DateField('تاريخ النشر', null=True, blank=True)
+    published_channel = models.CharField('قناة النشر', max_length=20, choices=PUBLISH_CHANNEL_CHOICES, blank=True)
     created_at      = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True, db_index=True)
     updated_at      = models.DateTimeField('تاريخ التحديث', auto_now=True)
     created_by      = models.ForeignKey(

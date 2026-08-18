@@ -84,6 +84,8 @@ urlpatterns = [
     path('system/marketing/social-posts/api/<int:pk>/update/', views.admin_marketing_post_update, name='admin_marketing_post_update'),
     path('system/marketing/social-posts/api/<int:pk>/delete/', views.admin_marketing_post_delete, name='admin_marketing_post_delete'),
     path('system/marketing/social-posts/api/generate/', views.admin_marketing_post_generate, name='admin_marketing_post_generate'),
+    path('system/marketing/social-posts/api/<int:pk>/publish/', views.admin_marketing_post_publish, name='admin_marketing_post_publish'),
+    path('system/marketing/social-posts/api/<int:pk>/unpublish/', views.admin_marketing_post_unpublish, name='admin_marketing_post_unpublish'),
 
     # Tenant Backup (manual — all plans)
     path('settings/backup/create/', views.tenant_backup_create_api, name='tenant_backup_create_api'),

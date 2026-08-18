@@ -98,6 +98,10 @@
 .mkt-badge { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .6rem; border-radius:20px; font-size:.72rem; font-weight:600; white-space:nowrap; background:#ede7f9; color:#6547bd; }
 .mkt-badge--ai { background:#faf3dd; color:#8a6a1f; }
 .mkt-badge--manual { background:#eef1f5; color:#565e72; }
+.mkt-badge--published { background:#dceee3; color:#2f7a52; }
+.mkt-card--published { border-color:#8fcaa8; }
+.mkt-btn--publish { color:#2f7a52; border-color:#8fcaa8; }
+.mkt-btn--publish:hover { background:#dceee3; }
 .mkt-row-actions { display:flex; gap:.35rem; }
 
 /* Empty state */
@@ -153,6 +157,7 @@
             </div>
             <div class="mkt-stats">
                 <span class="mkt-stat"><i class="fas fa-note-sticky"></i>{{ total_count }} منشوراً</span>
+                <span class="mkt-stat"><i class="fas fa-check-circle"></i>{{ published_count }} تم نشره</span>
             </div>
         </div>
     </div>
@@ -166,6 +171,11 @@
                 <option value="{{ key }}" {% if category_filter == key %}selected{% endif %}>{{ label }} ({{ count }})</option>
                 {% endfor %}
             </select>
+            <select name="published" class="mkt-select" onchange="this.form.submit()">
+                <option value="">كل الحالات</option>
+                <option value="published" {% if published_filter == 'published' %}selected{% endif %}>تم نشرها ({{ published_count }})</option>
+                <option value="unpublished" {% if published_filter == 'unpublished' %}selected{% endif %}>لم تُنشر بعد ({{ unpublished_count }})</option>
+            </select>
         </form>
         <div style="margin-inline-start:auto;">
             <button type="button" class="mkt-btn mkt-btn--primary" onclick="openCreateModal()"><i class="fas fa-plus"></i> منشور جديد</button>
@@ -176,7 +186,7 @@
     {% if posts %}
     <div class="mkt-grid">
         {% for post in posts %}
-        <div class="mkt-card" id="row-{{ post.pk }}">
+        <div class="mkt-card {% if post.is_published %}mkt-card--published{% endif %}" id="row-{{ post.pk }}">
             <div class="mkt-card__top">
                 <div class="mkt-card__badges">
                     <span class="mkt-badge">{{ post.get_category_display }}</span>
@@ -185,6 +195,9 @@
                     {% else %}
                     <span class="mkt-badge mkt-badge--manual">يدوي</span>
                     {% endif %}
+                    {% if post.is_published %}
+                    <span class="mkt-badge mkt-badge--published" id="pub-badge-{{ post.pk }}"><i class="fas fa-check-circle"></i> {{ post.get_published_channel_display }} · {{ post.published_at|date:"Y-m-d" }}</span>
+                    {% endif %}
                 </div>
                 <span class="mkt-card__index">#{{ forloop.counter0|add:page_obj.start_index }}</span>
             </div>
@@ -192,6 +205,11 @@
             <div class="mkt-card__foot">
                 <span class="mkt-card__date">{{ post.created_at|date:"Y-m-d" }}</span>
                 <div class="mkt-row-actions">
+                    {% if post.is_published %}
+                    <button class="mkt-btn mkt-btn--outline mkt-btn--icon mkt-btn--publish" id="pub-btn-{{ post.pk }}" title="إلغاء تحديد النشر" onclick="unpublishPost({{ post.pk }})"><i class="fas fa-rotate-left"></i></button>
+                    {% else %}
+                    <button class="mkt-btn mkt-btn--outline mkt-btn--icon mkt-btn--publish" id="pub-btn-{{ post.pk }}" title="تحديد كمنشور" onclick="openPublishModal({{ post.pk }})"><i class="fas fa-paper-plane"></i></button>
+                    {% endif %}
                     <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="نسخ" onclick="copyPost(this, {{ post.pk }})"><i class="fas fa-copy"></i></button>
                     <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="تعديل" onclick="openEditModal({{ post.pk }}, '{{ post.category }}')"><i class="fas fa-pen"></i></button>
                     <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="حذف" onclick="deletePost({{ post.pk }})"><i class="fas fa-trash"></i></button>
@@ -206,19 +224,19 @@
         <ul class="pagination justify-content-center mt-2">
             <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
                 {% if page_obj.has_previous %}
-                <a class="page-link" href="?{% if category_filter %}category={{ category_filter }}&{% endif %}page={{ page_obj.previous_page_number }}">السابق</a>
+                <a class="page-link" href="?{{ extra_qs }}page={{ page_obj.previous_page_number }}">السابق</a>
                 {% else %}
                 <span class="page-link">السابق</span>
                 {% endif %}
             </li>
             {% for num in page_obj.paginator.page_range %}
             <li class="page-item {% if num == page_obj.number %}active{% endif %}">
-                <a class="page-link" href="?{% if category_filter %}category={{ category_filter }}&{% endif %}page={{ num }}">{{ num }}</a>
+                <a class="page-link" href="?{{ extra_qs }}page={{ num }}">{{ num }}</a>
             </li>
             {% endfor %}
             <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
                 {% if page_obj.has_next %}
-                <a class="page-link" href="?{% if category_filter %}category={{ category_filter }}&{% endif %}page={{ page_obj.next_page_number }}">التالي</a>
+                <a class="page-link" href="?{{ extra_qs }}page={{ page_obj.next_page_number }}">التالي</a>
                 {% else %}
                 <span class="page-link">التالي</span>
                 {% endif %}
@@ -299,6 +317,40 @@
             <div class="cx-delete-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
                 <button type="button" class="cx-btn-danger" id="confirmDeleteMktPostBtn">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ PUBLISH MODAL ══════════════════════════ -->
+<div class="modal fade" id="publishMktPostModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:20px; border:none;">
+            <div class="mkt-modal__head">
+                <h6 class="mkt-modal__title">تحديد كمنشور</h6>
+                <button class="mkt-modal__close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="mkt-modal__body">
+                <input type="hidden" id="publishPostId" value="">
+                <div class="mkt-form-group">
+                    <label class="mkt-form-label">القناة</label>
+                    <select class="mkt-form-select" id="publishChannel">
+                        {% for key, label in PUBLISH_CHANNEL_CHOICES %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mkt-form-group">
+                    <label class="mkt-form-label">تاريخ النشر</label>
+                    <input type="date" class="mkt-form-input" id="publishDate">
+                </div>
+            </div>
+            <div class="mkt-modal__foot">
+                <span></span>
+                <div style="display:flex; gap:.75rem;">
+                    <button class="mkt-btn mkt-btn--outline" data-bs-dismiss="modal">إلغاء</button>
+                    <button class="mkt-btn mkt-btn--primary" onclick="submitPublish()"><i class="fas fa-check"></i> تأكيد</button>
+                </div>
             </div>
         </div>
     </div>
@@ -405,6 +457,54 @@ function submitPost() {
 }
 
 const deleteMktPostModal = new bootstrap.Modal(document.getElementById('deleteMktPostModal'));
+const publishMktPostModal = new bootstrap.Modal(document.getElementById('publishMktPostModal'));
+
+function openPublishModal(pk) {
+    document.getElementById('publishPostId').value = pk;
+    document.getElementById('publishChannel').value = 'facebook';
+    document.getElementById('publishDate').value = new Date().toISOString().slice(0, 10);
+    publishMktPostModal.show();
+}
+
+function submitPublish() {
+    const pk = document.getElementById('publishPostId').value;
+    const channel = document.getElementById('publishChannel').value;
+    const publishedAt = document.getElementById('publishDate').value;
+
+    fetch(`/system/marketing/social-posts/api/${pk}/publish/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `channel=${encodeURIComponent(channel)}&published_at=${encodeURIComponent(publishedAt)}`,
+    })
+    .then(r => r.json())
+    .then(d => {
+        publishMktPostModal.hide();
+        if (d.success) {
+            showToast(d.message, 'ok');
+            setTimeout(() => location.reload(), 700);
+        } else {
+            showToast(d.message || 'حدث خطأ', 'err');
+        }
+    })
+    .catch(() => showToast('تعذّر الاتصال بالخادم', 'err'));
+}
+
+function unpublishPost(pk) {
+    fetch(`/system/marketing/social-posts/api/${pk}/unpublish/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF },
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            showToast(d.message, 'ok');
+            setTimeout(() => location.reload(), 700);
+        } else {
+            showToast(d.message || 'حدث خطأ', 'err');
+        }
+    })
+    .catch(() => showToast('تعذّر الاتصال بالخادم', 'err'));
+}
 
 function deletePost(pk) {
     document.getElementById('deleteMktPostId').value = pk;

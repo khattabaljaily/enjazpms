@@ -2595,12 +2595,19 @@ def admin_marketing_posts(request):
         return redirect('core:no_permission')
 
     category_filter = request.GET.get('category', '')
+    published_filter = request.GET.get('published', '')
 
     posts = SocialMediaPost.objects.select_related('created_by').all()
     if category_filter:
         posts = posts.filter(category=category_filter)
+    if published_filter == 'published':
+        posts = posts.filter(is_published=True)
+    elif published_filter == 'unpublished':
+        posts = posts.filter(is_published=False)
 
     total_count = SocialMediaPost.objects.count()
+    published_count = SocialMediaPost.objects.filter(is_published=True).count()
+    unpublished_count = total_count - published_count
     category_stats = [
         (key, label, SocialMediaPost.objects.filter(category=key).count())
         for key, label in SocialMediaPost.CATEGORY_CHOICES
@@ -2609,13 +2616,25 @@ def admin_marketing_posts(request):
     paginator = Paginator(posts, 12)
     page_obj = paginator.get_page(request.GET.get('page'))
 
+    extra_qs_parts = []
+    if category_filter:
+        extra_qs_parts.append(f'category={category_filter}')
+    if published_filter:
+        extra_qs_parts.append(f'published={published_filter}')
+    extra_qs = '&'.join(extra_qs_parts) + ('&' if extra_qs_parts else '')
+
     return render(request, 'core/admin_marketing_posts.html', {
         'posts': page_obj,
         'page_obj': page_obj,
+        'extra_qs': extra_qs,
         'total_count': total_count,
+        'published_count': published_count,
+        'unpublished_count': unpublished_count,
         'category_stats': category_stats,
         'category_filter': category_filter,
+        'published_filter': published_filter,
         'CATEGORY_CHOICES': SocialMediaPost.CATEGORY_CHOICES,
+        'PUBLISH_CHANNEL_CHOICES': SocialMediaPost.PUBLISH_CHANNEL_CHOICES,
     })
 
 
@@ -2681,6 +2700,60 @@ def admin_marketing_post_delete(request, pk):
     post.delete()
 
     return JsonResponse({'success': True, 'message': 'تم حذف المنشور'})
+
+
+@login_required
+@require_POST
+def admin_marketing_post_publish(request, pk):
+    err = _superuser_required(request, 'manage_marketing')
+    if err:
+        return err
+
+    post = get_object_or_404(SocialMediaPost, pk=pk)
+
+    channel = request.POST.get('channel', '').strip()
+    published_at = request.POST.get('published_at', '').strip()
+
+    valid_channels = dict(SocialMediaPost.PUBLISH_CHANNEL_CHOICES)
+    if channel not in valid_channels:
+        return JsonResponse({'success': False, 'message': 'قناة غير صالحة'}, status=400)
+
+    from datetime import date as date_cls
+    if published_at:
+        try:
+            published_date = date_cls.fromisoformat(published_at)
+        except ValueError:
+            return JsonResponse({'success': False, 'message': 'تاريخ غير صالح'}, status=400)
+    else:
+        published_date = dj_timezone.localdate()
+
+    post.is_published = True
+    post.published_channel = channel
+    post.published_at = published_date
+    post.save(update_fields=['is_published', 'published_channel', 'published_at'])
+
+    return JsonResponse({
+        'success': True,
+        'message': 'تم تحديد المنشور كمنشور',
+        'channel_label': post.get_published_channel_display(),
+        'published_at': post.published_at.strftime('%Y-%m-%d'),
+    })
+
+
+@login_required
+@require_POST
+def admin_marketing_post_unpublish(request, pk):
+    err = _superuser_required(request, 'manage_marketing')
+    if err:
+        return err
+
+    post = get_object_or_404(SocialMediaPost, pk=pk)
+    post.is_published = False
+    post.published_channel = ''
+    post.published_at = None
+    post.save(update_fields=['is_published', 'published_channel', 'published_at'])
+
+    return JsonResponse({'success': True, 'message': 'تم إلغاء تحديد النشر'})
 
 
 @login_required
