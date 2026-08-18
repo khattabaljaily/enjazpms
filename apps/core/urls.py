@@ -78,6 +78,13 @@ urlpatterns = [
     # System — Training
     path('system/training/', views.admin_training, name='admin_training'),
 
+    # System — Marketing
+    path('system/marketing/social-posts/', views.admin_marketing_posts, name='admin_marketing_posts'),
+    path('system/marketing/social-posts/api/create/', views.admin_marketing_post_create, name='admin_marketing_post_create'),
+    path('system/marketing/social-posts/api/<int:pk>/update/', views.admin_marketing_post_update, name='admin_marketing_post_update'),
+    path('system/marketing/social-posts/api/<int:pk>/delete/', views.admin_marketing_post_delete, name='admin_marketing_post_delete'),
+    path('system/marketing/social-posts/api/generate/', views.admin_marketing_post_generate, name='admin_marketing_post_generate'),
+
     # Tenant Backup (manual — all plans)
     path('settings/backup/create/', views.tenant_backup_create_api, name='tenant_backup_create_api'),
     path('settings/backup/download/<int:backup_id>/', views.tenant_backup_download, name='tenant_backup_download'),

@@ -102,6 +102,23 @@
     </ul>
     {% endif %}
 
+    <!-- التسويق -->
+    {% if user.is_superuser or 'manage_marketing' in user.platform_permissions %}
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item has-submenu">
+            <a class="nav-link nav-link-toggle{% if 'system/marketing' in request.path %} submenu-active{% endif %}" href="#">
+                <span class="nav-icon"><i class="fas fa-bullhorn"></i></span>
+                التسويق
+                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+            </a>
+            <ul class="nav-submenu">
+                <li><a href="{% url 'core:admin_marketing_posts' %}" class="nav-sublink{% if request.resolver_match.url_name == 'admin_marketing_posts' %} active{% endif %}"><i class="fas fa-share-nodes me-2"></i>وسائل التواصل</a></li>
+            </ul>
+        </li>
+    </ul>
+    {% endif %}
+
     <!-- النظام -->
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">

@@ -1,0 +1,391 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% block page_title %}وسائل التواصل{% endblock %}
+{% block page_description %}بنك المنشورات التسويقية الجاهزة للنشر، مع إمكانية التوليد بالذكاء الاصطناعي{% endblock %}
+
+{% block extra_css %}
+<style>
+.mkt-wrapper { display:flex; flex-direction:column; gap:1rem; }
+
+/* Hero */
+.mkt-hero {
+    position:relative; overflow:hidden; border-radius:20px;
+    background:linear-gradient(135deg,#1e1533 0%,#2d1f4a 50%,#3d2a5c 100%);
+    padding:.75rem 1.2rem; box-shadow:0 8px 32px rgba(45,31,74,.28);
+}
+.mkt-hero__orb {
+    position:absolute; border-radius:50%; pointer-events:none;
+    top:-45%; right:-4%; width:300px; height:300px;
+    background:rgba(203,160,62,.12);
+}
+.mkt-hero__inner {
+    position:relative; z-index:1; display:flex;
+    align-items:center; justify-content:space-between; gap:1.5rem; flex-wrap:wrap;
+}
+.mkt-hero__left { display:flex; align-items:center; gap:1rem; }
+.mkt-hero__icon {
+    width:48px; height:48px; border-radius:14px;
+    background:rgba(203,160,62,.22); display:flex; align-items:center;
+    justify-content:center; font-size:1.4rem; color:#e9c877;
+}
+.mkt-hero__title { color:#fff; font-size:1.25rem; font-weight:700; margin:0; }
+.mkt-hero__desc { color:#c4b8dd; font-size:.8rem; margin:0; }
+.mkt-hero__actions { display:flex; gap:.5rem; flex-wrap:wrap; }
+
+.mkt-stats { display:flex; gap:.5rem; flex-wrap:wrap; }
+.mkt-stat {
+    padding:.3rem .9rem; border-radius:30px; font-size:.75rem; font-weight:600;
+    display:flex; align-items:center; gap:.35rem;
+    background:rgba(255,255,255,.1); color:#e2e8f0;
+}
+
+/* Filters */
+.mkt-filters {
+    background:var(--card-bg,#fff); border-radius:14px;
+    padding:.75rem 1rem; display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+}
+.mkt-select {
+    border:1px solid var(--border-color,#e2e8f0); border-radius:10px;
+    padding:.4rem .75rem; padding-inline-end:2rem; font-size:.82rem;
+    background:var(--input-bg,#f8fafc); color:var(--text-main,#1e293b);
+    outline:none; cursor:pointer; appearance:none; -webkit-appearance:none; -moz-appearance:none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%2364748b' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+    background-position: left 0.65rem center; background-repeat:no-repeat; background-size:.85rem;
+}
+.mkt-btn {
+    padding:.45rem 1rem; border-radius:10px; font-size:.82rem; font-weight:600;
+    border:none; cursor:pointer; transition:.15s; display:inline-flex; align-items:center; gap:.4rem;
+}
+.mkt-btn--primary { background:linear-gradient(135deg,#8b6ecb,#6547bd); color:#fff; }
+.mkt-btn--primary:hover { opacity:.95; }
+.mkt-btn--gold { background:linear-gradient(135deg,#e9c877,#cba03e); color:#3d2a05; }
+.mkt-btn--gold:hover { opacity:.92; }
+.mkt-btn--outline { background:transparent; border:1px solid var(--border-color,#e2e8f0); color:var(--text-main,#1e293b); }
+.mkt-btn--outline:hover { background:var(--hover-bg,#f1f5f9); }
+.mkt-btn--sm { padding:.3rem .6rem; font-size:.75rem; }
+.mkt-btn--icon { width:32px; height:32px; padding:0; justify-content:center; }
+.mkt-btn:disabled { opacity:.6; cursor:default; }
+
+/* Table */
+.mkt-table-wrap {
+    background:var(--card-bg,#fff); border-radius:16px; overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
+    overflow-x:auto;
+}
+.mkt-table { width:100%; min-width:760px; border-collapse:collapse; font-size:.84rem; }
+.mkt-table thead th {
+    background:var(--table-head-bg,#f8fafc); color:var(--text-muted,#64748b);
+    font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;
+    padding:.65rem 1rem; text-align:right; border-bottom:1px solid var(--border-color,#e2e8f0);
+    white-space:nowrap;
+}
+.mkt-table tbody tr { transition:background .12s; }
+.mkt-table tbody tr:hover { background:var(--hover-bg,#f8fafc); }
+.mkt-table tbody td {
+    padding:.7rem 1rem; border-bottom:1px solid var(--border-color,#e2e8f0);
+    color:var(--text-main,#1e293b); vertical-align:top;
+}
+.mkt-table tbody tr:last-child td { border-bottom:none; }
+.mkt-content-cell { max-width:420px; }
+.mkt-content-cell p { margin:0; line-height:1.6; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+.mkt-badge { display:inline-flex; align-items:center; padding:.2rem .6rem; border-radius:20px; font-size:.72rem; font-weight:600; white-space:nowrap; background:#ede7f9; color:#6547bd; }
+.mkt-badge--ai { background:#faf3dd; color:#8a6a1f; }
+.mkt-badge--manual { background:#eef1f5; color:#565e72; }
+.mkt-row-actions { display:flex; gap:.35rem; }
+
+/* Empty state */
+.mkt-empty { padding:3rem 1rem; text-align:center; color:var(--text-muted,#94a3b8); }
+
+/* Modal (shared visual language with other admin modals) */
+.mkt-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1050; align-items:center; justify-content:center; padding:1rem; }
+.mkt-modal-overlay.open { display:flex; }
+.mkt-modal { background:var(--card-bg,#fff); border-radius:20px; width:100%; max-width:560px; box-shadow:0 20px 60px rgba(0,0,0,.2); max-height:90vh; overflow-y:auto; }
+.mkt-modal__head { padding:1.25rem 1.5rem; border-bottom:1px solid var(--border-color,#e2e8f0); display:flex; align-items:center; justify-content:space-between; }
+.mkt-modal__title { font-size:1rem; font-weight:700; color:var(--text-main,#1e293b); margin:0; }
+.mkt-modal__close { width:32px; height:32px; border-radius:8px; border:none; cursor:pointer; background:var(--hover-bg,#f1f5f9); color:var(--text-muted,#64748b); display:flex; align-items:center; justify-content:center; }
+.mkt-modal__body { padding:1.5rem; display:flex; flex-direction:column; gap:1rem; }
+.mkt-modal__foot { padding:1rem 1.5rem; border-top:1px solid var(--border-color,#e2e8f0); display:flex; justify-content:space-between; gap:.75rem; align-items:center; }
+.mkt-form-group { display:flex; flex-direction:column; gap:.3rem; }
+.mkt-form-label { font-size:.8rem; font-weight:600; color:var(--text-muted,#64748b); }
+.mkt-form-input, .mkt-form-select, .mkt-form-textarea {
+    border:1px solid var(--border-color,#e2e8f0); border-radius:10px;
+    padding:.5rem .75rem; font-size:.85rem; color:var(--text-main,#1e293b);
+    background:var(--input-bg,#f8fafc); outline:none; font-family:inherit;
+}
+.mkt-form-textarea { resize:vertical; min-height:140px; line-height:1.7; }
+.mkt-gen-row { display:flex; gap:.5rem; align-items:flex-end; }
+.mkt-gen-row .mkt-form-group { flex:1; }
+.mkt-gen-hint { font-size:.72rem; color:var(--text-muted,#94a3b8); }
+
+/* Toast */
+.mkt-toast { display:none; position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%); z-index:1100; padding:.65rem 1.4rem; border-radius:12px; font-size:.85rem; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.18); }
+.mkt-toast--ok { background:#16a34a; color:#fff; }
+.mkt-toast--err { background:#dc2626; color:#fff; }
+
+@media (max-width: 768px) {
+    .mkt-hero__inner { flex-direction:column; align-items:flex-start; }
+    .mkt-filters { padding:1rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mkt-wrapper">
+
+    <!-- Hero -->
+    <div class="mkt-hero">
+        <div class="mkt-hero__orb"></div>
+        <div class="mkt-hero__inner">
+            <div class="mkt-hero__left">
+                <div class="mkt-hero__icon"><i class="fas fa-bullhorn"></i></div>
+                <div>
+                    <div class="mkt-hero__title">وسائل التواصل</div>
+                    <div class="mkt-hero__desc">بنك المنشورات التسويقية — جاهزة للنسخ والنشر، أو وليّدها بالذكاء الاصطناعي</div>
+                </div>
+            </div>
+            <div class="mkt-stats">
+                <span class="mkt-stat"><i class="fas fa-note-sticky"></i>{{ total_count }} منشوراً</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="mkt-filters">
+        <form method="get" style="display:contents;">
+            <select name="category" class="mkt-select" onchange="this.form.submit()">
+                <option value="">كل التصنيفات ({{ total_count }})</option>
+                {% for key, label, count in category_stats %}
+                <option value="{{ key }}" {% if category_filter == key %}selected{% endif %}>{{ label }} ({{ count }})</option>
+                {% endfor %}
+            </select>
+        </form>
+        <div style="margin-inline-start:auto;">
+            <button type="button" class="mkt-btn mkt-btn--primary" onclick="openCreateModal()"><i class="fas fa-plus"></i> منشور جديد</button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="mkt-table-wrap">
+        <table class="mkt-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>التصنيف</th>
+                    <th>المحتوى</th>
+                    <th>المصدر</th>
+                    <th>تاريخ الإنشاء</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in posts %}
+                <tr id="row-{{ post.pk }}">
+                    <td>{{ forloop.counter }}</td>
+                    <td><span class="mkt-badge">{{ post.get_category_display }}</span></td>
+                    <td class="mkt-content-cell"><p>{{ post.content }}</p></td>
+                    <td>
+                        {% if post.is_ai_generated %}
+                        <span class="mkt-badge mkt-badge--ai"><i class="fas fa-wand-magic-sparkles"></i> ذكاء اصطناعي</span>
+                        {% else %}
+                        <span class="mkt-badge mkt-badge--manual">يدوي</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ post.created_at|date:"Y-m-d" }}</td>
+                    <td>
+                        <div class="mkt-row-actions">
+                            <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="نسخ" onclick="copyPost(this, {{ post.pk }})"><i class="fas fa-copy"></i></button>
+                            <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="تعديل" onclick="openEditModal({{ post.pk }}, '{{ post.category }}')"><i class="fas fa-pen"></i></button>
+                            <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="حذف" onclick="deletePost({{ post.pk }})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6"><div class="mkt-empty"><i class="fas fa-bullhorn fa-2x mb-2"></i><div>لا توجد منشورات بعد</div></div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Hidden store of full post content (avoids HTML-escaping issues when opening the edit modal) -->
+<div id="mktPostData" style="display:none;">
+    {% for post in posts %}
+    <div data-id="{{ post.pk }}" data-category="{{ post.category }}">{{ post.content }}</div>
+    {% endfor %}
+</div>
+
+<!-- ════════════ MODAL: Create / Edit ══════════════════════════════ -->
+<div class="mkt-modal-overlay" id="modalPost">
+  <div class="mkt-modal">
+    <div class="mkt-modal__head">
+      <h6 class="mkt-modal__title" id="mktModalTitle">منشور جديد</h6>
+      <button class="mkt-modal__close" onclick="closeModal('modalPost')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="mkt-modal__body">
+      <input type="hidden" id="mktPostId" value="">
+
+      <div class="mkt-form-group">
+        <label class="mkt-form-label">التصنيف</label>
+        <select class="mkt-form-select" id="mktCategory">
+          {% for key, label in CATEGORY_CHOICES %}
+          <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mkt-gen-row">
+        <div class="mkt-form-group">
+          <label class="mkt-form-label">موضوع مقترح للتوليد (اختياري)</label>
+          <input class="mkt-form-input" id="mktTopicHint" placeholder="مثال: تنبيه انتهاء الصلاحية للصيدليات">
+        </div>
+        <button type="button" class="mkt-btn mkt-btn--gold" id="mktGenerateBtn" onclick="generatePost()">
+          <i class="fas fa-wand-magic-sparkles"></i> توليد بالذكاء الاصطناعي
+        </button>
+      </div>
+      <div class="mkt-gen-hint">التوليد يملأ حقل المحتوى تلقائياً — راجعه وعدّله قبل الحفظ.</div>
+
+      <div class="mkt-form-group">
+        <label class="mkt-form-label">محتوى المنشور</label>
+        <textarea class="mkt-form-textarea" id="mktContent" placeholder="اكتب نص المنشور هنا..."></textarea>
+      </div>
+    </div>
+    <div class="mkt-modal__foot">
+      <span></span>
+      <div style="display:flex; gap:.75rem;">
+        <button class="mkt-btn mkt-btn--outline" onclick="closeModal('modalPost')">إلغاء</button>
+        <button class="mkt-btn mkt-btn--primary" onclick="submitPost()"><i class="fas fa-check"></i> حفظ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mkt-toast" id="mktToast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+const URL_CREATE = "{% url 'core:admin_marketing_post_create' %}";
+const URL_GENERATE = "{% url 'core:admin_marketing_post_generate' %}";
+const URL_UPDATE = (pk) => `/system/marketing/social-posts/api/${pk}/update/`;
+const URL_DELETE = (pk) => `/system/marketing/social-posts/api/${pk}/delete/`;
+
+let mktGenerated = false; // tracks whether current content came from AI
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openCreateModal() {
+    document.getElementById('mktModalTitle').textContent = 'منشور جديد';
+    document.getElementById('mktPostId').value = '';
+    document.getElementById('mktCategory').value = 'feature';
+    document.getElementById('mktTopicHint').value = '';
+    document.getElementById('mktContent').value = '';
+    mktGenerated = false;
+    openModal('modalPost');
+}
+
+function openEditModal(pk, category) {
+    const dataEl = document.querySelector(`#mktPostData [data-id="${pk}"]`);
+    const content = dataEl ? dataEl.textContent.trim() : '';
+    document.getElementById('mktModalTitle').textContent = 'تعديل المنشور';
+    document.getElementById('mktPostId').value = pk;
+    document.getElementById('mktCategory').value = category;
+    document.getElementById('mktTopicHint').value = '';
+    document.getElementById('mktContent').value = content;
+    mktGenerated = false;
+    openModal('modalPost');
+}
+
+function generatePost() {
+    const btn = document.getElementById('mktGenerateBtn');
+    const category = document.getElementById('mktCategory').value;
+    const topicHint = document.getElementById('mktTopicHint').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ التوليد...';
+
+    fetch(URL_GENERATE, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `category=${encodeURIComponent(category)}&topic_hint=${encodeURIComponent(topicHint)}`,
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            document.getElementById('mktContent').value = d.content;
+            mktGenerated = true;
+            showToast('تم توليد نص المنشور، راجعه قبل الحفظ', 'ok');
+        } else {
+            showToast(d.message || 'تعذّر التوليد', 'err');
+        }
+    })
+    .catch(() => showToast('تعذّر الاتصال بالخادم', 'err'))
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> توليد بالذكاء الاصطناعي';
+    });
+}
+
+function submitPost() {
+    const pk = document.getElementById('mktPostId').value;
+    const category = document.getElementById('mktCategory').value;
+    const content = document.getElementById('mktContent').value.trim();
+
+    if (!content) { showToast('محتوى المنشور مطلوب', 'err'); return; }
+
+    const url = pk ? URL_UPDATE(pk) : URL_CREATE;
+    const body = new URLSearchParams({ category, content, is_ai_generated: mktGenerated ? '1' : '0' });
+
+    fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) {
+            closeModal('modalPost');
+            showToast(d.message, 'ok');
+            setTimeout(() => location.reload(), 900);
+        } else {
+            showToast(d.message || 'حدث خطأ', 'err');
+        }
+    })
+    .catch(() => showToast('تعذّر الاتصال بالخادم', 'err'));
+}
+
+function deletePost(pk) {
+    if (!confirm('هل تريد حذف هذا المنشور؟')) return;
+    fetch(URL_DELETE(pk), { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                document.getElementById(`row-${pk}`).remove();
+                showToast(d.message, 'ok');
+            } else {
+                showToast(d.message || 'حدث خطأ', 'err');
+            }
+        })
+        .catch(() => showToast('تعذّر الاتصال بالخادم', 'err'));
+}
+
+function copyPost(btn, pk) {
+    const dataEl = document.querySelector(`#mktPostData [data-id="${pk}"]`);
+    const content = dataEl ? dataEl.textContent.trim() : '';
+    navigator.clipboard.writeText(content).then(() => {
+        showToast('تم نسخ المنشور', 'ok');
+    }).catch(() => showToast('تعذّر النسخ', 'err'));
+}
+
+function showToast(msg, type='ok') {
+    const t = document.getElementById('mktToast');
+    t.textContent = msg;
+    t.className = `mkt-toast mkt-toast--${type}`;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+</script>
+{% endblock %}

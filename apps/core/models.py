@@ -727,6 +727,43 @@ class AdminNotification(models.Model):
         )
 
 
+class SocialMediaPost(models.Model):
+    """منشور تسويقي جاهز للنشر على وسائل التواصل — محتوى خاص بالمنصة نفسها، وليس ببيانات مشترك."""
+
+    CATEGORY_CHOICES = [
+        ('comprehensive',  'منشور شامل'),
+        ('problem',        'مشكلة'),
+        ('feature',        'ميزة'),
+        ('business_type',  'حسب نوع النشاط'),
+        ('trust',          'ثقة وأمان'),
+        ('objection',      'معالجة اعتراض'),
+        ('tip',            'نصيحة تجارية'),
+        ('comparison',     'مقارنة'),
+        ('cta',            'دعوة مباشرة'),
+        ('engagement',     'تفاعلي'),
+        ('sudan_context',  'السياق السوداني'),
+    ]
+
+    category        = models.CharField('التصنيف', max_length=20, choices=CATEGORY_CHOICES, default='feature', db_index=True)
+    content         = models.TextField('المحتوى')
+    is_ai_generated = models.BooleanField('مولّد بالذكاء الاصطناعي', default=False)
+    created_at      = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True, db_index=True)
+    updated_at      = models.DateTimeField('تاريخ التحديث', auto_now=True)
+    created_by      = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, verbose_name='أنشأه'
+    )
+
+    class Meta:
+        db_table = 'social_media_posts'
+        verbose_name = 'منشور تسويقي'
+        verbose_name_plural = 'المنشورات التسويقية'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.content[:50]
+
+
 class ExchangeRateHistory(models.Model):
     tenant     = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='exchange_rate_history', db_index=True)
     rate       = models.DecimalField('سعر الصرف', max_digits=12, decimal_places=2)

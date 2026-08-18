@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta, date as date_type
 from django.utils import timezone as dj_timezone
 
-from .models import Settings, Tenant, BusinessType, SupportTicket, SupportMessage, TenantBackup
+from .models import Settings, Tenant, BusinessType, SupportTicket, SupportMessage, TenantBackup, SocialMediaPost
 from apps.notifications.models import Notification
 from .forms import TenantForm
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country, CURRENCY_CHOICES
@@ -475,6 +475,7 @@ PLATFORM_PERMS = [
     ('view_audit_log',    'سجل المراجعة',             'fa-clock-rotate-left'),
     ('manage_backups',    'النسخ الاحتياطية',          'fa-database'),
     ('view_notifications','إشعارات النظام',            'fa-bell'),
+    ('manage_marketing',  'إدارة التسويق',              'fa-bullhorn'),
 ]
 
 
@@ -2581,3 +2582,117 @@ def analytics(request):
         'supplier_debt': supplier_debt,
     }
     return render(request, 'core/analytics.html', context)
+
+
+# ============================================================
+# MARKETING — Social Media Posts (Platform Admin Only)
+# ============================================================
+
+@login_required
+def admin_marketing_posts(request):
+    if not request.user.has_platform_perm('manage_marketing'):
+        return redirect('core:no_permission')
+
+    category_filter = request.GET.get('category', '')
+
+    posts = SocialMediaPost.objects.select_related('created_by').all()
+    if category_filter:
+        posts = posts.filter(category=category_filter)
+
+    total_count = SocialMediaPost.objects.count()
+    category_stats = [
+        (key, label, SocialMediaPost.objects.filter(category=key).count())
+        for key, label in SocialMediaPost.CATEGORY_CHOICES
+    ]
+
+    return render(request, 'core/admin_marketing_posts.html', {
+        'posts': posts,
+        'total_count': total_count,
+        'category_stats': category_stats,
+        'category_filter': category_filter,
+        'CATEGORY_CHOICES': SocialMediaPost.CATEGORY_CHOICES,
+    })
+
+
+@login_required
+@require_POST
+def admin_marketing_post_create(request):
+    err = _superuser_required(request, 'manage_marketing')
+    if err:
+        return err
+
+    category = request.POST.get('category', '').strip()
+    content = request.POST.get('content', '').strip()
+
+    valid_categories = dict(SocialMediaPost.CATEGORY_CHOICES)
+    if category not in valid_categories:
+        return JsonResponse({'success': False, 'message': 'تصنيف غير صالح'}, status=400)
+    if not content:
+        return JsonResponse({'success': False, 'message': 'محتوى المنشور مطلوب'}, status=400)
+
+    post = SocialMediaPost.objects.create(
+        category=category,
+        content=content,
+        is_ai_generated=request.POST.get('is_ai_generated') == '1',
+        created_by=request.user,
+    )
+
+    return JsonResponse({'success': True, 'message': 'تم إنشاء المنشور بنجاح', 'post_id': post.pk})
+
+
+@login_required
+@require_POST
+def admin_marketing_post_update(request, pk):
+    err = _superuser_required(request, 'manage_marketing')
+    if err:
+        return err
+
+    post = get_object_or_404(SocialMediaPost, pk=pk)
+
+    category = request.POST.get('category', '').strip()
+    content = request.POST.get('content', '').strip()
+
+    valid_categories = dict(SocialMediaPost.CATEGORY_CHOICES)
+    if category not in valid_categories:
+        return JsonResponse({'success': False, 'message': 'تصنيف غير صالح'}, status=400)
+    if not content:
+        return JsonResponse({'success': False, 'message': 'محتوى المنشور مطلوب'}, status=400)
+
+    post.category = category
+    post.content = content
+    post.save(update_fields=['category', 'content', 'updated_at'])
+
+    return JsonResponse({'success': True, 'message': 'تم تحديث المنشور بنجاح'})
+
+
+@login_required
+@require_POST
+def admin_marketing_post_delete(request, pk):
+    err = _superuser_required(request, 'manage_marketing')
+    if err:
+        return err
+
+    post = get_object_or_404(SocialMediaPost, pk=pk)
+    post.delete()
+
+    return JsonResponse({'success': True, 'message': 'تم حذف المنشور'})
+
+
+@login_required
+@require_POST
+def admin_marketing_post_generate(request):
+    err = _superuser_required(request, 'manage_marketing')
+    if err:
+        return err
+
+    category = request.POST.get('category', '').strip()
+    topic_hint = request.POST.get('topic_hint', '').strip()
+
+    valid_categories = dict(SocialMediaPost.CATEGORY_CHOICES)
+    if category not in valid_categories:
+        return JsonResponse({'success': False, 'message': 'تصنيف غير صالح'}, status=400)
+
+    from apps.ai.services import generate_marketing_post
+    content = generate_marketing_post(category, topic_hint)
+
+    return JsonResponse({'success': True, 'content': content})
