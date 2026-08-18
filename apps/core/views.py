@@ -10,6 +10,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404
+from django.core.paginator import Paginator
 from apps.accounts.decorators import require_permission
 from apps.accounts.activity_service import log_activity
 from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
@@ -2605,8 +2606,12 @@ def admin_marketing_posts(request):
         for key, label in SocialMediaPost.CATEGORY_CHOICES
     ]
 
+    paginator = Paginator(posts, 12)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     return render(request, 'core/admin_marketing_posts.html', {
-        'posts': posts,
+        'posts': page_obj,
+        'page_obj': page_obj,
         'total_count': total_count,
         'category_stats': category_stats,
         'category_filter': category_filter,
