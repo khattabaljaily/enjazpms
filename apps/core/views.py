@@ -2692,7 +2692,27 @@ def admin_marketing_post_generate(request):
     if category not in valid_categories:
         return JsonResponse({'success': False, 'message': 'تصنيف غير صالح'}, status=400)
 
-    from apps.ai.services import generate_marketing_post
-    content = generate_marketing_post(category, topic_hint)
+    from apps.ai.services import generate_marketing_post, find_similar_post
 
-    return JsonResponse({'success': True, 'content': content})
+    existing_posts = list(
+        SocialMediaPost.objects.filter(category=category).values_list('content', flat=True)
+    )
+
+    content = generate_marketing_post(category, topic_hint, existing_posts=existing_posts)
+    similar = find_similar_post(content, existing_posts)
+
+    if similar:
+        # One retry: give the model an even more explicit nudge before giving up on avoiding it.
+        content = generate_marketing_post(
+            category,
+            topic_hint or 'اكتب بزاوية مختلفة تماماً عن المنشورات الموجودة',
+            existing_posts=existing_posts,
+        )
+        similar = find_similar_post(content, existing_posts)
+
+    return JsonResponse({
+        'success': True,
+        'content': content,
+        'similar_warning': bool(similar),
+        'similar_content': similar['content'] if similar else None,
+    })

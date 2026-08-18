@@ -514,10 +514,15 @@ _MARKETING_CATEGORY_GUIDANCE = {
 }
 
 
-def generate_marketing_post(category: str, topic_hint: str = '') -> str:
+def generate_marketing_post(category: str, topic_hint: str = '', existing_posts: list | None = None) -> str:
     """
     Generate ONE ready-to-publish Arabic (Modern Standard Arabic) social media
     post about EnjazIMS itself, for the given marketing category.
+
+    `existing_posts` (optional): content of posts already saved in this same
+    category, used to steer the model away from repeating an idea or phrasing
+    that's already in the bank. This is a best-effort nudge, not a guarantee —
+    callers should still run the result through `find_similar_post()`.
 
     Used by the platform admin "Marketing / Social Posts" screen — this is
     platform-level content generation, unrelated to any tenant's business data.
@@ -526,11 +531,21 @@ def generate_marketing_post(category: str, topic_hint: str = '') -> str:
 
     hint_line = f'\nموضوع أو زاوية مقترحة من طلب المستخدم: {topic_hint}\n' if topic_hint.strip() else ''
 
+    existing_block = ''
+    if existing_posts:
+        sample = existing_posts[:15]
+        numbered = "\n".join(f"{i+1}. {text}" for i, text in enumerate(sample))
+        existing_block = (
+            "\nمنشورات موجودة بالفعل في نفس هذا التصنيف — لا تكرر نفس الفكرة أو الزاوية أو الصياغة "
+            f"الموجودة في أي منها، واكتب شيئاً مختلفاً عنها بوضوح:\n{numbered}\n"
+        )
+
     prompt = (
         f"{_MARKETING_FEATURES_REFERENCE}\n\n"
         f"اكتب منشوراً واحداً فقط لوسائل التواصل الاجتماعي (فيسبوك أو إنستقرام) للترويج لنظام إنجاز.\n"
         f"نوع المنشور المطلوب: {guidance}"
-        f"{hint_line}\n"
+        f"{hint_line}"
+        f"{existing_block}\n"
         "قواعد إلزامية:\n"
         "- اكتب بالعربية الفصحى فقط، بدون أي لهجة عامية.\n"
         "- طول المنشور بين 4 و5 أسطر (حوالي 45 إلى 70 كلمة)، فقرة واحدة متصلة بدون عناوين أو نقاط.\n"
@@ -545,10 +560,36 @@ def generate_marketing_post(category: str, topic_hint: str = '') -> str:
             "role": "system",
             "content": (
                 "أنت كاتب محتوى تسويقي محترف يكتب بالعربية الفصحى فقط. "
-                "تكتب منشورات تسويقية قصيرة ومقنعة بدون مبالغة أو ادعاءات غير مؤكدة."
+                "تكتب منشورات تسويقية قصيرة ومقنعة بدون مبالغة أو ادعاءات غير مؤكدة، "
+                "وتحرص دائماً على ألا يكرر أي منشور جديد فكرة أو صياغة منشور سابق."
             ),
         },
         {"role": "user", "content": prompt},
     ]
 
     return _call_deepseek(messages, max_tokens=350)
+
+
+def find_similar_post(text: str, existing_posts: list, threshold: float = 0.72):
+    """
+    Safety-net duplicate check: compares `text` against each string in
+    `existing_posts` using a plain character-based similarity ratio, and
+    returns the closest match if it's at or above `threshold` (0..1).
+
+    Returns None if nothing is close enough. This is a blunt, dependency-free
+    check meant to catch near-duplicate AI output the prompt-level steering
+    missed — not a semantic/meaning-based comparison.
+    """
+    import difflib
+
+    best_match = None
+    best_ratio = 0.0
+    for other in existing_posts:
+        ratio = difflib.SequenceMatcher(None, text, other).ratio()
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_match = other
+
+    if best_match and best_ratio >= threshold:
+        return {'content': best_match, 'ratio': round(best_ratio, 2)}
+    return None

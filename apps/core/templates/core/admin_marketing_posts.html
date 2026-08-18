@@ -90,6 +90,7 @@
 .mkt-card__text {
     margin:0; line-height:1.85; font-size:.87rem; color:var(--text-main,#1e293b);
     flex:1;
+    text-align: justify;
 }
 .mkt-card__foot { display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding-top:.5rem; border-top:1px solid var(--border-color,#e2e8f0); }
 .mkt-card__date { font-size:.72rem; color:var(--text-muted,#94a3b8); }
@@ -256,6 +257,27 @@
   </div>
 </div>
 
+<!-- ══════════════════════════ DELETE CONFIRM MODAL ══════════════════════════ -->
+<div class="modal fade" id="deleteMktPostModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+                <h5 class="cx-delete-title">حذف المنشور؟</h5>
+                <p class="cx-delete-desc">
+                    ستقوم بحذف هذا المنشور بشكل نهائي.<br>
+                    لا يمكن التراجع عن هذا الإجراء.
+                </p>
+                <input type="hidden" id="deleteMktPostId" value="">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteMktPostBtn">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="mkt-toast" id="mktToast"></div>
 {% endblock %}
 
@@ -312,7 +334,11 @@ function generatePost() {
         if (d.success) {
             document.getElementById('mktContent').value = d.content;
             mktGenerated = true;
-            showToast('تم توليد نص المنشور، راجعه قبل الحفظ', 'ok');
+            if (d.similar_warning) {
+                showToast('النص قريب من منشور موجود بالفعل — راجعه وعدّله قبل الحفظ', 'err');
+            } else {
+                showToast('تم توليد نص المنشور، راجعه قبل الحفظ', 'ok');
+            }
         } else {
             showToast(d.message || 'تعذّر التوليد', 'err');
         }
@@ -352,11 +378,20 @@ function submitPost() {
     .catch(() => showToast('تعذّر الاتصال بالخادم', 'err'));
 }
 
+const deleteMktPostModal = new bootstrap.Modal(document.getElementById('deleteMktPostModal'));
+
 function deletePost(pk) {
-    if (!confirm('هل تريد حذف هذا المنشور؟')) return;
+    document.getElementById('deleteMktPostId').value = pk;
+    deleteMktPostModal.show();
+}
+
+document.getElementById('confirmDeleteMktPostBtn').addEventListener('click', function () {
+    const pk = document.getElementById('deleteMktPostId').value;
+    if (!pk) return;
     fetch(URL_DELETE(pk), { method: 'POST', headers: { 'X-CSRFToken': CSRF } })
         .then(r => r.json())
         .then(d => {
+            deleteMktPostModal.hide();
             if (d.success) {
                 document.getElementById(`row-${pk}`).remove();
                 showToast(d.message, 'ok');
@@ -365,7 +400,7 @@ function deletePost(pk) {
             }
         })
         .catch(() => showToast('تعذّر الاتصال بالخادم', 'err'));
-}
+});
 
 function copyPost(btn, pk) {
     const dataEl = document.querySelector(`#mktPostData [data-id="${pk}"]`);
