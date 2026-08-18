@@ -67,35 +67,40 @@
 .mkt-btn--icon { width:32px; height:32px; padding:0; justify-content:center; }
 .mkt-btn:disabled { opacity:.6; cursor:default; }
 
-/* Table */
-.mkt-table-wrap {
-    background:var(--card-bg,#fff); border-radius:16px; overflow:hidden;
-    box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid var(--border-color,#e2e8f0);
-    overflow-x:auto;
+/* Cards grid */
+.mkt-grid {
+    display:grid; grid-template-columns:1fr; gap:1rem;
 }
-.mkt-table { width:100%; min-width:760px; border-collapse:collapse; font-size:.84rem; }
-.mkt-table thead th {
-    background:var(--table-head-bg,#f8fafc); color:var(--text-muted,#64748b);
-    font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;
-    padding:.65rem 1rem; text-align:right; border-bottom:1px solid var(--border-color,#e2e8f0);
-    white-space:nowrap;
+@media (min-width: 640px) {
+    .mkt-grid { grid-template-columns:repeat(2, 1fr); }
 }
-.mkt-table tbody tr { transition:background .12s; }
-.mkt-table tbody tr:hover { background:var(--hover-bg,#f8fafc); }
-.mkt-table tbody td {
-    padding:.7rem 1rem; border-bottom:1px solid var(--border-color,#e2e8f0);
-    color:var(--text-main,#1e293b); vertical-align:top;
+@media (min-width: 1100px) {
+    .mkt-grid { grid-template-columns:repeat(3, 1fr); }
 }
-.mkt-table tbody tr:last-child td { border-bottom:none; }
-.mkt-content-cell { max-width:420px; }
-.mkt-content-cell p { margin:0; line-height:1.6; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.mkt-card {
+    display:flex; flex-direction:column; gap:.75rem;
+    background:var(--card-bg,#fff); border:1px solid var(--border-color,#e2e8f0);
+    border-radius:16px; padding:1.1rem; box-shadow:0 2px 8px rgba(0,0,0,.05);
+    transition:box-shadow .15s, transform .15s;
+}
+.mkt-card:hover { box-shadow:0 8px 24px rgba(0,0,0,.08); }
+.mkt-card__top { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+.mkt-card__badges { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+.mkt-card__index { font-size:.72rem; color:var(--text-muted,#94a3b8); font-weight:600; }
+.mkt-card__text {
+    margin:0; line-height:1.85; font-size:.87rem; color:var(--text-main,#1e293b);
+    flex:1;
+}
+.mkt-card__foot { display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding-top:.5rem; border-top:1px solid var(--border-color,#e2e8f0); }
+.mkt-card__date { font-size:.72rem; color:var(--text-muted,#94a3b8); }
 
-.mkt-badge { display:inline-flex; align-items:center; padding:.2rem .6rem; border-radius:20px; font-size:.72rem; font-weight:600; white-space:nowrap; background:#ede7f9; color:#6547bd; }
+.mkt-badge { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .6rem; border-radius:20px; font-size:.72rem; font-weight:600; white-space:nowrap; background:#ede7f9; color:#6547bd; }
 .mkt-badge--ai { background:#faf3dd; color:#8a6a1f; }
 .mkt-badge--manual { background:#eef1f5; color:#565e72; }
 .mkt-row-actions { display:flex; gap:.35rem; }
 
 /* Empty state */
+.mkt-table-wrap { background:var(--card-bg,#fff); border-radius:16px; border:1px solid var(--border-color,#e2e8f0); }
 .mkt-empty { padding:3rem 1rem; text-align:center; color:var(--text-muted,#94a3b8); }
 
 /* Modal (shared visual language with other admin modals) */
@@ -166,47 +171,37 @@
         </div>
     </div>
 
-    <!-- Table -->
-    <div class="mkt-table-wrap">
-        <table class="mkt-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>التصنيف</th>
-                    <th>المحتوى</th>
-                    <th>المصدر</th>
-                    <th>تاريخ الإنشاء</th>
-                    <th>إجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for post in posts %}
-                <tr id="row-{{ post.pk }}">
-                    <td>{{ forloop.counter }}</td>
-                    <td><span class="mkt-badge">{{ post.get_category_display }}</span></td>
-                    <td class="mkt-content-cell"><p>{{ post.content }}</p></td>
-                    <td>
-                        {% if post.is_ai_generated %}
-                        <span class="mkt-badge mkt-badge--ai"><i class="fas fa-wand-magic-sparkles"></i> ذكاء اصطناعي</span>
-                        {% else %}
-                        <span class="mkt-badge mkt-badge--manual">يدوي</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ post.created_at|date:"Y-m-d" }}</td>
-                    <td>
-                        <div class="mkt-row-actions">
-                            <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="نسخ" onclick="copyPost(this, {{ post.pk }})"><i class="fas fa-copy"></i></button>
-                            <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="تعديل" onclick="openEditModal({{ post.pk }}, '{{ post.category }}')"><i class="fas fa-pen"></i></button>
-                            <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="حذف" onclick="deletePost({{ post.pk }})"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6"><div class="mkt-empty"><i class="fas fa-bullhorn fa-2x mb-2"></i><div>لا توجد منشورات بعد</div></div></td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Cards -->
+    {% if posts %}
+    <div class="mkt-grid">
+        {% for post in posts %}
+        <div class="mkt-card" id="row-{{ post.pk }}">
+            <div class="mkt-card__top">
+                <div class="mkt-card__badges">
+                    <span class="mkt-badge">{{ post.get_category_display }}</span>
+                    {% if post.is_ai_generated %}
+                    <span class="mkt-badge mkt-badge--ai" title="مولّد بالذكاء الاصطناعي"><i class="fas fa-wand-magic-sparkles"></i></span>
+                    {% else %}
+                    <span class="mkt-badge mkt-badge--manual">يدوي</span>
+                    {% endif %}
+                </div>
+                <span class="mkt-card__index">#{{ forloop.counter }}</span>
+            </div>
+            <p class="mkt-card__text">{{ post.content }}</p>
+            <div class="mkt-card__foot">
+                <span class="mkt-card__date">{{ post.created_at|date:"Y-m-d" }}</span>
+                <div class="mkt-row-actions">
+                    <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="نسخ" onclick="copyPost(this, {{ post.pk }})"><i class="fas fa-copy"></i></button>
+                    <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="تعديل" onclick="openEditModal({{ post.pk }}, '{{ post.category }}')"><i class="fas fa-pen"></i></button>
+                    <button class="mkt-btn mkt-btn--outline mkt-btn--icon" title="حذف" onclick="deletePost({{ post.pk }})"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
+    {% else %}
+    <div class="mkt-table-wrap"><div class="mkt-empty"><i class="fas fa-bullhorn fa-2x mb-2"></i><div>لا توجد منشورات بعد</div></div></div>
+    {% endif %}
 </div>
 
 <!-- Hidden store of full post content (avoids HTML-escaping issues when opening the edit modal) -->
