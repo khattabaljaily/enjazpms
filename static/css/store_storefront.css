@@ -67,6 +67,35 @@ body {
   white-space: nowrap;
 }
 
+.sf-header__actions {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-shrink: 0;
+}
+
+.sf-pricelist-btn {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  height: 44px;
+  padding: 0 1rem;
+  border: 1.5px solid var(--brand);
+  color: var(--brand);
+  background: transparent;
+  border-radius: 12px;
+  font-size: .85rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.sf-pricelist-btn:hover { background: var(--brand); color: #fff; }
+.sf-pricelist-btn span { display: none; }
+@media (min-width: 560px) {
+  .sf-pricelist-btn span { display: inline; }
+}
+
 .sf-cart {
   position: relative;
   width: 44px;

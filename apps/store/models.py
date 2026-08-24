@@ -71,6 +71,10 @@ class StoreSettings(TenantMixin):
     show_out_of_stock    = models.BooleanField('عرض المنتجات النافدة', default=False)
     show_prices          = models.BooleanField('عرض الأسعار', default=True)
     show_stock_quantity  = models.BooleanField('عرض الكمية المتوفرة', default=False)
+    show_price_list      = models.BooleanField(
+        'تفعيل قائمة الأسعار', default=False,
+        help_text='صفحة عامة منفصلة تعرض كل المنتجات وأسعارها مع بحث وفلترة، بدون طلب أو سلة'
+    )
     min_order_amount     = models.DecimalField(
         'الحد الأدنى للطلب', max_digits=12, decimal_places=2, default=0
     )

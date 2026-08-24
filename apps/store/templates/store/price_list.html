@@ -1,0 +1,218 @@
+{% load static store_tags %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>قائمة الأسعار — {{ store.display_name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/store_price_list.css' %}?v=4.0">
+<style>:root { --brand: {{ store.accent_color }}; }</style>
+</head>
+<body>
+
+<!-- ── Hero ─────────────────────────────────────────────── -->
+<div class="pl-hero">
+  <div class="pl-hero__bg"></div>
+  <div class="pl-hero__inner">
+    <a href="{% url 'store:storefront' slug=store.slug %}" class="pl-back">
+      <i class="fas fa-arrow-right"></i> {{ store.display_name }}
+    </a>
+    <div class="pl-hero__row">
+      <div>
+        <h1 class="pl-hero__title"><i class="fas fa-tags"></i> قائمة الأسعار</h1>
+        {% if store.description %}<p class="pl-hero__desc">{{ store.description }}</p>{% endif %}
+      </div>
+      <button type="button" class="pl-print-btn" onclick="window.print()" title="طباعة القائمة">
+        <i class="fas fa-print"></i>
+      </button>
+    </div>
+    <div class="pl-hero__badge"><span id="plCount">{{ total_count }}</span> منتج متاح</div>
+  </div>
+</div>
+
+<!-- ── Print-only header ───────────────────────────────── -->
+<div class="pl-print-header">
+  <div class="pl-print-header__brand">
+    {% if store.cover_image %}<img src="{{ store.cover_image.url }}" alt="" class="pl-print-header__img">{% endif %}
+    <div>
+      <div class="pl-print-header__name">{{ store.display_name }}</div>
+      <div class="pl-print-header__sub">قائمة الأسعار</div>
+    </div>
+  </div>
+  <div class="pl-print-header__meta">
+    <span id="plPrintDate"></span>
+    <span><span id="plPrintCount">{{ total_count }}</span> منتج</span>
+  </div>
+</div>
+
+<!-- ── Toolbar (floating) ──────────────────────────────── -->
+<div class="pl-toolbar-wrap">
+  <div class="pl-toolbar">
+    <div class="pl-search">
+      <i class="fas fa-search pl-search__icon"></i>
+      <input id="plSearch" class="pl-search__input" type="search"
+             placeholder="ابحث عن منتج..." autocomplete="off">
+      <button type="button" id="plSearchClear" class="pl-search__clear" title="مسح البحث">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    {% if categories %}
+    <select id="plCatSelect" class="pl-sort">
+      <option value="all">كل الفئات ({{ total_count }})</option>
+      {% for cat in categories %}
+      <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.count }})</option>
+      {% endfor %}
+    </select>
+    {% endif %}
+    <select id="plSort" class="pl-sort">
+      <option value="name-asc">الاسم (أ - ي)</option>
+      <option value="name-desc">الاسم (ي - أ)</option>
+      {% if store.show_prices %}
+      <option value="price-asc">السعر (الأقل أولاً)</option>
+      <option value="price-desc">السعر (الأعلى أولاً)</option>
+      {% endif %}
+    </select>
+  </div>
+</div>
+
+<!-- ── Price list ───────────────────────────────────────── -->
+<main class="pl-main">
+  <div class="pl-list" id="plList">
+    <div class="pl-list__head">
+      <span class="pl-list__head-name">المنتج</span>
+      {% if store.show_prices %}<span class="pl-list__head-price">السعر</span>{% endif %}
+    </div>
+
+    <div id="plBody">
+      {% for item in products %}
+      <div class="pl-item"
+           data-name="{{ item.name|lower }}"
+           data-sku="{{ item.sku|default:''|lower }}"
+           data-cat="{{ item.category_id|default:'' }}"
+           data-price="{{ item.selling_price|default:0 }}">
+        <div class="pl-item__lead">
+          <span class="pl-item__dot">{{ item.name|first|upper }}</span>
+          <div class="pl-item__text">
+            <div class="pl-item__name">{{ item.name }}</div>
+            <div class="pl-item__meta">
+              {% if item.category %}<span class="pl-item__cat">{{ item.category.name }}</span>{% endif %}
+              {% if item.sku %}<span class="pl-item__sku">{{ item.sku }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        {% if store.show_prices %}
+        <div class="pl-item__price">
+          {{ item.selling_price|format_price }}
+          <span class="pl-cur">{{ store.tenant.currency|currency_ar }}</span>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="pl-empty" id="plEmpty" {% if products %}style="display:none;"{% endif %}>
+      <div class="pl-empty__icon"><i class="fas fa-box-open"></i></div>
+      <h3 class="pl-empty__title">لا توجد منتجات</h3>
+      <p class="pl-empty__text" id="plEmptyText">لا توجد منتجات متاحة حالياً.</p>
+    </div>
+  </div>
+</main>
+
+<!-- ── Footer ─────────────────────────────────────────── -->
+<footer class="pl-footer">
+  <div class="pl-footer__inner">
+    <span class="pl-footer__copy">{{ store.display_name }}</span>
+    {% if store.whatsapp %}
+    <a href="https://wa.me/{{ store.whatsapp }}" target="_blank" class="pl-footer__wa">
+      <i class="fab fa-whatsapp"></i> تواصل معنا
+    </a>
+    {% endif %}
+  </div>
+</footer>
+
+<script>
+(function () {
+  var searchInput = document.getElementById('plSearch');
+  var clearBtn    = document.getElementById('plSearchClear');
+  var sortSelect  = document.getElementById('plSort');
+  var catSelect   = document.getElementById('plCatSelect');
+  var body        = document.getElementById('plBody');
+  var countEl     = document.getElementById('plCount');
+  var printCountEl = document.getElementById('plPrintCount');
+  var emptyEl     = document.getElementById('plEmpty');
+  var emptyText   = document.getElementById('plEmptyText');
+
+  var printDateEl = document.getElementById('plPrintDate');
+  if (printDateEl) {
+    printDateEl.textContent = 'تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-EG-u-nu-latn');
+  }
+
+  var activeCat = 'all';
+
+  function currentRows() {
+    return Array.prototype.slice.call(body.querySelectorAll('.pl-item'));
+  }
+
+  function applyFilters() {
+    var q = (searchInput.value || '').trim().toLowerCase();
+    clearBtn.classList.toggle('show', !!q);
+    var visible = 0;
+
+    currentRows().forEach(function (row) {
+      var matchesCat = activeCat === 'all' || row.dataset.cat === activeCat;
+      var matchesSearch = !q ||
+        row.dataset.name.indexOf(q) !== -1 ||
+        (row.dataset.sku && row.dataset.sku.indexOf(q) !== -1);
+      var show = matchesCat && matchesSearch;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    countEl.textContent = visible;
+    if (printCountEl) printCountEl.textContent = visible;
+    if (visible === 0) {
+      emptyEl.style.display = '';
+      emptyText.textContent = q
+        ? 'لم يتم العثور على منتجات تطابق "' + searchInput.value.trim() + '".'
+        : 'لا توجد منتجات في هذه الفئة.';
+    } else {
+      emptyEl.style.display = 'none';
+    }
+  }
+
+  function applySort() {
+    var val = sortSelect.value;
+    var rows = currentRows();
+    var dir = val.indexOf('desc') !== -1 ? -1 : 1;
+    var key = val.indexOf('price') !== -1 ? 'price' : 'name';
+
+    rows.sort(function (a, b) {
+      if (key === 'price') {
+        return (parseFloat(a.dataset.price) - parseFloat(b.dataset.price)) * dir;
+      }
+      return a.dataset.name.localeCompare(b.dataset.name, 'ar') * dir;
+    });
+    rows.forEach(function (row) { body.appendChild(row); });
+  }
+
+  searchInput.addEventListener('input', applyFilters);
+  clearBtn.addEventListener('click', function () {
+    searchInput.value = '';
+    applyFilters();
+    searchInput.focus();
+  });
+  sortSelect.addEventListener('change', applySort);
+  if (catSelect) {
+    catSelect.addEventListener('change', function () {
+      activeCat = catSelect.value;
+      applyFilters();
+    });
+  }
+})();
+</script>
+</body>
+</html>

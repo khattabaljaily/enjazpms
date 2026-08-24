@@ -74,6 +74,31 @@ h2{{font-size:1.55rem;font-weight:900;margin-bottom:.6rem;letter-spacing:-.01em;
     return HttpResponse(html, status=200)
 
 
+def _price_list_disabled_response(store):
+    from django.http import HttpResponse
+    html = f"""<!DOCTYPE html><html lang="ar" dir="rtl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{store.display_name}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root{{--brand:{store.accent_color};}}
+*{{box-sizing:border-box;margin:0;padding:0;}}
+body{{font-family:'Cairo','Segoe UI',sans-serif;background:#0f172a;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;}}
+.box{{text-align:center;max-width:400px;}}
+.store-icon{{font-size:3.5rem;margin-bottom:1.5rem;line-height:1;}}
+h2{{font-size:1.55rem;font-weight:900;margin-bottom:.6rem;letter-spacing:-.01em;}}
+.sub{{color:#94a3b8;font-size:.9rem;line-height:1.75;}}
+</style></head><body>
+<div class="box">
+  <div class="store-icon">🏷️</div>
+  <h2>{store.display_name}</h2>
+  <p class="sub">قائمة الأسعار غير متاحة حالياً.</p>
+</div></body></html>"""
+    return HttpResponse(html, status=404)
+
+
 def _store_disabled_response(store):
     from django.shortcuts import render as _render
     from django.http import HttpResponse
@@ -181,6 +206,39 @@ def storefront(request, slug):
         'category_id':   category_id,
         'status':        store.get_status(),
         'stock_qty_map': stock_qty_map,
+    })
+
+
+# ══════════════════════════════════════════════════════════════
+# PUBLIC — Price List
+# ══════════════════════════════════════════════════════════════
+
+def price_list(request, slug):
+    store = get_object_or_404(StoreSettings, slug=slug)
+    if not store.show_price_list:
+        return _price_list_disabled_response(store)
+
+    products = _get_products(store).order_by('name')
+
+    from apps.items.models import Category
+    from django.db.models import Count
+    categories = Category.objects.filter(
+        tenant=store.tenant, is_active=True
+    ).order_by('display_order', 'name')
+
+    cat_counts = dict(
+        products.values_list('category_id').annotate(c=Count('id')).order_by()
+    )
+    categories = [
+        {'id': cat.id, 'name': cat.name, 'count': cat_counts.get(cat.id, 0)}
+        for cat in categories
+    ]
+
+    return render(request, 'store/price_list.html', {
+        'store':         store,
+        'products':      products,
+        'total_count':   len(products),
+        'categories':    categories,
     })
 
 
@@ -346,6 +404,7 @@ def manage_settings(request):
         store.show_out_of_stock   = request.POST.get('show_out_of_stock') == 'on'
         store.show_prices         = request.POST.get('show_prices') == 'on'
         store.show_stock_quantity = request.POST.get('show_stock_quantity') == 'on'
+        store.show_price_list     = request.POST.get('show_price_list') == 'on'
         store.min_order_amount    = request.POST.get('min_order_amount') or 0
         store.bank_details      = request.POST.get('bank_details', '').strip()
         store.delivery_message  = request.POST.get('delivery_message', '').strip()

@@ -13,6 +13,7 @@ urlpatterns = [
 
     # ── Public storefront ──────────────────────────────────
     path('<slug:slug>/',                views.storefront,        name='storefront'),
+    path('<slug:slug>/price-list/',     views.price_list,        name='price_list'),
     path('<slug:slug>/cart/',           views.cart_view,         name='cart'),
     path('<slug:slug>/cart/add/',       views.cart_add_view,     name='cart_add'),
     path('<slug:slug>/cart/remove/',    views.cart_remove_view,  name='cart_remove'),

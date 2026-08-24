@@ -320,6 +320,24 @@
     </div>
 
     <div class="cx-panel p-3">
+      <div class="cx-panel-head"><i class="fas fa-tags"></i> قائمة الأسعار</div>
+      <div class="st-form-body">
+
+        <div class="st-toggle-row mb-0">
+          <div>
+            <div class="st-field-title">تفعيل قائمة الأسعار</div>
+            <div class="st-field-hint">صفحة عامة منفصلة تعرض كل المنتجات وأسعارها، مع بحث وفلترة حسب الفئة. رابطها يظهر تلقائياً في صفحة المتجر</div>
+          </div>
+          <label class="st-toggle">
+            <input type="checkbox" name="show_price_list" {% if store.show_price_list %}checked{% endif %}>
+            <span class="st-toggle__track"><span class="st-toggle__thumb"></span></span>
+          </label>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="cx-panel p-3">
       <div class="cx-panel-head"><i class="fas fa-credit-card"></i> الدفع والتسليم</div>
       <div class="st-form-body">
         <div class="st-field">

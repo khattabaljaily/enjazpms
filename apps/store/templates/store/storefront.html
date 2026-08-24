@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="{% static 'css/store_storefront.css' %}?v=3.0">
+<link rel="stylesheet" href="{% static 'css/store_storefront.css' %}?v=3.1">
 <style>:root { --brand: {{ store.accent_color }}; }</style>
 </head>
 <body>
@@ -22,10 +22,17 @@
       {% endif %}
       <span class="sf-brand__name">{{ store.display_name }}</span>
     </a>
-    <a href="{% url 'store:cart' slug=store.slug %}" class="sf-cart" aria-label="السلة">
-      <i class="fas fa-shopping-bag"></i>
-      {% if cart_count > 0 %}<span class="sf-cart__badge">{{ cart_count }}</span>{% endif %}
-    </a>
+    <div class="sf-header__actions">
+      {% if store.show_price_list %}
+      <a href="{% url 'store:price_list' slug=store.slug %}" class="sf-pricelist-btn">
+        <i class="fas fa-tags"></i><span>قائمة الأسعار</span>
+      </a>
+      {% endif %}
+      <a href="{% url 'store:cart' slug=store.slug %}" class="sf-cart" aria-label="السلة">
+        <i class="fas fa-shopping-bag"></i>
+        {% if cart_count > 0 %}<span class="sf-cart__badge">{{ cart_count }}</span>{% endif %}
+      </a>
+    </div>
   </div>
 </header>
 
