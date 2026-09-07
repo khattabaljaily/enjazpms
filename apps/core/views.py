@@ -1993,32 +1993,40 @@ def tenant_create_api(request):
         logging.getLogger(__name__).error('tenant_create_api error: %s', e, exc_info=True)
         return JsonResponse({'success': False, 'message': f'حدث خطأ: {e}'}, status=500)
 
-    # Send admin notification email (non-blocking)
-    try:
-        from django.core.mail import EmailMessage
-        from django.template.loader import render_to_string
-        from django.utils import timezone
+    # Send admin notification email in a background thread so a slow/unreachable
+    # SMTP server can never block this request (it previously could hang forever).
+    def _send_tenant_notification_email(dashboard_url):
+        try:
+            from django.core.mail import EmailMessage
+            from django.template.loader import render_to_string
+            from django.utils import timezone
 
-        dashboard_url = request.build_absolute_uri('/tenants/')
-        html_body = render_to_string('core/email/new_tenant_notification.html', {
-            'tenant': tenant,
-            'admin_full_name': full_name,
-            'admin_username': username,
-            'admin_email': email,
-            'created_at': timezone.now(),
-            'dashboard_url': dashboard_url,
-        })
-        msg = EmailMessage(
-            subject=f'New Tenant Registered: {tenant.name}',
-            body=html_body,
-            from_email='EnjazIMS <{}>'.format(settings.EMAIL_HOST_USER),
-            to=['khattabaljaily@gmail.com'],
-        )
-        msg.content_subtype = 'html'
-        msg.send(fail_silently=False)
-    except Exception as _email_err:
-        import logging
-        logging.getLogger(__name__).error('tenant notification email failed: %s', _email_err, exc_info=True)
+            html_body = render_to_string('core/email/new_tenant_notification.html', {
+                'tenant': tenant,
+                'admin_full_name': full_name,
+                'admin_username': username,
+                'admin_email': email,
+                'created_at': timezone.now(),
+                'dashboard_url': dashboard_url,
+            })
+            msg = EmailMessage(
+                subject=f'New Tenant Registered: {tenant.name}',
+                body=html_body,
+                from_email='EnjazIMS <{}>'.format(settings.EMAIL_HOST_USER),
+                to=['khattabaljaily@gmail.com'],
+            )
+            msg.content_subtype = 'html'
+            msg.send(fail_silently=False)
+        except Exception as _email_err:
+            import logging
+            logging.getLogger(__name__).error('tenant notification email failed: %s', _email_err, exc_info=True)
+
+    import threading
+    threading.Thread(
+        target=_send_tenant_notification_email,
+        args=(request.build_absolute_uri('/tenants/'),),
+        daemon=True,
+    ).start()
 
     return JsonResponse({
         'success': True,

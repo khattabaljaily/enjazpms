@@ -1,5 +1,5 @@
 /* EnjazIMS Service Worker — app-shell only, no data caching */
-const CACHE = 'enjaz-shell-v1';
+const CACHE = 'enjaz-shell-v2';
 const SHELL = [
   '/static/css/main.css',
   '/static/css/layout.css',
@@ -34,14 +34,20 @@ self.addEventListener('fetch', e => {
   /* Only handle same-origin GET requests */
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  /* Static assets — cache first */
+  /* Static assets — stale-while-revalidate: serve cached copy instantly,
+     but always refetch in the background so the NEXT load gets fresh assets
+     after a deploy instead of being stuck on a cached copy indefinitely. */
   if (url.pathname.startsWith('/static/')) {
     e.respondWith(
-      caches.match(request).then(cached => cached || fetch(request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(request, clone));
-        return res;
-      }))
+      caches.open(CACHE).then(cache =>
+        cache.match(request).then(cached => {
+          const fetchPromise = fetch(request).then(res => {
+            cache.put(request, res.clone());
+            return res;
+          }).catch(() => cached);
+          return cached || fetchPromise;
+        })
+      )
     );
     return;
   }
