@@ -68,6 +68,7 @@ htmlcov/
 *.backup
 *.sql
 *.cnf
+logs/
 
 # Local reference files
 SYSTEM_BRIEF.md
