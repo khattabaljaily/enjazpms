@@ -717,6 +717,7 @@ def register_step3(request):
                         hard_currency=form.cleaned_data.get('hard_currency', 'USD') if hard_currency_mode else 'USD',
                         exchange_rate=form.cleaned_data.get('exchange_rate') or 1,
                         exchange_rate_updated_at=_tz.now() if hard_currency_mode else None,
+                        is_approved=False,
                     )
                     
                     # 2. إنشاء User
@@ -772,15 +773,48 @@ def register_step3(request):
                         import logging
                         logging.getLogger(__name__).error('registration email failed: %s', _email_err, exc_info=True)
 
+                    # 7. Send "pending approval" email to the new tenant admin (backgrounded
+                    # so a slow/unreachable SMTP server can never block this request)
+                    def _send_pending_email(tenant_id, admin_email, admin_full_name):
+                        try:
+                            from django.core.mail import EmailMessage
+                            from django.template.loader import render_to_string
+                            from django.conf import settings as django_settings
+                            tenant_obj = Tenant.objects.get(pk=tenant_id)
+                            html_body = render_to_string('accounts/email/trial_pending_email.html', {
+                                'tenant': tenant_obj,
+                                'admin_full_name': admin_full_name,
+                            })
+                            msg = EmailMessage(
+                                subject=f'طلبك قيد المراجعة - {tenant_obj.name}',
+                                body=html_body,
+                                from_email='EnjazIMS <{}>'.format(django_settings.EMAIL_HOST_USER),
+                                to=[admin_email],
+                            )
+                            msg.content_subtype = 'html'
+                            if admin_email:
+                                msg.send(fail_silently=False)
+                        except Exception as _e:
+                            import logging
+                            logging.getLogger(__name__).error('pending approval email failed: %s', _e, exc_info=True)
+
+                    import threading
+                    _pending_email_args = (tenant.id, user.email, user.get_full_name() or step1_data['username'])
+                    transaction.on_commit(lambda: threading.Thread(
+                        target=_send_pending_email,
+                        args=_pending_email_args,
+                        daemon=True,
+                    ).start())
+
                     if _wants_json(request):
                         return JsonResponse({
                             'success': True,
-                            'message': f'مرحباً {user.get_full_name()}! تم إنشاء حسابك بنجاح',
-                            'redirect_url': reverse('core:dashboard'),
+                            'message': f'مرحباً {user.get_full_name()}! تم إنشاء حسابك بنجاح، حسابك الآن قيد المراجعة',
+                            'redirect_url': reverse('core:pending_approval'),
                         })
 
-                    messages.success(request, f'مرحباً {user.get_full_name()}! تم إنشاء حسابك بنجاح')
-                    return redirect('core:dashboard')
+                    messages.success(request, f'مرحباً {user.get_full_name()}! تم إنشاء حسابك بنجاح، حسابك الآن قيد المراجعة')
+                    return redirect('core:pending_approval')
                     
             except Exception as e:
                 if _wants_json(request):

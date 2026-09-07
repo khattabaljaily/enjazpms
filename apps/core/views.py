@@ -1493,6 +1493,13 @@ def no_permission(request):
     return render(request, 'core/no_permission.html', status=403)
 
 
+def pending_approval(request):
+    """صفحة انتظار اعتماد الحساب بعد التسجيل الذاتي"""
+    return render(request, 'core/pending_approval.html', {
+        'tenant': getattr(request, 'tenant', None),
+    })
+
+
 @login_required
 @require_permission('view_tenant_settings')
 def tenant_settings(request):
@@ -1806,12 +1813,13 @@ def tenant_list(request):
     total = Tenant.objects.count()
     active = Tenant.objects.filter(is_active=True).count()
     suspended = total - active
+    pending = Tenant.objects.filter(is_approved=False).count()
     today = dj_timezone.localdate()
     expired = Tenant.objects.filter(is_active=True, subscription_expires__lt=today).count()
     context = {
         'form': TenantForm(),
         'business_types': business_types,
-        'stats': {'total': total, 'active': active, 'suspended': suspended, 'expired': expired},
+        'stats': {'total': total, 'active': active, 'suspended': suspended, 'expired': expired, 'pending': pending},
         'country_timezone_map': COUNTRY_TIMEZONE_MAP,
         'country_currency_map': COUNTRY_CURRENCY_MAP,
         'currency_ar': CURRENCY_AR,
@@ -1846,6 +1854,8 @@ def tenant_table_api(request):
         qs = qs.filter(is_active=False)
     elif status_filter == 'expired':
         qs = qs.filter(is_active=True, subscription_expires__lt=today)
+    elif status_filter == 'pending':
+        qs = qs.filter(is_approved=False)
 
     if plan_filter:
         qs = qs.filter(subscription_plan=plan_filter)
@@ -1903,6 +1913,7 @@ def tenant_table_api(request):
                 'version_type': t.get_version_type_display(),
                 'version_type_key': t.version_type,
                 'is_active': t.is_active,
+                'is_approved': t.is_approved,
                 'is_demo': getattr(t, 'is_demo', False),
                 'subscription_expires': t.subscription_expires.strftime('%Y-%m-%d') if t.subscription_expires else None,
                 'exp_label': exp_label,
@@ -2269,6 +2280,60 @@ def tenant_suspend_api(request, pk):
     tenant.save(update_fields=['is_active', 'updated_at'])
     action = 'تم تفعيل' if tenant.is_active else 'تم تعليق'
     return JsonResponse({'success': True, 'message': f'{action} المشترك "{tenant.name}" بنجاح', 'is_active': tenant.is_active})
+
+
+@login_required
+def tenant_approve_api(request, pk):
+    """API: اعتماد مشترك جديد (تفعيل حساب معلّق بعد التسجيل الذاتي)"""
+    err = _superuser_required(request, 'manage_tenants')
+    if err:
+        return err
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    tenant = get_object_or_404(Tenant, pk=pk)
+    if tenant.is_approved:
+        return JsonResponse({'success': True, 'message': 'المشترك معتمد بالفعل', 'is_approved': True})
+
+    tenant.is_approved = True
+    tenant.approved_at = dj_timezone.now()
+    tenant.save(update_fields=['is_approved', 'approved_at', 'updated_at'])
+
+    from apps.accounts.models import User
+    admin_user = User.objects.filter(tenant=tenant, is_tenant_admin=True).order_by('id').first()
+
+    def _send_approved_email(admin_email, admin_full_name, login_url):
+        try:
+            from django.core.mail import EmailMessage
+            from django.template.loader import render_to_string
+            html_body = render_to_string('core/email/tenant_approved_email.html', {
+                'tenant': tenant,
+                'admin_full_name': admin_full_name,
+                'login_url': login_url,
+            })
+            msg = EmailMessage(
+                subject=f'تم تفعيل حسابك - {tenant.name}',
+                body=html_body,
+                from_email='EnjazIMS <{}>'.format(settings.EMAIL_HOST_USER),
+                to=[admin_email],
+            )
+            msg.content_subtype = 'html'
+            if admin_email:
+                msg.send(fail_silently=False)
+        except Exception as _e:
+            import logging
+            logging.getLogger(__name__).error('tenant approved email failed: %s', _e, exc_info=True)
+
+    if admin_user and admin_user.email:
+        from django.urls import reverse
+        import threading
+        threading.Thread(
+            target=_send_approved_email,
+            args=(admin_user.email, admin_user.get_full_name() or tenant.name, request.build_absolute_uri(reverse('accounts:login'))),
+            daemon=True,
+        ).start()
+
+    return JsonResponse({'success': True, 'message': f'تم اعتماد المشترك "{tenant.name}" بنجاح', 'is_approved': True})
 
 
 @login_required

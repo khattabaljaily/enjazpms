@@ -511,6 +511,11 @@ table.cx-table thead th {
     color: var(--text-secondary);
 }
 
+.cxr-status--pending {
+    background: rgba(234,179,8,0.12);
+    color: #a16207;
+}
+
 .cxr-status-dot {
     width: 6px;
     height: 6px;
@@ -518,8 +523,9 @@ table.cx-table thead th {
     display: inline-block;
 }
 
-.cxr-status--on  .cxr-status-dot { background: #10b981; }
-.cxr-status--off .cxr-status-dot { background: var(--text-tertiary); }
+.cxr-status--on      .cxr-status-dot { background: #10b981; }
+.cxr-status--off     .cxr-status-dot { background: var(--text-tertiary); }
+.cxr-status--pending .cxr-status-dot { background: #eab308; }
 
 /* Action Buttons */
 .cxr-actions {
@@ -548,6 +554,7 @@ table.cx-table thead th {
 .cxr-act--del:hover    { background: rgba(239,68,68,0.1);   color: #ef4444; }
 .cxr-act--login:hover  { background: rgba(99,102,241,0.15); color: #6366f1; }
 .cxr-act--renew:hover  { background: rgba(16,185,129,0.12); color: #059669; }
+.cxr-act--approve:hover { background: rgba(16,185,129,0.1); color: #10b981; }
 .cxr-act--store        { text-decoration: none; }
 .cxr-act--store:hover  { background: rgba(14,165,233,0.12); color: #0ea5e9; text-decoration: none; }
 
@@ -1009,7 +1016,8 @@ input[type="date"].cx-input {
     color: #f59e0b;
 }
 
-.cx-confirm-icon--danger { background: rgba(239,68,68,0.1); color: #ef4444; }
+.cx-confirm-icon--danger  { background: rgba(239,68,68,0.1);  color: #ef4444; }
+.cx-confirm-icon--success { background: rgba(16,185,129,0.1); color: #10b981; }
 
 .cx-confirm-title {
     font-size: 1.1rem;

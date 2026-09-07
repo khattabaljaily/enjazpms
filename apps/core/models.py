@@ -132,6 +132,8 @@ class Tenant(models.Model):
     subscription_expires = models.DateField('نهاية الاشتراك', null=True, blank=True)
     is_active = models.BooleanField('نشط', default=True)
     is_demo = models.BooleanField('حساب تجريبي', default=False)
+    is_approved = models.BooleanField('معتمد', default=True)
+    approved_at = models.DateTimeField('تاريخ الاعتماد', null=True, blank=True)
     
     # System Settings
     version_type = models.CharField(

@@ -19,8 +19,8 @@ class BusinessTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Tenant)
 class TenantAdmin(admin.ModelAdmin):
-    list_display = ['name', 'business_type', 'subscription_plan', 'is_active', 'created_at']
-    list_filter = ['business_type', 'subscription_plan', 'is_active', 'version_type']
+    list_display = ['name', 'business_type', 'subscription_plan', 'is_active', 'is_approved', 'created_at']
+    list_filter = ['business_type', 'subscription_plan', 'is_active', 'is_approved', 'version_type']
     search_fields = ['name', 'slug', 'email', 'phone']
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ['created_at', 'updated_at']
@@ -34,7 +34,7 @@ class TenantAdmin(admin.ModelAdmin):
             'fields': ('email', 'phone', 'address', 'city', 'country')
         }),
         ('الاشتراك', {
-            'fields': ('subscription_plan', 'subscription_start', 'subscription_expires', 'is_active', 'is_demo')
+            'fields': ('subscription_plan', 'subscription_start', 'subscription_expires', 'is_active', 'is_demo', 'is_approved', 'approved_at')
         }),
         ('إعدادات النظام', {
             'fields': ('version_type', 'max_branches', 'max_stocks', 'max_users')

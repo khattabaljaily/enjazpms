@@ -52,6 +52,11 @@
             <strong id="kpiExpired">{{ stats.expired }}</strong>
             <span>منتهي</span>
         </span>
+        <span class="cx-stat-badge cx-stat-badge--pending">
+            <i class="fas fa-hourglass-half"></i>
+            <strong id="kpiPending">{{ stats.pending }}</strong>
+            <span>قيد الاعتماد</span>
+        </span>
     </div>
 </div>
 
@@ -78,6 +83,7 @@
                 <button type="button" class="cx-filter-tab" data-status="active">نشط</button>
                 <button type="button" class="cx-filter-tab" data-status="suspended">معلق</button>
                 <button type="button" class="cx-filter-tab" data-status="expired">منتهي</button>
+                <button type="button" class="cx-filter-tab" data-status="pending">قيد الاعتماد</button>
             </div>
         </div>
     </div>
@@ -501,6 +507,31 @@
     </div>
 </div>
 
+<!-- ══════════════════════════ APPROVE MODAL ══════════════════════════ -->
+<div class="modal fade" id="approveTenantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
+        <div class="modal-content cx-confirm-modal">
+            <div class="cx-confirm-body">
+                <div class="cx-confirm-icon cx-confirm-icon--success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h5 class="cx-confirm-title">اعتماد الحساب؟</h5>
+                <p class="cx-confirm-desc">
+                    سيتم تفعيل حساب <strong id="approveTenantName"></strong>
+                    <br>وسيصله بريد إلكتروني بتفعيل الحساب.
+                </p>
+                <input type="hidden" id="approveTenantId" value="">
+            </div>
+            <div class="cx-confirm-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-success" id="confirmApproveBtn">
+                    اعتماد
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ══════════════════════════ DELETE MODAL ══════════════════════════ -->
 <div class="modal fade" id="deleteTenantModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
@@ -614,13 +645,14 @@
     const urlUpdate   = "{% url 'core:tenant_update_api' 0 %}";
     const urlDelete   = "{% url 'core:tenant_delete_api' 0 %}";
     const urlSuspend  = "{% url 'core:tenant_suspend_api' 0 %}";
+    const urlApprove  = "{% url 'core:tenant_approve_api' 0 %}";
     const urlRenew    = "{% url 'core:tenant_renew_api' 0 %}";
     const urlLoginAs  = "{% url 'accounts:login_as_tenant_api' 0 %}";
 
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
     /* ── Append modals to body to avoid stacking context issues ── */
-    ['tenantModal','viewTenantModal','suspendTenantModal','renewTenantModal','deleteTenantModal','loginAsTenantModal'].forEach(function(id) {
+    ['tenantModal','viewTenantModal','suspendTenantModal','approveTenantModal','renewTenantModal','deleteTenantModal','loginAsTenantModal'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el && el.parentElement !== document.body) document.body.appendChild(el);
     });
@@ -628,6 +660,7 @@
     const tenantModal  = new bootstrap.Modal(document.getElementById('tenantModal'));
     const viewModal    = new bootstrap.Modal(document.getElementById('viewTenantModal'));
     const suspendModal = new bootstrap.Modal(document.getElementById('suspendTenantModal'));
+    const approveModal = new bootstrap.Modal(document.getElementById('approveTenantModal'));
     const deleteModal  = new bootstrap.Modal(document.getElementById('deleteTenantModal'));
     const renewModal   = new bootstrap.Modal(document.getElementById('renewTenantModal'));
     const loginAsModal = new bootstrap.Modal(document.getElementById('loginAsTenantModal'));
@@ -654,12 +687,17 @@
         rows.each(function (r) {
             const planCls    = CARD_PLAN_CLS[r.subscription_plan_key] || '';
             const expCls     = CARD_EXP_CLS[r.exp_status] || '';
-            const statusHtml = r.is_active
-                ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
-                : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>معلق</span>';
+            const statusHtml = !r.is_approved
+                ? '<span class="cxr-status cxr-status--pending"><span class="cxr-status-dot"></span>قيد الاعتماد</span>'
+                : (r.is_active
+                    ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>'
+                    : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>معلق</span>');
             const demoBadge  = r.is_demo ? '<span class="tnr-badge tnr-badge--demo">تجريبي</span>' : '';
             const suspIcon   = r.is_active ? 'fa-pause' : 'fa-play';
             const suspTitle  = r.is_active ? 'تعليق' : 'تفعيل';
+            const approveBtn = !r.is_approved
+                ? `<button class="cxr-act cxr-act--approve js-approve-tenant" data-id="${r.id}" data-name="${r.name}" title="اعتماد"><i class="fas fa-check"></i></button>`
+                : '';
             const storeBtn   = r.store_slug
                 ? `<a class="cxr-act cxr-act--store" href="/store/${r.store_slug}/" target="_blank" title="زيارة المتجر${r.store_enabled ? '' : ' (معطّل)'}"><i class="fas fa-store"></i></a>`
                 : '';
@@ -679,6 +717,7 @@
                 </div>
                 <div class="cx-card-footer">
                     <div class="cxr-actions">
+                        ${approveBtn}
                         <button class="cxr-act cxr-act--view js-view-tenant"    data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
                         <button class="cxr-act js-edit-tenant"                   data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
                         <button class="cxr-act cxr-act--warn js-suspend-tenant" data-id="${r.id}" data-name="${r.name}" data-active="${r.is_active}" title="${suspTitle}"><i class="fas ${suspIcon}"></i></button>
@@ -748,9 +787,11 @@
             },
             {
                 data: 'is_active',
-                render: a => a
-                    ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
-                    : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>معلق</span>`
+                render: (a, __, r) => !r.is_approved
+                    ? `<span class="cxr-status cxr-status--pending"><span class="cxr-status-dot"></span>قيد الاعتماد</span>`
+                    : (a
+                        ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشط</span>`
+                        : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>معلق</span>`)
             },
             {
                 data: null, orderable: false, searchable: false,
@@ -760,7 +801,11 @@
                     const storeBtn     = r.store_slug
                         ? `<a class="cxr-act cxr-act--store" href="/store/${r.store_slug}/" target="_blank" title="زيارة المتجر${r.store_enabled ? '' : ' (معطّل)'}"><i class="fas fa-store"></i></a>`
                         : '';
+                    const approveBtn  = !r.is_approved
+                        ? `<button class="cxr-act cxr-act--approve js-approve-tenant" data-id="${r.id}" data-name="${r.name}" title="اعتماد"><i class="fas fa-check"></i></button>`
+                        : '';
                     return `<div class="cxr-actions">
+                        ${approveBtn}
                         <button class="cxr-act cxr-act--view js-view-tenant"    data-id="${r.id}" title="عرض"><i class="fas fa-eye"></i></button>
                         <button class="cxr-act js-edit-tenant"                   data-id="${r.id}" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
                         <button class="cxr-act cxr-act--warn js-suspend-tenant" data-id="${r.id}" data-name="${r.name}" data-active="${r.is_active}" title="${suspendLabel}"><i class="fas ${suspendIcon}"></i></button>
@@ -1037,6 +1082,26 @@
         });
     });
 
+    /* ── Approve ── */
+    $('#confirmApproveBtn').on('click', function () {
+        const id = $('#approveTenantId').val();
+        if (!id) return;
+        $.ajax({
+            url: apiUrl(urlApprove, id), method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            success: function (resp) {
+                if (resp.success) {
+                    approveModal.hide();
+                    dt.ajax.reload(null, false);
+                    EnjazIMS.toast(resp.message || 'تم الاعتماد', 'success');
+                    return;
+                }
+                EnjazIMS.toast(resp.message || 'تعذرت العملية', 'error');
+            },
+            error: function (xhr) { EnjazIMS.toast(_xhrMsg(xhr, 'تعذرت العملية'), 'error'); }
+        });
+    });
+
     /* ── Delete ── */
     $('#confirmDeleteTenantBtn').on('click', function () {
         const id = $('#deleteTenantId').val();
@@ -1069,6 +1134,11 @@
     $(document).on('click', '.js-edit-tenant',    function () { openEdit($(this).data('id')); });
     $(document).on('click', '.js-suspend-tenant', function () {
         openSuspend($(this).data('id'), $(this).data('name'), $(this).data('active'));
+    });
+    $(document).on('click', '.js-approve-tenant', function () {
+        $('#approveTenantId').val($(this).data('id'));
+        $('#approveTenantName').text($(this).data('name'));
+        approveModal.show();
     });
     $(document).on('click', '.js-delete-tenant', function () {
         $('#deleteTenantId').val($(this).data('id'));

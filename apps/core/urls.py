@@ -13,6 +13,7 @@ urlpatterns = [
     path('terms/', views.terms_of_service, name='terms_of_service'),
     path('no-tenant/', views.no_tenant, name='no_tenant'),
     path('no-permission/', views.no_permission, name='no_permission'),
+    path('pending-approval/', views.pending_approval, name='pending_approval'),
     path('settings/tenant/', views.tenant_settings, name='tenant_settings'),
     path('settings/tenant/api/update/', views.tenant_settings_update_api, name='tenant_settings_update_api'),
     path('settings/tenant/api/upload-logo/', views.tenant_logo_upload_api, name='tenant_logo_upload_api'),
@@ -32,6 +33,7 @@ urlpatterns = [
     path('tenants/api/<int:pk>/update/', views.tenant_update_api, name='tenant_update_api'),
     path('tenants/api/<int:pk>/delete/', views.tenant_delete_api, name='tenant_delete_api'),
     path('tenants/api/<int:pk>/suspend/', views.tenant_suspend_api, name='tenant_suspend_api'),
+    path('tenants/api/<int:pk>/approve/', views.tenant_approve_api, name='tenant_approve_api'),
     path('tenants/api/<int:pk>/renew/', views.tenant_renew_api, name='tenant_renew_api'),
 
     # System — Users

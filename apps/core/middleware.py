@@ -80,6 +80,7 @@ class TenantMiddleware:
                     '/subscription-expired/',
                     '/no-tenant/',
                     '/no-permission/',
+                    '/pending-approval/',
                     '/settings/',
                     '/static/',
                     '/media/',
@@ -94,10 +95,19 @@ class TenantMiddleware:
                     return redirect(admin_dashboard_path)
             else:
                 request.tenant = request.user.tenant
-                
-                # Check if tenant is active and subscription is valid
+
+                # Check if tenant is approved, active, and subscription is valid
                 if request.tenant:
-                    if not request.tenant.is_active or not request.tenant.is_subscription_valid():
+                    if not request.tenant.is_approved:
+                        _pending_allowed = (
+                            '/pending-approval/',
+                            '/accounts/logout/',
+                            '/static/',
+                            '/media/',
+                        )
+                        if not any(request.path.startswith(p) for p in _pending_allowed):
+                            return redirect('/pending-approval/')
+                    elif not request.tenant.is_active or not request.tenant.is_subscription_valid():
                         _expired_allowed = (
                             '/subscription/',
                             '/support/',
@@ -254,6 +264,7 @@ class TermsMiddleware:
         '/subscription/',
         '/no-tenant/',
         '/no-permission/',
+        '/pending-approval/',
         '/sw.js',
         '/manifest.json',
     )
