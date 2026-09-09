@@ -1,6 +1,6 @@
 {
-  "name": "EnjazIMS",
-  "short_name": "إنجاز",
+  "name": "Snake",
+  "short_name": "Snake",
   "description": "نظام إدارة المخزون الذكي",
   "start_url": "/",
   "scope": "/",

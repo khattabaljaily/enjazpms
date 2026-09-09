@@ -264,7 +264,7 @@
         columns: [
             { data: 'entry_date' },
             { data: 'agent' },
-            { data: 'amount', className: 'text-end', render: v => EnjazIMS.formatMoney(Math.abs(v||0)) },
+            { data: 'amount', className: 'text-end', render: v => Snake.formatMoney(Math.abs(v||0)) },
             { data: 'payment_method' },
             { data: 'notes' },
             { data: null, orderable: false, render: row => {
@@ -334,7 +334,7 @@
         paymentModalAgent.value = a.id;
         paymentAgentDrop.style.display = 'none';
         paymentModalAgentName.textContent = a.name;
-        paymentModalAgentBalance.textContent = EnjazIMS.formatMoney(a.balance || 0);
+        paymentModalAgentBalance.textContent = Snake.formatMoney(a.balance || 0);
     }
 
     function setPaymentMethod(method) {
@@ -369,16 +369,16 @@
 
     paymentModalSaveBtn.addEventListener('click', function() {
         const agentId    = paymentModalAgent.value;
-        const amount     = EnjazIMS.parseNumber(paymentModalAmount.value);
+        const amount     = Snake.parseNumber(paymentModalAmount.value);
         const paymentDate = paymentModalDate.value;
         const method     = paymentModalMethod.value;
         const treasuryId = paymentModalTreasury.value;
         const reference  = paymentModalReference.value.trim();
         const notes      = paymentModalNotes.value.trim();
 
-        if (!agentId)          return EnjazIMS.toast('اختر المندوب', 'error');
-        if (!paymentDate)      return EnjazIMS.toast('اختر التاريخ', 'error');
-        if (!amount || amount <= 0) return EnjazIMS.toast('أدخل مبلغاً صحيحاً', 'error');
+        if (!agentId)          return Snake.toast('اختر المندوب', 'error');
+        if (!paymentDate)      return Snake.toast('اختر التاريخ', 'error');
+        if (!amount || amount <= 0) return Snake.toast('أدخل مبلغاً صحيحاً', 'error');
 
         paymentModalSaveBtn.disabled = true;
         paymentModalSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...';
@@ -390,11 +390,11 @@
                 reference, notes }),
         })
         .then(data => {
-            if (!data.success) { EnjazIMS.toast(data.message || 'تعذر حفظ الدفعة', 'error'); return; }
+            if (!data.success) { Snake.toast(data.message || 'تعذر حفظ الدفعة', 'error'); return; }
             paymentModal.hide(); paymentsTable.ajax.reload(null, false);
-            EnjazIMS.toast(data.message || 'تم تسجيل الدفعة بنجاح', 'success');
+            Snake.toast(data.message || 'تم تسجيل الدفعة بنجاح', 'success');
         })
-        .catch(err => EnjazIMS.toast(err.message || 'خطأ في الاتصال', 'error'))
+        .catch(err => Snake.toast(err.message || 'خطأ في الاتصال', 'error'))
         .finally(() => { paymentModalSaveBtn.disabled=false; paymentModalSaveBtn.innerHTML='<i class="fas fa-save me-1"></i>تسجيل الدفعة'; });
     });
 
@@ -403,14 +403,14 @@
         if (viewBtn) {
             fetchJson(`/agents/payments/${viewBtn.dataset.id}/detail/`, { method: 'GET' })
             .then(data => {
-                if (!data.success) { EnjazIMS.toast(data.message, 'error'); return; }
+                if (!data.success) { Snake.toast(data.message, 'error'); return; }
                 const p = data.data;
                 document.getElementById('paymentDetailsTitle').textContent = `دفعة مندوب #${p.id}`;
                 document.getElementById('paymentDetailsSubtitle').textContent = p.is_canceled ? 'هذه الدفعة ملغاة' : 'الدفعة مفعلة';
                 document.getElementById('paymentDetailsId').textContent      = p.id;
                 document.getElementById('paymentDetailsDate').textContent    = p.entry_date;
                 document.getElementById('paymentDetailsAgent').textContent   = p.agent;
-                document.getElementById('paymentDetailsAmount').textContent  = EnjazIMS.formatMoney(Math.abs(parseFloat(p.amount)||0));
+                document.getElementById('paymentDetailsAmount').textContent  = Snake.formatMoney(Math.abs(parseFloat(p.amount)||0));
                 document.getElementById('paymentDetailsMethod').textContent  = p.payment_method;
                 document.getElementById('paymentDetailsTreasury').textContent = p.cash_treasury || '—';
                 document.getElementById('paymentDetailsNotes').textContent   = p.notes;
@@ -419,7 +419,7 @@
                 document.getElementById('paymentDetailsCanceledNote').textContent = p.cancellation_note || '—';
                 paymentDetailsModal.show();
             })
-            .catch(err => EnjazIMS.toast(err.message||'خطأ في الاتصال', 'error'));
+            .catch(err => Snake.toast(err.message||'خطأ في الاتصال', 'error'));
             return;
         }
         const cancelBtn = e.target.closest('.js-cancel-payment');
@@ -434,12 +434,12 @@
         paymentCancelConfirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الإلغاء...';
         fetchJson(`/agents/payments/${paymentCancelTargetId}/cancel/`, { method:'POST', headers:{'Content-Type':'application/json'} })
         .then(data => {
-            if (!data.success) { EnjazIMS.toast(data.message||'تعذر الإلغاء','error'); return; }
+            if (!data.success) { Snake.toast(data.message||'تعذر الإلغاء','error'); return; }
             paymentCancelConfirmModal.hide(); paymentCancelTargetId=null;
             paymentsTable.ajax.reload(null,false);
-            EnjazIMS.toast(data.message||'تم إلغاء الدفعة','success');
+            Snake.toast(data.message||'تم إلغاء الدفعة','success');
         })
-        .catch(err => EnjazIMS.toast(err.message||'خطأ','error'))
+        .catch(err => Snake.toast(err.message||'خطأ','error'))
         .finally(() => { paymentCancelConfirmBtn.disabled=false; paymentCancelConfirmBtn.innerHTML='تأكيد الإلغاء'; });
     });
 

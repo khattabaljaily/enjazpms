@@ -95,13 +95,13 @@
   function recalc(){
     let g=0;
     document.querySelectorAll('#returnLinesTable tbody tr[data-line-id]').forEach(function(row){
-      const qty = EnjazIMS.parseNumber(row.querySelector('.js-ret-qty')?.value || 0);
-      const unit = EnjazIMS.parseNumber(row.dataset.unitCost || 0);
+      const qty = Snake.parseNumber(row.querySelector('.js-ret-qty')?.value || 0);
+      const unit = Snake.parseNumber(row.dataset.unitCost || 0);
       const total = qty * unit;
       g += total;
-      row.querySelector('.js-line-total').textContent = EnjazIMS.formatMoney(total);
+      row.querySelector('.js-line-total').textContent = Snake.formatMoney(total);
     });
-    document.getElementById('grandTotal').textContent = EnjazIMS.formatMoney(g);
+    document.getElementById('grandTotal').textContent = Snake.formatMoney(g);
   }
 
   document.querySelectorAll('.js-ret-qty').forEach(function(i){ i.addEventListener('input', recalc); });
@@ -110,10 +110,10 @@
   function submit(action){
     const lines=[];
     document.querySelectorAll('#returnLinesTable tbody tr[data-line-id]').forEach(function(row){
-      const qty = EnjazIMS.parseNumber(row.querySelector('.js-ret-qty')?.value || 0);
+      const qty = Snake.parseNumber(row.querySelector('.js-ret-qty')?.value || 0);
       if(qty>0){ lines.push({ invoice_line_id: Number(row.dataset.lineId), returned_quantity: qty }); }
     });
-    if(!lines.length){ EnjazIMS.toast('حدد بنداً واحداً على الأقل', 'warning'); return; }
+    if(!lines.length){ Snake.toast('حدد بنداً واحداً على الأقل', 'warning'); return; }
 
     const header = {
       return_date: document.getElementById('returnDate').value,
@@ -129,10 +129,10 @@
     })
     .then(async r => ({ ok:r.ok, data:await r.json() }))
     .then(({ok,data}) => {
-      if(!ok || !data.success){ EnjazIMS.toast(data.message || 'تعذر حفظ المرتجع', 'error'); return; }
+      if(!ok || !data.success){ Snake.toast(data.message || 'تعذر حفظ المرتجع', 'error'); return; }
       window.location.href = data.redirect;
     })
-    .catch(()=> EnjazIMS.toast('تعذر الاتصال بالخادم', 'error'));
+    .catch(()=> Snake.toast('تعذر الاتصال بالخادم', 'error'));
   }
 
   document.getElementById('saveDraftBtn').addEventListener('click', function(){ submit('save_draft'); });

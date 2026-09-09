@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         $.get(detailUrl, function (response) {
             if (!response.success) {
-                EnjazIMS.toast(response.message || 'تعذر جلب بيانات المستخدم', 'error');
+                Snake.toast(response.message || 'تعذر جلب بيانات المستخدم', 'error');
                 return;
             }
 
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             userModal.show();
         }).fail(function () {
-            EnjazIMS.toast('تعذر جلب بيانات المستخدم', 'error');
+            Snake.toast('تعذر جلب بيانات المستخدم', 'error');
         });
     }
 
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         $.get(detailUrl, function (response) {
             if (!response.success) {
-                EnjazIMS.toast(response.message || 'تعذر جلب بيانات المستخدم', 'error');
+                Snake.toast(response.message || 'تعذر جلب بيانات المستخدم', 'error');
                 return;
             }
 
@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 viewModal.show();
             }
         }).fail(function () {
-            EnjazIMS.toast('تعذر جلب بيانات المستخدم', 'error');
+            Snake.toast('تعذر جلب بيانات المستخدم', 'error');
         });
     }
 
@@ -317,14 +317,14 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (deleteModal) {
                             deleteModal.hide();
                         }
-                        EnjazIMS.toast(response.message || 'تم حذف المستخدم', 'success');
+                        Snake.toast(response.message || 'تم حذف المستخدم', 'success');
                         usersTable.ajax.reload(null, false);
                         return;
                     }
-                    EnjazIMS.toast(response.message || 'تعذر حذف المستخدم', 'error');
+                    Snake.toast(response.message || 'تعذر حذف المستخدم', 'error');
                 },
                 error: function () {
-                    EnjazIMS.toast('تعذر حذف المستخدم', 'error');
+                    Snake.toast('تعذر حذف المستخدم', 'error');
                 }
             });
         });
@@ -333,8 +333,8 @@ document.addEventListener('DOMContentLoaded', function () {
     userForm.on('submit', function (event) {
         event.preventDefault();
         const busyText = userSubmitBtn.html();
-        EnjazIMS.clearFormErrors(userForm);
-        EnjazIMS.showLoading(userSubmitBtn);
+        Snake.clearFormErrors(userForm);
+        Snake.showLoading(userSubmitBtn);
 
         const userId = userIdInput.val();
         const url = userId ? `/accounts/users/api/${userId}/update/` : '/accounts/users/api/create/';
@@ -371,25 +371,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             success: function (response) {
-                EnjazIMS.hideLoading(userSubmitBtn, busyText);
+                Snake.hideLoading(userSubmitBtn, busyText);
                 if (response.success) {
                     userModal.hide();
-                    EnjazIMS.toast(response.message, 'success');
+                    Snake.toast(response.message, 'success');
                     usersTable.ajax.reload();
                     return;
                 }
                 if (response.errors) {
-                    EnjazIMS.renderFieldErrors(userForm, response.errors);
+                    Snake.renderFieldErrors(userForm, response.errors);
                 }
-                EnjazIMS.showFormError(userForm, response.message || 'الرجاء التحقق من الحقول');
+                Snake.showFormError(userForm, response.message || 'الرجاء التحقق من الحقول');
             },
             error: function (xhr) {
-                EnjazIMS.hideLoading(userSubmitBtn, busyText);
+                Snake.hideLoading(userSubmitBtn, busyText);
                 const response = xhr.responseJSON || {};
                 if (response.errors) {
-                    EnjazIMS.renderFieldErrors(userForm, response.errors);
+                    Snake.renderFieldErrors(userForm, response.errors);
                 }
-                EnjazIMS.showFormError(userForm, response.message || 'تعذر حفظ البيانات');
+                Snake.showFormError(userForm, response.message || 'تعذر حفظ البيانات');
             }
         });
     });

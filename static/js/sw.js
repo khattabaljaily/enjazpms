@@ -1,4 +1,4 @@
-/* EnjazIMS Service Worker — app-shell only, no data caching */
+/* Snake Service Worker — app-shell only, no data caching */
 const CACHE = 'enjaz-shell-v2';
 const SHELL = [
   '/static/css/main.css',

@@ -53,7 +53,7 @@ def app_context(request):
     معلومات عامة عن التطبيق
     """
     return {
-        'app_name': 'EnjazIMS',
+        'app_name': 'Snake',
         'app_version': '1.0.0',
         'app_description': 'نظام إدارة المخزون ونقاط البيع',
         'current_year': timezone.localtime().year,

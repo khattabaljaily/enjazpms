@@ -207,7 +207,7 @@ function renderMobileReturnCards(rows) {
     const cardsHtml = rows.map(function (r) {
         const invoiceNumber = r.invoice_number || '—';
         const customer = r.customer || '—';
-        const total = EnjazIMS.formatMoney(r.total_returned);
+        const total = Snake.formatMoney(r.total_returned);
         const statusLabel = statusBadgeMap[r.status] || '—';
         const statusClass = r.status ? `cx-badge cx-badge--${r.status === 'draft' ? 'muted' : r.status === 'confirmed' ? 'success' : 'danger'}` : '';
 
@@ -300,9 +300,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 data: 'total_returned',
                 className: 'text-end sales-return-money-col',
                 render: function (value, type) {
-                    const n = EnjazIMS.parseNumber(value);
+                    const n = Snake.parseNumber(value);
                     if (type === 'sort' || type === 'type') return n;
-                    return EnjazIMS.formatMoney(n);
+                    return Snake.formatMoney(n);
                 }
             },
             { data: 'status', render: function(d, t, row) {
@@ -366,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function openReturnModal(row, refundMethodMap) {
     const num = (v) => {
-        return EnjazIMS.formatMoney(v);
+        return Snake.formatMoney(v);
     };
 
     const date = (v) => {
@@ -400,7 +400,7 @@ function openReturnModal(row, refundMethodMap) {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${line.item_name}</td>
-                        <td>${EnjazIMS.formatQuantity(line.returned_quantity)}</td>
+                        <td>${Snake.formatQuantity(line.returned_quantity)}</td>
                         <td>${num(line.unit_price)}</td>
                         <td><strong>${num(line.line_total)}</strong></td>
                     `;
@@ -474,8 +474,8 @@ function submitReturnListAction() {
 
 function showAlert(msg, type = 'danger') {
     const mapped = type === 'danger' ? 'error' : type;
-    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
-        EnjazIMS.toast(msg, mapped);
+    if (window.Snake && typeof Snake.toast === 'function') {
+        Snake.toast(msg, mapped);
         return;
     }
     console.warn(msg);

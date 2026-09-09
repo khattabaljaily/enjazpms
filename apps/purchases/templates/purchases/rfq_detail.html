@@ -203,7 +203,7 @@ const CSRF = "{{ csrf_token }}";
 
 async function doAction(action, msg) {
     const titles = { accept: 'تأكيد القبول', convert: 'تأكيد التحويل', send: 'تأكيد الإرسال', reject: 'رفض العرض', cancel: 'إلغاء الطلب' };
-    if (!await EnjazIMS.confirmAction(msg, titles[action] || 'تأكيد')) return;
+    if (!await Snake.confirmAction(msg, titles[action] || 'تأكيد')) return;
     const r = await fetch(`/purchases/rfq/{{ rfq.pk }}/${action}/`, {
         method: 'POST', headers: { 'X-CSRFToken': CSRF },
     });

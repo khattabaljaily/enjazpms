@@ -247,7 +247,7 @@ function renderMobileQuoteCards(rows) {
 
     const cardsHtml = rows.map(function (r) {
         const customer = r.customer || '—';
-        const total = EnjazIMS.formatMoney(r.grand_total);
+        const total = Snake.formatMoney(r.grand_total);
         const statusLabel = statusBadgeMap[r.status] || '—';
         const statusClass = r.status ? `cx-badge cx-badge--${r.status === 'draft' ? 'muted' : r.status === 'sent' ? 'primary' : r.status === 'accepted' ? 'success' : r.status === 'rejected' ? 'danger' : r.status === 'converted' ? 'info' : r.status === 'expired' ? 'warning' : 'danger'}` : '';
 
@@ -323,11 +323,11 @@ function initTable() {
                 data: 'grand_total',
                 className: 'text-end sales-money-col',
                 render: function (data, type) {
-                    const numericValue = EnjazIMS.parseNumber(data);
+                    const numericValue = Snake.parseNumber(data);
                     if (type === 'sort' || type === 'type') {
                         return numericValue;
                     }
-                    return EnjazIMS.formatMoney(numericValue);
+                    return Snake.formatMoney(numericValue);
                 }
             },
             {
@@ -402,7 +402,7 @@ function openQuoteModal(row) {
     document.getElementById('viewQuoteExpiry').textContent = row.expiry_date || '—';
     document.getElementById('viewQuoteCustomer').textContent = row.customer || '—';
     document.getElementById('viewQuoteStock').textContent = row.stock || '—';
-    document.getElementById('viewQuoteTotal').textContent = EnjazIMS.formatMoney(row.grand_total);
+    document.getElementById('viewQuoteTotal').textContent = Snake.formatMoney(row.grand_total);
     document.getElementById('viewQuoteOpenPageBtn').href = `${QUOTE_BASE_URL}${row.id}/`;
     bootstrap.Modal.getOrCreateInstance(document.getElementById('viewQuoteModal')).show();
 }
@@ -446,13 +446,13 @@ function submitQuoteAction() {
         .then(data => {
             if (data.success) {
                 closeQuoteActionModal();
-                EnjazIMS.toast(data.message, 'success');
+                Snake.toast(data.message, 'success');
                 quotesTable.ajax.reload(null, false);
             } else {
-                EnjazIMS.toast(data.message, 'error');
+                Snake.toast(data.message, 'error');
             }
         })
-        .catch(() => EnjazIMS.toast('حدث خطأ في الاتصال', 'error'))
+        .catch(() => Snake.toast('حدث خطأ في الاتصال', 'error'))
         .finally(() => { btn.disabled = false; btn.innerHTML = orig; });
 }
 

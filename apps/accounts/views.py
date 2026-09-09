@@ -764,7 +764,7 @@ def register_step3(request):
                         msg = EmailMessage(
                             subject=f'New Tenant Registered: {tenant.name}',
                             body=html_body,
-                            from_email='EnjazIMS <{}>'.format(django_settings.EMAIL_HOST_USER),
+                            from_email='Snake <{}>'.format(django_settings.EMAIL_HOST_USER),
                             to=['khattabaljaily@gmail.com'],
                         )
                         msg.content_subtype = 'html'
@@ -788,7 +788,7 @@ def register_step3(request):
                             msg = EmailMessage(
                                 subject=f'طلبك قيد المراجعة - {tenant_obj.name}',
                                 body=html_body,
-                                from_email='EnjazIMS <{}>'.format(django_settings.EMAIL_HOST_USER),
+                                from_email='Snake <{}>'.format(django_settings.EMAIL_HOST_USER),
                                 to=[admin_email],
                             )
                             msg.content_subtype = 'html'
@@ -1013,7 +1013,7 @@ def password_reset_request(request):
                 reverse('accounts:password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
             )
 
-            subject = 'إعادة تعيين كلمة المرور - منصة إنجاز'
+            subject = 'إعادة تعيين كلمة المرور - منصة Snake'
             message = render_to_string('accounts/email/password_reset_email.html', {
                 'user': user,
                 'reset_url': reset_url,

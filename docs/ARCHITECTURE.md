@@ -1,4 +1,4 @@
-# 🏗️ EnjazIMS - System Architecture
+# 🏗️ Snake - System Architecture
 
 **نظام إدارة المخزون ونقاط البيع - البنية التقنية الكاملة**
 
@@ -22,7 +22,7 @@
 نظام **Multi-Tenant** يسمح لعدة عملاء (شركات/أنشطة تجارية) باستخدام نفس التطبيق مع عزل كامل للبيانات.
 
 ```
-EnjazIMS Platform
+Snake Platform
 ├── Tenant 1: صيدلية النور
 │   ├── Admin: أحمد (مدير النشاط)
 │   ├── Employees: 5 موظفين

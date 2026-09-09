@@ -1,5 +1,5 @@
 /**
- * EnjazIMS — Permissions Management v3.0
+ * Snake — Permissions Management v3.0
  * Split-panel UI: dirty bar at top, members modal
  */
 (function () {
@@ -181,7 +181,7 @@
 
     function selectGroup(id) {
         if (isDirty && activeGroupId !== id) {
-            EnjazIMS.confirmAction('لديك تغييرات غير محفوظة. هل تريد الانتقال وفقدانها؟', 'تغييرات غير محفوظة')
+            Snake.confirmAction('لديك تغييرات غير محفوظة. هل تريد الانتقال وفقدانها؟', 'تغييرات غير محفوظة')
                 .then(confirmed => { if (confirmed) _doSelectGroup(id); });
             return;
         }
@@ -201,13 +201,13 @@
         fetch(API.detail(id))
             .then(r => r.json())
             .then(resp => {
-                if (!resp.success) { EnjazIMS.toast('تعذّر تحميل البيانات', 'error'); return; }
+                if (!resp.success) { Snake.toast('تعذّر تحميل البيانات', 'error'); return; }
                 activeGroupData = resp.data;
                 populateEditor(resp.data);
                 isDirty = false;
                 updateDirty();
             })
-            .catch(() => EnjazIMS.toast('خطأ في الاتصال', 'error'));
+            .catch(() => Snake.toast('خطأ في الاتصال', 'error'));
     }
 
     function populateEditor(group) {
@@ -367,7 +367,7 @@
 
     function saveGroup() {
         const name = editorNameInput.value.trim();
-        if (!name) { EnjazIMS.toast('يرجى إدخال اسم المجموعة', 'error'); editorNameInput.focus(); return; }
+        if (!name) { Snake.toast('يرجى إدخال اسم المجموعة', 'error'); editorNameInput.focus(); return; }
 
         const origHtml = btnSave.innerHTML;
         btnSave.disabled = true;
@@ -390,7 +390,7 @@
                 btnSave.disabled  = false;
                 btnSave.innerHTML = origHtml;
                 if (resp.success) {
-                    EnjazIMS.toast(resp.message || 'تم الحفظ بنجاح', 'success');
+                    Snake.toast(resp.message || 'تم الحفظ بنجاح', 'success');
                     isDirty         = false;
                     originalSnap    = snapshot();
                     updateDirty();
@@ -408,17 +408,17 @@
                     }
                     renderGroupList();
                 } else {
-                    EnjazIMS.toast(resp.message || 'تعذّر الحفظ', 'error');
+                    Snake.toast(resp.message || 'تعذّر الحفظ', 'error');
                 }
             })
-            .catch(() => { btnSave.disabled = false; btnSave.innerHTML = origHtml; EnjazIMS.toast('خطأ في الاتصال', 'error'); });
+            .catch(() => { btnSave.disabled = false; btnSave.innerHTML = origHtml; Snake.toast('خطأ في الاتصال', 'error'); });
     }
 
     /* ── Delete ──────────────────────────────────────────────── */
 
     function deleteGroup() {
         const name = editorNameInput.value.trim() || 'هذه المجموعة';
-        EnjazIMS.confirmAction(`هل تريد حذف المجموعة "${name}"؟ لا يمكن التراجع.`, 'حذف المجموعة')
+        Snake.confirmAction(`هل تريد حذف المجموعة "${name}"؟ لا يمكن التراجع.`, 'حذف المجموعة')
             .then(confirmed => {
                 if (!confirmed) return;
                 fetch(API.delete(activeGroupId), {
@@ -428,7 +428,7 @@
                     .then(r => r.json())
                     .then(resp => {
                         if (resp.success) {
-                            EnjazIMS.toast(resp.message || 'تم الحذف', 'success');
+                            Snake.toast(resp.message || 'تم الحذف', 'success');
                             allGroups     = allGroups.filter(g => g.id !== activeGroupId);
                             activeGroupId = null;
                             isDirty       = false;
@@ -436,10 +436,10 @@
                             pmEmpty.style.display  = '';
                             renderGroupList();
                         } else {
-                            EnjazIMS.toast(resp.message || 'تعذّر الحذف', 'error');
+                            Snake.toast(resp.message || 'تعذّر الحذف', 'error');
                         }
                     })
-                    .catch(() => EnjazIMS.toast('خطأ في الاتصال', 'error'));
+                    .catch(() => Snake.toast('خطأ في الاتصال', 'error'));
             });
     }
 
@@ -558,7 +558,7 @@
                 createGroupSubmit.disabled  = false;
                 createGroupSubmit.innerHTML = origHtml;
                 if (resp.success) {
-                    EnjazIMS.toast(resp.message || 'تم الإنشاء', 'success');
+                    Snake.toast(resp.message || 'تم الإنشاء', 'success');
                     createGroupModal.hide();
                     allGroups.push({
                         id: resp.data.id, name,
@@ -578,7 +578,7 @@
             .catch(() => {
                 createGroupSubmit.disabled  = false;
                 createGroupSubmit.innerHTML = origHtml;
-                EnjazIMS.toast('خطأ في الاتصال', 'error');
+                Snake.toast('خطأ في الاتصال', 'error');
             });
     });
 
@@ -643,7 +643,7 @@
 
     btnDiscard.addEventListener('click', () => {
         if (!activeGroupData) return;
-        EnjazIMS.confirmAction('هل تريد تجاهل التغييرات والعودة للبيانات الأصلية؟', 'تجاهل التغييرات')
+        Snake.confirmAction('هل تريد تجاهل التغييرات والعودة للبيانات الأصلية؟', 'تجاهل التغييرات')
             .then(confirmed => {
                 if (!confirmed) return;
                 populateEditor(activeGroupData);

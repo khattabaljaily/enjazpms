@@ -1,5 +1,5 @@
 """
-AI Services — DeepSeek integration for EnjazIMS
+AI Services — DeepSeek integration for Snake
 ================================================
 Collects real business data per tenant, then queries DeepSeek to generate
 Arabic business insights, chat responses, and smart notification analysis.
@@ -223,7 +223,7 @@ def collect_business_context(tenant) -> dict:
 # ──────────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = """أنت مساعد أعمال ذكي متخصص في تحليل بيانات المخزون والمبيعات.
-تعمل داخل نظام إدارة مخزون (EnjazIMS) لصاحب المحل.
+تعمل داخل نظام إدارة مخزون (Snake) لصاحب الصيدلية.
 قواعد الرد الصارمة:
 - أجب دائماً بالعربية، بأسلوب مهني وموجز.
 - استخدم دائماً رمز العملة العربي الموجود في البيانات ولا تُبدّله بعملة أخرى.
@@ -480,8 +480,8 @@ def enrich_notification(notification_type: str, raw_message: str, tenant) -> str
 # ──────────────────────────────────────────────────────────────
 
 _MARKETING_FEATURES_REFERENCE = (
-    "حقائق عن نظام إنجاز (EnjazIMS) يجب الاستناد إليها فقط، دون اختراع أي ميزة أو رقم غير مذكور هنا. "
-    "استخدم اسم \"إنجاز\" في نص المنشور، لا \"EnjazIMS\":\n"
+    "حقائق عن نظام Snake يجب الاستناد إليها فقط، دون اختراع أي ميزة أو رقم غير مذكور هنا. "
+    "استخدم اسم \"Snake\" في نص المنشور:\n"
     "- نظام سحابي لإدارة المخزون والمبيعات، بواجهة عربية كاملة من الأساس، وليست مترجمة.\n"
     "- يدعم محلاً واحداً بمخزن واحد، أو مخازن متعددة، أو فروعاً متعددة (حتى عشرين فرعاً)، بنفس السهولة.\n"
     "- نسخة احتياطية يومية تلقائية لبيانات كل مشترك، مع عزل تام لبياناته عن أي مشترك آخر.\n"
@@ -507,7 +507,7 @@ _MARKETING_CATEGORY_GUIDANCE = {
     'trust': 'يعالج هاجس الأمان أو الثقة في نظام سحابي: حماية البيانات، النسخ الاحتياطي، العزل بين المشتركين، الصلاحيات.',
     'objection': 'يطرح اعتراضاً واقعياً يقوله تاجر مثل "معقد وما عندي وقت أتعلمه" أو "عندي نظام قديم شغال"، ثم يرد عليه بإجابة مقنعة وصادقة.',
     'tip': 'نصيحة تجارية عملية مفيدة بذاتها لصاحب أي محل، مع ربط خفيف بكيف يسهّل النظام تطبيقها.',
-    'comparison': 'يقارن بين طريقة عمل تقليدية (دفتر ورقي، إكسل، برنامج قديم، الذاكرة) وبين نظام إدارة حقيقي مثل إنجاز.',
+    'comparison': 'يقارن بين طريقة عمل تقليدية (دفتر ورقي، إكسل، برنامج قديم، الذاكرة) وبين نظام إدارة حقيقي مثل Snake.',
     'cta': 'دعوة مباشرة وصريحة لبدء التجربة المجانية لمدة 7 أيام، بدون وعود مبالغ فيها.',
     'engagement': 'سؤال حقيقي يدفع القارئ للتعليق والمشاركة، دون ذكر مباشر للنظام في بداية المنشور، ويمكن ذكره بخفة في النهاية أو عدم ذكره إطلاقاً.',
     'sudan_context': 'يتحدث عن واقع التجار في السودان تحديداً: إدارة العمل عن بُعد، النزوح بين المدن، تعدد الفروع الجغرافي، أو تذبذب العملة — دون المبالغة أو افتراض معلومات غير مؤكدة.',
@@ -517,7 +517,7 @@ _MARKETING_CATEGORY_GUIDANCE = {
 def generate_marketing_post(category: str, topic_hint: str = '', existing_posts: list | None = None) -> str:
     """
     Generate ONE ready-to-publish Arabic (Modern Standard Arabic) social media
-    post about EnjazIMS itself, for the given marketing category.
+    post about Snake itself, for the given marketing category.
 
     `existing_posts` (optional): content of posts already saved in this same
     category, used to steer the model away from repeating an idea or phrasing
@@ -542,7 +542,7 @@ def generate_marketing_post(category: str, topic_hint: str = '', existing_posts:
 
     prompt = (
         f"{_MARKETING_FEATURES_REFERENCE}\n\n"
-        f"اكتب منشوراً واحداً فقط لوسائل التواصل الاجتماعي (فيسبوك أو إنستقرام) للترويج لنظام إنجاز.\n"
+        f"اكتب منشوراً واحداً فقط لوسائل التواصل الاجتماعي (فيسبوك أو إنستقرام) للترويج لنظام Snake.\n"
         f"نوع المنشور المطلوب: {guidance}"
         f"{hint_line}"
         f"{existing_block}\n"

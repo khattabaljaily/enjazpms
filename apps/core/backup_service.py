@@ -113,7 +113,7 @@ def create_backup(tenant, backup_type: str = 'manual') -> 'TenantBackup':
 
     try:
         with file_path.open('w', encoding='utf-8') as f:
-            f.write("-- EnjazIMS Tenant Backup\n")
+            f.write("-- Snake Tenant Backup\n")
             f.write(f"-- Tenant : {tenant.name} (id={tenant.id}, slug={tenant.slug})\n")
             f.write(f"-- Created: {now.isoformat()}\n")
             f.write(f"-- Type   : {backup_type}\n\n")

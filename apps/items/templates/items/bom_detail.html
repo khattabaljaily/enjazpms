@@ -331,7 +331,7 @@ function doAddLine() {
 
 /* ── Delete line ──────────────────────────────────────────── */
 async function deleteLine(lineId) {
-    const ok = await EnjazIMS.confirmAction('هل تريد حذف هذا المكوّن؟', 'حذف مكوّن');
+    const ok = await Snake.confirmAction('هل تريد حذف هذا المكوّن؟', 'حذف مكوّن');
     if (!ok) return;
     $.ajax({
         url: RECIPE_DETAIL_URL,
@@ -351,12 +351,12 @@ async function deleteLine(lineId) {
                             </td>
                         </tr>`);
                 }
-                EnjazIMS.toast('تم حذف المكوّن', 'success');
+                Snake.toast('تم حذف المكوّن', 'success');
             } else {
-                EnjazIMS.toast(res.message, 'error');
+                Snake.toast(res.message, 'error');
             }
         },
-        error: function(xhr) { EnjazIMS.toast(xhr.responseJSON?.message || 'حدث خطأ', 'error'); }
+        error: function(xhr) { Snake.toast(xhr.responseJSON?.message || 'حدث خطأ', 'error'); }
     });
 }
 
@@ -377,13 +377,13 @@ $('#confirmDeleteRecipeBtn').on('click', function() {
                 sessionStorage.setItem('__enjazFlash', JSON.stringify({ message: res.message, type: 'success' }));
                 window.location.href = BOM_LIST_URL;
             } else {
-                EnjazIMS.toast(res.message, 'error');
+                Snake.toast(res.message, 'error');
                 $btn.prop('disabled', false).html('<i class="fas fa-trash me-1"></i> نعم، احذف');
                 deleteRecipeModal.hide();
             }
         },
         error: function(xhr) {
-            EnjazIMS.toast(xhr.responseJSON?.message || 'حدث خطأ', 'error');
+            Snake.toast(xhr.responseJSON?.message || 'حدث خطأ', 'error');
             $btn.prop('disabled', false).html('<i class="fas fa-trash me-1"></i> نعم، احذف');
             deleteRecipeModal.hide();
         }

@@ -442,7 +442,7 @@
         document.getElementById('id_is_active').disabled = false;
         document.getElementById('id_opening_balance').value = '';
         document.getElementById('id_opening_balance_date').value = '{{ today }}';
-        EnjazIMS.clearFormErrors($form);
+        Snake.clearFormErrors($form);
     }
 
     function openCreate() {
@@ -458,7 +458,7 @@
             .then(r => r.json())
             .then(resp => {
                 if (!resp.success) {
-                    EnjazIMS.toast(resp.message || 'تعذر تحميل البيانات', 'error');
+                    Snake.toast(resp.message || 'تعذر تحميل البيانات', 'error');
                     return;
                 }
                 const d = resp.data;
@@ -483,7 +483,7 @@
                 $submitBtn.html('<i class="fas fa-check me-1"></i>حفظ التعديلات');
                 treasuryModal.show();
             })
-            .catch(() => EnjazIMS.toast('تعذر تحميل البيانات', 'error'));
+            .catch(() => Snake.toast('تعذر تحميل البيانات', 'error'));
     }
 
     function openDelete(id, name) {
@@ -532,8 +532,8 @@
                         <td style="font-size:.8rem;color:#6b7280;">${row.movement_date || '—'}</td>
                         <td><span class="badge" style="${badgeStyle}font-size:.72rem;border-radius:6px;padding:.25rem .55rem;font-weight:700;">${row.movement_type || '—'}</span></td>
                         <td style="font-size:.8rem;">${refHtml}</td>
-                        <td style="font-weight:700;color:${amtColor};">${EnjazIMS.formatMoney(row.amount || 0)}</td>
-                        <td style="font-weight:700;color:#6366f1;">${EnjazIMS.formatMoney(row.running_balance || 0)}</td>
+                        <td style="font-weight:700;color:${amtColor};">${Snake.formatMoney(row.amount || 0)}</td>
+                        <td style="font-weight:700;color:#6366f1;">${Snake.formatMoney(row.running_balance || 0)}</td>
                         <td style="font-size:.8rem;color:#6b7280;display:none;">${row.description || ''}</td>
                     </tr>`;
                 }).join('');
@@ -548,15 +548,15 @@
             .then(r => r.json())
             .then(resp => {
                 if (!resp.success) {
-                    EnjazIMS.toast(resp.message || 'تعذر تحميل البيانات', 'error');
+                    Snake.toast(resp.message || 'تعذر تحميل البيانات', 'error');
                     return;
                 }
                 const d = resp.data;
-                document.getElementById('treasuryLedgerSubtitle').textContent = `${d.name || '—'} (${d.code || '—'}) — الرصيد الحالي: ${EnjazIMS.formatMoney(d.current_balance || 0)}`;
+                document.getElementById('treasuryLedgerSubtitle').textContent = `${d.name || '—'} (${d.code || '—'}) — الرصيد الحالي: ${Snake.formatMoney(d.current_balance || 0)}`;
                 loadTreasuryTransactions(id);
                 ledgerModal.show();
             })
-            .catch(() => EnjazIMS.toast('تعذر تحميل البيانات', 'error'));
+            .catch(() => Snake.toast('تعذر تحميل البيانات', 'error'));
     }
 
     /* ── Mobile card renderer ───────────────────────────────── */
@@ -570,8 +570,8 @@
         }
 
         const cardsHtml = rows.map(function (r) {
-            const balance = EnjazIMS.formatMoney(r.current_balance || 0);
-            const balanceClass = EnjazIMS.parseNumber(r.current_balance || 0) >= 0 ? 'cx-treasury-card-balance--positive' : 'cx-treasury-card-balance--negative';
+            const balance = Snake.formatMoney(r.current_balance || 0);
+            const balanceClass = Snake.parseNumber(r.current_balance || 0) >= 0 ? 'cx-treasury-card-balance--positive' : 'cx-treasury-card-balance--negative';
             const status = r.is_active
                 ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشطة</span>'
                 : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوفة</span>';
@@ -634,7 +634,7 @@
                 : v
             },
             { data: 'code' },
-            { data: 'current_balance', className: 'text-end', render: (v, _, row) => `${EnjazIMS.formatMoney(v || 0)} <span class="text-muted" style="font-size:.8rem;">${curSym(row.currency)}</span>` },
+            { data: 'current_balance', className: 'text-end', render: (v, _, row) => `${Snake.formatMoney(v || 0)} <span class="text-muted" style="font-size:.8rem;">${curSym(row.currency)}</span>` },
             { data: 'currency', render: (v, _, row) => row.is_hard_currency
                 ? `<span class="cx-badge" style="background:#f59e0b22;color:#d97706;border:1px solid #f59e0b40;">${curSym(v)}</span>`
                 : `<span class="cx-badge cx-badge--muted">${curSym(v)}</span>`
@@ -688,9 +688,9 @@
         const id = $idInput.val();
         const url = id ? `${TREASURY_DETAIL_API_BASE}${id}/update/` : TREASURY_CREATE_API;
 
-        EnjazIMS.clearFormErrors($form);
+        Snake.clearFormErrors($form);
         const orig = $submitBtn.html();
-        EnjazIMS.showLoading($submitBtn);
+        Snake.showLoading($submitBtn);
 
         fetch(url, {
             method: 'POST',
@@ -699,10 +699,10 @@
         })
         .then(r => r.json())
         .then(resp => {
-            EnjazIMS.hideLoading($submitBtn, orig);
+            Snake.hideLoading($submitBtn, orig);
             if (resp.success) {
                 treasuryModal.hide();
-                EnjazIMS.toast(resp.message || 'تم الحفظ بنجاح', 'success');
+                Snake.toast(resp.message || 'تم الحفظ بنجاح', 'success');
                 treasuryTable.ajax.reload(null, false);
                 return;
             }
@@ -711,8 +711,8 @@
             box.textContent = resp.message || 'تعذر الحفظ';
         })
         .catch(() => {
-            EnjazIMS.hideLoading($submitBtn, orig);
-            EnjazIMS.toast('حدث خطأ في الاتصال', 'error');
+            Snake.hideLoading($submitBtn, orig);
+            Snake.toast('حدث خطأ في الاتصال', 'error');
         });
     });
 
@@ -726,13 +726,13 @@
         .then(resp => {
             if (resp.success) {
                 deleteModal.hide();
-                EnjazIMS.toast(resp.message || 'تم الحذف', 'success');
+                Snake.toast(resp.message || 'تم الحذف', 'success');
                 treasuryTable.ajax.reload(null, false);
             } else {
-                EnjazIMS.toast(resp.message || 'تعذر الحذف', 'error');
+                Snake.toast(resp.message || 'تعذر الحذف', 'error');
             }
         })
-        .catch(() => EnjazIMS.toast('حدث خطأ في الاتصال', 'error'));
+        .catch(() => Snake.toast('حدث خطأ في الاتصال', 'error'));
     });
 
     // Make functions global
@@ -798,9 +798,9 @@
         const hcCur = '{{ hc_currency_symbol }}';
         let txt = '';
         if (dir === 'to_hc') {
-            txt = `سيتم صرف ${EnjazIMS.formatMoney(local)} ${localCur} من الخزينة المحلية لشراء ${EnjazIMS.formatMoney(hc)} ${hcCur} — السعر: ${EnjazIMS.formatMoney(rate)} ${localCur}/${hcCur}`;
+            txt = `سيتم صرف ${Snake.formatMoney(local)} ${localCur} من الخزينة المحلية لشراء ${Snake.formatMoney(hc)} ${hcCur} — السعر: ${Snake.formatMoney(rate)} ${localCur}/${hcCur}`;
         } else {
-            txt = `سيتم صرف ${EnjazIMS.formatMoney(hc)} ${hcCur} وإيداع ${EnjazIMS.formatMoney(local)} ${localCur} في الخزينة المحلية — السعر: ${EnjazIMS.formatMoney(rate)} ${localCur}/${hcCur}`;
+            txt = `سيتم صرف ${Snake.formatMoney(hc)} ${hcCur} وإيداع ${Snake.formatMoney(local)} ${localCur} في الخزينة المحلية — السعر: ${Snake.formatMoney(rate)} ${localCur}/${hcCur}`;
         }
         if (summary) { summary.style.display = ''; summaryText.textContent = txt; }
     }
@@ -838,8 +838,8 @@
         const rate = parseFloat('{{ current_tenant.exchange_rate|floatformat:2 }}') || 1;
         const balHcEl = document.getElementById('hcBalanceHc');
         const balLocEl = document.getElementById('hcBalanceLocal');
-        if (balHcEl) balHcEl.textContent = EnjazIMS.formatMoney(hcBal);
-        if (balLocEl) balLocEl.textContent = EnjazIMS.formatMoney(hcBal * rate);
+        if (balHcEl) balHcEl.textContent = Snake.formatMoney(hcBal);
+        if (balLocEl) balLocEl.textContent = Snake.formatMoney(hcBal * rate);
     })();
     {% endif %}
 
@@ -920,7 +920,7 @@
             btn.innerHTML = '<i class="fas fa-exchange-alt me-1"></i> تنفيذ التحويل';
             if (resp.success) {
                 transferModal?.hide();
-                EnjazIMS.toast('تم التحويل بنجاح', 'success');
+                Snake.toast('تم التحويل بنجاح', 'success');
                 treasuryTable.ajax.reload(null, false);
                 // Refresh HC banner balance from table
                 {% if hc_treasury %}
@@ -931,8 +931,8 @@
                         const rate2 = parseFloat('{{ current_tenant.exchange_rate|floatformat:2 }}') || 1;
                         const balHcEl = document.getElementById('hcBalanceHc');
                         const locEl = document.getElementById('hcBalanceLocal');
-                        if (balHcEl) balHcEl.textContent = EnjazIMS.formatMoney(bal);
-                        if (locEl) locEl.textContent = EnjazIMS.formatMoney(bal * rate2);
+                        if (balHcEl) balHcEl.textContent = Snake.formatMoney(bal);
+                        if (locEl) locEl.textContent = Snake.formatMoney(bal * rate2);
                     }).catch(() => {});
                 {% endif %}
             } else {

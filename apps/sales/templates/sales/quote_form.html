@@ -372,7 +372,7 @@ function renderSearchResults(items) {
     const container = document.getElementById('itemSearchResults');
     if (!items.length) { container.innerHTML = '<div class="text-muted text-center py-3">لا توجد نتائج</div>'; return; }
     container.innerHTML = items.map(item => {
-        const qtyLabel = item.is_service ? 'خدمة' : `متاح: ${EnjazIMS.formatQuantity(item.available_qty || 0)}`;
+        const qtyLabel = item.is_service ? 'خدمة' : `متاح: ${Snake.formatQuantity(item.available_qty || 0)}`;
         const qtyClass = item.is_service || item.available_qty > 0 ? 'sale-item-result__qty--ok' : 'sale-item-result__qty--empty';
         return `
         <div class="sale-item-result" onclick="selectItem(${item.id})">
@@ -381,7 +381,7 @@ function renderSearchResults(items) {
                 <div class="sale-item-result__sku">${item.sku}</div>
             </div>
             <div class="sale-item-result__meta">
-                <div class="sale-item-result__price">${EnjazIMS.formatMoney(item.selling_price || 0)}</div>
+                <div class="sale-item-result__price">${Snake.formatMoney(item.selling_price || 0)}</div>
                 <div class="sale-item-result__qty ${qtyClass}">${qtyLabel}</div>
             </div>
         </div>`;
@@ -418,10 +418,10 @@ function addLineToTable(lineData) {
     const tbody = document.getElementById('linesBody');
     document.getElementById('emptyLinesMsg').style.display = 'none';
 
-    const qty = EnjazIMS.parseNumber(lineData.quantity) || 1;
-    const price = EnjazIMS.parseNumber(lineData.unit_price) || 0;
-    const disc = EnjazIMS.parseNumber(lineData.discount_percent) || 0;
-    const tax = EnjazIMS.parseNumber(lineData.tax_rate) || 0;
+    const qty = Snake.parseNumber(lineData.quantity) || 1;
+    const price = Snake.parseNumber(lineData.unit_price) || 0;
+    const disc = Snake.parseNumber(lineData.discount_percent) || 0;
+    const tax = Snake.parseNumber(lineData.tax_rate) || 0;
     const lineTotal = calcLineTotal(qty, price, disc, tax);
 
     const units = lineData.units || [];
@@ -459,7 +459,7 @@ function addLineToTable(lineData) {
                value="${disc || ''}" oninput="updateLine(${id})"></td>
         <td><input type="text" inputmode="decimal" class="cx-input cx-input--sm sales-input-pct inv-num-field" id="tax-${id}"
                value="${tax || ''}" oninput="updateLine(${id})"></td>
-        <td class="text-end" id="total-${id}"><strong>${EnjazIMS.formatMoney(lineTotal)}</strong></td>
+        <td class="text-end" id="total-${id}"><strong>${Snake.formatMoney(lineTotal)}</strong></td>
         <td>
             <button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})">
                 <i class="fas fa-trash"></i>
@@ -479,7 +479,7 @@ function onUnitChange(id) {
     const newFactor = parseFloat(opt.dataset.factor) || 1;
     if (oldFactor !== newFactor) {
         const priceInput = document.getElementById(`price-${id}`);
-        const currentPrice = EnjazIMS.parseNumber(priceInput.value) || 0;
+        const currentPrice = Snake.parseNumber(priceInput.value) || 0;
         if (currentPrice > 0) priceInput.value = ((currentPrice / oldFactor) * newFactor).toFixed(2);
     }
     row.dataset.unitId = sel.value;
@@ -495,11 +495,11 @@ function calcLineTotal(qty, price, discPct, taxRate) {
 }
 
 function updateLine(id) {
-    const qty = EnjazIMS.parseNumber(document.getElementById(`qty-${id}`).value) || 0;
-    const price = EnjazIMS.parseNumber(document.getElementById(`price-${id}`).value) || 0;
-    const disc = EnjazIMS.parseNumber(document.getElementById(`disc-${id}`).value) || 0;
-    const tax = EnjazIMS.parseNumber(document.getElementById(`tax-${id}`).value) || 0;
-    document.getElementById(`total-${id}`).innerHTML = `<strong>${EnjazIMS.formatMoney(calcLineTotal(qty, price, disc, tax))}</strong>`;
+    const qty = Snake.parseNumber(document.getElementById(`qty-${id}`).value) || 0;
+    const price = Snake.parseNumber(document.getElementById(`price-${id}`).value) || 0;
+    const disc = Snake.parseNumber(document.getElementById(`disc-${id}`).value) || 0;
+    const tax = Snake.parseNumber(document.getElementById(`tax-${id}`).value) || 0;
+    document.getElementById(`total-${id}`).innerHTML = `<strong>${Snake.formatMoney(calcLineTotal(qty, price, disc, tax))}</strong>`;
     recalcTotals();
 }
 
@@ -516,10 +516,10 @@ function recalcTotals() {
     let subtotal = 0, taxTotal = 0;
     document.querySelectorAll('#linesBody tr').forEach(row => {
         const id = row.id.replace('line-', '');
-        const qty = EnjazIMS.parseNumber(document.getElementById(`qty-${id}`)?.value) || 0;
-        const price = EnjazIMS.parseNumber(document.getElementById(`price-${id}`)?.value) || 0;
-        const disc = EnjazIMS.parseNumber(document.getElementById(`disc-${id}`)?.value) || 0;
-        const tax = EnjazIMS.parseNumber(document.getElementById(`tax-${id}`)?.value) || 0;
+        const qty = Snake.parseNumber(document.getElementById(`qty-${id}`)?.value) || 0;
+        const price = Snake.parseNumber(document.getElementById(`price-${id}`)?.value) || 0;
+        const disc = Snake.parseNumber(document.getElementById(`disc-${id}`)?.value) || 0;
+        const tax = Snake.parseNumber(document.getElementById(`tax-${id}`)?.value) || 0;
         const gross = qty * price;
         const sub = gross - gross * (disc / 100);
         subtotal += sub;
@@ -527,15 +527,15 @@ function recalcTotals() {
     });
 
     const discType = document.getElementById('discountType').value;
-    const discVal = EnjazIMS.parseNumber(document.getElementById('discountValue').value) || 0;
+    const discVal = Snake.parseNumber(document.getElementById('discountValue').value) || 0;
     let discAmt = discType === 'percent' ? subtotal * (discVal / 100) : discVal;
     discAmt = Math.min(discAmt, subtotal);
     const grand = subtotal - discAmt + taxTotal;
 
-    document.getElementById('displaySubtotal').textContent = EnjazIMS.formatMoney(subtotal);
-    document.getElementById('displayDiscount').textContent = EnjazIMS.formatMoney(discAmt);
-    document.getElementById('displayTax').textContent = EnjazIMS.formatMoney(taxTotal);
-    document.getElementById('displayGrandTotal').textContent = EnjazIMS.formatMoney(grand);
+    document.getElementById('displaySubtotal').textContent = Snake.formatMoney(subtotal);
+    document.getElementById('displayDiscount').textContent = Snake.formatMoney(discAmt);
+    document.getElementById('displayTax').textContent = Snake.formatMoney(taxTotal);
+    document.getElementById('displayGrandTotal').textContent = Snake.formatMoney(grand);
 }
 
 // ── Customer Info ──────────────────────────────────────────
@@ -548,8 +548,8 @@ function fetchCustomerInfo() {
         .then(data => {
             if (!data.success) return;
             const c = data.customer;
-            document.getElementById('custBalance').textContent = EnjazIMS.formatMoney(c.current_balance || 0);
-            document.getElementById('custCreditLimit').textContent = EnjazIMS.formatMoney(c.credit_limit || 0);
+            document.getElementById('custBalance').textContent = Snake.formatMoney(c.current_balance || 0);
+            document.getElementById('custCreditLimit').textContent = Snake.formatMoney(c.credit_limit || 0);
             document.getElementById('custPhone').textContent = c.phone || '—';
             card.classList.remove('sales-field-hidden');
         });
@@ -563,10 +563,10 @@ function collectLines() {
         lines.push({
             item_id: row.dataset.itemId,
             variant_id: row.dataset.variantId || null,
-            quantity: String(EnjazIMS.parseNumber(document.getElementById(`qty-${id}`).value || 0)),
-            unit_price: EnjazIMS.parseNumber(document.getElementById(`price-${id}`).value || 0).toFixed(2),
-            discount_percent: EnjazIMS.parseNumber(document.getElementById(`disc-${id}`).value || 0).toFixed(2),
-            tax_rate: EnjazIMS.parseNumber(document.getElementById(`tax-${id}`).value || 0).toFixed(2),
+            quantity: String(Snake.parseNumber(document.getElementById(`qty-${id}`).value || 0)),
+            unit_price: Snake.parseNumber(document.getElementById(`price-${id}`).value || 0).toFixed(2),
+            discount_percent: Snake.parseNumber(document.getElementById(`disc-${id}`).value || 0).toFixed(2),
+            tax_rate: Snake.parseNumber(document.getElementById(`tax-${id}`).value || 0).toFixed(2),
         });
     });
     return lines;
@@ -591,7 +591,7 @@ function submitQuoteForm() {
         notes: document.getElementById('notes').value,
         terms: document.getElementById('terms').value,
         quote_discount_type: document.getElementById('discountType').value,
-        quote_discount_value: EnjazIMS.parseNumber(document.getElementById('discountValue').value || 0).toFixed(2),
+        quote_discount_value: Snake.parseNumber(document.getElementById('discountValue').value || 0).toFixed(2),
         lines,
     };
 
@@ -648,8 +648,8 @@ function getCookie(name) {
 
 function showAlert(msg, type = 'danger') {
     const mapped = type === 'danger' ? 'error' : type;
-    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
-        EnjazIMS.toast(msg, mapped); return;
+    if (window.Snake && typeof Snake.toast === 'function') {
+        Snake.toast(msg, mapped); return;
     }
     console.warn(msg);
 }

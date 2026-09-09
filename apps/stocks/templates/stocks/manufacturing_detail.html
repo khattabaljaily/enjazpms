@@ -126,23 +126,23 @@ const DELETE_URL  = "{% url 'stocks:manufacturing_delete' order.id %}";
 const CSRF_TOKEN  = "{{ csrf_token }}";
 
 async function ajaxAction(url, confirmMsg, title, successMsg, redirectAfter) {
-    const ok = await EnjazIMS.confirmAction(confirmMsg, title);
+    const ok = await Snake.confirmAction(confirmMsg, title);
     if (!ok) return;
     try {
         const r = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
         const res = await r.json();
         if (res.success) {
-            EnjazIMS.toast(successMsg, 'success');
+            Snake.toast(successMsg, 'success');
             if (redirectAfter) {
                 setTimeout(() => { window.location.href = redirectAfter; }, 800);
             } else {
                 setTimeout(() => location.reload(), 800);
             }
         } else {
-            EnjazIMS.toast('خطأ: ' + res.message, 'error');
+            Snake.toast('خطأ: ' + res.message, 'error');
         }
     } catch {
-        EnjazIMS.toast('حدث خطأ في الاتصال', 'error');
+        Snake.toast('حدث خطأ في الاتصال', 'error');
     }
 }
 

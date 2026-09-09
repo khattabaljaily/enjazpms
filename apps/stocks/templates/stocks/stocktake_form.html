@@ -75,7 +75,7 @@
 document.getElementById('btnCreate').addEventListener('click', async function () {
     const stockId = document.getElementById('stockId').value;
     if (!stockId) {
-        EnjazIMS.toast('يرجى اختيار المخزن', 'warning');
+        Snake.toast('يرجى اختيار المخزن', 'warning');
         return;
     }
     this.disabled = true;
@@ -94,7 +94,7 @@ document.getElementById('btnCreate').addEventListener('click', async function ()
     if (d.success) {
         window.location = d.redirect;
     } else {
-        EnjazIMS.toast(d.message || 'حدث خطأ', 'error');
+        Snake.toast(d.message || 'حدث خطأ', 'error');
         this.disabled = false;
         this.innerHTML = '<i class="fas fa-play me-1"></i> بدء الجرد';
     }

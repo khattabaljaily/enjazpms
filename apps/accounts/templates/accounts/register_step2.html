@@ -35,14 +35,8 @@
     <div class="alert alert-danger auth-alert js-form-errors d-none mb-3"></div>
 
     <div class="auth-form-grid auth-form-grid-compact">
-        <div class="mb-3">
-            {{ form.business_type.label_tag }}
-            {{ form.business_type }}
-            {% if form.business_type.errors %}
-            <div class="text-danger small mt-1 js-field-errors" data-field="business_type">{{ form.business_type.errors }}</div>
-            {% endif %}
-        </div>
-        
+        {{ form.business_type }}
+
         <div class="mb-3">
             {{ form.business_name.label_tag }}
             {{ form.business_name }}

@@ -419,8 +419,8 @@ function submitConvert() {
     const method = document.getElementById('convertPaymentMethod').value;
     const body = { payment_method: method };
     if (method === 'mixed') {
-        const cashAmount = EnjazIMS.parseNumber(document.getElementById('convertCashAmount').value || 0);
-        const bankAmount = EnjazIMS.parseNumber(document.getElementById('convertBankAmount').value || 0);
+        const cashAmount = Snake.parseNumber(document.getElementById('convertCashAmount').value || 0);
+        const bankAmount = Snake.parseNumber(document.getElementById('convertBankAmount').value || 0);
         body.cash_amount = cashAmount.toFixed(2);
         body.bank_amount = bankAmount.toFixed(2);
         body.bank_reference = document.getElementById('convertBankRef').value;
@@ -458,10 +458,10 @@ function submitConvert() {
 }
 
 function formatQuoteNumbers() {
-    if (!window.EnjazIMS) return false;
+    if (!window.Snake) return false;
     document.querySelectorAll('.js-quote-percent').forEach((el) => {
-        const value = EnjazIMS.parseNumber(el.dataset.value || 0);
-        el.textContent = `${EnjazIMS.formatQuantity(value, 2)}%`;
+        const value = Snake.parseNumber(el.dataset.value || 0);
+        el.textContent = `${Snake.formatQuantity(value, 2)}%`;
     });
     return true;
 }
@@ -473,8 +473,8 @@ window.addEventListener('load', formatQuoteNumbers);
 
 function showAlert(msg, type = 'danger') {
     const mapped = type === 'danger' ? 'error' : type;
-    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
-        EnjazIMS.toast(msg, mapped); return;
+    if (window.Snake && typeof Snake.toast === 'function') {
+        Snake.toast(msg, mapped); return;
     }
     console.warn(msg);
 }

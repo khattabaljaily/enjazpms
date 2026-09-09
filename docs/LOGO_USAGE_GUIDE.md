@@ -1,4 +1,4 @@
-# 🎨 دليل استخدام شعارات إنجاز
+# 🎨 دليل استخدام شعارات Snake
 
 ## 📁 الملفات المتوفرة
 
@@ -33,9 +33,9 @@ static/img/logo/
 
 ```html
 <!-- Light mode: Company color logo -->
-<img src="{% static 'img/logo/logo-6547bd.png' %}" alt="إنجاز" class="logo-light">
+<img src="{% static 'img/logo/logo-6547bd.png' %}" alt="Snake" class="logo-light">
 <!-- Dark mode: White logo -->
-<img src="{% static 'img/logo/logo-ffffff.png' %}" alt="إنجاز" class="logo-dark">
+<img src="{% static 'img/logo/logo-ffffff.png' %}" alt="Snake" class="logo-dark">
 ```
 
 **CSS:**
@@ -59,9 +59,9 @@ static/img/logo/
 ```html
 <a class="navbar-brand d-flex align-items-center gap-2" href="...">
     <img src="{% static 'img/logo/logo-161616.png' %}" 
-         alt="إنجاز" height="32" class="navbar-logo logo-light">
+         alt="Snake" height="32" class="navbar-logo logo-light">
     <img src="{% static 'img/logo/logo-ffffff.png' %}" 
-         alt="إنجاز" height="32" class="navbar-logo logo-dark">
+         alt="Snake" height="32" class="navbar-logo logo-dark">
 </a>
 ```
 
@@ -90,8 +90,8 @@ static/img/logo/
 
 ```html
 <div class="welcome-card">
-    <img src="{% static 'img/logo/logo-6547bd.png' %}" alt="إنجاز" height="64">
-    <h1>مرحباً بك في نظام إنجاز</h1>
+    <img src="{% static 'img/logo/logo-6547bd.png' %}" alt="Snake" height="64">
+    <h1>مرحباً بك في نظام Snake</h1>
 </div>
 ```
 
@@ -106,9 +106,9 @@ static/img/logo/
 ```html
 <div class="sidebar-logo">
     <img src="{% static 'img/logo/logo-161616.png' %}" 
-         alt="إنجاز" class="logo-light">
+         alt="Snake" class="logo-light">
     <img src="{% static 'img/logo/logo-ffffff.png' %}" 
-         alt="إنجاز" class="logo-dark">
+         alt="Snake" class="logo-dark">
 </div>
 ```
 
@@ -118,7 +118,7 @@ static/img/logo/
 **الملف:** `logo-6547bd.png` أو `logo-cba03e.png`
 
 ```html
-<img src="{{ STATIC_URL }}img/logo/logo-6547bd.png" alt="إنجاز" height="48">
+<img src="{{ STATIC_URL }}img/logo/logo-6547bd.png" alt="Snake" height="48">
 ```
 
 **السبب:** ألوان الشركة الأساسية لعرض احترافي.
@@ -194,7 +194,7 @@ function updateLogos() {
 ```html
 <img data-logo-light="{% static 'img/logo/logo-161616.png' %}"
      data-logo-dark="{% static 'img/logo/logo-ffffff.png' %}"
-     alt="إنجاز">
+     alt="Snake">
 ```
 
 ---
@@ -208,7 +208,7 @@ function updateLogos() {
 
 ### الوصولية (Accessibility):
 ```html
-<img src="..." alt="إنجاز - نظام إدارة المخزون ونقاط البيع" role="img">
+<img src="..." alt="Snake - نظام إدارة المخزون ونقاط البيع" role="img">
 ```
 
 ### SEO:

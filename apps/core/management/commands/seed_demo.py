@@ -621,7 +621,7 @@ class Command(BaseCommand):
             ('online_order',   'high',   'طلب جديد من المتجر',           'طلب #ORD-00003 بقيمة 7,000 SDG — في انتظار الموافقة'),
             ('overdue_invoice','medium', 'فاتورة متأخرة السداد',          'فاتورة «مؤسسة البركة» متأخرة 12 يوماً'),
             ('transfer_done',  'low',    'اكتمل تحويل المخزون',           'تم تأكيد التحويل TRF-001 إلى مخزن الطابق الثاني'),
-            ('general',        'low',    'مرحباً في إنجاز IMS',           'حسابك جاهز — ابدأ بإضافة منتجاتك ومبيعاتك'),
+            ('general',        'low',    'مرحباً في Snake IMS',           'حسابك جاهز — ابدأ بإضافة منتجاتك ومبيعاتك'),
         ]
         for ntype, priority, title, msg in data:
             Notification.objects.create(

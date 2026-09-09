@@ -1,4 +1,4 @@
-// EnjazIMS - Main JavaScript
+// Snake - Main JavaScript
 // ================================
 
 // Sidebar toggle (mobile)
@@ -167,11 +167,11 @@ function getCookie(name) {
 
 // Initialize numeric input conversion
 document.addEventListener('DOMContentLoaded', function () {
-    EnjazIMS.initNumericInputs();
+    Snake.initNumericInputs();
 });
 
 // Utility functions
-const EnjazIMS = {
+const Snake = {
     // Show loading spinner
     showLoading: function(element) {
         $(element).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> جاري التحميل...');
@@ -309,11 +309,11 @@ const EnjazIMS = {
     
     // Confirm delete action — returns a Promise (use with await)
     confirmDelete: function(message = 'هل أنت متأكد من الحذف؟') {
-        return EnjazIMS.confirmAction(message, 'تأكيد الحذف');
+        return Snake.confirmAction(message, 'تأكيد الحذف');
     },
 
     // Modal-based confirmation — returns a Promise that resolves true/false.
-    // Usage: EnjazIMS.confirmAction('رسالة').then(ok => { if (ok) ... });
+    // Usage: Snake.confirmAction('رسالة').then(ok => { if (ok) ... });
     confirmAction: function(message, title, confirmText) {
         return new Promise(function(resolve) {
             // Determine icon, colour and button label from title keywords
@@ -498,7 +498,7 @@ const EnjazIMS = {
 
         numericInputs.forEach(input => {
             input.addEventListener('input', function(e) {
-                const converted = EnjazIMS.convertArabicNumerals(e.target.value);
+                const converted = Snake.convertArabicNumerals(e.target.value);
                 if (converted !== e.target.value) {
                     e.target.value = converted;
                 }
@@ -506,7 +506,7 @@ const EnjazIMS = {
 
             input.addEventListener('paste', function(e) {
                 setTimeout(() => {
-                    const converted = EnjazIMS.convertArabicNumerals(e.target.value);
+                    const converted = Snake.convertArabicNumerals(e.target.value);
                     if (converted !== e.target.value) {
                         e.target.value = converted;
                     }
@@ -562,7 +562,7 @@ const EnjazIMS = {
     }
 };
 
-window.EnjazIMS = EnjazIMS;
+window.Snake = Snake;
 
 // jQuery AJAX hooks for GSpinner + backwards-compat alias
 $(document)
@@ -587,14 +587,14 @@ $(document).ready(function() {
     }
 
     // Number steppers — initial page load
-    EnjazIMS.initNumberSteppers();
+    Snake.initNumberSteppers();
 
     // Re-run steppers when DOM changes (dynamic invoice lines, modals, etc.)
     let _stepperTimer = null;
     new MutationObserver(function(muts) {
         if (!muts.some(m => m.addedNodes.length)) return;
         clearTimeout(_stepperTimer);
-        _stepperTimer = setTimeout(function() { EnjazIMS.initNumberSteppers(); }, 120);
+        _stepperTimer = setTimeout(function() { Snake.initNumberSteppers(); }, 120);
     }).observe(document.body, { childList: true, subtree: true });
 
     // Numeric-only filter for invoice line fields (.inv-num-field)
@@ -633,7 +633,7 @@ $(document).ready(function() {
     $('.btn-delete').on('click', async function(e) {
         e.preventDefault();
         const href = $(this).attr('href') || $(this).data('href');
-        const confirmed = await EnjazIMS.confirmAction('هل أنت متأكد من الحذف؟', 'تأكيد الحذف');
+        const confirmed = await Snake.confirmAction('هل أنت متأكد من الحذف؟', 'تأكيد الحذف');
         if (confirmed && href) {
             window.location.href = href;
         }
@@ -646,12 +646,12 @@ $(document).ready(function() {
     if (pendingMessages.length) {
         pendingMessages.forEach((entry) => {
             if (!entry || !entry.message) return;
-            EnjazIMS.toast(entry.message, entry.type || 'info');
+            Snake.toast(entry.message, entry.type || 'info');
         });
         window.__enjazPendingMessages = [];
     }
 
-    EnjazIMS.consumeRememberedToast();
+    Snake.consumeRememberedToast();
 
     // AJAX auth forms (login/register)
     $('.js-auth-ajax').on('submit', function(e) {
@@ -661,8 +661,8 @@ $(document).ready(function() {
         const submitBtn = form.find('button[type=submit]');
         const originalText = submitBtn.html();
 
-        EnjazIMS.clearFormErrors(form);
-        EnjazIMS.showLoading(submitBtn);
+        Snake.clearFormErrors(form);
+        Snake.showLoading(submitBtn);
 
         $.ajax({
             url: form.attr('action') || window.location.href,
@@ -673,7 +673,7 @@ $(document).ready(function() {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             success: function(response) {
-                EnjazIMS.hideLoading(submitBtn, originalText);
+                Snake.hideLoading(submitBtn, originalText);
 
                 if (response.success) {
                     if (response.redirect_url) {
@@ -683,21 +683,21 @@ $(document).ready(function() {
                 }
 
                 if (response.errors) {
-                    EnjazIMS.renderFieldErrors(form, response.errors);
+                    Snake.renderFieldErrors(form, response.errors);
 
                     const hasNonFieldErrors = Array.isArray(response.errors.__all__) && response.errors.__all__.length;
                     if (hasNonFieldErrors) {
-                        EnjazIMS.showFormError(form, response.message || response.errors.__all__.join('<br>'));
+                        Snake.showFormError(form, response.message || response.errors.__all__.join('<br>'));
                     } else {
-                        EnjazIMS.showFormError(form, 'يرجى مراجعة الحقول المحددة أدناه');
+                        Snake.showFormError(form, 'يرجى مراجعة الحقول المحددة أدناه');
                     }
                     return;
                 }
 
-                EnjazIMS.showFormError(form, response.message || 'يرجى التحقق من الحقول المطلوبة');
+                Snake.showFormError(form, response.message || 'يرجى التحقق من الحقول المطلوبة');
             },
             error: function(xhr) {
-                EnjazIMS.hideLoading(submitBtn, originalText);
+                Snake.hideLoading(submitBtn, originalText);
 
                 const response = xhr.responseJSON || {};
 
@@ -707,18 +707,18 @@ $(document).ready(function() {
                 }
 
                 if (response.errors) {
-                    EnjazIMS.renderFieldErrors(form, response.errors);
+                    Snake.renderFieldErrors(form, response.errors);
 
                     const hasNonFieldErrors = Array.isArray(response.errors.__all__) && response.errors.__all__.length;
                     if (hasNonFieldErrors) {
-                        EnjazIMS.showFormError(form, response.message || response.errors.__all__.join('<br>'));
+                        Snake.showFormError(form, response.message || response.errors.__all__.join('<br>'));
                     } else {
-                        EnjazIMS.showFormError(form, 'يرجى مراجعة الحقول المحددة أدناه');
+                        Snake.showFormError(form, 'يرجى مراجعة الحقول المحددة أدناه');
                     }
                     return;
                 }
 
-                EnjazIMS.showFormError(form, response.message || 'تعذر إرسال النموذج، حاول مرة أخرى');
+                Snake.showFormError(form, response.message || 'تعذر إرسال النموذج، حاول مرة أخرى');
             }
         });
     });
@@ -734,31 +734,31 @@ function handleAjaxForm(formId, onSuccess) {
         const submitBtn = form.find('button[type=submit]');
         const originalText = submitBtn.html();
         
-        EnjazIMS.showLoading(submitBtn);
+        Snake.showLoading(submitBtn);
         
         $.ajax({
             url: form.attr('action'),
             method: form.attr('method') || 'POST',
             data: form.serialize(),
             success: function(response) {
-                EnjazIMS.hideLoading(submitBtn, originalText);
+                Snake.hideLoading(submitBtn, originalText);
                 
                 if (response.success) {
-                    EnjazIMS.toast(response.message, 'success');
+                    Snake.toast(response.message, 'success');
                     if (onSuccess) onSuccess(response);
                 } else {
-                    EnjazIMS.toast(response.message || 'حدث خطأ', 'error');
+                    Snake.toast(response.message || 'حدث خطأ', 'error');
                 }
             },
             error: function(xhr) {
-                EnjazIMS.hideLoading(submitBtn, originalText);
+                Snake.hideLoading(submitBtn, originalText);
                 
                 let message = 'حدث خطأ في الاتصال';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     message = xhr.responseJSON.message;
                 }
                 
-                EnjazIMS.toast(message, 'error');
+                Snake.toast(message, 'error');
             }
         });
     });

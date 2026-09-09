@@ -1,58 +1,19 @@
 [
   {
-    "name": "General Retail",
-    "name_ar": "تجارة عامة",
-    "slug": "general-retail",
-    "icon": "fa-store",
-    "description": "قطع غيار، إلكترونيات، أدوات منزلية، قرطاسية — منتجات بكميات صحيحة بدون تواريخ انتهاء",
+    "name": "Pharmacy",
+    "name_ar": "صيدلية",
+    "slug": "pharmacy",
+    "icon": "fa-mortar-pestle",
+    "description": "صيدلية — أدوية ومستحضرات صيدلانية بتواريخ انتهاء وأرقام دُفعات",
     "display_order": 1,
-    "is_active": true,
-    "features": {
-      "has_expiry_dates": false,
-      "has_batch_numbers": false,
-      "has_serial_numbers": false,
-      "has_weight_items": false,
-      "has_variants": false,
-      "has_services": false,
-      "has_manufacturing": false,
-      "has_work_orders": false
-    }
-  },
-  {
-    "name": "Food & Pharma",
-    "name_ar": "أغذية وصيدليات",
-    "slug": "food-pharma",
-    "icon": "fa-basket-shopping",
-    "description": "بقالة، صيدلية، مستحضرات تجميل — كل ما له تاريخ انتهاء أو أرقام دُفعات",
-    "display_order": 2,
     "is_active": true,
     "features": {
       "has_expiry_dates": true,
       "has_batch_numbers": true,
       "has_serial_numbers": false,
       "has_weight_items": true,
-      "has_variants": false,
       "has_services": false,
       "has_manufacturing": false,
-      "has_work_orders": false
-    }
-  },
-  {
-    "name": "Restaurant & Cafe",
-    "name_ar": "مطاعم ومقاهي",
-    "slug": "restaurant-cafe",
-    "icon": "fa-utensils",
-    "description": "مطاعم، كافيهات، مخابز — إنتاج من مواد خام ووصفات وبيع سريع",
-    "display_order": 3,
-    "is_active": true,
-    "features": {
-      "has_expiry_dates": true,
-      "has_batch_numbers": false,
-      "has_serial_numbers": false,
-      "has_weight_items": true,
-      "has_variants": false,
-      "has_services": true,
-      "has_manufacturing": true,
       "has_work_orders": false
     }
   }

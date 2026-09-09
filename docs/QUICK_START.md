@@ -1,4 +1,4 @@
-# 🚀 EnjazIMS - Quick Start
+# 🚀 Snake - Quick Start
 
 **دليل البدء السريع**
 

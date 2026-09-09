@@ -564,9 +564,9 @@ function saveSection(section, formId, btn) {
     .then(function (r) { return r.json(); })
     .then(function (data) {
         if (!data.success) throw new Error(data.message || 'تعذر الحفظ');
-        EnjazIMS.toast(data.message || 'تم الحفظ', 'success');
+        Snake.toast(data.message || 'تم الحفظ', 'success');
     })
-    .catch(function (err) { EnjazIMS.toast(err.message || 'حدث خطأ', 'error'); })
+    .catch(function (err) { Snake.toast(err.message || 'حدث خطأ', 'error'); })
     .finally(function () { btn.disabled = false; btn.innerHTML = original; });
 }
 
@@ -669,7 +669,7 @@ function saveTenantColor() {
 
     function uploadLogo(file) {
         if (file.size > 2 * 1024 * 1024) {
-            EnjazIMS.toast('حجم الملف يتجاوز 2 ميجابايت', 'error');
+            Snake.toast('حجم الملف يتجاوز 2 ميجابايت', 'error');
             input.value = '';
             return;
         }
@@ -712,9 +712,9 @@ function saveTenantColor() {
             }
             img.src = d.logo_url + '?t=' + Date.now();
             img.style.display = '';
-            EnjazIMS.toast(d.message, 'success');
+            Snake.toast(d.message, 'success');
         })
-        .catch(function (err) { EnjazIMS.toast(err.message || 'حدث خطأ', 'error'); })
+        .catch(function (err) { Snake.toast(err.message || 'حدث خطأ', 'error'); })
         .finally(function () {
             if (dropZone) dropZone.style.opacity = '';
             input.value = '';
@@ -723,7 +723,7 @@ function saveTenantColor() {
 
     function deleteLogo() {
         // placeholder — reload page or call delete API if exists
-        EnjazIMS.toast('لا تتوفر وظيفة الحذف حالياً', 'info');
+        Snake.toast('لا تتوفر وظيفة الحذف حالياً', 'info');
     }
 
     if (deleteBtn) deleteBtn.addEventListener('click', deleteLogo);

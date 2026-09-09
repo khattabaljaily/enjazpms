@@ -228,8 +228,8 @@ function submitReturnAction() {
 
 function showAlert(msg, type = 'danger') {
     const mapped = type === 'danger' ? 'error' : type;
-    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
-        EnjazIMS.toast(msg, mapped);
+    if (window.Snake && typeof Snake.toast === 'function') {
+        Snake.toast(msg, mapped);
         return;
     }
     console.warn(msg);

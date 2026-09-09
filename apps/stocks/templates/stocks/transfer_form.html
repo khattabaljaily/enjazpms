@@ -252,7 +252,7 @@ function searchItems(q) {
             `<button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
                 onclick='addLine(${JSON.stringify(item)})'>
                 <span>${item.name} <small class="text-muted">${item.sku}</small></span>
-                <span class="badge bg-secondary">${EnjazIMS.formatQuantity(item.available_qty)} ${item.unit}</span>
+                <span class="badge bg-secondary">${Snake.formatQuantity(item.available_qty)} ${item.unit}</span>
             </button>`
         ).join('');
     });

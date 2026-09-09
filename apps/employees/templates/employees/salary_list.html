@@ -328,9 +328,9 @@
 
     function updateTotals() {
         const checked = pendingItems.filter(i => i.checked);
-        document.getElementById('totAdv').textContent   = EnjazIMS.formatMoney(checked.filter(i => i.type === 'advance').reduce((s,i) => s + i.amount, 0));
-        document.getElementById('totBonus').textContent = EnjazIMS.formatMoney(checked.filter(i => i.type === 'bonus').reduce((s,i) => s + i.amount, 0));
-        document.getElementById('totDed').textContent   = EnjazIMS.formatMoney(checked.filter(i => i.type === 'deduction').reduce((s,i) => s + i.amount, 0));
+        document.getElementById('totAdv').textContent   = Snake.formatMoney(checked.filter(i => i.type === 'advance').reduce((s,i) => s + i.amount, 0));
+        document.getElementById('totBonus').textContent = Snake.formatMoney(checked.filter(i => i.type === 'bonus').reduce((s,i) => s + i.amount, 0));
+        document.getElementById('totDed').textContent   = Snake.formatMoney(checked.filter(i => i.type === 'deduction').reduce((s,i) => s + i.amount, 0));
     }
 
     function calcNet() {
@@ -339,7 +339,7 @@
         const bonuses    = checked.filter(i => i.type === 'bonus').reduce((s,i) => s + i.amount, 0);
         const advances   = checked.filter(i => i.type === 'advance').reduce((s,i) => s + i.amount, 0);
         const deductions = checked.filter(i => i.type === 'deduction').reduce((s,i) => s + i.amount, 0);
-        document.getElementById('salNetDisplay').textContent = EnjazIMS.formatMoney(base + bonuses - advances - deductions);
+        document.getElementById('salNetDisplay').textContent = Snake.formatMoney(base + bonuses - advances - deductions);
     }
 
     function renderPendingTable() {
@@ -365,7 +365,7 @@
                 <td style="padding:7px 6px;">${badge}</td>
                 <td style="padding:7px 6px;" class="small">${item.description || '—'}</td>
                 <td style="padding:7px 6px;" class="small text-muted">${item.date}</td>
-                <td style="padding:7px 10px;text-align:end;font-weight:600;${amtStyle}">${EnjazIMS.formatMoney(item.amount)}</td>
+                <td style="padding:7px 10px;text-align:end;font-weight:600;${amtStyle}">${Snake.formatMoney(item.amount)}</td>
             </tr>`;
         }).join('');
         updateTotals();
@@ -446,11 +446,11 @@
             { data: 'employee', render: v => `<span class="cxr-name">${v}</span>` },
             { data: 'period_start' },
             { data: 'period_end' },
-            { data: 'base_salary',       className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
-            { data: 'bonus',             className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
-            { data: 'advances_deducted', className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
-            { data: 'deductions',        className: 'text-end', render: v => EnjazIMS.formatMoney(v || 0) },
-            { data: 'total_due',         className: 'text-end fw-bold', render: v => EnjazIMS.formatMoney(v || 0) },
+            { data: 'base_salary',       className: 'text-end', render: v => Snake.formatMoney(v || 0) },
+            { data: 'bonus',             className: 'text-end', render: v => Snake.formatMoney(v || 0) },
+            { data: 'advances_deducted', className: 'text-end', render: v => Snake.formatMoney(v || 0) },
+            { data: 'deductions',        className: 'text-end', render: v => Snake.formatMoney(v || 0) },
+            { data: 'total_due',         className: 'text-end fw-bold', render: v => Snake.formatMoney(v || 0) },
             { data: 'treasury' },
             { data: 'status', render: v => fmtStatus(v) },
             {
@@ -539,9 +539,9 @@
         const end      = document.getElementById('salPeriodEnd').value;
         const method   = document.getElementById('salPaymentMethod').value;
         const treasury = document.getElementById('salTreasury').value;
-        if (!employee) { EnjazIMS.toast('الرجاء اختيار الموظف', 'error'); return; }
-        if (!start || !end) { EnjazIMS.toast('الرجاء تحديد فترة الراتب', 'error'); return; }
-        if (method === 'cash' && !treasury) { EnjazIMS.toast('الرجاء اختيار الخزينة للدفع النقدي', 'error'); return; }
+        if (!employee) { Snake.toast('الرجاء اختيار الموظف', 'error'); return; }
+        if (!start || !end) { Snake.toast('الرجاء تحديد فترة الراتب', 'error'); return; }
+        if (method === 'cash' && !treasury) { Snake.toast('الرجاء اختيار الخزينة للدفع النقدي', 'error'); return; }
 
         const checked = pendingItems.filter(function (i) { return i.checked; });
         const bonus            = checked.filter(i => i.type === 'bonus').reduce((s,i) => s + i.amount, 0);
@@ -576,12 +576,12 @@
         .then(r => r.json())
         .then(function (resp) {
             $btn.html(orig).prop('disabled', false);
-            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
+            if (!resp.success) { Snake.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
             salModal.hide();
             dt.ajax.reload(null, false);
-            EnjazIMS.toast('تم إنشاء كشف الراتب', 'success');
+            Snake.toast('تم إنشاء كشف الراتب', 'success');
         })
-        .catch(() => { $btn.html(orig).prop('disabled', false); EnjazIMS.toast('خطأ في الاتصال', 'error'); });
+        .catch(() => { $btn.html(orig).prop('disabled', false); Snake.toast('خطأ في الاتصال', 'error'); });
     });
 
     /* ── View ── */
@@ -598,7 +598,7 @@
                             <div class="cx-info-card-icon ${item.type === 'bonus' ? 'cx-info-icon--success' : 'cx-info-icon--danger'}"><i class="fas ${item.type === 'bonus' ? 'fa-star' : 'fa-minus-circle'}"></i></div>
                             <div class="cx-info-card-content">
                                 <span class="cx-info-card-label">${item.type_display} — ${item.date}</span>
-                                <span class="cx-info-card-value">${item.description} (${EnjazIMS.formatMoney(item.amount)})</span>
+                                <span class="cx-info-card-value">${item.description} (${Snake.formatMoney(item.amount)})</span>
                             </div>
                         </div>
                     `).join('')
@@ -607,23 +607,23 @@
                 $('#viewSalBody').html(`
                     <div class="cx-info-card">
                         <div class="cx-info-card-icon cx-info-icon--balance"><i class="fas fa-wallet"></i></div>
-                        <div class="cx-info-card-content"><span class="cx-info-card-label">الراتب الأساسي</span><span class="cx-info-card-value">${EnjazIMS.formatMoney(d.base_salary)}</span></div>
+                        <div class="cx-info-card-content"><span class="cx-info-card-label">الراتب الأساسي</span><span class="cx-info-card-value">${Snake.formatMoney(d.base_salary)}</span></div>
                     </div>
                     <div class="cx-info-card">
                         <div class="cx-info-card-icon" style="background:#dcfce7"><i class="fas fa-star" style="color:#16a34a"></i></div>
-                        <div class="cx-info-card-content"><span class="cx-info-card-label">الحوافز</span><span class="cx-info-card-value cx-money--pos">${EnjazIMS.formatMoney(d.bonus)}</span></div>
+                        <div class="cx-info-card-content"><span class="cx-info-card-label">الحوافز</span><span class="cx-info-card-value cx-money--pos">${Snake.formatMoney(d.bonus)}</span></div>
                     </div>
                     <div class="cx-info-card">
                         <div class="cx-info-card-icon" style="background:#fef3c7"><i class="fas fa-hand-holding-dollar" style="color:#d97706"></i></div>
-                        <div class="cx-info-card-content"><span class="cx-info-card-label">السلف المخصومة</span><span class="cx-info-card-value cx-money--neg">${EnjazIMS.formatMoney(d.advances_deducted)}</span></div>
+                        <div class="cx-info-card-content"><span class="cx-info-card-label">السلف المخصومة</span><span class="cx-info-card-value cx-money--neg">${Snake.formatMoney(d.advances_deducted)}</span></div>
                     </div>
                     <div class="cx-info-card">
                         <div class="cx-info-card-icon" style="background:#fee2e2"><i class="fas fa-minus-circle" style="color:#dc2626"></i></div>
-                        <div class="cx-info-card-content"><span class="cx-info-card-label">خصومات أخرى</span><span class="cx-info-card-value cx-money--neg">${EnjazIMS.formatMoney(d.deductions)}</span></div>
+                        <div class="cx-info-card-content"><span class="cx-info-card-label">خصومات أخرى</span><span class="cx-info-card-value cx-money--neg">${Snake.formatMoney(d.deductions)}</span></div>
                     </div>
                     <div class="cx-info-card cx-info-card--money">
                         <div class="cx-info-card-icon cx-info-icon--credit"><i class="fas fa-coins"></i></div>
-                        <div class="cx-info-card-content"><span class="cx-info-card-label">الصافي المستحق</span><span class="cx-info-card-value cx-info-card-value--money">${EnjazIMS.formatMoney(d.total_due)}</span></div>
+                        <div class="cx-info-card-content"><span class="cx-info-card-label">الصافي المستحق</span><span class="cx-info-card-value cx-info-card-value--money">${Snake.formatMoney(d.total_due)}</span></div>
                     </div>
                     <div class="cx-info-card">
                         <div class="cx-info-card-icon cx-info-icon--status"><i class="fas fa-circle-check"></i></div>
@@ -636,7 +636,7 @@
                 `);
                 viewModal.show();
             })
-            .catch(() => EnjazIMS.toast('تعذر تحميل البيانات', 'error'));
+            .catch(() => Snake.toast('تعذر تحميل البيانات', 'error'));
     });
 
     /* ── Pay ── */
@@ -665,12 +665,12 @@
         .then(r => r.json())
         .then(function (resp) {
             $btn.html(orig).prop('disabled', false);
-            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الدفع', 'error'); return; }
+            if (!resp.success) { Snake.toast(resp.message || 'تعذر الدفع', 'error'); return; }
             payModal.hide();
             dt.ajax.reload(null, false);
-            EnjazIMS.toast('تم دفع الراتب بنجاح', 'success');
+            Snake.toast('تم دفع الراتب بنجاح', 'success');
         })
-        .catch(() => { $btn.html(orig).prop('disabled', false); EnjazIMS.toast('خطأ في الاتصال', 'error'); });
+        .catch(() => { $btn.html(orig).prop('disabled', false); Snake.toast('خطأ في الاتصال', 'error'); });
     });
 
     /* ── Cancel ── */
@@ -700,12 +700,12 @@
         .then(r => r.json())
         .then(function (resp) {
             $btn.html(orig).prop('disabled', false);
-            if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر الإلغاء', 'error'); return; }
+            if (!resp.success) { Snake.toast(resp.message || 'تعذر الإلغاء', 'error'); return; }
             cancelModal.hide();
             dt.ajax.reload(null, false);
-            EnjazIMS.toast('تم إلغاء كشف الراتب', 'success');
+            Snake.toast('تم إلغاء كشف الراتب', 'success');
         })
-        .catch(() => { $btn.html(orig).prop('disabled', false); EnjazIMS.toast('خطأ في الاتصال', 'error'); });
+        .catch(() => { $btn.html(orig).prop('disabled', false); Snake.toast('خطأ في الاتصال', 'error'); });
     });
 
 })();

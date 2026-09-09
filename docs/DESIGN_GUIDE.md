@@ -1,4 +1,4 @@
-# 🎨 EnjazIMS - Design System
+# 🎨 Snake - Design System
 
 **نظام تصميم حديث | Modern, Tailwind-Inspired**
 

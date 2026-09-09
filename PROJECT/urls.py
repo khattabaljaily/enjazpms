@@ -1,5 +1,5 @@
 """
-URL configuration for EnjazIMS project.
+URL configuration for Snake project.
 """
 from django.contrib import admin
 from django.urls import path, include

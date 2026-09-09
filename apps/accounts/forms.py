@@ -220,14 +220,14 @@ class Step2BusinessForm(forms.Form):
         apply_arabic_error_messages(self)
         for field in self.fields.values():
             field.widget.attrs['autocomplete'] = 'off'
-    
+        default_business_type = BusinessType.objects.filter(is_active=True).order_by('display_order').first()
+        if default_business_type:
+            self.fields['business_type'].initial = default_business_type.pk
+
     business_type = forms.ModelChoiceField(
         label='نوع النشاط التجاري',
         queryset=BusinessType.objects.filter(is_active=True),
-        widget=forms.Select(attrs={
-            'class': 'form-select'
-        }),
-        empty_label='-- اختر نوع النشاط --'
+        widget=forms.HiddenInput(),
     )
     
     business_name = forms.CharField(

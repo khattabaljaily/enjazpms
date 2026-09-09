@@ -140,17 +140,17 @@ const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2];
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.ret-sold-qty, .ret-returned-qty, .ret-returnable-qty').forEach(el => {
         const raw = el.dataset.value ?? el.textContent;
-        el.textContent = EnjazIMS.formatQuantity(raw);
+        el.textContent = Snake.formatQuantity(raw);
     });
 
     document.querySelectorAll('.ret-unit-price').forEach(el => {
         const raw = el.dataset.value ?? el.textContent;
-        el.textContent = EnjazIMS.formatMoney(raw);
+        el.textContent = Snake.formatMoney(raw);
     });
 
     document.querySelectorAll('.ret-line-total').forEach(el => {
         el.dataset.total = '0';
-        el.textContent = EnjazIMS.formatMoney(0);
+        el.textContent = Snake.formatMoney(0);
     });
 
     document.querySelectorAll('.ret-qty').forEach(input => {
@@ -161,28 +161,28 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function updateReturnTotal(input) {
-    const qty = EnjazIMS.parseNumber(input.value);
-    const price = EnjazIMS.parseNumber(input.dataset.price);
+    const qty = Snake.parseNumber(input.value);
+    const price = Snake.parseNumber(input.dataset.price);
     const total = qty * price;
     const lineCell = input.closest('tr').querySelector('.ret-line-total');
     lineCell.dataset.total = String(total);
-    lineCell.textContent = EnjazIMS.formatMoney(total);
+    lineCell.textContent = Snake.formatMoney(total);
     recalcReturnTotal();
 }
 
 function recalcReturnTotal() {
     let total = 0;
     document.querySelectorAll('.ret-line-total').forEach(td => {
-        total += EnjazIMS.parseNumber(td.dataset.total || 0);
+        total += Snake.parseNumber(td.dataset.total || 0);
     });
-    document.getElementById('returnGrandTotal').textContent = EnjazIMS.formatMoney(total);
+    document.getElementById('returnGrandTotal').textContent = Snake.formatMoney(total);
 }
 
 function submitReturn(action) {
     const lines = [];
     document.querySelectorAll('#returnLinesBody tr').forEach(row => {
         const lineId = row.querySelector('.inv-line-id')?.value;
-        const qty = EnjazIMS.parseNumber(row.querySelector('.ret-qty')?.value);
+        const qty = Snake.parseNumber(row.querySelector('.ret-qty')?.value);
         if (lineId && qty > 0) {
             lines.push({ invoice_line_id: lineId, returned_quantity: qty });
         }
@@ -210,8 +210,8 @@ function submitReturn(action) {
 
 function showAlert(msg, type = 'danger') {
     const mapped = type === 'danger' ? 'error' : type;
-    if (window.EnjazIMS && typeof EnjazIMS.toast === 'function') {
-        EnjazIMS.toast(msg, mapped);
+    if (window.Snake && typeof Snake.toast === 'function') {
+        Snake.toast(msg, mapped);
         return;
     }
     console.warn(msg);

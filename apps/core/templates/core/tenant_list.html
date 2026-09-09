@@ -872,7 +872,7 @@
         $('#admin_full_name, #admin_username, #admin_email, #admin_password, #admin_password2').val('');
         $('#admin_username').prop('readonly', false);
         $('#adminUserSectionNote').text('سيُنشأ حساب مدير تلقائياً');
-        EnjazIMS.clearFormErrors($form);
+        Snake.clearFormErrors($form);
     }
 
     function openCreate() {
@@ -901,7 +901,7 @@
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function (resp) {
-                if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
                 $idInput.val(d.id);
                 $('#id_name').val(d.name || '');
@@ -937,35 +937,35 @@
                 $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
                 tenantModal.show();
             },
-            error: function () { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+            error: function () { Snake.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
     /* ── Save ── */
     $form.on('submit', function (e) {
         e.preventDefault();
-        EnjazIMS.clearFormErrors($form);
+        Snake.clearFormErrors($form);
         const id  = $idInput.val();
         const url = id ? apiUrl(urlUpdate, id) : urlCreate;
         const orig = $submitBtn.html();
-        EnjazIMS.showLoading($submitBtn);
+        Snake.showLoading($submitBtn);
         $.ajax({
             url, method: 'POST', data: $form.serialize(),
             success: function (resp) {
-                EnjazIMS.hideLoading($submitBtn, orig);
+                Snake.hideLoading($submitBtn, orig);
                 if (resp.success) {
                     tenantModal.hide();
                     dt.ajax.reload(null, false);
-                    EnjazIMS.toast(resp.message || 'تم الحفظ', 'success');
+                    Snake.toast(resp.message || 'تم الحفظ', 'success');
                     return;
                 }
-                EnjazIMS.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
+                Snake.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
             },
             error: function (xhr) {
-                EnjazIMS.hideLoading($submitBtn, orig);
+                Snake.hideLoading($submitBtn, orig);
                 const r = xhr.responseJSON || {};
-                if (r.errors) EnjazIMS.renderFieldErrors($form, r.errors);
-                EnjazIMS.showFormError($form, r.message || 'حدث خطأ');
+                if (r.errors) Snake.renderFieldErrors($form, r.errors);
+                Snake.showFormError($form, r.message || 'حدث خطأ');
             }
         });
     });
@@ -975,7 +975,7 @@
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function (resp) {
-                if (!resp.success) { EnjazIMS.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
 
                 const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
@@ -1043,7 +1043,7 @@
                 $('#viewEditTenantBtn').data('id', d.id);
                 viewModal.show();
             },
-            error: function () { EnjazIMS.toast('تعذر تحميل البيانات', 'error'); }
+            error: function () { Snake.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
@@ -1073,12 +1073,12 @@
                     suspendModal.hide();
                     viewModal.hide();
                     dt.ajax.reload(null, false);
-                    EnjazIMS.toast(resp.message || 'تم التحديث', 'success');
+                    Snake.toast(resp.message || 'تم التحديث', 'success');
                     return;
                 }
-                EnjazIMS.toast(resp.message || 'تعذرت العملية', 'error');
+                Snake.toast(resp.message || 'تعذرت العملية', 'error');
             },
-            error: function (xhr) { EnjazIMS.toast(_xhrMsg(xhr, 'تعذرت العملية'), 'error'); }
+            error: function (xhr) { Snake.toast(_xhrMsg(xhr, 'تعذرت العملية'), 'error'); }
         });
     });
 
@@ -1093,12 +1093,12 @@
                 if (resp.success) {
                     approveModal.hide();
                     dt.ajax.reload(null, false);
-                    EnjazIMS.toast(resp.message || 'تم الاعتماد', 'success');
+                    Snake.toast(resp.message || 'تم الاعتماد', 'success');
                     return;
                 }
-                EnjazIMS.toast(resp.message || 'تعذرت العملية', 'error');
+                Snake.toast(resp.message || 'تعذرت العملية', 'error');
             },
-            error: function (xhr) { EnjazIMS.toast(_xhrMsg(xhr, 'تعذرت العملية'), 'error'); }
+            error: function (xhr) { Snake.toast(_xhrMsg(xhr, 'تعذرت العملية'), 'error'); }
         });
     });
 
@@ -1113,15 +1113,15 @@
                 if (resp.success) {
                     deleteModal.hide();
                     dt.ajax.reload(null, false);
-                    EnjazIMS.toast(resp.message || 'تم الحذف', 'success');
+                    Snake.toast(resp.message || 'تم الحذف', 'success');
                     return;
                 }
-                EnjazIMS.toast(resp.message || 'تعذر الحذف', 'error');
+                Snake.toast(resp.message || 'تعذر الحذف', 'error');
             },
             error: function (xhr) {
                 let msg = 'تعذر الحذف';
                 try { msg = JSON.parse(xhr.responseText).message || msg; } catch (e) {}
-                EnjazIMS.toast(msg, 'error');
+                Snake.toast(msg, 'error');
             }
         });
     });
@@ -1188,7 +1188,7 @@
                 if (resp.success) {
                     renewModal.hide();
                     dt.ajax.reload(null, false);
-                    EnjazIMS.toast(resp.message || 'تم تجديد الاشتراك بنجاح', 'success');
+                    Snake.toast(resp.message || 'تم تجديد الاشتراك بنجاح', 'success');
                 } else {
                     $('#renewError').removeClass('d-none').text(resp.error || 'حدث خطأ');
                 }

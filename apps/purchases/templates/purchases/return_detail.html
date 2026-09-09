@@ -68,13 +68,13 @@
   function postAction(url){
     fetch(url, { method:'POST', headers:{ 'X-CSRFToken': getCookie('csrftoken') }})
       .then(r=>r.json())
-      .then(data=>{ if(!data.success){ EnjazIMS.toast(data.message || 'تعذر التنفيذ', 'error'); return; } EnjazIMS.toast(data.message || 'تمت العملية', 'success'); window.location.reload(); })
-      .catch(()=>EnjazIMS.toast('تعذر الاتصال بالخادم', 'error'));
+      .then(data=>{ if(!data.success){ Snake.toast(data.message || 'تعذر التنفيذ', 'error'); return; } Snake.toast(data.message || 'تمت العملية', 'success'); window.location.reload(); })
+      .catch(()=>Snake.toast('تعذر الاتصال بالخادم', 'error'));
   }
   const c=document.getElementById('confirmBtn');
   const x=document.getElementById('cancelBtn');
-  if(c){ c.addEventListener('click', async function(){ if(!await EnjazIMS.confirmAction('تأكيد المرتجع وتطبيق التأثيرات؟', 'تأكيد المرتجع')) return; postAction("{% url 'purchases:return_confirm' purchase_return.id %}"); }); }
-  if(x){ x.addEventListener('click', async function(){ if(!await EnjazIMS.confirmAction('إلغاء المرتجع وعكس التأثيرات؟', 'إلغاء المرتجع')) return; postAction("{% url 'purchases:return_cancel' purchase_return.id %}"); }); }
+  if(c){ c.addEventListener('click', async function(){ if(!await Snake.confirmAction('تأكيد المرتجع وتطبيق التأثيرات؟', 'تأكيد المرتجع')) return; postAction("{% url 'purchases:return_confirm' purchase_return.id %}"); }); }
+  if(x){ x.addEventListener('click', async function(){ if(!await Snake.confirmAction('إلغاء المرتجع وعكس التأثيرات؟', 'إلغاء المرتجع')) return; postAction("{% url 'purchases:return_cancel' purchase_return.id %}"); }); }
 })();
 </script>
 {% endblock %}
