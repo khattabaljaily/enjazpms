@@ -42,6 +42,16 @@ urlpatterns = [
     path('stocktakes/<int:pk>/confirm/', views.stocktake_confirm_ajax, name='stocktake_confirm'),
     path('stocktakes/<int:pk>/cancel/', views.stocktake_cancel_ajax, name='stocktake_cancel'),
 
+    path('destructions/', views.destruction_list, name='destruction_list'),
+    path('destructions/api/', views.destruction_table_api, name='destruction_api'),
+    path('destructions/create/', views.destruction_create, name='destruction_create'),
+    path('destructions/api/item-batches/', views.destruction_item_batches_api, name='destruction_item_batches_api'),
+    path('destructions/<int:pk>/', views.destruction_detail, name='destruction_detail'),
+    path('destructions/<int:pk>/add-line/', views.destruction_add_line_ajax, name='destruction_add_line'),
+    path('destructions/<int:pk>/lines/<int:line_id>/remove/', views.destruction_remove_line_ajax, name='destruction_remove_line'),
+    path('destructions/<int:pk>/confirm/', views.destruction_confirm_ajax, name='destruction_confirm'),
+    path('destructions/<int:pk>/cancel/', views.destruction_cancel_ajax, name='destruction_cancel'),
+
     # Manufacturing Orders
     path('manufacturing/', views.manufacturing_list, name='manufacturing_list'),
     path('manufacturing/api/', views.manufacturing_table_api, name='manufacturing_api'),

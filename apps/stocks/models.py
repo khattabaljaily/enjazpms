@@ -11,6 +11,8 @@ Stocks Models - نماذج المخازن
   - كل مخزن جديد يحصل تلقائياً على سجل StockQuantity (كمية=0) لكل منتجات الـ tenant
   - هذا يتم عبر Django Signals في ملف signals.py
 """
+from decimal import Decimal
+
 from django.db import models
 from django.db.models import Sum
 from apps.core.models import TenantMixin
@@ -133,6 +135,7 @@ class StockQuantity(TenantMixin):
       - فواتير البيع   (StockMovement type=out)
       - تحويلات المخزن (StockMovement type=transfer)
       - تسوية الجرد    (StockMovement type=adjustment)
+      - إتلاف مخزون    (StockMovement type=destruction_out)
     لا يُسمح بتعديل الكمية مباشرة من هذا الجدول.
     """
 
@@ -367,6 +370,120 @@ class StocktakeLine(TenantMixin):
     @property
     def difference(self):
         return self.counted_quantity - self.system_quantity
+
+
+# ============================================
+# STOCK DESTRUCTION (إتلاف الأصناف منتهية الصلاحية)
+# ============================================
+
+class StockDestruction(TenantMixin):
+    """
+    سجل إتلاف موثّق لأصناف منتهية الصلاحية أو تالفة — متطلب رقابي شائع للصيدليات.
+    - draft:     جاري تجهيز السجل
+    - confirmed: تم تطبيق الإتلاف على المخزون (لا يمكن التراجع)
+    - cancelled: أُلغي السجل بدون أي تأثير على المخزون
+    """
+    STATUS_CHOICES = (
+        ('draft',     'مسودة'),
+        ('confirmed', 'مؤكد'),
+        ('cancelled', 'ملغي'),
+    )
+    REASON_CHOICES = (
+        ('expired', 'منتهي الصلاحية'),
+        ('damaged', 'تالف'),
+        ('recalled', 'مسحوب من الشركة المصنعة'),
+        ('other', 'أخرى'),
+    )
+
+    destruction_number = models.CharField('رقم السجل', max_length=30, blank=True)
+    destruction_date    = models.DateField('تاريخ الإتلاف')
+    stock                = models.ForeignKey(
+        Stock, on_delete=models.PROTECT,
+        related_name='destructions', verbose_name='المخزن'
+    )
+    status = models.CharField('الحالة', max_length=12, choices=STATUS_CHOICES, default='draft')
+    reason = models.CharField('السبب', max_length=20, choices=REASON_CHOICES, default='expired')
+    witness_name = models.CharField(
+        'اسم الشاهد / المسؤول', max_length=200, blank=True,
+        help_text='اسم الشخص الذي شهد عملية الإتلاف (متطلب رقابي شائع)'
+    )
+    reference_number = models.CharField('رقم مرجعي / محضر', max_length=100, blank=True)
+    notes = models.TextField('ملاحظات', blank=True)
+
+    confirmed_by = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='confirmed_destructions', verbose_name='أُكِّد بواسطة'
+    )
+    confirmed_at = models.DateTimeField('تاريخ التأكيد', null=True, blank=True)
+
+    class Meta:
+        db_table = 'stock_destructions'
+        verbose_name = 'سجل إتلاف'
+        verbose_name_plural = 'سجلات الإتلاف'
+        ordering = ['-destruction_date', '-id']
+        indexes = [
+            models.Index(fields=['tenant', 'status']),
+            models.Index(fields=['tenant', '-destruction_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.destruction_number} — {self.stock.name}"
+
+    def save(self, *args, **kwargs):
+        if not self.destruction_number:
+            last = (
+                StockDestruction.objects.filter(tenant=self.tenant)
+                .exclude(destruction_number='')
+                .order_by('-id').first()
+            )
+            next_num = 1
+            if last and last.destruction_number.startswith('DES-'):
+                try:
+                    next_num = int(last.destruction_number.split('-')[-1]) + 1
+                except ValueError:
+                    pass
+            self.destruction_number = f"DES-{next_num:05d}"
+        super().save(*args, **kwargs)
+
+    @property
+    def total_quantity(self):
+        return sum((l.quantity for l in self.lines.all()), Decimal('0'))
+
+    @property
+    def total_value(self):
+        return sum((l.quantity * l.unit_cost_snapshot for l in self.lines.all()), Decimal('0'))
+
+
+class StockDestructionLine(TenantMixin):
+    destruction = models.ForeignKey(
+        StockDestruction, on_delete=models.CASCADE,
+        related_name='lines', verbose_name='سجل الإتلاف'
+    )
+    item = models.ForeignKey(
+        'items.Item', on_delete=models.PROTECT,
+        related_name='destruction_lines', verbose_name='المنتج'
+    )
+    batch = models.ForeignKey(
+        'items.ItemBatch', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='destruction_lines', verbose_name='الدفعة'
+    )
+    batch_number_snapshot = models.CharField('رقم الدفعة', max_length=100, blank=True)
+    expiry_date_snapshot = models.DateField('تاريخ انتهاء الصلاحية', null=True, blank=True)
+    quantity = models.DecimalField('الكمية', max_digits=12, decimal_places=4)
+    unit_cost_snapshot = models.DecimalField('تكلفة الوحدة', max_digits=14, decimal_places=2, default=0)
+    notes = models.CharField('ملاحظات', max_length=300, blank=True)
+
+    class Meta:
+        db_table = 'stock_destruction_lines'
+        verbose_name = 'بند إتلاف'
+        verbose_name_plural = 'بنود الإتلاف'
+
+    def __str__(self):
+        return f"{self.item.name} × {self.quantity}"
+
+    @property
+    def line_value(self):
+        return self.quantity * self.unit_cost_snapshot
 
 
 # ============================================

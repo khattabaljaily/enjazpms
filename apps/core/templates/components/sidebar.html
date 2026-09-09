@@ -235,6 +235,9 @@
                 <li><a href="{% url 'stocks:quantities_list' %}" class="nav-sublink"><i class="fas fa-cubes me-2"></i>أرصدة المخزون</a></li>
                 <li><a href="{% url 'stocks:transfer_list' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>تحويلات المخزون</a></li>
                 <li><a href="{% url 'stocks:stocktake_list' %}" class="nav-sublink"><i class="fas fa-clipboard-list me-2"></i>جرد المخزون</a></li>
+                {% if tenant_capabilities|has_capability:"has_expiry_alerts" %}
+                <li><a href="{% url 'stocks:destruction_list' %}" class="nav-sublink"><i class="fas fa-fire-burner me-2"></i>سجلات الإتلاف</a></li>
+                {% endif %}
                 {% if tenant_capabilities|has_capability:"has_manufacturing" %}
                 <li><a href="{% url 'stocks:manufacturing_list' %}" class="nav-sublink"><i class="fas fa-industry me-2"></i>أوامر التصنيع</a></li>
                 {% endif %}

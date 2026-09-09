@@ -1,0 +1,120 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:#b45309">
+                <i class="fas fa-fire-burner"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">سجل إتلاف جديد</h1>
+                <p class="cx-hero-desc">أدخل بيانات الإتلاف — ستضيف الأصناف المُتلَفة في الخطوة التالية</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="cx-panel p-4">
+            <div class="cx-panel-header mb-3">
+                <h3 class="cx-panel-title"><i class="fas fa-warehouse me-2"></i>بيانات السجل</h3>
+            </div>
+
+            <div class="mb-3">
+                <label class="cx-label">المخزن <span class="text-danger">*</span></label>
+                <select id="stockId" class="cx-input">
+                    <option value="">— اختر المخزن —</option>
+                    {% for s in stocks %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="cx-label">تاريخ الإتلاف</label>
+                <input type="date" id="destructionDate" class="cx-input" value="{{ today }}">
+            </div>
+
+            <div class="mb-3">
+                <label class="cx-label">السبب</label>
+                <select id="reason" class="cx-input">
+                    {% for key, label in reasons %}
+                    <option value="{{ key }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="cx-label">اسم الشاهد / المسؤول</label>
+                <input type="text" id="witnessName" class="cx-input" placeholder="اختياري">
+            </div>
+
+            <div class="mb-3">
+                <label class="cx-label">رقم مرجعي / محضر</label>
+                <input type="text" id="referenceNumber" class="cx-input" placeholder="اختياري">
+            </div>
+
+            <div class="mb-3">
+                <label class="cx-label">ملاحظات</label>
+                <textarea id="destructionNotes" class="cx-input" rows="3"></textarea>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'stocks:destruction_list' %}" class="cx-btn-secondary">إلغاء</a>
+                <button id="btnCreate" class="cx-btn-add">
+                    <i class="fas fa-arrow-left me-1"></i> متابعة لإضافة الأصناف
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('btnCreate').addEventListener('click', async function () {
+    const stockId = document.getElementById('stockId').value;
+    if (!stockId) {
+        Snake.toast('يرجى اختيار المخزن', 'warning');
+        return;
+    }
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الإنشاء…';
+
+    const r = await fetch("{% url 'stocks:destruction_create' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({
+            stock_id: stockId,
+            destruction_date: document.getElementById('destructionDate').value,
+            reason: document.getElementById('reason').value,
+            witness_name: document.getElementById('witnessName').value,
+            reference_number: document.getElementById('referenceNumber').value,
+            notes: document.getElementById('destructionNotes').value,
+        }),
+    });
+    const d = await r.json();
+    if (d.success) {
+        window.location = d.redirect;
+    } else {
+        Snake.toast(d.message || 'حدث خطأ', 'error');
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-arrow-left me-1"></i> متابعة لإضافة الأصناف';
+    }
+});
+</script>
+{% endblock %}

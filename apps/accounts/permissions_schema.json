@@ -72,6 +72,12 @@
         "change_branches": "تعديل بيانات الفرع",
         "delete_branches": "حذف فرع"
     },
+    "إتلاف المخزون": {
+        "view_stock_destructions": "عرض سجلات الإتلاف",
+        "add_stock_destructions": "إنشاء سجل إتلاف وإضافة بنود",
+        "confirm_stock_destructions": "تأكيد سجل إتلاف وتطبيقه على المخزون",
+        "cancel_stock_destructions": "إلغاء سجل إتلاف"
+    },
     "المبيعات": {
         "add_sales": "إنشاء فاتورة مبيعات جديدة",
         "change_sales": "تعديل وتأكيد فاتورة مبيعات",

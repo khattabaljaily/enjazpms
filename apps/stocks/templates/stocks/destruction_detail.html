@@ -1,0 +1,453 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/inv_detail.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/print_invoice.css' %}?v=2.6">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="doc-hero" data-status="{{ destruction.status }}">
+    <div class="doc-hero-inner">
+        <div class="doc-hero-left">
+            <div class="doc-hero-icon" style="background:#b45309">
+                <i class="fas fa-fire-burner"></i>
+            </div>
+            <div>
+                <div class="doc-hero-number">{{ destruction.destruction_number }}</div>
+                <div class="doc-hero-meta">
+                    <span class="doc-hero-meta-item"><i class="fas fa-calendar-day"></i>{{ destruction.destruction_date }}</span>
+                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ destruction.stock.name }}</span>
+                    <span class="doc-hero-meta-item"><i class="fas fa-circle-info"></i>{{ destruction.get_reason_display }}</span>
+                </div>
+                <div class="doc-pills">
+                    {% if destruction.status == 'draft' %}
+                    <span class="doc-pill" style="background:rgba(240,173,78,.15);color:#b07d00"><i class="fas fa-spinner"></i> مسودة</span>
+                    {% elif destruction.status == 'confirmed' %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> مؤكد</span>
+                    {% else %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-ban"></i> ملغي</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="doc-hero-actions">
+            <a href="{% url 'stocks:destruction_list' %}" class="cx-btn-secondary">
+                <i class="fas fa-arrow-right"></i><span>العودة</span>
+            </a>
+            {% if destruction.status == 'draft' %}
+            <button class="cx-btn-secondary" data-require-perm="add_stock_destructions" onclick="openAddLineModal()">
+                <i class="fas fa-plus"></i><span>إضافة صنف</span>
+            </button>
+            <button class="cx-btn-add" data-require-perm="confirm_stock_destructions" onclick="doConfirm()">
+                <i class="fas fa-check"></i><span>تأكيد وتطبيق</span>
+            </button>
+            <button class="cx-btn-danger" data-require-perm="cancel_stock_destructions" onclick="doCancel()">
+                <i class="fas fa-ban"></i><span>إلغاء</span>
+            </button>
+            {% elif destruction.status == 'confirmed' %}
+            <button class="cx-btn-secondary" onclick="window.print()">
+                <i class="fas fa-print"></i><span>طباعة الشهادة</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="cx-stats-inline mt-2">
+    <span class="cx-stat-badge cx-stat-badge--primary">
+        <i class="fas fa-list"></i>
+        <strong>{{ destruction.lines.count }}</strong><span>صنف</span>
+    </span>
+    <span class="cx-stat-badge cx-stat-badge--warning">
+        <i class="fas fa-cubes"></i>
+        <strong>{{ destruction.total_quantity|floatformat:"-2" }}</strong><span>إجمالي الكمية</span>
+    </span>
+    <span class="cx-stat-badge cx-stat-badge--danger">
+        <i class="fas fa-sack-dollar"></i>
+        <strong>{{ destruction.total_value|money }}</strong><span>قيمة الخسارة التقديرية</span>
+    </span>
+</div>
+
+{% if destruction.witness_name or destruction.reference_number or destruction.notes %}
+<div class="cx-panel mt-3 p-3">
+    <div class="row g-2">
+        {% if destruction.witness_name %}<div class="col-md-4"><span class="text-muted small">اسم الشاهد:</span> <strong>{{ destruction.witness_name }}</strong></div>{% endif %}
+        {% if destruction.reference_number %}<div class="col-md-4"><span class="text-muted small">رقم مرجعي:</span> <strong>{{ destruction.reference_number }}</strong></div>{% endif %}
+        {% if destruction.notes %}<div class="col-md-4"><span class="text-muted small">ملاحظات:</span> {{ destruction.notes }}</div>{% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="cx-panel mt-3">
+    <div class="cx-panel-header p-4 pb-2">
+        <h5 class="fw-semibold mb-0"><i class="fas fa-list me-2" style="color:#b45309;"></i>الأصناف المُتلَفة</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="cx-table" id="linesTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>الصنف</th>
+                    <th>الدفعة</th>
+                    <th>تاريخ الانتهاء</th>
+                    <th class="text-end">الكمية</th>
+                    <th class="text-end">تكلفة الوحدة</th>
+                    <th class="text-end">القيمة</th>
+                    <th>ملاحظات</th>
+                    {% if destruction.status == 'draft' %}<th></th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for ln in destruction.lines.all %}
+                <tr data-line-id="{{ ln.id }}">
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ ln.item.name }}</strong></td>
+                    <td>{{ ln.batch_number_snapshot|default:"—" }}</td>
+                    <td>{{ ln.expiry_date_snapshot|default:"—" }}</td>
+                    <td class="text-end">{{ ln.quantity|floatformat:"-4" }}</td>
+                    <td class="text-end">{{ ln.unit_cost_snapshot|money }}</td>
+                    <td class="text-end">{{ ln.line_value|money }}</td>
+                    <td class="text-muted">{{ ln.notes|default:"—" }}</td>
+                    {% if destruction.status == 'draft' %}
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeLine({{ ln.id }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center text-muted py-4">لا توجد أصناف — استخدم "إضافة صنف" لبدء التسجيل</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- Add line modal -->
+<div class="modal fade" id="addLineModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-main">
+                <div class="cx-modal-header">
+                    <h5 class="cx-modal-title"><i class="fas fa-plus-circle me-2"></i>إضافة صنف للإتلاف</h5>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cx-modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="cx-label">الصنف <sup class="cx-required">*</sup></label>
+                            <div style="position:relative">
+                                <input type="text" id="lineItemSearch" class="cx-input" placeholder="ابحث باسم الصنف أو SKU…" autocomplete="off">
+                                <div id="lineItemResults" style="display:none;position:absolute;z-index:9999;background:var(--surface);border:1px solid var(--border-color);border-radius:10px;max-height:220px;overflow-y:auto;width:100%;box-shadow:0 8px 24px rgba(0,0,0,.12);top:calc(100% + 4px)"></div>
+                            </div>
+                            <input type="hidden" id="lineItemId">
+                            <div id="lineItemSelected" class="mt-1" style="font-size:.82rem;color:var(--primary)"></div>
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label">الدفعة</label>
+                            <select id="lineBatch" class="cx-input" disabled>
+                                <option value="">— اختر الصنف أولاً —</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="cx-label">الكمية <sup class="cx-required">*</sup></label>
+                            <input type="number" id="lineQty" class="cx-input" value="1" step="0.0001" min="0.0001">
+                        </div>
+                        <div class="col-6">
+                            <label class="cx-label">تكلفة الوحدة</label>
+                            <input type="text" id="lineUnitCost" class="cx-input" readonly>
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label">ملاحظات</label>
+                            <input type="text" id="lineNotes" class="cx-input" placeholder="اختياري">
+                        </div>
+                    </div>
+                    <div id="addLineError" class="alert alert-danger d-none mt-3"></div>
+                </div>
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="cx-btn-primary" id="addLineBtn" onclick="doAddLine()">
+                        <i class="fas fa-plus me-1"></i> إضافة
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">تأكيد الإتلاف وتطبيقه على المخزون</h5></div>
+            <div class="modal-body">
+                <p>سيتم خصم كميات الأصناف المذكورة من مخزون <strong>{{ destruction.stock.name }}</strong> بشكل نهائي.</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-triangle-exclamation me-2"></i>
+                    هذا الإجراء لا يمكن التراجع عنه.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cx-btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button class="cx-btn-add" id="btnConfirmOk"><i class="fas fa-check me-1"></i>تأكيد وتطبيق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Printable certificate -->
+<div class="print-doc" dir="rtl">
+    <div class="print-head">
+        <div class="print-brand">
+            {% if tenant.logo %}
+                <img src="{{ tenant.logo.url }}" alt="{{ tenant.name }}" class="print-logo">
+            {% else %}
+                <img src="{% static 'img/logo/logo-161616.png' %}" alt="{{ tenant.name }}" class="print-logo">
+            {% endif %}
+            <div>
+                <div class="print-brand-name">{{ tenant.name }}</div>
+                {% if tenant.phone %}<div style="font-size:9px;color:#6b7280;margin-top:2px;">{{ tenant.phone }}</div>{% endif %}
+                {% if tenant.address %}<div style="font-size:9px;color:#6b7280;margin-top:1px;">{{ tenant.address }}{% if tenant.city %}، {{ tenant.city }}{% endif %}</div>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="print-head-bottom">
+        <h1 class="print-doc-heading">شهادة إتلاف مخزون</h1>
+        <div class="print-meta print-meta--inline">
+            <div class="print-meta-row"><span>رقم السجل</span><strong>{{ destruction.destruction_number }}</strong></div>
+            <div class="print-meta-row"><span>التاريخ</span><strong>{{ destruction.destruction_date }}</strong></div>
+            <div class="print-meta-row"><span>المخزن</span><strong>{{ destruction.stock.name }}</strong></div>
+            <div class="print-meta-row"><span>السبب</span><strong>{{ destruction.get_reason_display }}</strong></div>
+        </div>
+    </div>
+
+    <section class="print-box customer-box">
+        <div class="print-box-header"><h3 class="print-box-title">بيانات الإتلاف</h3></div>
+        <div class="print-info-grid">
+            <div class="print-info-item">
+                <span class="print-info-label">اسم الشاهد / المسؤول</span>
+                <span class="print-info-value">{{ destruction.witness_name|default:"—" }}</span>
+            </div>
+            <div class="print-info-item">
+                <span class="print-info-label">رقم مرجعي / محضر</span>
+                <span class="print-info-value">{{ destruction.reference_number|default:"—" }}</span>
+            </div>
+            {% if destruction.notes %}
+            <div class="print-info-item full-width">
+                <span class="print-info-label">ملاحظات</span>
+                <span class="print-info-value notes-text">{{ destruction.notes }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="section-separator" aria-hidden="true"></div>
+
+    <section class="print-box items-table">
+        <div class="print-box-header"><h3 class="print-box-title">الأصناف المُتلَفة</h3></div>
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th class="col-sn">#</th>
+                    <th class="col-product">الصنف</th>
+                    <th>رقم الدفعة</th>
+                    <th>تاريخ الانتهاء</th>
+                    <th class="col-qty">الكمية</th>
+                    <th class="col-price">تكلفة الوحدة</th>
+                    <th class="col-total">القيمة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ln in destruction.lines.all %}
+                <tr>
+                    <td class="col-sn">{{ forloop.counter }}</td>
+                    <td class="col-product">{{ ln.item.name }}</td>
+                    <td>{{ ln.batch_number_snapshot|default:"—" }}</td>
+                    <td>{{ ln.expiry_date_snapshot|default:"—" }}</td>
+                    <td class="col-qty">{{ ln.quantity|floatformat:"-4" }}</td>
+                    <td class="col-price">{{ ln.unit_cost_snapshot|money }}</td>
+                    <td class="col-total">{{ ln.line_value|money }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <div class="print-summary">
+        <div class="print-totals">
+            <div class="print-total-row print-total-row--grand">
+                <span>إجمالي قيمة الخسارة التقديرية</span>
+                <span>{{ destruction.total_value|money }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-separator" aria-hidden="true"></div>
+
+    <div class="print-info-grid" style="margin-top:40px;">
+        <div class="print-info-item">
+            <span class="print-info-label">توقيع المسؤول عن الإتلاف</span>
+            <span class="print-info-value">&nbsp;</span>
+        </div>
+        <div class="print-info-item">
+            <span class="print-info-label">توقيع الشاهد</span>
+            <span class="print-info-value">&nbsp;</span>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+const DESTRUCTION_ID = {{ destruction.pk }};
+const STOCK_ID = {{ destruction.stock_id }};
+const ADD_LINE_URL = "{% url 'stocks:destruction_add_line' destruction.pk %}";
+const CONFIRM_URL = "{% url 'stocks:destruction_confirm' destruction.pk %}";
+const CANCEL_URL = "{% url 'stocks:destruction_cancel' destruction.pk %}";
+const REMOVE_LINE_URL_TPL = "{% url 'stocks:destruction_remove_line' destruction.pk 0 %}";
+const ITEM_SEARCH_URL = "{% url 'items:search_api' %}";
+const BATCHES_URL = "{% url 'stocks:destruction_item_batches_api' %}";
+
+const addLineModal = new bootstrap.Modal(document.getElementById('addLineModal'));
+let selectedItemCost = '0.00';
+
+function renderItemResults(results) {
+    if (!results.length) {
+        document.getElementById('lineItemResults').innerHTML = '<div style="padding:.6rem .75rem;color:var(--text-secondary);font-size:.85rem">لا توجد نتائج</div>';
+        document.getElementById('lineItemResults').style.display = 'block';
+        return;
+    }
+    const html = results.map(r =>
+        `<div class="destr-item-result" data-id="${r.id}" data-name="${r.name}" data-cost="${r.cost_price || 0}"
+              style="padding:.55rem .75rem;cursor:pointer;border-bottom:1px solid var(--border-light);"
+              onmouseenter="this.style.background='var(--bg-secondary)'" onmouseleave="this.style.background=''">
+            <strong style="font-size:.9rem">${r.name}</strong>
+            <span style="font-size:.78rem;color:var(--text-secondary);margin-right:.4rem">${r.sku || ''}</span>
+        </div>`
+    ).join('');
+    document.getElementById('lineItemResults').innerHTML = html;
+    document.getElementById('lineItemResults').style.display = 'block';
+}
+
+document.getElementById('lineItemSearch').addEventListener('focus', function () {
+    if (document.getElementById('lineItemId').value) return;
+    fetch(ITEM_SEARCH_URL + '?q=&min_chars=0').then(r => r.json()).then(d => renderItemResults(d.results || []));
+});
+let itemSearchTimer;
+document.getElementById('lineItemSearch').addEventListener('input', function () {
+    clearTimeout(itemSearchTimer);
+    const q = this.value.trim();
+    itemSearchTimer = setTimeout(() => {
+        fetch(ITEM_SEARCH_URL + '?q=' + encodeURIComponent(q) + '&min_chars=0').then(r => r.json()).then(d => renderItemResults(d.results || []));
+    }, 250);
+});
+document.addEventListener('click', function (e) {
+    const result = e.target.closest('.destr-item-result');
+    if (result) {
+        const id = result.dataset.id, name = result.dataset.name, cost = result.dataset.cost;
+        document.getElementById('lineItemId').value = id;
+        document.getElementById('lineItemSearch').value = name;
+        document.getElementById('lineItemSelected').innerHTML = '<i class="fas fa-check-circle me-1"></i>' + name;
+        document.getElementById('lineItemResults').style.display = 'none';
+        selectedItemCost = cost;
+        document.getElementById('lineUnitCost').value = cost;
+        loadBatches(id);
+        return;
+    }
+    if (!e.target.closest('#lineItemSearch, #lineItemResults')) {
+        document.getElementById('lineItemResults').style.display = 'none';
+    }
+});
+
+function loadBatches(itemId) {
+    const $sel = document.getElementById('lineBatch');
+    $sel.innerHTML = '<option value="">— جاري التحميل —</option>';
+    fetch(BATCHES_URL + '?item_id=' + itemId + '&stock_id=' + STOCK_ID).then(r => r.json()).then(d => {
+        const batches = d.batches || [];
+        $sel.innerHTML = '<option value="">— بدون دفعة محددة —</option>' +
+            batches.map(b => `<option value="${b.id}">${b.batch_number} — ${b.expiry_date || 'بدون تاريخ'} (متبقي تقديري: ${b.quantity_remaining})${b.is_expired ? ' — منتهية' : ''}</option>`).join('');
+        $sel.disabled = false;
+    });
+}
+
+function openAddLineModal() {
+    document.getElementById('addLineError').classList.add('d-none');
+    document.getElementById('lineItemId').value = '';
+    document.getElementById('lineItemSearch').value = '';
+    document.getElementById('lineItemSelected').innerHTML = '';
+    document.getElementById('lineItemResults').style.display = 'none';
+    document.getElementById('lineQty').value = '1';
+    document.getElementById('lineUnitCost').value = '';
+    document.getElementById('lineBatch').innerHTML = '<option value="">— اختر الصنف أولاً —</option>';
+    document.getElementById('lineBatch').disabled = true;
+    document.getElementById('lineNotes').value = '';
+    addLineModal.show();
+}
+
+async function doAddLine() {
+    const itemId = document.getElementById('lineItemId').value;
+    const errEl = document.getElementById('addLineError');
+    if (!itemId) { errEl.textContent = 'يرجى اختيار الصنف'; errEl.classList.remove('d-none'); return; }
+    const qty = parseFloat(document.getElementById('lineQty').value);
+    if (!qty || qty <= 0) { errEl.textContent = 'يرجى إدخال كمية صحيحة'; errEl.classList.remove('d-none'); return; }
+
+    const r = await fetch(ADD_LINE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({
+            item_id: itemId,
+            batch_id: document.getElementById('lineBatch').value || null,
+            quantity: qty,
+            notes: document.getElementById('lineNotes').value,
+        }),
+    });
+    const d = await r.json();
+    if (d.success) {
+        location.reload();
+    } else {
+        errEl.textContent = d.message || 'حدث خطأ';
+        errEl.classList.remove('d-none');
+    }
+}
+
+async function removeLine(lineId) {
+    if (!await Snake.confirmAction('حذف هذا البند من السجل؟', 'تأكيد الحذف')) return;
+    const url = REMOVE_LINE_URL_TPL.replace('/0/remove/', '/' + lineId + '/remove/');
+    const r = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': CSRF } });
+    const d = await r.json();
+    if (d.success) location.reload();
+}
+
+function doConfirm() {
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+    document.getElementById('btnConfirmOk').onclick = async function () {
+        this.disabled = true;
+        const r = await fetch(CONFIRM_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF } });
+        const d = await r.json();
+        if (d.success) location.reload();
+        else { Snake.toast(d.message || 'حدث خطأ', 'error'); this.disabled = false; }
+    };
+}
+
+async function doCancel() {
+    if (!await Snake.confirmAction('إلغاء سجل الإتلاف بدون تطبيق؟', 'تأكيد الإلغاء')) return;
+    const r = await fetch(CANCEL_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF } });
+    const d = await r.json();
+    if (d.success) location.reload();
+    else Snake.toast(d.message || 'حدث خطأ', 'error');
+}
+</script>
+{% endblock %}

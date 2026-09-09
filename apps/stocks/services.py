@@ -191,6 +191,62 @@ def confirm_stocktake(stocktake):
 
 
 # ─────────────────────────────────────────────
+# Stock Destruction services (إتلاف المخزون)
+# ─────────────────────────────────────────────
+
+@transaction.atomic
+def confirm_stock_destruction(destruction, user):
+    """
+    يطبّق الإتلاف: ينقص StockQuantity.quantity (مصدر الحقيقة)، ويحدّث
+    ItemBatch.quantity_remaining كأفضل تقدير متاح (راجع ملاحظة الدفعات
+    في apps/stocks/models.py — الكمية المتبقية بالدفعة غير مضمونة الدقة
+    لأنها لا تُنقَص عند البيع)، ويسجّل StockMovement لكل بند.
+    """
+    if destruction.status != 'draft':
+        raise ValueError('يمكن تأكيد المسودات فقط')
+
+    lines = list(destruction.lines.select_related('item', 'batch'))
+    if not lines:
+        raise ValueError('لا توجد بنود في سجل الإتلاف')
+
+    for line in lines:
+        sq = _get_sq(destruction.tenant, destruction.stock, line.item)
+        if sq.quantity < line.quantity:
+            raise ValueError(
+                f'الكمية المتاحة من «{line.item.name}» ({sq.quantity:g}) أقل من كمية الإتلاف المطلوبة ({line.quantity:g}).'
+            )
+        sq.quantity -= line.quantity
+        sq.save(update_fields=['quantity', 'updated_at'])
+
+        if line.batch_id:
+            line.batch.quantity_remaining = max(line.batch.quantity_remaining - line.quantity, Decimal('0'))
+            line.batch.save(update_fields=['quantity_remaining'])
+
+        StockMovement.objects.create(
+            tenant=destruction.tenant, item=line.item, stock=destruction.stock,
+            movement_type='destruction_out', direction='out',
+            quantity=line.quantity, unit_cost=line.unit_cost_snapshot,
+            movement_date=destruction.destruction_date,
+            reference_type='stock_destruction', reference_id=destruction.id,
+            balance_after=sq.quantity,
+            notes=f'إتلاف {destruction.destruction_number} — {destruction.get_reason_display()}'
+                  + (f' — دفعة {line.batch_number_snapshot}' if line.batch_number_snapshot else ''),
+        )
+
+    destruction.status = 'confirmed'
+    destruction.confirmed_by = user
+    destruction.confirmed_at = timezone.now()
+    destruction.save(update_fields=['status', 'confirmed_by', 'confirmed_at', 'updated_at'])
+
+
+def cancel_stock_destruction(destruction):
+    if destruction.status == 'confirmed':
+        raise ValueError('لا يمكن إلغاء سجل إتلاف مؤكد')
+    destruction.status = 'cancelled'
+    destruction.save(update_fields=['status', 'updated_at'])
+
+
+# ─────────────────────────────────────────────
 # Manufacturing Order Services
 # ─────────────────────────────────────────────
 

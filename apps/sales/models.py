@@ -575,6 +575,7 @@ class StockMovement(TenantMixin):
         ('adjustment_out',     'تسوية — خروج'),
         ('opening_in',         'رصيد افتتاحي'),
         ('opening_correction', 'تصحيح رصيد افتتاحي'),
+        ('destruction_out',    'إتلاف — خروج'),
     )
 
     DIRECTION_CHOICES = (

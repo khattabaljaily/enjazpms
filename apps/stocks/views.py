@@ -19,9 +19,13 @@ from django.utils import timezone
 from apps.sales.models import StockMovement
 
 from .forms import StockForm
-from .models import Stock, StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine, ManufacturingOrder
+from .models import Stock, StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine, ManufacturingOrder, StockDestruction, StockDestructionLine
 from .reports import StocksReportGenerator
-from .services import confirm_stock_transfer, cancel_stock_transfer, confirm_stocktake, confirm_manufacturing_order, cancel_manufacturing_order
+from .services import (
+    confirm_stock_transfer, cancel_stock_transfer, confirm_stocktake,
+    confirm_manufacturing_order, cancel_manufacturing_order,
+    confirm_stock_destruction, cancel_stock_destruction,
+)
 
 
 def _ensure_tenant(request):
@@ -1628,6 +1632,270 @@ def stocktake_cancel_ajax(request, pk):
         return JsonResponse({'success': True})
     except Stocktake.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'الجرد غير موجود'}, status=404)
+
+
+# ============================================================
+# STOCK DESTRUCTION — سجلات إتلاف المخزون
+# ============================================================
+
+@login_required
+@require_permission('view_stock_destructions')
+def destruction_list(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    qs = StockDestruction.objects.for_tenant(tenant)
+    stats = {
+        'total':     qs.count(),
+        'draft':     qs.filter(status='draft').count(),
+        'confirmed': qs.filter(status='confirmed').count(),
+        'cancelled': qs.filter(status='cancelled').count(),
+    }
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    return render(request, 'stocks/destruction_list.html', {'stats': stats, 'stocks': stocks})
+
+
+@login_required
+@require_permission('view_stock_destructions')
+def destruction_table_api(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'error': 'no tenant'}, status=400)
+
+    draw     = int(request.GET.get('draw', 1))
+    start    = int(request.GET.get('start', 0))
+    length   = int(request.GET.get('length', 25))
+    search   = request.GET.get('search[value]', '').strip()
+    status_f = request.GET.get('status', '').strip()
+
+    qs = StockDestruction.objects.for_tenant(tenant).select_related('stock')
+    total = qs.count()
+
+    if status_f:
+        qs = qs.filter(status=status_f)
+    if search:
+        qs = qs.filter(Q(destruction_number__icontains=search) | Q(stock__name__icontains=search))
+
+    filtered = qs.count()
+    qs = qs[start:start + length]
+
+    STATUS_LABELS = {'draft': 'مسودة', 'confirmed': 'مؤكد', 'cancelled': 'ملغي'}
+    STATUS_COLORS = {'draft': 'warning', 'confirmed': 'success', 'cancelled': 'danger'}
+
+    rows = []
+    for d in qs:
+        badge = (
+            f'<span class="badge bg-{STATUS_COLORS.get(d.status,"secondary")}">'
+            f'{STATUS_LABELS.get(d.status, d.status)}</span>'
+        )
+        rows.append({
+            'id': d.id,
+            'destruction_number': d.destruction_number,
+            'destruction_date': str(d.destruction_date),
+            'stock': d.stock.name,
+            'reason': d.get_reason_display(),
+            'total_lines': d.lines.count(),
+            'status_badge': badge,
+            'status': d.status,
+        })
+
+    return JsonResponse({'draw': draw, 'recordsTotal': total, 'recordsFiltered': filtered, 'data': rows})
+
+
+@login_required
+@require_permission('add_stock_destructions')
+def destruction_create(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            data = request.POST.dict()
+
+        stock_id = data.get('stock_id')
+        ddate    = data.get('destruction_date') or str(timezone.localdate())
+        reason   = data.get('reason') or 'expired'
+        witness  = data.get('witness_name', '')
+        ref      = data.get('reference_number', '')
+        notes    = data.get('notes', '')
+
+        if not stock_id:
+            return JsonResponse({'success': False, 'errors': {'stock_id': ['المخزن مطلوب']}}, status=400)
+        try:
+            stock = Stock.objects.for_tenant(tenant).get(pk=stock_id)
+        except Stock.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=400)
+
+        destruction = StockDestruction.objects.create(
+            tenant=tenant, stock=stock, destruction_date=ddate, reason=reason,
+            witness_name=witness, reference_number=ref, notes=notes,
+            created_by=request.user, updated_by=request.user,
+        )
+        log_activity(request, 'إنشاء سجل إتلاف', f"{destruction.destruction_number} — {stock.name}", 'create')
+        return JsonResponse({'success': True, 'id': destruction.id,
+                             'redirect': f'/stocks/destructions/{destruction.id}/'})
+
+    context = {'stocks': stocks, 'today': str(timezone.localdate()), 'reasons': StockDestruction.REASON_CHOICES}
+    return render(request, 'stocks/destruction_form.html', context)
+
+
+@login_required
+@require_permission('view_stock_destructions')
+def destruction_detail(request, pk):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+    try:
+        destruction = (
+            StockDestruction.objects.for_tenant(tenant)
+            .select_related('stock')
+            .prefetch_related('lines__item', 'lines__batch')
+            .get(pk=pk)
+        )
+    except StockDestruction.DoesNotExist:
+        from django.http import Http404
+        raise Http404
+    return render(request, 'stocks/destruction_detail.html', {'destruction': destruction, 'tenant': tenant})
+
+
+@login_required
+@require_permission('view_stock_destructions')
+def destruction_item_batches_api(request):
+    """يُعيد دفعات صنف معيّن في مخزن معيّن — لاختيار الدفعة وقت إضافة بند إتلاف."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    item_id = request.GET.get('item_id')
+    stock_id = request.GET.get('stock_id')
+    if not item_id or not stock_id:
+        return JsonResponse({'success': True, 'batches': []})
+
+    from apps.items.models import ItemBatch
+    batches = ItemBatch.objects.filter(
+        tenant=tenant, item_id=item_id, stock_id=stock_id
+    ).order_by('expiry_date')
+
+    return JsonResponse({'success': True, 'batches': [
+        {
+            'id': b.id, 'batch_number': b.batch_number or 'بدون رقم',
+            'expiry_date': b.expiry_date.isoformat() if b.expiry_date else None,
+            'quantity_remaining': str(b.quantity_remaining), 'is_expired': b.is_expired,
+        }
+        for b in batches
+    ]})
+
+
+@login_required
+@require_permission('add_stock_destructions')
+def destruction_add_line_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        destruction = StockDestruction.objects.for_tenant(tenant).get(pk=pk, status='draft')
+    except StockDestruction.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'السجل غير موجود أو مؤكد بالفعل'}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'message': 'بيانات غير صالحة'}, status=400)
+
+    from apps.items.models import Item, ItemBatch
+
+    item_id = data.get('item_id')
+    batch_id = data.get('batch_id') or None
+    notes = data.get('notes', '')
+    try:
+        quantity = Decimal(str(data.get('quantity')))
+        if quantity <= 0:
+            raise InvalidOperation
+    except (InvalidOperation, TypeError, ValueError):
+        return JsonResponse({'success': False, 'message': 'الكمية غير صالحة'}, status=400)
+
+    try:
+        item = Item.objects.for_tenant(tenant).get(pk=item_id)
+    except Item.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'الصنف غير موجود'}, status=400)
+
+    batch = None
+    batch_number_snapshot = ''
+    expiry_date_snapshot = None
+    if batch_id:
+        try:
+            batch = ItemBatch.objects.get(tenant=tenant, pk=batch_id, item=item, stock=destruction.stock)
+            batch_number_snapshot = batch.batch_number
+            expiry_date_snapshot = batch.expiry_date
+        except ItemBatch.DoesNotExist:
+            batch = None
+
+    line = StockDestructionLine.objects.create(
+        tenant=tenant, destruction=destruction, item=item, batch=batch,
+        batch_number_snapshot=batch_number_snapshot, expiry_date_snapshot=expiry_date_snapshot,
+        quantity=quantity, unit_cost_snapshot=item.cost_price or Decimal('0'), notes=notes,
+    )
+    return JsonResponse({'success': True, 'line': {
+        'id': line.id, 'item_name': item.name, 'batch_number': batch_number_snapshot or '—',
+        'expiry_date': expiry_date_snapshot.isoformat() if expiry_date_snapshot else None,
+        'quantity': str(line.quantity), 'unit_cost': str(line.unit_cost_snapshot),
+        'notes': line.notes,
+    }})
+
+
+@login_required
+@require_permission('add_stock_destructions')
+def destruction_remove_line_ajax(request, pk, line_id):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        destruction = StockDestruction.objects.for_tenant(tenant).get(pk=pk, status='draft')
+    except StockDestruction.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'السجل غير موجود أو مؤكد بالفعل'}, status=404)
+
+    StockDestructionLine.objects.filter(tenant=tenant, destruction=destruction, pk=line_id).delete()
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_permission('confirm_stock_destructions')
+def destruction_confirm_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        destruction = StockDestruction.objects.for_tenant(tenant).get(pk=pk)
+        confirm_stock_destruction(destruction, request.user)
+        log_activity(request, 'تأكيد سجل إتلاف', destruction.destruction_number, 'update')
+        return JsonResponse({'success': True, 'message': 'تم تأكيد الإتلاف وتطبيقه على المخزون'})
+    except StockDestruction.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'السجل غير موجود'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+
+@login_required
+@require_permission('cancel_stock_destructions')
+def destruction_cancel_ajax(request, pk):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    try:
+        destruction = StockDestruction.objects.for_tenant(tenant).get(pk=pk)
+        cancel_stock_destruction(destruction)
+        log_activity(request, 'إلغاء سجل إتلاف', destruction.destruction_number, 'delete')
+        return JsonResponse({'success': True})
+    except StockDestruction.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'السجل غير موجود'}, status=404)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
 
 # ============================================================
