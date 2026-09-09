@@ -16,11 +16,11 @@
 .rd-back-btn {
   display: inline-flex; align-items: center; gap: .4rem;
   padding: .4rem .85rem; border-radius: 8px;
-  background: #f4f3ff; color: #6366f1; border: 1px solid #c7d2fe;
+  background: #f4f3ff; color: #c9840f; border: 1px solid #ffd699;
   font-size: .82rem; font-weight: 600; text-decoration: none;
   transition: all .15s; white-space: nowrap;
 }
-.rd-back-btn:hover { background: #eef2ff; color: #4338ca; }
+.rd-back-btn:hover { background: #fef3e2; color: #8f5c0a; }
 .rd-nav-sep { color: #d1d5db; font-size: .8rem; }
 .rd-nav-req { font-weight: 800; color: #1e293b; font-size: .92rem; }
 
@@ -51,7 +51,7 @@
 /* ─── Panel base ─── */
 .rd-panel {
   background: #fff; border-radius: 14px;
-  border: 1px solid #f0eeff; box-shadow: 0 2px 14px rgba(99,102,241,.06);
+  border: 1px solid #f0eeff; box-shadow: 0 2px 14px rgba(246,168,33,.06);
   overflow: hidden; margin-bottom: 1.1rem;
 }
 .rd-panel:last-child { margin-bottom: 0; }
@@ -60,7 +60,7 @@
   display: flex; align-items: center; gap: .5rem;
   font-weight: 700; font-size: .88rem; color: #1e293b;
 }
-.rd-panel-head i { color: #6366f1; font-size: .85rem; }
+.rd-panel-head i { color: #c9840f; font-size: .85rem; }
 .rd-panel-body { padding: 1.25rem 1.35rem; }
 
 /* ─── Agent / Customer info ─── */
@@ -77,7 +77,7 @@
   display: flex; align-items: center; justify-content: center;
   font-size: 1rem; font-weight: 800; color: #fff;
 }
-.rd-person-avatar--agent    { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+.rd-person-avatar--agent    { background: linear-gradient(135deg, #c9840f, #ff8a3d); }
 .rd-person-avatar--customer { background: linear-gradient(135deg, #06b6d4, #0891b2); }
 .rd-person-label { font-size: .7rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .18rem; }
 .rd-person-name  { font-weight: 700; font-size: .9rem; color: #1e293b; }
@@ -115,7 +115,7 @@
 .rd-item-cell { display: flex; align-items: center; gap: .65rem; }
 .rd-item-icon {
   width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
-  background: #eef2ff; color: #6366f1;
+  background: #fef3e2; color: #c9840f;
   display: flex; align-items: center; justify-content: center; font-size: .72rem;
 }
 .rd-item-name { font-weight: 600; color: #1e293b; font-size: .87rem; }
@@ -124,11 +124,11 @@
 .rd-total-bar {
   display: flex; align-items: center; justify-content: space-between;
   padding: .95rem 1.2rem;
-  background: linear-gradient(135deg, rgba(99,102,241,.05), rgba(139,92,246,.03));
-  border-top: 2px solid rgba(99,102,241,.1);
+  background: linear-gradient(135deg, rgba(246,168,33,.05), rgba(139,92,246,.03));
+  border-top: 2px solid rgba(246,168,33,.1);
 }
 .rd-total-label { font-size: .82rem; font-weight: 600; color: #64748b; }
-.rd-total-value { font-size: 1.2rem; font-weight: 800; color: #4338ca; }
+.rd-total-value { font-size: 1.2rem; font-weight: 800; color: #8f5c0a; }
 
 /* ═══════════════════ ACTION SIDEBAR ═══════════════════ */
 
@@ -161,14 +161,14 @@
 }
 .rd-form-label { font-size: .8rem; font-weight: 700; color: #374151; margin-bottom: .38rem; display: block; }
 .rd-select {
-  width: 100%; border: 1.5px solid #e0dcff; border-radius: 10px;
+  width: 100%; border: 1.5px solid #fef3e2; border-radius: 10px;
   padding: .62rem 1rem; font-size: .87rem;
   font-family: 'Cairo', sans-serif; color: #1e293b;
-  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236366f1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat left 1rem center;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c9840f' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat left 1rem center;
   -webkit-appearance: none; outline: none;
   transition: border-color .18s;
 }
-.rd-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+.rd-select:focus { border-color: #c9840f; box-shadow: 0 0 0 3px rgba(246,168,33,.1); }
 
 .rd-btn-approve {
   width: 100%; margin-top: .85rem;
@@ -382,7 +382,7 @@
         <div class="rd-meta-row">
           <div class="rd-meta-item">
             <div class="rd-meta-label">رقم الطلب</div>
-            <div class="rd-meta-value"><code style="color:#6366f1;background:#eef2ff;padding:.1rem .4rem;border-radius:5px;font-size:.85rem;">{{ req.request_number }}</code></div>
+            <div class="rd-meta-value"><code style="color:#c9840f;background:#fef3e2;padding:.1rem .4rem;border-radius:5px;font-size:.85rem;">{{ req.request_number }}</code></div>
           </div>
           <div class="rd-meta-item">
             <div class="rd-meta-label">تاريخ الطلب</div>
@@ -390,7 +390,7 @@
           </div>
           <div class="rd-meta-item">
             <div class="rd-meta-label">إجمالي الطلب</div>
-            <div class="rd-meta-value" style="color:#4338ca;" dir="ltr">{{ req.total_amount|money }}</div>
+            <div class="rd-meta-value" style="color:#8f5c0a;" dir="ltr">{{ req.total_amount|money }}</div>
           </div>
         </div>
 
@@ -407,7 +407,7 @@
     <div class="rd-panel">
       <div class="rd-panel-head">
         <i class="fas fa-boxes"></i> المنتجات المطلوبة
-        <span style="margin-right:auto;background:#eef2ff;color:#4338ca;border-radius:100px;font-size:.7rem;font-weight:700;padding:.12rem .5rem;">{{ lines|length }} صنف</span>
+        <span style="margin-right:auto;background:#fef3e2;color:#8f5c0a;border-radius:100px;font-size:.7rem;font-weight:700;padding:.12rem .5rem;">{{ lines|length }} صنف</span>
       </div>
       <div style="overflow-x:auto;">
         <table class="rd-table">
@@ -433,7 +433,7 @@
               </td>
               <td class="text-end" dir="ltr" style="color:#64748b;font-size:.84rem;">{{ line.unit_price|money }}</td>
               <td class="text-end" style="font-weight:700;">× {{ line.quantity|floatformat:0 }}</td>
-              <td class="text-end" dir="ltr" style="font-weight:800;color:#4338ca;">{{ line.line_total|money }}</td>
+              <td class="text-end" dir="ltr" style="font-weight:800;color:#8f5c0a;">{{ line.line_total|money }}</td>
             </tr>
             {% endfor %}
           </tbody>

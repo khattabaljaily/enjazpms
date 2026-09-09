@@ -255,6 +255,11 @@ class TenantCapabilities(models.Model):
     has_manufacturing = models.BooleanField('التصنيع والوصفات من مواد خام', default=False)
     has_work_orders = models.BooleanField('أوامر العمل', default=False)
 
+    # نموذج البيع (تجزئة مقابل توزيع بالجملة)
+    has_pos = models.BooleanField('نقطة البيع (POS)', default=True)
+    has_sales_invoice = models.BooleanField('إنشاء فاتورة مبيعات يدوياً', default=False)
+    has_agents_module = models.BooleanField('المناديب ومندوبو المبيعات', default=False)
+
     created_at = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True)
     updated_at = models.DateTimeField('تاريخ التحديث', auto_now=True)
 
@@ -279,6 +284,9 @@ class TenantCapabilities(models.Model):
             has_services=features.get('has_services', False),
             has_manufacturing=features.get('has_manufacturing', False),
             has_work_orders=features.get('has_work_orders', False),
+            has_pos=features.get('has_pos', True),
+            has_sales_invoice=features.get('has_sales_invoice', False),
+            has_agents_module=features.get('has_agents_module', False),
         )
 
 
@@ -299,7 +307,7 @@ class Settings(models.Model):
     # Invoice Settings
     invoice_prefix = models.CharField('بادئة الفاتورة', max_length=10, default='INV')
     invoice_footer = models.TextField('تذييل الفاتورة', blank=True)
-    invoice_color = models.CharField('لون الفاتورة', max_length=7, default='#6366f1')
+    invoice_color = models.CharField('لون الفاتورة', max_length=7, default='#c9840f')
     print_sale_invoice = models.BooleanField('طباعة فاتورة البيع', default=True)
     print_purchase_invoice = models.BooleanField('طباعة فاتورة الشراء', default=True)
     print_agent_name = models.BooleanField('طباعة اسم المندوب في الفاتورة', default=False)
@@ -358,7 +366,7 @@ class PlatformSettings(models.Model):
     platform_tagline = models.CharField('الشعار النصي', max_length=200, blank=True)
     platform_logo    = models.ImageField('الشعار', upload_to='platform/', blank=True, null=True)
     platform_favicon = models.ImageField('الأيقونة', upload_to='platform/', blank=True, null=True)
-    primary_color    = models.CharField('اللون الأساسي', max_length=7, default='#6366f1')
+    primary_color    = models.CharField('اللون الأساسي', max_length=7, default='#c9840f')
     footer_text      = models.CharField('نص الفوتر', max_length=300, blank=True)
 
     # ── وضع الصيانة ─────────────────────────────
@@ -736,7 +744,7 @@ class SocialMediaPost(models.Model):
         ('comprehensive',  'منشور شامل'),
         ('problem',        'مشكلة'),
         ('feature',        'ميزة'),
-        ('business_type',  'حسب نوع النشاط'),
+        ('business_type',  'حسب نمط الصيدلية'),
         ('trust',          'ثقة وأمان'),
         ('objection',      'معالجة اعتراض'),
         ('tip',            'نصيحة تجارية'),

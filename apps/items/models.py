@@ -1,10 +1,7 @@
 """
-Items Models - نماذج المنتجات والأصناف
-مصمم ليعمل مع جميع أنواع الأنشطة التجارية:
-  - صيدلية:          track_expiry, track_batch
-  - إلكترونيات:      track_serial
-  - سوبرماركت:       track_expiry, barcode
-  - شركة طبية/توزيع: track_batch, track_serial
+Items Models - نماذج الأدوية والأصناف
+مصمم لإدارة مخزون الصيدليات: تتبع تواريخ الصلاحية (track_expiry)
+والدُفعات (track_batch) لكل دواء ومستحضر.
 """
 from django.db import models
 from django.utils.text import slugify
@@ -119,12 +116,9 @@ class Unit(TenantMixin):
 
 class Item(TenantMixin):
     """
-    المنتج الأساسي - مشترك بين جميع أنواع الأنشطة التجارية.
+    الدواء أو المنتج الأساسي في مخزون الصيدلية.
 
-    الحقول المشروطة (تظهر/تُفعَّل حسب نوع النشاط التجاري):
-      track_expiry  → صيدليات، أغذية، مواد كيميائية
-      track_batch   → صناعات، أدوية، أغذية
-      track_serial  → إلكترونيات، أجهزة طبية
+    track_expiry / track_batch: تتبع تاريخ الصلاحية ورقم الدفعة لكل دواء.
     """
 
     ITEM_TYPE_CHOICES = (
@@ -206,12 +200,10 @@ class Item(TenantMixin):
         'الحد الأقصى للمخزون', max_digits=12, decimal_places=4, default=0
     )
 
-    # ------ خيارات التتبع (مشروطة بنوع النشاط) ------
-    # الصيدليات، الأغذية، المواد الكيميائية
+    # ------ خيارات التتبع ------
     track_expiry = models.BooleanField(
         'تتبع تاريخ الانتهاء', default=False
     )
-    # الصناعات، الأدوية، الأغذية
     track_batch = models.BooleanField(
         'تتبع رقم الدفعة / الباتش', default=False
     )

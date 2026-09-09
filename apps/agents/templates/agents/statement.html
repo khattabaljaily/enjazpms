@@ -10,7 +10,7 @@
 {% block content %}
 <div class="cx-scene printable-scene">
 
-    <div class="rpt-hero" style="background:linear-gradient(135deg,#6366f1,#818cf8);">
+    <div class="rpt-hero" style="background:linear-gradient(135deg,#c9840f,#f6a821);">
         <div class="rpt-hero-inner">
             <div class="rpt-hero-left">
                 <div class="rpt-hero-icon"><i class="fas fa-file-invoice-dollar"></i></div>
@@ -46,7 +46,7 @@
                 <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="rpt-filter-btn" style="background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;border:none;border-radius:8px;padding:.5rem 1.2rem;font-weight:600;width:100%;cursor:pointer;">
+                <button type="submit" class="rpt-filter-btn" style="background:linear-gradient(135deg,#c9840f,#f6a821);color:#fff;border:none;border-radius:8px;padding:.5rem 1.2rem;font-weight:600;width:100%;cursor:pointer;">
                     <i class="fas fa-search me-1"></i>عرض
                 </button>
             </div>
@@ -78,9 +78,9 @@
     </div>
 
     <div class="rpt-panel">
-        <div class="rpt-panel-header" style="background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(129,140,248,.04));">
+        <div class="rpt-panel-header" style="background:linear-gradient(135deg,rgba(246,168,33,.06),rgba(129,140,248,.04));">
             <h3 class="rpt-panel-title">
-                <i class="fas fa-table me-2" style="color:#6366f1;"></i>كشف حساب: {{ report.agent.name }}
+                <i class="fas fa-table me-2" style="color:#c9840f;"></i>كشف حساب: {{ report.agent.name }}
                 <span style="font-size:.78rem; opacity:.7; margin-right:.5rem;">{{ start_date }} — {{ end_date }}</span>
             </h3>
         </div>
@@ -98,11 +98,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr style="background:rgba(99,102,241,.08); font-weight:700; border-bottom:2px solid rgba(99,102,241,.2);">
+                        <tr style="background:rgba(246,168,33,.08); font-weight:700; border-bottom:2px solid rgba(246,168,33,.2);">
                             <td class="text-muted">{{ start_date }}</td>
-                            <td><span class="badge" style="background:rgba(99,102,241,.15);color:#6366f1;font-size:.75rem;border-radius:6px;padding:.25rem .6rem;">رصيد أول المدة</span></td>
-                            <td class="text-end fw-bold" style="color:#6366f1;">{{ report.opening_balance|money }}</td>
-                            <td class="text-end fw-bold" style="color:#6366f1;">{{ report.opening_balance|money }}</td>
+                            <td><span class="badge" style="background:rgba(246,168,33,.15);color:#c9840f;font-size:.75rem;border-radius:6px;padding:.25rem .6rem;">رصيد أول المدة</span></td>
+                            <td class="text-end fw-bold" style="color:#c9840f;">{{ report.opening_balance|money }}</td>
+                            <td class="text-end fw-bold" style="color:#c9840f;">{{ report.opening_balance|money }}</td>
                             <td class="text-muted" style="font-size:.8rem;">رصيد أول المدة</td>
                         </tr>
                         {% for entry in report.entries %}
@@ -121,7 +121,7 @@
                             <td class="text-end fw-bold" style="color:{% if entry.amount >= 0 %}#11998e{% else %}#ef4444{% endif %};">
                                 {% if entry.amount >= 0 %}+{% else %}−{% endif %}{{ entry.amount|cut:"-"|money }}
                             </td>
-                            <td class="text-end fw-bold" style="color:{% if entry.running_balance >= 0 %}#6366f1{% else %}#ef4444{% endif %};">
+                            <td class="text-end fw-bold" style="color:{% if entry.running_balance >= 0 %}#c9840f{% else %}#ef4444{% endif %};">
                                 {{ entry.running_balance|cut:"-"|money }}
                             </td>
                             <td class="text-muted" style="font-size:.8rem;">{{ entry.notes|default:"—" }}</td>

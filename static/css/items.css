@@ -24,7 +24,7 @@
     }
     .cx-item-card:hover {
         transform: translateY(-1px);
-        border-color: rgba(99, 102, 241, 0.24);
+        border-color: rgba(246,168,33, 0.24);
         box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
     }
     .cx-item-card-head {
@@ -58,7 +58,7 @@
         font-size: 0.68rem;
         font-weight: 700;
         color: var(--text-heading, #111827);
-        background: rgba(99, 102, 241, 0.09);
+        background: rgba(246,168,33, 0.09);
     }
     .cx-item-card-meta {
         display: grid;
@@ -103,7 +103,7 @@
         border-color: rgba(15, 23, 42, 0.12);
     }
     .cx-item-card-actions .cxr-act--view {
-        background: rgba(99, 102, 241, 0.08);
+        background: rgba(246,168,33, 0.08);
     }
     .cx-item-card-actions .cxr-act--del {
         background: rgba(239, 68, 68, 0.08);
@@ -139,7 +139,7 @@
     }
     .cx-category-card:hover {
         transform: translateY(-1px);
-        border-color: rgba(99, 102, 241, 0.24);
+        border-color: rgba(246,168,33, 0.24);
         box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
     }
     .cx-category-card-head {
@@ -239,7 +239,7 @@
     }
     .cx-unit-card:hover {
         transform: translateY(-1px);
-        border-color: rgba(99, 102, 241, 0.24);
+        border-color: rgba(246,168,33, 0.24);
         box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
     }
     .cx-unit-card-head {

@@ -120,7 +120,7 @@
                     <tbody>
                         {% for row in report.details %}
                         <tr>
-                            <td class="fw-bold" style="color:#667eea">{{ row.invoice_number }}</td>
+                            <td class="fw-bold" style="color:#f6a821">{{ row.invoice_number }}</td>
                             <td class="text-muted">{{ row.invoice_date|date:"Y-m-d" }}</td>
                             <td>{{ row.customer_name }}</td>
                             <td class="text-end text-muted">{{ row.total_quantity }}</td>
@@ -132,7 +132,7 @@
                         <tr class="rpt-total-row">
                             <td colspan="3"><i class="fas fa-calculator me-2"></i>الإجمالي</td>
                             <td class="text-end">{{ report.summary.total_quantity }}</td>
-                            <td class="text-end fw-bold" style="color:#667eea">{{ report.summary.total_amount }}</td>
+                            <td class="text-end fw-bold" style="color:#f6a821">{{ report.summary.total_amount }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -169,9 +169,9 @@
                 data: amounts,
                 fill: true,
                 tension: 0.4,
-                borderColor: '#667eea',
-                backgroundColor: 'rgba(102,126,234,0.12)',
-                pointBackgroundColor: '#667eea',
+                borderColor: '#f6a821',
+                backgroundColor: 'rgba(246, 168, 33,0.12)',
+                pointBackgroundColor: '#f6a821',
                 pointRadius: amounts.length > 20 ? 2 : 4,
                 pointHoverRadius: 6,
             }]

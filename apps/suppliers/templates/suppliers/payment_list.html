@@ -146,7 +146,7 @@
                                         </div>
                                         <div class="col-md-6" id="paymentModalHcPreviewRow" style="display:none;">
                                             <label class="cx-label" id="paymentModalHcPreviewLabel">المعادل بالعملة المحلية</label>
-                                            <div class="cx-input text-end" id="paymentModalHcPreview" style="background:var(--bg-secondary);color:var(--indigo-600,#4f46e5);font-weight:700;">—</div>
+                                            <div class="cx-input text-end" id="paymentModalHcPreview" style="background:var(--bg-secondary);color:var(--indigo-600,#a8660c);font-weight:700;">—</div>
                                         </div>
                                         {% endif %}
                                         <div class="col-12">
@@ -451,7 +451,7 @@
     (function() {
         function renderSupDrop(list) {
             paymentSupplierDrop.innerHTML = list.length
-                ? list.map(s => `<div class="pay-sup-opt" data-id="${s.id}" data-name="${s.name.replace(/"/g,'&quot;')}" data-currency="${s.currency||''}" data-balance="${s.balance}" data-hc-balance="${s.hcBalance||0}" style="padding:8px 12px;cursor:pointer;">${s.name}${s.currency ? `<span style="margin-right:6px;font-size:0.7rem;background:#eef2ff;color:#4f46e5;padding:1px 5px;border-radius:4px;">${s.currency}</span>` : ''}</div>`).join('')
+                ? list.map(s => `<div class="pay-sup-opt" data-id="${s.id}" data-name="${s.name.replace(/"/g,'&quot;')}" data-currency="${s.currency||''}" data-balance="${s.balance}" data-hc-balance="${s.hcBalance||0}" style="padding:8px 12px;cursor:pointer;">${s.name}${s.currency ? `<span style="margin-right:6px;font-size:0.7rem;background:#fef3e2;color:#a8660c;padding:1px 5px;border-radius:4px;">${s.currency}</span>` : ''}</div>`).join('')
                 : '<div style="padding:8px 12px;color:#6c757d;">لا توجد نتائج</div>';
             paymentSupplierDrop.querySelectorAll('.pay-sup-opt').forEach(el => {
                 el.addEventListener('mousedown', function(e) {

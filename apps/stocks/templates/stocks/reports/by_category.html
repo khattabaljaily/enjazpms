@@ -108,7 +108,7 @@
     const cats = [{% for c in report.data %}{ name: "{{ c.category_name|truncatechars:18 }}", qty: parseFloat("{{ c.total_available }}") || 0 }{% if not forloop.last %},{% endif %}{% endfor %}];
     const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
     const textColor = isDark ? '#9ca3af' : '#6b7280';
-    const palette   = ['#11998e','#38ef7d','#4facfe','#667eea','#764ba2','#fa709a','#f59e0b','#ef4444','#14b8a6','#a78bfa','#0575e6','#43e97b'];
+    const palette   = ['#11998e','#38ef7d','#4facfe','#f6a821','#e6731f','#fa709a','#f59e0b','#ef4444','#14b8a6','#ff8a3d','#0575e6','#43e97b'];
 
     new Chart(document.getElementById('stocksCategoryChart'), {
         type: 'doughnut',

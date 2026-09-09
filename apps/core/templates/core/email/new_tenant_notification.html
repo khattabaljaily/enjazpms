@@ -21,7 +21,7 @@
 
   <!-- HEADER -->
   <tr>
-    <td style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:40px 40px 32px;text-align:center;">
+    <td style="background:linear-gradient(135deg,#a8660c 0%,#ff8a3d 100%);padding:40px 40px 32px;text-align:center;">
       <p style="margin:0 0 16px;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.65);">Snake Platform</p>
       <div style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:50px;padding:10px 24px;margin-bottom:20px;">
         <span style="font-size:14px;color:#ffffff;font-weight:600;letter-spacing:1px;">NEW TENANT REGISTERED</span>
@@ -74,7 +74,7 @@
             <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Identifier</span>
           </td>
           <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;vertical-align:top;">
-            <span style="font-size:13px;font-family:monospace;color:#4f46e5;background:#ede9fe;padding:2px 8px;border-radius:4px;">{{ tenant.slug }}</span>
+            <span style="font-size:13px;font-family:monospace;color:#a8660c;background:#ede9fe;padding:2px 8px;border-radius:4px;">{{ tenant.slug }}</span>
           </td>
         </tr>
 
@@ -136,9 +136,9 @@
             {% if tenant.subscription_plan == 'trial' %}
               <span style="font-size:12px;font-weight:700;color:#92400e;background:#fef3c7;padding:3px 10px;border-radius:20px;">{{ tenant.get_subscription_plan_display }}</span>
             {% elif tenant.subscription_plan == 'basic' %}
-              <span style="font-size:12px;font-weight:700;color:#1e40af;background:#dbeafe;padding:3px 10px;border-radius:20px;">{{ tenant.get_subscription_plan_display }}</span>
+              <span style="font-size:12px;font-weight:700;color:#a8660c;background:#dbeafe;padding:3px 10px;border-radius:20px;">{{ tenant.get_subscription_plan_display }}</span>
             {% elif tenant.subscription_plan == 'pro' %}
-              <span style="font-size:12px;font-weight:700;color:#5b21b6;background:#ede9fe;padding:3px 10px;border-radius:20px;">{{ tenant.get_subscription_plan_display }}</span>
+              <span style="font-size:12px;font-weight:700;color:#a8660c;background:#ede9fe;padding:3px 10px;border-radius:20px;">{{ tenant.get_subscription_plan_display }}</span>
             {% else %}
               <span style="font-size:12px;font-weight:700;color:#166534;background:#dcfce7;padding:3px 10px;border-radius:20px;">{{ tenant.get_subscription_plan_display }}</span>
             {% endif %}
@@ -220,7 +220,7 @@
             <span style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Username</span>
           </td>
           <td style="padding:14px 18px;border-bottom:{% if admin_email %}1px solid #e2e8f0{% else %}0{% endif %};vertical-align:top;">
-            <span style="font-size:13px;font-family:monospace;color:#4f46e5;background:#ede9fe;padding:2px 8px;border-radius:4px;">{{ admin_username }}</span>
+            <span style="font-size:13px;font-family:monospace;color:#a8660c;background:#ede9fe;padding:2px 8px;border-radius:4px;">{{ admin_username }}</span>
           </td>
         </tr>
 
@@ -241,7 +241,7 @@
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
         <tr>
           <td align="center">
-            <a href="{{ dashboard_url }}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:8px;letter-spacing:0.3px;">
+            <a href="{{ dashboard_url }}" style="display:inline-block;background:linear-gradient(135deg,#a8660c 0%,#ff8a3d 100%);color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:8px;letter-spacing:0.3px;">
               View in Admin Dashboard
             </a>
           </td>
@@ -254,7 +254,7 @@
   <!-- FOOTER -->
   <tr>
     <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:24px 40px;text-align:center;">
-      <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#4f46e5;">Snake</p>
+      <p style="margin:0 0 4px;font-size:15px;font-weight:700;color:#a8660c;">Snake</p>
       <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;">This is an automated notification. Please do not reply.</p>
       <p style="margin:12px 0 0;font-size:11px;color:#cbd5e1;">&copy; {{ created_at|date:"Y" }} Snake. All rights reserved.</p>
     </td>

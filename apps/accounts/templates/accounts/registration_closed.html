@@ -12,7 +12,7 @@
     <div class="reg-notice__icon"><i class="fas fa-pause-circle"></i></div>
     <div class="reg-notice__text">
         نعمل حالياً على تحسين تجربة إنشاء الحساب، لذا تم إيقاف التسجيل المباشر مؤقتاً.
-        يمكنك التواصل معنا مباشرة عبر واتساب أو البريد الإلكتروني، أو تعبئة النموذج أدناه وسنتواصل معك لإتمام إنشاء الحساب.
+        يمكنك التواصل معنا مباشرة عبر واتساب، أو تعبئة النموذج أدناه وسنتواصل معك لإتمام إنشاء الحساب.
     </div>
 </div>
 
@@ -29,11 +29,6 @@
             data-bs-toggle="modal" data-bs-target="#regWaQrModal">
         <i class="fas fa-qrcode"></i>
     </button>
-    <a class="reg-quick__btn reg-quick__btn--email"
-       href="mailto:{{ contact_email }}?subject={% filter urlencode %}طلب إنشاء حساب جديد - Snake{% endfilter %}">
-        <i class="fas fa-envelope"></i>
-        <span>{{ contact_email }}</span>
-    </a>
 </div>
 
 <div class="reg-divider"><span>أو أرسل بياناتك مباشرة</span></div>
@@ -54,12 +49,6 @@
             {{ form.phone.label_tag }}
             {{ form.phone }}
             <div class="text-danger small mt-1 js-field-errors" data-field="phone"></div>
-        </div>
-
-        <div class="col-md-6">
-            {{ form.business_type.label_tag }}
-            {{ form.business_type }}
-            <div class="text-danger small mt-1 js-field-errors" data-field="business_type"></div>
         </div>
 
         <div class="col-md-6">
@@ -123,10 +112,7 @@
 
 {% block extra_css %}
 <style>
-/* Full-width layout: this page has no brand/logo panel, just a wide centered form */
-.auth-brand-panel { display: none; }
-.auth-split-page { min-height: calc(100vh - 60px); }
-.auth-form-panel { flex: 1 1 100%; padding: 2.5rem 1.5rem; }
+/* Wide form: this page has extra fields, needs a wider card than the default */
 .auth-card { max-width: 780px; }
 
 @media (max-width: 991px) {

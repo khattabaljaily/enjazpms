@@ -74,12 +74,12 @@
 
 #movementTreasuryFilter:focus {
   outline: none;
-  border-color: var(--primary, #6366f1);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.14);
+  border-color: var(--primary, #c9840f);
+  box-shadow: 0 0 0 4px rgba(246,168,33, 0.14);
 }
 
 #movementTreasuryFilter:hover {
-  border-color: var(--primary, #6366f1);
+  border-color: var(--primary, #c9840f);
 }
 
 /* ══════════════════════════ MOBILE CARDS ══════════════════════════ */
@@ -104,7 +104,7 @@
 
     .cx-treasury-card:hover {
         transform: translateY(-1px);
-        border-color: rgba(99, 102, 241, 0.24);
+        border-color: rgba(246,168,33, 0.24);
         box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
     }
 
@@ -139,7 +139,7 @@
     }
 
     .cx-treasury-card-code code {
-        background: rgba(99, 102, 241, 0.09);
+        background: rgba(246,168,33, 0.09);
         padding: 0.2rem 0.4rem;
         border-radius: 6px;
         font-family: 'Courier New', monospace;
@@ -235,11 +235,11 @@
     }
 
     .cx-treasury-card-actions .cxr-act--view {
-        background: rgba(99, 102, 241, 0.08);
+        background: rgba(246,168,33, 0.08);
     }
 
     .cx-treasury-card-actions .cxr-act--view:hover {
-        background: rgba(99, 102, 241, 0.12);
+        background: rgba(246,168,33, 0.12);
     }
 
     .cx-treasury-card-actions .cxr-act--del {

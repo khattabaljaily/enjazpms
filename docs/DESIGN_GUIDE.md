@@ -9,7 +9,7 @@
 ### الألوان (CSS Variables)
 ```css
 /* استخدم هذه المتغيرات مباشرة */
-var(--primary)          /* #6366f1 / #818cf8 */
+var(--primary)          /* #c9840f / #f6a821 */
 var(--surface)          /* Card backgrounds */
 var(--text-primary)     /* النص الأساسي */
 var(--border-color)     /* الحدود */
@@ -65,8 +65,8 @@ localStorage.getItem('theme')  // 'light' أو 'dark'
 
 ### Light Mode
 ```
-Primary: #6366f1 (Indigo)
-Secondary: #8b5cf6 (Purple)
+Primary: #c9840f (Indigo)
+Secondary: #ff8a3d (Purple)
 Success: #10b981 (Emerald)
 Warning: #f59e0b (Amber)
 Danger: #ef4444 (Red)
@@ -81,8 +81,8 @@ Text Secondary: #6b7280 (Gray-500)
 
 ### Dark Mode
 ```
-Primary: #818cf8 (Indigo-400)
-Secondary: #a78bfa (Purple-400)
+Primary: #f6a821 (Indigo-400)
+Secondary: #ff8a3d (Purple-400)
 Success: #34d399 (Emerald-400)
 Warning: #fbbf24 (Amber-400)
 Danger: #f87171 (Red-400)

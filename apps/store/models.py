@@ -63,7 +63,7 @@ class StoreSettings(TenantMixin):
     display_name  = models.CharField('اسم المتجر', max_length=200, blank=True)
     description   = models.TextField('وصف المتجر', blank=True)
     cover_image   = models.ImageField('صورة الغلاف', upload_to='store/covers/', blank=True, null=True)
-    accent_color  = models.CharField('اللون الرئيسي', max_length=7, default='#6366f1')
+    accent_color  = models.CharField('اللون الرئيسي', max_length=7, default='#c9840f')
     whatsapp      = models.CharField('واتساب (اختياري)', max_length=30, blank=True,
                                      help_text='للتواصل السريع مع العملاء')
 

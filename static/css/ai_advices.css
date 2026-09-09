@@ -1,6 +1,6 @@
 .ai-adv-header{ display:flex; align-items:center; gap:.6rem; margin-top:1rem; margin-bottom:.35rem; }
 .ai-adv-header{ display:flex; align-items:center; gap:.6rem; margin-top:0; margin-bottom:.35rem; }
-.ai-adv-header .ai-adv-title{ font-weight:700; color:var(--brand-color, #6366f1); font-size:0.95rem; }
+.ai-adv-header .ai-adv-title{ font-weight:700; color:var(--brand-color, #c9840f); font-size:0.95rem; }
 .ai-adv-header .ai-adv-sub{ font-size:0.78rem; color:var(--text-tertiary); }
 
 /* Tab style */

@@ -603,7 +603,7 @@
     <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
         <div class="modal-content cx-confirm-modal">
             <div class="cx-confirm-body">
-                <div class="cx-confirm-icon" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;">
+                <div class="cx-confirm-icon" style="background:linear-gradient(135deg,#c9840f,#ff8a3d);color:#fff;">
                     <i class="fas fa-user-secret"></i>
                 </div>
                 <h5 class="cx-confirm-title">الدخول كمدير المشترك</h5>
@@ -621,7 +621,7 @@
             <div class="cx-confirm-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
                 <button type="button" id="confirmLoginAsBtn"
-                    style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-weight:600;">
+                    style="background:linear-gradient(135deg,#c9840f,#ff8a3d);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-weight:600;">
                     <i class="fas fa-sign-in-alt me-1"></i> دخول
                 </button>
             </div>
@@ -978,7 +978,7 @@
                 if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
 
-                const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
+                const colors = ['#c9840f','#ff8a3d','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
                 const color  = colors[(d.name || '').charCodeAt(0) % colors.length];
                 const initial = (d.name || '?').trim().charAt(0).toUpperCase();
                 $('#viewTenantAvatar').html(initial).css('background', color);

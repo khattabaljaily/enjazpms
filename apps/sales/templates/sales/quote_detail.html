@@ -381,7 +381,7 @@ function submitQuoteDecision() {
         .then(data => {
             if (data.success) {
                 closeQuoteDecisionModal();
-                sessionStorage.setItem('__enjazFlash', JSON.stringify({
+                sessionStorage.setItem('__snakeFlash', JSON.stringify({
                     message: data.message || 'تمت العملية بنجاح',
                     type: 'success'
                 }));
@@ -445,7 +445,7 @@ function submitConvert() {
         }
         const redirectUrl = data.invoice_url || data.redirect;
         if (!redirectUrl) throw new Error('تم التحويل لكن لم يتم استلام رابط الفاتورة');
-        sessionStorage.setItem('__enjazFlash', JSON.stringify({
+        sessionStorage.setItem('__snakeFlash', JSON.stringify({
             message: data.message || 'تم تحويل العرض إلى فاتورة',
             type: 'success'
         }));

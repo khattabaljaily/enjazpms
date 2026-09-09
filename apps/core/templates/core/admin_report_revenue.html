@@ -110,7 +110,7 @@
                     <td class="rpt-td--num">{{ row.sales_total|floatformat:2|intcomma }}</td>
                     <td>
                         {% if row.monthly_fee > 0 %}
-                        <span style="color:#6366f1;font-weight:700;">${{ row.monthly_fee }}</span>
+                        <span style="color:#c9840f;font-weight:700;">${{ row.monthly_fee }}</span>
                         {% else %}
                         <span class="rpt-td--muted">مجاني</span>
                         {% endif %}
@@ -149,7 +149,7 @@
             <div class="rpt-mob-card__row">
                 <span class="rpt-mob-card__label">رسوم شهرية</span>
                 <span class="rpt-mob-card__val">
-                    {% if row.monthly_fee > 0 %}<span style="color:#6366f1;font-weight:700;">${{ row.monthly_fee }}</span>
+                    {% if row.monthly_fee > 0 %}<span style="color:#c9840f;font-weight:700;">${{ row.monthly_fee }}</span>
                     {% else %}<span class="rpt-mob-card__val--muted">مجاني</span>{% endif %}
                 </span>
             </div>
@@ -177,7 +177,7 @@
                 datasets: [{
                     label: 'مشترك جديد',
                     data: {{ monthly_new_json|safe }},
-                    backgroundColor: 'rgba(99,102,241,0.7)',
+                    backgroundColor: 'rgba(246,168,33,0.7)',
                     borderRadius: 6,
                 }]
             },
@@ -197,7 +197,7 @@
     if (rdCtx) {
         const labels = [];
         const data = [];
-        const colors = ['#94a3b8','#3b82f6','#6366f1','#7c3aed'];
+        const colors = ['#94a3b8','#3b82f6','#c9840f','#ff8a3d'];
         const bkgColors = [];
         {% for key, d in plan_revenue.items %}
         labels.push('{{ key }}'); data.push({{ d.monthly }}); bkgColors.push(colors[{{ forloop.counter0 }}]);

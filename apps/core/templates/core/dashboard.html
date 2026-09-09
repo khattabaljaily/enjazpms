@@ -46,6 +46,66 @@
     </div>
 </div>
 
+<!-- ══ QUICK ACTIONS — always visible, right after greeting ═══════ -->
+<div class="row g-3 mb-3">
+    <div class="col-12">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-bolt" style="color:#d97706;"></i>
+                    إجراءات سريعة
+                </h3>
+            </div>
+            <div class="db-panel-body">
+                <div class="db-actions-grid">
+                    <a href="{% url 'sales:invoice_create' %}" class="db-action db-action--indigo">
+                        <div class="db-action-icon"><i class="fas fa-plus"></i></div>
+                        <div>
+                            <span class="db-action-title">فاتورة جديدة</span>
+                            <span class="db-action-sub">تسجيل بيع جديد</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'items:list' %}" class="db-action db-action--emerald">
+                        <div class="db-action-icon"><i class="fas fa-box"></i></div>
+                        <div>
+                            <span class="db-action-title">المنتجات</span>
+                            <span class="db-action-sub">إدارة الأصناف</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'customers:create' %}" class="db-action db-action--sky">
+                        <div class="db-action-icon"><i class="fas fa-user-plus"></i></div>
+                        <div>
+                            <span class="db-action-title">عميل جديد</span>
+                            <span class="db-action-sub">إضافة عميل سريع</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'sales:invoice_list' %}" class="db-action db-action--amber">
+                        <div class="db-action-icon"><i class="fas fa-list-check"></i></div>
+                        <div>
+                            <span class="db-action-title">الفواتير</span>
+                            <span class="db-action-sub">عرض جميع الفواتير</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'purchases:order_list' %}" class="db-action db-action--violet">
+                        <div class="db-action-icon"><i class="fas fa-cart-shopping"></i></div>
+                        <div>
+                            <span class="db-action-title">أوامر الشراء</span>
+                            <span class="db-action-sub">إدارة المشتريات</span>
+                        </div>
+                    </a>
+                    <a href="{% url 'reports:reports' %}" class="db-action db-action--rose">
+                        <div class="db-action-icon"><i class="fas fa-chart-bar"></i></div>
+                        <div>
+                            <span class="db-action-title">التقارير</span>
+                            <span class="db-action-sub">تقارير وإحصاءات</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if request.user|has_perm_key:"view_dashboard" %}
 
 {% if request.user|has_perm_key:"view_ai_insights" and plan_allows_smart_tips %}
@@ -75,7 +135,7 @@
 <!-- ══ PRIMARY KPI ROW ════════════════════════════════════════════ -->
 <div class="db-kpi-grid">
 
-    <div class="db-kpi db-kpi--indigo">
+    <div class="db-kpi db-kpi--indigo db-kpi--hero">
         <div class="db-kpi-icon"><i class="fas fa-arrow-trend-up"></i></div>
         <div class="db-kpi-body">
             <div class="db-kpi-val">{{ stats.today_sales|money }}</div>
@@ -120,7 +180,7 @@
 <div class="db-stat-row">
 
     <div class="db-stat">
-        <div class="db-stat-icon" style="background:rgba(99,102,241,.1); color:#6366f1;">
+        <div class="db-stat-icon" style="background:rgba(246,168,33,.1); color:#c9840f;">
             <i class="fas fa-users"></i>
         </div>
         <div>
@@ -167,7 +227,7 @@
         <div class="db-panel">
             <div class="db-panel-head">
                 <h3 class="db-panel-title">
-                    <i class="fas fa-chart-area" style="color:#6366f1;"></i>
+                    <i class="fas fa-chart-area" style="color:#c9840f;"></i>
                     المبيعات الأسبوعية
                 </h3>
                 <span class="db-panel-meta">7 أيام</span>
@@ -201,10 +261,10 @@
 {% if store %}
 <div class="row g-3 mb-3">
   <div class="col-12">
-    <div class="db-panel" style="background:linear-gradient(135deg,rgba(99,102,241,.06) 0%,rgba(139,92,246,.04) 100%);border-color:rgba(99,102,241,.18);">
-      <div class="db-panel-head" style="border-color:rgba(99,102,241,.12);">
+    <div class="db-panel" style="background:linear-gradient(135deg,rgba(246,168,33,.06) 0%,rgba(139,92,246,.04) 100%);border-color:rgba(246,168,33,.18);">
+      <div class="db-panel-head" style="border-color:rgba(246,168,33,.12);">
         <h3 class="db-panel-title">
-          <i class="fas fa-store" style="color:#6366f1;"></i>
+          <i class="fas fa-store" style="color:#c9840f;"></i>
           متجرك الإلكتروني
         </h3>
         {% if store.is_enabled %}
@@ -218,7 +278,7 @@
       </div>
       <div class="db-panel-body">
         <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
-          <div style="flex-shrink:0;background:#fff;border-radius:12px;padding:8px;box-shadow:0 2px 12px rgba(99,102,241,.15);border:1.5px solid rgba(99,102,241,.12);">
+          <div style="flex-shrink:0;background:#fff;border-radius:12px;padding:8px;box-shadow:0 2px 12px rgba(246,168,33,.15);border:1.5px solid rgba(246,168,33,.12);">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&margin=4&data={{ request.scheme }}://{{ request.META.HTTP_HOST }}/store/{{ store.slug }}/"
                  alt="QR Code المتجر" style="width:80px;height:80px;display:block;">
           </div>
@@ -227,12 +287,12 @@
             <div style="font-size:.8rem;color:var(--text-secondary,#64748b);margin-bottom:.75rem;direction:ltr;text-align:right;">{{ request.scheme }}://{{ request.META.HTTP_HOST }}/store/{{ store.slug }}/</div>
             <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
               {% if store.is_enabled %}
-              <a href="/store/{{ store.slug }}/" target="_blank" style="display:inline-flex;align-items:center;gap:.4rem;padding:.38rem .85rem;border-radius:8px;border:1.5px solid rgba(99,102,241,.3);color:#6366f1;font-size:.8rem;font-weight:600;text-decoration:none;background:rgba(99,102,241,.06);">
+              <a href="/store/{{ store.slug }}/" target="_blank" style="display:inline-flex;align-items:center;gap:.4rem;padding:.38rem .85rem;border-radius:8px;border:1.5px solid rgba(246,168,33,.3);color:#c9840f;font-size:.8rem;font-weight:600;text-decoration:none;background:rgba(246,168,33,.06);">
                 <i class="fas fa-external-link-alt"></i> عرض المتجر
               </a>
               {% endif %}
               <button onclick="openStoreQR('{{ request.scheme }}://{{ request.META.HTTP_HOST }}/store/{{ store.slug }}/', '{{ store.display_name|default:request.tenant.name }}')"
-                      style="display:inline-flex;align-items:center;gap:.4rem;padding:.38rem .85rem;border-radius:8px;border:1.5px solid rgba(99,102,241,.3);color:#6366f1;font-size:.8rem;font-weight:600;cursor:pointer;background:rgba(99,102,241,.06);font-family:inherit;">
+                      style="display:inline-flex;align-items:center;gap:.4rem;padding:.38rem .85rem;border-radius:8px;border:1.5px solid rgba(246,168,33,.3);color:#c9840f;font-size:.8rem;font-weight:600;cursor:pointer;background:rgba(246,168,33,.06);font-family:inherit;">
                 <i class="fas fa-print"></i> طباعة QR
               </button>
               <a href="{% url 'store:manage_settings' %}" style="display:inline-flex;align-items:center;gap:.4rem;padding:.38rem .85rem;border-radius:8px;border:1.5px solid var(--border-color,#e2e8f0);color:var(--text-secondary,#64748b);font-size:.8rem;font-weight:600;text-decoration:none;background:var(--surface-alt,#f8fafc);">
@@ -289,7 +349,7 @@
         <div class="db-panel">
             <div class="db-panel-head">
                 <h3 class="db-panel-title">
-                    <i class="fas fa-chart-pie" style="color:#8b5cf6;"></i>
+                    <i class="fas fa-chart-pie" style="color:#ff8a3d;"></i>
                     أفضل الفئات
                 </h3>
                 <span class="db-panel-meta">هذا الشهر</span>
@@ -400,14 +460,14 @@
 <!-- ══ NO PERMISSION — beautiful locked placeholder ═══════════════ -->
 
 <!-- Lock notice banner -->
-<div style="display:flex;align-items:center;gap:.65rem;padding:.65rem 1rem;margin-bottom:1rem;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;font-size:.84rem;color:var(--text-secondary,#64748b);">
-    <i class="fas fa-lock" style="color:#6366f1;font-size:.9rem;flex-shrink:0;"></i>
+<div style="display:flex;align-items:center;gap:.65rem;padding:.65rem 1rem;margin-bottom:1rem;background:rgba(246,168,33,.08);border:1px solid rgba(246,168,33,.2);border-radius:10px;font-size:.84rem;color:var(--text-secondary,#64748b);">
+    <i class="fas fa-lock" style="color:#c9840f;font-size:.9rem;flex-shrink:0;"></i>
     <span>إحصاءات لوحة التحكم محجوبة — تواصل مع مدير النظام للحصول على صلاحية <strong>عرض لوحة التحكم</strong></span>
 </div>
 
 <!-- KPI Cards — blurred fake values -->
 <div class="db-kpi-grid" style="pointer-events:none;user-select:none;">
-    <div class="db-kpi db-kpi--indigo">
+    <div class="db-kpi db-kpi--indigo db-kpi--hero">
         <div class="db-kpi-icon"><i class="fas fa-arrow-trend-up"></i></div>
         <div class="db-kpi-body">
             <div class="db-kpi-val" style="filter:blur(7px);opacity:.7;">8,250.00</div>
@@ -444,7 +504,7 @@
 <!-- Secondary stats — blurred -->
 <div class="db-stat-row" style="pointer-events:none;user-select:none;">
     <div class="db-stat">
-        <div class="db-stat-icon" style="background:rgba(99,102,241,.1);color:#6366f1;"><i class="fas fa-users"></i></div>
+        <div class="db-stat-icon" style="background:rgba(246,168,33,.1);color:#c9840f;"><i class="fas fa-users"></i></div>
         <div><div class="db-stat-num" style="filter:blur(6px);opacity:.7;">12</div><div class="db-stat-lbl">مستخدمون</div></div>
     </div>
     <div class="db-stat">
@@ -466,27 +526,27 @@
     <div class="col-lg-8">
         <div class="db-panel">
             <div class="db-panel-head">
-                <h3 class="db-panel-title"><i class="fas fa-chart-area" style="color:#6366f1;"></i> المبيعات الأسبوعية</h3>
+                <h3 class="db-panel-title"><i class="fas fa-chart-area" style="color:#c9840f;"></i> المبيعات الأسبوعية</h3>
                 <span class="db-panel-meta">7 أيام</span>
             </div>
             <div class="db-panel-body" style="position:relative;overflow:hidden;">
                 <div class="db-chart-wrap" style="filter:blur(3px);opacity:.4;pointer-events:none;">
                     <svg width="100%" height="160" viewBox="0 0 420 160" preserveAspectRatio="none">
-                        <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity=".25"/><stop offset="100%" stop-color="#6366f1" stop-opacity=".01"/></linearGradient></defs>
+                        <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c9840f" stop-opacity=".25"/><stop offset="100%" stop-color="#c9840f" stop-opacity=".01"/></linearGradient></defs>
                         <polygon fill="url(#g1)" points="0,160 0,95 60,75 120,105 180,55 240,85 300,40 360,70 420,60 420,160"/>
-                        <polyline fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linejoin="round" points="0,95 60,75 120,105 180,55 240,85 300,40 360,70 420,60"/>
-                        <circle cx="0"   cy="95"  r="4" fill="#6366f1"/>
-                        <circle cx="60"  cy="75"  r="4" fill="#6366f1"/>
-                        <circle cx="120" cy="105" r="4" fill="#6366f1"/>
-                        <circle cx="180" cy="55"  r="4" fill="#6366f1"/>
-                        <circle cx="240" cy="85"  r="4" fill="#6366f1"/>
-                        <circle cx="300" cy="40"  r="4" fill="#6366f1"/>
-                        <circle cx="360" cy="70"  r="4" fill="#6366f1"/>
-                        <circle cx="420" cy="60"  r="4" fill="#6366f1"/>
+                        <polyline fill="none" stroke="#c9840f" stroke-width="2.5" stroke-linejoin="round" points="0,95 60,75 120,105 180,55 240,85 300,40 360,70 420,60"/>
+                        <circle cx="0"   cy="95"  r="4" fill="#c9840f"/>
+                        <circle cx="60"  cy="75"  r="4" fill="#c9840f"/>
+                        <circle cx="120" cy="105" r="4" fill="#c9840f"/>
+                        <circle cx="180" cy="55"  r="4" fill="#c9840f"/>
+                        <circle cx="240" cy="85"  r="4" fill="#c9840f"/>
+                        <circle cx="300" cy="40"  r="4" fill="#c9840f"/>
+                        <circle cx="360" cy="70"  r="4" fill="#c9840f"/>
+                        <circle cx="420" cy="60"  r="4" fill="#c9840f"/>
                     </svg>
                 </div>
                 <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;">
-                    <div style="width:40px;height:40px;border-radius:50%;background:#6366f1;display:flex;align-items:center;justify-content:center;">
+                    <div style="width:40px;height:40px;border-radius:50%;background:#c9840f;display:flex;align-items:center;justify-content:center;">
                         <i class="fas fa-lock" style="color:#fff;font-size:.95rem;"></i>
                     </div>
                     <p style="margin:0;font-size:.82rem;font-weight:600;color:var(--text-secondary,#64748b);">البيانات محجوبة</p>
@@ -535,11 +595,11 @@
                 <table class="db-prod-table">
                     <thead><tr><th style="width:36px;">#</th><th>المنتج</th><th class="text-end">الكمية</th><th class="text-end">الإيراد</th></tr></thead>
                     <tbody>
-                        <tr><td><span class="db-prod-rank db-prod-rank--1">1</span></td><td class="fw-bold">منتج أ</td><td class="text-end text-muted">125</td><td class="text-end fw-bold" style="color:#6366f1;">18,500</td></tr>
-                        <tr><td><span class="db-prod-rank db-prod-rank--2">2</span></td><td class="fw-bold">منتج ب</td><td class="text-end text-muted">98</td><td class="text-end fw-bold" style="color:#6366f1;">12,300</td></tr>
-                        <tr><td><span class="db-prod-rank db-prod-rank--3">3</span></td><td class="fw-bold">منتج ج</td><td class="text-end text-muted">74</td><td class="text-end fw-bold" style="color:#6366f1;">9,800</td></tr>
-                        <tr><td><span class="db-prod-rank db-prod-rank--n">4</span></td><td class="fw-bold">منتج د</td><td class="text-end text-muted">61</td><td class="text-end fw-bold" style="color:#6366f1;">7,200</td></tr>
-                        <tr><td><span class="db-prod-rank db-prod-rank--n">5</span></td><td class="fw-bold">منتج ه</td><td class="text-end text-muted">45</td><td class="text-end fw-bold" style="color:#6366f1;">5,100</td></tr>
+                        <tr><td><span class="db-prod-rank db-prod-rank--1">1</span></td><td class="fw-bold">منتج أ</td><td class="text-end text-muted">125</td><td class="text-end fw-bold" style="color:#c9840f;">18,500</td></tr>
+                        <tr><td><span class="db-prod-rank db-prod-rank--2">2</span></td><td class="fw-bold">منتج ب</td><td class="text-end text-muted">98</td><td class="text-end fw-bold" style="color:#c9840f;">12,300</td></tr>
+                        <tr><td><span class="db-prod-rank db-prod-rank--3">3</span></td><td class="fw-bold">منتج ج</td><td class="text-end text-muted">74</td><td class="text-end fw-bold" style="color:#c9840f;">9,800</td></tr>
+                        <tr><td><span class="db-prod-rank db-prod-rank--n">4</span></td><td class="fw-bold">منتج د</td><td class="text-end text-muted">61</td><td class="text-end fw-bold" style="color:#c9840f;">7,200</td></tr>
+                        <tr><td><span class="db-prod-rank db-prod-rank--n">5</span></td><td class="fw-bold">منتج ه</td><td class="text-end text-muted">45</td><td class="text-end fw-bold" style="color:#c9840f;">5,100</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -548,7 +608,7 @@
     <div class="col-lg-4">
         <div class="db-panel">
             <div class="db-panel-head">
-                <h3 class="db-panel-title"><i class="fas fa-chart-pie" style="color:#8b5cf6;"></i> أفضل الفئات</h3>
+                <h3 class="db-panel-title"><i class="fas fa-chart-pie" style="color:#ff8a3d;"></i> أفضل الفئات</h3>
                 <span class="db-panel-meta">هذا الشهر</span>
             </div>
             <div class="db-panel-body" style="filter:blur(4px);opacity:.5;">
@@ -585,66 +645,6 @@
 
 {% include "store/partials/qr_print_modal.html" %}
 
-<!-- ══ QUICK ACTIONS — always visible ══════════════════════════════ -->
-<div class="row g-3 mb-2">
-    <div class="col-12">
-        <div class="db-panel">
-            <div class="db-panel-head">
-                <h3 class="db-panel-title">
-                    <i class="fas fa-bolt" style="color:#d97706;"></i>
-                    إجراءات سريعة
-                </h3>
-            </div>
-            <div class="db-panel-body">
-                <div class="db-actions-grid">
-                    <a href="{% url 'sales:invoice_create' %}" class="db-action db-action--indigo">
-                        <div class="db-action-icon"><i class="fas fa-plus"></i></div>
-                        <div>
-                            <span class="db-action-title">فاتورة جديدة</span>
-                            <span class="db-action-sub">تسجيل بيع جديد</span>
-                        </div>
-                    </a>
-                    <a href="{% url 'items:list' %}" class="db-action db-action--emerald">
-                        <div class="db-action-icon"><i class="fas fa-box"></i></div>
-                        <div>
-                            <span class="db-action-title">المنتجات</span>
-                            <span class="db-action-sub">إدارة الأصناف</span>
-                        </div>
-                    </a>
-                    <a href="{% url 'customers:create' %}" class="db-action db-action--sky">
-                        <div class="db-action-icon"><i class="fas fa-user-plus"></i></div>
-                        <div>
-                            <span class="db-action-title">عميل جديد</span>
-                            <span class="db-action-sub">إضافة عميل سريع</span>
-                        </div>
-                    </a>
-                    <a href="{% url 'sales:invoice_list' %}" class="db-action db-action--amber">
-                        <div class="db-action-icon"><i class="fas fa-list-check"></i></div>
-                        <div>
-                            <span class="db-action-title">الفواتير</span>
-                            <span class="db-action-sub">عرض جميع الفواتير</span>
-                        </div>
-                    </a>
-                    <a href="{% url 'purchases:order_list' %}" class="db-action db-action--violet">
-                        <div class="db-action-icon"><i class="fas fa-cart-shopping"></i></div>
-                        <div>
-                            <span class="db-action-title">أوامر الشراء</span>
-                            <span class="db-action-sub">إدارة المشتريات</span>
-                        </div>
-                    </a>
-                    <a href="{% url 'reports:reports' %}" class="db-action db-action--rose">
-                        <div class="db-action-icon"><i class="fas fa-chart-bar"></i></div>
-                        <div>
-                            <span class="db-action-title">التقارير</span>
-                            <span class="db-action-sub">تقارير وإحصاءات</span>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
@@ -662,8 +662,8 @@
     if (wCtx) {
         const ctx = wCtx.getContext('2d');
         const grad = ctx.createLinearGradient(0, 0, 0, 220);
-        grad.addColorStop(0, 'rgba(99,102,241,.22)');
-        grad.addColorStop(1, 'rgba(99,102,241,.01)');
+        grad.addColorStop(0, 'rgba(246,168,33,.22)');
+        grad.addColorStop(1, 'rgba(246,168,33,.01)');
 
         new Chart(wCtx, {
             type: 'line',
@@ -673,12 +673,12 @@
                     data: {{ stats.weekly_sales_json|safe }},
                     fill: true,
                     backgroundColor: grad,
-                    borderColor: '#6366f1',
+                    borderColor: '#c9840f',
                     borderWidth: 2.5,
                     tension: 0.42,
                     pointRadius: 4,
                     pointHoverRadius: 7,
-                    pointBackgroundColor: '#6366f1',
+                    pointBackgroundColor: '#c9840f',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
                 }]
@@ -756,7 +756,7 @@
                 <td><span class="db-prod-rank ${rankClass(i)}">${i+1}</span></td>
                 <td class="fw-bold" style="color:var(--text-primary)">${p['item__name'] || '—'}</td>
                 <td class="text-end text-muted">${fmt(p.total_qty)}</td>
-                <td class="text-end fw-bold" style="color:#6366f1">${fmt(Math.round(p.total_revenue))}</td>`;
+                <td class="text-end fw-bold" style="color:#c9840f">${fmt(Math.round(p.total_revenue))}</td>`;
             tbody.appendChild(tr);
         });
     } else {

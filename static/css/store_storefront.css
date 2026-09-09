@@ -252,7 +252,7 @@ body {
 }
 .sf-search__input:focus {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(99,102,241,.1);
+  box-shadow: 0 0 0 3px rgba(246,168,33,.1);
 }
 .sf-search__clear {
   position: absolute;

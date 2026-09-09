@@ -236,7 +236,7 @@ const Snake = {
 
     rememberToast: function(message, type = 'success') {
         try {
-            sessionStorage.setItem('__enjazFlash', JSON.stringify({ message, type }));
+            sessionStorage.setItem('__snakeFlash', JSON.stringify({ message, type }));
         } catch (e) {
             // ignore storage errors
         }
@@ -244,15 +244,15 @@ const Snake = {
 
     consumeRememberedToast: function() {
         try {
-            const flashRaw = sessionStorage.getItem('__enjazFlash');
+            const flashRaw = sessionStorage.getItem('__snakeFlash');
             if (!flashRaw) return;
             const flash = JSON.parse(flashRaw);
             if (flash?.message) {
                 this.toast(flash.message, flash.type || 'success');
             }
-            sessionStorage.removeItem('__enjazFlash');
+            sessionStorage.removeItem('__snakeFlash');
         } catch (e) {
-            sessionStorage.removeItem('__enjazFlash');
+            sessionStorage.removeItem('__snakeFlash');
         }
     },
 
@@ -332,13 +332,13 @@ const Snake = {
                 iconClass = 'fa-check-circle'; iconColor = '#10b981'; iconBg = 'rgba(16,185,129,0.1)';
                 btnColor  = '#10b981'; btnLabel = confirmText || 'نعم، تأكيد';
             } else {
-                iconClass = 'fa-circle-question'; iconColor = '#6366f1'; iconBg = 'rgba(99,102,241,0.1)';
-                btnColor  = '#6366f1'; btnLabel = confirmText || 'نعم، متابعة';
+                iconClass = 'fa-circle-question'; iconColor = '#c9840f'; iconBg = 'rgba(246,168,33,0.1)';
+                btnColor  = '#c9840f'; btnLabel = confirmText || 'نعم، متابعة';
             }
 
             // Create a simple overlay modal that works on all devices
             const overlay = document.createElement('div');
-            overlay.id = 'enjazConfirmOverlay';
+            overlay.id = 'snakeConfirmOverlay';
             overlay.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -374,8 +374,8 @@ const Snake = {
                     </p>
                 </div>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 1rem 1.75rem; border-top: 1px solid #e5e7eb; background: #f9fafb;">
-                    <button type="button" class="cx-btn-ghost" id="enjazConfirmNo" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 8px; background: white; color: #6b7280; font-size: 0.875rem; cursor: pointer;">تراجع</button>
-                    <button type="button" id="enjazConfirmYes" style="padding: 0.5rem 1rem; border: none; border-radius: 8px; background: ${btnColor}; color: white; font-size: 0.875rem; cursor: pointer; font-weight: 600;">${btnLabel}</button>
+                    <button type="button" class="cx-btn-ghost" id="snakeConfirmNo" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 8px; background: white; color: #6b7280; font-size: 0.875rem; cursor: pointer;">تراجع</button>
+                    <button type="button" id="snakeConfirmYes" style="padding: 0.5rem 1rem; border: none; border-radius: 8px; background: ${btnColor}; color: white; font-size: 0.875rem; cursor: pointer; font-weight: 600;">${btnLabel}</button>
                 </div>
             `;
 
@@ -386,8 +386,8 @@ const Snake = {
             document.body.style.overflow = 'hidden';
 
             function cleanup() {
-                document.getElementById('enjazConfirmYes').removeEventListener('click', onYes);
-                document.getElementById('enjazConfirmNo').removeEventListener('click', onNo);
+                document.getElementById('snakeConfirmYes').removeEventListener('click', onYes);
+                document.getElementById('snakeConfirmNo').removeEventListener('click', onNo);
                 document.body.removeChild(overlay);
                 document.body.style.overflow = '';
             }
@@ -402,8 +402,8 @@ const Snake = {
                 resolve(false);
             }
 
-            document.getElementById('enjazConfirmYes').addEventListener('click', onYes);
-            document.getElementById('enjazConfirmNo').addEventListener('click', onNo);
+            document.getElementById('snakeConfirmYes').addEventListener('click', onYes);
+            document.getElementById('snakeConfirmNo').addEventListener('click', onNo);
 
             // Close on overlay click
             overlay.addEventListener('click', function(e) {
@@ -642,13 +642,13 @@ $(document).ready(function() {
     // Current year in footer
     $('#current-year').text(new Date().getFullYear());
 
-    const pendingMessages = window.__enjazPendingMessages || [];
+    const pendingMessages = window.__snakeFlashPending || [];
     if (pendingMessages.length) {
         pendingMessages.forEach((entry) => {
             if (!entry || !entry.message) return;
             Snake.toast(entry.message, entry.type || 'info');
         });
-        window.__enjazPendingMessages = [];
+        window.__snakeFlashPending = [];
     }
 
     Snake.consumeRememberedToast();

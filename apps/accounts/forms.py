@@ -225,20 +225,21 @@ class Step2BusinessForm(forms.Form):
             self.fields['business_type'].initial = default_business_type.pk
 
     business_type = forms.ModelChoiceField(
-        label='نوع النشاط التجاري',
-        queryset=BusinessType.objects.filter(is_active=True),
-        widget=forms.HiddenInput(),
+        label='نوع النشاط',
+        queryset=BusinessType.objects.filter(is_active=True).order_by('display_order'),
+        widget=forms.RadioSelect(),
+        empty_label=None,
     )
-    
+
     business_name = forms.CharField(
-        label='اسم النشاط التجاري',
+        label='اسم الصيدلية',
         max_length=200,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'مثال: اسم النشاط التجاري'
+            'placeholder': 'مثال: صيدلية النور'
         })
     )
-    
+
     phone = forms.CharField(
         label='رقم الهاتف',
         max_length=20,
@@ -254,7 +255,7 @@ class Step2BusinessForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={
             'class': 'form-control',
-            'rows': 3,
+            'rows': 2,
             'placeholder': 'أدخل العنوان الكامل'
         })
     )
@@ -438,21 +439,12 @@ class RegistrationRequestForm(forms.Form):
         })
     )
 
-    business_type = forms.ModelChoiceField(
-        label='نوع النشاط التجاري',
-        queryset=BusinessType.objects.filter(is_active=True),
-        widget=forms.Select(attrs={
-            'class': 'form-select'
-        }),
-        empty_label='-- اختر نوع النشاط --'
-    )
-
     business_name = forms.CharField(
-        label='اسم النشاط التجاري',
+        label='اسم الصيدلية',
         max_length=200,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'مثال: اسم النشاط التجاري'
+            'placeholder': 'مثال: صيدلية النور'
         })
     )
 

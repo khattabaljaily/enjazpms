@@ -17,7 +17,7 @@ from django.db import transaction
 
 User = get_user_model()
 
-DEMO_SLUG     = 'enjaz-demo-promo'
+DEMO_SLUG     = 'snake-demo-pharmacy'
 DEMO_PASSWORD = 'Demo@1234'
 MEDIA_ITEMS   = None   # resolved at runtime
 
@@ -25,30 +25,30 @@ MEDIA_ITEMS   = None   # resolved at runtime
 # ── بيانات الأصناف ─────────────────────────────────────────────────────────
 # (name, category_idx, cost, sell, purchase_qty, emoji_label, color_hex)
 ITEMS_DATA = [
-    # إلكترونيات (cat 0) — أزرق
-    ('لاب توب Dell XPS 15',    0,  2800, 3500,  30, 'LAPTOP',  '#1565C0'),
-    ('تلفاز Samsung 55 بوصة',  0,  3200, 4200,  25, 'TV',      '#0D47A1'),
-    ('جوال iPhone 15 Pro',     0,  5500, 6800,  20, 'PHONE',   '#1976D2'),
-    ('سماعات Sony WH-1000',    0,   450,  650,  60, 'AUDIO',   '#1E88E5'),
-    ('طابعة HP LaserJet',      0,   980, 1300,  15, 'PRINT',   '#2196F3'),
-    # ملابس (cat 1) — وردي
-    ('قميص قطني رجالي',        1,    55,   95, 120, 'SHIRT',   '#AD1457'),
-    ('فستان حريمي كاجوال',     1,    80,  145, 100, 'DRESS',   '#C2185B'),
-    ('بنطلون جينز',             1,    65,  120,  80, 'JEANS',   '#D81B60'),
-    ('جاكيت شتوي',              1,   120,  220,  70, 'JACKET',  '#E91E63'),
-    ('حذاء رياضي نايك',         1,   180,  320,  50, 'SHOES',   '#EC407A'),
-    # غذائيات (cat 2) — أخضر
-    ('أرز بسمتي 25 كيلو',      2,  1.80, 2.80, 500, 'RICE',    '#2E7D32'),
-    ('زيت عباد الشمس 5 لتر',   2,  4.20, 6.50, 300, 'OIL',     '#388E3C'),
-    ('سكر أبيض كيلو',           2,  1.50, 2.20, 600, 'SUGAR',   '#43A047'),
-    ('شاي أحمر علبة 250g',      2, 18.0, 28.0, 200, 'TEA',     '#4CAF50'),
-    ('معجون طماطم 800g',        2, 12.0, 20.0, 250, 'TOMATO',  '#66BB6A'),
-    # إكسسوارات (cat 3) — برتقالي
-    ('حقيبة جلد يد',            3,    95,  180,  80, 'BAG',     '#E65100'),
-    ('ساعة كاسيو G-Shock',      3,   350,  550,  40, 'WATCH',   '#EF6C00'),
-    ('نظارة شمسية Ray-Ban',     3,   250,  420,  60, 'GLASSES', '#F57C00'),
-    ('حزام جلدي رجالي',         3,    45,   85,  90, 'BELT',    '#FB8C00'),
-    ('محفظة جلد',               3,    60,  110, 100, 'WALLET',  '#FFA726'),
+    # أدوية (cat 0) — أزرق
+    ('باراسيتامول 500 مجم',         0,  2800, 3500,  30, 'PARA',    '#1565C0'),
+    ('أموكسيسيلين 500 مجم كبسول',   0,  3200, 4200,  25, 'AMOX',    '#0D47A1'),
+    ('إيبوبروفين 400 مجم',           0,  5500, 6800,  20, 'IBU',     '#1976D2'),
+    ('شراب خافض حرارة للأطفال',      0,   450,  650,  60, 'FEVR',    '#1E88E5'),
+    ('أقراص ضغط الدم (أملوديبين)',   0,   980, 1300,  15, 'BP',      '#2196F3'),
+    # مستلزمات طبية (cat 1) — وردي
+    ('ضمادات معقّمة',                1,    55,   95, 120, 'BAND',    '#AD1457'),
+    ('حقن إنسولين',                  1,    80,  145, 100, 'INSU',    '#C2185B'),
+    ('كمامات طبية (علبة 50)',        1,    65,  120,  80, 'MASK',    '#D81B60'),
+    ('قفازات طبية (علبة 100)',       1,   120,  220,  70, 'GLOV',    '#E91E63'),
+    ('ترمومتر رقمي',                 1,   180,  320,  50, 'THRM',    '#EC407A'),
+    # العناية بالبشرة (cat 2) — أخضر
+    ('كريم مرطب للبشرة الجافة',      2,  1.80, 2.80, 500, 'MOIS',    '#2E7D32'),
+    ('غسول وجه لطيف',                2,  4.20, 6.50, 300, 'FACE',    '#388E3C'),
+    ('واقي شمسي SPF50',              2,  1.50, 2.20, 600, 'SPF',     '#43A047'),
+    ('كريم علاج حب الشباب',          2, 18.0, 28.0, 200, 'ACNE',    '#4CAF50'),
+    ('صابون مطهر لليدين',            2, 12.0, 20.0, 250, 'SOAP',    '#66BB6A'),
+    # الأمومة والطفولة (cat 3) — بنفسجي
+    ('حفاضات أطفال مقاس متوسط',      3,    95,  180,  80, 'DIAP',    '#7B1FA2'),
+    ('حليب أطفال صناعي',             3,   350,  550,  40, 'MILK',    '#8E24AA'),
+    ('فيتامينات ما قبل الولادة',      3,   250,  420,  60, 'PRE',     '#9C27B0'),
+    ('محلول ملحي للاستنشاق',         3,    45,   85,  90, 'SALN',    '#AB47BC'),
+    ('معقم يدين 500 مل',             3,    60,  110, 100, 'SANI',    '#BA68C8'),
 ]
 
 # ── فواتير البيع: (days_ago, customer_idx, payment, [(item_idx, qty)]) ──────
@@ -171,14 +171,14 @@ class Command(BaseCommand):
         bt = BusinessType.objects.first()
         if not bt:
             bt = BusinessType.objects.create(
-                name='general_trade', name_ar='تجارة عامة',
-                slug='general-trade', icon='fa-store',
+                name='pharmacy', name_ar='صيدلية',
+                slug='pharmacy', icon='fa-pills',
             )
         today = date.today()
         tenant = Tenant.objects.create(
-            name='النجم للتجارة العامة', slug=DEMO_SLUG,
+            name='صيدلية الشفاء', slug=DEMO_SLUG,
             business_type=bt,
-            email='info@alnajm.demo', phone='0912345678',
+            email='info@alshifa.demo', phone='0912345678',
             address='شارع الجامعة، المنطقة التجارية',
             city='الخرطوم', country='السودان',
             subscription_plan='pro',
@@ -191,14 +191,14 @@ class Command(BaseCommand):
         )
         TenantCapabilities.objects.update_or_create(
             tenant=tenant,
-            defaults=dict(has_services=True, has_weight_items=True),
+            defaults=dict(has_services=True, has_expiry_dates=True, has_batch_numbers=True),
         )
         Settings.objects.update_or_create(
             tenant=tenant,
             defaults=dict(
-                invoice_prefix='NJM',
-                invoice_footer='شكراً لتعاملكم معنا — النجم للتجارة العامة',
-                invoice_color='#6366f1',
+                invoice_prefix='SHF',
+                invoice_footer='شكراً لتعاملكم معنا — صيدلية الشفاء',
+                invoice_color='#f6a821',
                 low_stock_alert=True,
             ),
         )
@@ -208,7 +208,7 @@ class Command(BaseCommand):
     # ── User ───────────────────────────────────────────────────────────────
     def _create_user(self, tenant):
         user = User.objects.create_user(
-            username='demo_admin', email='admin@alnajm.demo',
+            username='demo_admin', email='admin@alshifa.demo',
             password=DEMO_PASSWORD,
             first_name='أحمد', last_name='محمد',
             tenant=tenant, is_tenant_admin=True, is_active=True,
@@ -268,7 +268,7 @@ class Command(BaseCommand):
     # ── Categories ─────────────────────────────────────────────────────────
     def _create_categories(self, tenant, user):
         from apps.items.models import Category
-        names = ['إلكترونيات', 'ملابس وأزياء', 'مواد غذائية', 'إكسسوارات']
+        names = ['أدوية', 'مستلزمات طبية', 'العناية بالبشرة', 'الأمومة والطفولة']
         cats = [
             Category.objects.create(tenant=tenant, name=n, is_active=True, created_by=user)
             for n in names
@@ -279,7 +279,7 @@ class Command(BaseCommand):
     # ── Units ──────────────────────────────────────────────────────────────
     def _create_units(self, tenant, user):
         from apps.items.models import Unit
-        data = [('قطعة','PCS'),('كيلو','KG'),('لتر','LTR'),('متر','MTR')]
+        data = [('قطعة','PCS'),('علبة','BOX'),('شريط','STRIP'),('مل','ML')]
         units = [
             Unit.objects.create(
                 tenant=tenant, name=n, abbreviation=a,
@@ -295,7 +295,7 @@ class Command(BaseCommand):
         from apps.items.models import Item
         items = []
         for idx, (name, cat_idx, cost, sell, _, label, color) in enumerate(ITEMS_DATA):
-            unit = units[1] if cat_idx == 2 else units[0]   # كيلو للغذائيات
+            unit = units[0]   # قطعة لكل الأصناف
             img_path = self._make_product_image(label, color, idx)
             item = Item.objects.create(
                 tenant=tenant,
@@ -379,12 +379,12 @@ class Command(BaseCommand):
     def _create_customers(self, tenant, user):
         from apps.customers.models import Customer
         data = [
-            ('شركة الأمل للمقاولات',  '0912111222', 'الخرطوم',  20000),
-            ('مؤسسة البركة التجارية', '0922333444', 'أمدرمان',  15000),
-            ('محلات النور',            '0933555666', 'بحري',      5000),
-            ('أحمد إبراهيم سعيد',     '0944777888', 'الخرطوم',      0),
-            ('شركة الخليج للتوزيع',   '0955999000', 'شرق النيل', 30000),
-            ('مريم عبدالله كرم',      '0966111333', 'أمدرمان',      0),
+            ('عيادة الأمل الطبية',       '0912111222', 'الخرطوم',  20000),
+            ('مركز البركة الصحي',        '0922333444', 'أمدرمان',  15000),
+            ('صيدلية النور الفرعية',     '0933555666', 'بحري',      5000),
+            ('عبدالرحمن إبراهيم سعيد',   '0944777888', 'الخرطوم',      0),
+            ('مستشفى الخليج التخصصي',    '0955999000', 'شرق النيل', 30000),
+            ('مريم عبدالله كرم',         '0966111333', 'أمدرمان',      0),
         ]
         customers = [
             Customer.objects.create(
@@ -400,10 +400,10 @@ class Command(BaseCommand):
     def _create_suppliers(self, tenant, user):
         from apps.suppliers.models import Supplier
         data = [
-            ('شركة التقنية الحديثة',     '0911222333', 'الخرطوم'),
-            ('مصنع النسيج السوداني',      '0922444555', 'شندي'),
-            ('مجموعة الغذاء والتجارة',    '0933666777', 'أمدرمان'),
-            ('موردو الإكسسوارات الدولية', '0944888999', 'الخرطوم'),
+            ('الشركة الوطنية لتوريد الأدوية',        '0911222333', 'الخرطوم'),
+            ('مصنع الدواء السوداني',                 '0922444555', 'شندي'),
+            ('مجموعة الرعاية للمستلزمات الطبية',      '0933666777', 'أمدرمان'),
+            ('موردو مستحضرات التجميل الدولية',        '0944888999', 'الخرطوم'),
         ]
         suppliers = [
             Supplier.objects.create(
@@ -424,18 +424,18 @@ class Command(BaseCommand):
         # نقسّمها على دفعتين لبعض الأصناف لإظهار فواتير متعددة
         batches = [
             # (days_ago, supplier_idx, item_indices)
-            (65, 0, [0,1,2,3,4]),          # إلكترونيات - دفعة 1
-            (55, 0, [0,1,2]),              # إلكترونيات - دفعة 2
-            (60, 1, [5,6,7,8,9]),          # ملابس - دفعة 1
-            (50, 1, [5,6,7]),              # ملابس - دفعة 2
-            (58, 2, [10,11,12,13,14]),     # غذائيات - دفعة 1
-            (48, 2, [10,12,14]),           # غذائيات - دفعة 2
-            (56, 3, [15,16,17,18,19]),     # إكسسوارات - دفعة 1
-            (45, 3, [15,16,17]),           # إكسسوارات - دفعة 2
-            (30, 0, [2,3,4]),              # إلكترونيات - إعادة تخزين
-            (25, 1, [8,9]),                # ملابس - إعادة تخزين
-            (15, 2, [11,13]),              # غذائيات - إعادة تخزين
-            (10, 3, [18,19]),              # إكسسوارات - إعادة تخزين
+            (65, 0, [0,1,2,3,4]),          # أدوية - دفعة 1
+            (55, 0, [0,1,2]),              # أدوية - دفعة 2
+            (60, 1, [5,6,7,8,9]),          # مستلزمات طبية - دفعة 1
+            (50, 1, [5,6,7]),              # مستلزمات طبية - دفعة 2
+            (58, 2, [10,11,12,13,14]),     # العناية بالبشرة - دفعة 1
+            (48, 2, [10,12,14]),           # العناية بالبشرة - دفعة 2
+            (56, 3, [15,16,17,18,19]),     # الأمومة والطفولة - دفعة 1
+            (45, 3, [15,16,17]),           # الأمومة والطفولة - دفعة 2
+            (30, 0, [2,3,4]),              # أدوية - إعادة تخزين
+            (25, 1, [8,9]),                # مستلزمات طبية - إعادة تخزين
+            (15, 2, [11,13]),              # العناية بالبشرة - إعادة تخزين
+            (10, 3, [18,19]),              # الأمومة والطفولة - إعادة تخزين
         ]
 
         qty_factors = [1.0, 0.5, 1.0, 0.5, 1.0, 0.5, 1.0, 0.5, 0.3, 0.3, 0.3, 0.3]
@@ -556,7 +556,7 @@ class Command(BaseCommand):
 
         today = date.today()
         emp_data = [
-            ('محمد أحمد علي',  'مدير المبيعات', 'المبيعات',  'fixed', 3500),
+            ('محمد أحمد علي',  'صيدلي مسؤول',   'الصيدلة',   'fixed', 3500),
             ('فاطمة إبراهيم',  'محاسبة',        'المحاسبة',  'fixed', 2800),
             ('خالد عبدالله',   'مسؤول المخزن',  'المخزن',    'fixed', 2200),
         ]
@@ -592,8 +592,8 @@ class Command(BaseCommand):
         StoreSettings.objects.filter(tenant=tenant).delete()
         store = StoreSettings.objects.create(
             tenant=tenant, is_enabled=True,
-            display_name='متجر النجم', description='أفضل المنتجات بأفضل الأسعار',
-            accent_color='#6366f1', show_prices=True,
+            display_name='متجر صيدلية الشفاء', description='أدوية ومستلزمات طبية أصلية بأفضل الأسعار',
+            accent_color='#f6a821', show_prices=True,
             show_stock_quantity=False, status_override='open',
         )
         for i, status in enumerate(['pending','approved','pending']):
@@ -617,11 +617,11 @@ class Command(BaseCommand):
     def _create_notifications(self, tenant, user):
         from apps.notifications.models import Notification
         data = [
-            ('low_stock',      'high',   'تنبيه مخزون منخفض',           'الصنف «سماعات Sony WH-1000» وصل للحد الأدنى (5 قطع)'),
+            ('low_stock',      'high',   'تنبيه مخزون منخفض',           'الصنف «شراب خافض حرارة للأطفال» وصل للحد الأدنى (5 قطع)'),
             ('online_order',   'high',   'طلب جديد من المتجر',           'طلب #ORD-00003 بقيمة 7,000 SDG — في انتظار الموافقة'),
-            ('overdue_invoice','medium', 'فاتورة متأخرة السداد',          'فاتورة «مؤسسة البركة» متأخرة 12 يوماً'),
+            ('overdue_invoice','medium', 'فاتورة متأخرة السداد',          'فاتورة «مركز البركة الصحي» متأخرة 12 يوماً'),
             ('transfer_done',  'low',    'اكتمل تحويل المخزون',           'تم تأكيد التحويل TRF-001 إلى مخزن الطابق الثاني'),
-            ('general',        'low',    'مرحباً في Snake IMS',           'حسابك جاهز — ابدأ بإضافة منتجاتك ومبيعاتك'),
+            ('general',        'low',    'مرحباً في Snake',               'حسابك جاهز — ابدأ بإضافة أدويتك ومبيعاتك'),
         ]
         for ntype, priority, title, msg in data:
             Notification.objects.create(

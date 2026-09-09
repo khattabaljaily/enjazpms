@@ -2,9 +2,9 @@
 {% load humanize %}
 
 {% block auth_content %}
-<div class="text-center mb-4">
-    <h1 class="auth-title">معلومات النشاط التجاري</h1>
-    <p class="auth-subtitle">الخطوة الثانية: عرف نشاطك وبيانات المتجر</p>
+<div class="text-center mb-2">
+    <h1 class="auth-title">بيانات الصيدلية</h1>
+    <p class="auth-subtitle">الخطوة الثانية: عرّف صيدليتك وبيانات المتجر</p>
 </div>
 
 <!-- Progress Steps -->
@@ -19,7 +19,7 @@
         <div class="progress-step-circle">
             <i class="fas fa-store"></i>
         </div>
-        <span class="progress-step-label">النشاط التجاري</span>
+        <span class="progress-step-label">بيانات الصيدلية</span>
     </div>
     <div class="progress-step">
         <div class="progress-step-circle">
@@ -35,47 +35,69 @@
     <div class="alert alert-danger auth-alert js-form-errors d-none mb-3"></div>
 
     <div class="auth-form-grid auth-form-grid-compact">
-        {{ form.business_type }}
+        <div class="field-span-2 mb-2">
+            <label class="form-label d-block mb-2">{{ form.business_type.label }}</label>
+            <div class="biz-type-grid">
+                {% for bt in form.fields.business_type.queryset %}
+                <label class="biz-type-card {% if bt.pk|stringformat:'s' == form.business_type.value|stringformat:'s' %}biz-type-card--active{% endif %}" title="{{ bt.description }}">
+                    <input type="radio" name="business_type" value="{{ bt.pk }}"
+                           {% if bt.pk|stringformat:'s' == form.business_type.value|stringformat:'s' %}checked{% endif %}
+                           class="biz-type-radio">
+                    <span class="biz-type-icon"><i class="fas {{ bt.icon }}"></i></span>
+                    <span class="biz-type-name">{{ bt.name_ar }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% if form.business_type.errors %}
+            <div class="text-danger small mt-1 js-field-errors" data-field="business_type">{{ form.business_type.errors }}</div>
+            {% endif %}
+        </div>
 
-        <div class="mb-3">
+        <div class="mb-2">
             {{ form.business_name.label_tag }}
-            {{ form.business_name }}
+            <div class="input-icon-field">
+                <i class="fas fa-clinic-medical input-icon"></i>
+                {{ form.business_name }}
+            </div>
             {% if form.business_name.errors %}
             <div class="text-danger small mt-1 js-field-errors" data-field="business_name">{{ form.business_name.errors }}</div>
             {% endif %}
         </div>
-        
-        <div class="mb-3">
+
+        <div class="mb-2">
             {{ form.phone.label_tag }}
-            {{ form.phone }}
+            <div class="input-icon-field">
+                <i class="fas fa-phone input-icon"></i>
+                {{ form.phone }}
+            </div>
             {% if form.phone.errors %}
             <div class="text-danger small mt-1 js-field-errors" data-field="phone">{{ form.phone.errors }}</div>
             {% endif %}
         </div>
-        
-        <div class="mb-3">
+
+        <div class="mb-2">
             {{ form.city.label_tag }}
-            {{ form.city }}
+            <div class="input-icon-field">
+                <i class="fas fa-city input-icon"></i>
+                {{ form.city }}
+            </div>
             {% if form.city.errors %}
             <div class="text-danger small mt-1 js-field-errors" data-field="city">{{ form.city.errors }}</div>
             {% endif %}
         </div>
 
-        <div class="mb-3">
+        <div class="mb-2">
             {{ form.country.label_tag }}
             {{ form.country }}
             {% if form.country.errors %}
             <div class="text-danger small mt-1 js-field-errors" data-field="country">{{ form.country.errors }}</div>
             {% endif %}
+            <small class="text-muted d-block mt-1">
+                المنطقة الزمنية: <span id="countryTimezonePreview">{{ timezone_preview }}</span>
+            </small>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">المنطقة الزمنية</label>
-            <input id="countryTimezonePreview" class="form-control" readonly value="{{ timezone_preview }}">
-            <small class="text-muted">سيتم ضبط المنطقة الزمنية تلقائياً حسب البلد</small>
-        </div>
-
-        <div class="mb-3 field-span-2">
+        <div class="mb-2 field-span-2">
             {{ form.address.label_tag }}
             {{ form.address }}
             {% if form.address.errors %}
@@ -115,7 +137,7 @@
         if (!countrySelect || !timezonePreview) return;
         const selected = countrySelect.value;
         const timezone = COUNTRY_TIMEZONE_MAP[selected] || COUNTRY_TIMEZONE_MAP['السودان'];
-        timezonePreview.value = timezone;
+        timezonePreview.textContent = timezone;
     }
 
     function storeSuggestedCurrency() {

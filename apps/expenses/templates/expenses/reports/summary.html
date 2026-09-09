@@ -102,7 +102,7 @@
                         <tr>
                             <td class="fw-bold">{{ row.category_name }}</td>
                             <td class="text-center text-muted">{{ row.expense_count }}</td>
-                            <td class="text-end fw-bold" style="color:#6366f1;">{{ row.total_amount }}</td>
+                            <td class="text-end fw-bold" style="color:#c9840f;">{{ row.total_amount }}</td>
                         </tr>
                         {% endfor %}
                         <tr class="rpt-total-row">
@@ -133,7 +133,7 @@
     const cats = [{% for r in by_category.data %}{ name: "{{ r.category_name|truncatechars:18 }}", amt: parseFloat("{{ r.total_amount }}".replace(/,/g,'')) || 0 }{% if not forloop.last %},{% endif %}{% endfor %}];
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const textColor = isDark ? '#9ca3af' : '#6b7280';
-    const palette = ['#6366f1','#4f46e5','#818cf8','#a5b4fc','#c7d2fe','#e0e7ff','#f59e0b','#ef4444','#14b8a6','#10b981'];
+    const palette = ['#c9840f','#a8660c','#f6a821','#ffb640','#ffd699','#fde6c2','#f59e0b','#ef4444','#14b8a6','#10b981'];
 
     new Chart(document.getElementById('expensesCategoryChart'), {
         type: 'doughnut',

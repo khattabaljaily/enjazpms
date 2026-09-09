@@ -106,7 +106,7 @@
 }
 
 .sale-item-result:hover {
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(246,168,33, 0.05);
   transform: translateX(-4px);
 }
 
@@ -159,7 +159,7 @@
 
 /* Notes Panel */
 .sales-panel-note {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.04), rgba(59, 130, 246, 0.02));
+  background: linear-gradient(135deg, rgba(246,168,33, 0.04), rgba(59, 130, 246, 0.02));
   border-radius: 14px;
   padding: 0.75rem 1rem;
   margin-bottom: 1.25rem;

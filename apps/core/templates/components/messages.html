@@ -1,9 +1,9 @@
 {% load humanize %}
 {% if messages %}
 <script>
-window.__enjazPendingMessages = window.__enjazPendingMessages || [];
+window.__snakeFlashPending = window.__snakeFlashPending || [];
 {% for message in messages %}
-window.__enjazPendingMessages.push({
+window.__snakeFlashPending.push({
     message: "{{ message|escapejs }}",
     type: "{% if 'error' in message.tags or 'danger' in message.tags %}error{% elif 'success' in message.tags %}success{% elif 'warning' in message.tags %}warning{% else %}info{% endif %}"
 });

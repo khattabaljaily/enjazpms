@@ -374,7 +374,7 @@ $('#confirmDeleteRecipeBtn').on('click', function() {
         headers: { 'X-CSRFToken': CSRF_TOKEN },
         success: function(res) {
             if (res.success) {
-                sessionStorage.setItem('__enjazFlash', JSON.stringify({ message: res.message, type: 'success' }));
+                sessionStorage.setItem('__snakeFlash', JSON.stringify({ message: res.message, type: 'success' }));
                 window.location.href = BOM_LIST_URL;
             } else {
                 Snake.toast(res.message, 'error');

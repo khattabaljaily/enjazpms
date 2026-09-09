@@ -77,8 +77,8 @@
 
 .plan-trial      { background: rgba(107,114,128,0.1);  color: #6b7280; }
 .plan-basic      { background: rgba(59,130,246,0.1);   color: #3b82f6; }
-.plan-pro        { background: rgba(99,102,241,0.1);   color: #6366f1; }
-.plan-enterprise { background: rgba(139,92,246,0.1);   color: #8b5cf6; }
+.plan-pro        { background: rgba(246,168,33,0.1);   color: #c9840f; }
+.plan-enterprise { background: rgba(139,92,246,0.1);   color: #ff8a3d; }
 
 /* ══ VERSION & EXPIRY ════════════════════════════════════════ */
 .tnr-version { font-size: 0.8rem; color: var(--text-secondary); }
@@ -87,7 +87,7 @@
 .tnr-exp--ok       { color: #10b981; }
 .tnr-exp--soon     { color: #f59e0b; }
 .tnr-exp--expired  { color: #ef4444; }
-.tnr-exp--lifetime { color: #6366f1; }
+.tnr-exp--lifetime { color: #c9840f; }
 
 /* ══ SUBSCRIPTION STATUS BAR (View Modal) ════════════════════ */
 .tn-sub-status-bar {
@@ -105,7 +105,7 @@
 .tn-sub--ok       { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.2);  color: #10b981; }
 .tn-sub--soon     { background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.2);  color: #f59e0b; }
 .tn-sub--expired  { background: rgba(239,68,68,0.06);  border-color: rgba(239,68,68,0.2);   color: #ef4444; }
-.tn-sub--lifetime { background: rgba(99,102,241,0.06); border-color: rgba(99,102,241,0.2);  color: #6366f1; }
+.tn-sub--lifetime { background: rgba(246,168,33,0.06); border-color: rgba(246,168,33,0.2);  color: #c9840f; }
 
 .tn-sub-status-icon { font-size: 1rem; flex-shrink: 0; }
 .tn-sub-status-text { flex: 1; }
@@ -121,7 +121,7 @@
 .tn-sub-badge--ok       { background: rgba(16,185,129,0.15); color: #10b981; }
 .tn-sub-badge--soon     { background: rgba(245,158,11,0.15); color: #f59e0b; }
 .tn-sub-badge--expired  { background: rgba(239,68,68,0.15);  color: #ef4444; }
-.tn-sub-badge--lifetime { background: rgba(99,102,241,0.15); color: #6366f1; }
+.tn-sub-badge--lifetime { background: rgba(246,168,33,0.15); color: #c9840f; }
 
 /* ══ LIMITS GRID (View Modal) ════════════════════════════════ */
 .tn-limits-grid {
@@ -146,10 +146,10 @@
 .tn-limit-label { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
 
 /* ══ INFO ICON VARIANTS (not in shared cx-info-icon-*) ══════ */
-.tn-info-icon--type    { background: rgba(99,102,241,0.1);  color: #6366f1; }
-.tn-info-icon--users   { background: rgba(139,92,246,0.1);  color: #8b5cf6; }
+.tn-info-icon--type    { background: rgba(246,168,33,0.1);  color: #c9840f; }
+.tn-info-icon--users   { background: rgba(139,92,246,0.1);  color: #ff8a3d; }
 .tn-info-icon--date    { background: rgba(107,114,128,0.1); color: #6b7280; }
-.tn-info-icon--plan    { background: rgba(99,102,241,0.12); color: #6366f1; }
+.tn-info-icon--plan    { background: rgba(246,168,33,0.12); color: #c9840f; }
 .tn-info-icon--version { background: rgba(59,130,246,0.12); color: #3b82f6; }
 .tn-info-icon--start   { background: rgba(16,185,129,0.12); color: #10b981; }
 .tn-info-icon--expire  { background: rgba(239,68,68,0.12);  color: #ef4444; }

@@ -69,7 +69,7 @@
                             <td class="fw-bold">{{ row.name }}</td>
                             <td class="text-center text-muted">{{ row.phone|default:"—" }}</td>
                             <td class="text-end text-muted">{{ row.credit_limit }}</td>
-                            <td class="text-end fw-bold" style="color:{% if row.balance_raw > 0 %}#6366f1{% elif row.balance_raw < 0 %}#11998e{% else %}var(--text-secondary){% endif %}">
+                            <td class="text-end fw-bold" style="color:{% if row.balance_raw > 0 %}#c9840f{% elif row.balance_raw < 0 %}#11998e{% else %}var(--text-secondary){% endif %}">
                                 {{ row.balance }}
                             </td>
                         </tr>

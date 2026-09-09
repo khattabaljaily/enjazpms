@@ -4,7 +4,7 @@
     "name_ar": "صيدلية",
     "slug": "pharmacy",
     "icon": "fa-mortar-pestle",
-    "description": "صيدلية — أدوية ومستحضرات صيدلانية بتواريخ انتهاء وأرقام دُفعات",
+    "description": "صيدلية بيع مباشر للعملاء — نقطة بيع سريعة، أدوية بتواريخ انتهاء وأرقام دُفعات",
     "display_order": 1,
     "is_active": true,
     "features": {
@@ -14,7 +14,31 @@
       "has_weight_items": true,
       "has_services": false,
       "has_manufacturing": false,
-      "has_work_orders": false
+      "has_work_orders": false,
+      "has_pos": true,
+      "has_sales_invoice": false,
+      "has_agents_module": false
+    }
+  },
+  {
+    "name": "Medical Distributor",
+    "name_ar": "شركة توزيع أدوية",
+    "slug": "medical-distributor",
+    "icon": "fa-truck-medical",
+    "description": "شركة توزيع أدوية — تبيع بالجملة لصيدليات مسجّلة عبر فواتير ومندوبين، بدون نقطة بيع",
+    "display_order": 2,
+    "is_active": true,
+    "features": {
+      "has_expiry_dates": true,
+      "has_batch_numbers": true,
+      "has_serial_numbers": false,
+      "has_weight_items": false,
+      "has_services": false,
+      "has_manufacturing": false,
+      "has_work_orders": false,
+      "has_pos": false,
+      "has_sales_invoice": true,
+      "has_agents_module": true
     }
   }
 ]

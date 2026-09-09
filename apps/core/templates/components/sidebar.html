@@ -164,7 +164,7 @@
         </li>
         <li class="nav-item">
             <a class="nav-link{% if request.resolver_match.url_name == 'analytics' %} active{% endif %}" href="{% url 'core:analytics' %}">
-                <span class="nav-icon" style="background:rgba(139,92,246,.12);color:#8b5cf6;"><i class="fas fa-chart-line"></i></span>
+                <span class="nav-icon" style="background:rgba(139,92,246,.12);color:#ff8a3d;"><i class="fas fa-chart-line"></i></span>
                 التحليلات المتقدمة
             </a>
         </li>
@@ -180,9 +180,13 @@
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
+                {% if tenant_capabilities|has_capability:"has_pos" %}
                 <li><a href="{% url 'sales:pos' %}" class="nav-sublink"><i class="fas fa-cash-register me-2"></i>نقطة البيع (POS)</a></li>
+                {% endif %}
                 <li><a href="{% url 'sales:quote_list' %}" class="nav-sublink"><i class="fas fa-file-contract me-2"></i>عروض الأسعار</a></li>
+                {% if tenant_capabilities|has_capability:"has_sales_invoice" %}
                 <li><a href="{% url 'sales:invoice_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>فاتورة مبيعات</a></li>
+                {% endif %}
                 <li><a href="{% url 'sales:invoice_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الفواتير</a></li>
                 <li><a href="{% url 'sales:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
             </ul>
@@ -261,16 +265,16 @@
                 الموردين
             </a>
         </li>
-        {% if plan_allows_agents %}
+        {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" %}
         <li class="nav-item">
             <a class="nav-link" href="{% url 'agents:list' %}">
-                <span class="nav-icon" style="background:rgba(99,102,241,.12);color:#6366f1;"><i class="fas fa-id-badge"></i></span>
+                <span class="nav-icon" style="background:rgba(246,168,33,.12);color:#c9840f;"><i class="fas fa-id-badge"></i></span>
                 المناديب
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link" href="{% url 'agents:requests_list' %}">
-                <span class="nav-icon" style="background:rgba(99,102,241,.12);color:#6366f1;"><i class="fas fa-paper-plane"></i></span>
+                <span class="nav-icon" style="background:rgba(246,168,33,.12);color:#c9840f;"><i class="fas fa-paper-plane"></i></span>
                 طلبات المناديب
             </a>
         </li>
@@ -295,7 +299,7 @@
             <ul class="nav-submenu">
                 <li><a href="{% url 'customers:payments' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>مدفوعات العملاء</a></li>
                 <li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين</a></li>
-                {% if plan_allows_agents %}<li><a href="{% url 'agents:payments' %}" class="nav-sublink"><i class="fas fa-id-badge me-2"></i>دفعات المناديب</a></li>{% endif %}
+                {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" %}<li><a href="{% url 'agents:payments' %}" class="nav-sublink"><i class="fas fa-id-badge me-2"></i>دفعات المناديب</a></li>{% endif %}
                 <li><a href="{% url 'expenses:list' %}" class="nav-sublink"><i class="fas fa-receipt me-2"></i>المصروفات</a></li>
                 <li><a href="{% url 'treasury:list' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>الخزائن</a></li>
                 <li><a href="{% url 'employees:advance_list' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>سلف الموظفين</a></li>
@@ -384,7 +388,7 @@
                         <li><a href="{% url 'purchases:reports:supplier_balances' %}" class="nav-sublink"><i class="fas fa-truck me-2"></i>مديونيات الموردين</a></li>
                         <li><a href="{% url 'purchases:reports:payments_report' %}" class="nav-sublink"><i class="fas fa-money-bill-transfer me-2"></i>مدفوعات الموردين</a></li>
                         <li><a href="{% url 'purchases:reports:returns_report' %}" class="nav-sublink"><i class="fas fa-rotate-right me-2"></i>مرتجعات المشتريات</a></li>
-                        {% if plan_allows_agents %}
+                        {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" %}
                         <li class="nav-submenu-label">المناديب</li>
                         <li><a href="{% url 'agents:statement' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب مندوب</a></li>
                         <li><a href="{% url 'agents:balances' %}" class="nav-sublink"><i class="fas fa-id-badge me-2"></i>مستحقات المناديب</a></li>
@@ -436,7 +440,7 @@
         {% if plan_allows_store %}
         <li class="nav-item">
             <a class="nav-link{% if 'store' in request.path %} active{% endif %}" href="{% url 'store:manage_settings' %}">
-                <span class="nav-icon" style="background:linear-gradient(135deg,#6366f1,#7c3aed);color:#fff;"><i class="fas fa-store"></i></span>
+                <span class="nav-icon" style="background:linear-gradient(135deg,#c9840f,#ff8a3d);color:#fff;"><i class="fas fa-store"></i></span>
                 المتجر الإلكتروني
                 {% if store_pending_count %}
                 <span style="margin-right:auto;background:#ef4444;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:.62rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;">{{ store_pending_count }}</span>
@@ -479,7 +483,7 @@
     <ul class="nav flex-column">
         <li class="nav-item">
             <a class="nav-link{% if request.resolver_match.url_name == 'activity_log' %} active{% endif %}" href="{% url 'accounts:activity_log' %}">
-                <span class="nav-icon" style="background:linear-gradient(135deg,#6366f1,#4338ca);color:#fff;"><i class="fas fa-clock-rotate-left"></i></span>
+                <span class="nav-icon" style="background:linear-gradient(135deg,#c9840f,#8f5c0a);color:#fff;"><i class="fas fa-clock-rotate-left"></i></span>
                 سجل نشاطاتي
             </a>
         </li>

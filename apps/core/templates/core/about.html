@@ -13,7 +13,7 @@
 <!-- ══ TOP BAR ════════════════════════════════════════════════════ -->
 <nav class="ab-topbar" id="ab-topbar">
     <a href="/" class="ab-topbar__brand">
-        <img src="{% static 'img/logo/logo-6547bd.png' %}" alt="Snake" height="32">
+        <img src="{% static 'img/logo/logo-f6a821.png' %}" alt="Snake" height="32">
         <span>Snake</span>
     </a>
     <div class="ab-topbar__links">
@@ -38,15 +38,15 @@
         <div class="ab-hero__inner">
             <span class="ab-hero__badge ab-reveal">
                 <span class="ab-hero__badge-dot"></span>
-                نظام SaaS متكامل مدعوم بذكاء اصطناعي
+                نظام SaaS متكامل لإدارة الصيدليات، مدعوم بذكاء اصطناعي
             </span>
             <h1 class="ab-hero__title ab-reveal ab-reveal--d1">
-                أدِر نشاطك التجاري<br>
+                أدِر صيدليتك<br>
                 <span class="ab-hero__accent" id="ab-typing-target">بذكاء وسرعة</span>
             </h1>
             <p class="ab-hero__sub ab-reveal ab-reveal--d2">
-                Snake هو نظام إدارة مخزون ومبيعات متكامل يجمع كل عملياتك في مكان واحد —
-                من الفاتورة حتى التقرير، ومن الشراء حتى التسليم.
+                Snake هو نظام إدارة مخزون ومبيعات مصمم خصيصاً للصيدليات — يجمع كل عملياتك في مكان واحد،
+                من تتبع صلاحية الأدوية والدفعات حتى الفاتورة، ومن الشراء حتى التسليم.
             </p>
             <div class="ab-hero__actions ab-reveal ab-reveal--d3 mt-3">
                 <a href="{% url 'accounts:register_step1' %}" class="ab-btn ab-btn--white ab-btn--lg">
@@ -69,6 +69,9 @@
     <div class="ab-hero__scroll-hint">
         <div class="ab-scroll-indicator"><div class="ab-scroll-dot"></div></div>
     </div>
+    <svg class="ab-hero__wave" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,32 C240,60 480,4 720,20 C960,36 1200,58 1440,26 L1440,60 L0,60 Z"></path>
+    </svg>
 </section>
 
 <!-- ══ STATS ══════════════════════════════════════════════════════ -->
@@ -76,8 +79,8 @@
     <div class="ab-container">
         <div class="ab-stats__inner">
             <div class="ab-stat ab-sr">
-                <div class="ab-stat__num ab-count" data-target="10" data-suffix="+">0</div>
-                <div class="ab-stat__label">قطاعات تجارية مدعومة</div>
+                <div class="ab-stat__num"><i class="fas fa-pills"></i></div>
+                <div class="ab-stat__label">تتبع كامل للدفعات وتواريخ الصلاحية</div>
             </div>
             <div class="ab-stat__divider"></div>
             <div class="ab-stat ab-sr">
@@ -103,28 +106,6 @@
     </div>
 </section>
 
-<!-- ══ BUSINESS TYPES ════════════════════════════════════════════ -->
-<section class="ab-section ab-section--white">
-    <div class="ab-container">
-        <div class="ab-section__head ab-sr">
-            <span class="ab-section__kicker"><i class="fas fa-store"></i> القطاعات المدعومة</span>
-            <h2 class="ab-section__title">مناسب لكل نشاط تجاري</h2>
-            <p class="ab-section__desc">واحد من كل عشرة أنشطة تجارية مختلفة؟ Snake يتكيف مع طبيعة عملك تلقائياً.</p>
-        </div>
-        <div class="ab-sectors-grid ab-sr">
-            <div class="ab-sector-chip"><i class="fas fa-pills"></i> صيدليات</div>
-            <div class="ab-sector-chip"><i class="fas fa-shopping-cart"></i> سوبرماركت</div>
-            <div class="ab-sector-chip"><i class="fas fa-utensils"></i> مطاعم وكافيهات</div>
-            <div class="ab-sector-chip"><i class="fas fa-mobile-alt"></i> إلكترونيات</div>
-            <div class="ab-sector-chip"><i class="fas fa-car"></i> قطع غيار سيارات</div>
-            <div class="ab-sector-chip"><i class="fas fa-toolbox"></i> مواد بناء وأدوات</div>
-            <div class="ab-sector-chip"><i class="fas fa-leaf"></i> مواد غذائية وزراعية</div>
-            <div class="ab-sector-chip"><i class="fas fa-couch"></i> أثاث ومفروشات</div>
-            <div class="ab-sector-chip ab-sector-chip--more"><i class="fas fa-plus"></i> وأكثر</div>
-        </div>
-    </div>
-</section>
-
 <!-- ══ HOW IT WORKS ══════════════════════════════════════════════ -->
 <section class="ab-hiw">
     <div class="ab-hiw__bg"></div>
@@ -137,15 +118,15 @@
 
         <div class="ab-hiw__track">
             <!-- Step 1 -->
-            <div class="ab-hiw__card ab-sr" style="--step-color:#6366f1;--step-glow:rgba(99,102,241,.18);">
+            <div class="ab-hiw__card ab-sr" style="--step-color:#c9840f;--step-glow:rgba(246,168,33,.18);">
                 <div class="ab-hiw__card-top">
                     <div class="ab-hiw__num">١</div>
                     <div class="ab-hiw__icon-wrap">
                         <i class="fas fa-user-plus"></i>
                     </div>
                 </div>
-                <h4 class="ab-hiw__title">سجّل وأنشئ نشاطك</h4>
-                <p class="ab-hiw__text">اختر نوع نشاطك وأضف بياناته الأساسية. النظام يضبط نفسه تلقائياً حسب قطاعك.</p>
+                <h4 class="ab-hiw__title">سجّل صيدليتك</h4>
+                <p class="ab-hiw__text">أضف بيانات صيدليتك الأساسية، والنظام يضبط نفسه تلقائياً لتتبع الدفعات وتواريخ الصلاحية.</p>
                 <ul class="ab-hiw__list">
                     <li><i class="fas fa-check"></i> دقيقتان للتسجيل</li>
                     <li><i class="fas fa-check"></i> لا تقنية مطلوبة</li>
@@ -164,8 +145,8 @@
                         <i class="fas fa-boxes"></i>
                     </div>
                 </div>
-                <h4 class="ab-hiw__title">أضف منتجاتك ومخزونك</h4>
-                <p class="ab-hiw__text">أدخل منتجاتك يدوياً أو استورد قائمتك كاملةً من ملف Excel أو CSV في ثوانٍ.</p>
+                <h4 class="ab-hiw__title">أضف أدويتك ومخزونك</h4>
+                <p class="ab-hiw__text">أدخل أدويتك يدوياً أو استورد قائمتك كاملةً من ملف Excel أو CSV، مع رقم كل دفعة وتاريخ صلاحيتها.</p>
                 <ul class="ab-hiw__list">
                     <li><i class="fas fa-check"></i> استيراد Excel/CSV</li>
                     <li><i class="fas fa-check"></i> مخازن متعددة</li>
@@ -197,7 +178,7 @@
             <div class="ab-hiw__arrow"><i class="fas fa-chevron-left"></i></div>
 
             <!-- Step 4 -->
-            <div class="ab-hiw__card ab-sr" style="--step-color:#a855f7;--step-glow:rgba(168,85,247,.18);">
+            <div class="ab-hiw__card ab-sr" style="--step-color:#ff8a3d;--step-glow:rgba(255, 138, 61,.18);">
                 <div class="ab-hiw__card-top">
                     <div class="ab-hiw__num">٤</div>
                     <div class="ab-hiw__icon-wrap">
@@ -223,20 +204,37 @@
     </div>
 </section>
 
+<!-- ══ WHO IT'S FOR ═══════════════════════════════════════════════ -->
+<section class="ab-section ab-section--white">
+    <div class="ab-container">
+        <div class="ab-section__head ab-sr">
+            <span class="ab-section__kicker"><i class="fas fa-pills"></i> مصمم للصيدليات</span>
+            <h2 class="ab-section__title">مناسب لكل نوع صيدلية</h2>
+            <p class="ab-section__desc">من الصيدلية المستقلة إلى سلسلة الفروع، Snake يتكيف مع حجم صيدليتك.</p>
+        </div>
+        <div class="ab-sectors-grid ab-sr">
+            <div class="ab-sector-chip"><i class="fas fa-clinic-medical"></i> صيدلية مستقلة</div>
+            <div class="ab-sector-chip"><i class="fas fa-city"></i> سلسلة صيدليات متعددة الفروع</div>
+            <div class="ab-sector-chip"><i class="fas fa-truck-medical"></i> موزّع أدوية بالجملة</div>
+            <div class="ab-sector-chip"><i class="fas fa-hospital"></i> صيدلية داخل مجمع طبي</div>
+        </div>
+    </div>
+</section>
+
 <!-- ══ WHY ════════════════════════════════════════════════════════ -->
 <section class="ab-section ab-section--white">
     <div class="ab-container">
         <div class="ab-section__head ab-sr">
             <span class="ab-section__kicker"><i class="fas fa-bolt"></i> لماذا Snake؟</span>
             <h2 class="ab-section__title">ليس مجرد نظام محاسبة</h2>
-            <p class="ab-section__desc">Snake منظومة متكاملة تربط عملياتك من الشراء حتى التسليم حتى التحليل.</p>
+            <p class="ab-section__desc">Snake منظومة متكاملة تربط عمليات صيدليتك من الشراء حتى التسليم حتى التحليل.</p>
         </div>
         <div class="ab-compare ab-sr">
             <div class="ab-compare__col ab-compare__col--before">
                 <div class="ab-compare__label"><i class="fas fa-times-circle"></i> بدون Snake</div>
                 <ul class="ab-compare__list">
                     <li><i class="fas fa-times"></i> جداول Excel منفصلة ومتضاربة</li>
-                    <li><i class="fas fa-times"></i> لا تعرف رصيد مخزونك إلا وقت الجرد</li>
+                    <li><i class="fas fa-times"></i> أدوية منتهية الصلاحية تُكتشف متأخراً على الرف</li>
                     <li><i class="fas fa-times"></i> مديونيات ضائعة وعملاء غاضبون</li>
                     <li><i class="fas fa-times"></i> تقارير تُعدّ يدوياً وتستغرق ساعات</li>
                     <li><i class="fas fa-times"></i> لا رقابة على موظفيك وصلاحياتهم</li>
@@ -249,7 +247,7 @@
                 <div class="ab-compare__label"><i class="fas fa-check-circle"></i> مع Snake</div>
                 <ul class="ab-compare__list">
                     <li><i class="fas fa-check"></i> كل شيء في مكان واحد، متزامن لحظياً</li>
-                    <li><i class="fas fa-check"></i> رصيد المخزون يتحدث تلقائياً مع كل فاتورة</li>
+                    <li><i class="fas fa-check"></i> تنبيه تلقائي قبل انتهاء صلاحية كل دفعة</li>
                     <li><i class="fas fa-check"></i> كشف حساب كامل لكل عميل بضغطة واحدة</li>
                     <li><i class="fas fa-check"></i> 36+ تقرير جاهز في ثوانٍ</li>
                     <li><i class="fas fa-check"></i> 145 صلاحية دقيقة لكل دور ومستخدم</li>
@@ -269,9 +267,9 @@
             <div class="ab-hc-spotlight__body">
                 <div class="ab-hc-spotlight__text">
                     <h2 class="ab-hc-spotlight__title">وضع العملة الصعبة</h2>
-                    <p class="ab-hc-spotlight__sub">للتاجر الذي يشتري بالعملة الأجنبية ويبيع بالعملة المحلية</p>
+                    <p class="ab-hc-spotlight__sub">للصيدلية التي تستورد أدويتها بالعملة الأجنبية وتبيع بالعملة المحلية</p>
                     <ul class="ab-hc-spotlight__list">
-                        <li><i class="fas fa-check-circle"></i> سعّر منتجاتك بالدولار أو اليورو أو الريال — مرة واحدة</li>
+                        <li><i class="fas fa-check-circle"></i> سعّر أدويتك بالدولار أو اليورو أو الريال — مرة واحدة</li>
                         <li><i class="fas fa-check-circle"></i> غيّر سعر الصرف بنقرة واحدة، يُعاد تسعير كل المنتجات تلقائياً</li>
                         <li><i class="fas fa-check-circle"></i> خزينة عملة صعبة مستقلة بكشف حساب مفصّل</li>
                         <li><i class="fas fa-check-circle"></i> تحويلات مسجّلة بسعر صرف كل عملية على حدة</li>
@@ -284,13 +282,13 @@
                         <div class="ab-hc-card__rate">1 $ = <span>1,400</span> ج.س</div>
                         <div class="ab-hc-card__eq">
                             <div class="ab-hc-card__item">
-                                <span class="ab-hc-card__item-name">مكيّف سبليت</span>
-                                <span class="ab-hc-card__item-price">850 $</span>
+                                <span class="ab-hc-card__item-name">دواء مستورد (علبة)</span>
+                                <span class="ab-hc-card__item-price">8.5 $</span>
                             </div>
                             <div class="ab-hc-card__arrow"><i class="fas fa-arrow-left"></i></div>
                             <div class="ab-hc-card__item ab-hc-card__item--local">
                                 <span class="ab-hc-card__item-name">السعر بالجنيه</span>
-                                <span class="ab-hc-card__item-price">1,190,000 ج.س</span>
+                                <span class="ab-hc-card__item-price">11,900 ج.س</span>
                             </div>
                         </div>
                         <div class="ab-hc-card__update"><i class="fas fa-sync-alt"></i> يتحدث تلقائياً عند تغيير السعر</div>
@@ -331,7 +329,7 @@
                 <div class="ab-tab-panel ab-tab-panel--active" data-panel="inventory">
                     <div class="ab-tab-panel__grid">
                         <div class="ab-tab-feat">
-                            <div class="ab-tab-feat__icon" style="background:#eef2ff;color:#6366f1"><i class="fas fa-warehouse"></i></div>
+                            <div class="ab-tab-feat__icon" style="background:#fef3e2;color:#c9840f"><i class="fas fa-warehouse"></i></div>
                             <div class="ab-tab-feat__name">مخازن متعددة</div>
                             <p class="ab-tab-feat__text">أنشئ مخازن غير محدودة وتابع رصيد كل منتج في كل موقع بشكل مستقل.</p>
                         </div>
@@ -351,19 +349,19 @@
                             <p class="ab-tab-feat__text">إشعارات تلقائية عند وصول أي منتج لحد إعادة الطلب المحدد.</p>
                         </div>
                         <div class="ab-tab-feat">
-                            <div class="ab-tab-feat__icon" style="background:#f5f3ff;color:#7c3aed"><i class="fas fa-industry"></i></div>
-                            <div class="ab-tab-feat__name">إدارة التصنيع</div>
-                            <p class="ab-tab-feat__text">أوامر التصنيع مع قوائم المكونات (BOM) لتحويل المواد الخام لمنتجات نهائية.</p>
+                            <div class="ab-tab-feat__icon" style="background:#f5f3ff;color:#ff8a3d"><i class="fas fa-mortar-pestle"></i></div>
+                            <div class="ab-tab-feat__name">تركيب الأدوية المخلوطة</div>
+                            <p class="ab-tab-feat__text">أوامر تحضير مع قوائم المكونات (BOM) لتحويل المواد الخام لمستحضرات جاهزة.</p>
                         </div>
                         <div class="ab-tab-feat">
                             <div class="ab-tab-feat__icon" style="background:#ecfdf5;color:#059669"><i class="fas fa-file-import"></i></div>
                             <div class="ab-tab-feat__name">استيراد وتصدير Excel</div>
-                            <p class="ab-tab-feat__text">استورد قائمة منتجاتك بالكامل من Excel أو CSV في دقيقة واحدة.</p>
+                            <p class="ab-tab-feat__text">استورد قائمة أدويتك بالكامل من Excel أو CSV في دقيقة واحدة.</p>
                         </div>
                         <div class="ab-tab-feat">
-                            <div class="ab-tab-feat__icon" style="background:#fdf4ff;color:#a21caf"><i class="fas fa-layer-group"></i></div>
-                            <div class="ab-tab-feat__name">تتبع الدفعات (Batch)</div>
-                            <p class="ab-tab-feat__text">سجّل كل دفعة توريد برقمها وتاريخ صلاحيتها، وتابع رصيد كل دفعة على حدة.</p>
+                            <div class="ab-tab-feat__icon" style="background:#fdf4ff;color:#c9840f"><i class="fas fa-layer-group"></i></div>
+                            <div class="ab-tab-feat__name">تتبع الدفعات وتواريخ الصلاحية</div>
+                            <p class="ab-tab-feat__text">سجّل كل دفعة دواء برقمها وتاريخ صلاحيتها، وتابع رصيد كل دفعة على حدة.</p>
                         </div>
                     </div>
                 </div>
@@ -392,14 +390,14 @@
                             <p class="ab-tab-feat__text">أنشئ عرض سعر وحوّله لفاتورة بضغطة واحدة عند القبول.</p>
                         </div>
                         <div class="ab-tab-feat">
-                            <div class="ab-tab-feat__icon" style="background:#fdf4ff;color:#a21caf"><i class="fas fa-users"></i></div>
+                            <div class="ab-tab-feat__icon" style="background:#fdf4ff;color:#c9840f"><i class="fas fa-users"></i></div>
                             <div class="ab-tab-feat__name">إدارة العملاء</div>
                             <p class="ab-tab-feat__text">سجل عملاء مفصّل، كشف حساب لحظي، وإرسال الفواتير بالبريد الإلكتروني.</p>
                         </div>
                         <div class="ab-tab-feat">
-                            <div class="ab-tab-feat__icon" style="background:#eef2ff;color:#6366f1"><i class="fas fa-store"></i></div>
-                            <div class="ab-tab-feat__name">متجر إلكتروني مدمج</div>
-                            <p class="ab-tab-feat__text">كل محل يحصل على رابط متجر عام جاهز للطلبات أونلاين فوراً.</p>
+                            <div class="ab-tab-feat__icon" style="background:#fef3e2;color:#c9840f"><i class="fas fa-store"></i></div>
+                            <div class="ab-tab-feat__name">طلب الأدوية أونلاين</div>
+                            <p class="ab-tab-feat__text">كل صيدلية تحصل على رابط متجر عام جاهز لاستقبال طلبات عملائها أونلاين فوراً.</p>
                         </div>
                     </div>
                 </div>
@@ -428,7 +426,7 @@
                             <p class="ab-tab-feat__text">سجّل مصروفاتك بالتصنيف والخزينة مع تقارير شهرية تفصيلية.</p>
                         </div>
                         <div class="ab-tab-feat">
-                            <div class="ab-tab-feat__icon" style="background:#f5f3ff;color:#7c3aed"><i class="fas fa-chart-bar"></i></div>
+                            <div class="ab-tab-feat__icon" style="background:#f5f3ff;color:#ff8a3d"><i class="fas fa-chart-bar"></i></div>
                             <div class="ab-tab-feat__name">36+ تقرير تحليلي</div>
                             <p class="ab-tab-feat__text">تقارير المبيعات، المشتريات، المخزون، الموردين، العملاء، والخزائن.</p>
                         </div>
@@ -443,7 +441,7 @@
                             <p class="ab-tab-feat__text">رصيد كل مورد، سجل مدفوعات، وكشف حساب شامل لأي فترة.</p>
                         </div>
                         <div class="ab-tab-feat">
-                            <div class="ab-tab-feat__icon" style="background:#eef2ff;color:#6366f1"><i class="fas fa-file-signature"></i></div>
+                            <div class="ab-tab-feat__icon" style="background:#fef3e2;color:#c9840f"><i class="fas fa-file-signature"></i></div>
                             <div class="ab-tab-feat__name">طلب عروض أسعار من الموردين</div>
                             <p class="ab-tab-feat__text">أرسل طلب عرض سعر (RFQ) لمورد أو أكثر، قارن العروض، وحوّل المقبول لأمر شراء مباشرة.</p>
                         </div>
@@ -454,7 +452,7 @@
                 <div class="ab-tab-panel" data-panel="management">
                     <div class="ab-tab-panel__grid">
                         <div class="ab-tab-feat">
-                            <div class="ab-tab-feat__icon" style="background:#f5f3ff;color:#7c3aed"><i class="fas fa-user-shield"></i></div>
+                            <div class="ab-tab-feat__icon" style="background:#f5f3ff;color:#ff8a3d"><i class="fas fa-user-shield"></i></div>
                             <div class="ab-tab-feat__name">145 صلاحية دقيقة</div>
                             <p class="ab-tab-feat__text">26 قسماً من الصلاحيات القابلة للتخصيص لكل دور ومستخدم في فريقك.</p>
                         </div>
@@ -489,8 +487,8 @@
                             <p class="ab-tab-feat__text">سجل الموظفين، كشوف الرواتب، السلف الفورية، والحوافز والخصومات — مع ربط تلقائي بالخزائن.</p>
                         </div>
                         <div class="ab-tab-feat">
-                            <div class="ab-tab-feat__icon" style="background:#eef2ff;color:#6366f1"><i class="fas fa-id-badge"></i></div>
-                            <div class="ab-tab-feat__name">إدارة المناديب وبوابتهم <span style="background:#6366f1;color:#fff;font-size:.58rem;padding:1px 6px;border-radius:20px;font-weight:800;vertical-align:middle;">جديد</span></div>
+                            <div class="ab-tab-feat__icon" style="background:#fef3e2;color:#c9840f"><i class="fas fa-id-badge"></i></div>
+                            <div class="ab-tab-feat__name">إدارة المناديب وبوابتهم <span style="background:#c9840f;color:#fff;font-size:.58rem;padding:1px 6px;border-radius:20px;font-weight:800;vertical-align:middle;">جديد</span></div>
                             <p class="ab-tab-feat__text">أنشئ حسابات لمناديبك واختر أساس عمولتهم — على الفاتورة، على التحصيل الفعلي، أو الاثنين معاً — وامنحهم بوابة مستقلة لمتابعة فواتيرهم وكشف حسابهم وطلب الفواتير مباشرة.</p>
                         </div>
                     </div>
@@ -512,7 +510,7 @@
         <div class="ab-tab-panel__grid ab-sr">
 
             <div class="ab-tab-feat">
-                <div class="ab-tab-feat__icon" style="background:#eef2ff;color:#6366f1"><i class="fas fa-book-open"></i></div>
+                <div class="ab-tab-feat__icon" style="background:#fef3e2;color:#c9840f"><i class="fas fa-book-open"></i></div>
                 <div class="ab-tab-feat__name">دليل المساعدة</div>
                 <p class="ab-tab-feat__text">دليل تدريبي تفاعلي مدمج داخل كل صفحة في النظام يشرح الوظائف والخطوات خطوة بخطوة — يظهر بجانب الواجهة دون مغادرة الصفحة.</p>
             </div>
@@ -536,7 +534,7 @@
             </div>
 
             <div class="ab-tab-feat">
-                <div class="ab-tab-feat__icon" style="background:#fdf4ff;color:#a21caf"><i class="fas fa-ticket"></i></div>
+                <div class="ab-tab-feat__icon" style="background:#fdf4ff;color:#c9840f"><i class="fas fa-ticket"></i></div>
                 <div class="ab-tab-feat__name">تتبع طلبات الدعم</div>
                 <p class="ab-tab-feat__text">كل تذكرة دعم تمر بمراحل واضحة: مفتوحة ← قيد المعالجة ← محلولة، مع تاريخ كل رد وإمكانية المتابعة من النظام مباشرة.</p>
             </div>
@@ -570,12 +568,12 @@
                     <div class="ab-ai-card__glow"></div>
                     <div class="ab-ai-card__icon"><i class="fas fa-comments"></i></div>
                     <h4 class="ab-ai-card__title">محادثة مباشرة مع بياناتك</h4>
-                    <p class="ab-ai-card__text">زر عائم على كل صفحة في النظام يتيح لك طرح أسئلة مثل "ما أكثر المنتجات مبيعاً؟" أو "من أكبر المدينين؟" والحصول على إجابة دقيقة من بياناتك الفعلية.</p>
+                    <p class="ab-ai-card__text">زر عائم على كل صفحة في النظام يتيح لك طرح أسئلة مثل "ما أكثر الأدوية مبيعاً؟" أو "من أكبر المدينين؟" والحصول على إجابة دقيقة من بياناتك الفعلية.</p>
                     <div class="ab-ai-card__demo">
-                        <div class="ab-ai-demo-msg ab-ai-demo-msg--user">ما هي أكثر المنتجات مبيعاً هذا الشهر؟</div>
+                        <div class="ab-ai-demo-msg ab-ai-demo-msg--user">ما هي أكثر الأدوية مبيعاً هذا الشهر؟</div>
                         <div class="ab-ai-demo-msg ab-ai-demo-msg--ai">
                             <i class="fas fa-robot"></i>
-                            أكثر المنتجات مبيعاً هذا الشهر: هونر ماجيك 8 Pro بـ 5 وحدات وإيراد 20,000 ج.س، يليه ساعة هواوي واتش 4 بـ 3 وحدات.
+                            أكثر الأدوية مبيعاً هذا الشهر: باراسيتامول 500 مجم بـ 120 علبة وإيراد 18,000 ج.س، يليه أموكسيسيلين 500 مجم بـ 80 علبة.
                         </div>
                     </div>
                     <ul class="ab-ai-card__tags">
@@ -618,8 +616,8 @@
                     <i class="fas fa-store"></i> متجر إلكتروني مدمج
                     <span class="ab-store__new">جديد</span>
                 </span>
-                <h2 class="ab-store__title">متجرك الخاص أونلاين<br>في دقائق، لا أيام</h2>
-                <p class="ab-store__desc">كل محل في Snake يحصل على رابط متجر إلكتروني فوري. عملاؤك يتصفحون منتجاتك، يطلبون، وأنت تعتمد الفاتورة من لوحة التحكم.</p>
+                <h2 class="ab-store__title">صيدليتك الخاصة أونلاين<br>في دقائق، لا أيام</h2>
+                <p class="ab-store__desc">كل صيدلية في Snake تحصل على رابط متجر إلكتروني فوري. عملاؤك يتصفحون أدويتك المتاحة، يطلبون، وأنت تعتمد الفاتورة من لوحة التحكم.</p>
                 <ul class="ab-store__list">
                     <li><i class="fas fa-check-circle"></i> رابط متجر فريد لكل محل تلقائياً</li>
                     <li><i class="fas fa-check-circle"></i> رمز QR جاهز للطباعة يفتح متجرك مباشرة</li>
@@ -640,17 +638,17 @@
                         <div class="ab-mockup-dot"></div>
                     </div>
                     <div class="ab-mockup-header">
-                        <div class="ab-mockup-brand">🛍️ متجر الأمل</div>
+                        <div class="ab-mockup-brand">💊 صيدلية النور</div>
                         <div class="ab-mockup-cart"><i class="fas fa-shopping-cart"></i> <span>3</span></div>
                     </div>
                     <div class="ab-mockup-status open">
                         <span class="ab-mockup-dot-green"></span> مفتوح الآن — حتى 10:00 م
                     </div>
                     <div class="ab-mockup-grid">
-                        <div class="ab-mockup-card"><div class="ab-mockup-img">📱</div><div class="ab-mockup-name">هاتف X15</div><div class="ab-mockup-price">850 ج.س</div><div class="ab-mockup-btn">+ أضف</div></div>
-                        <div class="ab-mockup-card"><div class="ab-mockup-img">🎧</div><div class="ab-mockup-name">سماعة Pro</div><div class="ab-mockup-price">220 ج.س</div><div class="ab-mockup-btn">+ أضف</div></div>
-                        <div class="ab-mockup-card"><div class="ab-mockup-img">⌚</div><div class="ab-mockup-name">ساعة ذكية</div><div class="ab-mockup-price">450 ج.س</div><div class="ab-mockup-btn">+ أضف</div></div>
-                        <div class="ab-mockup-card"><div class="ab-mockup-img">💻</div><div class="ab-mockup-name">لاب توب i7</div><div class="ab-mockup-price">2,100 ج.س</div><div class="ab-mockup-btn">+ أضف</div></div>
+                        <div class="ab-mockup-card"><div class="ab-mockup-img">💊</div><div class="ab-mockup-name">باراسيتامول 500مجم</div><div class="ab-mockup-price">15 ج.س</div><div class="ab-mockup-btn">+ أضف</div></div>
+                        <div class="ab-mockup-card"><div class="ab-mockup-img">🧴</div><div class="ab-mockup-name">شراب فيتامين C</div><div class="ab-mockup-price">40 ج.س</div><div class="ab-mockup-btn">+ أضف</div></div>
+                        <div class="ab-mockup-card"><div class="ab-mockup-img">🩹</div><div class="ab-mockup-name">ضمادات معقّمة</div><div class="ab-mockup-price">25 ج.س</div><div class="ab-mockup-btn">+ أضف</div></div>
+                        <div class="ab-mockup-card"><div class="ab-mockup-img">🌡️</div><div class="ab-mockup-name">ترمومتر رقمي</div><div class="ab-mockup-price">180 ج.س</div><div class="ab-mockup-btn">+ أضف</div></div>
                     </div>
                     <div class="ab-mockup-notif"><i class="fas fa-bell"></i><span>طلب جديد ORD-00012 — أحمد محمد</span></div>
                 </div>
@@ -669,7 +667,7 @@
             <div class="ab-security__head ab-sr">
                 <span class="ab-security__kicker"><i class="fas fa-shield-alt"></i> الحماية والأمان</span>
                 <h2 class="ab-security__title">بياناتك في أيدٍ أمينة</h2>
-                <p class="ab-security__desc">نلتزم بأعلى معايير الحماية والخصوصية لبياناتك وبيانات عملائك.</p>
+                <p class="ab-security__desc">نلتزم بأعلى معايير الحماية والخصوصية لبياناتك وبيانات عملاء صيدليتك.</p>
             </div>
             <div class="ab-security-grid">
                 <div class="ab-sec-card ab-sr"><div class="ab-sec-card__icon ab-sec-card__icon--green"><i class="fas fa-globe-europe"></i></div><h5 class="ab-sec-card__title">خوادم أوروبية موثوقة</h5><p class="ab-sec-card__text">أداء قوي ومستقر من بنية تحتية أوروبية لتدفق أعمال بدون توقف.</p></div>
@@ -721,13 +719,10 @@
         <div class="ab-support__box ab-sr">
             <div class="ab-support__icon"><i class="fas fa-headset"></i></div>
             <h3 class="ab-support__title">فريق الدعم جاهز لخدمتك</h3>
-            <p class="ab-support__text">تواصل معنا عبر واتساب أو البريد الإلكتروني للحصول على مساعدة سريعة ودعم فني موجّه.</p>
+            <p class="ab-support__text">تواصل معنا عبر واتساب للحصول على مساعدة سريعة ودعم فني موجّه.</p>
             <div class="ab-support__contacts">
                 <a href="https://wa.me/249110100110" class="ab-contact-btn ab-contact-btn--whatsapp">
                     <i class="fab fa-whatsapp"></i> تواصل عبر واتساب
-                </a>
-                <a href="mailto:support@enjaztechnology.com" class="ab-contact-btn ab-contact-btn--email">
-                    <i class="fas fa-envelope"></i> راسلنا بالبريد
                 </a>
             </div>
         </div>
@@ -753,7 +748,7 @@
 <footer class="ab-footer">
     <div class="ab-container">
         <div class="ab-footer__inner">
-            <span class="ab-footer__copy">Snake &copy; 2026 — نظام إدارة المخزون والمبيعات</span>
+            <span class="ab-footer__copy">Snake &copy; 2026 — نظام إدارة الصيدليات</span>
             <div class="ab-footer__links">
                 <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>
                 <a href="{% url 'accounts:register_step1' %}">إنشاء حساب</a>

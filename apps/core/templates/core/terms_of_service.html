@@ -11,9 +11,9 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --indigo:    #4f46e5;
-      --indigo-dk: #3730a3;
-      --violet:    #7c3aed;
+      --indigo:    #a8660c;
+      --indigo-dk: #8f5c0a;
+      --violet:    #ff8a3d;
       --slate-50:  #f8fafc;
       --slate-100: #f1f5f9;
       --slate-200: #e2e8f0;
@@ -69,8 +69,8 @@
       font-size: .75rem;
       font-weight: 600;
       color: var(--indigo);
-      background: #eef2ff;
-      border: 1px solid #c7d2fe;
+      background: #fef3e2;
+      border: 1px solid #ffd699;
       border-radius: 2rem;
       padding: .25rem .8rem;
     }
@@ -250,13 +250,13 @@
     }
 
     .callout {
-      background: #eef2ff;
+      background: #fef3e2;
       border-right: 3px solid var(--indigo);
       border-radius: .5rem;
       padding: .75rem 1.1rem;
       margin-top: .85rem;
       font-size: .87rem;
-      color: #3730a3;
+      color: #8f5c0a;
       line-height: 1.7;
     }
     .callout-warn {
@@ -276,7 +276,7 @@
     .accept-card-top {
       background: linear-gradient(135deg, #f5f3ff, #ede9fe);
       padding: 1.25rem 2rem;
-      border-bottom: 1px solid #ddd6fe;
+      border-bottom: 1px solid #fde6c2;
       display: flex;
       align-items: center;
       gap: .75rem;
@@ -284,7 +284,7 @@
     .accept-card-top svg { flex-shrink: 0; }
     .accept-card-top p {
       font-size: .88rem;
-      color: #4c1d95;
+      color: #8f5c0a;
       font-weight: 500;
       line-height: 1.5;
     }
@@ -389,11 +389,11 @@
   <!-- TOP BAR -->
   <header class="topbar">
     <div class="brand">
-      <img src="{% static 'img/logo/logo-6547bd.png' %}" alt="Snake" height="34">
+      <img src="{% static 'img/logo/logo-f6a821.png' %}" alt="Snake" height="34">
     </div>
     <div style="display:flex;align-items:center;gap:.75rem;">
       <span class="topbar-badge">الإصدار {{ terms_version }}</span>
-      <a href="/" style="display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;font-weight:600;color:var(--indigo);text-decoration:none;background:#eef2ff;border:1px solid #c7d2fe;border-radius:2rem;padding:.3rem .9rem;transition:background .2s;">
+      <a href="/" style="display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;font-weight:600;color:var(--indigo);text-decoration:none;background:#fef3e2;border:1px solid #ffd699;border-radius:2rem;padding:.3rem .9rem;transition:background .2s;">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         الرئيسية
       </a>
@@ -449,8 +449,8 @@
             <h2>الخدمة المقدمة</h2>
           </div>
           <p>
-            توفر الجهة المطوّرة للنظام نظام إدارة مخزون وأعمال (SaaS) يشمل: إدارة المبيعات
-            والمشتريات، تتبع المخزون، إدارة العملاء والموردين، التقارير، وخدمات مساندة أخرى
+            توفر الجهة المطوّرة للنظام نظام إدارة مخزون ومبيعات (SaaS) مخصصاً للصيدليات، يشمل: إدارة المبيعات
+            والمشتريات، تتبع المخزون والدفعات وتواريخ الصلاحية، إدارة العملاء والموردين، التقارير، وخدمات مساندة أخرى
             وفقاً للباقة المشترك بها.
           </p>
           <div class="callout">
@@ -617,7 +617,7 @@
     {% if needs_acceptance %}
     <div class="accept-card">
       <div class="accept-card-top">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffb640" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
         <p>بعد مراجعة الاتفاقية، يُرجى تأكيد موافقتك للمتابعة إلى النظام.</p>

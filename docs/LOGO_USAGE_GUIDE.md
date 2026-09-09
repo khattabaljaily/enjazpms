@@ -5,7 +5,7 @@
 ```
 static/img/logo/
 ├── logo-161616.png  → أسود/رمادي داكن (#161616)
-├── logo-6547bd.png  → بنفسجي (#6547bd) - لون أساسي
+├── logo-f6a821.png  → كهرماني (#f6a821) - لون أساسي
 ├── logo-cba03e.png  → ذهبي (#cba03e) - لون أساسي
 └── logo-ffffff.png  → أبيض (#ffffff)
 ```
@@ -15,25 +15,25 @@ static/img/logo/
 ## 🎯 أماكن الاستخدام
 
 ### 1️⃣ Favicon (أيقونة الموقع)
-**الملف:** `logo-6547bd.png`  
+**الملف:** `logo-f6a821.png`  
 **الموقع:** `<head>` في base.html
 
 ```html
-<link rel="icon" type="image/png" href="{% static 'img/logo/logo-6547bd.png' %}">
-<link rel="apple-touch-icon" href="{% static 'img/logo/logo-6547bd.png' %}">
+<link rel="icon" type="image/png" href="{% static 'img/logo/logo-f6a821.png' %}">
+<link rel="apple-touch-icon" href="{% static 'img/logo/logo-f6a821.png' %}">
 ```
 
-**السبب:** اللون البنفسجي هو أحد ألوان الشركة الأساسية، ويظهر بوضوح في جميع المتصفحات.
+**السبب:** اللون الكهرماني هو أحد ألوان الشركة الأساسية، ويظهر بوضوح في جميع المتصفحات.
 
 ---
 
 ### 2️⃣ صفحة تسجيل الدخول (Login Page)
-**Light Mode:** `logo-6547bd.png` (بنفسجي)  
+**Light Mode:** `logo-f6a821.png` (كهرماني)  
 **Dark Mode:** `logo-ffffff.png` (أبيض)
 
 ```html
 <!-- Light mode: Company color logo -->
-<img src="{% static 'img/logo/logo-6547bd.png' %}" alt="Snake" class="logo-light">
+<img src="{% static 'img/logo/logo-f6a821.png' %}" alt="Snake" class="logo-light">
 <!-- Dark mode: White logo -->
 <img src="{% static 'img/logo/logo-ffffff.png' %}" alt="Snake" class="logo-dark">
 ```
@@ -47,7 +47,7 @@ static/img/logo/
 ```
 
 **السبب:** 
-- في الوضع النهاري: خلفية فاتحة (#fafafa) → نستخدم شعار بلون الشركة (بنفسجي)
+- في الوضع النهاري: خلفية فاتحة (#fafafa) → نستخدم شعار بلون الشركة (كهرماني)
 - في الوضع الليلي: خلفية داكنة (#0a0a0a) → نستخدم شعار أبيض للتباين
 
 ---
@@ -86,11 +86,11 @@ static/img/logo/
 ---
 
 ### 4️⃣ Dashboard / Welcome Section
-**الملف:** `logo-6547bd.png` أو `logo-cba03e.png`
+**الملف:** `logo-f6a821.png` أو `logo-cba03e.png`
 
 ```html
 <div class="welcome-card">
-    <img src="{% static 'img/logo/logo-6547bd.png' %}" alt="Snake" height="64">
+    <img src="{% static 'img/logo/logo-f6a821.png' %}" alt="Snake" height="64">
     <h1>مرحباً بك في نظام Snake</h1>
 </div>
 ```
@@ -115,10 +115,10 @@ static/img/logo/
 ---
 
 ### 6️⃣ Emails / PDF Reports
-**الملف:** `logo-6547bd.png` أو `logo-cba03e.png`
+**الملف:** `logo-f6a821.png` أو `logo-cba03e.png`
 
 ```html
-<img src="{{ STATIC_URL }}img/logo/logo-6547bd.png" alt="Snake" height="48">
+<img src="{{ STATIC_URL }}img/logo/logo-f6a821.png" alt="Snake" height="48">
 ```
 
 **السبب:** ألوان الشركة الأساسية لعرض احترافي.
@@ -126,7 +126,7 @@ static/img/logo/
 ---
 
 ### 7️⃣ Loading Screen / Splash
-**Light Mode:** `logo-6547bd.png`  
+**Light Mode:** `logo-f6a821.png`  
 **Dark Mode:** `logo-ffffff.png`
 
 ---
@@ -148,7 +148,7 @@ static/img/logo/
 
 | اللون | Hex Code | الاستخدام |
 |-------|----------|----------|
-| بنفسجي | `#6547bd` | **أساسي** - الشعار الرئيسي |
+| كهرماني | `#f6a821` | **أساسي** - الشعار الرئيسي |
 | ذهبي | `#cba03e` | **أساسي** - شعار بديل |
 | أسود | `#161616` | للخلفيات الفاتحة |
 | أبيض | `#ffffff` | للخلفيات الداكنة |

@@ -399,7 +399,7 @@ def manage_settings(request):
         store.is_enabled        = request.POST.get('is_enabled') == 'on'
         store.display_name      = request.POST.get('display_name', '').strip() or tenant.name
         store.description       = request.POST.get('description', '').strip()
-        store.accent_color      = request.POST.get('accent_color', '#6366f1').strip()
+        store.accent_color      = request.POST.get('accent_color', '#c9840f').strip()
         store.whatsapp          = request.POST.get('whatsapp', '').strip()
         store.show_out_of_stock   = request.POST.get('show_out_of_stock') == 'on'
         store.show_prices         = request.POST.get('show_prices') == 'on'

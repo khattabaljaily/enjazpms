@@ -621,7 +621,7 @@ function submitQuoteForm() {
             throw new Error('تم الحفظ لكن لم يتم استلام رابط التحويل');
         }
 
-        sessionStorage.setItem('__enjazFlash', JSON.stringify({
+        sessionStorage.setItem('__snakeFlash', JSON.stringify({
             message: data.message || 'تم حفظ عرض السعر بنجاح',
             type: 'success'
         }));

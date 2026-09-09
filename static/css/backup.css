@@ -32,7 +32,7 @@
 }
 .bk-status--completed   { background: rgba(16,185,129,0.1);  color: #10b981; }
 .bk-status--failed      { background: rgba(239,68,68,0.1);   color: #ef4444; }
-.bk-status--in_progress { background: rgba(99,102,241,0.12); color: #6366f1; }
+.bk-status--in_progress { background: rgba(246,168,33,0.12); color: #c9840f; }
 
 /* ══ ICON ACTION BUTTONS (table rows) ═══════════════════════ */
 .bk-icon-btn {
@@ -108,7 +108,7 @@
     font-weight: 800;
     font-size: 1.1rem;
     flex-shrink: 0;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, #c9840f, #ff8a3d);
     font-family: 'Cairo', sans-serif;
 }
 
@@ -162,14 +162,14 @@
     color: #fff;
     font-weight: 800;
     font-size: 1.35rem;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, #c9840f, #ff8a3d);
     flex-shrink: 0;
     font-family: 'Cairo', sans-serif;
 }
 .bk-tenant-header__info { flex: 1; min-width: 0; }
 .bk-tenant-header__name { font-size: 1.05rem; font-weight: 800; color: var(--text-primary); font-family: 'Cairo', sans-serif; }
 .bk-tenant-header__meta { font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px; font-family: 'Cairo', sans-serif; }
-.bk-tenant-header__meta code { font-size: 0.78rem; color: var(--primary); background: rgba(99,102,241,.08); padding: 0.1rem 0.4rem; border-radius: 4px; }
+.bk-tenant-header__meta code { font-size: 0.78rem; color: var(--primary); background: rgba(246,168,33,.08); padding: 0.1rem 0.4rem; border-radius: 4px; }
 
 /* ══ TABLE CELLS ════════════════════════════════════════════ */
 .bk-filename {
@@ -203,12 +203,12 @@
     width: 60px;
     height: 60px;
     border-radius: 18px;
-    background: rgba(99,102,241,0.08);
+    background: rgba(246,168,33,0.08);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
-    color: #6366f1;
+    color: #c9840f;
     margin-bottom: 1rem;
 }
 .bk-empty__title { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.3rem; font-family: 'Cairo', sans-serif; }
@@ -216,8 +216,8 @@
 
 /* ══ CRON HINT BOX ═══════════════════════════════════════════ */
 .bk-cron-box {
-    background: rgba(99,102,241,0.04);
-    border: 1px solid rgba(99,102,241,0.18);
+    background: rgba(246,168,33,0.04);
+    border: 1px solid rgba(246,168,33,0.18);
     border-radius: 12px;
     padding: 0.9rem 1.1rem;
     font-size: 0.82rem;
@@ -230,8 +230,8 @@
     margin-top: 0.35rem;
     font-family: 'Courier New', monospace;
     font-size: 0.78rem;
-    color: #6366f1;
-    background: rgba(99,102,241,0.08);
+    color: #c9840f;
+    background: rgba(246,168,33,0.08);
     padding: 0.25rem 0.6rem;
     border-radius: 6px;
     word-break: break-all;
@@ -359,7 +359,7 @@
         position: absolute;
         inset: 0 0 auto 0;
         height: 3px;
-        background: linear-gradient(90deg, var(--primary), #8b5cf6);
+        background: linear-gradient(90deg, var(--primary), #ff8a3d);
         border-radius: 16px 16px 0 0;
     }
 

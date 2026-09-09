@@ -592,26 +592,26 @@
 }
 
 .sidebar .nav-link:hover {
-    background: rgba(99,102,241,0.07);
+    background: rgba(246,168,33,0.07);
     color: var(--primary);
 }
 
 [data-theme="dark"] .sidebar .nav-link:hover {
-    background: rgba(99,102,241,0.12);
-    color: #a5b4fc;
+    background: rgba(246,168,33,0.12);
+    color: #ffb640;
 }
 
 /* Active state */
 .sidebar .nav-link.active {
-    background: rgba(99,102,241,0.1);
+    background: rgba(246,168,33,0.1);
     color: var(--primary);
     font-weight: 600;
     border-radius: 8px;
 }
 
 [data-theme="dark"] .sidebar .nav-link.active {
-    background: rgba(99,102,241,0.18);
-    color: #a5b4fc;
+    background: rgba(246,168,33,0.18);
+    color: #ffb640;
 }
 
 .sidebar .nav-link.active::after {
@@ -626,14 +626,14 @@
 }
 
 .sidebar .nav-link.submenu-active {
-    background: rgba(99,102,241,0.05);
+    background: rgba(246,168,33,0.05);
     color: var(--primary);
     font-weight: 600;
 }
 
 [data-theme="dark"] .sidebar .nav-link.submenu-active {
-    background: rgba(99,102,241,0.1);
-    color: #a5b4fc;
+    background: rgba(246,168,33,0.1);
+    color: #ffb640;
 }
 
 /* Icon container */
@@ -658,25 +658,25 @@
 .sidebar .nav-link:hover .nav-icon,
 .sidebar .nav-link.active .nav-icon,
 .sidebar .nav-link.submenu-active .nav-icon {
-    background: rgba(99,102,241,0.12);
+    background: rgba(246,168,33,0.12);
     color: var(--primary);
 }
 
 [data-theme="dark"] .sidebar .nav-link:hover .nav-icon,
 [data-theme="dark"] .sidebar .nav-link.active .nav-icon,
 [data-theme="dark"] .sidebar .nav-link.submenu-active .nav-icon {
-    background: rgba(99,102,241,0.2);
-    color: #a5b4fc;
+    background: rgba(246,168,33,0.2);
+    color: #ffb640;
 }
 
 /* Per-section icon accent colors */
 .sidebar .nav-icon--sales  { color: #10b981; }
-.sidebar .nav-icon--buy    { color: #6366f1; }
+.sidebar .nav-icon--buy    { color: #c9840f; }
 .sidebar .nav-icon--stock  { color: #f59e0b; }
 .sidebar .nav-icon--report { color: #3b82f6; }
-.sidebar .nav-icon--acct   { color: #8b5cf6; }
+.sidebar .nav-icon--acct   { color: #ff8a3d; }
 .sidebar .nav-icon--notif  { color: #ef4444; }
-.sidebar .nav-icon--dash   { color: #6366f1; }
+.sidebar .nav-icon--dash   { color: #c9840f; }
 
 /* Muted / coming-soon links */
 .sidebar-link-muted {
@@ -792,24 +792,24 @@
 }
 
 .nav-sublink:hover {
-    background: rgba(99,102,241,0.07);
+    background: rgba(246,168,33,0.07);
     color: var(--primary);
 }
 
 [data-theme="dark"] .nav-sublink:hover {
-    background: rgba(99,102,241,0.12);
-    color: #a5b4fc;
+    background: rgba(246,168,33,0.12);
+    color: #ffb640;
 }
 
 .nav-sublink.active {
-    background: rgba(99,102,241,0.1);
+    background: rgba(246,168,33,0.1);
     color: var(--primary);
     font-weight: 600;
 }
 
 [data-theme="dark"] .nav-sublink.active {
-    background: rgba(99,102,241,0.18);
-    color: #a5b4fc;
+    background: rgba(246,168,33,0.18);
+    color: #ffb640;
 }
 
 /* ── Submenu group label ── */

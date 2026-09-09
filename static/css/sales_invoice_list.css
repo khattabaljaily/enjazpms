@@ -62,7 +62,7 @@
 }
 
 #invoicesTable tbody tr:nth-child(even) {
-  background: rgba(99, 102, 241, 0.015);
+  background: rgba(246,168,33, 0.015);
 }
 
 #invoicesTable tbody td {
@@ -88,7 +88,7 @@
 }
 
 .sales-view-avatar {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.14), rgba(59, 130, 246, 0.1));
+  background: linear-gradient(135deg, rgba(246,168,33, 0.14), rgba(59, 130, 246, 0.1));
   color: var(--primary);
 }
 

@@ -14,7 +14,7 @@
 
 /* Hero */
 .er-hero {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #7c3aed 100%);
+    background: linear-gradient(135deg, #c9840f 0%, #a8660c 50%, #ff8a3d 100%);
     border-radius: 20px;
     padding: 1rem 2rem;
     color: #fff;
@@ -23,7 +23,7 @@
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1.5rem;
-    box-shadow: 0 8px 32px rgba(99,102,241,.25);
+    box-shadow: 0 8px 32px rgba(246,168,33,.25);
     flex-wrap: wrap;
 }
 .er-hero-left { display: flex; align-items: center; gap: 1rem; }
@@ -54,7 +54,7 @@
     display: flex; align-items: center; gap: .5rem;
     flex-shrink: 0;
 }
-.er-card-title i { color: #6366f1; }
+.er-card-title i { color: #c9840f; }
 
 /* Form */
 .er-form-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
@@ -69,10 +69,10 @@
     color: var(--text-primary);
     transition: border-color .2s;
 }
-.er-input:focus { outline: none; border-color: #6366f1; background: var(--bg-card,#fff); }
+.er-input:focus { outline: none; border-color: #c9840f; background: var(--bg-card,#fff); }
 .er-btn {
     padding: .65rem 1.6rem;
-    background: linear-gradient(135deg,#6366f1,#4f46e5);
+    background: linear-gradient(135deg,#c9840f,#a8660c);
     color: #fff; border: none; border-radius: 10px;
     font-size: .9rem; font-weight: 700;
     cursor: pointer; white-space: nowrap;
@@ -102,7 +102,7 @@
 }
 .er-spin-btn:first-child { border-bottom: 1px solid var(--border-color); border-radius: 10px 0 0 0; }
 .er-spin-btn:last-child  { border-radius: 0 0 0 10px; }
-.er-spin-btn:hover { background: #6366f1; color: #fff; }
+.er-spin-btn:hover { background: #c9840f; color: #fff; }
 
 /* Bottom grid: chart RIGHT | table LEFT */
 .er-bottom-grid {
@@ -145,7 +145,7 @@
 }
 .er-table tbody tr:last-child td { border-bottom: none; }
 .er-table tbody tr:hover { background: var(--bg-secondary); }
-.er-rate-badge { font-weight: 800; font-size: .9rem; color: #6366f1; }
+.er-rate-badge { font-weight: 800; font-size: .9rem; color: #c9840f; }
 .er-up   { color: #ef4444; }
 .er-down { color: #11998e; }
 .er-same { color: var(--text-secondary); }
@@ -363,11 +363,11 @@ function renderChart(rows) {
             datasets: [{
                 label: `سعر الصرف (${HC_CUR})`,
                 data: values,
-                borderColor: '#6366f1',
-                backgroundColor: 'rgba(99,102,241,.08)',
+                borderColor: '#c9840f',
+                backgroundColor: 'rgba(246,168,33,.08)',
                 borderWidth: 2.5,
                 pointRadius: rows.length <= 20 ? 4 : 2,
-                pointBackgroundColor: '#6366f1',
+                pointBackgroundColor: '#c9840f',
                 fill: true,
                 tension: 0.35,
             }]

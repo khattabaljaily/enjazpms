@@ -121,7 +121,7 @@
     </div>
     {% if invoice.agent %}
     <div class="doc-card">
-        <div class="doc-card-icon" style="background:rgba(99,102,241,.12);color:#6366f1;"><i class="fas fa-id-badge"></i></div>
+        <div class="doc-card-icon" style="background:rgba(246,168,33,.12);color:#c9840f;"><i class="fas fa-id-badge"></i></div>
         <div class="doc-card-body">
             <span class="doc-card-label">المندوب</span>
             <span class="doc-card-value">{{ invoice.agent.name }}</span>
@@ -501,7 +501,7 @@ function submitInvoiceDecision() {
     .then(data => {
         if (data.success) {
             closeInvoiceDecisionModal();
-            sessionStorage.setItem('__enjazFlash', JSON.stringify({
+            sessionStorage.setItem('__snakeFlash', JSON.stringify({
                 message: data.message || 'تمت العملية بنجاح',
                 type: 'success'
             }));
@@ -548,7 +548,7 @@ function submitCancel() {
         body: JSON.stringify({ reason })
     }).then(r => r.json()).then(data => {
         if (data.success) {
-            sessionStorage.setItem('__enjazFlash', JSON.stringify({
+            sessionStorage.setItem('__snakeFlash', JSON.stringify({
                 message: data.message || 'تم إلغاء الفاتورة بنجاح',
                 type: 'success'
             }));
@@ -572,7 +572,7 @@ function doPayment() {
         body: JSON.stringify({ amount, method, reference })
     }).then(r => r.json()).then(data => {
         if (data.success) {
-            sessionStorage.setItem('__enjazFlash', JSON.stringify({
+            sessionStorage.setItem('__snakeFlash', JSON.stringify({
                 message: data.message || 'تم تسجيل الدفعة بنجاح',
                 type: 'success'
             }));

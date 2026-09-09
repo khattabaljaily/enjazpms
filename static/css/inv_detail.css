@@ -28,10 +28,10 @@
 .doc-hero[data-status="returned"]           { --doc-accent: #f59e0b; }
 .doc-hero[data-status="partially_returned"] { --doc-accent: #f59e0b; }
 .doc-hero[data-status="sent"]               { --doc-accent: #3b82f6; }
-.doc-hero[data-status="received"]           { --doc-accent: #6366f1; }
+.doc-hero[data-status="received"]           { --doc-accent: #c9840f; }
 .doc-hero[data-status="accepted"]           { --doc-accent: #22c55e; }
 .doc-hero[data-status="rejected"]           { --doc-accent: #ef4444; }
-.doc-hero[data-status="converted"]          { --doc-accent: #8b5cf6; }
+.doc-hero[data-status="converted"]          { --doc-accent: #ff8a3d; }
 .doc-hero[data-status="expired"]            { --doc-accent: #f59e0b; }
 
 .doc-hero-inner {
@@ -51,12 +51,12 @@
 .doc-hero-icon {
   width: 56px; height: 56px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--primary), #818cf8);
+  background: linear-gradient(135deg, var(--primary), #f6a821);
   color: #fff;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.5rem;
   flex-shrink: 0;
-  box-shadow: 0 6px 20px rgba(99,102,241,.28);
+  box-shadow: 0 6px 20px rgba(246,168,33,.28);
 }
 .doc-hero-number {
   font-size: 1.65rem;
@@ -101,7 +101,7 @@
 .doc-pill--danger  { background: rgba(239,68,68,.12);   color: #dc2626; }
 .doc-pill--warning { background: rgba(245,158,11,.12);  color: #d97706; }
 .doc-pill--primary { background: rgba(59,130,246,.12);  color: #2563eb; }
-.doc-pill--info    { background: rgba(139,92,246,.12);  color: #7c3aed; }
+.doc-pill--info    { background: rgba(139,92,246,.12);  color: #ff8a3d; }
 .doc-pill--muted   { background: var(--bg-secondary);   color: var(--text-secondary); }
 
 .doc-hero-actions {
@@ -138,8 +138,8 @@
   display: flex; align-items: center; justify-content: center;
   font-size: 1rem; flex-shrink: 0;
 }
-.doc-card-icon--indigo  { background: rgba(99,102,241,.1);  color: #6366f1; }
-.doc-card-icon--violet  { background: rgba(139,92,246,.1);  color: #8b5cf6; }
+.doc-card-icon--indigo  { background: rgba(246,168,33,.1);  color: #c9840f; }
+.doc-card-icon--violet  { background: rgba(139,92,246,.1);  color: #ff8a3d; }
 .doc-card-icon--teal    { background: rgba(20,184,166,.1);  color: #14b8a6; }
 .doc-card-icon--amber   { background: rgba(245,158,11,.1);  color: #f59e0b; }
 .doc-card-icon--emerald { background: rgba(16,185,129,.1);  color: #10b981; }
@@ -260,8 +260,8 @@
 .doc-grand {
   margin: .85rem 0;
   padding: .95rem 1.1rem;
-  background: linear-gradient(135deg, rgba(99,102,241,.07), rgba(139,92,246,.04));
-  border: 1px solid rgba(99,102,241,.12);
+  background: linear-gradient(135deg, rgba(246,168,33,.07), rgba(139,92,246,.04));
+  border: 1px solid rgba(246,168,33,.12);
   border-radius: 13px;
   display: flex; justify-content: space-between; align-items: center;
 }
@@ -332,8 +332,8 @@
   background: var(--bg-tertiary);
 }
 [data-theme="dark"] .doc-grand {
-  background: linear-gradient(135deg, rgba(99,102,241,.1), rgba(139,92,246,.07));
-  border-color: rgba(99,102,241,.18);
+  background: linear-gradient(135deg, rgba(246,168,33,.1), rgba(139,92,246,.07));
+  border-color: rgba(246,168,33,.18);
 }
 [data-theme="dark"] .doc-card:hover {
   box-shadow: 0 6px 22px rgba(0,0,0,.3);

@@ -9,19 +9,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root {
-  --brand-50: #eef2ff; --brand-100: #e0e7ff; --brand-200: #c7d2fe;
-  --brand-300: #a5b4fc; --brand-400: #818cf8; --brand-500: #6366f1;
-  --brand-600: #4f46e5; --brand-700: #4338ca;
-  --violet: #8b5cf6; --violet-d: #7c3aed;
+  --brand-50: #fef3e2; --brand-100: #fde6c2; --brand-200: #ffd699;
+  --brand-300: #ffb640; --brand-400: #f6a821; --brand-500: #c9840f;
+  --brand-600: #a8660c; --brand-700: #8f5c0a;
+  --violet: #ff8a3d; --violet-d: #ff8a3d;
   --success: #10b981; --warning: #f59e0b;
   --danger: #ef4444; --info: #06b6d4;
   --text: #1e293b; --text-muted: #94a3b8; --text-subtle: #64748b;
   --surface: #ffffff; --bg: #f4f3ff;
-  --border: rgba(99,102,241,.09);
+  --border: rgba(246,168,33,.09);
   --sidebar-w: 248px;
   --radius: 14px;
-  --shadow: 0 2px 16px rgba(99,102,241,.07);
-  --shadow-lg: 0 8px 28px rgba(99,102,241,.14);
+  --shadow: 0 2px 16px rgba(246,168,33,.07);
+  --shadow-lg: 0 8px 28px rgba(246,168,33,.14);
 }
 *, *::before, *::after { box-sizing: border-box; }
 body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; margin: 0; }
@@ -30,7 +30,7 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
 .p-sidebar {
   position: fixed; top: 0; right: 0;
   width: var(--sidebar-w); height: 100vh;
-  background: linear-gradient(175deg, #0d0b22 0%, #1a1745 35%, #2d2882 70%, #3d1d8a 100%);
+  background: linear-gradient(175deg, #0d0a06 0%, #1f1712 35%, #33280f 70%, #8f5c0a 100%);
   display: flex; flex-direction: column;
   z-index: 1000;
   box-shadow: -4px 0 40px rgba(0,0,0,.35);
@@ -42,7 +42,7 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
   content: '';
   position: absolute; top: -80px; right: -80px;
   width: 240px; height: 240px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(99,102,241,.35) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(246,168,33,.35) 0%, transparent 65%);
   pointer-events: none;
 }
 .p-sidebar::after {
@@ -69,7 +69,7 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
   background: linear-gradient(135deg, var(--brand-400), var(--violet));
   display: flex; align-items: center; justify-content: center;
   font-size: .9rem;
-  box-shadow: 0 4px 14px rgba(99,102,241,.5);
+  box-shadow: 0 4px 14px rgba(246,168,33,.5);
 }
 .p-sidebar-logo-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
 
@@ -113,13 +113,13 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
   transition: all .18s;
 }
 .p-nav-item:hover { color: rgba(255,255,255,.88); background: rgba(255,255,255,.07); }
-.p-nav-item:hover .p-nav-icon { background: rgba(99,102,241,.28); }
+.p-nav-item:hover .p-nav-icon { background: rgba(246,168,33,.28); }
 .p-nav-item.active {
-  color: #fff; background: rgba(99,102,241,.28); font-weight: 600;
+  color: #fff; background: rgba(246,168,33,.28); font-weight: 600;
 }
 .p-nav-item.active .p-nav-icon {
   background: linear-gradient(135deg, var(--brand-500), var(--violet));
-  box-shadow: 0 3px 10px rgba(99,102,241,.45);
+  box-shadow: 0 3px 10px rgba(246,168,33,.45);
   color: #fff;
 }
 
@@ -127,20 +127,20 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
 .p-nav-cta {
   display: flex; align-items: center; gap: .65rem;
   padding: .7rem .9rem; border-radius: 10px; margin-top: .4rem;
-  background: linear-gradient(135deg, rgba(99,102,241,.28), rgba(139,92,246,.28));
-  border: 1px solid rgba(99,102,241,.3);
+  background: linear-gradient(135deg, rgba(246,168,33,.28), rgba(139,92,246,.28));
+  border: 1px solid rgba(246,168,33,.3);
   color: rgba(255,255,255,.8); text-decoration: none;
   font-size: .86rem; font-weight: 600;
   transition: all .2s;
 }
-.p-nav-cta:hover { background: linear-gradient(135deg, rgba(99,102,241,.42), rgba(139,92,246,.42)); color: #fff; }
-.p-nav-cta.active { background: linear-gradient(135deg, rgba(99,102,241,.5), rgba(139,92,246,.5)); color: #fff; border-color: rgba(99,102,241,.5); }
+.p-nav-cta:hover { background: linear-gradient(135deg, rgba(246,168,33,.42), rgba(139,92,246,.42)); color: #fff; }
+.p-nav-cta.active { background: linear-gradient(135deg, rgba(246,168,33,.5), rgba(139,92,246,.5)); color: #fff; border-color: rgba(246,168,33,.5); }
 .p-nav-cta-icon {
   width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
   background: linear-gradient(135deg, var(--brand-500), var(--violet));
   display: flex; align-items: center; justify-content: center;
   font-size: .78rem; color: #fff;
-  box-shadow: 0 2px 8px rgba(99,102,241,.45);
+  box-shadow: 0 2px 8px rgba(246,168,33,.45);
 }
 
 .p-nav-badge {
@@ -173,7 +173,7 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
   background: rgba(244,243,255,.88);
   backdrop-filter: blur(18px) saturate(1.8);
   -webkit-backdrop-filter: blur(18px) saturate(1.8);
-  border-bottom: 1px solid rgba(99,102,241,.09);
+  border-bottom: 1px solid rgba(246,168,33,.09);
   padding: .85rem 1.75rem;
   display: flex; align-items: center; gap: 1rem;
 }
@@ -208,12 +208,12 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
 .si-emerald { background: #ecfdf5; color: #059669; }
 .si-amber   { background: #fffbeb; color: #d97706; }
 .si-rose    { background: #fff1f2; color: #e11d48; }
-.si-violet  { background: #f5f3ff; color: #7c3aed; }
+.si-violet  { background: #f5f3ff; color: #ff8a3d; }
 .si-cyan    { background: #ecfeff; color: #0891b2; }
 .si-gradient {
   background: linear-gradient(135deg, var(--brand-500), var(--violet));
   color: #fff;
-  box-shadow: 0 4px 14px rgba(99,102,241,.35);
+  box-shadow: 0 4px 14px rgba(246,168,33,.35);
 }
 .p-stat-label { font-size: .76rem; color: var(--text-muted); font-weight: 500; margin-bottom: .18rem; }
 .p-stat-value { font-size: 1.42rem; font-weight: 800; color: var(--text); line-height: 1.1; letter-spacing: -.02em; }
@@ -254,7 +254,7 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
 .p-badge--pending   { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
 .p-badge--approved  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 .p-badge--rejected  { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
-.p-badge--confirmed { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.p-badge--confirmed { background: #fef3e2; color: #8f5c0a; border: 1px solid #ffd699; }
 .p-badge--draft     { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
 
 /* ═══════════════════ BUTTONS ═══════════════════ */
@@ -267,9 +267,9 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
 }
 .p-btn--primary {
   background: linear-gradient(135deg, var(--brand-500), var(--violet));
-  color: #fff; box-shadow: 0 4px 14px rgba(99,102,241,.35);
+  color: #fff; box-shadow: 0 4px 14px rgba(246,168,33,.35);
 }
-.p-btn--primary:hover { box-shadow: 0 6px 20px rgba(99,102,241,.5); transform: translateY(-1px); color: #fff; }
+.p-btn--primary:hover { box-shadow: 0 6px 20px rgba(246,168,33,.5); transform: translateY(-1px); color: #fff; }
 .p-btn--primary:active { transform: translateY(0); }
 .p-btn--outline { background: transparent; color: var(--brand-500); border: 1.5px solid var(--brand-200); }
 .p-btn--outline:hover { background: var(--brand-50); border-color: var(--brand-500); color: var(--brand-600); }
@@ -289,17 +289,17 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
 /* ═══════════════════ FORM ═══════════════════ */
 .p-form-label { font-size: .82rem; font-weight: 600; color: var(--text); margin-bottom: .35rem; display: block; }
 .p-input {
-  width: 100%; border: 1.5px solid #e0dcff; border-radius: 10px;
+  width: 100%; border: 1.5px solid #fef3e2; border-radius: 10px;
   padding: .62rem 1rem; font-size: .88rem;
   font-family: 'Cairo', sans-serif; color: var(--text); background: #fff;
   transition: border-color .18s, box-shadow .18s; outline: none;
 }
-.p-input:focus { border-color: var(--brand-400); box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+.p-input:focus { border-color: var(--brand-400); box-shadow: 0 0 0 3px rgba(246,168,33,.1); }
 
 /* ═══════════════════ MOBILE ═══════════════════ */
 .p-mobile-bar {
   display: none; position: fixed; top: 0; left: 0; right: 0;
-  background: linear-gradient(135deg, #0d0b22, #2d2882);
+  background: linear-gradient(135deg, #0d0a06, #33280f);
   flex-direction: column;
   z-index: 900; box-shadow: 0 2px 20px rgba(0,0,0,.3);
 }
@@ -320,8 +320,8 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
 .p-mqn-btn {
   display: flex; align-items: center; gap: .9rem;
   padding: .9rem 1.1rem; border-radius: 13px;
-  background: #fff; border: 1px solid rgba(99,102,241,.1);
-  box-shadow: 0 2px 10px rgba(99,102,241,.06);
+  background: #fff; border: 1px solid rgba(246,168,33,.1);
+  box-shadow: 0 2px 10px rgba(246,168,33,.06);
   text-decoration: none; color: var(--text);
   transition: all .15s;
 }
@@ -333,9 +333,9 @@ body { font-family: 'Cairo', 'Segoe UI', sans-serif; background: var(--bg); colo
 .p-mqn-label { font-weight: 700; font-size: .92rem; flex: 1; }
 .p-mqn-arrow { color: var(--text-muted); font-size: .72rem; }
 .p-mqn-btn--cta {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #c9840f, #ff8a3d);
   border-color: transparent;
-  box-shadow: 0 4px 16px rgba(99,102,241,.38);
+  box-shadow: 0 4px 16px rgba(246,168,33,.38);
 }
 .p-mqn-btn--cta .p-mqn-label { color: #fff; }
 .p-mqn-btn--cta .p-mqn-arrow { color: rgba(255,255,255,.55); }
@@ -473,7 +473,7 @@ code.inv-num { color: var(--brand-500); font-size: .83rem; background: var(--bra
         <i class="fas fa-chevron-left p-mqn-arrow"></i>
       </a>
       <a href="{% url 'agents:portal_invoices' %}" class="p-mqn-btn">
-        <div class="p-mqn-icon" style="background:#eef2ff;color:#6366f1;"><i class="fas fa-file-invoice"></i></div>
+        <div class="p-mqn-icon" style="background:#fef3e2;color:#c9840f;"><i class="fas fa-file-invoice"></i></div>
         <span class="p-mqn-label">فواتيري</span>
         <i class="fas fa-chevron-left p-mqn-arrow"></i>
       </a>

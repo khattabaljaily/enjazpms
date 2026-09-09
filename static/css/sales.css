@@ -41,7 +41,7 @@
 .cx-hero-icon-wrap {
   width: 52px;
   height: 52px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(59, 130, 246, 0.08));
+  background: linear-gradient(135deg, rgba(246,168,33, 0.15), rgba(59, 130, 246, 0.08));
   border-radius: 18px;
   display: flex;
   align-items: center;
@@ -111,8 +111,8 @@
 }
 
 .cx-stat-badge--primary {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.2);
+  background: rgba(246,168,33, 0.08);
+  border-color: rgba(246,168,33, 0.2);
 }
 
 .cx-stat-badge--info {
@@ -194,7 +194,7 @@
 .cx-input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 3px rgba(246,168,33, 0.1);
 }
 
 .cx-input--sm {
@@ -250,14 +250,14 @@ select.cx-input {
 }
 
 .cx-btn-add {
-  background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #a8660c 100%);
   color: white;
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 2px 6px rgba(246,168,33, 0.3);
 }
 
 .cx-btn-add:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px rgba(246,168,33, 0.4);
 }
 
 .cx-btn-warning {
@@ -349,7 +349,7 @@ select.cx-input {
 .cx-badge--pending  { background: rgba(234, 179, 8, 0.1);  color: #a16207; border: 1px solid rgba(234, 179, 8, 0.2); }
 .cx-badge--warning  { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); }
 .cx-badge--danger   { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
-.cx-badge--primary  { background: rgba(99, 102, 241, 0.1); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.2); }
+.cx-badge--primary  { background: rgba(246,168,33, 0.1); color: var(--primary); border: 1px solid rgba(246,168,33, 0.2); }
 .cx-badge--muted    { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-light); }
 .cx-badge--info     { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
 
@@ -388,7 +388,7 @@ select.cx-input {
 }
 
 .cx-table tbody tr:hover {
-  background: rgba(99, 102, 241, 0.02);
+  background: rgba(246,168,33, 0.02);
 }
 
 /* Totals Block - Modern */
@@ -772,7 +772,7 @@ select.cx-input {
 
     .cx-order-card:hover {
         transform: translateY(-1px);
-        border-color: rgba(99, 102, 241, 0.24);
+        border-color: rgba(246,168,33, 0.24);
         box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
     }
 
@@ -807,7 +807,7 @@ select.cx-input {
     }
 
     .cx-order-card-code code {
-        background: rgba(99, 102, 241, 0.09);
+        background: rgba(246,168,33, 0.09);
         padding: 0.2rem 0.4rem;
         border-radius: 6px;
         font-family: 'Courier New', monospace;
@@ -872,11 +872,11 @@ select.cx-input {
     }
 
     .cx-order-card-actions .cxr-act--view {
-        background: rgba(99, 102, 241, 0.08);
+        background: rgba(246,168,33, 0.08);
     }
 
     .cx-order-card-actions .cxr-act--view:hover {
-        background: rgba(99, 102, 241, 0.12);
+        background: rgba(246,168,33, 0.12);
     }
 
     .cx-order-card-actions .cxr-act--success {
@@ -919,7 +919,7 @@ select.cx-input {
 
     .cx-invoice-card:hover {
         transform: translateY(-1px);
-        border-color: rgba(99, 102, 241, 0.24);
+        border-color: rgba(246,168,33, 0.24);
         box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
     }
 
@@ -954,7 +954,7 @@ select.cx-input {
     }
 
     .cx-invoice-card-code code {
-        background: rgba(99, 102, 241, 0.09);
+        background: rgba(246,168,33, 0.09);
         padding: 0.2rem 0.4rem;
         border-radius: 6px;
         font-family: 'Courier New', monospace;
@@ -1019,11 +1019,11 @@ select.cx-input {
     }
 
     .cx-invoice-card-actions .cxr-act--view {
-        background: rgba(99, 102, 241, 0.08);
+        background: rgba(246,168,33, 0.08);
     }
 
     .cx-invoice-card-actions .cxr-act--view:hover {
-        background: rgba(99, 102, 241, 0.12);
+        background: rgba(246,168,33, 0.12);
     }
 
     .cx-invoice-card-actions .cxr-act--del {

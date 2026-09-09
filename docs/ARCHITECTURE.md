@@ -24,18 +24,18 @@
 ```
 Snake Platform
 ├── Tenant 1: صيدلية النور
-│   ├── Admin: أحمد (مدير النشاط)
+│   ├── Admin: أحمد (مدير الصيدلية)
 │   ├── Employees: 5 موظفين
 │   ├── Branches: 3 فروع
-│   ├── Items: 1000+ منتج
+│   ├── Items: 1000+ دواء
 │   └── Sales, Purchases, etc.
 │
-├── Tenant 2: سوبر ماركت الخير
+├── Tenant 2: صيدلية الشفاء
 │   ├── Admin: محمد
 │   ├── Employees: 10 موظفين
 │   └── ...
 │
-└── Tenant 3: مطعم الزهور
+└── Tenant 3: صيدلية الأمل
     └── ...
 ```
 
@@ -78,11 +78,10 @@ class Item(TenantMixin):
 ✅ تأكيد كلمة المرور
 ```
 
-#### المرحلة 2: بيانات النشاط التجاري
+#### المرحلة 2: بيانات الصيدلية
 ```
-✅ اسم النشاط التجاري
-✅ نوع النشاط (صيدلية، سوبر ماركت، مطعم، إلخ)
-✅ عنوان النشاط
+✅ اسم الصيدلية
+✅ عنوان الصيدلية
 ✅ أرقام التواصل
 ```
 
@@ -184,13 +183,13 @@ class Tenant(models.Model):
     updated_at = DateTimeField
 ```
 
-#### 2. BusinessType (أنواع الأنشطة)
+#### 2. BusinessType (نوع النشاط — صيدلية حالياً فقط)
 ```python
 class BusinessType(models.Model):
-    name = CharField               # Pharmacy, Supermarket, Restaurant
-    name_ar = CharField            # صيدلية، سوبر ماركت، مطعم
+    name = CharField               # pharmacy
+    name_ar = CharField            # صيدلية
     icon = CharField               # FontAwesome icon
-    features = JSONField           # مميزات خاصة بكل نوع
+    features = JSONField           # مميزات خاصة بالنوع (تتبع الصلاحية، الدُفعات...)
 ```
 
 #### 3. User (المستخدم - Custom User Model)

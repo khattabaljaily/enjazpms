@@ -37,7 +37,7 @@
 }
 .cx-user-card:hover, .cx-customer-card:hover {
     transform: translateY(-1px);
-    border-color: rgba(99, 102, 241, 0.24);
+    border-color: rgba(246,168,33, 0.24);
     box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
 }
 .cx-user-card-head, .cx-customer-card-head {
@@ -107,7 +107,7 @@
     border-color: rgba(15, 23, 42, 0.12);
 }
 .cx-user-card-actions .cxr-act--view, .cx-customer-card-actions .cxr-act--view {
-    background: rgba(99, 102, 241, 0.08);
+    background: rgba(246,168,33, 0.08);
 }
 .cx-user-card-actions .cxr-act--del, .cx-customer-card-actions .cxr-act--del {
     background: rgba(239, 68, 68, 0.08);

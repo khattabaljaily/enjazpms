@@ -877,7 +877,7 @@ function submitForm(action) {
             return;
         }
         if (data.success) {
-            sessionStorage.setItem('__enjazFlash', JSON.stringify({
+            sessionStorage.setItem('__snakeFlash', JSON.stringify({
                 message: data.message || 'تم حفظ الفاتورة بنجاح',
                 type: 'success'
             }));

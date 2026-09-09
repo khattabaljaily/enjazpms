@@ -101,7 +101,7 @@
                             <td class="fw-bold">{{ row.label }}</td>
                             <td class="text-center">{{ row.invoice_count }}</td>
                             <td class="text-end">{{ row.total_quantity }}</td>
-                            <td class="text-end fw-bold" style="color:#667eea">{{ row.total_amount }}</td>
+                            <td class="text-end fw-bold" style="color:#f6a821">{{ row.total_amount }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -137,8 +137,8 @@
             datasets: [{
                 label: 'المبيعات',
                 data: raw.map(r => r.amount),
-                backgroundColor: isLine ? 'rgba(102,126,234,0.12)' : 'rgba(102,126,234,0.75)',
-                borderColor: '#667eea',
+                backgroundColor: isLine ? 'rgba(246, 168, 33,0.12)' : 'rgba(246, 168, 33,0.75)',
+                borderColor: '#f6a821',
                 borderWidth: isLine ? 2 : 0,
                 borderRadius: isLine ? 0 : 6,
                 fill: isLine,

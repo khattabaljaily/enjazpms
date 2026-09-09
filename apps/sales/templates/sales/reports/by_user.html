@@ -94,7 +94,7 @@
                         <tbody>
                             {% for row in report.data %}
                             <tr>
-                                <td class="fw-bold" style="color:#667eea">{{ row.invoice_number }}</td>
+                                <td class="fw-bold" style="color:#f6a821">{{ row.invoice_number }}</td>
                                 <td class="text-muted">{{ row.invoice_date|date:"Y-m-d" }}</td>
                                 <td>{{ row.customer_name }}</td>
                                 <td class="text-end text-muted">{{ row.total_quantity }}</td>
@@ -134,7 +134,7 @@
                                 </td>
                                 <td class="fw-bold">{{ row.user_name }}</td>
                                 <td class="text-center">{{ row.invoice_count }}</td>
-                                <td class="text-end fw-bold" style="color:#667eea">{{ row.total_amount }}</td>
+                                <td class="text-end fw-bold" style="color:#f6a821">{{ row.total_amount }}</td>
                                 <td class="text-end text-muted">{{ row.avg_invoice_amount }}</td>
                             </tr>
                             {% endfor %}

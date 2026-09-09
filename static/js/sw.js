@@ -1,12 +1,12 @@
 /* Snake Service Worker — app-shell only, no data caching */
-const CACHE = 'enjaz-shell-v2';
+const CACHE = 'snake-shell-v3';
 const SHELL = [
   '/static/css/main.css',
   '/static/css/layout.css',
   '/static/css/components.css',
   '/static/css/auth.css',
   '/static/js/main.js',
-  '/static/img/logo/logo-6547bd.png',
+  '/static/img/logo/logo-f6a821.png',
   '/static/img/logo/logo-ffffff.png',
   '/static/img/icons/icon-192x192.png',
   '/static/fonts/cairo/Cairo-Regular.ttf',

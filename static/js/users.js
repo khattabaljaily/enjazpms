@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const user = response.data;
             const name = user.first_name || user.username || '—';
             const initials = (user.first_name || user.username || '—').trim().charAt(0).toUpperCase();
-            const color = '#6366f1';
+            const color = '#c9840f';
             $('#viewUserAvatar').text(initials).css('background', color);
             $('#viewUserName').text(name);
             $('#viewUserSubtitle').html(`<code class="cxr-code">${user.username || '—'}</code>`);

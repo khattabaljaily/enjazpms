@@ -168,7 +168,7 @@ body {
 .sco-input:focus {
   border-color: var(--brand);
   background: var(--sco-surface);
-  box-shadow: 0 0 0 3px rgba(99,102,241,.08);
+  box-shadow: 0 0 0 3px rgba(246,168,33,.08);
 }
 .sco-input--error { border-color: #ef4444; background: #fff5f5; }
 .sco-textarea { resize: vertical; min-height: 80px; }
@@ -201,7 +201,7 @@ body {
 .sco-pm--active {
   border-color: var(--brand);
   background: var(--sco-surface);
-  box-shadow: 0 0 0 3px rgba(99,102,241,.08);
+  box-shadow: 0 0 0 3px rgba(246,168,33,.08);
 }
 .sco-pm__icon {
   width: 38px;

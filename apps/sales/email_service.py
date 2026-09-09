@@ -45,7 +45,7 @@ def send_invoice_email(invoice, recipient_email: str, request=None) -> tuple[boo
     else:
         logo_abs_url = ''
 
-    brand_color = (settings_obj.invoice_color or '#6366f1').strip()
+    brand_color = (settings_obj.invoice_color or '#c9840f').strip()
     context = {
         'invoice': invoice,
         'lines': lines,

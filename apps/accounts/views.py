@@ -493,7 +493,6 @@ def permission_group_delete_api(request, pk):
 
 
 REGISTRATION_WHATSAPP_NUMBER = '249110100110'
-REGISTRATION_CONTACT_EMAIL = 'info@enjaztechnology.com'
 REGISTRATION_REQUEST_RECIPIENT = 'khattabaljaily@gmail.com'
 
 
@@ -504,7 +503,6 @@ def registration_closed(request):
     return render(request, 'accounts/registration_closed.html', {
         'form': form,
         'whatsapp_number': REGISTRATION_WHATSAPP_NUMBER,
-        'contact_email': REGISTRATION_CONTACT_EMAIL,
     })
 
 
@@ -527,7 +525,6 @@ def registration_request_api(request):
 
     email_context = {
         'personal_email': data['personal_email'],
-        'business_type': data['business_type'].name_ar,
         'business_name': data['business_name'],
         'phone': data['phone'],
         'address': data['address'],
