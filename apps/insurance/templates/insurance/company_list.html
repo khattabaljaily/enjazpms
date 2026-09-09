@@ -1,0 +1,241 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-briefcase-medical"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">شركات التأمين</h1>
+                <p class="cx-hero-desc">إدارة شركات التأمين الطبي وبوالص العملاء</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'insurance:claim_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-file-medical"></i>
+                    <span>مطالبات التأمين</span>
+                </a>
+                <button type="button" class="cx-btn-add" id="btnOpenCreateCompany">
+                    <i class="fas fa-plus"></i>
+                    <span>إضافة شركة تأمين</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="companySearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو الكود...">
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table" id="companiesTable" style="width:100%;">
+            <thead>
+                <tr>
+                    <th>الاسم</th>
+                    <th>الكود</th>
+                    <th>مسؤول التواصل</th>
+                    <th>الهاتف</th>
+                    <th class="text-center">نسبة التغطية الافتراضية</th>
+                    <th class="text-center">الحالة</th>
+                    <th class="text-center">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- ══ ADD/EDIT MODAL ══ -->
+<div class="modal fade" id="companyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form id="companyForm">
+                {% csrf_token %}
+                <input type="hidden" id="companyId" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="companyModalTitle">إضافة شركة تأمين</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none js-form-errors"></div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="cx-label">{{ form.name.label }} <sup class="cx-required">*</sup></label>
+                            {{ form.name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">{{ form.code.label }}</label>
+                            {{ form.code }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">{{ form.contact_person.label }}</label>
+                            {{ form.contact_person }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">{{ form.phone.label }}</label>
+                            {{ form.phone }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">{{ form.email.label }}</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">{{ form.default_coverage_percent.label }}</label>
+                            {{ form.default_coverage_percent }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">{{ form.settlement_period_days.label }}</label>
+                            {{ form.settlement_period_days }}
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="id_is_active">{{ form.is_active.label }}</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label">{{ form.address.label }}</label>
+                            {{ form.address }}
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label">{{ form.notes.label }}</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary" id="companySubmitBtn">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function() {
+    const urlTable  = "{% url 'insurance:company_table_api' %}";
+    const urlCreate = "{% url 'insurance:company_create_api' %}";
+    const urlDetail = "{% url 'insurance:company_detail_api' 0 %}";
+    const urlUpdate = "{% url 'insurance:company_update_api' 0 %}";
+    const urlDelete = "{% url 'insurance:company_delete_api' 0 %}";
+    function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+
+    const modal = new bootstrap.Modal(document.getElementById('companyModal'));
+    const $form = $('#companyForm');
+
+    const dt = $('#companiesTable').DataTable({
+        processing: true, serverSide: true, searching: true, ordering: false, pageLength: 25,
+        dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        language: {
+            emptyTable: 'لا توجد بيانات', zeroRecords: 'لا توجد نتائج مطابقة',
+            paginate: { first: 'الأول', last: 'الأخير', next: 'التالي', previous: 'السابق' },
+        },
+        ajax: { url: urlTable, data: function(d) {} },
+        columns: [
+            { data: 'name' },
+            { data: 'code' },
+            { data: 'contact_person' },
+            { data: 'phone' },
+            { data: 'default_coverage_percent', className: 'text-center', render: v => v + '%' },
+            { data: 'is_active', className: 'text-center', render: v => v
+                ? '<span class="badge bg-success">نشطة</span>'
+                : '<span class="badge bg-secondary">موقوفة</span>' },
+            { data: 'id', className: 'text-center', orderable: false, render: id => `
+                <button class="btn btn-sm btn-outline-primary js-edit" data-id="${id}"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-outline-danger js-delete" data-id="${id}"><i class="fas fa-trash"></i></button>
+            `},
+        ],
+    });
+
+    let searchTimer;
+    $('#companySearchInput').on('input', function() {
+        clearTimeout(searchTimer);
+        const val = this.value;
+        searchTimer = setTimeout(() => dt.search(val).draw(), 300);
+    });
+
+    function resetForm() {
+        $form[0].reset();
+        $('#companyId').val('');
+        $('#id_is_active').prop('checked', true);
+        $('.js-form-errors').addClass('d-none').empty();
+    }
+
+    $('#btnOpenCreateCompany').on('click', function() {
+        resetForm();
+        $('#companyModalTitle').text('إضافة شركة تأمين');
+        modal.show();
+    });
+
+    $('#companiesTable').on('click', '.js-edit', function() {
+        const id = $(this).data('id');
+        $.get(apiUrl(urlDetail, id), function(resp) {
+            if (!resp.success) { alert(resp.message); return; }
+            resetForm();
+            const d = resp.data;
+            $('#companyId').val(d.id);
+            $('#id_name').val(d.name);
+            $('#id_code').val(d.code);
+            $('#id_contact_person').val(d.contact_person);
+            $('#id_phone').val(d.phone);
+            $('#id_email').val(d.email);
+            $('#id_address').val(d.address);
+            $('#id_default_coverage_percent').val(d.default_coverage_percent);
+            $('#id_settlement_period_days').val(d.settlement_period_days);
+            $('#id_is_active').prop('checked', d.is_active);
+            $('#id_notes').val(d.notes);
+            $('#companyModalTitle').text('تعديل شركة التأمين');
+            modal.show();
+        });
+    });
+
+    $('#companiesTable').on('click', '.js-delete', function() {
+        const id = $(this).data('id');
+        if (!confirm('هل تريد حذف شركة التأمين هذه؟')) return;
+        $.post(apiUrl(urlDelete, id), { csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val() }, function(resp) {
+            if (resp.success) { dt.ajax.reload(); } else { alert(resp.message); }
+        });
+    });
+
+    $form.on('submit', function(e) {
+        e.preventDefault();
+        const id = $('#companyId').val();
+        const url = id ? apiUrl(urlUpdate, id) : urlCreate;
+        $.post(url, $form.serialize(), function(resp) {
+            if (resp.success) {
+                modal.hide();
+                dt.ajax.reload();
+            } else {
+                const errs = resp.errors || {};
+                const msgs = Object.values(errs).flat();
+                $('.js-form-errors').removeClass('d-none').html(msgs.join('<br>') || resp.message);
+            }
+        }).fail(function(xhr) {
+            const resp = xhr.responseJSON || {};
+            const errs = resp.errors || {};
+            const msgs = Object.values(errs).flat();
+            $('.js-form-errors').removeClass('d-none').html(msgs.join('<br>') || resp.message || 'حدث خطأ');
+        });
+    });
+});
+</script>
+{% endblock %}

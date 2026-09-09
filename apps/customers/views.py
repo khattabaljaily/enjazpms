@@ -52,6 +52,12 @@ def customer_list(request):
             'inactive': inactive,
         },
     }
+
+    capabilities = getattr(tenant, 'capabilities', None)
+    if capabilities and capabilities.has_insurance_billing:
+        from apps.insurance.models import InsuranceCompany
+        context['insurance_companies'] = InsuranceCompany.objects.filter(tenant=tenant, is_active=True).order_by('name')
+
     return render(request, 'customers/customer_list.html', context)
 
 

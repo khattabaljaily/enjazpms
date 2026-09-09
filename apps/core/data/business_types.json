@@ -17,7 +17,12 @@
       "has_work_orders": false,
       "has_pos": true,
       "has_sales_invoice": false,
-      "has_agents_module": false
+      "has_agents_module": false,
+      "has_drug_classification": true,
+      "has_item_alternatives": true,
+      "has_expiry_alerts": true,
+      "has_branch_stock_lookup": true,
+      "has_insurance_billing": true
     }
   },
   {
@@ -38,7 +43,12 @@
       "has_work_orders": false,
       "has_pos": false,
       "has_sales_invoice": true,
-      "has_agents_module": true
+      "has_agents_module": true,
+      "has_drug_classification": true,
+      "has_item_alternatives": false,
+      "has_expiry_alerts": true,
+      "has_branch_stock_lookup": false,
+      "has_insurance_billing": false
     }
   }
 ]

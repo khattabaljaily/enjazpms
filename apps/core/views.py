@@ -269,7 +269,30 @@ def dashboard(request):
                 'min_quantity': float(stock_item.effective_min_quantity)
             })
         stats['low_stock_items_json'] = json.dumps(low_stock_list)
-        
+
+        # Expiring items (pharmacy only)
+        capabilities = getattr(tenant, 'capabilities', None)
+        if capabilities and capabilities.has_expiry_alerts:
+            from apps.items.models import ItemBatch
+            warn_date = today + timedelta(days=30)
+            expiring_qs = ItemBatch.objects.filter(
+                tenant=tenant, quantity_remaining__gt=0,
+                expiry_date__isnull=False, expiry_date__lte=warn_date,
+            ).select_related('item').order_by('expiry_date')
+
+            stats['expired_items'] = expiring_qs.filter(expiry_date__lt=today).count()
+            stats['expiring_soon_count'] = expiring_qs.count()
+            expiring_list = [
+                {
+                    'item__name': b.item.name,
+                    'batch_number': b.batch_number or 'بدون رقم',
+                    'expiry_date': b.expiry_date.isoformat(),
+                    'days_to_expiry': b.days_to_expiry,
+                }
+                for b in expiring_qs[:5]
+            ]
+            stats['expiring_items_json'] = json.dumps(expiring_list)
+
         # Stock status summary for pie chart
         # Get all available products (quantity > 0 and item_type='product')
         available_items = StockQuantity.objects.filter(

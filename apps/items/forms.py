@@ -104,6 +104,8 @@ class ItemForm(forms.ModelForm):
             'cost_price_hc', 'selling_price_hc', 'min_selling_price_hc',
             'min_quantity', 'max_quantity',
             'track_expiry', 'track_batch', 'track_serial',
+            'generic_name', 'manufacturer', 'dosage_form', 'strength',
+            'requires_prescription', 'is_controlled_substance', 'alternatives',
             'description', 'image', 'is_active', 'is_sellable', 'is_purchasable',
         ]
         widgets = {
@@ -116,6 +118,13 @@ class ItemForm(forms.ModelForm):
             'track_expiry': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'track_batch': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'track_serial': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'generic_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: Paracetamol'}),
+            'manufacturer': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم الشركة المصنعة'}),
+            'dosage_form': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'أقراص، شراب، حقن...'}),
+            'strength': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '500 مجم، 5 مل...'}),
+            'requires_prescription': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_controlled_substance': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'alternatives': forms.SelectMultiple(attrs={'class': 'form-select', 'size': '6'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -132,6 +141,13 @@ class ItemForm(forms.ModelForm):
             'track_expiry': 'تتبع تاريخ الانتهاء',
             'track_batch': 'تتبع رقم الدفعة',
             'track_serial': 'تتبع الرقم التسلسلي',
+            'generic_name': 'الاسم العلمي / المادة الفعالة',
+            'manufacturer': 'الشركة المصنعة',
+            'dosage_form': 'الشكل الصيدلاني',
+            'strength': 'التركيز',
+            'requires_prescription': 'يُصرف بوصفة طبية',
+            'is_controlled_substance': 'خاضع للرقابة / مخدرات',
+            'alternatives': 'بدائل / أصناف مكافئة',
             'description': 'الوصف',
             'image': 'الصورة',
             'is_active': 'نشط',
@@ -155,8 +171,15 @@ class ItemForm(forms.ModelForm):
             self.fields['category'].queryset = Category.objects.filter(
                 tenant=tenant, is_active=True
             )
+            alt_qs = Item.objects.filter(tenant=tenant, is_active=True)
+            if self.instance and self.instance.pk:
+                alt_qs = alt_qs.exclude(pk=self.instance.pk)
+            self.fields['alternatives'].queryset = alt_qs
         else:
             self.fields['category'].queryset = Category.objects.none()
+            self.fields['alternatives'].queryset = Item.objects.none()
+
+        self.fields['alternatives'].required = False
 
     def _zero_if_none(self, field):
         value = self.cleaned_data.get(field)

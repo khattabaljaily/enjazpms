@@ -35,4 +35,8 @@ urlpatterns = [
     # Non-Moving Items
     path('non-moving/', views.stocks_non_moving_report, name='non_moving_report'),
     path('non-moving/export/', views.stocks_non_moving_report_export, name='non_moving_report_export'),
+
+    # Controlled Substances Register (Pharmacy only)
+    path('controlled-substances/', views.stocks_controlled_substances_report, name='controlled_substances_report'),
+    path('controlled-substances/export/', views.stocks_controlled_substances_report_export, name='controlled_substances_report_export'),
 ]

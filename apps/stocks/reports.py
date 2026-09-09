@@ -321,6 +321,48 @@ class StocksReportGenerator:
             'data': data,
         }
 
+    def get_controlled_substances_report(self):
+        """سجل حركة الأصناف الخاضعة للرقابة / المخدرات خلال فترة زمنية — للصيدليات"""
+        movements = StockMovement.objects.filter(
+            tenant=self.tenant,
+            item__is_controlled_substance=True,
+            movement_date__gte=self.start_date,
+            movement_date__lte=self.end_date,
+        ).select_related('item', 'stock', 'created_by').order_by('-movement_date', '-id')
+
+        data = []
+        total_in = Decimal('0')
+        total_out = Decimal('0')
+        for m in movements:
+            if m.direction == 'in':
+                total_in += m.quantity
+            else:
+                total_out += m.quantity
+            data.append({
+                'movement_date': m.movement_date,
+                'item_name': m.item.name,
+                'generic_name': m.item.generic_name or '—',
+                'item_unit': m.item.base_unit_name,
+                'stock_name': m.stock.name,
+                'movement_type': m.get_movement_type_display(),
+                'direction': m.direction,
+                'quantity': format_number(float(m.quantity), 2),
+                'balance_after': format_number(float(m.balance_after), 2),
+                'reference_type': m.reference_type or '—',
+                'reference_id': m.reference_id or '—',
+                'user': m.created_by.get_full_name() or m.created_by.username if m.created_by else '—',
+                'notes': m.notes or '—',
+            })
+
+        return {
+            'summary': {
+                'total_in': format_number(float(total_in), 2),
+                'total_out': format_number(float(total_out), 2),
+                'movement_count': format_number(len(data), 0),
+            },
+            'data': data,
+        }
+
     def get_valuation_report(self):
         """تقرير تقييم المخزون — قيمة كل صنف بسعر التكلفة، مجمّعة حسب الفئة"""
         from apps.items.models import Category

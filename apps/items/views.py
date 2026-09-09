@@ -168,7 +168,8 @@ def item_table_api(request):
             Q(name__icontains=search_value) |
             Q(sku__icontains=search_value) |
             Q(barcode__icontains=search_value) |
-            Q(name_en__icontains=search_value)
+            Q(name_en__icontains=search_value) |
+            Q(generic_name__icontains=search_value)
         )
 
     records_filtered = qs.count()
@@ -213,6 +214,8 @@ def item_table_api(request):
             'hc_currency': hc_currency,
             'track_expiry': item.track_expiry,
             'track_serial': item.track_serial,
+            'requires_prescription': item.requires_prescription,
+            'is_controlled_substance': item.is_controlled_substance,
             'is_active': item.is_active,
         }
         for item in qs
@@ -291,6 +294,7 @@ def item_create_api(request):
             item.save()
         except IntegrityError:
             return JsonResponse({'success': False, 'message': 'رمز المنتج (SKU) مستخدم بالفعل، يرجى اختيار رمز آخر', 'errors': {'sku': ['رمز المنتج مستخدم بالفعل']}}, status=400)
+        form.save_m2m()
         _save_item_units(item, request.POST.get('units_json', ''), tenant)
         log_activity(request, 'إضافة منتج جديد',
                      f"المنتج: {item.name}\nكود: {item.sku or '—'}\nالنوع: {item.get_item_type_display()}", 'create')
@@ -347,6 +351,13 @@ def item_detail_api(request, pk):
             'track_expiry': item.track_expiry,
             'track_batch': item.track_batch,
             'track_serial': item.track_serial,
+            'generic_name': item.generic_name,
+            'manufacturer': item.manufacturer,
+            'dosage_form': item.dosage_form,
+            'strength': item.strength,
+            'requires_prescription': item.requires_prescription,
+            'is_controlled_substance': item.is_controlled_substance,
+            'alternatives': [{'id': a.id, 'name': a.name} for a in item.alternatives.all()],
             'description': item.description,
             'is_active': item.is_active,
             'is_sellable': item.is_sellable,
@@ -446,6 +457,7 @@ def item_update_api(request, pk):
         updated.updated_by = request.user
         _apply_hc_prices(updated, tenant)
         updated.save()
+        form.save_m2m()
         _save_item_units(item, request.POST.get('units_json', ''), tenant)
         log_activity(request, 'تعديل منتج', updated.name, 'update')
         return JsonResponse({'success': True, 'message': 'تم تحديث المنتج بنجاح'})
@@ -527,7 +539,8 @@ def item_search_api(request):
         qs = base_qs.filter(
             Q(name__icontains=q) |
             Q(barcode__icontains=q) |
-            Q(sku__icontains=q)
+            Q(sku__icontains=q) |
+            Q(generic_name__icontains=q)
         ).prefetch_related('item_units')[:limit]
     else:
         qs = base_qs.order_by('name').prefetch_related('item_units')[:limit]

@@ -378,6 +378,7 @@ class SalePayment(TenantMixin):
     PAYMENT_CHOICES = (
         ('cash', 'نقداً'),
         ('bank', 'تحويل بنكي'),
+        ('insurance', 'شركة تأمين'),
     )
 
     invoice = models.ForeignKey(

@@ -405,6 +405,7 @@
                         {{ stats.low_stock_items }}
                     </span>
                 </div>
+                {% if tenant_capabilities.has_expiry_alerts %}
                 <div class="db-status-row">
                     <span class="db-status-label">
                         <i class="fas fa-calendar-xmark" style="color:#ef4444;"></i>
@@ -414,6 +415,7 @@
                         {{ stats.expired_items|default:0 }}
                     </span>
                 </div>
+                {% endif %}
                 <div class="db-status-row">
                     <span class="db-status-label">
                         <i class="fas fa-bolt" style="color:#10b981;"></i>
@@ -454,6 +456,32 @@
     </div>
 
 </div>
+
+{% if tenant_capabilities.has_expiry_alerts %}
+<!-- ══ EXPIRING SOON ═══════════════════════════════════════════════ -->
+<div class="row g-3 mb-2">
+    <div class="col-12">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-calendar-xmark" style="color:#ef4444;"></i>
+                    أصناف قاربت على الانتهاء
+                </h3>
+                {% if stats.expiring_soon_count %}
+                <span class="db-panel-meta" style="background:rgba(239,68,68,.1); color:#ef4444;">
+                    {{ stats.expiring_soon_count }} دفعة
+                </span>
+                {% endif %}
+            </div>
+            <div class="db-panel-body" id="expiringPanel">
+                <div class="text-center" style="padding:2rem 0; color:var(--text-tertiary);">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% else %}
 
@@ -782,6 +810,33 @@
             <i class="fas fa-check-circle fa-2x mb-2" style="color:#10b981; opacity:.7;"></i>
             <p class="mb-0" style="font-size:.85rem;">المخزون في وضع جيد</p>
         </div>`;
+    }
+
+    /* ── Expiring Soon Panel ── */
+    const expiringPanel = document.getElementById('expiringPanel');
+    if (expiringPanel) {
+        const expiringData = {{ stats.expiring_items_json|default:"[]"|safe }};
+        if (expiringData.length) {
+            const html = expiringData.map(b => {
+                const days = b.days_to_expiry;
+                const color = (days !== null && days <= 7) ? '#ef4444' : '#f59e0b';
+                const label = days < 0 ? 'منتهية' : `${days} يوم`;
+                return `
+                <div class="db-stock-item">
+                    <span class="db-stock-dot" style="background:${color};"></span>
+                    <span class="db-stock-name">${b['item__name']} <small style="color:var(--text-tertiary);">(${b.batch_number})</small></span>
+                    <span class="db-stock-qty" style="color:${color};">${label}</span>
+                    <span class="db-stock-sep">/</span>
+                    <span class="db-stock-min">${b.expiry_date}</span>
+                </div>`;
+            }).join('');
+            expiringPanel.innerHTML = html;
+        } else {
+            expiringPanel.innerHTML = `<div class="text-center" style="padding:2rem 0; color:var(--text-tertiary);">
+                <i class="fas fa-check-circle fa-2x mb-2" style="color:#10b981; opacity:.7;"></i>
+                <p class="mb-0" style="font-size:.85rem;">لا توجد أصناف قاربت على الانتهاء</p>
+            </div>`;
+        }
     }
 
     /* ── Payment Ring ── */

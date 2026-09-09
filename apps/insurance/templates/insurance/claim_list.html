@@ -1,0 +1,240 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-file-medical"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">مطالبات التأمين</h1>
+                <p class="cx-hero-desc">متابعة دورة حياة مطالبات التأمين — من التقديم حتى التسوية</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'insurance:company_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-briefcase-medical"></i>
+                    <span>شركات التأمين</span>
+                </a>
+                <a href="{% url 'insurance:statement' %}" class="cx-btn-secondary">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>كشف حساب</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="claimSearchInput" class="cx-search-input" placeholder="ابحث برقم المطالبة أو الفاتورة أو العميل...">
+        </div>
+        <div class="cx-toolbar-end">
+            <div class="cx-filter-tabs" role="group">
+                <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
+                {% for key, label in status_choices %}
+                <button type="button" class="cx-filter-tab" data-status="{{ key }}">{{ label }}</button>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table" id="claimsTable" style="width:100%;">
+            <thead>
+                <tr>
+                    <th>رقم المطالبة</th>
+                    <th>الفاتورة</th>
+                    <th>العميل</th>
+                    <th>شركة التأمين</th>
+                    <th>الحالة</th>
+                    <th class="text-center">المطالَب به</th>
+                    <th class="text-center">المتبقي</th>
+                    <th class="text-center">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- ══ CLAIM DETAIL MODAL ══ -->
+<div class="modal fade" id="claimModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تفاصيل المطالبة <span id="claimModalNumber"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="claimModalBody">
+                <div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function() {
+    const urlTable   = "{% url 'insurance:claim_table_api' %}";
+    const urlDetail  = "{% url 'insurance:claim_detail_api' 0 %}";
+    const urlSubmit  = "{% url 'insurance:claim_submit_api' 0 %}";
+    const urlRespond = "{% url 'insurance:claim_respond_api' 0 %}";
+    const urlSettle  = "{% url 'insurance:claim_settle_api' 0 %}";
+    const urlCancel  = "{% url 'insurance:claim_cancel_api' 0 %}";
+    function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
+    const CSRF = $('input[name=csrfmiddlewaretoken]').val() || '{{ csrf_token }}';
+
+    const claimModal = new bootstrap.Modal(document.getElementById('claimModal'));
+    let activeStatus = '';
+
+    const dt = $('#claimsTable').DataTable({
+        processing: true, serverSide: true, searching: true, ordering: false, pageLength: 25,
+        dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        language: {
+            emptyTable: 'لا توجد مطالبات', zeroRecords: 'لا توجد نتائج مطابقة',
+            paginate: { first: 'الأول', last: 'الأخير', next: 'التالي', previous: 'السابق' },
+        },
+        ajax: { url: urlTable, data: function(d) { d.status = activeStatus; } },
+        columns: [
+            { data: 'claim_number' },
+            { data: 'invoice_number' },
+            { data: 'customer_name' },
+            { data: 'insurance_company_name' },
+            { data: 'status_display' },
+            { data: 'covered_amount', className: 'text-center' },
+            { data: 'remaining_amount', className: 'text-center' },
+            { data: 'id', className: 'text-center', orderable: false, render: id => `
+                <button class="btn btn-sm btn-outline-primary js-view" data-id="${id}"><i class="fas fa-eye"></i> عرض</button>
+            `},
+        ],
+    });
+
+    $('.cx-filter-tab').on('click', function() {
+        $('.cx-filter-tab').removeClass('active');
+        $(this).addClass('active');
+        activeStatus = $(this).data('status') || '';
+        dt.ajax.reload();
+    });
+
+    let searchTimer;
+    $('#claimSearchInput').on('input', function() {
+        clearTimeout(searchTimer);
+        const val = this.value;
+        searchTimer = setTimeout(() => dt.search(val).draw(), 300);
+    });
+
+    function statusActions(status) {
+        if (status === 'draft') return `<button class="btn btn-sm btn-primary js-submit">تقديم المطالبة</button>`;
+        if (status === 'submitted') return `
+            <button class="btn btn-sm btn-success js-respond" data-status="approved">اعتماد كامل</button>
+            <button class="btn btn-sm btn-warning js-respond" data-status="partially_approved">اعتماد جزئي</button>
+            <button class="btn btn-sm btn-danger js-respond" data-status="rejected">رفض</button>`;
+        if (['approved', 'partially_approved', 'partially_paid'].includes(status)) {
+            return `<button class="btn btn-sm btn-success js-settle">تسجيل تسوية مستلمة</button>`;
+        }
+        return '';
+    }
+
+    function loadClaim(id) {
+        $('#claimModalBody').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>');
+        claimModal.show();
+        $.get(apiUrl(urlDetail, id), function(resp) {
+            if (!resp.success) { $('#claimModalBody').html(`<div class="alert alert-danger">${resp.message}</div>`); return; }
+            const d = resp.data;
+            $('#claimModalNumber').text(d.claim_number);
+            const linesHtml = d.lines.map(l => `
+                <tr><td>${l.item_name}</td><td class="text-center">${l.coverage_percent}%</td>
+                <td class="text-center">${l.claimed_amount}</td><td class="text-center">${l.approved_amount ?? '—'}</td></tr>
+            `).join('');
+            const canCancel = !['paid', 'cancelled'].includes(d.status) && parseFloat(d.paid_amount) === 0;
+            $('#claimModalBody').html(`
+                <div class="row g-2 mb-3">
+                    <div class="col-6"><strong>الفاتورة:</strong> ${d.invoice_number}</div>
+                    <div class="col-6"><strong>العميل:</strong> ${d.customer_name}</div>
+                    <div class="col-6"><strong>شركة التأمين:</strong> ${d.insurance_company_name}</div>
+                    <div class="col-6"><strong>الحالة:</strong> ${d.status_display}</div>
+                    <div class="col-6"><strong>المطالَب به:</strong> ${d.covered_amount}</div>
+                    <div class="col-6"><strong>نصيب المريض:</strong> ${d.patient_amount}</div>
+                    <div class="col-6"><strong>المعتمد:</strong> ${d.approved_amount ?? '—'}</div>
+                    <div class="col-6"><strong>المسدد:</strong> ${d.paid_amount} / متبقي ${d.remaining_amount}</div>
+                    ${d.rejection_reason ? `<div class="col-12"><strong>سبب الرفض/التخفيض:</strong> ${d.rejection_reason}</div>` : ''}
+                </div>
+                <table class="table table-sm">
+                    <thead><tr><th>الصنف</th><th class="text-center">النسبة</th><th class="text-center">المطالَب</th><th class="text-center">المعتمد</th></tr></thead>
+                    <tbody>${linesHtml}</tbody>
+                </table>
+                <div id="claimActionArea" class="d-flex gap-2 flex-wrap mt-3">
+                    ${statusActions(d.status)}
+                    ${canCancel ? '<button class="btn btn-sm btn-outline-danger js-cancel">إلغاء المطالبة</button>' : ''}
+                </div>
+            `);
+            $('#claimModalBody').data('claimId', id);
+        });
+    }
+
+    $('#claimsTable').on('click', '.js-view', function() { loadClaim($(this).data('id')); });
+
+    $('#claimModalBody').on('click', '.js-submit', function() {
+        const id = $('#claimModalBody').data('claimId');
+        $.post(apiUrl(urlSubmit, id), { csrfmiddlewaretoken: CSRF }, function(resp) {
+            if (resp.success) { loadClaim(id); dt.ajax.reload(); } else { alert(resp.message); }
+        });
+    });
+
+    $('#claimModalBody').on('click', '.js-respond', function() {
+        const id = $('#claimModalBody').data('claimId');
+        const status = $(this).data('status');
+        let approved = 0, reason = '';
+        if (status === 'approved') {
+            approved = prompt('المبلغ المعتمد بالكامل:');
+        } else if (status === 'partially_approved') {
+            approved = prompt('المبلغ المعتمد جزئياً:');
+        } else {
+            reason = prompt('سبب الرفض:') || '';
+        }
+        if (status !== 'rejected' && (approved === null || approved === '')) return;
+        $.post(apiUrl(urlRespond, id), {
+            csrfmiddlewaretoken: CSRF, status: status,
+            approved_amount: approved || 0, rejection_reason: reason,
+        }, function(resp) {
+            if (resp.success) { loadClaim(id); dt.ajax.reload(); } else { alert(resp.message); }
+        });
+    });
+
+    $('#claimModalBody').on('click', '.js-settle', function() {
+        const id = $('#claimModalBody').data('claimId');
+        const amount = prompt('مبلغ التسوية المستلمة:');
+        if (!amount) return;
+        const reference = prompt('رقم مرجعي (اختياري):') || '';
+        $.post(apiUrl(urlSettle, id), {
+            csrfmiddlewaretoken: CSRF, amount: amount, reference: reference,
+        }, function(resp) {
+            if (resp.success) { loadClaim(id); dt.ajax.reload(); } else { alert(resp.message); }
+        });
+    });
+
+    $('#claimModalBody').on('click', '.js-cancel', function() {
+        const id = $('#claimModalBody').data('claimId');
+        const reason = prompt('سبب الإلغاء:') || '';
+        if (!confirm('هل تريد إلغاء هذه المطالبة؟')) return;
+        $.post(apiUrl(urlCancel, id), { csrfmiddlewaretoken: CSRF, reason: reason }, function(resp) {
+            if (resp.success) { claimModal.hide(); dt.ajax.reload(); } else { alert(resp.message); }
+        });
+    });
+});
+</script>
+{% endblock %}

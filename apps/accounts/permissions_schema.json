@@ -114,6 +114,18 @@
         "cancel_agent_payments": "إلغاء دفعة مندوب",
         "view_agent_transactions": "عرض حركات حساب المندوب"
     },
+    "التأمين": {
+        "view_insurance_companies": "عرض شركات التأمين",
+        "add_insurance_companies": "إضافة شركة تأمين / بوليصة",
+        "change_insurance_companies": "تعديل شركة تأمين / بوليصة",
+        "view_insurance_claims": "عرض مطالبات التأمين",
+        "add_insurance_claims": "إنشاء مطالبة تأمين",
+        "submit_insurance_claims": "تقديم مطالبة تأمين",
+        "respond_insurance_claims": "تسجيل رد شركة التأمين",
+        "settle_insurance_claims": "تسجيل تسوية مطالبة تأمين",
+        "cancel_insurance_claims": "إلغاء مطالبة تأمين",
+        "view_insurance_statement": "عرض كشف حساب شركة تأمين"
+    },
     "الموظفين": {
         "view_employees": "عرض قائمة الموظفين",
         "add_employees": "إضافة موظف جديد",
@@ -173,7 +185,8 @@
         "view_stocks_item_movement_report": "تقرير حركة الأصناف",
         "view_stocks_low_stock_report": "تقرير المخزن المنخفض",
         "view_stocks_valuation_report": "تقرير تقييم المخزن (حساس)",
-        "view_stocks_non_moving_report": "تقرير الأصناف غير المتحركة"
+        "view_stocks_non_moving_report": "تقرير الأصناف غير المتحركة",
+        "view_stocks_controlled_substances_report": "سجل الأصناف الخاضعة للرقابة (صيدليات)"
     },
     "تقارير الحسابات": {
         "view_sales_customer_statement_report": "كشف حساب العميل",

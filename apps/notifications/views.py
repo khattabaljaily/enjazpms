@@ -11,6 +11,7 @@ from .services import (
     generate_low_stock_notifications,
     generate_overdue_invoice_notifications,
     generate_rfq_expiry_notifications,
+    generate_expiry_notifications,
 )
 
 _GEN_THROTTLE = 900  # seconds between auto-generations per tenant
@@ -25,6 +26,9 @@ def _maybe_generate(tenant):
     generate_low_stock_notifications(tenant)
     generate_overdue_invoice_notifications(tenant)
     generate_rfq_expiry_notifications(tenant)
+    capabilities = getattr(tenant, 'capabilities', None)
+    if capabilities and capabilities.has_expiry_alerts:
+        generate_expiry_notifications(tenant)
 
 
 def _tenant(request):

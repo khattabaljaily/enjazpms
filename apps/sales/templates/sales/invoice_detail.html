@@ -350,10 +350,107 @@
             {% endif %}
         </div>
     </div>
+
+    {% if tenant_capabilities.has_insurance_billing and invoice.customer and invoice.customer.insurance_policies.exists %}
+    <div class="doc-totals-card mt-3">
+        <div class="doc-totals-head"><i class="fas fa-briefcase-medical"></i> التأمين الطبي</div>
+        <div class="doc-totals-body">
+            {% if invoice.insurance_claim %}
+            <div class="doc-trow"><span class="doc-trow-lbl">رقم المطالبة</span><span class="doc-trow-val">{{ invoice.insurance_claim.claim_number }}</span></div>
+            <div class="doc-trow"><span class="doc-trow-lbl">الحالة</span><span class="doc-trow-val">{{ invoice.insurance_claim.get_status_display }}</span></div>
+            <div class="doc-trow"><span class="doc-trow-lbl">المطالَب به</span><span class="doc-trow-val">{{ invoice.insurance_claim.covered_amount|money }}</span></div>
+            <div class="doc-trow"><span class="doc-trow-lbl">المتبقي</span><span class="doc-trow-val">{{ invoice.insurance_claim.remaining_amount|money }}</span></div>
+            <a href="{% url 'insurance:claim_list' %}" class="cx-btn-secondary w-100 mt-2"><i class="fas fa-eye me-1"></i>إدارة المطالبة</a>
+            {% else %}
+            <button type="button" class="cx-btn-add w-100" id="btnCreateClaim"><i class="fas fa-file-medical me-1"></i>إنشاء مطالبة تأمين</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 </div><!-- row -->
 </div><!-- cx-scene -->
+
+{% if tenant_capabilities.has_insurance_billing and not invoice.insurance_claim %}
+<div class="modal fade" id="createClaimModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إنشاء مطالبة تأمين</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="createClaimBody">
+                <div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="btnSubmitClaim">إنشاء المطالبة</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    const btn = document.getElementById('btnCreateClaim');
+    if (!btn) return;
+    const urlEligible = "{% url 'insurance:invoice_eligible_lines_api' invoice.id %}";
+    const urlCreate = "{% url 'insurance:claim_create_api' %}";
+    const modal = new bootstrap.Modal(document.getElementById('createClaimModal'));
+
+    btn.addEventListener('click', function() {
+        document.getElementById('createClaimBody').innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>';
+        modal.show();
+        fetch(urlEligible).then(r => r.json()).then(resp => {
+            if (!resp.success) { document.getElementById('createClaimBody').innerHTML = `<div class="alert alert-danger">${resp.message}</div>`; return; }
+            const d = resp.data;
+            if (!d.policies.length) {
+                document.getElementById('createClaimBody').innerHTML = '<div class="alert alert-warning">لا توجد بوليصة تأمين نشطة لهذا العميل.</div>';
+                return;
+            }
+            const policyOptions = d.policies.map(p => `<option value="${p.id}" data-coverage="${p.coverage_percent}">${p.insurance_company_name} (${p.coverage_percent}%)</option>`).join('');
+            const linesHtml = d.lines.map(l => `
+                <tr>
+                    <td><input type="checkbox" class="js-line-check" data-id="${l.id}" checked></td>
+                    <td>${l.item_name}</td>
+                    <td class="text-center">${l.quantity}</td>
+                    <td class="text-center">${l.line_total}</td>
+                </tr>`).join('');
+            document.getElementById('createClaimBody').innerHTML = `
+                <div class="mb-3">
+                    <label class="cx-label">البوليصة</label>
+                    <select id="claimPolicySelect" class="form-select">${policyOptions}</select>
+                </div>
+                <table class="table table-sm">
+                    <thead><tr><th></th><th>الصنف</th><th class="text-center">الكمية</th><th class="text-center">المبلغ</th></tr></thead>
+                    <tbody>${linesHtml}</tbody>
+                </table>`;
+            document.getElementById('createClaimBody').dataset.policies = JSON.stringify(d.policies);
+        });
+    });
+
+    document.getElementById('btnSubmitClaim').addEventListener('click', function() {
+        const body = document.getElementById('createClaimBody');
+        const policyId = document.getElementById('claimPolicySelect') ? document.getElementById('claimPolicySelect').value : null;
+        if (!policyId) return;
+        const policies = JSON.parse(body.dataset.policies || '[]');
+        const policy = policies.find(p => String(p.id) === String(policyId));
+        const lines = Array.from(document.querySelectorAll('.js-line-check:checked')).map(el => ({
+            invoice_line_id: parseInt(el.dataset.id),
+            coverage_percent: policy ? policy.coverage_percent : 0,
+        }));
+        if (!lines.length) { alert('اختر بنداً واحداً على الأقل'); return; }
+        fetch(urlCreate, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ invoice_id: {{ invoice.id }}, policy_id: policyId, lines: lines }),
+        }).then(r => r.json()).then(resp => {
+            if (resp.success) { location.reload(); } else { alert(resp.message); }
+        });
+    });
+})();
+</script>
+{% endif %}
 
 {% include "sales/partials/print_invoice.html" %}
 

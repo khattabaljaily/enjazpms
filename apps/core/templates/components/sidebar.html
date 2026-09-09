@@ -279,6 +279,20 @@
             </a>
         </li>
         {% endif %}
+        {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'insurance:company_list' %}">
+                <span class="nav-icon" style="background:rgba(37,99,235,.12);color:#2563eb;"><i class="fas fa-briefcase-medical"></i></span>
+                التأمين الطبي
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'insurance:claim_list' %}">
+                <span class="nav-icon" style="background:rgba(37,99,235,.12);color:#2563eb;"><i class="fas fa-file-medical"></i></span>
+                مطالبات التأمين
+            </a>
+        </li>
+        {% endif %}
     </ul>
 
     <!-- ── Accounting ── -->
@@ -300,6 +314,7 @@
                 <li><a href="{% url 'customers:payments' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>مدفوعات العملاء</a></li>
                 <li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين</a></li>
                 {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" %}<li><a href="{% url 'agents:payments' %}" class="nav-sublink"><i class="fas fa-id-badge me-2"></i>دفعات المناديب</a></li>{% endif %}
+                {% if tenant_capabilities|has_capability:"has_insurance_billing" %}<li><a href="{% url 'insurance:statement' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب تأمين</a></li>{% endif %}
                 <li><a href="{% url 'expenses:list' %}" class="nav-sublink"><i class="fas fa-receipt me-2"></i>المصروفات</a></li>
                 <li><a href="{% url 'treasury:list' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>الخزائن</a></li>
                 <li><a href="{% url 'employees:advance_list' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>سلف الموظفين</a></li>
@@ -368,6 +383,9 @@
                         <li><a href="{% url 'stocks:reports:low_stock_report' %}" class="nav-sublink"><i class="fas fa-triangle-exclamation me-2"></i>مخزون منخفض</a></li>
                         <li><a href="{% url 'stocks:reports:valuation_report' %}" class="nav-sublink"><i class="fas fa-coins me-2"></i>تقييم المخزون</a></li>
                         <li><a href="{% url 'stocks:reports:non_moving_report' %}" class="nav-sublink"><i class="fas fa-hourglass me-2"></i>الأصناف الراكدة</a></li>
+                        {% if tenant_capabilities.has_drug_classification %}
+                        <li><a href="{% url 'stocks:reports:controlled_substances_report' %}" class="nav-sublink"><i class="fas fa-mortar-pestle me-2"></i>سجل الأصناف الخاضعة للرقابة</a></li>
+                        {% endif %}
                     </ul>
                 </li>
 

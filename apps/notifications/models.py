@@ -16,6 +16,7 @@ class Notification(TenantMixin):
         ('stocktake_done',   'اكتمال جرد مخزون'),
         ('online_order',     'طلب جديد من المتجر'),
         ('agent_request',    'طلب مندوب جديد'),
+        ('expiry_soon',      'قرب انتهاء صلاحية'),
         ('general',          'إشعار عام'),
     )
 

@@ -2413,7 +2413,8 @@ def pos_items_api(request):
         qs = qs.filter(
             Q(name__icontains=search) |
             Q(sku__icontains=search) |
-            Q(barcode__icontains=search)
+            Q(barcode__icontains=search) |
+            Q(generic_name__icontains=search)
         )
 
     qs = list(qs.order_by('name')[:80])
@@ -2450,9 +2451,81 @@ def pos_items_api(request):
             'is_service': item.item_type == 'service',
             'available_qty': float(sq.get('available_quantity', 0)) if sq else None,
             'image_url': image_url,
+            'requires_prescription': item.requires_prescription,
+            'is_controlled_substance': item.is_controlled_substance,
         })
 
     return JsonResponse({'items': items}, json_dumps_params={'ensure_ascii': False})
+
+
+@login_required
+@require_permission('view_items')
+def item_alternatives_api(request):
+    """يُعيد بدائل صنف معيّن مع كمياتها المتاحة في مخزن محدد — تُستخدم في نقطة البيع عند نفاد الصنف."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    item_id = request.GET.get('item_id')
+    stock_id = request.GET.get('stock_id')
+    if not item_id:
+        return _json_error('item_id مطلوب')
+
+    try:
+        item = Item.objects.for_tenant(tenant).get(pk=item_id)
+    except Item.DoesNotExist:
+        return _json_error('الصنف غير موجود', status=404)
+
+    alternatives = list(item.alternatives.filter(tenant=tenant, is_active=True, is_sellable=True))
+    alt_ids = [a.id for a in alternatives]
+
+    qty_map = {}
+    if stock_id and alt_ids:
+        sqqs = StockQuantity.objects.filter(tenant=tenant, stock_id=stock_id, item_id__in=alt_ids)
+        for sq in sqqs:
+            qty_map[sq.item_id] = float(sq.available_quantity)
+
+    data = [
+        {
+            'id': a.id,
+            'name': a.name,
+            'selling_price': str(a.selling_price or 0),
+            'tax_rate': str(a.tax_rate or 0),
+            'available_qty': qty_map.get(a.id, 0),
+        }
+        for a in alternatives
+    ]
+    return JsonResponse({'success': True, 'alternatives': data}, json_dumps_params={'ensure_ascii': False})
+
+
+@login_required
+@require_permission('view_items')
+def item_other_stocks_api(request):
+    """يُعيد الكمية المتاحة لصنف معيّن في كل مخازن الـ tenant الأخرى (باستثناء المخزن الحالي)."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+
+    item_id = request.GET.get('item_id')
+    exclude_stock_id = request.GET.get('exclude_stock_id')
+    if not item_id:
+        return _json_error('item_id مطلوب')
+
+    rows = (
+        StockQuantity.objects
+        .filter(tenant=tenant, item_id=item_id, stock__is_active=True)
+        .exclude(stock_id=exclude_stock_id)
+        .select_related('stock')
+    )
+    data = [
+        {
+            'stock_id': r.stock_id,
+            'stock_name': r.stock.name,
+            'available_qty': float(r.available_quantity),
+        }
+        for r in rows if r.available_quantity > 0
+    ]
+    return JsonResponse({'success': True, 'stocks': data}, json_dumps_params={'ensure_ascii': False})
 
 
 @login_required

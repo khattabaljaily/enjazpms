@@ -212,6 +212,25 @@ class Item(TenantMixin):
         'تتبع الرقم التسلسلي', default=False
     )
 
+    # ------ بيانات صيدلانية (تظهر فقط للصيدليات) ------
+    generic_name = models.CharField('الاسم العلمي / المادة الفعالة', max_length=300, blank=True)
+    manufacturer = models.CharField('الشركة المصنعة', max_length=200, blank=True)
+    dosage_form = models.CharField(
+        'الشكل الصيدلاني', max_length=100, blank=True,
+        help_text='مثال: أقراص، شراب، حقن، كبسولات'
+    )
+    strength = models.CharField(
+        'التركيز', max_length=100, blank=True,
+        help_text='مثال: 500 مجم، 5 مل'
+    )
+    requires_prescription = models.BooleanField('يُصرف بوصفة طبية', default=False)
+    is_controlled_substance = models.BooleanField('خاضع للرقابة / مخدرات', default=False)
+    alternatives = models.ManyToManyField(
+        'self', blank=True, symmetrical=True,
+        verbose_name='بدائل / أصناف مكافئة',
+        help_text='أصناف يمكن اقتراحها كبديل عند نفاد هذا الصنف'
+    )
+
     # ------ تفاصيل إضافية ------
     description = models.TextField('الوصف', blank=True)
     image = models.ImageField(
@@ -232,6 +251,7 @@ class Item(TenantMixin):
             models.Index(fields=['tenant', 'barcode']),
             models.Index(fields=['tenant', 'category']),
             models.Index(fields=['tenant', 'name']),
+            models.Index(fields=['tenant', 'is_controlled_substance']),
         ]
 
     def __str__(self):

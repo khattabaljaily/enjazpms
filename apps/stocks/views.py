@@ -979,6 +979,52 @@ def stocks_low_stock_report_export(request):
 
 
 # ─────────────────────────────────────────────────────────────────
+#   CONTROLLED SUBSTANCES REGISTER (Pharmacy only)
+# ─────────────────────────────────────────────────────────────────
+
+@login_required
+@require_permission('view_stocks_controlled_substances_report')
+def stocks_controlled_substances_report(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
+
+    report = StocksReportGenerator(tenant, start_date, end_date).get_controlled_substances_report()
+
+    return render(request, 'stocks/reports/controlled_substances.html', {
+        'report': report,
+        'start_date': start_date,
+        'end_date': end_date,
+        'section': 'stocks_reports',
+    })
+
+
+@login_required
+@require_permission('view_stocks_controlled_substances_report')
+def stocks_controlled_substances_report_export(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
+    end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
+
+    report = StocksReportGenerator(tenant, start_date, end_date).get_controlled_substances_report()
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="controlled_substances_{end_date}.csv"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    writer.writerow(['التاريخ', 'الصنف', 'المادة الفعالة', 'المخزن', 'نوع الحركة', 'الاتجاه', 'الكمية', 'الرصيد بعد', 'المرجع', 'المستخدم', 'ملاحظات'])
+    for row in report['data']:
+        writer.writerow([row['movement_date'], row['item_name'], row['generic_name'], row['stock_name'], row['movement_type'], row['direction'], row['quantity'], row['balance_after'], row['reference_type'], row['user'], row['notes']])
+    return response
+
+
+# ─────────────────────────────────────────────────────────────────
 #   INVENTORY VALUATION REPORT
 # ─────────────────────────────────────────────────────────────────
 

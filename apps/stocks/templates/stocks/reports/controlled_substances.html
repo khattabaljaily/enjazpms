@@ -1,0 +1,114 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--stocks">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-mortar-pestle"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">سجل حركة الأصناف الخاضعة للرقابة</h1>
+                    <p class="rpt-hero-desc">حركات الدخول والخروج للأدوية المخدرة/الخاضعة للرقابة خلال الفترة</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'stocks:reports:controlled_substances_report_export' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'stocks:quantities_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <form method="get" class="rpt-panel" style="padding:1rem 1.25rem;margin-bottom:1rem;">
+        <div class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label class="cx-label">من تاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-auto">
+                <label class="cx-label">إلى تاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="cx-btn-secondary">تصفية</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="rpt-kpi-card">
+            <div class="rpt-kpi-icon"><i class="fas fa-arrow-down"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_in }}</div>
+            <div class="rpt-kpi-label">إجمالي الداخل</div>
+        </div>
+        <div class="rpt-kpi-card">
+            <div class="rpt-kpi-icon"><i class="fas fa-arrow-up"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.total_out }}</div>
+            <div class="rpt-kpi-label">إجمالي الخارج</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--red">
+            <div class="rpt-kpi-icon"><i class="fas fa-list"></i></div>
+            <div class="rpt-kpi-value">{{ report.summary.movement_count }}</div>
+            <div class="rpt-kpi-label">عدد الحركات</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--stocks">
+            <h3 class="rpt-panel-title"><i class="fas fa-mortar-pestle me-2"></i>سجل الحركات</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الصنف</th>
+                            <th>المادة الفعالة</th>
+                            <th>المخزن</th>
+                            <th>نوع الحركة</th>
+                            <th class="text-center">الكمية</th>
+                            <th class="text-center">الرصيد بعد</th>
+                            <th>المرجع</th>
+                            <th>المستخدم</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="text-muted">{{ row.movement_date }}</td>
+                            <td class="fw-bold">{{ row.item_name }}</td>
+                            <td class="text-muted">{{ row.generic_name }}</td>
+                            <td class="text-muted">{{ row.stock_name }}</td>
+                            <td>{{ row.movement_type }}</td>
+                            <td class="text-center fw-bold" style="color:{% if row.direction == 'in' %}#10b981{% else %}#ef4444{% endif %};">
+                                {% if row.direction == 'in' %}+{% else %}-{% endif %}{{ row.quantity }}
+                            </td>
+                            <td class="text-center">{{ row.balance_after }}</td>
+                            <td class="text-muted">{{ row.reference_type }}</td>
+                            <td class="text-muted">{{ row.user }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty">
+                <i class="fas fa-check-circle" style="color:#11998e !important; opacity:1 !important;"></i>
+                <p>لا توجد حركات على أصناف خاضعة للرقابة خلال هذه الفترة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

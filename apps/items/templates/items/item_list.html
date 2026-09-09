@@ -439,6 +439,74 @@
                         </div>
                         {% endif %}
 
+                        {# ── بيانات صيدلانية — تظهر فقط للصيدليات ── #}
+                        {% if tenant_capabilities.has_drug_classification %}
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-icon"><i class="fas fa-mortar-pestle"></i></span> بيانات صيدلانية
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_generic_name">{{ item_form.generic_name.label }}</label>
+                                {{ item_form.generic_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_manufacturer">{{ item_form.manufacturer.label }}</label>
+                                {{ item_form.manufacturer }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_dosage_form">{{ item_form.dosage_form.label }}</label>
+                                {{ item_form.dosage_form }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_strength">{{ item_form.strength.label }}</label>
+                                {{ item_form.strength }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_requires_prescription">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">
+                                            <i class="fas fa-file-prescription text-primary me-1"></i>
+                                            {{ item_form.requires_prescription.label }}
+                                        </span>
+                                        <span class="cx-toggle-desc">يظهر تنبيه للكاشير قبل البيع</span>
+                                    </div>
+                                    {{ item_form.requires_prescription }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_is_controlled_substance">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">
+                                            <i class="fas fa-triangle-exclamation text-danger me-1"></i>
+                                            {{ item_form.is_controlled_substance.label }}
+                                        </span>
+                                        <span class="cx-toggle-desc">يُدرَج في سجل حركة الأصناف الخاضعة للرقابة</span>
+                                    </div>
+                                    {{ item_form.is_controlled_substance }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {# ── بدائل الصنف — تظهر فقط للصيدليات ── #}
+                        {% if tenant_capabilities.has_item_alternatives %}
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-icon"><i class="fas fa-right-left"></i></span> بدائل الصنف
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label class="cx-label" for="id_alternatives">{{ item_form.alternatives.label }}</label>
+                                {{ item_form.alternatives }}
+                                <div class="cx-field-hint" style="font-size:.75rem;color:var(--text-muted,#9ca3af);">
+                                    <i class="fas fa-info-circle"></i>
+                                    تُقترح هذه الأصناف كبديل تلقائياً في نقطة البيع عند نفاد هذا الصنف
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
                         {# ── ٥: معلومات إضافية ── #}
                         <div class="cx-form-group-label">
                             <span class="cx-form-group-icon"><i class="fas fa-list-check"></i></span> معلومات إضافية
@@ -868,6 +936,8 @@
         hasExpiryDates:  {{ tenant_capabilities.has_expiry_dates|yesno:"true,false" }},
         hasBatchNumbers: {{ tenant_capabilities.has_batch_numbers|yesno:"true,false" }},
         hasSerialNumbers:{{ tenant_capabilities.has_serial_numbers|yesno:"true,false" }},
+        hasDrugClassification: {{ tenant_capabilities.has_drug_classification|yesno:"true,false" }},
+        hasItemAlternatives:   {{ tenant_capabilities.has_item_alternatives|yesno:"true,false" }},
     };
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
@@ -914,6 +984,8 @@
                         <div class="cx-item-card-badge-row">
                             ${CAP.hasExpiryDates  && r.track_expiry ? '<span class="cx-item-card-badge">تتبع الانتهاء</span>' : ''}
                             ${CAP.hasSerialNumbers && r.track_serial ? '<span class="cx-item-card-badge">رقم تسلسلي</span>' : ''}
+                            ${CAP.hasDrugClassification && r.requires_prescription ? '<span class="cx-item-card-badge">℞ بوصفة</span>' : ''}
+                            ${CAP.hasDrugClassification && r.is_controlled_substance ? '<span class="cx-item-card-badge" style="color:#dc2626;">خاضع للرقابة</span>' : ''}
                         </div>
                     </div>
                     ${status}
@@ -977,6 +1049,8 @@
                     let badges = '';
                     if (CAP.hasExpiryDates  && r.track_expiry) badges += `<span class="badge bg-danger ms-1" style="font-size:0.6rem" title="تتبع الانتهاء"><i class="fas fa-calendar-xmark"></i></span>`;
                     if (CAP.hasSerialNumbers && r.track_serial) badges += `<span class="badge bg-info ms-1" style="font-size:0.6rem" title="رقم تسلسلي"><i class="fas fa-barcode"></i></span>`;
+                    if (CAP.hasDrugClassification && r.requires_prescription) badges += `<span class="badge bg-primary ms-1" style="font-size:0.6rem" title="يُصرف بوصفة طبية"><i class="fas fa-file-prescription"></i></span>`;
+                    if (CAP.hasDrugClassification && r.is_controlled_substance) badges += `<span class="badge bg-danger ms-1" style="font-size:0.6rem" title="خاضع للرقابة"><i class="fas fa-triangle-exclamation"></i></span>`;
                     return `<span class="cxr-name">${r.name}</span>${badges}`;
                 }
             },
@@ -1316,6 +1390,17 @@
                 $('#id_track_expiry').prop('checked', !!d.track_expiry);
                 $('#id_track_batch').prop('checked', !!d.track_batch);
                 $('#id_track_serial').prop('checked', !!d.track_serial);
+                if (CAP.hasDrugClassification) {
+                    $('#id_generic_name').val(d.generic_name || '');
+                    $('#id_manufacturer').val(d.manufacturer || '');
+                    $('#id_dosage_form').val(d.dosage_form || '');
+                    $('#id_strength').val(d.strength || '');
+                    $('#id_requires_prescription').prop('checked', !!d.requires_prescription);
+                    $('#id_is_controlled_substance').prop('checked', !!d.is_controlled_substance);
+                }
+                if (CAP.hasItemAlternatives) {
+                    $('#id_alternatives').val((d.alternatives || []).map(a => String(a.id)));
+                }
                 $('#id_description').val(d.description || '');
                 $('#id_is_active').prop('checked', !!d.is_active);
                 $('#id_is_sellable').prop('checked', !!d.is_sellable);

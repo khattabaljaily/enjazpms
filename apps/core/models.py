@@ -260,6 +260,13 @@ class TenantCapabilities(models.Model):
     has_sales_invoice = models.BooleanField('إنشاء فاتورة مبيعات يدوياً', default=False)
     has_agents_module = models.BooleanField('المناديب ومندوبو المبيعات', default=False)
 
+    # خصائص الصيدليات
+    has_drug_classification = models.BooleanField('تصنيف الأدوية (مادة فعالة، شركة مصنعة، وصفة، مخدرات)', default=False)
+    has_item_alternatives = models.BooleanField('بدائل الأصناف', default=False)
+    has_expiry_alerts = models.BooleanField('تنبيهات انتهاء الصلاحية', default=False)
+    has_branch_stock_lookup = models.BooleanField('الاستعلام عن توفر الصنف بمخازن أخرى', default=False)
+    has_insurance_billing = models.BooleanField('الفوترة عبر شركات التأمين', default=False)
+
     created_at = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True)
     updated_at = models.DateTimeField('تاريخ التحديث', auto_now=True)
 
@@ -287,6 +294,11 @@ class TenantCapabilities(models.Model):
             has_pos=features.get('has_pos', True),
             has_sales_invoice=features.get('has_sales_invoice', False),
             has_agents_module=features.get('has_agents_module', False),
+            has_drug_classification=features.get('has_drug_classification', False),
+            has_item_alternatives=features.get('has_item_alternatives', False),
+            has_expiry_alerts=features.get('has_expiry_alerts', False),
+            has_branch_stock_lookup=features.get('has_branch_stock_lookup', False),
+            has_insurance_billing=features.get('has_insurance_billing', False),
         )
 
 

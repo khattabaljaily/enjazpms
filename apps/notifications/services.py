@@ -100,6 +100,44 @@ def generate_overdue_invoice_notifications(tenant):
     return count
 
 
+def generate_expiry_notifications(tenant, warn_days=30):
+    """Notify about item batches expiring within `warn_days` (pharmacy only)."""
+    from apps.items.models import ItemBatch
+
+    today = timezone.localdate()
+    soon = today + timedelta(days=warn_days)
+
+    expiring = ItemBatch.objects.filter(
+        tenant=tenant,
+        quantity_remaining__gt=0,
+        expiry_date__isnull=False,
+        expiry_date__lte=soon,
+    ).select_related('item')
+
+    count = 0
+    for batch in expiring:
+        link = f'/items/{batch.item_id}/batches/'
+        if _already_notified(tenant, 'expiry_soon', link):
+            continue
+
+        days_left = batch.days_to_expiry
+        status = 'منتهية الصلاحية' if batch.is_expired else f'تنتهي خلال {days_left} يوم'
+        Notification.objects.create(
+            tenant=tenant,
+            notification_type='expiry_soon',
+            priority='high' if (days_left is not None and days_left <= 7) else 'medium',
+            title=f'قرب انتهاء صلاحية: {batch.item.name}',
+            message=(
+                f'الدفعة "{batch.batch_number or "بدون رقم"}" من "{batch.item.name}" '
+                f'({status} — {batch.expiry_date}) بكمية متبقية {batch.quantity_remaining:.2f}.'
+            ),
+            link=link,
+        )
+        count += 1
+
+    return count
+
+
 def generate_rfq_expiry_notifications(tenant):
     """Notify about RFQs expiring within 3 days."""
     from apps.purchases.models import PurchaseRFQ

@@ -191,7 +191,7 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
         from apps.agents.services import apply_collection_commission
         apply_collection_commission(tenant, invoice, payment)
 
-    if method == 'cash':
+    if method in ('cash', 'insurance'):
         treasury_notes = notes or f'فاتورة {invoice.invoice_number}'
         if amount > 0:
             post_treasury_receipt(
@@ -654,6 +654,9 @@ def cancel_sale_invoice(invoice: SaleInvoice, user, reason: str = '') -> SaleInv
             " يمكن إلغاء الفواتير المؤكدة وقيد التسليم فقط."
         )
 
+    if hasattr(invoice, 'insurance_claim') and invoice.insurance_claim.status not in ('draft', 'cancelled'):
+        raise ValueError('لا يمكن إلغاء فاتورة مرتبطة بمطالبة تأمين نشطة — يجب إلغاء المطالبة أولاً.')
+
     tenant = invoice.tenant
 
     if invoice.status == 'pending_delivery':
@@ -740,6 +743,9 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
         raise ValueError(
             "لا يمكن تعديل فاتورة تحتوي على مرتجعات مؤكدة."
         )
+
+    if hasattr(invoice, 'insurance_claim') and invoice.insurance_claim.status not in ('draft', 'cancelled'):
+        raise ValueError('لا يمكن تعديل فاتورة مرتبطة بمطالبة تأمين نشطة — يجب إلغاء المطالبة أولاً.')
 
     tenant = invoice.tenant
 
@@ -841,6 +847,9 @@ def confirm_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
         raise ValueError(
             "يمكن إرجاع الفواتير المؤكدة فقط."
         )
+
+    if hasattr(invoice, 'insurance_claim') and invoice.insurance_claim.status not in ('draft', 'cancelled'):
+        raise ValueError('لا يمكن إرجاع فاتورة مرتبطة بمطالبة تأمين نشطة — يجب إلغاء المطالبة أولاً.')
 
     tenant = sale_return.tenant
     return_lines = list(sale_return.lines.select_related('invoice_line', 'item'))
@@ -1107,7 +1116,12 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
 
     # تقليل المطالبة في حساب العميل
     if invoice.customer:
-        ledger_reference_type = 'customer_payment_bank' if method == 'bank' else 'customer_payment_cash'
+        if method == 'bank':
+            ledger_reference_type = 'customer_payment_bank'
+        elif method == 'insurance':
+            ledger_reference_type = 'customer_payment_insurance'
+        else:
+            ledger_reference_type = 'customer_payment_cash'
         _apply_customer_ledger(
             tenant=tenant,
             customer=invoice.customer,
@@ -1120,6 +1134,35 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
         )
 
     return payment
+
+
+@transaction.atomic
+def write_off_invoice_balance(invoice: SaleInvoice, amount: Decimal, reason: str = '', user=None) -> None:
+    """
+    يشطب جزءاً من رصيد فاتورة آجلة كخسارة، دون تسجيل دفعة حقيقية (لا SalePayment ولا ترحيل للخزينة).
+    يُستخدم مثلاً لفرق اعتماد مطالبة تأمين (المبلغ المعتمد أقل من المُطالَب به) لا يُعاد فوترته للعميل.
+    """
+    amount = Decimal(str(amount or 0))
+    if amount <= 0:
+        return
+    if amount > invoice.remaining_amount + Decimal('0.01'):
+        raise ValueError(f"مبلغ الشطب ({amount}) يتجاوز المتبقي على الفاتورة ({invoice.remaining_amount}).")
+
+    tenant = invoice.tenant
+    invoice.paid_amount = (invoice.paid_amount or Decimal('0')) + amount
+    invoice.save(update_fields=['paid_amount', 'updated_at'])
+
+    if invoice.customer:
+        _apply_customer_ledger(
+            tenant=tenant,
+            customer=invoice.customer,
+            amount=-amount,
+            entry_type='adjustment',
+            reference_type='invoice_writeoff',
+            reference_id=invoice.id,
+            date=timezone.localdate(),
+            notes=reason or f'شطب رصيد فاتورة {invoice.invoice_number}',
+        )
 
 
 def _post_customer_direct_payment(tenant, customer, amount, method, date, reference, notes, user, treasury, kind):

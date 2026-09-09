@@ -216,12 +216,43 @@
     </div>
 </div>
 
+<!-- ══ OUT-OF-STOCK: ALTERNATIVES / OTHER STOCKS ══════════════ -->
+<div class="pos-success-overlay" id="altOverlay">
+    <div class="pos-success-box" style="max-width:420px;text-align:right;">
+        <div class="pos-success-title" id="altTitle" style="margin-bottom:1rem;"></div>
+        <div id="altAlternativesSection" style="display:none;">
+            <div style="font-weight:700;font-size:.85rem;color:var(--text-tertiary);margin-bottom:.5rem;">
+                <i class="fas fa-right-left"></i> بدائل متاحة
+            </div>
+            <div id="altAlternativesList"></div>
+        </div>
+        <div id="altOtherStocksSection" style="display:none;margin-top:1rem;">
+            <div style="font-weight:700;font-size:.85rem;color:var(--text-tertiary);margin-bottom:.5rem;">
+                <i class="fas fa-warehouse"></i> متوفر في مخزن آخر
+            </div>
+            <div id="altOtherStocksList"></div>
+        </div>
+        <div id="altEmptyMsg" style="display:none;color:var(--text-tertiary);font-size:.85rem;text-align:center;padding:1rem 0;">
+            لا توجد بدائل أو مخزون آخر لهذا الصنف حالياً
+        </div>
+        <div class="pos-success-btns" style="margin-top:1.25rem;">
+            <button class="pos-success-btn primary" id="altCloseBtn" style="width:100%;">إغلاق</button>
+        </div>
+    </div>
+</div>
+
 <script>
 (function() {
 'use strict';
 
 const CSRF         = document.querySelector('meta[name="csrf-token"]').content;
 const ITEMS_URL    = '{% url "sales:pos_items_api" %}';
+const ALTERNATIVES_URL  = '{% url "sales:item_alternatives_api" %}';
+const OTHER_STOCKS_URL  = '{% url "sales:item_other_stocks_api" %}';
+const CAP = {
+    hasItemAlternatives:   {{ tenant_capabilities.has_item_alternatives|yesno:"true,false" }},
+    hasBranchStockLookup:  {{ tenant_capabilities.has_branch_stock_lookup|yesno:"true,false" }},
+};
 const CHECKOUT_URL = '{% url "sales:pos_checkout_api" %}';
 
 /* ── State ───────────────────────────────────────────── */
@@ -388,6 +419,7 @@ function renderGrid(items) {
              data-unit-name="${escHtml(item.unit_name || '')}">
             <div class="pos-item-card-add"><i class="fas fa-plus"></i></div>
             ${img}
+            ${item.is_controlled_substance ? '<div class="pos-item-icon" style="position:absolute;top:6px;left:6px;width:22px;height:22px;background:#dc2626;color:#fff;border-radius:50%;font-size:.65rem;" title="خاضع للرقابة"><i class="fas fa-triangle-exclamation"></i></div>' : (item.requires_prescription ? '<div class="pos-item-icon" style="position:absolute;top:6px;left:6px;width:22px;height:22px;background:#2563eb;color:#fff;border-radius:50%;font-size:.65rem;" title="يُصرف بوصفة طبية"><i class="fas fa-file-prescription"></i></div>' : '')}
             <div class="pos-item-name">${escHtml(item.name)}</div>
             <div class="pos-item-price">${fmt(item.selling_price)}</div>
             ${qtyBadge}
@@ -398,7 +430,101 @@ function renderGrid(items) {
     $grid.querySelectorAll('.pos-item-card:not(.out-of-stock)').forEach(card => {
         card.addEventListener('click', () => addToCart(card));
     });
+
+    if (CAP.hasItemAlternatives || CAP.hasBranchStockLookup) {
+        $grid.querySelectorAll('.pos-item-card.out-of-stock').forEach(card => {
+            card.addEventListener('click', () => openAltModal(parseInt(card.dataset.id), card.dataset.name));
+        });
+    }
 }
+
+/* ── Out-of-stock: alternatives / other stocks ──────────── */
+function openAltModal(itemId, itemName) {
+    const $overlay = document.getElementById('altOverlay');
+    const $altSection = document.getElementById('altAlternativesSection');
+    const $altList = document.getElementById('altAlternativesList');
+    const $stockSection = document.getElementById('altOtherStocksSection');
+    const $stockList = document.getElementById('altOtherStocksList');
+    const $empty = document.getElementById('altEmptyMsg');
+
+    document.getElementById('altTitle').textContent = `نفد المخزون: ${itemName}`;
+    $altSection.style.display = 'none';
+    $stockSection.style.display = 'none';
+    $empty.style.display = 'none';
+    $altList.innerHTML = '';
+    $stockList.innerHTML = '';
+    $overlay.classList.add('show');
+
+    const requests = [];
+
+    if (CAP.hasItemAlternatives) {
+        requests.push(
+            fetch(`${ALTERNATIVES_URL}?item_id=${itemId}&stock_id=${$stock.value}`)
+                .then(r => r.json())
+                .then(data => {
+                    const alts = (data.alternatives || []);
+                    if (!alts.length) return;
+                    $altSection.style.display = '';
+                    $altList.innerHTML = alts.map(a => `
+                        <div class="pos-item-card" style="display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;margin-bottom:.4rem;cursor:pointer;" data-alt-id="${a.id}">
+                            <div>
+                                <div style="font-weight:700;">${escHtml(a.name)}</div>
+                                <div style="font-size:.75rem;color:var(--text-tertiary);">متاح: ${a.available_qty}</div>
+                            </div>
+                            <div style="font-weight:700;">${fmt(a.selling_price)}</div>
+                        </div>`).join('');
+                    $altList.querySelectorAll('[data-alt-id]').forEach((el, idx) => {
+                        el.addEventListener('click', () => addAlternativeToCart(alts[idx]));
+                    });
+                })
+                .catch(() => {})
+        );
+    }
+
+    if (CAP.hasBranchStockLookup) {
+        requests.push(
+            fetch(`${OTHER_STOCKS_URL}?item_id=${itemId}&exclude_stock_id=${$stock.value}`)
+                .then(r => r.json())
+                .then(data => {
+                    const stocks = (data.stocks || []);
+                    if (!stocks.length) return;
+                    $stockSection.style.display = '';
+                    $stockList.innerHTML = stocks.map(s => `
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .8rem;margin-bottom:.3rem;background:var(--bg-hover,rgba(0,0,0,.03));border-radius:8px;">
+                            <span>${escHtml(s.stock_name)}</span>
+                            <strong>${s.available_qty}</strong>
+                        </div>`).join('');
+                })
+                .catch(() => {})
+        );
+    }
+
+    Promise.all(requests).then(() => {
+        if ($altSection.style.display === 'none' && $stockSection.style.display === 'none') {
+            $empty.style.display = '';
+        }
+    });
+}
+
+function addAlternativeToCart(alt) {
+    const existing = cart.find(c => c.item_id === alt.id);
+    if (existing) {
+        existing.qty += 1;
+    } else {
+        cart.push({
+            item_id: alt.id, name: alt.name, qty: 1,
+            unit_price: parseFloat(alt.selling_price) || 0,
+            discount_percent: 0, tax_rate: parseFloat(alt.tax_rate) || 0,
+            cost_price: 0, unit_id: '', unit_factor: 1, unit_name: '', units: [],
+        });
+    }
+    renderCart();
+    document.getElementById('altOverlay').classList.remove('show');
+}
+
+document.getElementById('altCloseBtn').addEventListener('click', () => {
+    document.getElementById('altOverlay').classList.remove('show');
+});
 
 /* ── Cart operations ─────────────────────────────────── */
 function addToCart(card) {
