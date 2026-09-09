@@ -319,7 +319,7 @@
                 <li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين</a></li>
                 {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" %}<li><a href="{% url 'agents:payments' %}" class="nav-sublink"><i class="fas fa-id-badge me-2"></i>دفعات المناديب</a></li>{% endif %}
                 {% if tenant_capabilities|has_capability:"has_insurance_billing" %}<li><a href="{% url 'insurance:statement' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب تأمين</a></li>{% endif %}
-                {% if tenant_capabilities|has_capability:"has_insurance_billing" %}<li><a href="{% url 'insurance:claims_aging' %}" class="nav-sublink"><i class="fas fa-hourglass-half me-2"></i>أعمار مطالبات التأمين</a></li>{% endif %}
+                {% if tenant_capabilities|has_capability:"has_insurance_billing" %}<li><a href="{% url 'insurance:claims_aging' %}" class="nav-sublink"><i class="fas fa-hourglass-half me-2"></i>متأخرات التأمين</a></li>{% endif %}
                 <li><a href="{% url 'expenses:list' %}" class="nav-sublink"><i class="fas fa-receipt me-2"></i>المصروفات</a></li>
                 <li><a href="{% url 'treasury:list' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>الخزائن</a></li>
                 <li><a href="{% url 'employees:advance_list' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>سلف الموظفين</a></li>

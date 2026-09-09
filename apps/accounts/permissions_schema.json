@@ -137,7 +137,7 @@
         "settle_insurance_claims": "تسجيل تسوية مطالبة تأمين",
         "cancel_insurance_claims": "إلغاء مطالبة تأمين",
         "view_insurance_statement": "عرض كشف حساب شركة تأمين",
-        "view_insurance_claims_aging": "عرض تقرير أعمار مطالبات التأمين"
+        "view_insurance_claims_aging": "عرض متأخرات التأمين"
     },
     "الموظفين": {
         "view_employees": "عرض قائمة الموظفين",
