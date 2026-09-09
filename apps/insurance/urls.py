@@ -31,4 +31,7 @@ urlpatterns = [
 
     # Statement
     path('statement/', views.insurance_statement, name='statement'),
+
+    # Reports
+    path('claims/aging/', views.claims_aging_report, name='claims_aging'),
 ]

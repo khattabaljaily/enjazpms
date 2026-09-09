@@ -13,6 +13,7 @@ from apps.sales.models import SaleInvoice
 
 from .forms import InsuranceCompanyForm, CustomerInsurancePolicyForm
 from .models import InsuranceCompany, CustomerInsurancePolicy, InsuranceClaim, InsuranceClaimSettlement
+from .reports import InsuranceReportGenerator
 from . import services
 
 
@@ -531,4 +532,19 @@ def insurance_statement(request):
         'selected_company': selected_company,
         'entries': entries,
         'section': 'insurance_statement',
+    })
+
+
+@login_required
+@require_permission('view_insurance_claims_aging')
+def claims_aging_report(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+
+    report = InsuranceReportGenerator(tenant).get_claims_aging_report()
+
+    return render(request, 'insurance/claims_aging.html', {
+        'report': report,
+        'section': 'insurance_claims_aging',
     })
