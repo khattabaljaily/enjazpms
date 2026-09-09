@@ -406,8 +406,9 @@ function renderGrid(items) {
             qtyBadge = `<div class="pos-item-qty${cls ? ' ' + cls : ''}">${label}</div>`;
         }
 
+        const oosClickable = oos && (CAP.hasItemAlternatives || CAP.hasBranchStockLookup);
         return `
-        <div class="pos-item-card${oos ? ' out-of-stock' : ''}"
+        <div class="pos-item-card${oos ? ' out-of-stock' : ''}${oosClickable ? ' pos-oos-clickable' : ''}"
              data-id="${item.id}"
              data-price="${item.selling_price}"
              data-tax="${item.tax_rate}"

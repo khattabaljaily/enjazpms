@@ -334,6 +334,12 @@
     filter: grayscale(.5);
 }
 
+/* Pharmacy: out-of-stock cards stay clickable to show alternatives / other-branch stock */
+.pos-item-card.out-of-stock.pos-oos-clickable {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
 .pos-item-img {
     width: 60px;
     height: 60px;
