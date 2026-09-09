@@ -540,7 +540,7 @@ function submitInvoiceDecision() {
     .then(data => {
         if (data.success) {
             closeInvoiceDecisionModal();
-            sessionStorage.setItem('__snakeFlash', JSON.stringify({
+            sessionStorage.setItem('__enjazFlash', JSON.stringify({
                 message: data.message || 'تمت العملية بنجاح',
                 type: 'success'
             }));
@@ -587,7 +587,7 @@ function submitCancel() {
         body: JSON.stringify({ reason })
     }).then(r => r.json()).then(data => {
         if (data.success) {
-            sessionStorage.setItem('__snakeFlash', JSON.stringify({
+            sessionStorage.setItem('__enjazFlash', JSON.stringify({
                 message: data.message || 'تم إلغاء الفاتورة بنجاح',
                 type: 'success'
             }));
@@ -611,7 +611,7 @@ function doPayment() {
         body: JSON.stringify({ amount, method, reference })
     }).then(r => r.json()).then(data => {
         if (data.success) {
-            sessionStorage.setItem('__snakeFlash', JSON.stringify({
+            sessionStorage.setItem('__enjazFlash', JSON.stringify({
                 message: data.message || 'تم تسجيل الدفعة بنجاح',
                 type: 'success'
             }));
@@ -624,8 +624,8 @@ function doPayment() {
 
 function showAlert(msg, type = 'danger') {
     const mapped = type === 'danger' ? 'error' : type;
-    if (window.Snake && typeof Snake.toast === 'function') {
-        Snake.toast(msg, mapped);
+    if (window.Enjaz && typeof Enjaz.toast === 'function') {
+        Enjaz.toast(msg, mapped);
         return;
     }
     console.warn(msg);

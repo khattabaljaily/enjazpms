@@ -17,7 +17,7 @@ from django.db import transaction
 
 User = get_user_model()
 
-DEMO_SLUG     = 'snake-demo-pharmacy'
+DEMO_SLUG     = 'enjaz-demo-pharmacy'
 DEMO_PASSWORD = 'Demo@1234'
 MEDIA_ITEMS   = None   # resolved at runtime
 
@@ -621,7 +621,7 @@ class Command(BaseCommand):
             ('online_order',   'high',   'طلب جديد من المتجر',           'طلب #ORD-00003 بقيمة 7,000 SDG — في انتظار الموافقة'),
             ('overdue_invoice','medium', 'فاتورة متأخرة السداد',          'فاتورة «مركز البركة الصحي» متأخرة 12 يوماً'),
             ('transfer_done',  'low',    'اكتمل تحويل المخزون',           'تم تأكيد التحويل TRF-001 إلى مخزن الطابق الثاني'),
-            ('general',        'low',    'مرحباً في Snake',               'حسابك جاهز — ابدأ بإضافة أدويتك ومبيعاتك'),
+            ('general',        'low',    'مرحباً في ENJAZ PMS',               'حسابك جاهز — ابدأ بإضافة أدويتك ومبيعاتك'),
         ]
         for ntype, priority, title, msg in data:
             Notification.objects.create(

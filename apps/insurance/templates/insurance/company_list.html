@@ -325,7 +325,7 @@
         $form[0].reset();
         $idInput.val('');
         $('#id_is_active').prop('checked', true);
-        Snake.clearFormErrors($form);
+        Enjaz.clearFormErrors($form);
     }
 
     function openCreate() {
@@ -340,7 +340,7 @@
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function (resp) {
-                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                if (!resp.success) { Enjaz.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
                 $idInput.val(d.id);
                 $('#id_name').val(d.name || '');
@@ -349,7 +349,7 @@
                 $('#id_phone').val(d.phone || '');
                 $('#id_email').val(d.email || '');
                 $('#id_address').val(d.address || '');
-                $('#id_default_coverage_percent').val(Snake.parseNumber(d.default_coverage_percent) || '');
+                $('#id_default_coverage_percent').val(Enjaz.parseNumber(d.default_coverage_percent) || '');
                 $('#id_settlement_period_days').val(d.settlement_period_days || '');
                 $('#id_notes').val(d.notes || '');
                 $('#id_is_active').prop('checked', !!d.is_active);
@@ -357,30 +357,30 @@
                 $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
                 companyModal.show();
             },
-            error: function () { Snake.toast('تعذر تحميل البيانات', 'error'); }
+            error: function () { Enjaz.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
     /* ── Save ─────────────────────────────────────────────────── */
     $form.on('submit', function (e) {
         e.preventDefault();
-        Snake.clearFormErrors($form);
+        Enjaz.clearFormErrors($form);
         const id = $idInput.val();
         const url = id ? apiUrl(urlUpdate, id) : urlCreate;
         const orig = $submitBtn.html();
-        Snake.showLoading($submitBtn);
+        Enjaz.showLoading($submitBtn);
         $.ajax({
             url: url, method: 'POST', data: $form.serialize(),
             success: function (resp) {
-                Snake.hideLoading($submitBtn, orig);
-                if (resp.success) { companyModal.hide(); dt.ajax.reload(null, false); Snake.toast(resp.message || 'تم الحفظ', 'success'); return; }
-                Snake.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
+                Enjaz.hideLoading($submitBtn, orig);
+                if (resp.success) { companyModal.hide(); dt.ajax.reload(null, false); Enjaz.toast(resp.message || 'تم الحفظ', 'success'); return; }
+                Enjaz.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
             },
             error: function (xhr) {
-                Snake.hideLoading($submitBtn, orig);
+                Enjaz.hideLoading($submitBtn, orig);
                 const r = xhr.responseJSON || {};
-                if (r.errors) Snake.renderFieldErrors($form, r.errors);
-                Snake.showFormError($form, r.message || 'حدث خطأ');
+                if (r.errors) Enjaz.renderFieldErrors($form, r.errors);
+                Enjaz.showFormError($form, r.message || 'حدث خطأ');
             }
         });
     });
@@ -397,10 +397,10 @@
         $.ajax({
             url: apiUrl(urlDelete, id), method: 'POST',
             success: function (resp) {
-                if (resp.success) { deleteModal.hide(); dt.ajax.reload(null, false); Snake.toast(resp.message || 'تم الحذف', 'success'); return; }
-                Snake.toast(resp.message || 'تعذر الحذف', 'error');
+                if (resp.success) { deleteModal.hide(); dt.ajax.reload(null, false); Enjaz.toast(resp.message || 'تم الحذف', 'success'); return; }
+                Enjaz.toast(resp.message || 'تعذر الحذف', 'error');
             },
-            error: function (xhr) { Snake.toast((xhr.responseJSON && xhr.responseJSON.message) || 'تعذر الحذف', 'error'); }
+            error: function (xhr) { Enjaz.toast((xhr.responseJSON && xhr.responseJSON.message) || 'تعذر الحذف', 'error'); }
         });
     });
 

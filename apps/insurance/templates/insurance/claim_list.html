@@ -282,11 +282,11 @@
                 <div class="cx-supplier-card-meta">
                     <div>
                         <span class="cx-supplier-card-meta-label">المطالَب به</span>
-                        <strong class="cx-supplier-card-meta-value">${Snake.formatMoney(r.covered_amount)}</strong>
+                        <strong class="cx-supplier-card-meta-value">${Enjaz.formatMoney(r.covered_amount)}</strong>
                     </div>
                     <div>
                         <span class="cx-supplier-card-meta-label">المتبقي</span>
-                        <strong class="cx-supplier-card-meta-value">${Snake.formatMoney(r.remaining_amount)}</strong>
+                        <strong class="cx-supplier-card-meta-value">${Enjaz.formatMoney(r.remaining_amount)}</strong>
                     </div>
                 </div>
                 <div class="cx-supplier-card-actions">
@@ -318,8 +318,8 @@
             { data: 'customer_name' },
             { data: 'insurance_company_name' },
             { data: null, render: (_, __, r) => statusBadge(r.status, r.status_display) },
-            { data: 'covered_amount', render: v => `<span class="cxr-bal">${Snake.formatMoney(v)}</span>` },
-            { data: 'remaining_amount', render: v => `<span class="cxr-bal ${parseFloat(v) > 0 ? 'cxr-bal--pos' : 'cxr-bal--zero'}">${Snake.formatMoney(v)}</span>` },
+            { data: 'covered_amount', render: v => `<span class="cxr-bal">${Enjaz.formatMoney(v)}</span>` },
+            { data: 'remaining_amount', render: v => `<span class="cxr-bal ${parseFloat(v) > 0 ? 'cxr-bal--pos' : 'cxr-bal--zero'}">${Enjaz.formatMoney(v)}</span>` },
             {
                 data: null, orderable: false, searchable: false,
                 render: (_, __, r) => `<div class="cxr-actions">
@@ -363,7 +363,7 @@
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function (resp) {
-                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                if (!resp.success) { Enjaz.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
                 currentClaimId = d.id;
                 $('#viewClaimNumber').text(d.claim_number);
@@ -372,10 +372,10 @@
                 $('#viewClaimCustomer').text(d.customer_name);
                 $('#viewClaimCompany').text(d.insurance_company_name);
                 $('#viewClaimDueDate').text(d.due_date || '—');
-                $('#viewClaimCovered').html(`<strong>${Snake.formatMoney(d.covered_amount)}</strong>`);
-                $('#viewClaimPatient').html(`<strong>${Snake.formatMoney(d.patient_amount)}</strong>`);
-                $('#viewClaimApproved').html(d.approved_amount !== null ? `<strong>${Snake.formatMoney(d.approved_amount)}</strong>` : '—');
-                $('#viewClaimPaid').html(`<strong>${Snake.formatMoney(d.paid_amount)}</strong> / <span class="text-muted">متبقي ${Snake.formatMoney(d.remaining_amount)}</span>`);
+                $('#viewClaimCovered').html(`<strong>${Enjaz.formatMoney(d.covered_amount)}</strong>`);
+                $('#viewClaimPatient').html(`<strong>${Enjaz.formatMoney(d.patient_amount)}</strong>`);
+                $('#viewClaimApproved').html(d.approved_amount !== null ? `<strong>${Enjaz.formatMoney(d.approved_amount)}</strong>` : '—');
+                $('#viewClaimPaid').html(`<strong>${Enjaz.formatMoney(d.paid_amount)}</strong> / <span class="text-muted">متبقي ${Enjaz.formatMoney(d.remaining_amount)}</span>`);
                 if (d.rejection_reason) {
                     $('#viewClaimRejectionWrap').show();
                     $('#viewClaimRejection').text(d.rejection_reason);
@@ -383,7 +383,7 @@
                     $('#viewClaimRejectionWrap').hide();
                 }
                 $('#viewClaimLinesBody').html(d.lines.map(function (l) {
-                    return `<tr><td>${l.item_name}</td><td>${l.coverage_percent}%</td><td>${Snake.formatMoney(l.claimed_amount)}</td><td>${l.approved_amount !== null ? Snake.formatMoney(l.approved_amount) : '—'}</td></tr>`;
+                    return `<tr><td>${l.item_name}</td><td>${l.coverage_percent}%</td><td>${Enjaz.formatMoney(l.claimed_amount)}</td><td>${l.approved_amount !== null ? Enjaz.formatMoney(l.approved_amount) : '—'}</td></tr>`;
                 }).join('') || '<tr><td colspan="4" class="text-center text-muted">لا توجد بنود</td></tr>');
 
                 const canCancel = !['paid', 'cancelled'].includes(d.status) && parseFloat(d.paid_amount) === 0;
@@ -392,7 +392,7 @@
                 footer += '<button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>';
                 $('#viewClaimActions').html(footer);
             },
-            error: function () { Snake.toast('تعذر تحميل البيانات', 'error'); }
+            error: function () { Enjaz.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
@@ -403,10 +403,10 @@
         $.ajax({
             url: apiUrl(urlSubmit, currentClaimId), method: 'POST',
             success: function (resp) {
-                if (resp.success) { Snake.toast(resp.message || 'تم التقديم', 'success'); loadClaim(currentClaimId); dt.ajax.reload(null, false); }
-                else { Snake.toast(resp.message || 'تعذر التقديم', 'error'); }
+                if (resp.success) { Enjaz.toast(resp.message || 'تم التقديم', 'success'); loadClaim(currentClaimId); dt.ajax.reload(null, false); }
+                else { Enjaz.toast(resp.message || 'تعذر التقديم', 'error'); }
             },
-            error: function (xhr) { Snake.toast((xhr.responseJSON && xhr.responseJSON.message) || 'تعذر التقديم', 'error'); }
+            error: function (xhr) { Enjaz.toast((xhr.responseJSON && xhr.responseJSON.message) || 'تعذر التقديم', 'error'); }
         });
     });
 
@@ -459,8 +459,8 @@
         e.preventDefault();
         const $btn = $('#claimActionSubmitBtn');
         const orig = $btn.html();
-        Snake.clearFormErrors($('#claimActionForm'));
-        Snake.showLoading($btn);
+        Enjaz.clearFormErrors($('#claimActionForm'));
+        Enjaz.showLoading($btn);
 
         let url, data;
         if (currentAction === 'respond') {
@@ -478,20 +478,20 @@
         $.ajax({
             url: url, method: 'POST', data: data,
             success: function (resp) {
-                Snake.hideLoading($btn, orig);
+                Enjaz.hideLoading($btn, orig);
                 if (resp.success) {
                     actionModal.hide();
-                    Snake.toast(resp.message || 'تم الحفظ', 'success');
+                    Enjaz.toast(resp.message || 'تم الحفظ', 'success');
                     loadClaim(currentClaimId);
                     dt.ajax.reload(null, false);
                 } else {
-                    Snake.showFormError($('#claimActionForm'), resp.message || 'تعذرت العملية');
+                    Enjaz.showFormError($('#claimActionForm'), resp.message || 'تعذرت العملية');
                 }
             },
             error: function (xhr) {
-                Snake.hideLoading($btn, orig);
+                Enjaz.hideLoading($btn, orig);
                 const r = xhr.responseJSON || {};
-                Snake.showFormError($('#claimActionForm'), r.message || 'حدث خطأ');
+                Enjaz.showFormError($('#claimActionForm'), r.message || 'حدث خطأ');
             }
         });
     });
@@ -512,13 +512,13 @@
             success: function (resp) {
                 if (resp.success) {
                     cancelModal.hide(); viewModal.hide();
-                    Snake.toast(resp.message || 'تم إلغاء المطالبة', 'success');
+                    Enjaz.toast(resp.message || 'تم إلغاء المطالبة', 'success');
                     dt.ajax.reload(null, false);
                 } else {
-                    Snake.toast(resp.message || 'تعذر الإلغاء', 'error');
+                    Enjaz.toast(resp.message || 'تعذر الإلغاء', 'error');
                 }
             },
-            error: function (xhr) { Snake.toast((xhr.responseJSON && xhr.responseJSON.message) || 'تعذر الإلغاء', 'error'); }
+            error: function (xhr) { Enjaz.toast((xhr.responseJSON && xhr.responseJSON.message) || 'تعذر الإلغاء', 'error'); }
         });
     });
 

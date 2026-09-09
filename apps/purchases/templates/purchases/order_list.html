@@ -101,7 +101,7 @@
         }
 
         const cardsHtml = rows.map(function (r) {
-            const total = Snake.formatMoney(r.net_total || r.grand_total || 0);
+            const total = Enjaz.formatMoney(r.net_total || r.grand_total || 0);
             const statusClass = statusMap[r.status] || r.status_color || 'secondary';
             const statusLabel = r.status_label || '—';
             const confirmBtn = r.status === 'draft' && hasPerm('change_purchases')
@@ -177,9 +177,9 @@
                 data: 'net_total',
                 className: 'text-end',
                 render: function(v, t, row) {
-                    const net = Snake.formatMoney(v || 0);
+                    const net = Enjaz.formatMoney(v || 0);
                     if (row.returned_amount && parseFloat(row.returned_amount) > 0) {
-                        const orig = Snake.formatMoney(row.grand_total || 0);
+                        const orig = Enjaz.formatMoney(row.grand_total || 0);
                         return `<span style="text-decoration:line-through;color:var(--text-tertiary);font-size:.8rem">${orig}</span><br><strong>${net}</strong>`;
                     }
                     return net;
@@ -244,19 +244,19 @@
             ? 'سيتم تأكيد أمر الشراء وتطبيق تأثيراته، هل تريد المتابعة؟'
             : 'سيتم إلغاء أمر الشراء وعكس تأثيراته، هل تريد المتابعة؟';
         const title = isConfirm ? 'تأكيد أمر الشراء' : 'إلغاء أمر الشراء';
-        if (!await Snake.confirmAction(message, title)) return;
+        if (!await Enjaz.confirmAction(message, title)) return;
 
         $.ajax({
             url,
             method: 'POST',
             headers: { 'X-CSRFToken': getCookie('csrftoken') },
             success: function(resp) {
-                Snake.toast(resp.message || 'تمت العملية بنجاح', 'success');
+                Enjaz.toast(resp.message || 'تمت العملية بنجاح', 'success');
                 dt.ajax.reload(null, false);
             },
             error: function(xhr) {
                 const msg = xhr.responseJSON?.message || 'تعذر إتمام العملية';
-                Snake.toast(msg, 'error');
+                Enjaz.toast(msg, 'error');
             }
         });
     });

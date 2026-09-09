@@ -166,7 +166,7 @@ function doConfirm() {
 }
 
 async function doCancel() {
-    if (!await Snake.confirmAction('هل أنت متأكد من إلغاء هذا التحويل؟ سيتم عكس الكميات.', 'تأكيد الإلغاء')) return;
+    if (!await Enjaz.confirmAction('هل أنت متأكد من إلغاء هذا التحويل؟ سيتم عكس الكميات.', 'تأكيد الإلغاء')) return;
     const r = await fetch(CANCEL_URL, {
         method: 'POST', headers: { 'X-CSRFToken': CSRF },
     });
@@ -176,7 +176,7 @@ async function doCancel() {
 }
 
 async function doDelete() {
-    if (!await Snake.confirmAction('حذف هذه المسودة نهائياً؟', 'تأكيد الحذف')) return;
+    if (!await Enjaz.confirmAction('حذف هذه المسودة نهائياً؟', 'تأكيد الحذف')) return;
     const r = await fetch(DELETE_URL, {
         method: 'POST', headers: { 'X-CSRFToken': CSRF },
     });

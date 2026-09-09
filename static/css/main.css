@@ -1,5 +1,5 @@
 /* 
- * Snake - Core Design System
+ * ENJAZ PMS - Core Design System
  * Version: 3.0
  * Date: April 28, 2026
  * Purpose: Fonts + Colors + Basic Variables ONLY
@@ -121,6 +121,59 @@
     --radius-full: 9999px;
     
     --transition: 150ms ease-in-out;
+}
+
+/* Brand mark — logo icon + "ENJAZ" wordmark, used in every nav/header position */
+.brand-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    text-decoration: none;
+}
+
+.brand-mark__icon {
+    height: 26px;
+    width: auto;
+    display: block;
+    flex-shrink: 0;
+}
+
+.brand-mark__icon--dark  { display: block; }
+.brand-mark__icon--light { display: none; }
+[data-theme="dark"] .brand-mark__icon--dark  { display: none; }
+[data-theme="dark"] .brand-mark__icon--light { display: block; }
+
+/* Forces the white mark regardless of site theme — for panels with a fixed colored background */
+.brand-mark--inverse .brand-mark__icon--dark  { display: none; }
+.brand-mark--inverse .brand-mark__icon--light { display: block; }
+
+/* Forces the dark mark + dark text regardless of site theme — for headers
+   that keep a fixed light/white background even when data-theme is dark
+   (e.g. the marketing pages' topbars). */
+.brand-mark--on-light .brand-mark__icon--dark  { display: block !important; }
+.brand-mark--on-light .brand-mark__icon--light { display: none !important; }
+.brand-mark--on-light .brand-wordmark { color: #111827; }
+
+.brand-mark--lg .brand-mark__icon { height: 44px; }
+
+.brand-wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.brand-wordmark--inverse {
+    color: #fff;
+}
+
+.brand-wordmark--lg {
+    font-size: 1.7rem;
 }
 
 /* Dark Mode */
@@ -253,6 +306,9 @@ input[type="tel"] {
     /* Bootstrap core */
     --bs-body-bg:             var(--bg-primary);
     --bs-body-color:          var(--text-primary);
+    --bs-secondary-color:     var(--text-secondary);
+    --bs-tertiary-color:      var(--text-tertiary);
+    --bs-emphasis-color:      var(--text-primary);
     --bs-border-color:        var(--border-color);
     --bs-border-color-translucent: rgba(255,255,255,0.1);
     --bs-secondary-bg:        var(--bg-secondary);

@@ -302,7 +302,7 @@
                 </div>
                 <div class="cx-emp-card-meta">
                     <div><span class="cx-emp-card-meta-label">المسمى</span><strong class="cx-emp-card-meta-value">${r.position}</strong></div>
-                    <div><span class="cx-emp-card-meta-label">الراتب</span><strong class="cx-emp-card-meta-value">${Snake.formatMoney(r.base_salary)}</strong></div>
+                    <div><span class="cx-emp-card-meta-label">الراتب</span><strong class="cx-emp-card-meta-value">${Enjaz.formatMoney(r.base_salary)}</strong></div>
                 </div>
                 <div class="cx-emp-card-actions">
                     <button class="cxr-act js-view-emp" data-id="${r.id}"><i class="fas fa-eye"></i></button>
@@ -333,8 +333,8 @@
             { data: 'position' },
             { data: 'department' },
             { data: 'phone' },
-            { data: 'base_salary', className: 'text-end', render: v => Snake.formatMoney(v || 0) },
-            { data: 'pending_advances', className: 'text-end', render: v => Snake.formatMoney(v || 0) },
+            { data: 'base_salary', className: 'text-end', render: v => Enjaz.formatMoney(v || 0) },
+            { data: 'pending_advances', className: 'text-end', render: v => Enjaz.formatMoney(v || 0) },
             {
                 data: 'is_active',
                 render: v => v
@@ -414,14 +414,14 @@
                 document.getElementById('empIsActiveRow').style.display = '';
                 empModal.show();
             })
-            .catch(() => Snake.toast('تعذر تحميل البيانات', 'error'));
+            .catch(() => Enjaz.toast('تعذر تحميل البيانات', 'error'));
     }
 
     /* ── Save ── */
     $('#btnSaveEmployee').on('click', function () {
         const id = $('#empId').val();
         const name = document.getElementById('empName').value.trim();
-        if (!name) { Snake.toast('اسم الموظف مطلوب', 'error'); return; }
+        if (!name) { Enjaz.toast('اسم الموظف مطلوب', 'error'); return; }
 
         const payload = {
             name,
@@ -448,12 +448,12 @@
         .then(r => r.json())
         .then(function (resp) {
             $btn.html(orig).prop('disabled', false);
-            if (!resp.success) { Snake.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
+            if (!resp.success) { Enjaz.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
             empModal.hide();
             dt.ajax.reload(null, false);
-            Snake.toast('تم حفظ الموظف بنجاح', 'success');
+            Enjaz.toast('تم حفظ الموظف بنجاح', 'success');
         })
-        .catch(() => { $btn.html(orig).prop('disabled', false); Snake.toast('خطأ في الاتصال', 'error'); });
+        .catch(() => { $btn.html(orig).prop('disabled', false); Enjaz.toast('خطأ في الاتصال', 'error'); });
     });
 
     /* ── View ── */
@@ -469,12 +469,12 @@
                 $('#viewEmpPhone').text(d.phone || '—');
                 $('#viewEmpDepartment').text(d.department || '—');
                 $('#viewEmpHireDate').text(d.hire_date || '—');
-                $('#viewEmpSalary').text(Snake.formatMoney(d.base_salary || 0));
+                $('#viewEmpSalary').text(Enjaz.formatMoney(d.base_salary || 0));
                 $('#viewEmpSalaryType').text(d.salary_type === 'fixed' ? 'ثابت' : d.salary_type === 'hourly' ? 'بالساعة' : 'بالأيام');
                 $('#viewEditEmpBtn').data('id', d.id);
                 viewModal.show();
             })
-            .catch(() => Snake.toast('تعذر تحميل البيانات', 'error'));
+            .catch(() => Enjaz.toast('تعذر تحميل البيانات', 'error'));
     }
 
     /* ── Delete ── */
@@ -491,12 +491,12 @@
         })
         .then(r => r.json())
         .then(function (resp) {
-            if (!resp.success) { Snake.toast(resp.message || 'تعذر الحذف', 'error'); return; }
+            if (!resp.success) { Enjaz.toast(resp.message || 'تعذر الحذف', 'error'); return; }
             deleteModal.hide();
             dt.ajax.reload(null, false);
-            Snake.toast('تم حذف الموظف', 'success');
+            Enjaz.toast('تم حذف الموظف', 'success');
         })
-        .catch(() => Snake.toast('خطأ في الاتصال', 'error'));
+        .catch(() => Enjaz.toast('خطأ في الاتصال', 'error'));
     });
 
     /* ── Table bindings ── */

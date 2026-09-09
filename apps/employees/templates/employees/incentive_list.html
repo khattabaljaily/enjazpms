@@ -291,7 +291,7 @@
         columns: [
             { data: 'employee', render: v => `<span class="cxr-name">${v}</span>` },
             { data: 'type',          render: v => fmtType(v) },
-            { data: 'amount',        className: 'text-end', render: v => Snake.formatMoney(v || 0) },
+            { data: 'amount',        className: 'text-end', render: v => Enjaz.formatMoney(v || 0) },
             { data: 'description' },
             { data: 'payout_display' },
             { data: 'date' },
@@ -393,11 +393,11 @@
         const payout   = document.getElementById('incPayout').value;
         const method   = document.getElementById('incPaymentMethod').value;
         const treasury = document.getElementById('incTreasury').value;
-        if (!employee)    { Snake.toast('الرجاء اختيار الموظف', 'error'); return; }
-        if (!amount || parseFloat(amount) <= 0) { Snake.toast('الرجاء إدخال مبلغ صحيح', 'error'); return; }
-        if (!description) { Snake.toast('الرجاء إدخال وصف', 'error'); return; }
+        if (!employee)    { Enjaz.toast('الرجاء اختيار الموظف', 'error'); return; }
+        if (!amount || parseFloat(amount) <= 0) { Enjaz.toast('الرجاء إدخال مبلغ صحيح', 'error'); return; }
+        if (!description) { Enjaz.toast('الرجاء إدخال وصف', 'error'); return; }
         if (type === 'bonus' && payout === 'immediate' && method === 'cash' && !treasury) {
-            Snake.toast('الحوافز النقدية الفورية تتطلب تحديد الخزينة', 'error'); return;
+            Enjaz.toast('الحوافز النقدية الفورية تتطلب تحديد الخزينة', 'error'); return;
         }
 
         const payload = {
@@ -425,12 +425,12 @@
         .then(r => r.json())
         .then(function (resp) {
             $btn.html(orig).prop('disabled', false);
-            if (!resp.success) { Snake.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
+            if (!resp.success) { Enjaz.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
             incModal.hide();
             dt.ajax.reload(null, false);
-            Snake.toast('تم حفظ السجل بنجاح', 'success');
+            Enjaz.toast('تم حفظ السجل بنجاح', 'success');
         })
-        .catch(() => { $btn.html(orig).prop('disabled', false); Snake.toast('خطأ في الاتصال', 'error'); });
+        .catch(() => { $btn.html(orig).prop('disabled', false); Enjaz.toast('خطأ في الاتصال', 'error'); });
     });
 
     /* ── Pay ── */
@@ -453,12 +453,12 @@
         .then(r => r.json())
         .then(function (resp) {
             $btn.html(orig).prop('disabled', false);
-            if (!resp.success) { Snake.toast(resp.message || 'تعذر الدفع', 'error'); return; }
+            if (!resp.success) { Enjaz.toast(resp.message || 'تعذر الدفع', 'error'); return; }
             payModal.hide();
             dt.ajax.reload(null, false);
-            Snake.toast('تم دفع الحافز بنجاح', 'success');
+            Enjaz.toast('تم دفع الحافز بنجاح', 'success');
         })
-        .catch(() => { $btn.html(orig).prop('disabled', false); Snake.toast('خطأ في الاتصال', 'error'); });
+        .catch(() => { $btn.html(orig).prop('disabled', false); Enjaz.toast('خطأ في الاتصال', 'error'); });
     });
 
     /* ── Cancel ── */
@@ -481,12 +481,12 @@
         .then(r => r.json())
         .then(function (resp) {
             $btn.html(orig).prop('disabled', false);
-            if (!resp.success) { Snake.toast(resp.message || 'تعذر الإلغاء', 'error'); return; }
+            if (!resp.success) { Enjaz.toast(resp.message || 'تعذر الإلغاء', 'error'); return; }
             cancelModal.hide();
             dt.ajax.reload(null, false);
-            Snake.toast('تم إلغاء السجل', 'success');
+            Enjaz.toast('تم إلغاء السجل', 'success');
         })
-        .catch(() => { $btn.html(orig).prop('disabled', false); Snake.toast('خطأ في الاتصال', 'error'); });
+        .catch(() => { $btn.html(orig).prop('disabled', false); Enjaz.toast('خطأ في الاتصال', 'error'); });
     });
 
 })();

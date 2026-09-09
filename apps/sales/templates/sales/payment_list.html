@@ -224,7 +224,7 @@
             {
                 data: 'amount',
                 className: 'text-end',
-                render: v => Snake.formatMoney(v || 0)
+                render: v => Enjaz.formatMoney(v || 0)
             },
             { data: 'payment_method' },
             { data: 'reference_number' },
@@ -246,7 +246,7 @@
         UNPAID_INVOICES.forEach(function (inv) {
             const opt = document.createElement('option');
             opt.value = inv.id;
-            opt.textContent = `${inv.invoice_number} — ${inv.customer} — المتبقي ${Snake.formatMoney(inv.remaining)}`;
+            opt.textContent = `${inv.invoice_number} — ${inv.customer} — المتبقي ${Enjaz.formatMoney(inv.remaining)}`;
             paymentModalInvoice.appendChild(opt);
         });
     }
@@ -281,7 +281,7 @@
             return;
         }
         paymentModalCustomer.textContent = selected.customer;
-        paymentModalRemaining.textContent = Snake.formatMoney(selected.remaining);
+        paymentModalRemaining.textContent = Enjaz.formatMoney(selected.remaining);
     }
 
     btnOpenCreatePayment.addEventListener('click', function () {
@@ -311,15 +311,15 @@
 
     function savePayment() {
         const invoiceId = paymentModalInvoice.value;
-        const amount = Snake.parseNumber(paymentModalAmount.value);
+        const amount = Enjaz.parseNumber(paymentModalAmount.value);
         const method = paymentModalMethodInput.value;
         const reference = paymentModalReference.value.trim();
         const notes = paymentModalNotes.value.trim();
         const paymentDate = paymentModalDate.value;
 
-        if (!invoiceId) return Snake.toast('اختر الفاتورة', 'error');
-        if (!paymentDate) return Snake.toast('اختر التاريخ', 'error');
-        if (!amount || amount <= 0) return Snake.toast('أدخل مبلغاً صحيحاً', 'error');
+        if (!invoiceId) return Enjaz.toast('اختر الفاتورة', 'error');
+        if (!paymentDate) return Enjaz.toast('اختر التاريخ', 'error');
+        if (!amount || amount <= 0) return Enjaz.toast('أدخل مبلغاً صحيحاً', 'error');
 
         paymentModalSaveBtn.disabled = true;
         paymentModalSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...';
@@ -344,17 +344,17 @@
             paymentModalSaveBtn.disabled = false;
             paymentModalSaveBtn.innerHTML = '<i class="fas fa-save me-1"></i>' + document.getElementById('paymentModalSaveText').textContent;
             if (!data.success) {
-                Snake.toast(data.message || 'تعذر تسجيل الدفعة', 'error');
+                Enjaz.toast(data.message || 'تعذر تسجيل الدفعة', 'error');
                 return;
             }
             paymentModal.hide();
             dt.ajax.reload(null, false);
-            Snake.toast('تم تسجيل الدفعة بنجاح', 'success');
+            Enjaz.toast('تم تسجيل الدفعة بنجاح', 'success');
         })
         .catch(() => {
             paymentModalSaveBtn.disabled = false;
             paymentModalSaveBtn.innerHTML = '<i class="fas fa-save me-1"></i>' + document.getElementById('paymentModalSaveText').textContent;
-            Snake.toast('خطأ في الاتصال', 'error');
+            Enjaz.toast('خطأ في الاتصال', 'error');
         });
     }
 

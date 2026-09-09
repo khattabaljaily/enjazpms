@@ -441,7 +441,7 @@ class PlatformSettings(models.Model):
     ]
 
     # ── هوية المنصة ─────────────────────────────
-    platform_name    = models.CharField('اسم المنصة', max_length=100, default='Snake')
+    platform_name    = models.CharField('اسم المنصة', max_length=100, default='ENJAZ PMS')
     platform_tagline = models.CharField('الشعار النصي', max_length=200, blank=True)
     platform_logo    = models.ImageField('الشعار', upload_to='platform/', blank=True, null=True)
     platform_favicon = models.ImageField('الأيقونة', upload_to='platform/', blank=True, null=True)

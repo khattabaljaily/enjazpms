@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}خطط الأسعار | Snake{% endblock %}
+{% block title %}خطط الأسعار | ENJAZ PMS{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pricing.css' %}?v=3.0">
@@ -13,8 +13,11 @@
     <!-- ─── Top Bar ──────────────────────────────────────────────── -->
     <nav class="pr-topbar">
         <a href="/" class="pr-topbar__brand">
-            <img src="{% static 'img/logo/logo-f6a821.png' %}" alt="Snake" height="30">
-            <span>Snake</span>
+            <span class="brand-mark brand-mark--on-light">
+                <img src="{% static 'img/logo/enjaz-mark-dark.png' %}" alt="" class="brand-mark__icon brand-mark__icon--dark">
+                <img src="{% static 'img/logo/enjaz-mark-light.png' %}" alt="" class="brand-mark__icon brand-mark__icon--light">
+                <span class="brand-wordmark">ENJAZ</span>
+            </span>
         </a>
         <div class="pr-topbar__links">
             <a href="{% url 'core:about' %}" class="pr-topbar__link">عن النظام</a>
@@ -134,7 +137,7 @@
     <section class="pr-features">
         <div class="pr-container">
             <div class="pr-section-head">
-                <span class="pr-section-kicker">لماذا Snake؟</span>
+                <span class="pr-section-kicker">لماذا ENJAZ PMS؟</span>
                 <h2 class="pr-section-title">ميزات النظام الشاملة</h2>
                 <p class="pr-section-sub">كل ما تحتاجه لإدارة صيدليتك من مكان واحد.</p>
             </div>
@@ -214,7 +217,7 @@
                 <div class="pr-cta__orb pr-cta__orb--2"></div>
                 <div class="pr-cta__content">
                     <h2 class="pr-cta__title">جاهز للبدء؟</h2>
-                    <p class="pr-cta__desc">جرّب Snake مجاناً لمدة {{ trial_days }} أيام — بدون أي التزام.</p>
+                    <p class="pr-cta__desc">جرّب ENJAZ PMS مجاناً لمدة {{ trial_days }} أيام — بدون أي التزام.</p>
                     <a href="{% url 'accounts:register_step1' %}" class="pr-btn pr-btn--white pr-btn--lg">
                         <i class="fas fa-rocket"></i>
                         ابدأ الآن مجاناً
@@ -228,7 +231,7 @@
     <footer class="pr-footer">
         <div class="pr-container">
             <div class="pr-footer__inner">
-                <span class="pr-footer__copy">Snake &copy; 2026 — نظام إدارة المخزون</span>
+                <span class="pr-footer__copy">ENJAZ PMS &copy; 2026 — نظام إدارة المخزون</span>
                 <div class="pr-footer__links">
                     <a href="{% url 'core:about' %}">عن النظام</a>
                     <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>

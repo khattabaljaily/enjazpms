@@ -1,13 +1,11 @@
-/* Snake Service Worker — app-shell only, no data caching */
-const CACHE = 'snake-shell-v3';
+/* ENJAZ PMS Service Worker — app-shell only, no data caching */
+const CACHE = 'enjazpms-shell-v4';
 const SHELL = [
   '/static/css/main.css',
   '/static/css/layout.css',
   '/static/css/components.css',
   '/static/css/auth.css',
   '/static/js/main.js',
-  '/static/img/logo/logo-f6a821.png',
-  '/static/img/logo/logo-ffffff.png',
   '/static/img/icons/icon-192x192.png',
   '/static/fonts/cairo/Cairo-Regular.ttf',
   '/static/fonts/cairo/Cairo-Bold.ttf',

@@ -1,4 +1,4 @@
-# 🎨 Snake - Design System
+# 🎨 ENJAZ PMS - Design System
 
 **نظام تصميم حديث | Modern, Tailwind-Inspired**
 

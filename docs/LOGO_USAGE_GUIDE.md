@@ -1,222 +1,40 @@
-# 🎨 دليل استخدام شعارات Snake
+# 🎨 دليل هوية ENJAZ PMS
 
-## 📁 الملفات المتوفرة
+الهوية البصرية عبارة عن علامة (Logo mark) هندسية بأحرف عربية متداخلة + Wordmark نصي **ENJAZ**. ملفات العلامة في `static/img/logo/`: `enjaz-mark-dark.png` (للخلفيات الفاتحة)، `enjaz-mark-light.png` (أبيض، للخلفيات الداكنة/الملوّنة)، و`enjaz-mark-gold.png` (نسخة بلون الشركة، احتياطية).
 
-```
-static/img/logo/
-├── logo-161616.png  → أسود/رمادي داكن (#161616)
-├── logo-f6a821.png  → كهرماني (#f6a821) - لون أساسي
-├── logo-cba03e.png  → ذهبي (#cba03e) - لون أساسي
-└── logo-ffffff.png  → أبيض (#ffffff)
-```
+## المكوّن (CSS)
 
----
-
-## 🎯 أماكن الاستخدام
-
-### 1️⃣ Favicon (أيقونة الموقع)
-**الملف:** `logo-f6a821.png`  
-**الموقع:** `<head>` في base.html
+معرّف في `static/css/main.css`:
 
 ```html
-<link rel="icon" type="image/png" href="{% static 'img/logo/logo-f6a821.png' %}">
-<link rel="apple-touch-icon" href="{% static 'img/logo/logo-f6a821.png' %}">
+<span class="brand-mark">
+    <img src="{% static 'img/logo/enjaz-mark-dark.png' %}" alt="" class="brand-mark__icon brand-mark__icon--dark">
+    <img src="{% static 'img/logo/enjaz-mark-light.png' %}" alt="" class="brand-mark__icon brand-mark__icon--light">
+    <span class="brand-wordmark">ENJAZ</span>
+</span>
 ```
 
-**السبب:** اللون الكهرماني هو أحد ألوان الشركة الأساسية، ويظهر بوضوح في جميع المتصفحات.
+- `.brand-mark` — الحاوية (أيقونة + نص)، تعرض الأيقونة المناسبة تلقائياً حسب `data-theme`.
+- `.brand-mark--inverse` — يفرض الأيقونة البيضاء بغض النظر عن الوضع، للخلفيات ذات لون ثابت (مثل لوحة تسجيل الدخول الجانبية).
+- `.brand-mark--lg` — حجم أيقونة أكبر عند الحاجة لإبراز أوضح.
+- `.brand-wordmark` — النص "ENJAZ"، يستخدم `var(--text-primary)` فيتكيّف تلقائياً مع الوضع الفاتح والداكن.
+- `.brand-wordmark--inverse` / `.brand-wordmark--lg` — نسخة بيضاء / حجم أكبر للنص، بنفس منطق الأيقونة.
 
----
+## أماكن الاستخدام
 
-### 2️⃣ صفحة تسجيل الدخول (Login Page)
-**Light Mode:** `logo-f6a821.png` (كهرماني)  
-**Dark Mode:** `logo-ffffff.png` (أبيض)
+| المكان | الملف |
+|---|---|
+| الشريط العلوي (Navbar) | `apps/core/templates/components/navbar.html` |
+| القائمة الجانبية (Sidebar) | `apps/core/templates/components/sidebar.html` |
+| صفحات الدخول/التسجيل | `apps/core/templates/layouts/auth.html` |
+| صفحة "عن النظام" | `apps/core/templates/core/about.html` |
+| صفحة الأسعار | `apps/core/templates/core/pricing.html` |
+| اتفاقية الاستخدام | `apps/core/templates/core/terms_of_service.html` (نسخة محلية من الـ CSS داخل الصفحة نفسها) |
 
-```html
-<!-- Light mode: Company color logo -->
-<img src="{% static 'img/logo/logo-f6a821.png' %}" alt="Snake" class="logo-light">
-<!-- Dark mode: White logo -->
-<img src="{% static 'img/logo/logo-ffffff.png' %}" alt="Snake" class="logo-dark">
-```
+## أيقونات التطبيق (Favicon / PWA)
 
-**CSS:**
-```css
-[data-theme="light"] .logo-dark,
-[data-theme="dark"] .logo-light {
-    display: none;
-}
-```
+نظراً لأن المتصفحات تتطلب ملف صورة فعلي للأيقونة (لا يمكن استخدام نص مباشرة)، تُستخدم علامة بسيطة بحرف **E** على خلفية كهرمانية `#c9840f`، مولّدة في `static/img/icons/` بالمقاسات المطلوبة لِـ `manifest.json` والـ favicon. المصدر القابل للتعديل: `static/img/icons/icon-source.svg`.
 
-**السبب:** 
-- في الوضع النهاري: خلفية فاتحة (#fafafa) → نستخدم شعار بلون الشركة (كهرماني)
-- في الوضع الليلي: خلفية داكنة (#0a0a0a) → نستخدم شعار أبيض للتباين
+## مستند طباعة الفواتير/العروض
 
----
-
-### 3️⃣ Navbar (شريط التنقل)
-**Light Mode:** `logo-161616.png` (أسود)  
-**Dark Mode:** `logo-ffffff.png` (أبيض)
-
-```html
-<a class="navbar-brand d-flex align-items-center gap-2" href="...">
-    <img src="{% static 'img/logo/logo-161616.png' %}" 
-         alt="Snake" height="32" class="navbar-logo logo-light">
-    <img src="{% static 'img/logo/logo-ffffff.png' %}" 
-         alt="Snake" height="32" class="navbar-logo logo-dark">
-</a>
-```
-
-**CSS:**
-```css
-.navbar-logo {
-    height: 32px;
-    width: auto;
-    display: block;
-}
-
-[data-theme="light"] .navbar-logo.logo-dark,
-[data-theme="dark"] .navbar-logo.logo-light {
-    display: none;
-}
-```
-
-**السبب:**
-- الـ Navbar خلفيته بيضاء شفافة في Light mode → شعار أسود
-- الـ Navbar خلفيته داكنة شفافة في Dark mode → شعار أبيض
-
----
-
-### 4️⃣ Dashboard / Welcome Section
-**الملف:** `logo-f6a821.png` أو `logo-cba03e.png`
-
-```html
-<div class="welcome-card">
-    <img src="{% static 'img/logo/logo-f6a821.png' %}" alt="Snake" height="64">
-    <h1>مرحباً بك في نظام Snake</h1>
-</div>
-```
-
-**السبب:** استخدام ألوان الشركة الأساسية لإبراز الهوية البصرية.
-
----
-
-### 5️⃣ Sidebar (القائمة الجانبية)
-**Light Mode:** `logo-161616.png` (أسود)  
-**Dark Mode:** `logo-ffffff.png` (أبيض)
-
-```html
-<div class="sidebar-logo">
-    <img src="{% static 'img/logo/logo-161616.png' %}" 
-         alt="Snake" class="logo-light">
-    <img src="{% static 'img/logo/logo-ffffff.png' %}" 
-         alt="Snake" class="logo-dark">
-</div>
-```
-
----
-
-### 6️⃣ Emails / PDF Reports
-**الملف:** `logo-f6a821.png` أو `logo-cba03e.png`
-
-```html
-<img src="{{ STATIC_URL }}img/logo/logo-f6a821.png" alt="Snake" height="48">
-```
-
-**السبب:** ألوان الشركة الأساسية لعرض احترافي.
-
----
-
-### 7️⃣ Loading Screen / Splash
-**Light Mode:** `logo-f6a821.png`  
-**Dark Mode:** `logo-ffffff.png`
-
----
-
-## 📐 الأحجام المقترحة
-
-| الموقع | الارتفاع | الملاحظات |
-|--------|---------|-----------|
-| Favicon | 32px | حجم أيقونة المتصفح |
-| Login Page | 48-64px | كبير نسبياً |
-| Navbar | 32px | متوسط ومتوازن |
-| Sidebar | 28-32px | صغير نسبياً |
-| Dashboard Welcome | 64-80px | كبير للترحيب |
-| Footer | 24-28px | صغير |
-
----
-
-## 🎨 ألوان الشركة
-
-| اللون | Hex Code | الاستخدام |
-|-------|----------|----------|
-| كهرماني | `#f6a821` | **أساسي** - الشعار الرئيسي |
-| ذهبي | `#cba03e` | **أساسي** - شعار بديل |
-| أسود | `#161616` | للخلفيات الفاتحة |
-| أبيض | `#ffffff` | للخلفيات الداكنة |
-
----
-
-## ✅ القواعد العامة
-
-### افعل:
-✅ استخدم الشعار المناسب للخلفية (تباين جيد)  
-✅ غيّر الشعار تلقائياً مع تبديل الوضع (Light/Dark)  
-✅ استخدم ألوان الشركة في الأماكن المهمة (Login, Welcome)  
-✅ حافظ على نسبة العرض إلى الارتفاع
-
-### لا تفعل:
-❌ لا تضع شعار أبيض على خلفية فاتحة  
-❌ لا تضع شعار أسود على خلفية داكنة  
-❌ لا تغير حجم الشعار بشكل غير متناسب  
-❌ لا تستخدم أكثر من شعار في نفس الموقع (إلا للتبديل بين الأوضاع)
-
----
-
-## 🔄 Dynamic Logo Loading (JavaScript)
-
-إذا أردت تحديث الشعار ديناميكياً:
-
-```javascript
-function updateLogos() {
-    const theme = document.documentElement.getAttribute('data-theme');
-    const logos = document.querySelectorAll('[data-logo-light], [data-logo-dark]');
-    
-    logos.forEach(logo => {
-        if (theme === 'dark') {
-            logo.src = logo.dataset.logoDark;
-        } else {
-            logo.src = logo.dataset.logoLight;
-        }
-    });
-}
-```
-
-**HTML:**
-```html
-<img data-logo-light="{% static 'img/logo/logo-161616.png' %}"
-     data-logo-dark="{% static 'img/logo/logo-ffffff.png' %}"
-     alt="Snake">
-```
-
----
-
-## 📝 ملاحظات إضافية
-
-### تحسين الأداء:
-- جميع الشعارات PNG بأحجام صغيرة (~20KB)
-- استخدم lazy loading للصور الكبيرة
-- ضع الشعارات في CDN إذا كان متاحاً
-
-### الوصولية (Accessibility):
-```html
-<img src="..." alt="Snake - نظام إدارة المخزون ونقاط البيع" role="img">
-```
-
-### SEO:
-- أضف `alt` واضح لكل صورة
-- استخدم أسماء ملفات واضحة
-- ضع Schema.org markup للموقع
-
----
-
-**آخر تحديث:** 27 أبريل 2026  
-**الحالة:** ✅ جميع الشعارات مطبقة ومتكاملة مع Dark Mode
+عند عدم رفع الصيدلية لشعارها الخاص (`tenant.logo`)، تُعرض بدلاً من الشعار علامة مربعة صغيرة بأول حرف من اسم المنشأة (`.print-logo-mark` في `static/css/print_invoice.css` و`print_quote.css`) — بنفس المنطق المستخدم في قالب البريد الإلكتروني.

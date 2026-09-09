@@ -180,7 +180,7 @@
             returnRows.set(String(r.id), r);
             const statusClass = statusClassMap[r.status] || 'muted';
             const statusLabel = r.status_label || '—';
-            const total = Snake.formatMoney(r.total_returned || 0);
+            const total = Enjaz.formatMoney(r.total_returned || 0);
 
             return `<article class="cx-return-card">
                 <div class="cx-return-card-head">
@@ -233,7 +233,7 @@
             { data: 'return_date', defaultContent: '—' },
             { data: 'invoice_number', defaultContent: '—' },
             { data: 'supplier', defaultContent: '—' },
-            { data: 'total_returned', className: 'text-end', defaultContent: '0.00', render: function(v){ return Snake.formatMoney(v || 0);} },
+            { data: 'total_returned', className: 'text-end', defaultContent: '0.00', render: function(v){ return Enjaz.formatMoney(v || 0);} },
             { data: 'status_label', defaultContent: '—', render: function(v, _t, row){ return `<span class="cx-badge cx-badge--${row?.status==='confirmed'?'success':(row?.status==='cancelled'?'danger':'muted')}">${v||'—'}</span>`; } },
             { data: null, orderable:false, searchable:false, className:'text-center', render: function(_, __, row){ 
                 returnRows.set(String(row.id), row);
@@ -265,7 +265,7 @@
     });
 
     function openReturnModal(row) {
-        const num = (v) => Snake.formatMoney(v);
+        const num = (v) => Enjaz.formatMoney(v);
         const date = (v) => v || '—';
 
         document.getElementById('viewReturnNumber').textContent = row.return_number || '—';

@@ -234,7 +234,7 @@
         },
         columns: [
             { data: 'employee', render: v => `<span class="cxr-name">${v}</span>` },
-            { data: 'amount', className: 'text-end', render: v => Snake.formatMoney(v || 0) },
+            { data: 'amount', className: 'text-end', render: v => Enjaz.formatMoney(v || 0) },
             { data: 'date' },
             { data: 'treasury' },
             { data: 'status', render: v => fmtStatus(v) },
@@ -299,9 +299,9 @@
         const amount   = document.getElementById('advAmount').value || '0';
         const method   = document.getElementById('advPaymentMethod').value;
         const treasury = document.getElementById('advTreasury').value;
-        if (!employee) { Snake.toast('الرجاء اختيار الموظف', 'error'); return; }
-        if (!amount || parseFloat(amount) <= 0) { Snake.toast('الرجاء إدخال مبلغ صحيح', 'error'); return; }
-        if (method === 'cash' && !treasury) { Snake.toast('الرجاء اختيار الخزينة للدفع النقدي', 'error'); return; }
+        if (!employee) { Enjaz.toast('الرجاء اختيار الموظف', 'error'); return; }
+        if (!amount || parseFloat(amount) <= 0) { Enjaz.toast('الرجاء إدخال مبلغ صحيح', 'error'); return; }
+        if (method === 'cash' && !treasury) { Enjaz.toast('الرجاء اختيار الخزينة للدفع النقدي', 'error'); return; }
 
         const payload = {
             employee,
@@ -327,12 +327,12 @@
             let resp;
             try { resp = JSON.parse(text); } catch (e) { resp = { success: false, message: text || 'خطأ في الاتصال' }; }
             $btn.html(orig).prop('disabled', false);
-            if (!resp.success) { Snake.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
+            if (!resp.success) { Enjaz.toast(resp.message || 'تعذر الحفظ', 'error'); return; }
             advModal.hide();
             dt.ajax.reload(null, false);
-            Snake.toast('تم تسجيل السلفة بنجاح', 'success');
+            Enjaz.toast('تم تسجيل السلفة بنجاح', 'success');
         })
-        .catch(() => { $btn.html(orig).prop('disabled', false); Snake.toast('خطأ في الاتصال', 'error'); });
+        .catch(() => { $btn.html(orig).prop('disabled', false); Enjaz.toast('خطأ في الاتصال', 'error'); });
     });
 
     /* ── Cancel Advance ── */
@@ -355,12 +355,12 @@
         .then(r => r.json())
         .then(function (resp) {
             $btn.html(orig).prop('disabled', false);
-            if (!resp.success) { Snake.toast(resp.message || 'تعذر الإلغاء', 'error'); return; }
+            if (!resp.success) { Enjaz.toast(resp.message || 'تعذر الإلغاء', 'error'); return; }
             cancelModal.hide();
             dt.ajax.reload(null, false);
-            Snake.toast('تم إلغاء السلفة', 'success');
+            Enjaz.toast('تم إلغاء السلفة', 'success');
         })
-        .catch(() => { $btn.html(orig).prop('disabled', false); Snake.toast('خطأ في الاتصال', 'error'); });
+        .catch(() => { $btn.html(orig).prop('disabled', false); Enjaz.toast('خطأ في الاتصال', 'error'); });
     });
 
 })();

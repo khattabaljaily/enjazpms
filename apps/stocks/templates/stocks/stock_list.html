@@ -481,7 +481,7 @@
         $idInput.val('');
         $('#id_is_active').prop('checked', true);
         $('#id_is_default').prop('checked', false);
-        Snake.clearFormErrors($form);
+        Enjaz.clearFormErrors($form);
     }
 
     /* ── Open create ───────────────────────────────────────── */
@@ -498,7 +498,7 @@
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function(resp) {
-                if (!resp.success) { Snake.toast(resp.message, 'error'); return; }
+                if (!resp.success) { Enjaz.toast(resp.message, 'error'); return; }
                 const d = resp.data;
                 $idInput.val(d.id);
                 $('#id_name').val(d.name || '');
@@ -513,35 +513,35 @@
                 $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
                 stockModal.show();
             },
-            error: function() { Snake.toast('تعذر تحميل البيانات', 'error'); }
+            error: function() { Enjaz.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
     /* ── Save ──────────────────────────────────────────────── */
     $form.on('submit', function (e) {
         e.preventDefault();
-        Snake.clearFormErrors($form);
+        Enjaz.clearFormErrors($form);
         const id  = $idInput.val();
         const url = id ? apiUrl(urlUpdate, id) : urlCreate;
         const orig = $submitBtn.html();
-        Snake.showLoading($submitBtn);
+        Enjaz.showLoading($submitBtn);
         $.ajax({
             url, method: 'POST', data: $form.serialize(),
             success: function(resp) {
-                Snake.hideLoading($submitBtn, orig);
+                Enjaz.hideLoading($submitBtn, orig);
                 if (resp.success) {
                     stockModal.hide();
                     dt.ajax.reload(null, false);
-                    Snake.toast(resp.message, 'success');
+                    Enjaz.toast(resp.message, 'success');
                     return;
                 }
-                Snake.showFormError($form, resp.message);
+                Enjaz.showFormError($form, resp.message);
             },
             error: function(xhr) {
-                Snake.hideLoading($submitBtn, orig);
+                Enjaz.hideLoading($submitBtn, orig);
                 const r = xhr.responseJSON || {};
-                if (r.errors) Snake.renderFieldErrors($form, r.errors);
-                Snake.showFormError($form, r.message || 'حدث خطأ');
+                if (r.errors) Enjaz.renderFieldErrors($form, r.errors);
+                Enjaz.showFormError($form, r.message || 'حدث خطأ');
             }
         });
     });
@@ -559,10 +559,10 @@
             url: apiUrl(urlDelete, id), method: 'POST',
             success: function(resp) {
                 deleteModal.hide();
-                if (resp.success) { dt.ajax.reload(null, false); Snake.toast(resp.message, 'success'); }
-                else Snake.toast(resp.message, 'error');
+                if (resp.success) { dt.ajax.reload(null, false); Enjaz.toast(resp.message, 'success'); }
+                else Enjaz.toast(resp.message, 'error');
             },
-            error: function(xhr) { Snake.toast(_xhrMsg(xhr, 'تعذر الحذف'), 'error'); }
+            error: function(xhr) { Enjaz.toast(_xhrMsg(xhr, 'تعذر الحذف'), 'error'); }
         });
     });
 
@@ -571,7 +571,7 @@
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function(resp) {
-                if (!resp.success) { Snake.toast(resp.message, 'error'); return; }
+                if (!resp.success) { Enjaz.toast(resp.message, 'error'); return; }
                 const d = resp.data;
                 $('#viewStockName').text(d.name);
                 $('#viewStockCode').html(`<code class="cxr-code">${d.code}</code>`);
@@ -590,7 +590,7 @@
                 $('#viewEditStockBtn').data('id', d.id);
                 viewModal.show();
             },
-            error: function() { Snake.toast('تعذر تحميل البيانات', 'error'); }
+            error: function() { Enjaz.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
@@ -608,10 +608,10 @@
         $.ajax({
             url: apiUrl(urlSetDefault, id), method: 'POST',
             success: function(resp) {
-                if (resp.success) { dt.ajax.reload(null, false); Snake.toast(resp.message, 'success'); }
-                else Snake.toast(resp.message, 'error');
+                if (resp.success) { dt.ajax.reload(null, false); Enjaz.toast(resp.message, 'success'); }
+                else Enjaz.toast(resp.message, 'error');
             },
-            error: function(xhr) { Snake.toast(_xhrMsg(xhr, 'تعذر التعيين'), 'error'); }
+            error: function(xhr) { Enjaz.toast(_xhrMsg(xhr, 'تعذر التعيين'), 'error'); }
         });
     });
 
@@ -628,10 +628,10 @@
         $.ajax({
             url: apiUrl(urlSetDefault, id), method: 'POST',
             success: function(resp) {
-                if (resp.success) { dt.ajax.reload(null, false); Snake.toast(resp.message, 'success'); }
-                else Snake.toast(resp.message, 'error');
+                if (resp.success) { dt.ajax.reload(null, false); Enjaz.toast(resp.message, 'success'); }
+                else Enjaz.toast(resp.message, 'error');
             },
-            error: function(xhr) { Snake.toast(_xhrMsg(xhr, 'تعذر التعيين'), 'error'); }
+            error: function(xhr) { Enjaz.toast(_xhrMsg(xhr, 'تعذر التعيين'), 'error'); }
         });
     });
 

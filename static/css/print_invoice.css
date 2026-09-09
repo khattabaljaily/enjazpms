@@ -52,7 +52,17 @@
 }
 
 .print-logo-mark {
-  display: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  width: 44px;
+  border-radius: 10px;
+  background: #c9840f;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  flex-shrink: 0;
 }
 
 .print-title {

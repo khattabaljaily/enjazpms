@@ -128,9 +128,9 @@
         }
 
         const cardsHtml = rows.map(function (r) {
-            const qty = Snake.formatQuantity(r.quantity);
-            const reserved = Snake.formatQuantity(r.reserved);
-            const available = Snake.formatQuantity(r.available);
+            const qty = Enjaz.formatQuantity(r.quantity);
+            const reserved = Enjaz.formatQuantity(r.reserved);
+            const available = Enjaz.formatQuantity(r.available);
             const statusClass = r.is_zero ? 'danger' : r.is_low ? 'warning' : 'success';
             const statusIcon = r.is_zero ? 'fa-circle-xmark' : r.is_low ? 'fa-triangle-exclamation' : 'fa-circle-check';
             const statusText = r.is_zero ? 'نفدت' : r.is_low ? 'منخفضة' : 'متوفرة';
@@ -209,10 +209,10 @@
             { data: 'barcode',  render: v => `<code class="cxr-code">${v}</code>` },
             { data: 'stock_name' },
             { data: 'unit', className: 'text-center', render: v => `<span class="inv-unit-badge">${v || '—'}</span>` },
-            { data: 'quantity',  className: 'text-end qty-num', render: v => Snake.formatQuantity(v) },
-            { data: 'reserved',  className: 'text-end qty-num qty-reserved', render: v => Snake.formatQuantity(v) },
+            { data: 'quantity',  className: 'text-end qty-num', render: v => Enjaz.formatQuantity(v) },
+            { data: 'reserved',  className: 'text-end qty-num qty-reserved', render: v => Enjaz.formatQuantity(v) },
             { data: 'available', className: 'text-end qty-num', render: function(v, _, row) {
-                const amount = Snake.formatQuantity(v);
+                const amount = Enjaz.formatQuantity(v);
                 if (row.is_zero)  return `<span class="qty-badge qty-badge--zero">${amount}</span>`;
                 if (row.is_low)   return `<span class="qty-badge qty-badge--low">${amount}</span>`;
                 return `<span class="qty-badge qty-badge--ok">${amount}</span>`;

@@ -1,4 +1,4 @@
-// Snake - Main JavaScript
+// Enjaz - Main JavaScript
 // ================================
 
 // Sidebar toggle (mobile)
@@ -167,11 +167,11 @@ function getCookie(name) {
 
 // Initialize numeric input conversion
 document.addEventListener('DOMContentLoaded', function () {
-    Snake.initNumericInputs();
+    Enjaz.initNumericInputs();
 });
 
 // Utility functions
-const Snake = {
+const Enjaz = {
     // Show loading spinner
     showLoading: function(element) {
         $(element).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> جاري التحميل...');
@@ -236,7 +236,7 @@ const Snake = {
 
     rememberToast: function(message, type = 'success') {
         try {
-            sessionStorage.setItem('__snakeFlash', JSON.stringify({ message, type }));
+            sessionStorage.setItem('__enjazFlash', JSON.stringify({ message, type }));
         } catch (e) {
             // ignore storage errors
         }
@@ -244,15 +244,15 @@ const Snake = {
 
     consumeRememberedToast: function() {
         try {
-            const flashRaw = sessionStorage.getItem('__snakeFlash');
+            const flashRaw = sessionStorage.getItem('__enjazFlash');
             if (!flashRaw) return;
             const flash = JSON.parse(flashRaw);
             if (flash?.message) {
                 this.toast(flash.message, flash.type || 'success');
             }
-            sessionStorage.removeItem('__snakeFlash');
+            sessionStorage.removeItem('__enjazFlash');
         } catch (e) {
-            sessionStorage.removeItem('__snakeFlash');
+            sessionStorage.removeItem('__enjazFlash');
         }
     },
 
@@ -309,11 +309,11 @@ const Snake = {
     
     // Confirm delete action — returns a Promise (use with await)
     confirmDelete: function(message = 'هل أنت متأكد من الحذف؟') {
-        return Snake.confirmAction(message, 'تأكيد الحذف');
+        return Enjaz.confirmAction(message, 'تأكيد الحذف');
     },
 
     // Modal-based confirmation — returns a Promise that resolves true/false.
-    // Usage: Snake.confirmAction('رسالة').then(ok => { if (ok) ... });
+    // Usage: Enjaz.confirmAction('رسالة').then(ok => { if (ok) ... });
     confirmAction: function(message, title, confirmText) {
         return new Promise(function(resolve) {
             // Determine icon, colour and button label from title keywords
@@ -338,7 +338,7 @@ const Snake = {
 
             // Create a simple overlay modal that works on all devices
             const overlay = document.createElement('div');
-            overlay.id = 'snakeConfirmOverlay';
+            overlay.id = 'enjazConfirmOverlay';
             overlay.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -374,8 +374,8 @@ const Snake = {
                     </p>
                 </div>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 1rem 1.75rem; border-top: 1px solid #e5e7eb; background: #f9fafb;">
-                    <button type="button" class="cx-btn-ghost" id="snakeConfirmNo" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 8px; background: white; color: #6b7280; font-size: 0.875rem; cursor: pointer;">تراجع</button>
-                    <button type="button" id="snakeConfirmYes" style="padding: 0.5rem 1rem; border: none; border-radius: 8px; background: ${btnColor}; color: white; font-size: 0.875rem; cursor: pointer; font-weight: 600;">${btnLabel}</button>
+                    <button type="button" class="cx-btn-ghost" id="enjazConfirmNo" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 8px; background: white; color: #6b7280; font-size: 0.875rem; cursor: pointer;">تراجع</button>
+                    <button type="button" id="enjazConfirmYes" style="padding: 0.5rem 1rem; border: none; border-radius: 8px; background: ${btnColor}; color: white; font-size: 0.875rem; cursor: pointer; font-weight: 600;">${btnLabel}</button>
                 </div>
             `;
 
@@ -386,8 +386,8 @@ const Snake = {
             document.body.style.overflow = 'hidden';
 
             function cleanup() {
-                document.getElementById('snakeConfirmYes').removeEventListener('click', onYes);
-                document.getElementById('snakeConfirmNo').removeEventListener('click', onNo);
+                document.getElementById('enjazConfirmYes').removeEventListener('click', onYes);
+                document.getElementById('enjazConfirmNo').removeEventListener('click', onNo);
                 document.body.removeChild(overlay);
                 document.body.style.overflow = '';
             }
@@ -402,8 +402,8 @@ const Snake = {
                 resolve(false);
             }
 
-            document.getElementById('snakeConfirmYes').addEventListener('click', onYes);
-            document.getElementById('snakeConfirmNo').addEventListener('click', onNo);
+            document.getElementById('enjazConfirmYes').addEventListener('click', onYes);
+            document.getElementById('enjazConfirmNo').addEventListener('click', onNo);
 
             // Close on overlay click
             overlay.addEventListener('click', function(e) {
@@ -498,7 +498,7 @@ const Snake = {
 
         numericInputs.forEach(input => {
             input.addEventListener('input', function(e) {
-                const converted = Snake.convertArabicNumerals(e.target.value);
+                const converted = Enjaz.convertArabicNumerals(e.target.value);
                 if (converted !== e.target.value) {
                     e.target.value = converted;
                 }
@@ -506,7 +506,7 @@ const Snake = {
 
             input.addEventListener('paste', function(e) {
                 setTimeout(() => {
-                    const converted = Snake.convertArabicNumerals(e.target.value);
+                    const converted = Enjaz.convertArabicNumerals(e.target.value);
                     if (converted !== e.target.value) {
                         e.target.value = converted;
                     }
@@ -562,7 +562,7 @@ const Snake = {
     }
 };
 
-window.Snake = Snake;
+window.Enjaz = Enjaz;
 
 // jQuery AJAX hooks for GSpinner + backwards-compat alias
 $(document)
@@ -587,14 +587,14 @@ $(document).ready(function() {
     }
 
     // Number steppers — initial page load
-    Snake.initNumberSteppers();
+    Enjaz.initNumberSteppers();
 
     // Re-run steppers when DOM changes (dynamic invoice lines, modals, etc.)
     let _stepperTimer = null;
     new MutationObserver(function(muts) {
         if (!muts.some(m => m.addedNodes.length)) return;
         clearTimeout(_stepperTimer);
-        _stepperTimer = setTimeout(function() { Snake.initNumberSteppers(); }, 120);
+        _stepperTimer = setTimeout(function() { Enjaz.initNumberSteppers(); }, 120);
     }).observe(document.body, { childList: true, subtree: true });
 
     // Numeric-only filter for invoice line fields (.inv-num-field)
@@ -633,7 +633,7 @@ $(document).ready(function() {
     $('.btn-delete').on('click', async function(e) {
         e.preventDefault();
         const href = $(this).attr('href') || $(this).data('href');
-        const confirmed = await Snake.confirmAction('هل أنت متأكد من الحذف؟', 'تأكيد الحذف');
+        const confirmed = await Enjaz.confirmAction('هل أنت متأكد من الحذف؟', 'تأكيد الحذف');
         if (confirmed && href) {
             window.location.href = href;
         }
@@ -642,18 +642,24 @@ $(document).ready(function() {
     // Current year in footer
     $('#current-year').text(new Date().getFullYear());
 
-    const pendingMessages = window.__snakeFlashPending || [];
+    const pendingMessages = window.__enjazFlashPending || [];
     if (pendingMessages.length) {
         pendingMessages.forEach((entry) => {
             if (!entry || !entry.message) return;
-            Snake.toast(entry.message, entry.type || 'info');
+            Enjaz.toast(entry.message, entry.type || 'info');
         });
-        window.__snakeFlashPending = [];
+        window.__enjazFlashPending = [];
     }
 
-    Snake.consumeRememberedToast();
+    Enjaz.consumeRememberedToast();
 
     // AJAX auth forms (login/register)
+    function shakeAuthErrors(form) {
+        const targets = form.find('.is-invalid, .js-form-errors:not(.d-none)');
+        targets.addClass('auth-shake');
+        setTimeout(function() { targets.removeClass('auth-shake'); }, 500);
+    }
+
     $('.js-auth-ajax').on('submit', function(e) {
         e.preventDefault();
 
@@ -661,8 +667,8 @@ $(document).ready(function() {
         const submitBtn = form.find('button[type=submit]');
         const originalText = submitBtn.html();
 
-        Snake.clearFormErrors(form);
-        Snake.showLoading(submitBtn);
+        Enjaz.clearFormErrors(form);
+        Enjaz.showLoading(submitBtn);
 
         $.ajax({
             url: form.attr('action') || window.location.href,
@@ -673,31 +679,36 @@ $(document).ready(function() {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             success: function(response) {
-                Snake.hideLoading(submitBtn, originalText);
+                Enjaz.hideLoading(submitBtn, originalText);
 
                 if (response.success) {
                     if (response.redirect_url) {
-                        window.location.href = response.redirect_url;
+                        form.closest('.auth-card').addClass('auth-card--success');
+                        setTimeout(function() {
+                            window.location.href = response.redirect_url;
+                        }, 260);
                     }
                     return;
                 }
 
                 if (response.errors) {
-                    Snake.renderFieldErrors(form, response.errors);
+                    Enjaz.renderFieldErrors(form, response.errors);
 
                     const hasNonFieldErrors = Array.isArray(response.errors.__all__) && response.errors.__all__.length;
                     if (hasNonFieldErrors) {
-                        Snake.showFormError(form, response.message || response.errors.__all__.join('<br>'));
+                        Enjaz.showFormError(form, response.message || response.errors.__all__.join('<br>'));
                     } else {
-                        Snake.showFormError(form, 'يرجى مراجعة الحقول المحددة أدناه');
+                        Enjaz.showFormError(form, 'يرجى مراجعة الحقول المحددة أدناه');
                     }
+                    shakeAuthErrors(form);
                     return;
                 }
 
-                Snake.showFormError(form, response.message || 'يرجى التحقق من الحقول المطلوبة');
+                Enjaz.showFormError(form, response.message || 'يرجى التحقق من الحقول المطلوبة');
+                shakeAuthErrors(form);
             },
             error: function(xhr) {
-                Snake.hideLoading(submitBtn, originalText);
+                Enjaz.hideLoading(submitBtn, originalText);
 
                 const response = xhr.responseJSON || {};
 
@@ -707,18 +718,20 @@ $(document).ready(function() {
                 }
 
                 if (response.errors) {
-                    Snake.renderFieldErrors(form, response.errors);
+                    Enjaz.renderFieldErrors(form, response.errors);
 
                     const hasNonFieldErrors = Array.isArray(response.errors.__all__) && response.errors.__all__.length;
                     if (hasNonFieldErrors) {
-                        Snake.showFormError(form, response.message || response.errors.__all__.join('<br>'));
+                        Enjaz.showFormError(form, response.message || response.errors.__all__.join('<br>'));
                     } else {
-                        Snake.showFormError(form, 'يرجى مراجعة الحقول المحددة أدناه');
+                        Enjaz.showFormError(form, 'يرجى مراجعة الحقول المحددة أدناه');
                     }
+                    shakeAuthErrors(form);
                     return;
                 }
 
-                Snake.showFormError(form, response.message || 'تعذر إرسال النموذج، حاول مرة أخرى');
+                Enjaz.showFormError(form, response.message || 'تعذر إرسال النموذج، حاول مرة أخرى');
+                shakeAuthErrors(form);
             }
         });
     });
@@ -734,31 +747,31 @@ function handleAjaxForm(formId, onSuccess) {
         const submitBtn = form.find('button[type=submit]');
         const originalText = submitBtn.html();
         
-        Snake.showLoading(submitBtn);
+        Enjaz.showLoading(submitBtn);
         
         $.ajax({
             url: form.attr('action'),
             method: form.attr('method') || 'POST',
             data: form.serialize(),
             success: function(response) {
-                Snake.hideLoading(submitBtn, originalText);
+                Enjaz.hideLoading(submitBtn, originalText);
                 
                 if (response.success) {
-                    Snake.toast(response.message, 'success');
+                    Enjaz.toast(response.message, 'success');
                     if (onSuccess) onSuccess(response);
                 } else {
-                    Snake.toast(response.message || 'حدث خطأ', 'error');
+                    Enjaz.toast(response.message || 'حدث خطأ', 'error');
                 }
             },
             error: function(xhr) {
-                Snake.hideLoading(submitBtn, originalText);
+                Enjaz.hideLoading(submitBtn, originalText);
                 
                 let message = 'حدث خطأ في الاتصال';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     message = xhr.responseJSON.message;
                 }
                 
-                Snake.toast(message, 'error');
+                Enjaz.toast(message, 'error');
             }
         });
     });

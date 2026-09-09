@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
             name='PlatformSettings',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('platform_name', models.CharField(default='Snake', max_length=100, verbose_name='اسم المنصة')),
+                ('platform_name', models.CharField(default='ENJAZ PMS', max_length=100, verbose_name='اسم المنصة')),
                 ('platform_tagline', models.CharField(blank=True, max_length=200, verbose_name='الشعار النصي')),
                 ('platform_logo', models.ImageField(blank=True, null=True, upload_to='platform/', verbose_name='الشعار')),
                 ('platform_favicon', models.ImageField(blank=True, null=True, upload_to='platform/', verbose_name='الأيقونة')),

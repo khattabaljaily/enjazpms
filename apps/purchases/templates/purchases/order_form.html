@@ -312,7 +312,7 @@ function searchItems() {
                             <div class="sale-item-result__sku">${item.sku || '—'}</div>
                         </div>
                         <div class="sale-item-result__meta">
-                            <div class="sale-item-result__price">${Snake.formatMoney(item.cost_price || 0)}</div>
+                            <div class="sale-item-result__price">${Enjaz.formatMoney(item.cost_price || 0)}</div>
                             ${item.unit_name ? `<div style="font-size:.72rem;color:var(--text-tertiary)">${item.unit_name}</div>` : ''}
                         </div>
                     </div>
@@ -363,12 +363,12 @@ function addLine(itemId, itemName, itemSku, suggestedCost, opts = {}) {
     row.innerHTML = `
         <td><div class="sales-line-item-name">${itemName}</div><div class="sales-line-item-sku">${itemSku || ''}</div>${trackingHtml}</td>
         <td>
-            <input type="text" inputmode="decimal" value="${Snake.parseNumber(opts.qty || 1)}" class="cx-input cx-input--sm inv-num-field" id="qty-${id}" oninput="recalc()">
+            <input type="text" inputmode="decimal" value="${Enjaz.parseNumber(opts.qty || 1)}" class="cx-input cx-input--sm inv-num-field" id="qty-${id}" oninput="recalc()">
         </td>
         <td class="inv-unit-cell" id="unit-cell-${id}">${unitHtml}</td>
         <td><input type="text" inputmode="decimal" value="${suggestedCost || ''}" class="cx-input cx-input--sm inv-num-field" id="cost-${id}" oninput="recalc()"></td>
-        <td><input type="text" inputmode="decimal" value="${Snake.parseNumber(opts.tax_rate) || ''}" class="cx-input cx-input--sm inv-num-field" id="tax-${id}" oninput="recalc()"></td>
-        <td class="text-end" id="total-${id}">${Snake.formatMoney(0)}</td>
+        <td><input type="text" inputmode="decimal" value="${Enjaz.parseNumber(opts.tax_rate) || ''}" class="cx-input cx-input--sm inv-num-field" id="tax-${id}" oninput="recalc()"></td>
+        <td class="text-end" id="total-${id}">${Enjaz.formatMoney(0)}</td>
         <td><button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})"><i class="fas fa-trash"></i></button></td>
     `;
     tbody.appendChild(row);
@@ -387,7 +387,7 @@ function onUnitChange(id) {
     if (oldFactor !== newFactor) {
         const costInput = document.getElementById(`cost-${id}`);
         if (costInput) {
-            const currentCost = Snake.parseNumber(costInput.value) || 0;
+            const currentCost = Enjaz.parseNumber(costInput.value) || 0;
             if (currentCost > 0) costInput.value = ((currentCost / oldFactor) * newFactor).toFixed(2);
         }
     }
@@ -411,9 +411,9 @@ function recalc() {
 
     document.querySelectorAll('#linesBody tr').forEach((row) => {
         const id = row.id.replace('line-', '');
-        const qty = Snake.parseNumber(document.getElementById(`qty-${id}`).value);
-        const cost = Snake.parseNumber(document.getElementById(`cost-${id}`).value);
-        const tax = Snake.parseNumber(document.getElementById(`tax-${id}`).value);
+        const qty = Enjaz.parseNumber(document.getElementById(`qty-${id}`).value);
+        const cost = Enjaz.parseNumber(document.getElementById(`cost-${id}`).value);
+        const tax = Enjaz.parseNumber(document.getElementById(`tax-${id}`).value);
 
         const lineSub = qty * cost;
         const lineTax = lineSub * (tax / 100);
@@ -421,22 +421,22 @@ function recalc() {
 
         subtotal += lineSub;
         taxTotal += lineTax;
-        document.getElementById(`total-${id}`).textContent = Snake.formatMoney(total);
+        document.getElementById(`total-${id}`).textContent = Enjaz.formatMoney(total);
     });
 
     const grand = subtotal + taxTotal;
     document.getElementById('lineCount').textContent = String(document.querySelectorAll('#linesBody tr').length);
-    document.getElementById('displaySubtotal').textContent = Snake.formatMoney(subtotal);
-    document.getElementById('displayTax').textContent = Snake.formatMoney(taxTotal);
-    document.getElementById('displayGrand').textContent = Snake.formatMoney(grand);
+    document.getElementById('displaySubtotal').textContent = Enjaz.formatMoney(subtotal);
+    document.getElementById('displayTax').textContent = Enjaz.formatMoney(taxTotal);
+    document.getElementById('displayGrand').textContent = Enjaz.formatMoney(grand);
 
     const pm = document.getElementById('paymentMethod').value;
     if (pm === 'mixed') {
-        const cash = Snake.parseNumber(document.getElementById('cashAmount')?.value || 0);
-        const bank = Snake.parseNumber(document.getElementById('bankAmount')?.value || 0);
+        const cash = Enjaz.parseNumber(document.getElementById('cashAmount')?.value || 0);
+        const bank = Enjaz.parseNumber(document.getElementById('bankAmount')?.value || 0);
         const credit = Math.max(0, grand - cash - bank);
         const creditInput = document.getElementById('creditAmount');
-        if (creditInput) creditInput.value = Snake.formatMoney(credit);
+        if (creditInput) creditInput.value = Enjaz.formatMoney(credit);
     }
 }
 
@@ -462,7 +462,7 @@ function collectLines() {
 function submitOrder(action) {
     const lines = collectLines();
     if (!lines.length) {
-        Snake.toast('أضف منتجاً واحداً على الأقل', 'warning');
+        Enjaz.toast('أضف منتجاً واحداً على الأقل', 'warning');
         return;
     }
 
@@ -479,33 +479,33 @@ function submitOrder(action) {
 
     const pm = header.payment_method;
     const grandText = document.getElementById('displayGrand').textContent || '0';
-    const grandTotal = Snake.parseNumber(grandText.replace(/,/g, ''));
-    const cashAmount = Snake.parseNumber(header.cash_amount || 0);
-    const bankAmount = Snake.parseNumber(header.bank_amount || 0);
+    const grandTotal = Enjaz.parseNumber(grandText.replace(/,/g, ''));
+    const cashAmount = Enjaz.parseNumber(header.cash_amount || 0);
+    const bankAmount = Enjaz.parseNumber(header.bank_amount || 0);
 
     if (pm === 'credit' && !header.supplier_id && action === 'confirm') {
-        Snake.toast('الشراء الآجل يتطلب اختيار مورد', 'warning');
+        Enjaz.toast('الشراء الآجل يتطلب اختيار مورد', 'warning');
         return;
     }
 
     if (pm === 'mixed') {
         if (cashAmount < 0 || bankAmount < 0) {
-            Snake.toast('مبالغ الدفع المختلط يجب أن تكون أكبر من أو تساوي صفر', 'warning');
+            Enjaz.toast('مبالغ الدفع المختلط يجب أن تكون أكبر من أو تساوي صفر', 'warning');
             return;
         }
         if ((cashAmount + bankAmount) > (grandTotal + 0.01)) {
-            Snake.toast('مجموع النقدي والبنكي لا يمكن أن يتجاوز إجمالي أمر الشراء', 'warning');
+            Enjaz.toast('مجموع النقدي والبنكي لا يمكن أن يتجاوز إجمالي أمر الشراء', 'warning');
             return;
         }
         const creditPart = Math.max(0, grandTotal - cashAmount - bankAmount);
         if (creditPart > 0.01 && !header.supplier_id && action === 'confirm') {
-            Snake.toast('الجزء الآجل في الدفع المختلط يتطلب اختيار مورد', 'warning');
+            Enjaz.toast('الجزء الآجل في الدفع المختلط يتطلب اختيار مورد', 'warning');
             return;
         }
     }
 
     if ((pm === 'bank' || pm === 'mixed') && bankAmount > 0 && !header.bank_reference.trim() && action === 'confirm') {
-        Snake.toast('يرجى إدخال مرجع التحويل البنكي', 'warning');
+        Enjaz.toast('يرجى إدخال مرجع التحويل البنكي', 'warning');
         return;
     }
 
@@ -524,12 +524,12 @@ function submitOrder(action) {
     .then(async (resp) => {
         const data = await resp.json();
         if (!resp.ok || !data.success) {
-            Snake.toast(data.message || 'تعذر حفظ أمر الشراء', 'error');
+            Enjaz.toast(data.message || 'تعذر حفظ أمر الشراء', 'error');
             return;
         }
         window.location.href = data.redirect;
     })
-    .catch(() => Snake.toast('تعذر الاتصال بالخادم', 'error'));
+    .catch(() => Enjaz.toast('تعذر الاتصال بالخادم', 'error'));
 }
 
 (function bindModalBackdrop() {
@@ -567,7 +567,7 @@ function submitOrder(action) {
                 Number(line.item_id || 0),
                 line.item_name || '',
                 line.item_sku || '',
-                Snake.parseNumber(line.unit_cost || 0),
+                Enjaz.parseNumber(line.unit_cost || 0),
                 {
                     qty: line.quantity,
                     tax_rate: line.tax_rate,
@@ -615,7 +615,7 @@ function submitOrder(action) {
         var grandEl = document.getElementById('cx-hc-grand');
         if (grandEl) {
             if (cur) {
-                var g = Snake.parseNumber((document.getElementById('displayGrand') || {}).textContent || '0');
+                var g = Enjaz.parseNumber((document.getElementById('displayGrand') || {}).textContent || '0');
                 setHint(grandEl, fmt(g, cur));
             } else { setHint(grandEl, ''); }
         }
@@ -625,9 +625,9 @@ function submitOrder(action) {
             var costHint = document.getElementById('cx-hc-cost-' + id);
             var totalHint = document.getElementById('cx-hc-total-' + id);
             if (!cur) { setHint(costHint, ''); setHint(totalHint, ''); return; }
-            var cost  = Snake.parseNumber((document.getElementById('cost-' + id) || {}).value || '0');
-            var qty   = Snake.parseNumber((document.getElementById('qty-' + id) || {}).value || '1');
-            var tax   = Snake.parseNumber((document.getElementById('tax-' + id) || {}).value || '0');
+            var cost  = Enjaz.parseNumber((document.getElementById('cost-' + id) || {}).value || '0');
+            var qty   = Enjaz.parseNumber((document.getElementById('qty-' + id) || {}).value || '1');
+            var tax   = Enjaz.parseNumber((document.getElementById('tax-' + id) || {}).value || '0');
             var sub   = qty * cost;
             var total = sub + sub * (tax / 100);
             setHint(costHint,  fmt(cost, cur));

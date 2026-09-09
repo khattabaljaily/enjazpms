@@ -1,4 +1,4 @@
-# 🚀 Snake - Quick Start
+# 🚀 ENJAZ PMS - Quick Start
 
 **دليل البدء السريع**
 

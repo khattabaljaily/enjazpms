@@ -11,7 +11,7 @@
             {% if tenant.logo %}
                 <img src="{{ tenant.logo.url }}" alt="{{ tenant.name }}" class="print-logo">
             {% else %}
-                <img src="{% static 'img/logo/logo-161616.png' %}" alt="{{ tenant.name }}" class="print-logo">
+                <div class="print-logo-mark">{{ tenant.name|first }}</div>
             {% endif %}
             <div>
                 <div class="print-brand-name">{{ tenant.name }}</div>

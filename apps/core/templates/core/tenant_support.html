@@ -1,7 +1,7 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
 {% block page_title %}الدعم الفني{% endblock %}
-{% block page_description %}تواصل مع فريق دعم Snake وتتبع طلباتك{% endblock %}
+{% block page_description %}تواصل مع فريق دعم ENJAZ PMS وتتبع طلباتك{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -240,7 +240,7 @@
                 <div class="ts-hero__icon"><i class="fas fa-headset"></i></div>
                 <div>
                     <div class="ts-hero__title">الدعم الفني</div>
-                    <div class="ts-hero__desc">تواصل مع فريق Snake وتتبع طلبات الدعم الخاصة بك</div>
+                    <div class="ts-hero__desc">تواصل مع فريق ENJAZ PMS وتتبع طلبات الدعم الخاصة بك</div>
                 </div>
             </div>
             <div class="ts-stats">
@@ -260,7 +260,7 @@
         <div class="ts-wa-card__sub">للردود السريعة على استفساراتك وطلبات الدعم</div>
       </div>
       {% with tenant_name=request.tenant.business_name|default:"" user_name=request.user.get_full_name|default:request.user.username %}
-      <a href="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج Snake.{% endfilter %}"
+      <a href="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج Enjaz.{% endfilter %}"
          target="_blank" rel="noopener" class="ts-wa-btn ts-wa-btn--mobile" id="waLink">
         <i class="fab fa-whatsapp"></i> افتح المحادثة
       </a>
@@ -327,7 +327,7 @@
         <div class="ts-empty">
             <div class="ts-empty__icon"><i class="fas fa-headset"></i></div>
             <div class="ts-empty__title">لا توجد تذاكر دعم</div>
-            <div class="ts-empty__text">لم ترسل أي طلب دعم بعد. يمكنك فتح تذكرة جديدة للتواصل مع فريق Snake.</div>
+            <div class="ts-empty__text">لم ترسل أي طلب دعم بعد. يمكنك فتح تذكرة جديدة للتواصل مع فريق Enjaz.</div>
             <button type="button" class="ts-btn ts-btn--primary" data-bs-toggle="modal" data-bs-target="#newTicketModal">
                 <i class="fas fa-plus"></i> فتح تذكرة جديدة
             </button>
@@ -470,7 +470,7 @@
   var isMobile = window.matchMedia('(pointer:coarse), (max-width:768px)').matches;
   if (isMobile) return;
   {% with tn=request.tenant.business_name|default:"" un=request.user.get_full_name|default:request.user.username %}
-  var msg = 'مرحباً، أنا {{ un }} من {{ tn }} - مستخدم برنامج Snake.';
+  var msg = 'مرحباً، أنا {{ un }} من {{ tn }} - مستخدم برنامج Enjaz.';
   {% endwith %}
   var url = 'https://wa.me/249110100110?text=' + encodeURIComponent(msg);
   var canvas = document.getElementById('waQrCanvas');

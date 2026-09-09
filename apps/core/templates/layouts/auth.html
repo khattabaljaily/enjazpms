@@ -8,11 +8,11 @@
 <nav class="auth-nav">
     <div class="auth-nav-inner">
         <a class="auth-nav-brand" href="{% url 'core:pricing' %}">
-            <div class="auth-nav-logo-wrap">
-                <img src="{% static 'img/logo/logo-f6a821.png' %}" alt="Snake" class="auth-nav-logo logo-light">
-                <img src="{% static 'img/logo/logo-ffffff.png' %}" alt="Snake" class="auth-nav-logo logo-dark">
-            </div>
-            <span class="auth-nav-brand-text">Snake</span>
+            <span class="brand-mark">
+                <img src="{% static 'img/logo/enjaz-mark-dark.png' %}" alt="" class="brand-mark__icon brand-mark__icon--dark">
+                <img src="{% static 'img/logo/enjaz-mark-light.png' %}" alt="" class="brand-mark__icon brand-mark__icon--light">
+                <span class="brand-wordmark">ENJAZ</span>
+            </span>
         </a>
 
         <div class="auth-nav-actions">
@@ -32,48 +32,63 @@
     </div>
 </nav>
 
-<!-- ══ Banner + Centered Card Page ═══════════════════════ -->
+<!-- ══ Centered Card Page ═══════════════════════════════ -->
 <div class="auth-page-v2">
-
-    <!-- Decorative top banner (full width) -->
-    <section class="auth-banner">
-        <div class="auth-banner-pattern"></div>
-        <div class="auth-banner-inner">
-            <div class="auth-banner-logo">
-                <img src="{% static 'img/logo/logo-ffffff.png' %}" alt="Snake" class="auth-banner-logo-img">
-            </div>
-            <div class="auth-banner-text">
-                <h1 class="auth-banner-title">Snake</h1>
-                <p class="auth-banner-tagline">منصة متكاملة لإدارة مخزون ومبيعات الصيدليات</p>
-            </div>
-            <div class="auth-banner-trust">
-                <span class="auth-trust-pill"><i class="fas fa-pills"></i> تتبع الصلاحية والدفعات</span>
-                <span class="auth-trust-pill"><i class="fas fa-bolt"></i> 99.9% وقت التشغيل</span>
-                <span class="auth-trust-pill"><i class="fas fa-headset"></i> دعم فني 24/7</span>
-            </div>
-        </div>
-        <svg class="auth-banner-wave" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M0,32 C240,60 480,4 720,20 C960,36 1200,58 1440,26 L1440,60 L0,60 Z"></path>
-        </svg>
-    </section>
 
     <!-- Form area -->
     <main class="auth-content-area">
-        <div class="auth-card animate-fade-in">
+        <div class="auth-shell animate-fade-in">
+            <aside class="auth-side-panel">
+                <div class="auth-side-panel__top">
+                    <span class="brand-mark brand-mark--inverse brand-mark--lg">
+                        <img src="{% static 'img/logo/enjaz-mark-light.png' %}" alt="" class="brand-mark__icon brand-mark__icon--light">
+                        <span class="brand-wordmark brand-wordmark--inverse brand-wordmark--lg">ENJAZ</span>
+                    </span>
+                    <div class="auth-side-panel__badge">
+                        <i class="fas fa-shield-heart"></i>
+                        نظام موثوق
+                    </div>
+                </div>
+                <h2 class="auth-side-panel__title">نظامك المتكامل لإدارة الصيدلية</h2>
+                <p class="auth-side-panel__text">إدارة ذكية لمخزونك، مبيعاتك، موظفيك، وعملياتك اليومية من واجهة واحدة.</p>
 
-            {% if messages %}
-            {% for message in messages %}
-            <div class="alert alert-{% if 'error' in message.tags or 'danger' in message.tags %}danger{% elif 'success' in message.tags %}success{% elif 'warning' in message.tags %}warning{% else %}info{% endif %} d-flex align-items-center gap-2 mb-3">
-                <i class="fas {% if 'error' in message.tags or 'danger' in message.tags %}fa-exclamation-circle{% elif 'success' in message.tags %}fa-check-circle{% elif 'warning' in message.tags %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
-                <span>{{ message }}</span>
-            </div>
-            {% endfor %}
-            {% endif %}
+                <ul class="auth-side-list">
+                    <li><i class="fas fa-check"></i> متابعة المخزون والطلبات في الوقت الفعلي</li>
+                    <li><i class="fas fa-check"></i> تقارير مالية ومبيعات دقيقة وفورية</li>
+                    <li><i class="fas fa-check"></i> أمان متقدم وصلاحيات واضحة للموظفين</li>
+                </ul>
 
-            {% block auth_content %}{% endblock %}
+                <div class="auth-side-stats">
+                    <div>
+                        <strong>24/7</strong>
+                        <span>دعم فني</span>
+                    </div>
+                    <div>
+                        <strong>99.9%</strong>
+                        <span>استقرار</span>
+                    </div>
+                    <div>
+                        <strong>1×</strong>
+                        <span>واجهة موحدة</span>
+                    </div>
+                </div>
+            </aside>
 
-            <div class="auth-footer">
-                {% block auth_links %}{% endblock %}
+            <div class="auth-card">
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{% if 'error' in message.tags or 'danger' in message.tags %}danger{% elif 'success' in message.tags %}success{% elif 'warning' in message.tags %}warning{% else %}info{% endif %} d-flex align-items-center gap-2 mb-3">
+                    <i class="fas {% if 'error' in message.tags or 'danger' in message.tags %}fa-exclamation-circle{% elif 'success' in message.tags %}fa-check-circle{% elif 'warning' in message.tags %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                {% block auth_content %}{% endblock %}
+
+                <div class="auth-footer">
+                    {% block auth_links %}{% endblock %}
+                </div>
             </div>
         </div>
     </main>
@@ -87,13 +102,18 @@ function toggleAuthTheme() {
     html.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
     var icon = document.getElementById('authThemeIcon');
-    if (icon) icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    if (icon) {
+        icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        icon.classList.remove('icon-flip');
+        void icon.offsetWidth;
+        icon.classList.add('icon-flip');
+    }
 }
 
 (function() {
-    var saved = localStorage.getItem('theme');
-    var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
+    // Theme itself is already applied by the blocking script in <head>;
+    // this just syncs the icon to match.
+    var theme = document.documentElement.getAttribute('data-theme');
     var icon = document.getElementById('authThemeIcon');
     if (icon && theme === 'dark') icon.className = 'fas fa-sun';
 })();
@@ -116,6 +136,9 @@ document.querySelectorAll('.input-toggle-pass').forEach(function(btn) {
         input.type = showing ? 'password' : 'text';
         icon.className = showing ? 'fas fa-eye' : 'fas fa-eye-slash';
         btn.setAttribute('aria-label', showing ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور');
+        icon.classList.remove('icon-flip');
+        void icon.offsetWidth;
+        icon.classList.add('icon-flip');
     });
 });
 </script>

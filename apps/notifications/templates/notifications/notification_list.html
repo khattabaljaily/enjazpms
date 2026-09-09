@@ -310,7 +310,7 @@ document.getElementById('btnGenerate').addEventListener('click', async function 
         const d = await r.json();
         if (d.success) {
             const msg = d.total > 0 ? `تم إنشاء ${d.total} إشعار جديد` : 'لا توجد إشعارات جديدة';
-            if (window.Snake) Snake.toast(msg, d.total > 0 ? 'success' : 'info');
+            if (window.Enjaz) Enjaz.toast(msg, d.total > 0 ? 'success' : 'info');
             if (d.total > 0) setTimeout(() => location.reload(), 900);
         }
     } finally {

@@ -298,10 +298,10 @@ function renderMobileInvoiceCards(rows) {
     };
 
     const cardsHtml = rows.map(function (r) {
-        const returnedAmt = Snake.parseNumber(r.returned_amount || 0);
+        const returnedAmt = Enjaz.parseNumber(r.returned_amount || 0);
         const total = returnedAmt > 0
-            ? `<span style="text-decoration:line-through;color:#9ca3af;font-size:.8em;">${Snake.formatMoney(r.grand_total || 0)}</span> <span class="text-danger">${Snake.formatMoney(r.net_total || 0)}</span>`
-            : Snake.formatMoney(r.grand_total || 0);
+            ? `<span style="text-decoration:line-through;color:#9ca3af;font-size:.8em;">${Enjaz.formatMoney(r.grand_total || 0)}</span> <span class="text-danger">${Enjaz.formatMoney(r.net_total || 0)}</span>`
+            : Enjaz.formatMoney(r.grand_total || 0);
         const statusClass = statusBadgeMap[r.status] || r.status_color || 'muted';
         const statusLabel = r.status_label || '—';
         const paymentMethod = paymentMethodMap[r.payment_method] || r.payment_method || '—';
@@ -410,14 +410,14 @@ function initTable() {
                 data: 'grand_total',
                 className: 'text-end sales-money-col',
                 render: function (data, type, row) {
-                    const returnedAmt = Snake.parseNumber(row.returned_amount || 0);
+                    const returnedAmt = Enjaz.parseNumber(row.returned_amount || 0);
                     if (type === 'sort' || type === 'type') {
-                        return Snake.parseNumber(row.net_total || data);
+                        return Enjaz.parseNumber(row.net_total || data);
                     }
                     if (returnedAmt > 0) {
-                        return `<span style="text-decoration:line-through;color:#9ca3af;font-size:.85em;">${Snake.formatMoney(data)}</span><br><span class="text-danger fw-bold">${Snake.formatMoney(row.net_total || 0)}</span><br><small class="text-muted" style="font-size:.7em;">مرتجع: ${Snake.formatMoney(returnedAmt)}</small>`;
+                        return `<span style="text-decoration:line-through;color:#9ca3af;font-size:.85em;">${Enjaz.formatMoney(data)}</span><br><span class="text-danger fw-bold">${Enjaz.formatMoney(row.net_total || 0)}</span><br><small class="text-muted" style="font-size:.7em;">مرتجع: ${Enjaz.formatMoney(returnedAmt)}</small>`;
                     }
-                    return Snake.formatMoney(Snake.parseNumber(data));
+                    return Enjaz.formatMoney(Enjaz.parseNumber(data));
                 }
             },
             {
@@ -532,7 +532,7 @@ function openInvoiceModal(row) {
     };
 
     const num = (v) => {
-        return Snake.formatMoney(v);
+        return Enjaz.formatMoney(v);
     };
 
     const date = (v) => {
@@ -653,8 +653,8 @@ function getCookie(name) {
 
 function showToast(message, type = 'success') {
     const mapped = type === 'danger' ? 'error' : type;
-    if (window.Snake && typeof Snake.toast === 'function') {
-        Snake.toast(message, mapped);
+    if (window.Enjaz && typeof Enjaz.toast === 'function') {
+        Enjaz.toast(message, mapped);
         return;
     }
     console.warn(message);

@@ -5,7 +5,7 @@ seed_week_activity — يضيف كماً كبيراً من الحركات (مب�
 
 الاستخدام:
     python manage.py seed_week_activity
-    python manage.py seed_week_activity --tenant صيدلية-Snake --days 7
+    python manage.py seed_week_activity --tenant صيدلية-تجريبية --days 7
 """
 import random
 from datetime import date, datetime, timedelta, time as dtime

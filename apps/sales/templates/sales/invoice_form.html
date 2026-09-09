@@ -535,7 +535,7 @@ function renderSearchResults(items) {
         const qtyClass = isService
             ? 'sale-item-result__qty--ok'
             : (item.available_qty > 0 ? 'sale-item-result__qty--ok' : 'sale-item-result__qty--empty');
-        const qtyLabel = isService ? 'خدمة (بدون مخزون)' : `متاح: ${Snake.formatQuantity(item.available_qty || 0)}`;
+        const qtyLabel = isService ? 'خدمة (بدون مخزون)' : `متاح: ${Enjaz.formatQuantity(item.available_qty || 0)}`;
 
         return `
         <div class="sale-item-result" onclick="selectItem(${item.id})">
@@ -544,7 +544,7 @@ function renderSearchResults(items) {
                 <div class="sale-item-result__sku">${item.sku}</div>
             </div>
             <div class="sale-item-result__meta">
-                <div class="sale-item-result__price">${Snake.formatMoney(item.selling_price || 0)}</div>
+                <div class="sale-item-result__price">${Enjaz.formatMoney(item.selling_price || 0)}</div>
                 <div class="sale-item-result__qty ${qtyClass}">
                     ${qtyLabel}
                 </div>
@@ -611,10 +611,10 @@ function addLineToTable(lineData) {
     row.dataset.trackSerial = lineData.track_serial ? '1' : '0';
     row.dataset.trackExpiry = lineData.track_expiry ? '1' : '0';
 
-    const qty = Snake.parseNumber(lineData.quantity) || 1;
-    const price = Snake.parseNumber(lineData.unit_price) || 0;
-    const disc = Snake.parseNumber(lineData.discount_percent) || 0;
-    const tax = Snake.parseNumber(lineData.tax_rate) || 0;
+    const qty = Enjaz.parseNumber(lineData.quantity) || 1;
+    const price = Enjaz.parseNumber(lineData.unit_price) || 0;
+    const disc = Enjaz.parseNumber(lineData.discount_percent) || 0;
+    const tax = Enjaz.parseNumber(lineData.tax_rate) || 0;
     const lineTotal = calcLineTotal(qty, price, disc, tax);
 
     const showBatch  = CAP.hasBatchNumbers  && (lineData.track_batch  ?? true);
@@ -664,7 +664,7 @@ function addLineToTable(lineData) {
                    value="${tax || ''}" oninput="updateLine(${id})">
         </td>
         <td class="text-end" id="total-${id}">
-            <strong>${Snake.formatMoney(lineTotal)}</strong>
+            <strong>${Enjaz.formatMoney(lineTotal)}</strong>
         </td>
         <td>
             <button type="button" class="cx-btn-icon cx-btn-icon--danger" onclick="removeLine(${id})">
@@ -693,7 +693,7 @@ function onUnitChange(id) {
     // Auto-adjust price: keep base price consistent across unit switches
     if (oldFactor !== newFactor) {
         const priceInput = document.getElementById(`price-${id}`);
-        const currentPrice = Snake.parseNumber(priceInput.value) || 0;
+        const currentPrice = Enjaz.parseNumber(priceInput.value) || 0;
         if (currentPrice > 0) {
             priceInput.value = ((currentPrice / oldFactor) * newFactor).toFixed(2);
         }
@@ -712,12 +712,12 @@ function calcLineTotal(qty, price, discPct, taxRate) {
 }
 
 function updateLine(id) {
-    const qty = Snake.parseNumber(document.getElementById(`qty-${id}`).value) || 0;
-    const price = Snake.parseNumber(document.getElementById(`price-${id}`).value) || 0;
-    const disc = Snake.parseNumber(document.getElementById(`disc-${id}`).value) || 0;
-    const tax = Snake.parseNumber(document.getElementById(`tax-${id}`).value) || 0;
+    const qty = Enjaz.parseNumber(document.getElementById(`qty-${id}`).value) || 0;
+    const price = Enjaz.parseNumber(document.getElementById(`price-${id}`).value) || 0;
+    const disc = Enjaz.parseNumber(document.getElementById(`disc-${id}`).value) || 0;
+    const tax = Enjaz.parseNumber(document.getElementById(`tax-${id}`).value) || 0;
     const total = calcLineTotal(qty, price, disc, tax);
-    document.getElementById(`total-${id}`).innerHTML = `<strong>${Snake.formatMoney(total)}</strong>`;
+    document.getElementById(`total-${id}`).innerHTML = `<strong>${Enjaz.formatMoney(total)}</strong>`;
     recalcTotals();
 }
 
@@ -739,10 +739,10 @@ function recalcTotals() {
 
     document.querySelectorAll('#linesBody tr').forEach(row => {
         const id = row.id.replace('line-', '');
-        const qty = Snake.parseNumber(document.getElementById(`qty-${id}`)?.value) || 0;
-        const price = Snake.parseNumber(document.getElementById(`price-${id}`)?.value) || 0;
-        const disc = Snake.parseNumber(document.getElementById(`disc-${id}`)?.value) || 0;
-        const tax = Snake.parseNumber(document.getElementById(`tax-${id}`)?.value) || 0;
+        const qty = Enjaz.parseNumber(document.getElementById(`qty-${id}`)?.value) || 0;
+        const price = Enjaz.parseNumber(document.getElementById(`price-${id}`)?.value) || 0;
+        const disc = Enjaz.parseNumber(document.getElementById(`disc-${id}`)?.value) || 0;
+        const tax = Enjaz.parseNumber(document.getElementById(`tax-${id}`)?.value) || 0;
 
         const gross = qty * price;
         const discAmt = gross * (disc / 100);
@@ -753,24 +753,24 @@ function recalcTotals() {
     });
 
     const discType = document.getElementById('discountType').value;
-    const discVal = Snake.parseNumber(document.getElementById('discountValue').value) || 0;
+    const discVal = Enjaz.parseNumber(document.getElementById('discountValue').value) || 0;
     let discAmt = discType === 'percent' ? subtotal * (discVal / 100) : discVal;
     discAmt = Math.min(discAmt, subtotal);
 
     const grandTotal = subtotal - discAmt + taxTotal;
 
-    document.getElementById('displaySubtotal').textContent = Snake.formatMoney(subtotal);
-    document.getElementById('displayDiscount').textContent = Snake.formatMoney(discAmt);
-    document.getElementById('displayTax').textContent = Snake.formatMoney(taxTotal);
-    document.getElementById('displayGrandTotal').textContent = Snake.formatMoney(grandTotal);
+    document.getElementById('displaySubtotal').textContent = Enjaz.formatMoney(subtotal);
+    document.getElementById('displayDiscount').textContent = Enjaz.formatMoney(discAmt);
+    document.getElementById('displayTax').textContent = Enjaz.formatMoney(taxTotal);
+    document.getElementById('displayGrandTotal').textContent = Enjaz.formatMoney(grandTotal);
 
     const pm = document.getElementById('paymentMethod').value;
     if (pm === 'mixed') {
-        const cash = Snake.parseNumber(document.getElementById('cashAmount').value) || 0;
-        const bank = Snake.parseNumber(document.getElementById('bankAmount').value) || 0;
+        const cash = Enjaz.parseNumber(document.getElementById('cashAmount').value) || 0;
+        const bank = Enjaz.parseNumber(document.getElementById('bankAmount').value) || 0;
         const credit = Math.max(0, grandTotal - cash - bank);
         document.getElementById('creditAmount').value = credit.toFixed(2);
-        document.getElementById('displayCredit').textContent = Snake.formatMoney(credit);
+        document.getElementById('displayCredit').textContent = Enjaz.formatMoney(credit);
     }
 }
 
@@ -787,8 +787,8 @@ function fetchCustomerInfo() {
     .then(data => {
         if (!data.success) return;
         const c = data.customer;
-        document.getElementById('custBalance').textContent = Snake.formatMoney(c.current_balance || 0);
-        document.getElementById('custCreditLimit').textContent = Snake.formatMoney(c.credit_limit || 0);
+        document.getElementById('custBalance').textContent = Enjaz.formatMoney(c.current_balance || 0);
+        document.getElementById('custCreditLimit').textContent = Enjaz.formatMoney(c.credit_limit || 0);
         document.getElementById('custPhone').textContent = c.phone || '—';
         card.classList.remove('sales-field-hidden');
     });
@@ -807,10 +807,10 @@ function collectLines() {
         lines.push({
             item_id: row.dataset.itemId,
             variant_id: row.dataset.variantId || null,
-            quantity: String(Snake.parseNumber(document.getElementById(`qty-${id}`).value || 0)),
-            unit_price: Snake.parseNumber(document.getElementById(`price-${id}`).value || 0).toFixed(2),
-            discount_percent: Snake.parseNumber(document.getElementById(`disc-${id}`).value || 0).toFixed(2),
-            tax_rate: Snake.parseNumber(document.getElementById(`tax-${id}`).value || 0).toFixed(2),
+            quantity: String(Enjaz.parseNumber(document.getElementById(`qty-${id}`).value || 0)),
+            unit_price: Enjaz.parseNumber(document.getElementById(`price-${id}`).value || 0).toFixed(2),
+            discount_percent: Enjaz.parseNumber(document.getElementById(`disc-${id}`).value || 0).toFixed(2),
+            tax_rate: Enjaz.parseNumber(document.getElementById(`tax-${id}`).value || 0).toFixed(2),
             cost_price_snapshot: row.dataset.costPrice || '0',
             batch_number: showBatch  ? (document.getElementById(`batch-${id}`)?.value || '') : '',
             serial_number: showSerial ? (document.getElementById(`serial-${id}`)?.value || '') : '',
@@ -843,9 +843,9 @@ function submitForm(action) {
         payment_method: document.getElementById('paymentMethod').value,
         delivery_type: document.getElementById('deliveryType').value,
         invoice_discount_type: document.getElementById('discountType').value,
-        invoice_discount_value: Snake.parseNumber(document.getElementById('discountValue').value || 0).toFixed(2),
-        cash_amount: Snake.parseNumber(document.getElementById('cashAmount')?.value || 0).toFixed(2),
-        bank_amount: Snake.parseNumber(document.getElementById('bankAmount')?.value || 0).toFixed(2),
+        invoice_discount_value: Enjaz.parseNumber(document.getElementById('discountValue').value || 0).toFixed(2),
+        cash_amount: Enjaz.parseNumber(document.getElementById('cashAmount')?.value || 0).toFixed(2),
+        bank_amount: Enjaz.parseNumber(document.getElementById('bankAmount')?.value || 0).toFixed(2),
         bank_reference: document.getElementById('bankReference')?.value || '',
         notes: document.getElementById('notes').value,
     };
@@ -877,7 +877,7 @@ function submitForm(action) {
             return;
         }
         if (data.success) {
-            sessionStorage.setItem('__snakeFlash', JSON.stringify({
+            sessionStorage.setItem('__enjazFlash', JSON.stringify({
                 message: data.message || 'تم حفظ الفاتورة بنجاح',
                 type: 'success'
             }));
@@ -909,8 +909,8 @@ function getCookie(name) {
 
 function showAlert(msg, type = 'danger') {
     const mapped = type === 'danger' ? 'error' : type;
-    if (window.Snake && typeof Snake.toast === 'function') {
-        Snake.toast(msg, mapped);
+    if (window.Enjaz && typeof Enjaz.toast === 'function') {
+        Enjaz.toast(msg, mapped);
         return;
     }
 

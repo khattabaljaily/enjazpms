@@ -97,7 +97,7 @@
     <div class="exp-hero__icon"><i class="fas fa-clock"></i></div>
     <div>
       <div class="exp-hero__title">انتهى اشتراكك</div>
-      <div class="exp-hero__sub">نظام Snake لإدارة المخزون والمبيعات</div>
+      <div class="exp-hero__sub">نظام ENJAZ PMS لإدارة المخزون والمبيعات</div>
     </div>
   </div>
 
@@ -108,7 +108,7 @@
       <div class="exp-alert__title">الوصول موقوف مؤقتاً</div>
       <div class="exp-alert__desc">
         انتهت صلاحية اشتراكك. بياناتك محفوظة ومؤمّنة تماماً وستعود للعمل فور تجديد الاشتراك.
-        تواصل مع فريق Snake لتجديد الاشتراك في أقرب وقت.
+        تواصل مع فريق ENJAZ PMS لتجديد الاشتراك في أقرب وقت.
       </div>
     </div>
   </div>
@@ -118,10 +118,10 @@
     <div class="exp-wa__icon"><i class="fab fa-whatsapp"></i></div>
     <div class="exp-wa__body">
       <div class="exp-wa__title">تواصل معنا عبر واتساب</div>
-      <div class="exp-wa__sub">للتواصل السريع مع فريق Snake</div>
+      <div class="exp-wa__sub">للتواصل السريع مع فريق ENJAZ PMS</div>
     </div>
     {% with user_name=request.user.get_full_name|default:request.user.username tenant_name=request.tenant.name|default:"" %}
-    <a href="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج Snake.{% endfilter %}"
+    <a href="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج Enjaz.{% endfilter %}"
        target="_blank" rel="noopener" class="exp-wa__btn">
       <i class="fab fa-whatsapp"></i> تواصل معنا
     </a>

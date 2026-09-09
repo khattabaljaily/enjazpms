@@ -323,8 +323,8 @@
     }
 
     // Populate stats
-    document.getElementById('statThisMonth').textContent = Snake.formatMoney('{{ stats.this_month }}');
-    document.getElementById('statTotalConfirmed').textContent = Snake.formatMoney('{{ stats.total_confirmed }}');
+    document.getElementById('statThisMonth').textContent = Enjaz.formatMoney('{{ stats.this_month }}');
+    document.getElementById('statTotalConfirmed').textContent = Enjaz.formatMoney('{{ stats.total_confirmed }}');
 
     const EXPENSE_CATEGORIES = JSON.parse('{{ categories_json|escapejs }}');
     const EXPENSE_TREASURIES = JSON.parse('{{ treasuries_json|escapejs }}');
@@ -383,7 +383,7 @@
         const balance = opt?.dataset?.balance;
         if (balance !== undefined && balance !== '') {
             expenseModalTreasuryBalance.style.display = '';
-            expenseModalTreasuryBalance.textContent = 'الرصيد الحالي: ' + Snake.formatMoney(balance);
+            expenseModalTreasuryBalance.textContent = 'الرصيد الحالي: ' + Enjaz.formatMoney(balance);
         } else {
             expenseModalTreasuryBalance.style.display = 'none';
         }
@@ -453,12 +453,12 @@
             .then(r => r.json())
             .then(data => {
                 if (!data.success) {
-                    Snake.toast(data.message || 'تعذر تحميل بيانات المصروف', 'error');
+                    Enjaz.toast(data.message || 'تعذر تحميل بيانات المصروف', 'error');
                     return;
                 }
                 openExpenseModal('edit', data.data);
             })
-            .catch(() => Snake.toast('تعذر تحميل بيانات المصروف', 'error'));
+            .catch(() => Enjaz.toast('تعذر تحميل بيانات المصروف', 'error'));
     }
 
     function addCategoryToLists(category) {
@@ -470,7 +470,7 @@
     function saveExpense() {
         const categoryId = expenseCategorySel.value;
         const description = expenseModalDescription.value.trim();
-        const amount = Snake.parseNumber(expenseModalAmount.value);
+        const amount = Enjaz.parseNumber(expenseModalAmount.value);
         const expenseDate = expenseModalDate.value;
         const paymentMethod = expensePaymentMethodInput.value;
         const treasuryId = paymentMethod === 'cash' ? (expenseTreasurySel.value || null) : null;
@@ -478,10 +478,10 @@
         const notes = expenseModalNotes.value.trim();
         const expenseId = expenseModalId.value;
 
-        if (!categoryId) return Snake.toast('اختر التصنيف', 'error');
-        if (!expenseDate) return Snake.toast('اختر التاريخ', 'error');
-        if (!description) return Snake.toast('أدخل الوصف', 'error');
-        if (!amount || amount <= 0) return Snake.toast('أدخل مبلغاً صحيحاً', 'error');
+        if (!categoryId) return Enjaz.toast('اختر التصنيف', 'error');
+        if (!expenseDate) return Enjaz.toast('اختر التاريخ', 'error');
+        if (!description) return Enjaz.toast('أدخل الوصف', 'error');
+        if (!amount || amount <= 0) return Enjaz.toast('أدخل مبلغاً صحيحاً', 'error');
 
         const payload = {
             category_id: parseInt(categoryId, 10),
@@ -511,17 +511,17 @@
             expenseModalSaveBtn.disabled = false;
             expenseModalSaveBtn.innerHTML = '<i class="fas fa-save me-1"></i>' + expenseModalSaveText.textContent;
             if (!data.success) {
-                Snake.toast(data.message || 'تعذر حفظ المصروف', 'error');
+                Enjaz.toast(data.message || 'تعذر حفظ المصروف', 'error');
                 return;
             }
             expenseModal.hide();
             dt.ajax.reload(null, false);
-            Snake.toast('تم حفظ المصروف بنجاح', 'success');
+            Enjaz.toast('تم حفظ المصروف بنجاح', 'success');
         })
         .catch(() => {
             expenseModalSaveBtn.disabled = false;
             expenseModalSaveBtn.innerHTML = '<i class="fas fa-save me-1"></i>' + expenseModalSaveText.textContent;
-            Snake.toast('خطأ في الاتصال', 'error');
+            Enjaz.toast('خطأ في الاتصال', 'error');
         });
     }
 
@@ -547,7 +547,7 @@
         }
 
         const cardsHtml = rows.map(function (r) {
-            const amount = Snake.formatMoney(r.amount || 0);
+            const amount = Enjaz.formatMoney(r.amount || 0);
             const statusClass = r.status_raw === 'confirmed' ? 'cx-status--on' : r.status_raw === 'cancelled' ? 'cx-status--off' : 'cx-status--warning';
             const statusLabel = r.status || '—';
 
@@ -613,7 +613,7 @@
             {
                 data: 'amount',
                 className: 'text-end',
-                render: v => Snake.formatMoney(v || 0)
+                render: v => Enjaz.formatMoney(v || 0)
             },
             { data: 'payment_method' },
             { data: 'treasury' },
@@ -650,7 +650,7 @@
     function openExpenseView(id) {
         const row = expenseRows.get(id);
         if (!row) {
-            Snake.toast('تعذر تحميل تفاصيل المصروف', 'error');
+            Enjaz.toast('تعذر تحميل تفاصيل المصروف', 'error');
             return;
         }
 
@@ -659,7 +659,7 @@
         document.getElementById('viewExpenseDate').textContent = row.expense_date || '—';
         document.getElementById('viewExpenseCategory').textContent = row.category || '—';
         document.getElementById('viewExpenseDescription').textContent = row.description || '—';
-        document.getElementById('viewExpenseAmount').textContent = Snake.formatMoney(row.amount || 0);
+        document.getElementById('viewExpenseAmount').textContent = Enjaz.formatMoney(row.amount || 0);
         document.getElementById('viewExpensePayment').innerHTML = row.payment_method || '—';
         document.getElementById('viewExpenseTreasury').textContent = row.treasury || '—';
         document.getElementById('viewExpenseStatus').innerHTML = row.status || '—';
@@ -685,7 +685,7 @@
 
     saveExpenseCategoryBtn.addEventListener('click', function () {
         const name = newExpenseCategoryName.value.trim();
-        if (!name) return Snake.toast('أدخل اسم التصنيف', 'error');
+        if (!name) return Enjaz.toast('أدخل اسم التصنيف', 'error');
 
         fetch("{% url 'expenses:category_create_api' %}", {
             method: 'POST',
@@ -698,15 +698,15 @@
         .then(r => r.json())
         .then(data => {
             if (!data.success) {
-                Snake.toast(data.message || 'تعذر إضافة التصنيف', 'error');
+                Enjaz.toast(data.message || 'تعذر إضافة التصنيف', 'error');
                 return;
             }
             addCategoryToLists({ id: data.id, name: data.name });
             addCategoryModal.hide();
             expenseModal.show();
-            Snake.toast('تم إضافة التصنيف', 'success');
+            Enjaz.toast('تم إضافة التصنيف', 'success');
         })
-        .catch(() => Snake.toast('خطأ في الاتصال', 'error'));
+        .catch(() => Enjaz.toast('خطأ في الاتصال', 'error'));
     });
 
     $('#statusFilter, #categoryFilter').on('change', function () { dt.ajax.reload(); });
@@ -754,14 +754,14 @@
         .then(response => response.json())
         .then(function (resp) {
             if (!resp.success) {
-                Snake.toast(resp.message || 'تعذر إتمام العملية', 'error');
+                Enjaz.toast(resp.message || 'تعذر إتمام العملية', 'error');
                 return;
             }
-            Snake.toast(resp.message || 'تمت العملية', 'success');
+            Enjaz.toast(resp.message || 'تمت العملية', 'success');
             dt.ajax.reload(null, false);
         })
         .catch(function () {
-            Snake.toast('تعذر إتمام العملية', 'error');
+            Enjaz.toast('تعذر إتمام العملية', 'error');
         });
     });
 

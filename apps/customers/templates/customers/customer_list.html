@@ -581,8 +581,8 @@
 
         const cardsHtml = rows.map(function (r) {
             const city = r.city || '—';
-            const balance = Snake.formatMoney(r.current_balance);
-            const balanceClass = Snake.parseNumber(r.current_balance) > 0 ? 'cxr-bal--pos' : Snake.parseNumber(r.current_balance) < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
+            const balance = Enjaz.formatMoney(r.current_balance);
+            const balanceClass = Enjaz.parseNumber(r.current_balance) > 0 ? 'cxr-bal--pos' : Enjaz.parseNumber(r.current_balance) < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
             const status = r.is_active
                 ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
                 : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوف</span>';
@@ -669,9 +669,9 @@
             {
                 data: 'current_balance',
                 render: function (v) {
-                    const n = Snake.parseNumber(v);
+                    const n = Enjaz.parseNumber(v);
                     const cls = n > 0 ? 'cxr-bal--pos' : n < 0 ? 'cxr-bal--neg' : 'cxr-bal--zero';
-                    return `<span class="cxr-bal ${cls}">${Snake.formatMoney(v)}</span>`;
+                    return `<span class="cxr-bal ${cls}">${Enjaz.formatMoney(v)}</span>`;
                 }
             },
             {
@@ -718,7 +718,7 @@
         $form[0].reset();
         $idInput.val('');
         $('#id_is_active').prop('checked', true);
-        Snake.clearFormErrors($form);
+        Enjaz.clearFormErrors($form);
         ['#id_opening_balance', '#id_credit_limit'].forEach(function(sel) {
             var el = document.querySelector(sel);
             if (el && parseFloat(el.value) === 0) el.value = '';
@@ -747,7 +747,7 @@
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function (resp) {
-                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                if (!resp.success) { Enjaz.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
                 $idInput.val(d.id);
                 $('#id_name').val(d.name || '');
@@ -755,8 +755,8 @@
                 $('#id_email').val(d.email || '');
                 $('#id_city').val(d.city || '');
                 $('#id_address').val(d.address || '');
-                $('#id_opening_balance').val(Snake.parseNumber(d.opening_balance) || '');
-                $('#id_credit_limit').val(Snake.parseNumber(d.credit_limit) || '');
+                $('#id_opening_balance').val(Enjaz.parseNumber(d.opening_balance) || '');
+                $('#id_credit_limit').val(Enjaz.parseNumber(d.credit_limit) || '');
                 $('#id_notes').val(d.notes || '');
                 $('#id_is_active').prop('checked', !!d.is_active);
 
@@ -772,7 +772,7 @@
                 }
                 customerModal.show();
             },
-            error: function () { Snake.toast('تعذر تحميل البيانات', 'error'); }
+            error: function () { Enjaz.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
@@ -806,9 +806,9 @@
 
     $('#btnAddPolicy').on('click', function () {
         const customerId = $idInput.val();
-        if (!customerId) { Snake.toast('احفظ بيانات العميل أولاً', 'error'); return; }
+        if (!customerId) { Enjaz.toast('احفظ بيانات العميل أولاً', 'error'); return; }
         const companyId = $('#policyInsuranceCompany').val();
-        if (!companyId) { Snake.toast('اختر شركة التأمين', 'error'); return; }
+        if (!companyId) { Enjaz.toast('اختر شركة التأمين', 'error'); return; }
         $.post(urlPolicyCreate, {
             csrfmiddlewaretoken: getCookie('csrftoken'),
             customer: customerId,
@@ -821,7 +821,7 @@
                 $('#policyNumber').val(''); $('#policyCoverage').val(''); $('#policyInsuranceCompany').val('');
                 loadCustomerPolicies(customerId);
             } else {
-                Snake.toast(resp.message || 'تعذرت الإضافة', 'error');
+                Enjaz.toast(resp.message || 'تعذرت الإضافة', 'error');
             }
         });
     });
@@ -831,7 +831,7 @@
         const customerId = $idInput.val();
         if (!confirm('حذف هذه البوليصة؟')) return;
         $.post(apiUrl(urlPolicyDelete, id), { csrfmiddlewaretoken: getCookie('csrftoken') }, function (resp) {
-            if (resp.success) { loadCustomerPolicies(customerId); } else { Snake.toast(resp.message, 'error'); }
+            if (resp.success) { loadCustomerPolicies(customerId); } else { Enjaz.toast(resp.message, 'error'); }
         });
     });
     {% endif %}
@@ -839,23 +839,23 @@
     /* ── Save ───────────────────────────────────────────────── */
     $form.on('submit', function (e) {
         e.preventDefault();
-        Snake.clearFormErrors($form);
+        Enjaz.clearFormErrors($form);
         const id = $idInput.val();
         const url = id ? apiUrl(urlUpdate, id) : urlCreate;
         const orig = $submitBtn.html();
-        Snake.showLoading($submitBtn);
+        Enjaz.showLoading($submitBtn);
         $.ajax({
             url, method: 'POST', data: $form.serialize(),
             success: function (resp) {
-                Snake.hideLoading($submitBtn, orig);
-                if (resp.success) { customerModal.hide(); dt.ajax.reload(null, false); Snake.toast(resp.message || 'تم الحفظ', 'success'); return; }
-                Snake.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
+                Enjaz.hideLoading($submitBtn, orig);
+                if (resp.success) { customerModal.hide(); dt.ajax.reload(null, false); Enjaz.toast(resp.message || 'تم الحفظ', 'success'); return; }
+                Enjaz.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
             },
             error: function (xhr) {
-                Snake.hideLoading($submitBtn, orig);
+                Enjaz.hideLoading($submitBtn, orig);
                 const r = xhr.responseJSON || {};
-                if (r.errors) Snake.renderFieldErrors($form, r.errors);
-                Snake.showFormError($form, r.message || 'حدث خطأ');
+                if (r.errors) Enjaz.renderFieldErrors($form, r.errors);
+                Enjaz.showFormError($form, r.message || 'حدث خطأ');
             }
         });
     });
@@ -873,10 +873,10 @@
         $.ajax({
             url: apiUrl(urlDelete, id), method: 'POST',
             success: function (resp) {
-                if (resp.success) { deleteModal.hide(); dt.ajax.reload(null, false); Snake.toast(resp.message || 'تم الحذف', 'success'); return; }
-                Snake.toast(resp.message || 'تعذر الحذف', 'error');
+                if (resp.success) { deleteModal.hide(); dt.ajax.reload(null, false); Enjaz.toast(resp.message || 'تم الحذف', 'success'); return; }
+                Enjaz.toast(resp.message || 'تعذر الحذف', 'error');
             },
-            error: function (xhr) { Snake.toast(_xhrMsg(xhr, 'تعذر الحذف'), 'error'); }
+            error: function (xhr) { Enjaz.toast(_xhrMsg(xhr, 'تعذر الحذف'), 'error'); }
         });
     });
 
@@ -885,7 +885,7 @@
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function (resp) {
-                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                if (!resp.success) { Enjaz.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
                 
                 // Set avatar
@@ -906,10 +906,10 @@
                 $('#viewAddress').text(d.address || '—');
                 
                 // Financial info
-                const bal = Snake.parseNumber(d.current_balance);
+                const bal = Enjaz.parseNumber(d.current_balance);
                 const balCls = bal > 0 ? 'text-success' : bal < 0 ? 'text-danger' : '';
-                $('#viewBalance').html(`<strong class="${balCls}">${Snake.formatMoney(d.current_balance)}</strong>`);
-                $('#viewCreditLimit').html(`<strong>${Snake.formatMoney(d.credit_limit)}</strong>`);
+                $('#viewBalance').html(`<strong class="${balCls}">${Enjaz.formatMoney(d.current_balance)}</strong>`);
+                $('#viewCreditLimit').html(`<strong>${Enjaz.formatMoney(d.credit_limit)}</strong>`);
                 
                 // Additional info
                 $('#viewNotes').text(d.notes || '—');
@@ -923,7 +923,7 @@
                 
                 viewModal.show();
             },
-            error: function () { Snake.toast('تعذر تحميل البيانات', 'error'); }
+            error: function () { Enjaz.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
@@ -940,8 +940,8 @@
     function buildCustomerLedgerCard(tx) {
         const s = custLedgerStyle(tx);
         const amtColor = s.amtColor, badgeBg = s.badgeBg, badgeColor = s.badgeColor;
-        const amtFmt  = Snake.formatMoney(Math.abs(Snake.parseNumber(tx.amount || 0)));
-        const balFmt  = Snake.formatMoney(Math.abs(Snake.parseNumber(tx.running_balance || 0)));
+        const amtFmt  = Enjaz.formatMoney(Math.abs(Enjaz.parseNumber(tx.amount || 0)));
+        const balFmt  = Enjaz.formatMoney(Math.abs(Enjaz.parseNumber(tx.running_balance || 0)));
         const editedBadge = tx.is_edited ? `<span style="font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:5px;background:rgba(251,191,36,.2);color:#b45309;margin-right:.35rem;">تم التعديل</span>` : '';
         const reversedBadge = tx.is_reversal ? `<span style="font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:5px;background:rgba(239,68,68,.15);color:#dc2626;margin-right:.35rem;">إلغاء</span>` : '';
         const notesLine = tx.notes && tx.notes !== '—'
@@ -987,8 +987,8 @@
                     return `<tr style="background:${s.rowBg}">
                         <td>${tx.entry_date || '—'}</td>
                         <td>${typeCell}</td>
-                        <td style="color:${s.amtColor};font-weight:700;">${Snake.formatMoney(Math.abs(Snake.parseNumber(tx.amount || 0)))}</td>
-                        <td style="color:#c9840f;">${Snake.formatMoney(Math.abs(Snake.parseNumber(tx.running_balance || 0)))}</td>
+                        <td style="color:${s.amtColor};font-weight:700;">${Enjaz.formatMoney(Math.abs(Enjaz.parseNumber(tx.amount || 0)))}</td>
+                        <td style="color:#c9840f;">${Enjaz.formatMoney(Math.abs(Enjaz.parseNumber(tx.running_balance || 0)))}</td>
                         <td>${tx.notes || '—'}</td>
                     </tr>`;
                 }).join('');
@@ -1008,13 +1008,13 @@
             url: apiUrl(urlDetail, id),
             method: 'GET',
             success: function(resp) {
-                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                if (!resp.success) { Enjaz.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
-                $('#customerLedgerSubtitle').text(`${d.name || '—'} (${d.code || '—'}) — المديونية: ${Snake.formatMoney(d.current_balance || 0)}`);
+                $('#customerLedgerSubtitle').text(`${d.name || '—'} (${d.code || '—'}) — المديونية: ${Enjaz.formatMoney(d.current_balance || 0)}`);
                 loadCustomerTransactions(id);
                 ledgerModal.show();
             },
-            error: function() { Snake.toast('تعذر تحميل البيانات', 'error'); }
+            error: function() { Enjaz.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
@@ -1064,16 +1064,16 @@
                     $('#portalLinkInput').val(r.portal_url);
                     $('#portalLinkExpiry').text('صالح حتى: ' + r.expires_at);
                     $('#portalLinkWrap').removeClass('d-none');
-                    Snake.toast('تم إنشاء رابط البوابة', 'success');
+                    Enjaz.toast('تم إنشاء رابط البوابة', 'success');
                 } else {
-                    Snake.toast(r.message || 'حدث خطأ', 'error');
+                    Enjaz.toast(r.message || 'حدث خطأ', 'error');
                     $('#generatePortalBtnLabel').text(origLabel);
                 }
             },
             error: function () {
                 $btn.prop('disabled', false);
                 $('#generatePortalBtnLabel').text(origLabel);
-                Snake.toast('تعذر الإنشاء', 'error');
+                Enjaz.toast('تعذر الإنشاء', 'error');
             }
         });
     });
@@ -1082,11 +1082,11 @@
         const val = $('#portalLinkInput').val();
         if (!val) return;
         navigator.clipboard.writeText(val).then(function () {
-            Snake.toast('تم نسخ الرابط', 'success');
+            Enjaz.toast('تم نسخ الرابط', 'success');
         }).catch(function () {
             $('#portalLinkInput').select();
             document.execCommand('copy');
-            Snake.toast('تم نسخ الرابط', 'success');
+            Enjaz.toast('تم نسخ الرابط', 'success');
         });
     });
 
@@ -1177,13 +1177,13 @@
             'text/csv'
         ];
         if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
-            Snake.toast('نوع الملف غير مدعوم. الرجاء اختيار ملف Excel أو CSV', 'error');
+            Enjaz.toast('نوع الملف غير مدعوم. الرجاء اختيار ملف Excel أو CSV', 'error');
             return;
         }
 
         // Validate file size (5MB)
         if (file.size > 5 * 1024 * 1024) {
-            Snake.toast('حجم الملف كبير جداً. الحد الأقصى 5 MB', 'error');
+            Enjaz.toast('حجم الملف كبير جداً. الحد الأقصى 5 MB', 'error');
             return;
         }
 
@@ -1235,18 +1235,18 @@
                         dt.ajax.reload();
                     }
                     const toastType = resp.imported > 0 ? 'success' : 'error';
-                    Snake.toast(resp.message || 'تم استيراد العملاء بنجاح', toastType);
+                    Enjaz.toast(resp.message || 'تم استيراد العملاء بنجاح', toastType);
                     if (resp.errors && resp.errors.length > 0) {
                         const errHtml = resp.errors.map(e => `<div>• ${e}</div>`).join('');
-                        Snake.toast(errHtml, 'error');
+                        Enjaz.toast(errHtml, 'error');
                     }
                 } else {
-                    Snake.toast(resp.message || 'فشل الاستيراد', 'error');
+                    Enjaz.toast(resp.message || 'فشل الاستيراد', 'error');
                 }
             },
             error: function(xhr) {
                 const msg = xhr.responseJSON?.message || 'حدث خطأ أثناء الاستيراد';
-                Snake.toast(msg, 'error');
+                Enjaz.toast(msg, 'error');
             }
         });
     });
@@ -1260,7 +1260,7 @@
     // Export customers
     $('#btnExportCustomers').on('click', function() {
         window.location.href = '{% url "customers:export_api" %}';
-        Snake.toast('جاري تصدير البيانات...', 'info');
+        Enjaz.toast('جاري تصدير البيانات...', 'info');
     });
 
 })();

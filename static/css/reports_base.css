@@ -1,5 +1,5 @@
 /* =============================================================
-   Reports Base CSS — Snake  v4.0
+   Reports Base CSS — ENJAZ PMS  v4.0
    All report templates share this stylesheet.
    Uses CSS variables from main.css → adapts to dark & light mode.
    ============================================================= */
@@ -526,7 +526,7 @@
        Appears above the report title. Shows system name and the
        date the report was printed (set via data-print-date attr). */
     .printable-scene::before {
-        content: 'Snake — نظام إدارة المخزون   ·   ' attr(data-print-date);
+        content: 'ENJAZ PMS — نظام إدارة المخزون   ·   ' attr(data-print-date);
         display: block !important;
         text-align: center;
         font-size: 8pt;

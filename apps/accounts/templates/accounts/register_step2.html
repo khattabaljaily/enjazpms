@@ -53,7 +53,7 @@
             {% endif %}
         </div>
 
-        <div class="mb-2">
+        <div class="mb-2 field-start">
             {{ form.business_name.label_tag }}
             <div class="input-icon-field">
                 <i class="fas fa-clinic-medical input-icon"></i>
@@ -64,7 +64,7 @@
             {% endif %}
         </div>
 
-        <div class="mb-2">
+        <div class="mb-2 field-end">
             {{ form.phone.label_tag }}
             <div class="input-icon-field">
                 <i class="fas fa-phone input-icon"></i>
@@ -75,7 +75,7 @@
             {% endif %}
         </div>
 
-        <div class="mb-2">
+        <div class="mb-2 field-start">
             {{ form.city.label_tag }}
             <div class="input-icon-field">
                 <i class="fas fa-city input-icon"></i>
@@ -86,9 +86,12 @@
             {% endif %}
         </div>
 
-        <div class="mb-2">
+        <div class="mb-2 field-end">
             {{ form.country.label_tag }}
-            {{ form.country }}
+            <div class="input-icon-field">
+                <i class="fas fa-globe-americas input-icon"></i>
+                {{ form.country }}
+            </div>
             {% if form.country.errors %}
             <div class="text-danger small mt-1 js-field-errors" data-field="country">{{ form.country.errors }}</div>
             {% endif %}

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>اتفاقية الاستخدام — Snake</title>
+  <title>اتفاقية الاستخدام — ENJAZ PMS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -24,6 +24,28 @@
     }
 
     html { scroll-behavior: smooth; }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+    .brand-mark__icon {
+      height: 24px;
+      width: auto;
+      display: block;
+    }
+    .brand-wordmark {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4em;
+      font-weight: 800;
+      font-size: 1.2rem;
+      letter-spacing: 0.01em;
+      line-height: 1;
+      color: var(--slate-900);
+      white-space: nowrap;
+    }
 
     body {
       font-family: 'Cairo', sans-serif;
@@ -389,7 +411,10 @@
   <!-- TOP BAR -->
   <header class="topbar">
     <div class="brand">
-      <img src="{% static 'img/logo/logo-f6a821.png' %}" alt="Snake" height="34">
+      <span class="brand-mark">
+        <img src="{% static 'img/logo/enjaz-mark-dark.png' %}" alt="" class="brand-mark__icon">
+        <span class="brand-wordmark">ENJAZ</span>
+      </span>
     </div>
     <div style="display:flex;align-items:center;gap:.75rem;">
       <span class="topbar-badge">الإصدار {{ terms_version }}</span>
@@ -404,7 +429,7 @@
   <div class="hero">
     <div class="hero-label">وثيقة رسمية معتمدة</div>
     <h1>اتفاقية الاستخدام وشروط الخدمة</h1>
-    <p>يُرجى قراءة هذه الاتفاقية بعناية. تحدد هذه الوثيقة حقوقك والتزاماتك عند استخدام نظام Snake.</p>
+    <p>يُرجى قراءة هذه الاتفاقية بعناية. تحدد هذه الوثيقة حقوقك والتزاماتك عند استخدام نظام Enjaz.</p>
   </div>
 
   <!-- WAVE -->
@@ -436,8 +461,8 @@
             <h2>تعريف الأطراف</h2>
           </div>
           <p>
-            هذه الاتفاقية مبرمة بين <strong>الجهة المطوّرة للنظام</strong> (مزوّد الخدمة)، وبين <strong>المشترك</strong>
-            (أي شخص أو كيان تجاري يستخدم نظام Snake).
+            هذه الاتفاقية مبرمة بين <strong>إنجاز لتقنية المعلومات</strong> ("الجهة المطوّرة للنظام" أو مزوّد الخدمة)، وبين <strong>المشترك</strong>
+            (أي شخص أو كيان تجاري يستخدم نظام ENJAZ PMS).
             باستخدامك للنظام فأنت تُقرّ بأنك مفوَّض للموافقة على هذه الاتفاقية باسم نشاطك التجاري.
           </p>
         </div>
@@ -561,7 +586,7 @@
             <h2>حدود المسؤولية</h2>
           </div>
           <p>
-            نظام Snake أداة لإدارة الأعمال وليس مستشاراً مالياً أو قانونياً. القرارات التجارية
+            نظام ENJAZ PMS أداة لإدارة الأعمال وليس مستشاراً مالياً أو قانونياً. القرارات التجارية
             المبنية على بيانات النظام هي مسؤولية المشترك الكاملة. لا تتجاوز المسؤولية القصوى
             لمزوّد الخدمة في أي حال مبلغ رسوم اشتراك شهر واحد.
           </p>
@@ -601,7 +626,7 @@
       <div class="readonly-footer">
         <span>آخر تحديث: {{ terms_version }}</span>
         <span class="dot">·</span>
-        <span>الجهة المطوّرة للنظام</span>
+        <span>إنجاز لتقنية المعلومات</span>
         <span class="dot">·</span>
         <span>رقم التسجيل: 120370</span>
         {% if user.is_authenticated %}
@@ -632,7 +657,7 @@
             <input type="checkbox" id="termsCheck" onchange="toggleBtn()">
             <label for="termsCheck">
               قرأت اتفاقية الاستخدام كاملاً وأوافق على جميع بنودها.
-              أُقرّ بأن استمراري في استخدام <strong>نظام Snake</strong>
+              أُقرّ بأن استمراري في استخدام <strong>نظام ENJAZ PMS</strong>
               يُعدّ التزاماً قانونياً بهذه الاتفاقية.
             </label>
           </label>

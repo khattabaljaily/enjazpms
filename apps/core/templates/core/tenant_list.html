@@ -872,7 +872,7 @@
         $('#admin_full_name, #admin_username, #admin_email, #admin_password, #admin_password2').val('');
         $('#admin_username').prop('readonly', false);
         $('#adminUserSectionNote').text('سيُنشأ حساب مدير تلقائياً');
-        Snake.clearFormErrors($form);
+        Enjaz.clearFormErrors($form);
     }
 
     function openCreate() {
@@ -901,7 +901,7 @@
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function (resp) {
-                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                if (!resp.success) { Enjaz.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
                 $idInput.val(d.id);
                 $('#id_name').val(d.name || '');
@@ -937,35 +937,35 @@
                 $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
                 tenantModal.show();
             },
-            error: function () { Snake.toast('تعذر تحميل البيانات', 'error'); }
+            error: function () { Enjaz.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
     /* ── Save ── */
     $form.on('submit', function (e) {
         e.preventDefault();
-        Snake.clearFormErrors($form);
+        Enjaz.clearFormErrors($form);
         const id  = $idInput.val();
         const url = id ? apiUrl(urlUpdate, id) : urlCreate;
         const orig = $submitBtn.html();
-        Snake.showLoading($submitBtn);
+        Enjaz.showLoading($submitBtn);
         $.ajax({
             url, method: 'POST', data: $form.serialize(),
             success: function (resp) {
-                Snake.hideLoading($submitBtn, orig);
+                Enjaz.hideLoading($submitBtn, orig);
                 if (resp.success) {
                     tenantModal.hide();
                     dt.ajax.reload(null, false);
-                    Snake.toast(resp.message || 'تم الحفظ', 'success');
+                    Enjaz.toast(resp.message || 'تم الحفظ', 'success');
                     return;
                 }
-                Snake.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
+                Enjaz.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
             },
             error: function (xhr) {
-                Snake.hideLoading($submitBtn, orig);
+                Enjaz.hideLoading($submitBtn, orig);
                 const r = xhr.responseJSON || {};
-                if (r.errors) Snake.renderFieldErrors($form, r.errors);
-                Snake.showFormError($form, r.message || 'حدث خطأ');
+                if (r.errors) Enjaz.renderFieldErrors($form, r.errors);
+                Enjaz.showFormError($form, r.message || 'حدث خطأ');
             }
         });
     });
@@ -975,7 +975,7 @@
         $.ajax({
             url: apiUrl(urlDetail, id), method: 'GET',
             success: function (resp) {
-                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                if (!resp.success) { Enjaz.toast(resp.message || 'تعذر التحميل', 'error'); return; }
                 const d = resp.data;
 
                 const colors = ['#c9840f','#ff8a3d','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444'];
@@ -1043,7 +1043,7 @@
                 $('#viewEditTenantBtn').data('id', d.id);
                 viewModal.show();
             },
-            error: function () { Snake.toast('تعذر تحميل البيانات', 'error'); }
+            error: function () { Enjaz.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
@@ -1073,12 +1073,12 @@
                     suspendModal.hide();
                     viewModal.hide();
                     dt.ajax.reload(null, false);
-                    Snake.toast(resp.message || 'تم التحديث', 'success');
+                    Enjaz.toast(resp.message || 'تم التحديث', 'success');
                     return;
                 }
-                Snake.toast(resp.message || 'تعذرت العملية', 'error');
+                Enjaz.toast(resp.message || 'تعذرت العملية', 'error');
             },
-            error: function (xhr) { Snake.toast(_xhrMsg(xhr, 'تعذرت العملية'), 'error'); }
+            error: function (xhr) { Enjaz.toast(_xhrMsg(xhr, 'تعذرت العملية'), 'error'); }
         });
     });
 
@@ -1093,12 +1093,12 @@
                 if (resp.success) {
                     approveModal.hide();
                     dt.ajax.reload(null, false);
-                    Snake.toast(resp.message || 'تم الاعتماد', 'success');
+                    Enjaz.toast(resp.message || 'تم الاعتماد', 'success');
                     return;
                 }
-                Snake.toast(resp.message || 'تعذرت العملية', 'error');
+                Enjaz.toast(resp.message || 'تعذرت العملية', 'error');
             },
-            error: function (xhr) { Snake.toast(_xhrMsg(xhr, 'تعذرت العملية'), 'error'); }
+            error: function (xhr) { Enjaz.toast(_xhrMsg(xhr, 'تعذرت العملية'), 'error'); }
         });
     });
 
@@ -1113,15 +1113,15 @@
                 if (resp.success) {
                     deleteModal.hide();
                     dt.ajax.reload(null, false);
-                    Snake.toast(resp.message || 'تم الحذف', 'success');
+                    Enjaz.toast(resp.message || 'تم الحذف', 'success');
                     return;
                 }
-                Snake.toast(resp.message || 'تعذر الحذف', 'error');
+                Enjaz.toast(resp.message || 'تعذر الحذف', 'error');
             },
             error: function (xhr) {
                 let msg = 'تعذر الحذف';
                 try { msg = JSON.parse(xhr.responseText).message || msg; } catch (e) {}
-                Snake.toast(msg, 'error');
+                Enjaz.toast(msg, 'error');
             }
         });
     });
@@ -1188,7 +1188,7 @@
                 if (resp.success) {
                     renewModal.hide();
                     dt.ajax.reload(null, false);
-                    Snake.toast(resp.message || 'تم تجديد الاشتراك بنجاح', 'success');
+                    Enjaz.toast(resp.message || 'تم تجديد الاشتراك بنجاح', 'success');
                 } else {
                     $('#renewError').removeClass('d-none').text(resp.error || 'حدث خطأ');
                 }

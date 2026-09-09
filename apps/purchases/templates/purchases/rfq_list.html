@@ -119,7 +119,7 @@ $(document).ready(function () {
             { data: 'supplier' },
             { data: 'stock' },
             { data: 'total_lines', render: n => `<span class="badge bg-secondary">${n}</span>` },
-            { data: 'grand_total', render: v => Snake.formatMoney(v || 0), className: 'text-end' },
+            { data: 'grand_total', render: v => Enjaz.formatMoney(v || 0), className: 'text-end' },
             { data: 'status_badge', orderable: false },
             {
                 data: null, orderable: false,

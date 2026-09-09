@@ -7,6 +7,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script>
+        // Applied before first paint so the page never flashes light before
+        // switching to the saved/default theme. Dark is the system default.
+        (function() {
+            var theme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
 
     <!-- Favicon & PWA -->
@@ -17,7 +25,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Snake">
+    <meta name="apple-mobile-web-app-title" content="ENJAZ PMS">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#f6a821" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#c9840f" media="(prefers-color-scheme: dark)">

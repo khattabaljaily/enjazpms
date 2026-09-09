@@ -310,7 +310,7 @@
             {
                 data: 'amount',
                 className: 'text-end',
-                render: v => Snake.formatMoney(Math.abs(parseFloat(v) || 0))
+                render: v => Enjaz.formatMoney(Math.abs(parseFloat(v) || 0))
             },
             { data: 'payment_method' },
             { data: 'notes' },
@@ -452,7 +452,7 @@
     function updateCustomerInfo() {
         if (selectedPaymentCustomer) {
             paymentModalCustomerName.textContent    = selectedPaymentCustomer.name;
-            paymentModalCustomerBalance.textContent = Snake.formatMoney(parseFloat(selectedPaymentCustomer.balance) || 0);
+            paymentModalCustomerBalance.textContent = Enjaz.formatMoney(parseFloat(selectedPaymentCustomer.balance) || 0);
         } else {
             paymentModalCustomerName.textContent    = '—';
             paymentModalCustomerBalance.textContent = '—';
@@ -482,16 +482,16 @@
 
     function savePayment() {
         const customerId = paymentModalCustomer.value;
-        const amount = Snake.parseNumber(paymentModalAmount.value);
+        const amount = Enjaz.parseNumber(paymentModalAmount.value);
         const paymentDate = paymentModalDate.value;
         const method = paymentModalMethodInput.value;
         const treasuryId = paymentModalTreasury.value;
         const reference = paymentModalReference.value.trim();
         const notes = paymentModalNotes.value.trim();
 
-        if (!customerId) return Snake.toast('اختر العميل', 'error');
-        if (!paymentDate) return Snake.toast('اختر التاريخ', 'error');
-        if (!amount || amount <= 0) return Snake.toast('أدخل مبلغاً صحيحاً', 'error');
+        if (!customerId) return Enjaz.toast('اختر العميل', 'error');
+        if (!paymentDate) return Enjaz.toast('اختر التاريخ', 'error');
+        if (!amount || amount <= 0) return Enjaz.toast('أدخل مبلغاً صحيحاً', 'error');
 
         paymentModalSaveBtn.disabled = true;
         paymentModalSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جارٍ الحفظ...';
@@ -515,15 +515,15 @@
         .then(r => r.json())
         .then(data => {
             if (!data.success) {
-                Snake.toast(data.message || 'تعذر حفظ الدفعة', 'error');
+                Enjaz.toast(data.message || 'تعذر حفظ الدفعة', 'error');
                 return;
             }
             paymentModal.hide();
             paymentsTable.ajax.reload(null, false);
-            Snake.toast(data.message || 'تم تسجيل الدفعة بنجاح', 'success');
+            Enjaz.toast(data.message || 'تم تسجيل الدفعة بنجاح', 'success');
         })
         .catch(() => {
-            Snake.toast('خطأ في الاتصال', 'error');
+            Enjaz.toast('خطأ في الاتصال', 'error');
         })
         .finally(() => {
             paymentModalSaveBtn.disabled = false;
@@ -546,7 +546,7 @@
             .then(r => r.json())
             .then(data => {
                 if (!data.success) {
-                    Snake.toast(data.message || 'تعذر تحميل تفاصيل الدفعة', 'error');
+                    Enjaz.toast(data.message || 'تعذر تحميل تفاصيل الدفعة', 'error');
                     return;
                 }
                 const payment = data.data;
@@ -555,7 +555,7 @@
                 paymentDetailsFields.id.textContent = payment.id;
                 paymentDetailsFields.date.textContent = payment.entry_date;
                 paymentDetailsFields.customer.textContent = payment.customer;
-                paymentDetailsFields.amount.textContent = Snake.formatMoney(Math.abs(payment.amount));
+                paymentDetailsFields.amount.textContent = Enjaz.formatMoney(Math.abs(payment.amount));
                 paymentDetailsFields.method.textContent = payment.payment_method;
                 paymentDetailsFields.treasury.textContent = payment.cash_treasury || '—';
                 paymentDetailsFields.notes.textContent = payment.notes;
@@ -564,7 +564,7 @@
                 paymentDetailsFields.canceledNote.textContent = payment.cancellation_note || '—';
                 paymentDetailsModal.show();
             })
-            .catch(() => Snake.toast('خطأ في الاتصال', 'error'));
+            .catch(() => Enjaz.toast('خطأ في الاتصال', 'error'));
             return;
         }
 
@@ -593,15 +593,15 @@
         .then(r => r.json())
         .then(data => {
             if (!data.success) {
-                Snake.toast(data.message || 'تعذر إلغاء الدفعة', 'error');
+                Enjaz.toast(data.message || 'تعذر إلغاء الدفعة', 'error');
                 return;
             }
             paymentCancelConfirmModal.hide();
             paymentCancelTargetId = null;
             paymentsTable.ajax.reload(null, false);
-            Snake.toast(data.message || 'تم إلغاء الدفعة بنجاح', 'success');
+            Enjaz.toast(data.message || 'تم إلغاء الدفعة بنجاح', 'success');
         })
-        .catch(() => Snake.toast('خطأ في الاتصال', 'error'))
+        .catch(() => Enjaz.toast('خطأ في الاتصال', 'error'))
         .finally(() => {
             paymentCancelConfirmBtn.disabled = false;
             paymentCancelConfirmBtn.innerHTML = 'تأكيد الإلغاء';

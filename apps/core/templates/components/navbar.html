@@ -10,9 +10,11 @@
                 <i class="fas fa-bars"></i>
             </button>
             <a class="navbar-brand-wrap" href="{% url 'core:dashboard' %}">
-                <img src="{% static 'img/logo/logo-161616.png' %}" alt="Snake" class="navbar-logo logo-light">
-                <img src="{% static 'img/logo/logo-ffffff.png' %}" alt="Snake" class="navbar-logo logo-dark">
-                <span class="navbar-brand-text">Snake</span>
+                <span class="brand-mark">
+                    <img src="{% static 'img/logo/enjaz-mark-dark.png' %}" alt="" class="brand-mark__icon brand-mark__icon--dark">
+                    <img src="{% static 'img/logo/enjaz-mark-light.png' %}" alt="" class="brand-mark__icon brand-mark__icon--light">
+                    <span class="brand-wordmark">ENJAZ</span>
+                </span>
             </a>
         </div>
 
@@ -117,10 +119,10 @@ function toggleTheme() {
     });
 }
 
-// Load saved theme on page load
+// Theme itself is already applied by the blocking script in <head>;
+// this just syncs the icon to match.
 (function() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', savedTheme);
+    const savedTheme = document.documentElement.getAttribute('data-theme');
     if (savedTheme === 'dark') {
         document.querySelectorAll('.theme-icon-ref').forEach(function(icon) {
             icon.classList.replace('fa-moon', 'fa-sun');

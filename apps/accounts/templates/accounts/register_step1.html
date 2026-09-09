@@ -35,7 +35,7 @@
     <div class="alert alert-danger auth-alert js-form-errors d-none mb-3"></div>
 
     <div class="auth-form-grid">
-        <div class="mb-2">
+        <div class="mb-2 field-start">
             {{ form.username.label_tag }}
             <div class="input-icon-field">
                 <i class="fas fa-user input-icon"></i>
@@ -46,7 +46,7 @@
             {% endif %}
         </div>
 
-        <div class="mb-2">
+        <div class="mb-2 field-end">
             {{ form.email.label_tag }}
             <div class="input-icon-field">
                 <i class="fas fa-envelope input-icon"></i>
@@ -57,7 +57,7 @@
             {% endif %}
         </div>
 
-        <div class="mb-2">
+        <div class="mb-2 field-start">
             {{ form.password.label_tag }}
             <div class="input-icon-field has-toggle">
                 <i class="fas fa-lock input-icon"></i>
@@ -71,7 +71,7 @@
             {% endif %}
         </div>
 
-        <div class="mb-2">
+        <div class="mb-2 field-end">
             {{ form.password_confirm.label_tag }}
             <div class="input-icon-field has-toggle">
                 <i class="fas fa-lock input-icon"></i>

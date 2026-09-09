@@ -1,4 +1,4 @@
-# Snake — Pharmacy Management System
+# ENJAZ PMS — Pharmacy Management System
 
 A multi-tenant SaaS system for pharmacy inventory and sales management, initially targeting the Sudanese market with full Arabic (RTL) support.
 
@@ -75,7 +75,7 @@ python manage.py runserver
 ## Project Structure
 
 ```
-Snake/
+enjazpms/
 ├── PROJECT/          # Django settings
 ├── apps/
 │   ├── core/         # Tenant, middleware, backup, support tickets

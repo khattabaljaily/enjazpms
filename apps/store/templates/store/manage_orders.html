@@ -133,17 +133,17 @@ async function approveOrder(pk) {
       method: 'POST', headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' }
     });
     if (r.status === 403) {
-      Snake.toast('ليس لديك صلاحية لقبول الطلبات', 'error'); return;
+      Enjaz.toast('ليس لديك صلاحية لقبول الطلبات', 'error'); return;
     }
     const d = await r.json();
     if (d.success) {
-      if (window.Snake) Snake.toast(d.message, 'success');
+      if (window.Enjaz) Enjaz.toast(d.message, 'success');
       setTimeout(() => location.reload(), 800);
     } else {
-      if (window.Snake) Snake.toast(d.error || d.message || 'حدث خطأ', 'error');
+      if (window.Enjaz) Enjaz.toast(d.error || d.message || 'حدث خطأ', 'error');
     }
   } catch(e) {
-    if (window.Snake) Snake.toast('خطأ في الاتصال، يرجى المحاولة مرة أخرى', 'error');
+    if (window.Enjaz) Enjaz.toast('خطأ في الاتصال، يرجى المحاولة مرة أخرى', 'error');
   }
 }
 
@@ -153,17 +153,17 @@ async function rejectOrder(pk) {
       method: 'POST', headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' }
     });
     if (r.status === 403) {
-      Snake.toast('ليس لديك صلاحية لرفض الطلبات', 'error'); return;
+      Enjaz.toast('ليس لديك صلاحية لرفض الطلبات', 'error'); return;
     }
     const d = await r.json();
     if (d.success) {
-      if (window.Snake) Snake.toast('تم رفض الطلب', 'warning');
+      if (window.Enjaz) Enjaz.toast('تم رفض الطلب', 'warning');
       setTimeout(() => location.reload(), 700);
     } else {
-      if (window.Snake) Snake.toast(d.error || d.message || 'حدث خطأ', 'error');
+      if (window.Enjaz) Enjaz.toast(d.error || d.message || 'حدث خطأ', 'error');
     }
   } catch(e) {
-    if (window.Snake) Snake.toast('خطأ في الاتصال، يرجى المحاولة مرة أخرى', 'error');
+    if (window.Enjaz) Enjaz.toast('خطأ في الاتصال، يرجى المحاولة مرة أخرى', 'error');
   }
 }
 </script>

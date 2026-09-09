@@ -212,7 +212,7 @@
             {% if tenant.logo %}
                 <img src="{{ tenant.logo.url }}" alt="{{ tenant.name }}" class="print-logo">
             {% else %}
-                <img src="{% static 'img/logo/logo-161616.png' %}" alt="{{ tenant.name }}" class="print-logo">
+                <div class="print-logo-mark">{{ tenant.name|first }}</div>
             {% endif %}
             <div>
                 <div class="print-brand-name">{{ tenant.name }}</div>
@@ -424,7 +424,7 @@ async function doAddLine() {
 }
 
 async function removeLine(lineId) {
-    if (!await Snake.confirmAction('حذف هذا البند من السجل؟', 'تأكيد الحذف')) return;
+    if (!await Enjaz.confirmAction('حذف هذا البند من السجل؟', 'تأكيد الحذف')) return;
     const url = REMOVE_LINE_URL_TPL.replace('/0/remove/', '/' + lineId + '/remove/');
     const r = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': CSRF } });
     const d = await r.json();
@@ -438,16 +438,16 @@ function doConfirm() {
         const r = await fetch(CONFIRM_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF } });
         const d = await r.json();
         if (d.success) location.reload();
-        else { Snake.toast(d.message || 'حدث خطأ', 'error'); this.disabled = false; }
+        else { Enjaz.toast(d.message || 'حدث خطأ', 'error'); this.disabled = false; }
     };
 }
 
 async function doCancel() {
-    if (!await Snake.confirmAction('إلغاء سجل الإتلاف بدون تطبيق؟', 'تأكيد الإلغاء')) return;
+    if (!await Enjaz.confirmAction('إلغاء سجل الإتلاف بدون تطبيق؟', 'تأكيد الإلغاء')) return;
     const r = await fetch(CANCEL_URL, { method: 'POST', headers: { 'X-CSRFToken': CSRF } });
     const d = await r.json();
     if (d.success) location.reload();
-    else Snake.toast(d.message || 'حدث خطأ', 'error');
+    else Enjaz.toast(d.message || 'حدث خطأ', 'error');
 }
 </script>
 {% endblock %}

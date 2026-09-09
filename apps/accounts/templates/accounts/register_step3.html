@@ -62,15 +62,15 @@
     </div>
 
     <div class="auth-form-grid">
-        <div class="mb-3">
+        <div class="mb-3 field-start">
             {{ form.timezone.label_tag }}
             {{ form.timezone }}
             {% if form.timezone.errors %}
             <div class="text-danger small js-field-errors" data-field="timezone">{{ form.timezone.errors }}</div>
             {% endif %}
         </div>
-        
-        <div class="mb-3">
+
+        <div class="mb-3 field-end">
             <label class="form-label">العملة <small class="text-muted fw-normal">(تُضبط تلقائياً)</small></label>
             <input id="currencyDisplay" class="form-control" readonly
                    value="{{ suggested_currency }}"
@@ -116,14 +116,14 @@
 
         <div class="js-hc-fields field-span-2" style="display:none;">
             <div class="auth-form-grid">
-                <div class="mb-3">
+                <div class="mb-3 field-start">
                     {{ form.hard_currency.label_tag }}
                     {{ form.hard_currency }}
                     {% if form.hard_currency.errors %}
                     <div class="text-danger small">{{ form.hard_currency.errors }}</div>
                     {% endif %}
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 field-end">
                     {{ form.exchange_rate.label_tag }}
                     {{ form.exchange_rate }}
                     {% if form.exchange_rate.help_text %}
