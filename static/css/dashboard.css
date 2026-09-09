@@ -117,10 +117,12 @@
     display: flex;
     align-items: flex-start;
     gap: 1rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 6px 16px rgba(0,0,0,.035);
     transition: box-shadow .22s, transform .22s;
     position: relative;
     overflow: hidden;
 }
+[data-theme="dark"] .db-kpi { box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 6px 16px rgba(0,0,0,.25); }
 .db-kpi--hero {
     flex-direction: column;
     justify-content: center;
@@ -214,9 +216,11 @@
     display: flex;
     align-items: center;
     gap: .85rem;
-    transition: box-shadow .2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 4px 12px rgba(0,0,0,.03);
+    transition: box-shadow .2s, transform .2s;
 }
-.db-stat:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
+.db-stat:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); transform: translateY(-2px); }
+[data-theme="dark"] .db-stat { box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.2); }
 .db-stat-icon {
     width: 40px; height: 40px;
     border-radius: 10px;
@@ -240,7 +244,16 @@
     border-radius: 16px;
     overflow: hidden;
     height: 100%;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 8px 20px rgba(0,0,0,.035);
+    transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease;
 }
+.db-panel:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,.04), 0 14px 28px rgba(0,0,0,.06);
+    border-color: rgba(246,168,33,.28);
+}
+[data-theme="dark"] .db-panel { box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 8px 20px rgba(0,0,0,.25); }
+[data-theme="dark"] .db-panel:hover { box-shadow: 0 4px 8px rgba(0,0,0,.25), 0 14px 28px rgba(0,0,0,.35); }
+
 .db-panel-head {
     padding: .9rem 1.4rem;
     border-bottom: 1px solid var(--border-color);
@@ -253,9 +266,19 @@
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
-    display: flex; align-items: center; gap: .5rem;
+    display: flex; align-items: center; gap: .6rem;
 }
-.db-panel-title i { opacity: .7; }
+.db-panel-title i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: currentColor;
+    background: color-mix(in srgb, currentColor 12%, transparent);
+    font-size: .82rem;
+}
 .db-panel-meta {
     font-size: .73rem;
     color: var(--text-tertiary);
@@ -361,6 +384,10 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: .75rem;
+}
+.db-actions-grid--3col { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 991px) {
+    .db-actions-grid--3col { grid-template-columns: repeat(2, 1fr); }
 }
 .db-action {
     display: flex;
@@ -525,3 +552,6 @@
 [data-theme="dark"] .db-prod-table tr:hover td { background: rgba(255,255,255,.03); }
 [data-theme="dark"] .db-ring-track { stroke: rgba(255,255,255,.08); }
 [data-theme="dark"] .db-stock-dot  { box-shadow: 0 0 0 3px rgba(239,68,68,.12); }
+
+/* ── Keep the floating AI button clear of the weekly-sales chart ── */
+#ai-fab.ai-fab { bottom: 20px; left: 20px; }

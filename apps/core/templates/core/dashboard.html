@@ -46,7 +46,114 @@
     </div>
 </div>
 
-<!-- ══ QUICK ACTIONS — always visible, right after greeting ═══════ -->
+{% if request.user|has_perm_key:"view_dashboard" %}
+
+{% if request.user|has_perm_key:"view_ai_insights" and plan_allows_smart_tips %}
+<!-- AI Advices widget -->
+<div class="ai-adv-wrapper">
+    <div class="ai-adv-tab" role="heading" aria-level="3">
+        <i class="fas fa-lightbulb ai-adv-icon" aria-hidden="true"></i>
+        <span class="ai-adv-tab-text">نصائح ذكية</span>
+    </div>
+    <div id="aiAdvicesWidget" class="ai-advices" role="status" aria-live="polite">
+        <button class="ai-adv-btn" id="aiPrev" aria-label="السابق">‹</button>
+        <div class="ai-adv-content">
+            <div class="ai-adv-text" id="aiAdviceText">تحميل النصائح...</div>
+        </div>
+        <button class="ai-adv-btn" id="aiNext" aria-label="التالي">›</button>
+    </div>
+</div>
+<div id="aiAdviceModal" class="ai-adv-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="aiAdviceModalTitle">
+    <div class="ai-adv-modal-dialog" role="document">
+        <button type="button" id="aiAdviceModalClose" class="ai-adv-modal-close" aria-label="إغلاق">×</button>
+        <h2 id="aiAdviceModalTitle" class="ai-adv-modal-title">النصيحة الكاملة</h2>
+        <div id="aiAdviceModalBody" class="ai-adv-modal-body"></div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ══ CHARTS ROW ═════════════════════════════════════════════════ -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-chart-column" style="color:#10b981;"></i>
+                    إيرادات ومصروفات
+                </h3>
+                <span class="db-panel-meta">أسبوعي</span>
+            </div>
+            <div class="db-panel-body">
+                <div class="db-chart-wrap">
+                    <canvas id="revenuesExpensesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h3 class="db-panel-title">
+                    <i class="fas fa-chart-area" style="color:#c9840f;"></i>
+                    المبيعات الأسبوعية
+                </h3>
+                <span class="db-panel-meta">7 أيام</span>
+            </div>
+            <div class="db-panel-body">
+                <div class="db-chart-wrap">
+                    <canvas id="weeklySalesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ SECONDARY STATS ════════════════════════════════════════════ -->
+<div class="db-stat-row">
+
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(246,168,33,.1); color:#c9840f;">
+            <i class="fas fa-users"></i>
+        </div>
+        <div>
+            <div class="db-stat-num">{{ stats.total_users }}</div>
+            <div class="db-stat-lbl">مستخدمون</div>
+        </div>
+    </div>
+
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(16,185,129,.1); color:#10b981;">
+            <i class="fas fa-box-open"></i>
+        </div>
+        <div>
+            <div class="db-stat-num">{{ stats.total_products }}</div>
+            <div class="db-stat-lbl">منتجات</div>
+        </div>
+    </div>
+
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(14,165,233,.1); color:#0ea5e9;">
+            <i class="fas fa-user-group"></i>
+        </div>
+        <div>
+            <div class="db-stat-num">{{ stats.total_customers }}</div>
+            <div class="db-stat-lbl">عملاء</div>
+        </div>
+    </div>
+
+    <div class="db-stat">
+        <div class="db-stat-icon" style="background:rgba(245,158,11,.1); color:#d97706;">
+            <i class="fas fa-truck"></i>
+        </div>
+        <div>
+            <div class="db-stat-num">{{ stats.total_suppliers }}</div>
+            <div class="db-stat-lbl">موردون</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══ QUICK ACTIONS ══════════════════════════════════════════════ -->
 <div class="row g-3 mb-3">
     <div class="col-12">
         <div class="db-panel">
@@ -57,7 +164,7 @@
                 </h3>
             </div>
             <div class="db-panel-body">
-                <div class="db-actions-grid">
+                <div class="db-actions-grid db-actions-grid--3col">
                     <a href="{% url 'sales:invoice_create' %}" class="db-action db-action--indigo">
                         <div class="db-action-icon"><i class="fas fa-plus"></i></div>
                         <div>
@@ -106,32 +213,6 @@
     </div>
 </div>
 
-{% if request.user|has_perm_key:"view_dashboard" %}
-
-{% if request.user|has_perm_key:"view_ai_insights" and plan_allows_smart_tips %}
-<!-- AI Advices widget -->
-<div class="ai-adv-wrapper">
-    <div class="ai-adv-tab" role="heading" aria-level="3">
-        <i class="fas fa-lightbulb ai-adv-icon" aria-hidden="true"></i>
-        <span class="ai-adv-tab-text">نصائح ذكية</span>
-    </div>
-    <div id="aiAdvicesWidget" class="ai-advices" role="status" aria-live="polite">
-        <button class="ai-adv-btn" id="aiPrev" aria-label="السابق">‹</button>
-        <div class="ai-adv-content">
-            <div class="ai-adv-text" id="aiAdviceText">تحميل النصائح...</div>
-        </div>
-        <button class="ai-adv-btn" id="aiNext" aria-label="التالي">›</button>
-    </div>
-</div>
-<div id="aiAdviceModal" class="ai-adv-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="aiAdviceModalTitle">
-    <div class="ai-adv-modal-dialog" role="document">
-        <button type="button" id="aiAdviceModalClose" class="ai-adv-modal-close" aria-label="إغلاق">×</button>
-        <h2 id="aiAdviceModalTitle" class="ai-adv-modal-title">النصيحة الكاملة</h2>
-        <div id="aiAdviceModalBody" class="ai-adv-modal-body"></div>
-    </div>
-</div>
-{% endif %}
-
 <!-- ══ PRIMARY KPI ROW ════════════════════════════════════════════ -->
 <div class="db-kpi-grid">
 
@@ -174,87 +255,6 @@
         </div>
     </div>
 
-</div>
-
-<!-- ══ SECONDARY STATS ════════════════════════════════════════════ -->
-<div class="db-stat-row">
-
-    <div class="db-stat">
-        <div class="db-stat-icon" style="background:rgba(246,168,33,.1); color:#c9840f;">
-            <i class="fas fa-users"></i>
-        </div>
-        <div>
-            <div class="db-stat-num">{{ stats.total_users }}</div>
-            <div class="db-stat-lbl">مستخدمون</div>
-        </div>
-    </div>
-
-    <div class="db-stat">
-        <div class="db-stat-icon" style="background:rgba(16,185,129,.1); color:#10b981;">
-            <i class="fas fa-box-open"></i>
-        </div>
-        <div>
-            <div class="db-stat-num">{{ stats.total_products }}</div>
-            <div class="db-stat-lbl">منتجات</div>
-        </div>
-    </div>
-
-    <div class="db-stat">
-        <div class="db-stat-icon" style="background:rgba(14,165,233,.1); color:#0ea5e9;">
-            <i class="fas fa-user-group"></i>
-        </div>
-        <div>
-            <div class="db-stat-num">{{ stats.total_customers }}</div>
-            <div class="db-stat-lbl">عملاء</div>
-        </div>
-    </div>
-
-    <div class="db-stat">
-        <div class="db-stat-icon" style="background:rgba(245,158,11,.1); color:#d97706;">
-            <i class="fas fa-truck"></i>
-        </div>
-        <div>
-            <div class="db-stat-num">{{ stats.total_suppliers }}</div>
-            <div class="db-stat-lbl">موردون</div>
-        </div>
-    </div>
-
-</div>
-
-<!-- ══ CHARTS ROW ═════════════════════════════════════════════════ -->
-<div class="row g-3 mb-3">
-    <div class="col-lg-8">
-        <div class="db-panel">
-            <div class="db-panel-head">
-                <h3 class="db-panel-title">
-                    <i class="fas fa-chart-area" style="color:#c9840f;"></i>
-                    المبيعات الأسبوعية
-                </h3>
-                <span class="db-panel-meta">7 أيام</span>
-            </div>
-            <div class="db-panel-body">
-                <div class="db-chart-wrap">
-                    <canvas id="weeklySalesChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="db-panel">
-            <div class="db-panel-head">
-                <h3 class="db-panel-title">
-                    <i class="fas fa-chart-column" style="color:#10b981;"></i>
-                    إيرادات ومصروفات
-                </h3>
-                <span class="db-panel-meta">أسبوعي</span>
-            </div>
-            <div class="db-panel-body">
-                <div class="db-chart-wrap">
-                    <canvas id="revenuesExpensesChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- ══ STORE QR WIDGET ════════════════════════════════════════════ -->
