@@ -1,6 +1,10 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/insurance.css' %}?v=1.0">
+{% endblock %}
+
 {% block page_header %}{% endblock %}
 
 {% block content %}
@@ -48,8 +52,8 @@
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table" id="claimsTable" style="width:100%;">
+    <div class="table-responsive cx-table-wrap">
+        <table id="claimsTable" class="cx-table">
             <thead>
                 <tr>
                     <th>رقم المطالبة</th>
@@ -57,28 +61,173 @@
                     <th>العميل</th>
                     <th>شركة التأمين</th>
                     <th>الحالة</th>
-                    <th class="text-center">المطالَب به</th>
-                    <th class="text-center">المتبقي</th>
-                    <th class="text-center">إجراءات</th>
+                    <th>المطالَب به</th>
+                    <th>المتبقي</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
+    <div id="claimsCardsMobile" class="d-none p-3" aria-live="polite"></div>
 </div>
 
 </div>
 
-<!-- ══ CLAIM DETAIL MODAL ══ -->
-<div class="modal fade" id="claimModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">تفاصيل المطالبة <span id="claimModalNumber"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- ══════════════════════════ VIEW CLAIM MODAL ══════════════════════════ -->
+<div class="modal fade" id="viewClaimModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-view-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div class="cx-view-avatar" style="background:#2563eb;"><i class="fas fa-file-medical"></i></div>
+                    <div>
+                        <h5 class="cx-view-title" id="viewClaimNumber"></h5>
+                        <p class="cx-view-subtitle" id="viewClaimStatus"></p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-body" id="claimModalBody">
-                <div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>
+
+            <div class="cx-view-body">
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-circle-info"></i> بيانات المطالبة</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon"><i class="fas fa-file-invoice"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">الفاتورة</span>
+                                <span class="cx-info-card-value" id="viewClaimInvoice"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon"><i class="fas fa-user"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">العميل</span>
+                                <span class="cx-info-card-value" id="viewClaimCustomer"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon"><i class="fas fa-briefcase-medical"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">شركة التأمين</span>
+                                <span class="cx-info-card-value" id="viewClaimCompany"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon"><i class="fas fa-calendar"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">تاريخ التسوية المتوقع</span>
+                                <span class="cx-info-card-value" id="viewClaimDueDate"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-money-bill-wave"></i> المبالغ</div>
+                    <div class="cx-info-grid">
+                        <div class="cx-info-card cx-info-card--money">
+                            <div class="cx-info-card-icon"><i class="fas fa-hand-holding-dollar"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المطالَب به</span>
+                                <span class="cx-info-card-value cx-info-card-value--money" id="viewClaimCovered"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--money">
+                            <div class="cx-info-card-icon"><i class="fas fa-user-injured"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">نصيب المريض</span>
+                                <span class="cx-info-card-value cx-info-card-value--money" id="viewClaimPatient"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--money">
+                            <div class="cx-info-card-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المعتمد</span>
+                                <span class="cx-info-card-value cx-info-card-value--money" id="viewClaimApproved"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card cx-info-card--money">
+                            <div class="cx-info-card-icon"><i class="fas fa-wallet"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المسدد / المتبقي</span>
+                                <span class="cx-info-card-value cx-info-card-value--money" id="viewClaimPaid"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="viewClaimRejectionWrap" class="cx-info-card cx-info-card--full mt-3" style="display:none;">
+                        <div class="cx-info-card-icon"><i class="fas fa-circle-exclamation"></i></div>
+                        <div class="cx-info-card-content">
+                            <span class="cx-info-card-label">سبب الرفض / التخفيض</span>
+                            <span class="cx-info-card-value" id="viewClaimRejection"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cx-view-section">
+                    <div class="cx-view-section-title"><i class="fas fa-list"></i> بنود المطالبة</div>
+                    <div class="table-responsive cx-table-wrap">
+                        <table class="cx-table">
+                            <thead><tr><th>الصنف</th><th>النسبة</th><th>المطالَب</th><th>المعتمد</th></tr></thead>
+                            <tbody id="viewClaimLinesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cx-view-footer" id="viewClaimActions"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ RESPOND / SETTLE MODAL ══════════════════════════ -->
+<div class="modal fade" id="claimActionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="claimActionForm">
+                <div class="cx-modal-main">
+                    <div class="cx-modal-header">
+                        <h5 class="cx-modal-title" id="claimActionTitle"></h5>
+                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="cx-modal-body" id="claimActionBody">
+                        <div class="alert alert-danger d-none js-form-errors mb-3"></div>
+                    </div>
+                    <div class="cx-modal-footer">
+                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="cx-btn-primary" id="claimActionSubmitBtn">تأكيد</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ CANCEL CLAIM MODAL ══════════════════════════ -->
+<div class="modal fade" id="cancelClaimModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon"><i class="fas fa-ban"></i></div>
+                <h5 class="cx-delete-title">إلغاء المطالبة؟</h5>
+                <p class="cx-delete-desc">
+                    ستقوم بإلغاء المطالبة <strong id="cancelClaimNumber"></strong>.
+                    <br>لا يمكن التراجع عن هذا الإجراء.
+                </p>
+                <div class="text-start mt-3">
+                    <label class="cx-label" for="cancelClaimReason">سبب الإلغاء</label>
+                    <textarea id="cancelClaimReason" class="form-control" rows="2"></textarea>
+                </div>
+                <input type="hidden" id="cancelClaimId" value="">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">تراجع</button>
+                <button type="button" class="cx-btn-danger" id="confirmCancelClaimBtn">نعم، ألغِ المطالبة</button>
             </div>
         </div>
     </div>
@@ -88,7 +237,9 @@
 
 {% block extra_js %}
 <script>
-$(function() {
+(function () {
+    'use strict';
+
     const urlTable   = "{% url 'insurance:claim_table_api' %}";
     const urlDetail  = "{% url 'insurance:claim_detail_api' 0 %}";
     const urlSubmit  = "{% url 'insurance:claim_submit_api' 0 %}";
@@ -96,145 +247,281 @@ $(function() {
     const urlSettle  = "{% url 'insurance:claim_settle_api' 0 %}";
     const urlCancel  = "{% url 'insurance:claim_cancel_api' 0 %}";
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
-    const CSRF = $('input[name=csrfmiddlewaretoken]').val() || '{{ csrf_token }}';
 
-    const claimModal = new bootstrap.Modal(document.getElementById('claimModal'));
+    [document.getElementById('viewClaimModal'), document.getElementById('claimActionModal'), document.getElementById('cancelClaimModal')]
+        .forEach(function (el) { if (el && el.parentElement !== document.body) document.body.appendChild(el); });
+
+    const viewModal   = new bootstrap.Modal(document.getElementById('viewClaimModal'));
+    const actionModal = new bootstrap.Modal(document.getElementById('claimActionModal'));
+    const cancelModal = new bootstrap.Modal(document.getElementById('cancelClaimModal'));
+
     let activeStatus = '';
+    let currentClaimId = null;
 
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function statusBadge(s, label) {
+        const map = { paid: 'on', approved: 'on', partially_paid: 'warn', partially_approved: 'warn',
+                      submitted: 'warn', draft: '', rejected: 'off', cancelled: 'off' };
+        const cls = map[s] === 'on' ? 'cxr-status--on' : map[s] === 'warn' ? 'cxr-status--pending' : 'cxr-status--off';
+        return `<span class="cxr-status ${cls}"><span class="cxr-status-dot"></span>${label}</span>`;
+    }
+
+    function renderMobileCards(rows) {
+        const $cards = $('#claimsCardsMobile');
+        if (!$cards.length) return;
+        if (!rows || !rows.length) { $cards.html('<div class="cx-empty-state">لا توجد مطالبات للعرض</div>'); return; }
+        $cards.html(rows.map(function (r) {
+            return `<article class="cx-supplier-card">
+                <div class="cx-supplier-card-head">
+                    <div class="cx-supplier-card-title-wrap">
+                        <h2 class="cx-supplier-card-title">${r.claim_number}</h2>
+                        <p class="cx-supplier-card-code"><code>${r.invoice_number}</code> — ${r.customer_name}</p>
+                    </div>
+                    ${statusBadge(r.status, r.status_display)}
+                </div>
+                <div class="cx-supplier-card-meta">
+                    <div>
+                        <span class="cx-supplier-card-meta-label">المطالَب به</span>
+                        <strong class="cx-supplier-card-meta-value">${Snake.formatMoney(r.covered_amount)}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-supplier-card-meta-label">المتبقي</span>
+                        <strong class="cx-supplier-card-meta-value">${Snake.formatMoney(r.remaining_amount)}</strong>
+                    </div>
+                </div>
+                <div class="cx-supplier-card-actions">
+                    <button class="cxr-act cxr-act--view js-view-claim" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
+                </div>
+            </article>`;
+        }).join(''));
+    }
+
+    /* ── DataTable ─────────────────────────────────────────── */
     const dt = $('#claimsTable').DataTable({
         processing: true, serverSide: true, searching: true, ordering: false, pageLength: 25,
         dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
         language: {
-            emptyTable: 'لا توجد مطالبات', zeroRecords: 'لا توجد نتائج مطابقة',
+            emptyTable: 'لا توجد مطالبات',
+            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_ مطالبة',
+            infoEmpty: 'عرض 0 إلى 0 من أصل 0 مطالبة',
+            infoFiltered: '(تمت التصفية من إجمالي _MAX_ مطالبة)',
+            lengthMenu: 'عرض _MENU_ مطالبة',
+            loadingRecords: 'جاري التحميل...', processing: 'جاري المعالجة...', search: 'بحث:',
+            zeroRecords: 'لا توجد نتائج مطابقة',
             paginate: { first: 'الأول', last: 'الأخير', next: 'التالي', previous: 'السابق' },
         },
-        ajax: { url: urlTable, data: function(d) { d.status = activeStatus; } },
+        ajax: { url: urlTable, data: function (d) { d.status = activeStatus; } },
+        drawCallback: function () { renderMobileCards(dt.rows({ page: 'current' }).data().toArray()); },
         columns: [
-            { data: 'claim_number' },
-            { data: 'invoice_number' },
+            { data: 'claim_number', render: n => `<span class="cxr-name">${n}</span>` },
+            { data: 'invoice_number', render: n => `<code class="cxr-code">${n}</code>` },
             { data: 'customer_name' },
             { data: 'insurance_company_name' },
-            { data: 'status_display' },
-            { data: 'covered_amount', className: 'text-center' },
-            { data: 'remaining_amount', className: 'text-center' },
-            { data: 'id', className: 'text-center', orderable: false, render: id => `
-                <button class="btn btn-sm btn-outline-primary js-view" data-id="${id}"><i class="fas fa-eye"></i> عرض</button>
-            `},
+            { data: null, render: (_, __, r) => statusBadge(r.status, r.status_display) },
+            { data: 'covered_amount', render: v => `<span class="cxr-bal">${Snake.formatMoney(v)}</span>` },
+            { data: 'remaining_amount', render: v => `<span class="cxr-bal ${parseFloat(v) > 0 ? 'cxr-bal--pos' : 'cxr-bal--zero'}">${Snake.formatMoney(v)}</span>` },
+            {
+                data: null, orderable: false, searchable: false,
+                render: (_, __, r) => `<div class="cxr-actions">
+                    <button class="cxr-act cxr-act--view js-view-claim" data-id="${r.id}" aria-label="عرض"><i class="fas fa-eye"></i></button>
+                </div>`
+            },
         ],
     });
+    renderMobileCards(dt.rows({ page: 'current' }).data().toArray());
 
-    $('.cx-filter-tab').on('click', function() {
+    let searchTimer;
+    $('#claimSearchInput').on('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+    $('.cx-filter-tab').on('click', function () {
         $('.cx-filter-tab').removeClass('active');
         $(this).addClass('active');
         activeStatus = $(this).data('status') || '';
         dt.ajax.reload();
     });
 
-    let searchTimer;
-    $('#claimSearchInput').on('input', function() {
-        clearTimeout(searchTimer);
-        const val = this.value;
-        searchTimer = setTimeout(() => dt.search(val).draw(), 300);
-    });
-
-    function statusActions(status) {
-        if (status === 'draft') return `<button class="btn btn-sm btn-primary js-submit">تقديم المطالبة</button>`;
-        if (status === 'submitted') return `
-            <button class="btn btn-sm btn-success js-respond" data-status="approved">اعتماد كامل</button>
-            <button class="btn btn-sm btn-warning js-respond" data-status="partially_approved">اعتماد جزئي</button>
-            <button class="btn btn-sm btn-danger js-respond" data-status="rejected">رفض</button>`;
-        if (['approved', 'partially_approved', 'partially_paid'].includes(status)) {
-            return `<button class="btn btn-sm btn-success js-settle">تسجيل تسوية مستلمة</button>`;
+    /* ── View claim ───────────────────────────────────────────── */
+    function actionButtons(status) {
+        let html = '';
+        if (status === 'draft') {
+            html += '<button type="button" class="cx-btn-primary js-submit-claim">تقديم المطالبة</button>';
+        } else if (status === 'submitted') {
+            html += '<button type="button" class="cx-btn-primary js-open-respond" data-status="approved">اعتماد كامل</button>';
+            html += '<button type="button" class="cx-btn-secondary js-open-respond" data-status="partially_approved">اعتماد جزئي</button>';
+            html += '<button type="button" class="cx-btn-danger js-open-respond" data-status="rejected">رفض</button>';
+        } else if (['approved', 'partially_approved', 'partially_paid'].includes(status)) {
+            html += '<button type="button" class="cx-btn-primary js-open-settle">تسجيل تسوية مستلمة</button>';
         }
-        return '';
+        return html;
     }
 
     function loadClaim(id) {
-        $('#claimModalBody').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>');
-        claimModal.show();
-        $.get(apiUrl(urlDetail, id), function(resp) {
-            if (!resp.success) { $('#claimModalBody').html(`<div class="alert alert-danger">${resp.message}</div>`); return; }
-            const d = resp.data;
-            $('#claimModalNumber').text(d.claim_number);
-            const linesHtml = d.lines.map(l => `
-                <tr><td>${l.item_name}</td><td class="text-center">${l.coverage_percent}%</td>
-                <td class="text-center">${l.claimed_amount}</td><td class="text-center">${l.approved_amount ?? '—'}</td></tr>
-            `).join('');
-            const canCancel = !['paid', 'cancelled'].includes(d.status) && parseFloat(d.paid_amount) === 0;
-            $('#claimModalBody').html(`
-                <div class="row g-2 mb-3">
-                    <div class="col-6"><strong>الفاتورة:</strong> ${d.invoice_number}</div>
-                    <div class="col-6"><strong>العميل:</strong> ${d.customer_name}</div>
-                    <div class="col-6"><strong>شركة التأمين:</strong> ${d.insurance_company_name}</div>
-                    <div class="col-6"><strong>الحالة:</strong> ${d.status_display}</div>
-                    <div class="col-6"><strong>المطالَب به:</strong> ${d.covered_amount}</div>
-                    <div class="col-6"><strong>نصيب المريض:</strong> ${d.patient_amount}</div>
-                    <div class="col-6"><strong>المعتمد:</strong> ${d.approved_amount ?? '—'}</div>
-                    <div class="col-6"><strong>المسدد:</strong> ${d.paid_amount} / متبقي ${d.remaining_amount}</div>
-                    ${d.rejection_reason ? `<div class="col-12"><strong>سبب الرفض/التخفيض:</strong> ${d.rejection_reason}</div>` : ''}
-                </div>
-                <table class="table table-sm">
-                    <thead><tr><th>الصنف</th><th class="text-center">النسبة</th><th class="text-center">المطالَب</th><th class="text-center">المعتمد</th></tr></thead>
-                    <tbody>${linesHtml}</tbody>
-                </table>
-                <div id="claimActionArea" class="d-flex gap-2 flex-wrap mt-3">
-                    ${statusActions(d.status)}
-                    ${canCancel ? '<button class="btn btn-sm btn-outline-danger js-cancel">إلغاء المطالبة</button>' : ''}
-                </div>
-            `);
-            $('#claimModalBody').data('claimId', id);
+        $('#viewClaimLinesBody').html('<tr><td colspan="4" class="text-center text-muted">جاري التحميل...</td></tr>');
+        viewModal.show();
+        $.ajax({
+            url: apiUrl(urlDetail, id), method: 'GET',
+            success: function (resp) {
+                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                const d = resp.data;
+                currentClaimId = d.id;
+                $('#viewClaimNumber').text(d.claim_number);
+                $('#viewClaimStatus').text(d.status_display);
+                $('#viewClaimInvoice').text(d.invoice_number);
+                $('#viewClaimCustomer').text(d.customer_name);
+                $('#viewClaimCompany').text(d.insurance_company_name);
+                $('#viewClaimDueDate').text(d.due_date || '—');
+                $('#viewClaimCovered').html(`<strong>${Snake.formatMoney(d.covered_amount)}</strong>`);
+                $('#viewClaimPatient').html(`<strong>${Snake.formatMoney(d.patient_amount)}</strong>`);
+                $('#viewClaimApproved').html(d.approved_amount !== null ? `<strong>${Snake.formatMoney(d.approved_amount)}</strong>` : '—');
+                $('#viewClaimPaid').html(`<strong>${Snake.formatMoney(d.paid_amount)}</strong> / <span class="text-muted">متبقي ${Snake.formatMoney(d.remaining_amount)}</span>`);
+                if (d.rejection_reason) {
+                    $('#viewClaimRejectionWrap').show();
+                    $('#viewClaimRejection').text(d.rejection_reason);
+                } else {
+                    $('#viewClaimRejectionWrap').hide();
+                }
+                $('#viewClaimLinesBody').html(d.lines.map(function (l) {
+                    return `<tr><td>${l.item_name}</td><td>${l.coverage_percent}%</td><td>${Snake.formatMoney(l.claimed_amount)}</td><td>${l.approved_amount !== null ? Snake.formatMoney(l.approved_amount) : '—'}</td></tr>`;
+                }).join('') || '<tr><td colspan="4" class="text-center text-muted">لا توجد بنود</td></tr>');
+
+                const canCancel = !['paid', 'cancelled'].includes(d.status) && parseFloat(d.paid_amount) === 0;
+                let footer = actionButtons(d.status);
+                if (canCancel) footer += '<button type="button" class="cx-btn-ghost js-cancel-claim">إلغاء المطالبة</button>';
+                footer += '<button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>';
+                $('#viewClaimActions').html(footer);
+            },
+            error: function () { Snake.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
 
-    $('#claimsTable').on('click', '.js-view', function() { loadClaim($(this).data('id')); });
+    $('#claimsTable, #claimsCardsMobile').on('click', '.js-view-claim', function () { loadClaim($(this).data('id')); });
 
-    $('#claimModalBody').on('click', '.js-submit', function() {
-        const id = $('#claimModalBody').data('claimId');
-        $.post(apiUrl(urlSubmit, id), { csrfmiddlewaretoken: CSRF }, function(resp) {
-            if (resp.success) { loadClaim(id); dt.ajax.reload(); } else { alert(resp.message); }
+    /* ── Submit ───────────────────────────────────────────────── */
+    $('#viewClaimActions').on('click', '.js-submit-claim', function () {
+        $.ajax({
+            url: apiUrl(urlSubmit, currentClaimId), method: 'POST',
+            success: function (resp) {
+                if (resp.success) { Snake.toast(resp.message || 'تم التقديم', 'success'); loadClaim(currentClaimId); dt.ajax.reload(null, false); }
+                else { Snake.toast(resp.message || 'تعذر التقديم', 'error'); }
+            },
+            error: function (xhr) { Snake.toast((xhr.responseJSON && xhr.responseJSON.message) || 'تعذر التقديم', 'error'); }
         });
     });
 
-    $('#claimModalBody').on('click', '.js-respond', function() {
-        const id = $('#claimModalBody').data('claimId');
-        const status = $(this).data('status');
-        let approved = 0, reason = '';
-        if (status === 'approved') {
-            approved = prompt('المبلغ المعتمد بالكامل:');
-        } else if (status === 'partially_approved') {
-            approved = prompt('المبلغ المعتمد جزئياً:');
-        } else {
-            reason = prompt('سبب الرفض:') || '';
+    /* ── Respond / Settle action modal ───────────────────────────── */
+    let currentAction = null; // 'respond' | 'settle'
+    let currentRespondStatus = null;
+
+    function openRespondModal(status) {
+        currentAction = 'respond';
+        currentRespondStatus = status;
+        const titles = { approved: 'اعتماد المطالبة بالكامل', partially_approved: 'اعتماد جزئي للمطالبة', rejected: 'رفض المطالبة' };
+        $('#claimActionTitle').text(titles[status] || 'الرد على المطالبة');
+        let body = '<div class="alert alert-danger d-none js-form-errors mb-3"></div>';
+        if (status !== 'rejected') {
+            body += `<div class="mb-3">
+                <label class="cx-label">المبلغ المعتمد</label>
+                <input type="number" step="0.01" min="0" class="form-control" id="respondApprovedAmount">
+            </div>`;
         }
-        if (status !== 'rejected' && (approved === null || approved === '')) return;
-        $.post(apiUrl(urlRespond, id), {
-            csrfmiddlewaretoken: CSRF, status: status,
-            approved_amount: approved || 0, rejection_reason: reason,
-        }, function(resp) {
-            if (resp.success) { loadClaim(id); dt.ajax.reload(); } else { alert(resp.message); }
+        body += `<div class="mb-3">
+            <label class="cx-label">${status === 'rejected' ? 'سبب الرفض' : 'ملاحظات (اختياري)'}</label>
+            <textarea class="form-control" id="respondReason" rows="2"></textarea>
+        </div>`;
+        $('#claimActionBody').html(body);
+        $('#claimActionSubmitBtn').text('تأكيد');
+        actionModal.show();
+    }
+
+    function openSettleModal() {
+        currentAction = 'settle';
+        $('#claimActionTitle').text('تسجيل تسوية مستلمة من شركة التأمين');
+        $('#claimActionBody').html(`
+            <div class="alert alert-danger d-none js-form-errors mb-3"></div>
+            <div class="mb-3">
+                <label class="cx-label">مبلغ التسوية</label>
+                <input type="number" step="0.01" min="0" class="form-control" id="settleAmount">
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">رقم مرجعي (اختياري)</label>
+                <input type="text" class="form-control" id="settleReference">
+            </div>`);
+        $('#claimActionSubmitBtn').text('تسجيل التسوية');
+        actionModal.show();
+    }
+
+    $('#viewClaimActions').on('click', '.js-open-respond', function () { openRespondModal($(this).data('status')); });
+    $('#viewClaimActions').on('click', '.js-open-settle', openSettleModal);
+
+    $('#claimActionForm').on('submit', function (e) {
+        e.preventDefault();
+        const $btn = $('#claimActionSubmitBtn');
+        const orig = $btn.html();
+        Snake.clearFormErrors($('#claimActionForm'));
+        Snake.showLoading($btn);
+
+        let url, data;
+        if (currentAction === 'respond') {
+            data = {
+                status: currentRespondStatus,
+                approved_amount: $('#respondApprovedAmount').length ? ($('#respondApprovedAmount').val() || 0) : 0,
+                rejection_reason: $('#respondReason').val() || '',
+            };
+            url = apiUrl(urlRespond, currentClaimId);
+        } else {
+            data = { amount: $('#settleAmount').val() || 0, reference: $('#settleReference').val() || '' };
+            url = apiUrl(urlSettle, currentClaimId);
+        }
+
+        $.ajax({
+            url: url, method: 'POST', data: data,
+            success: function (resp) {
+                Snake.hideLoading($btn, orig);
+                if (resp.success) {
+                    actionModal.hide();
+                    Snake.toast(resp.message || 'تم الحفظ', 'success');
+                    loadClaim(currentClaimId);
+                    dt.ajax.reload(null, false);
+                } else {
+                    Snake.showFormError($('#claimActionForm'), resp.message || 'تعذرت العملية');
+                }
+            },
+            error: function (xhr) {
+                Snake.hideLoading($btn, orig);
+                const r = xhr.responseJSON || {};
+                Snake.showFormError($('#claimActionForm'), r.message || 'حدث خطأ');
+            }
         });
     });
 
-    $('#claimModalBody').on('click', '.js-settle', function() {
-        const id = $('#claimModalBody').data('claimId');
-        const amount = prompt('مبلغ التسوية المستلمة:');
-        if (!amount) return;
-        const reference = prompt('رقم مرجعي (اختياري):') || '';
-        $.post(apiUrl(urlSettle, id), {
-            csrfmiddlewaretoken: CSRF, amount: amount, reference: reference,
-        }, function(resp) {
-            if (resp.success) { loadClaim(id); dt.ajax.reload(); } else { alert(resp.message); }
+    /* ── Cancel ───────────────────────────────────────────────── */
+    $('#viewClaimActions').on('click', '.js-cancel-claim', function () {
+        $('#cancelClaimId').val(currentClaimId);
+        $('#cancelClaimNumber').text($('#viewClaimNumber').text());
+        $('#cancelClaimReason').val('');
+        cancelModal.show();
+    });
+
+    $('#confirmCancelClaimBtn').on('click', function () {
+        const id = $('#cancelClaimId').val();
+        if (!id) return;
+        $.ajax({
+            url: apiUrl(urlCancel, id), method: 'POST', data: { reason: $('#cancelClaimReason').val() || '' },
+            success: function (resp) {
+                if (resp.success) {
+                    cancelModal.hide(); viewModal.hide();
+                    Snake.toast(resp.message || 'تم إلغاء المطالبة', 'success');
+                    dt.ajax.reload(null, false);
+                } else {
+                    Snake.toast(resp.message || 'تعذر الإلغاء', 'error');
+                }
+            },
+            error: function (xhr) { Snake.toast((xhr.responseJSON && xhr.responseJSON.message) || 'تعذر الإلغاء', 'error'); }
         });
     });
 
-    $('#claimModalBody').on('click', '.js-cancel', function() {
-        const id = $('#claimModalBody').data('claimId');
-        const reason = prompt('سبب الإلغاء:') || '';
-        if (!confirm('هل تريد إلغاء هذه المطالبة؟')) return;
-        $.post(apiUrl(urlCancel, id), { csrfmiddlewaretoken: CSRF, reason: reason }, function(resp) {
-            if (resp.success) { claimModal.hide(); dt.ajax.reload(); } else { alert(resp.message); }
-        });
-    });
-});
+})();
 </script>
 {% endblock %}

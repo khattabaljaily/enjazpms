@@ -101,6 +101,41 @@
   .cx-ledger-dialog .cx-table tbody tr::before { display: none !important; }
   .cx-ledger-dialog .cx-table tbody td { display: table-cell !important; padding: .5rem .7rem !important; border-bottom: 1px solid var(--border-light, #e5e7eb) !important; font-size: .8rem !important; }
 }
+
+/* ── Alternatives: searchable multi-select ───────────────── */
+.cx-searchable-select { position: relative; }
+.cx-searchable-select-dropdown {
+  position: absolute; z-index: 1050; width: 100%;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.12);
+  max-height: 260px; overflow-y: auto;
+  top: calc(100% + 4px);
+}
+.cx-searchable-option {
+  padding: .55rem .75rem; cursor: pointer; font-size: .875rem;
+  color: var(--text-primary, #111827);
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+.cx-searchable-option:last-child { border-bottom: none; }
+.cx-searchable-option:hover { background: var(--surface-alt, #f3f4f6); }
+.cx-searchable-option small { display: block; color: var(--text-muted, #9ca3af); font-size: .72rem; margin-top: 2px; }
+.cx-searchable-no-results { padding: .75rem 1rem; font-size: .8rem; color: var(--text-muted, #9ca3af); }
+
+.cx-chip-list { display: flex; flex-wrap: wrap; gap: .4rem; }
+.cx-chip {
+  display: inline-flex; align-items: center; gap: .4rem;
+  background: var(--surface-alt, #f3f4f6); border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 999px; padding: .3rem .4rem .3rem .75rem; font-size: .82rem;
+  color: var(--text-primary, #111827);
+}
+.cx-chip-remove {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%; cursor: pointer;
+  background: rgba(0,0,0,.06); color: var(--text-muted, #9ca3af); font-size: .65rem;
+}
+.cx-chip-remove:hover { background: #ef4444; color: #fff; }
 </style>
 {% endblock %}
 
@@ -497,9 +532,14 @@
                         </div>
                         <div class="row g-3 mb-4">
                             <div class="col-12">
-                                <label class="cx-label" for="id_alternatives">{{ item_form.alternatives.label }}</label>
-                                {{ item_form.alternatives }}
-                                <div class="cx-field-hint" style="font-size:.75rem;color:var(--text-muted,#9ca3af);">
+                                <label class="cx-label">بدائل / أصناف مكافئة</label>
+                                <div class="cx-searchable-select" id="altSearchWrap">
+                                    <input type="text" id="altSearchInput" class="form-control" placeholder="ابحث عن صنف لإضافته كبديل..." autocomplete="off">
+                                    <div id="altDropdown" class="cx-searchable-select-dropdown" style="display:none;"></div>
+                                </div>
+                                <div id="altChipList" class="cx-chip-list mt-2"></div>
+                                <div id="altHiddenInputs"></div>
+                                <div class="cx-field-hint mt-2" style="font-size:.75rem;color:var(--text-muted,#9ca3af);">
                                     <i class="fas fa-info-circle"></i>
                                     تُقترح هذه الأصناف كبديل تلقائياً في نقطة البيع عند نفاد هذا الصنف
                                 </div>
@@ -941,6 +981,81 @@
     };
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
+    {% if tenant_capabilities.has_item_alternatives %}
+    /* ── Alternatives: searchable AJAX multi-select ──────────── */
+    (function () {
+        const urlSearch = "{% url 'items:search_api' %}";
+        let selectedAlts = [];   // [{id, name}]
+        let currentItemId = null;
+        let searchTimer;
+
+        function escAlt(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function renderChips() {
+            $('#altChipList').html(selectedAlts.map(function (a) {
+                return '<span class="cx-chip" data-id="' + a.id + '">' + escAlt(a.name) +
+                    '<span class="cx-chip-remove" data-id="' + a.id + '"><i class="fas fa-times"></i></span></span>';
+            }).join(''));
+            $('#altHiddenInputs').html(selectedAlts.map(function (a) {
+                return '<input type="hidden" name="alternatives" value="' + a.id + '">';
+            }).join(''));
+        }
+
+        function renderResults(results) {
+            const filtered = results.filter(function (r) {
+                return !selectedAlts.some(function (a) { return a.id === r.id; }) && String(r.id) !== String(currentItemId);
+            });
+            if (!filtered.length) {
+                $('#altDropdown').html('<div class="cx-searchable-no-results">لا توجد نتائج</div>').show();
+                return;
+            }
+            $('#altDropdown').html(filtered.map(function (r) {
+                return '<div class="cx-searchable-option" data-id="' + r.id + '" data-name="' + escAlt(r.name) + '">' +
+                    escAlt(r.name) + (r.sku ? '<small>' + escAlt(r.sku) + '</small>' : '') + '</div>';
+            }).join('')).show();
+        }
+
+        function search(q) {
+            $.getJSON(urlSearch, { q: q, min_chars: 0 }, function (data) {
+                renderResults((data.results || []).map(function (r) { return { id: r.id, name: r.name, sku: r.sku }; }));
+            });
+        }
+
+        $('#altSearchInput').on('focus', function () { search($(this).val().trim()); });
+        $('#altSearchInput').on('input', function () {
+            clearTimeout(searchTimer);
+            const q = $(this).val().trim();
+            searchTimer = setTimeout(function () { search(q); }, 250);
+        });
+        $(document).on('mousedown', '#altDropdown .cx-searchable-option', function (e) {
+            e.preventDefault();
+            const id = parseInt($(this).data('id'));
+            const name = $(this).data('name');
+            if (!selectedAlts.some(function (a) { return a.id === id; })) {
+                selectedAlts.push({ id: id, name: name });
+                renderChips();
+            }
+            $('#altSearchInput').val('').trigger('focus');
+        });
+        $(document).on('click', '.cx-chip-remove', function () {
+            const id = parseInt($(this).data('id'));
+            selectedAlts = selectedAlts.filter(function (a) { return a.id !== id; });
+            renderChips();
+        });
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('#altSearchWrap').length) $('#altDropdown').hide();
+        });
+
+        window._altPicker = {
+            reset: function () { selectedAlts = []; currentItemId = null; renderChips(); $('#altSearchInput').val(''); $('#altDropdown').hide(); },
+            setCurrentItemId: function (id) { currentItemId = id; },
+            setSelected: function (list) { selectedAlts = (list || []).slice(); renderChips(); },
+        };
+    })();
+    {% endif %}
+
     ['itemModal','viewItemModal','itemLedgerModal','deleteItemModal'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el && el.parentElement !== document.body) document.body.appendChild(el);
@@ -1348,6 +1463,7 @@
             var el = document.getElementById(id); if (el) el.textContent = '';
         });
         {% endif %}
+        if (window._altPicker) window._altPicker.reset();
     }
 
     /* ── Open create ───────────────────────────────────────── */
@@ -1398,8 +1514,9 @@
                     $('#id_requires_prescription').prop('checked', !!d.requires_prescription);
                     $('#id_is_controlled_substance').prop('checked', !!d.is_controlled_substance);
                 }
-                if (CAP.hasItemAlternatives) {
-                    $('#id_alternatives').val((d.alternatives || []).map(a => String(a.id)));
+                if (CAP.hasItemAlternatives && window._altPicker) {
+                    window._altPicker.setCurrentItemId(d.id);
+                    window._altPicker.setSelected(d.alternatives || []);
                 }
                 $('#id_description').val(d.description || '');
                 $('#id_is_active').prop('checked', !!d.is_active);

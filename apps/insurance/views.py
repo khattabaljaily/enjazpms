@@ -58,11 +58,24 @@ def company_table_api(request):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 25))
     search = request.GET.get('search[value]', '').strip()
+    status = request.GET.get('status', '').strip()
+
     qs = InsuranceCompany.objects.filter(tenant=tenant)
+    records_total = qs.count()
+
+    if status == 'active':
+        qs = qs.filter(is_active=True)
+    elif status == 'inactive':
+        qs = qs.filter(is_active=False)
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(code__icontains=search) | Q(phone__icontains=search))
-    qs = qs.order_by('-created_at')
+    records_filtered = qs.count()
+
+    qs = qs.order_by('-created_at')[start:start + length]
 
     data = [
         {
@@ -73,8 +86,8 @@ def company_table_api(request):
         }
         for c in qs
     ]
-    return JsonResponse({'draw': int(request.GET.get('draw', 1)), 'recordsTotal': qs.count(),
-                          'recordsFiltered': qs.count(), 'data': data})
+    return JsonResponse({'draw': draw, 'recordsTotal': records_total,
+                          'recordsFiltered': records_filtered, 'data': data})
 
 
 @login_required
@@ -253,9 +266,15 @@ def claim_table_api(request):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 25))
     status = request.GET.get('status', '').strip()
     search = request.GET.get('search[value]', '').strip()
+
     qs = InsuranceClaim.objects.filter(tenant=tenant).select_related('customer', 'insurance_company', 'invoice')
+    records_total = qs.count()
+
     if status:
         qs = qs.filter(status=status)
     if search:
@@ -263,7 +282,9 @@ def claim_table_api(request):
             Q(claim_number__icontains=search) | Q(customer__name__icontains=search) |
             Q(invoice__invoice_number__icontains=search) | Q(insurance_company__name__icontains=search)
         )
-    qs = qs.order_by('-created_at')
+    records_filtered = qs.count()
+
+    qs = qs.order_by('-created_at')[start:start + length]
 
     data = [
         {
@@ -276,8 +297,8 @@ def claim_table_api(request):
         }
         for c in qs
     ]
-    return JsonResponse({'draw': int(request.GET.get('draw', 1)), 'recordsTotal': qs.count(),
-                          'recordsFiltered': qs.count(), 'data': data})
+    return JsonResponse({'draw': draw, 'recordsTotal': records_total,
+                          'recordsFiltered': records_filtered, 'data': data})
 
 
 @login_required

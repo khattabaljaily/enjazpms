@@ -1,11 +1,16 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/insurance.css' %}?v=1.0">
+{% endblock %}
+
 {% block page_header %}{% endblock %}
 
 {% block content %}
 <div class="cx-scene">
 
+<!-- ══════════════════════════ PAGE HERO HEADER ══════════════════════════ -->
 <div class="cx-hero">
     <div class="cx-hero-inner">
         <div class="cx-hero-left">
@@ -32,97 +37,164 @@
     </div>
 </div>
 
+<!-- ══════════════════════════ MAIN TABLE PANEL ══════════════════════════ -->
 <div class="cx-panel">
+
+    {# ── Inline Toolbar ── #}
     <div class="cx-toolbar">
         <div class="cx-toolbar-search">
             <i class="fas fa-search cx-toolbar-search-icon"></i>
             <input type="text" id="companySearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو الكود...">
         </div>
+        <div class="cx-toolbar-end">
+            <div class="cx-filter-tabs" role="group">
+                <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
+                <button type="button" class="cx-filter-tab" data-status="active">نشطة</button>
+                <button type="button" class="cx-filter-tab" data-status="inactive">موقوفة</button>
+            </div>
+        </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table" id="companiesTable" style="width:100%;">
+    {# ── Table ── #}
+    <div class="table-responsive cx-table-wrap">
+        <table id="companiesTable" class="cx-table">
             <thead>
                 <tr>
-                    <th>الاسم</th>
+                    <th>شركة التأمين</th>
                     <th>الكود</th>
                     <th>مسؤول التواصل</th>
                     <th>الهاتف</th>
-                    <th class="text-center">نسبة التغطية الافتراضية</th>
-                    <th class="text-center">الحالة</th>
-                    <th class="text-center">إجراءات</th>
+                    <th>نسبة التغطية الافتراضية</th>
+                    <th>الحالة</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
-</div>
+    <div id="companiesCardsMobile" class="d-none p-3" aria-live="polite"></div>
 
 </div>
 
-<!-- ══ ADD/EDIT MODAL ══ -->
+</div>
+
+<!-- ══════════════════════════ ADD / EDIT MODAL ══════════════════════════ -->
 <div class="modal fade" id="companyModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <form id="companyForm">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="companyForm" novalidate>
                 {% csrf_token %}
                 <input type="hidden" id="companyId" value="">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="companyModalTitle">إضافة شركة تأمين</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-danger d-none js-form-errors"></div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="cx-label">{{ form.name.label }} <sup class="cx-required">*</sup></label>
-                            {{ form.name }}
+
+                <div class="cx-modal-main">
+                    <div class="cx-modal-header">
+                        <div>
+                            <h5 class="cx-modal-title" id="companyModalTitle">إضافة شركة تأمين</h5>
                         </div>
-                        <div class="col-md-6">
-                            <label class="cx-label">{{ form.code.label }}</label>
-                            {{ form.code }}
+                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="cx-modal-body">
+                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
+
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-icon"><i class="fas fa-briefcase-medical"></i></span> بيانات الشركة
                         </div>
-                        <div class="col-md-6">
-                            <label class="cx-label">{{ form.contact_person.label }}</label>
-                            {{ form.contact_person }}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="cx-label">{{ form.phone.label }}</label>
-                            {{ form.phone }}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="cx-label">{{ form.email.label }}</label>
-                            {{ form.email }}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="cx-label">{{ form.default_coverage_percent.label }}</label>
-                            {{ form.default_coverage_percent }}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="cx-label">{{ form.settlement_period_days.label }}</label>
-                            {{ form.settlement_period_days }}
-                        </div>
-                        <div class="col-md-6 d-flex align-items-end">
-                            <div class="form-check">
-                                {{ form.is_active }}
-                                <label class="form-check-label" for="id_is_active">{{ form.is_active.label }}</label>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_name">{{ form.name.label }} <sup class="cx-required">*</sup></label>
+                                {{ form.name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_code">{{ form.code.label }}</label>
+                                {{ form.code }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_contact_person">{{ form.contact_person.label }}</label>
+                                {{ form.contact_person }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_phone">{{ form.phone.label }}</label>
+                                {{ form.phone }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_email">{{ form.email.label }}</label>
+                                {{ form.email }}
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-label" for="id_address">{{ form.address.label }}</label>
+                                {{ form.address }}
                             </div>
                         </div>
-                        <div class="col-12">
-                            <label class="cx-label">{{ form.address.label }}</label>
-                            {{ form.address }}
+
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-icon"><i class="fas fa-percent"></i></span> شروط التغطية
                         </div>
-                        <div class="col-12">
-                            <label class="cx-label">{{ form.notes.label }}</label>
-                            {{ form.notes }}
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_default_coverage_percent">{{ form.default_coverage_percent.label }}</label>
+                                {{ form.default_coverage_percent }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_settlement_period_days">{{ form.settlement_period_days.label }}</label>
+                                {{ form.settlement_period_days }}
+                            </div>
+                        </div>
+
+                        <div class="cx-form-group-label">
+                            <span class="cx-form-group-icon"><i class="fas fa-list-check"></i></span> ملاحظات وحالة
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="cx-label" for="id_notes">{{ form.notes.label }}</label>
+                                {{ form.notes }}
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-toggle-card" for="id_is_active">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ form.is_active.label }}</span>
+                                        <span class="cx-toggle-desc">الشركة نشطة ومتاحة عند اختيار بوليصة أو مطالبة</span>
+                                    </div>
+                                    {{ form.is_active }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary" id="companySubmitBtn">حفظ</button>
+
+                    <div class="cx-modal-footer">
+                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="cx-btn-primary" id="companySubmitBtn">
+                            <i class="fas fa-check me-1"></i> حفظ
+                        </button>
+                    </div>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ DELETE CONFIRM MODAL ══════════════════════════ -->
+<div class="modal fade" id="deleteCompanyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <h5 class="cx-delete-title">حذف شركة التأمين؟</h5>
+                <p class="cx-delete-desc">
+                    ستقوم بحذف <strong id="deleteCompanyName"></strong> بشكل نهائي.
+                    <br>لا يمكن التراجع عن هذا الإجراء.
+                </p>
+                <input type="hidden" id="deleteCompanyId" value="">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteCompanyBtn">نعم، احذف</button>
+            </div>
         </div>
     </div>
 </div>
@@ -131,111 +203,214 @@
 
 {% block extra_js %}
 <script>
-$(function() {
-    const urlTable  = "{% url 'insurance:company_table_api' %}";
-    const urlCreate = "{% url 'insurance:company_create_api' %}";
-    const urlDetail = "{% url 'insurance:company_detail_api' 0 %}";
-    const urlUpdate = "{% url 'insurance:company_update_api' 0 %}";
-    const urlDelete = "{% url 'insurance:company_delete_api' 0 %}";
+(function () {
+    'use strict';
+
+    const urlTable   = "{% url 'insurance:company_table_api' %}";
+    const urlCreate  = "{% url 'insurance:company_create_api' %}";
+    const urlDetail  = "{% url 'insurance:company_detail_api' 0 %}";
+    const urlUpdate  = "{% url 'insurance:company_update_api' 0 %}";
+    const urlDelete  = "{% url 'insurance:company_delete_api' 0 %}";
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
-    const modal = new bootstrap.Modal(document.getElementById('companyModal'));
-    const $form = $('#companyForm');
+    const companyModalEl = document.getElementById('companyModal');
+    const deleteModalEl  = document.getElementById('deleteCompanyModal');
+    [companyModalEl, deleteModalEl].forEach(function (el) {
+        if (el && el.parentElement !== document.body) document.body.appendChild(el);
+    });
+    const companyModal = new bootstrap.Modal(companyModalEl);
+    const deleteModal  = new bootstrap.Modal(deleteModalEl);
 
+    const $form      = $('#companyForm');
+    const $submitBtn = $('#companySubmitBtn');
+    const $idInput   = $('#companyId');
+    let activeStatus = '';
+
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileCards(rows) {
+        const $cards = $('#companiesCardsMobile');
+        if (!$cards.length) return;
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد شركات تأمين للعرض</div>');
+            return;
+        }
+        $cards.html(rows.map(function (r) {
+            const status = r.is_active
+                ? '<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشطة</span>'
+                : '<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوفة</span>';
+            return `<article class="cx-supplier-card">
+                <div class="cx-supplier-card-head">
+                    <div class="cx-supplier-card-title-wrap">
+                        <h2 class="cx-supplier-card-title">${r.name || '—'}</h2>
+                        <p class="cx-supplier-card-code"><code>${r.code || '—'}</code></p>
+                    </div>
+                    ${status}
+                </div>
+                <div class="cx-supplier-card-meta">
+                    <div>
+                        <span class="cx-supplier-card-meta-label">مسؤول التواصل</span>
+                        <strong class="cx-supplier-card-meta-value">${r.contact_person || '—'}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-supplier-card-meta-label">نسبة التغطية</span>
+                        <strong class="cx-supplier-card-meta-value">${r.default_coverage_percent}%</strong>
+                    </div>
+                </div>
+                <div class="cx-supplier-card-actions">
+                    <button class="cxr-act js-edit-company" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                    <button class="cxr-act cxr-act--del js-delete-company" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                </div>
+            </article>`;
+        }).join(''));
+    }
+
+    /* ── DataTable ─────────────────────────────────────────── */
     const dt = $('#companiesTable').DataTable({
         processing: true, serverSide: true, searching: true, ordering: false, pageLength: 25,
         dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
         language: {
-            emptyTable: 'لا توجد بيانات', zeroRecords: 'لا توجد نتائج مطابقة',
+            emptyTable: 'لا توجد بيانات متاحة',
+            info: 'عرض _START_ إلى _END_ من أصل _TOTAL_ شركة',
+            infoEmpty: 'عرض 0 إلى 0 من أصل 0 شركة',
+            infoFiltered: '(تمت التصفية من إجمالي _MAX_ شركة)',
+            lengthMenu: 'عرض _MENU_ شركة',
+            loadingRecords: 'جاري التحميل...',
+            processing: 'جاري المعالجة...',
+            search: 'بحث:',
+            zeroRecords: 'لم يتم العثور على نتائج مطابقة',
             paginate: { first: 'الأول', last: 'الأخير', next: 'التالي', previous: 'السابق' },
         },
-        ajax: { url: urlTable, data: function(d) {} },
+        ajax: { url: urlTable, data: function (d) { d.status = activeStatus; } },
+        drawCallback: function () { renderMobileCards(dt.rows({ page: 'current' }).data().toArray()); },
         columns: [
-            { data: 'name' },
-            { data: 'code' },
-            { data: 'contact_person' },
-            { data: 'phone' },
-            { data: 'default_coverage_percent', className: 'text-center', render: v => v + '%' },
-            { data: 'is_active', className: 'text-center', render: v => v
-                ? '<span class="badge bg-success">نشطة</span>'
-                : '<span class="badge bg-secondary">موقوفة</span>' },
-            { data: 'id', className: 'text-center', orderable: false, render: id => `
-                <button class="btn btn-sm btn-outline-primary js-edit" data-id="${id}"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-sm btn-outline-danger js-delete" data-id="${id}"><i class="fas fa-trash"></i></button>
-            `},
+            { data: 'name', render: n => `<span class="cxr-name">${n}</span>` },
+            { data: 'code', render: c => `<code class="cxr-code">${c}</code>` },
+            { data: 'contact_person', render: c => c && c !== '-' ? c : '<span class="cxr-empty">—</span>' },
+            { data: 'phone', render: p => p && p !== '-' ? p : '<span class="cxr-empty">—</span>' },
+            { data: 'default_coverage_percent', render: v => v + '%' },
+            {
+                data: 'is_active',
+                render: a => a
+                    ? `<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>نشطة</span>`
+                    : `<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>موقوفة</span>`
+            },
+            {
+                data: null, orderable: false, searchable: false,
+                render: function (_, __, r) {
+                    return `<div class="cxr-actions">
+                        <button class="cxr-act js-edit-company" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>
+                        <button class="cxr-act cxr-act--del js-delete-company" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>
+                    </div>`;
+                }
+            },
         ],
     });
+    renderMobileCards(dt.rows({ page: 'current' }).data().toArray());
 
+    /* ── Search / filter ──────────────────────────────────────── */
     let searchTimer;
-    $('#companySearchInput').on('input', function() {
+    $('#companySearchInput').on('input', function () {
         clearTimeout(searchTimer);
-        const val = this.value;
-        searchTimer = setTimeout(() => dt.search(val).draw(), 300);
+        searchTimer = setTimeout(() => dt.search($(this).val()).draw(), 350);
+    });
+    $('.cx-filter-tab').on('click', function () {
+        $('.cx-filter-tab').removeClass('active');
+        $(this).addClass('active');
+        activeStatus = $(this).data('status');
+        dt.ajax.reload();
     });
 
+    /* ── Form helpers ─────────────────────────────────────────── */
     function resetForm() {
         $form[0].reset();
-        $('#companyId').val('');
+        $idInput.val('');
         $('#id_is_active').prop('checked', true);
-        $('.js-form-errors').addClass('d-none').empty();
+        Snake.clearFormErrors($form);
     }
 
-    $('#btnOpenCreateCompany').on('click', function() {
+    function openCreate() {
         resetForm();
         $('#companyModalTitle').text('إضافة شركة تأمين');
-        modal.show();
-    });
+        $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
+        companyModal.show();
+    }
 
-    $('#companiesTable').on('click', '.js-edit', function() {
-        const id = $(this).data('id');
-        $.get(apiUrl(urlDetail, id), function(resp) {
-            if (!resp.success) { alert(resp.message); return; }
-            resetForm();
-            const d = resp.data;
-            $('#companyId').val(d.id);
-            $('#id_name').val(d.name);
-            $('#id_code').val(d.code);
-            $('#id_contact_person').val(d.contact_person);
-            $('#id_phone').val(d.phone);
-            $('#id_email').val(d.email);
-            $('#id_address').val(d.address);
-            $('#id_default_coverage_percent').val(d.default_coverage_percent);
-            $('#id_settlement_period_days').val(d.settlement_period_days);
-            $('#id_is_active').prop('checked', d.is_active);
-            $('#id_notes').val(d.notes);
-            $('#companyModalTitle').text('تعديل شركة التأمين');
-            modal.show();
+    function openEdit(id) {
+        resetForm();
+        $.ajax({
+            url: apiUrl(urlDetail, id), method: 'GET',
+            success: function (resp) {
+                if (!resp.success) { Snake.toast(resp.message || 'تعذر التحميل', 'error'); return; }
+                const d = resp.data;
+                $idInput.val(d.id);
+                $('#id_name').val(d.name || '');
+                $('#id_code').val(d.code || '');
+                $('#id_contact_person').val(d.contact_person || '');
+                $('#id_phone').val(d.phone || '');
+                $('#id_email').val(d.email || '');
+                $('#id_address').val(d.address || '');
+                $('#id_default_coverage_percent').val(Snake.parseNumber(d.default_coverage_percent) || '');
+                $('#id_settlement_period_days').val(d.settlement_period_days || '');
+                $('#id_notes').val(d.notes || '');
+                $('#id_is_active').prop('checked', !!d.is_active);
+                $('#companyModalTitle').text('تعديل شركة التأمين');
+                $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
+                companyModal.show();
+            },
+            error: function () { Snake.toast('تعذر تحميل البيانات', 'error'); }
         });
-    });
+    }
 
-    $('#companiesTable').on('click', '.js-delete', function() {
-        const id = $(this).data('id');
-        if (!confirm('هل تريد حذف شركة التأمين هذه؟')) return;
-        $.post(apiUrl(urlDelete, id), { csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val() }, function(resp) {
-            if (resp.success) { dt.ajax.reload(); } else { alert(resp.message); }
-        });
-    });
-
-    $form.on('submit', function(e) {
+    /* ── Save ─────────────────────────────────────────────────── */
+    $form.on('submit', function (e) {
         e.preventDefault();
-        const id = $('#companyId').val();
+        Snake.clearFormErrors($form);
+        const id = $idInput.val();
         const url = id ? apiUrl(urlUpdate, id) : urlCreate;
-        $.post(url, $form.serialize(), function(resp) {
-            if (resp.success) {
-                modal.hide();
-                dt.ajax.reload();
-            } else {
-                const errs = resp.errors || {};
-                const msgs = Object.values(errs).flat();
-                $('.js-form-errors').removeClass('d-none').html(msgs.join('<br>') || resp.message);
+        const orig = $submitBtn.html();
+        Snake.showLoading($submitBtn);
+        $.ajax({
+            url: url, method: 'POST', data: $form.serialize(),
+            success: function (resp) {
+                Snake.hideLoading($submitBtn, orig);
+                if (resp.success) { companyModal.hide(); dt.ajax.reload(null, false); Snake.toast(resp.message || 'تم الحفظ', 'success'); return; }
+                Snake.showFormError($form, resp.message || 'يرجى مراجعة الحقول');
+            },
+            error: function (xhr) {
+                Snake.hideLoading($submitBtn, orig);
+                const r = xhr.responseJSON || {};
+                if (r.errors) Snake.renderFieldErrors($form, r.errors);
+                Snake.showFormError($form, r.message || 'حدث خطأ');
             }
-        }).fail(function(xhr) {
-            const resp = xhr.responseJSON || {};
-            const errs = resp.errors || {};
-            const msgs = Object.values(errs).flat();
-            $('.js-form-errors').removeClass('d-none').html(msgs.join('<br>') || resp.message || 'حدث خطأ');
         });
     });
-});
+
+    /* ── Delete ───────────────────────────────────────────────── */
+    function openDelete(id, name) {
+        $('#deleteCompanyId').val(id);
+        $('#deleteCompanyName').text(name);
+        deleteModal.show();
+    }
+    $('#confirmDeleteCompanyBtn').on('click', function () {
+        const id = $('#deleteCompanyId').val();
+        if (!id) return;
+        $.ajax({
+            url: apiUrl(urlDelete, id), method: 'POST',
+            success: function (resp) {
+                if (resp.success) { deleteModal.hide(); dt.ajax.reload(null, false); Snake.toast(resp.message || 'تم الحذف', 'success'); return; }
+                Snake.toast(resp.message || 'تعذر الحذف', 'error');
+            },
+            error: function (xhr) { Snake.toast((xhr.responseJSON && xhr.responseJSON.message) || 'تعذر الحذف', 'error'); }
+        });
+    });
+
+    /* ── Bindings ─────────────────────────────────────────────── */
+    $('#btnOpenCreateCompany').on('click', openCreate);
+    $('#companiesTable').on('click', '.js-edit-company', function () { openEdit($(this).data('id')); });
+    $('#companiesTable').on('click', '.js-delete-company', function () { openDelete($(this).data('id'), $(this).data('name')); });
+    $('#companiesCardsMobile').on('click', '.js-edit-company', function () { openEdit($(this).data('id')); });
+    $('#companiesCardsMobile').on('click', '.js-delete-company', function () { openDelete($(this).data('id'), $(this).data('name')); });
+
+})();
 </script>
 {% endblock %}
