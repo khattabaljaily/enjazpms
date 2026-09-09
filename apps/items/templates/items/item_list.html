@@ -522,6 +522,21 @@
                                     <div class="cx-toggle-switch"></div>
                                 </label>
                             </div>
+                            {% if tenant_capabilities.has_insurance_billing %}
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_is_insurance_excluded">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">
+                                            <i class="fas fa-ban text-warning me-1"></i>
+                                            {{ item_form.is_insurance_excluded.label }}
+                                        </span>
+                                        <span class="cx-toggle-desc">يُستبعد تلقائياً عند إنشاء مطالبة تأمين</span>
+                                    </div>
+                                    {{ item_form.is_insurance_excluded }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                            {% endif %}
                         </div>
                         {% endif %}
 
@@ -1101,6 +1116,7 @@
                             ${CAP.hasSerialNumbers && r.track_serial ? '<span class="cx-item-card-badge">رقم تسلسلي</span>' : ''}
                             ${CAP.hasDrugClassification && r.requires_prescription ? '<span class="cx-item-card-badge">℞ بوصفة</span>' : ''}
                             ${CAP.hasDrugClassification && r.is_controlled_substance ? '<span class="cx-item-card-badge" style="color:#dc2626;">خاضع للرقابة</span>' : ''}
+                            ${r.is_insurance_excluded ? '<span class="cx-item-card-badge" style="color:#b45309;">غير مغطى بالتأمين</span>' : ''}
                         </div>
                     </div>
                     ${status}
@@ -1166,6 +1182,7 @@
                     if (CAP.hasSerialNumbers && r.track_serial) badges += `<span class="badge bg-info ms-1" style="font-size:0.6rem" title="رقم تسلسلي"><i class="fas fa-barcode"></i></span>`;
                     if (CAP.hasDrugClassification && r.requires_prescription) badges += `<span class="badge bg-primary ms-1" style="font-size:0.6rem" title="يُصرف بوصفة طبية"><i class="fas fa-file-prescription"></i></span>`;
                     if (CAP.hasDrugClassification && r.is_controlled_substance) badges += `<span class="badge bg-danger ms-1" style="font-size:0.6rem" title="خاضع للرقابة"><i class="fas fa-triangle-exclamation"></i></span>`;
+                    if (r.is_insurance_excluded) badges += `<span class="badge ms-1" style="font-size:0.6rem;background:#b45309;" title="غير مغطى بالتأمين"><i class="fas fa-ban"></i></span>`;
                     return `<span class="cxr-name">${r.name}</span>${badges}`;
                 }
             },
@@ -1513,6 +1530,7 @@
                     $('#id_strength').val(d.strength || '');
                     $('#id_requires_prescription').prop('checked', !!d.requires_prescription);
                     $('#id_is_controlled_substance').prop('checked', !!d.is_controlled_substance);
+                    $('#id_is_insurance_excluded').prop('checked', !!d.is_insurance_excluded);
                 }
                 if (CAP.hasItemAlternatives && window._altPicker) {
                     window._altPicker.setCurrentItemId(d.id);

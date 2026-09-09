@@ -373,83 +373,25 @@
 </div><!-- cx-scene -->
 
 {% if tenant_capabilities.has_insurance_billing and not invoice.insurance_claim %}
-<div class="modal fade" id="createClaimModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">إنشاء مطالبة تأمين</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="createClaimBody">
-                <div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" id="btnSubmitClaim">إنشاء المطالبة</button>
-            </div>
+<div class="cx-modal-backdrop sales-field-hidden" id="createClaimModalBackdrop">
+    <div class="cx-modal">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title"><i class="fas fa-file-medical me-2"></i>إنشاء مطالبة تأمين</h3>
+            <button type="button" class="cx-modal-close" onclick="closeCreateClaimModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body" id="createClaimBody">
+            <div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+        <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-secondary" onclick="closeCreateClaimModal()">إلغاء</button>
+            <button type="button" class="cx-btn-add" id="btnSubmitClaim">
+                <i class="fas fa-check me-1"></i>إنشاء المطالبة
+            </button>
         </div>
     </div>
 </div>
-<script>
-(function() {
-    const btn = document.getElementById('btnCreateClaim');
-    if (!btn) return;
-    const urlEligible = "{% url 'insurance:invoice_eligible_lines_api' invoice.id %}";
-    const urlCreate = "{% url 'insurance:claim_create_api' %}";
-    const modal = new bootstrap.Modal(document.getElementById('createClaimModal'));
-
-    btn.addEventListener('click', function() {
-        document.getElementById('createClaimBody').innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>';
-        modal.show();
-        fetch(urlEligible).then(r => r.json()).then(resp => {
-            if (!resp.success) { document.getElementById('createClaimBody').innerHTML = `<div class="alert alert-danger">${resp.message}</div>`; return; }
-            const d = resp.data;
-            if (!d.policies.length) {
-                document.getElementById('createClaimBody').innerHTML = '<div class="alert alert-warning">لا توجد بوليصة تأمين نشطة لهذا العميل.</div>';
-                return;
-            }
-            const policyOptions = d.policies.map(p => `<option value="${p.id}" data-coverage="${p.coverage_percent}">${p.insurance_company_name} (${p.coverage_percent}%)</option>`).join('');
-            const linesHtml = d.lines.map(l => `
-                <tr>
-                    <td><input type="checkbox" class="js-line-check" data-id="${l.id}" checked></td>
-                    <td>${l.item_name}</td>
-                    <td class="text-center">${l.quantity}</td>
-                    <td class="text-center">${l.line_total}</td>
-                </tr>`).join('');
-            document.getElementById('createClaimBody').innerHTML = `
-                <div class="mb-3">
-                    <label class="cx-label">البوليصة</label>
-                    <select id="claimPolicySelect" class="form-select">${policyOptions}</select>
-                </div>
-                <table class="table table-sm">
-                    <thead><tr><th></th><th>الصنف</th><th class="text-center">الكمية</th><th class="text-center">المبلغ</th></tr></thead>
-                    <tbody>${linesHtml}</tbody>
-                </table>`;
-            document.getElementById('createClaimBody').dataset.policies = JSON.stringify(d.policies);
-        });
-    });
-
-    document.getElementById('btnSubmitClaim').addEventListener('click', function() {
-        const body = document.getElementById('createClaimBody');
-        const policyId = document.getElementById('claimPolicySelect') ? document.getElementById('claimPolicySelect').value : null;
-        if (!policyId) return;
-        const policies = JSON.parse(body.dataset.policies || '[]');
-        const policy = policies.find(p => String(p.id) === String(policyId));
-        const lines = Array.from(document.querySelectorAll('.js-line-check:checked')).map(el => ({
-            invoice_line_id: parseInt(el.dataset.id),
-            coverage_percent: policy ? policy.coverage_percent : 0,
-        }));
-        if (!lines.length) { alert('اختر بنداً واحداً على الأقل'); return; }
-        fetch(urlCreate, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-            body: JSON.stringify({ invoice_id: {{ invoice.id }}, policy_id: policyId, lines: lines }),
-        }).then(r => r.json()).then(resp => {
-            if (resp.success) { location.reload(); } else { alert(resp.message); }
-        });
-    });
-})();
-</script>
 {% endif %}
 
 {% include "sales/partials/print_invoice.html" %}
@@ -737,5 +679,75 @@ function submitEmail() {
         btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>إرسال';
     });
 }
+
+{% if tenant_capabilities.has_insurance_billing and not invoice.insurance_claim %}
+/* ── Insurance claim creation ────────────────────────────── */
+(function() {
+    const btn = document.getElementById('btnCreateClaim');
+    if (!btn) return;
+    const urlEligible = "{% url 'insurance:invoice_eligible_lines_api' invoice.id %}";
+    const urlCreate = "{% url 'insurance:claim_create_api' %}";
+
+    function openCreateClaimModal() {
+        document.getElementById('createClaimModalBackdrop').classList.remove('sales-field-hidden');
+    }
+    window.closeCreateClaimModal = function() {
+        document.getElementById('createClaimModalBackdrop').classList.add('sales-field-hidden');
+    };
+
+    btn.addEventListener('click', function() {
+        document.getElementById('createClaimBody').innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>';
+        openCreateClaimModal();
+        fetch(urlEligible).then(r => r.json()).then(resp => {
+            if (!resp.success) { document.getElementById('createClaimBody').innerHTML = `<div class="alert alert-danger">${resp.message}</div>`; return; }
+            const d = resp.data;
+            if (!d.policies.length) {
+                document.getElementById('createClaimBody').innerHTML = '<div class="alert alert-warning">لا توجد بوليصة تأمين نشطة لهذا العميل.</div>';
+                return;
+            }
+            const policyOptions = d.policies.map(p => `<option value="${p.id}" data-coverage="${p.coverage_percent}">${p.insurance_company_name} (${p.coverage_percent}%)</option>`).join('');
+            const anyExcluded = d.lines.some(l => l.is_insurance_excluded);
+            const linesHtml = d.lines.map(l => `
+                <tr${l.is_insurance_excluded ? ' style="background:rgba(180,83,9,.07);"' : ''}>
+                    <td><input type="checkbox" class="js-line-check" data-id="${l.id}" ${l.is_insurance_excluded ? '' : 'checked'}></td>
+                    <td>${l.item_name}${l.is_insurance_excluded ? ' <span class="badge" style="background:#b45309;font-size:.65rem;"><i class="fas fa-ban me-1"></i>غير مغطى بالتأمين</span>' : ''}</td>
+                    <td class="text-center">${l.quantity}</td>
+                    <td class="text-center">${l.line_total}</td>
+                </tr>`).join('');
+            document.getElementById('createClaimBody').innerHTML = `
+                <div class="mb-3">
+                    <label class="cx-label">البوليصة</label>
+                    <select id="claimPolicySelect" class="form-select">${policyOptions}</select>
+                </div>
+                ${anyExcluded ? '<div class="alert alert-warning py-2 px-3" style="font-size:.85rem;"><i class="fas fa-triangle-exclamation me-1"></i>بعض الأصناف مُعلَّمة كغير مغطاة بالتأمين وتم استبعادها تلقائياً — يمكنك تضمينها يدوياً إذا لزم الأمر.</div>' : ''}
+                <table class="table table-sm">
+                    <thead><tr><th></th><th>الصنف</th><th class="text-center">الكمية</th><th class="text-center">المبلغ</th></tr></thead>
+                    <tbody>${linesHtml}</tbody>
+                </table>`;
+            document.getElementById('createClaimBody').dataset.policies = JSON.stringify(d.policies);
+        });
+    });
+
+    document.getElementById('btnSubmitClaim').addEventListener('click', function() {
+        const body = document.getElementById('createClaimBody');
+        const policyId = document.getElementById('claimPolicySelect') ? document.getElementById('claimPolicySelect').value : null;
+        if (!policyId) return;
+        const policies = JSON.parse(body.dataset.policies || '[]');
+        const policy = policies.find(p => String(p.id) === String(policyId));
+        const lines = Array.from(document.querySelectorAll('.js-line-check:checked')).map(el => ({
+            invoice_line_id: parseInt(el.dataset.id),
+            coverage_percent: policy ? policy.coverage_percent : 0,
+        }));
+        if (!lines.length) { alert('اختر بنداً واحداً على الأقل'); return; }
+        fetch(urlCreate, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ invoice_id: {{ invoice.id }}, policy_id: policyId, lines: lines }),
+        }).then(r => r.json()).then(resp => {
+            if (resp.success) { location.reload(); } else { alert(resp.message); }
+        });
+    });
+})();
+{% endif %}
 </script>
 {% endblock %}

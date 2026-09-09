@@ -225,6 +225,10 @@ class Item(TenantMixin):
     )
     requires_prescription = models.BooleanField('يُصرف بوصفة طبية', default=False)
     is_controlled_substance = models.BooleanField('خاضع للرقابة / مخدرات', default=False)
+    is_insurance_excluded = models.BooleanField(
+        'غير مغطى بالتأمين', default=False,
+        help_text='يُستبعد تلقائياً عند إنشاء مطالبة تأمين لفاتورة تحتوي هذا الصنف'
+    )
     alternatives = models.ManyToManyField(
         'self', blank=True, symmetrical=True,
         verbose_name='بدائل / أصناف مكافئة',

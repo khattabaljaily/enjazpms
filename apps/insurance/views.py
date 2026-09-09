@@ -326,6 +326,7 @@ def invoice_eligible_lines_api(request, invoice_id):
         {
             'id': line.id, 'item_name': line.item.name,
             'quantity': str(line.quantity), 'line_total': str(line.line_total),
+            'is_insurance_excluded': line.item.is_insurance_excluded,
         }
         for line in invoice.lines.select_related('item').all()
     ]

@@ -105,7 +105,7 @@ class ItemForm(forms.ModelForm):
             'min_quantity', 'max_quantity',
             'track_expiry', 'track_batch', 'track_serial',
             'generic_name', 'manufacturer', 'dosage_form', 'strength',
-            'requires_prescription', 'is_controlled_substance', 'alternatives',
+            'requires_prescription', 'is_controlled_substance', 'is_insurance_excluded', 'alternatives',
             'description', 'image', 'is_active', 'is_sellable', 'is_purchasable',
         ]
         widgets = {
@@ -124,6 +124,7 @@ class ItemForm(forms.ModelForm):
             'strength': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '500 مجم، 5 مل...'}),
             'requires_prescription': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_controlled_substance': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_insurance_excluded': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'alternatives': forms.SelectMultiple(attrs={'class': 'form-select', 'size': '6'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
@@ -147,6 +148,7 @@ class ItemForm(forms.ModelForm):
             'strength': 'التركيز',
             'requires_prescription': 'يُصرف بوصفة طبية',
             'is_controlled_substance': 'خاضع للرقابة / مخدرات',
+            'is_insurance_excluded': 'غير مغطى بالتأمين',
             'alternatives': 'بدائل / أصناف مكافئة',
             'description': 'الوصف',
             'image': 'الصورة',

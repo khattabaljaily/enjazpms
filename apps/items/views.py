@@ -216,6 +216,7 @@ def item_table_api(request):
             'track_serial': item.track_serial,
             'requires_prescription': item.requires_prescription,
             'is_controlled_substance': item.is_controlled_substance,
+            'is_insurance_excluded': item.is_insurance_excluded,
             'is_active': item.is_active,
         }
         for item in qs
@@ -357,6 +358,7 @@ def item_detail_api(request, pk):
             'strength': item.strength,
             'requires_prescription': item.requires_prescription,
             'is_controlled_substance': item.is_controlled_substance,
+            'is_insurance_excluded': item.is_insurance_excluded,
             'alternatives': [{'id': a.id, 'name': a.name} for a in item.alternatives.all()],
             'description': item.description,
             'is_active': item.is_active,
