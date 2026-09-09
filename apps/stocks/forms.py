@@ -6,7 +6,7 @@ class StockForm(forms.ModelForm):
     class Meta:
         model = Stock
         fields = [
-            'name', 'code', 'stock_type', 'address', 'notes', 'is_active', 'is_default',
+            'name', 'code', 'stock_type', 'branch', 'address', 'notes', 'is_active', 'is_default',
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -18,6 +18,7 @@ class StockForm(forms.ModelForm):
                 'placeholder': 'يُولَّد تلقائياً إن تُرك فارغاً',
             }),
             'stock_type': forms.Select(attrs={'class': 'form-select'}),
+            'branch': forms.Select(attrs={'class': 'form-select'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -27,8 +28,19 @@ class StockForm(forms.ModelForm):
             'name': 'اسم المخزن',
             'code': 'الرمز',
             'stock_type': 'نوع المخزن',
+            'branch': 'الفرع',
             'address': 'العنوان / الموقع',
             'notes': 'ملاحظات',
             'is_active': 'نشط',
             'is_default': 'مخزن افتراضي',
         }
+
+    def __init__(self, *args, tenant=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['branch'].required = False
+        if tenant:
+            from apps.core.models import Branch
+            self.fields['branch'].queryset = Branch.objects.filter(tenant=tenant, is_active=True)
+        else:
+            from apps.core.models import Branch
+            self.fields['branch'].queryset = Branch.objects.none()

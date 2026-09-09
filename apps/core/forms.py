@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 
-from .models import BusinessType, Tenant
+from .models import BusinessType, Tenant, Branch
 from .constants import COUNTRY_CHOICES, CURRENCY_CHOICES, COUNTRY_TIMEZONE_MAP
 
 
@@ -61,3 +61,16 @@ class TenantForm(forms.ModelForm):
         self.fields['business_type'].label = 'نوع النشاط'
         if not self.instance.pk:
             self.fields['subscription_start'].initial = timezone.localdate()
+
+
+class BranchForm(forms.ModelForm):
+    class Meta:
+        model = Branch
+        fields = ['name', 'code', 'address', 'phone', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'يُولَّد تلقائياً إن تُرك فارغاً'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }

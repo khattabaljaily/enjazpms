@@ -43,11 +43,13 @@ class Stock(TenantMixin):
     )
 
     # ------ الفرع المرتبط (للنسخة multi_branch فقط) ------
-    # سيتم ربطه بـ branches.Branch عند إنشاء تطبيق الفروع
-    # branch = models.ForeignKey('branches.Branch', ...)
+    branch = models.ForeignKey(
+        'core.Branch', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='stocks', verbose_name='الفرع'
+    )
     branch_name = models.CharField(
-        'اسم الفرع', max_length=200, blank=True,
-        help_text='يُستخدم مؤقتاً حتى يتم إنشاء تطبيق الفروع'
+        'اسم الفرع (قديم)', max_length=200, blank=True,
+        help_text='حقل قديم قبل إضافة موديل الفرع الحقيقي — يُستخدم كنسخة احتياطية فقط'
     )
 
     # ------ تفاصيل إضافية ------

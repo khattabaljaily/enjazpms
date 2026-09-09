@@ -157,6 +157,10 @@
                                 <label class="cx-label" for="id_stock_type">{{ form.stock_type.label }}</label>
                                 {{ form.stock_type }}
                             </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_branch">{{ form.branch.label }}</label>
+                                {{ form.branch }}
+                            </div>
                             <div class="col-12">
                                 <label class="cx-label" for="id_address">{{ form.address.label }}</label>
                                 {{ form.address }}
@@ -500,6 +504,7 @@
                 $('#id_name').val(d.name || '');
                 $('#id_code').val(d.code || '');
                 $('#id_stock_type').val(d.stock_type || '');
+                $('#id_branch').val(d.branch || '');
                 $('#id_address').val(d.address || '');
                 $('#id_notes').val(d.notes || '');
                 $('#id_is_active').prop('checked', !!d.is_active);

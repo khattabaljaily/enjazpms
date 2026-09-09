@@ -25,6 +25,14 @@ urlpatterns = [
     path('about/', views.about, name='about'),
     path('analytics/', views.analytics, name='analytics'),
 
+    # Branches (الفروع)
+    path('branches/', views.branch_list, name='branch_list'),
+    path('branches/api/table/', views.branch_table_api, name='branch_table_api'),
+    path('branches/api/create/', views.branch_create_api, name='branch_create_api'),
+    path('branches/api/<int:pk>/detail/', views.branch_detail_api, name='branch_detail_api'),
+    path('branches/api/<int:pk>/update/', views.branch_update_api, name='branch_update_api'),
+    path('branches/api/<int:pk>/delete/', views.branch_delete_api, name='branch_delete_api'),
+
     # Tenant management (superuser)
     path('tenants/', views.tenant_list, name='tenant_list'),
     path('tenants/api/table/', views.tenant_table_api, name='tenant_table_api'),

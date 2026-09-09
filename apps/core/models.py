@@ -303,6 +303,73 @@ class TenantCapabilities(models.Model):
 
 
 # ============================================
+# BRANCH (فروع النشاط التجاري)
+# ============================================
+
+class Branch(models.Model):
+    """
+    فرع فيزيائي للنشاط التجاري (للنسخة multi_branch).
+    كل Stock يمكن أن يرتبط بفرع واحد — راجع Stock.branch في apps/stocks/models.py.
+    """
+
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        verbose_name='المشترك',
+        related_name='branches'
+    )
+    name = models.CharField('اسم الفرع', max_length=200)
+    code = models.CharField('الرمز', max_length=20, blank=True)
+    address = models.TextField('العنوان', blank=True)
+    phone = models.CharField('الهاتف', max_length=20, blank=True)
+    is_active = models.BooleanField('نشط', default=True)
+    is_default = models.BooleanField('الفرع الافتراضي', default=False)
+
+    created_at = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True)
+    updated_at = models.DateTimeField('تاريخ التحديث', auto_now=True)
+
+    class Meta:
+        db_table = 'branches'
+        verbose_name = 'فرع'
+        verbose_name_plural = 'الفروع'
+        ordering = ['-is_default', 'name']
+        unique_together = [('tenant', 'code')]
+        indexes = [
+            models.Index(fields=['tenant', 'is_active']),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            last = (
+                Branch.objects.filter(tenant=self.tenant)
+                .exclude(code='')
+                .order_by('-id')
+                .first()
+            )
+            next_num = 1
+            if last and last.code.startswith('BR-'):
+                try:
+                    next_num = int(last.code.split('-')[-1]) + 1
+                except ValueError:
+                    next_num = Branch.objects.filter(tenant=self.tenant).count() + 1
+            self.code = f"BR-{next_num:03d}"
+
+        if not self.pk and not Branch.objects.filter(tenant=self.tenant).exists():
+            self.is_default = True
+
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def can_add_branch(tenant):
+        """هل يستطيع هذا الـ tenant إضافة فرع جديد؟"""
+        current_count = Branch.objects.filter(tenant=tenant, is_active=True).count()
+        return current_count < tenant.max_branches
+
+
+# ============================================
 # SETTINGS
 # ============================================
 

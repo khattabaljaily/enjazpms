@@ -51,7 +51,7 @@ def stock_list(request):
     can_add = active < tenant.max_stocks
 
     context = {
-        'form': StockForm(),
+        'form': StockForm(tenant=tenant),
         'stats': {
             'total': total,
             'active': active,
@@ -153,7 +153,7 @@ def stock_create_api(request):
             'message': f'لقد وصلت للحد الأقصى المسموح به ({tenant.max_stocks} مخازن). يرجى ترقية الباقة.',
         }, status=403)
 
-    form = StockForm(request.POST)
+    form = StockForm(request.POST, tenant=tenant)
     if form.is_valid():
         stock = form.save(commit=False)
         stock.tenant = tenant
@@ -203,6 +203,7 @@ def stock_detail_api(request, pk):
             'name': stock.name,
             'code': stock.code,
             'stock_type': stock.stock_type,
+            'branch': stock.branch_id,
             'address': stock.address,
             'notes': stock.notes,
             'is_active': stock.is_active,
@@ -230,7 +231,7 @@ def stock_update_api(request, pk):
     except Stock.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=404)
 
-    form = StockForm(request.POST, instance=stock)
+    form = StockForm(request.POST, instance=stock, tenant=tenant)
     if form.is_valid():
         updated = form.save(commit=False)
         updated.updated_by = request.user

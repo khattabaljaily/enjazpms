@@ -18,9 +18,9 @@ from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta, date as date_type
 from django.utils import timezone as dj_timezone
 
-from .models import Settings, Tenant, BusinessType, SupportTicket, SupportMessage, TenantBackup, SocialMediaPost
+from .models import Settings, Tenant, BusinessType, SupportTicket, SupportMessage, TenantBackup, SocialMediaPost, Branch
 from apps.notifications.models import Notification
-from .forms import TenantForm
+from .forms import TenantForm, BranchForm
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country, CURRENCY_CHOICES
 from apps.treasury.models import TreasuryMovement
 from apps.expenses.models import Expense
@@ -2890,3 +2890,142 @@ def admin_marketing_post_generate(request):
         'similar_warning': bool(similar),
         'similar_content': similar['content'] if similar else None,
     })
+
+
+# ════════════════════════════════════════════════════════════
+# Branches (الفروع)
+# ════════════════════════════════════════════════════════════
+
+def _branch_json_error(message, status=400):
+    return JsonResponse({'success': False, 'message': message}, status=status, json_dumps_params={'ensure_ascii': False})
+
+
+def _branch_json_ok(data=None, msg='تمت العملية بنجاح'):
+    payload = {'success': True, 'message': msg}
+    if data is not None:
+        payload['data'] = data
+    return JsonResponse(payload, json_dumps_params={'ensure_ascii': False})
+
+
+def _branch_serialize_errors(form):
+    return {field: [str(e) for e in errors] for field, errors in form.errors.items()}
+
+
+@login_required
+@require_permission('view_branches')
+def branch_list(request):
+    tenant = request.tenant
+    if not tenant:
+        return redirect('core:no_tenant')
+    return render(request, 'core/branch_list.html', {
+        'form': BranchForm(),
+        'section': 'branches',
+    })
+
+
+@login_required
+@require_permission('view_branches')
+def branch_table_api(request):
+    tenant = request.tenant
+    if not tenant:
+        return _branch_json_error('لا يوجد نشاط تجاري')
+
+    search = request.GET.get('search[value]', '').strip()
+    qs = Branch.objects.filter(tenant=tenant)
+    if search:
+        qs = qs.filter(Q(name__icontains=search) | Q(code__icontains=search))
+    qs = qs.order_by('-is_default', 'name')
+
+    data = [
+        {
+            'id': b.id, 'name': b.name, 'code': b.code,
+            'phone': b.phone or '-', 'is_active': b.is_active, 'is_default': b.is_default,
+            'stocks_count': b.stocks.count(),
+        }
+        for b in qs
+    ]
+    return JsonResponse({'draw': int(request.GET.get('draw', 1)), 'recordsTotal': qs.count(),
+                          'recordsFiltered': qs.count(), 'data': data})
+
+
+@login_required
+@require_permission('add_branches')
+def branch_create_api(request):
+    tenant = request.tenant
+    if not tenant:
+        return _branch_json_error('لا يوجد نشاط تجاري')
+    if request.method != 'POST':
+        return _branch_json_error('طريقة غير مسموحة', status=405)
+
+    if not Branch.can_add_branch(tenant):
+        return _branch_json_error(
+            f'لقد وصلت للحد الأقصى المسموح به من الفروع ({tenant.max_branches}). تواصل مع الدعم لزيادة الحد.'
+        )
+
+    form = BranchForm(request.POST)
+    if form.is_valid():
+        branch = form.save(commit=False)
+        branch.tenant = tenant
+        branch.save()
+        log_activity(request, 'إضافة فرع', branch.name, 'create')
+        return _branch_json_ok({'id': branch.id}, 'تم إضافة الفرع بنجاح')
+    return JsonResponse({'success': False, 'message': 'يرجى التحقق من الحقول', 'errors': _branch_serialize_errors(form)},
+                         status=400, json_dumps_params={'ensure_ascii': False})
+
+
+@login_required
+@require_permission('view_branches')
+def branch_detail_api(request, pk):
+    tenant = request.tenant
+    if not tenant:
+        return _branch_json_error('لا يوجد نشاط تجاري')
+    try:
+        b = Branch.objects.get(tenant=tenant, pk=pk)
+    except Branch.DoesNotExist:
+        return _branch_json_error('الفرع غير موجود', status=404)
+    return _branch_json_ok({
+        'id': b.id, 'name': b.name, 'code': b.code, 'address': b.address,
+        'phone': b.phone, 'is_active': b.is_active, 'is_default': b.is_default,
+    })
+
+
+@login_required
+@require_permission('change_branches')
+def branch_update_api(request, pk):
+    tenant = request.tenant
+    if not tenant:
+        return _branch_json_error('لا يوجد نشاط تجاري')
+    if request.method != 'POST':
+        return _branch_json_error('طريقة غير مسموحة', status=405)
+    try:
+        b = Branch.objects.get(tenant=tenant, pk=pk)
+    except Branch.DoesNotExist:
+        return _branch_json_error('الفرع غير موجود', status=404)
+
+    form = BranchForm(request.POST, instance=b)
+    if form.is_valid():
+        updated = form.save()
+        log_activity(request, 'تعديل فرع', updated.name, 'update')
+        return _branch_json_ok(msg='تم تحديث الفرع بنجاح')
+    return JsonResponse({'success': False, 'message': 'يرجى التحقق من الحقول', 'errors': _branch_serialize_errors(form)},
+                         status=400, json_dumps_params={'ensure_ascii': False})
+
+
+@login_required
+@require_permission('delete_branches')
+def branch_delete_api(request, pk):
+    tenant = request.tenant
+    if not tenant:
+        return _branch_json_error('لا يوجد نشاط تجاري')
+    if request.method != 'POST':
+        return _branch_json_error('طريقة غير مسموحة', status=405)
+    try:
+        b = Branch.objects.get(tenant=tenant, pk=pk)
+    except Branch.DoesNotExist:
+        return _branch_json_error('الفرع غير موجود', status=404)
+    if b.stocks.exists():
+        return _branch_json_error('لا يمكن حذف فرع مرتبط بمخازن — أزل الربط من المخازن أولاً.')
+    name = b.name
+    b.delete()
+    log_activity(request, 'حذف فرع', name, 'delete')
+    return _branch_json_ok(msg=f'تم حذف "{name}" بنجاح')
