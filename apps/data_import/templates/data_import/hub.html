@@ -1,0 +1,64 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block extra_css %}
+<style>
+.di-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:1rem; padding:1.5rem; }
+.di-card {
+  display:flex; flex-direction:column; gap:.6rem; padding:1.25rem;
+  border:1px solid var(--border-light,#e5e7eb); border-radius:14px;
+  background:var(--surface,#fff); text-decoration:none; color:inherit;
+  transition:border-color .15s, box-shadow .15s;
+}
+.di-card:hover { border-color:var(--indigo-500,#c9840f); box-shadow:0 4px 14px rgba(0,0,0,.06); color:inherit; }
+.di-card-icon {
+  width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+  background:var(--indigo-50,#fef3e2); color:var(--indigo-700,#8f5c0a); font-size:1.1rem;
+}
+.di-card-title { font-weight:700; font-size:.95rem; }
+.di-card-desc { font-size:.8rem; color:var(--text-secondary,#6b7280); }
+.di-card-soon { opacity:.55; cursor:default; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas fa-file-import"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">استيراد البيانات</h1>
+                <p class="cx-hero-desc">استورد بياناتك دفعة واحدة بدل الإدخال اليدوي بندًا بندًا</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel">
+    <div class="di-cards">
+        <a href="{% url 'data_import:product_page' %}" class="di-card">
+            <div class="di-card-icon"><i class="fas fa-box-open"></i></div>
+            <div class="di-card-title">استيراد المنتجات</div>
+            <div class="di-card-desc">قالب Excel مصمم حسب نشاطك، يشمل الأسعار والمخزون والرصيد الافتتاحي</div>
+        </a>
+        <div class="di-card di-card-soon">
+            <div class="di-card-icon"><i class="fas fa-users"></i></div>
+            <div class="di-card-title">استيراد العملاء</div>
+            <div class="di-card-desc">قريباً</div>
+        </div>
+        <div class="di-card di-card-soon">
+            <div class="di-card-icon"><i class="fas fa-truck"></i></div>
+            <div class="di-card-title">استيراد الموردين</div>
+            <div class="di-card-desc">قريباً</div>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}

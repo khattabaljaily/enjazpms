@@ -208,6 +208,23 @@
         </li>
     </ul>
 
+    {% if user|has_perm_key:'import_items' %}
+    <!-- ── Data Import ── -->
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item has-submenu">
+            <a class="nav-link nav-link-toggle{% if 'data-import' in request.path %} submenu-active{% endif %}" href="#">
+                <span class="nav-icon nav-icon--stock"><i class="fas fa-file-import"></i></span>
+                استيراد البيانات
+                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+            </a>
+            <ul class="nav-submenu">
+                <li><a href="{% url 'data_import:product_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'product_page' %} active{% endif %}"><i class="fas fa-box-open me-2"></i>استيراد المنتجات</a></li>
+            </ul>
+        </li>
+    </ul>
+    {% endif %}
+
     <!-- ── Inventory ── -->
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">

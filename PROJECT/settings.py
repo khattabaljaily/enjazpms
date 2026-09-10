@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'apps.suppliers',
     'apps.agents',
     'apps.items',
+    'apps.data_import',
     'apps.purchases',
     'apps.sales',
     'apps.insurance',

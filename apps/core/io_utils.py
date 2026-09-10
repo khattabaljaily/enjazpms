@@ -24,6 +24,15 @@ def csv_writer(response) -> csv.writer:
     return csv.writer(response)
 
 
+def xlsx_response(filename: str) -> HttpResponse:
+    """Return an HttpResponse ready for an .xlsx attachment download."""
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
 # ── Parsing helpers ─────────────────────────────────────────────────────────
 
 def parse_uploaded_file(file) -> tuple[list[dict], str | None]:

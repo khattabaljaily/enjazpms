@@ -166,10 +166,6 @@
                     <i class="fas fa-file-export"></i>
                     <span>تصدير</span>
                 </a>
-                <button type="button" class="cx-btn-secondary" id="btnOpenImportItems" data-require-perm="import_items">
-                    <i class="fas fa-file-import"></i>
-                    <span>استيراد</span>
-                </button>
                 <button type="button" class="cx-btn-add" id="btnOpenCreateItem" data-require-perm="add_items">
                     <i class="fas fa-plus"></i>
                     <span>إضافة منتج</span>
@@ -870,40 +866,6 @@
             <div class="cx-delete-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
                 <button type="button" class="cx-btn-danger" id="confirmDeleteItemBtn">نعم، احذف</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ══════════════════════════ IMPORT MODAL ══════════════════════════ -->
-<div class="modal fade" id="importItemsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered cx-modal-dialog" style="max-width:480px">
-        <div class="modal-content cx-modal">
-            <div class="cx-modal-main">
-                <div class="cx-modal-header">
-                    <h5 class="cx-modal-title"><i class="fas fa-file-import me-2"></i>استيراد منتجات</h5>
-                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="cx-modal-body">
-                    <div class="alert alert-info d-flex align-items-start gap-2 mb-3" style="font-size:.875rem">
-                        <i class="fas fa-circle-info mt-1"></i>
-                        <div>
-                            ارفع ملف CSV أو Excel يحتوي على بيانات المنتجات.
-                            <a href="{% url 'items:template_api' %}" class="fw-bold" data-no-spinner>تحميل النموذج</a>
-                        </div>
-                    </div>
-                    <div id="importItemsResult" class="d-none mb-3"></div>
-                    <div class="mb-3">
-                        <label class="cx-label" for="importItemsFile">اختر الملف <sup class="cx-required">*</sup></label>
-                        <input type="file" class="form-control" id="importItemsFile" accept=".csv,.xlsx,.xls">
-                    </div>
-                </div>
-                <div class="cx-modal-footer">
-                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
-                    <button type="button" class="cx-btn-primary" id="confirmImportItemsBtn">
-                        <i class="fas fa-upload me-1"></i> استيراد
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -1801,47 +1763,6 @@
         deleteModal.show();
     });
     $('#viewEditItemBtn').on('click', function () { viewModal.hide(); openEdit($(this).data('id')); });
-
-    /* ── Import ──────────────────────────────────────────────── */
-    const importItemsModal = new bootstrap.Modal(document.getElementById('importItemsModal'));
-    document.getElementById('importItemsModal') && document.body.appendChild(document.getElementById('importItemsModal'));
-
-    $('#btnOpenImportItems').on('click', function () {
-        $('#importItemsFile').val('');
-        $('#importItemsResult').addClass('d-none').html('');
-        importItemsModal.show();
-    });
-
-    $('#confirmImportItemsBtn').on('click', function () {
-        const file = $('#importItemsFile')[0].files[0];
-        if (!file) { Enjaz.toast('الرجاء اختيار ملف', 'error'); return; }
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').first().val());
-        const $btn = $(this);
-        Enjaz.showLoading($btn);
-        $.ajax({
-            url: "{% url 'items:import_api' %}",
-            method: 'POST',
-            data: fd,
-            processData: false,
-            contentType: false,
-            success: function (resp) {
-                Enjaz.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
-                const cls = resp.success ? 'alert-success' : 'alert-danger';
-                let html = `<div class="alert ${cls} mb-0">${resp.message}</div>`;
-                if (resp.errors && resp.errors.length) {
-                    html += '<ul class="mt-2 mb-0 small text-danger">' + resp.errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
-                }
-                $('#importItemsResult').removeClass('d-none').html(html);
-                if (resp.success && resp.imported > 0) dt.ajax.reload(null, false);
-            },
-            error: function () {
-                Enjaz.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
-                Enjaz.toast('حدث خطأ أثناء الاستيراد', 'error');
-            }
-        });
-    });
 
     /* ── Category select: tree-indented ────────────────────── */
     (function initCategoryTreeSelect() {

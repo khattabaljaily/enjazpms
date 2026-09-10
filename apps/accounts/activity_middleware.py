@@ -70,7 +70,7 @@ ACTIVITY_MAP = {
     'items:create_api':            ('إضافة منتج جديد',              'create'),
     'items:update_api':            ('تعديل بيانات منتج',            'update'),
     'items:delete_api':            ('حذف منتج',                      'delete'),
-    'items:import_api':            ('استيراد منتجات من ملف',        'create'),
+    'data_import:product_commit':  ('استيراد منتجات من ملف',        'create'),
     'items:category_create_api':   ('إضافة تصنيف جديد',            'create'),
     'items:category_update_api':   ('تعديل تصنيف',                  'update'),
     'items:category_delete_api':   ('حذف تصنيف',                    'delete'),

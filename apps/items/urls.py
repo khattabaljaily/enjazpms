@@ -29,10 +29,8 @@ urlpatterns = [
     path('units/api/<int:pk>/update/', views.unit_update_api, name='unit_update_api'),
     path('units/api/<int:pk>/delete/', views.unit_delete_api, name='unit_delete_api'),
 
-    # ------- Items Import/Export -------
+    # ------- Items Export -------
     path('api/export/', views.item_export_api, name='export_api'),
-    path('api/import/', views.item_import_api, name='import_api'),
-    path('api/template/', views.item_download_template, name='template_api'),
 
     # ------- Categories Import/Export -------
     path('categories/api/export/', views.category_export_api, name='category_export_api'),
