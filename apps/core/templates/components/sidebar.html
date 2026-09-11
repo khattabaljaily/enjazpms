@@ -208,7 +208,7 @@
         </li>
     </ul>
 
-    {% if user|has_perm_key:'import_items' %}
+    {% if user|has_perm_key:'import_items' or user|has_perm_key:'import_customers' or user|has_perm_key:'import_suppliers' %}
     <!-- ── Data Import ── -->
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
@@ -219,7 +219,15 @@
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
+                {% if user|has_perm_key:'import_items' %}
                 <li><a href="{% url 'data_import:product_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'product_page' %} active{% endif %}"><i class="fas fa-box-open me-2"></i>استيراد المنتجات</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'import_customers' %}
+                <li><a href="{% url 'data_import:customer_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'customer_page' %} active{% endif %}"><i class="fas fa-users me-2"></i>استيراد العملاء</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'import_suppliers' %}
+                <li><a href="{% url 'data_import:supplier_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'supplier_page' %} active{% endif %}"><i class="fas fa-truck me-2"></i>استيراد الموردين</a></li>
+                {% endif %}
             </ul>
         </li>
     </ul>
@@ -250,7 +258,9 @@
             </a>
             <ul class="nav-submenu">
                 <li><a href="{% url 'stocks:list' %}" class="nav-sublink"><i class="fas fa-warehouse me-2"></i>قائمة المخازن</a></li>
+                {% if current_tenant.version_type == 'multi_branch' %}
                 <li><a href="{% url 'core:branch_list' %}" class="nav-sublink"><i class="fas fa-code-branch me-2"></i>الفروع</a></li>
+                {% endif %}
                 <li><a href="{% url 'stocks:quantities_list' %}" class="nav-sublink"><i class="fas fa-cubes me-2"></i>أرصدة المخزون</a></li>
                 <li><a href="{% url 'stocks:transfer_list' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>تحويلات المخزون</a></li>
                 <li><a href="{% url 'stocks:stocktake_list' %}" class="nav-sublink"><i class="fas fa-clipboard-list me-2"></i>جرد المخزون</a></li>

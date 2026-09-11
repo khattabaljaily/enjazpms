@@ -323,7 +323,7 @@ def invoice_create(request):
         return redirect('core:no_tenant')
 
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True)
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).select_related('branch')
     items = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
     from apps.agents.models import Agent as _Agent
     agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name') if tenant.plan_allows('agents') else []
@@ -370,7 +370,7 @@ def invoice_edit(request, pk):
         return redirect('sales:invoice_detail', pk=pk)
 
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True)
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).select_related('branch')
     items = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
     from apps.agents.models import Agent as _Agent
     agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name') if tenant.plan_allows('agents') else []
@@ -580,6 +580,25 @@ def _process_invoice_post(request, tenant, invoice):
 
             if action == 'confirm':
                 confirm_sale_invoice(inv, request.user)
+
+                insurance_policy_id = header.get('insurance_policy_id') or None
+                if inv.payment_method == 'credit' and inv.customer_id and insurance_policy_id:
+                    from apps.insurance.models import CustomerInsurancePolicy
+                    from apps.insurance import services as insurance_services
+                    try:
+                        policy = CustomerInsurancePolicy.objects.get(
+                            tenant=tenant, pk=insurance_policy_id, customer_id=inv.customer_id, is_active=True,
+                        )
+                    except CustomerInsurancePolicy.DoesNotExist:
+                        raise ValueError('بوليصة التأمين المحددة غير موجودة أو غير نشطة')
+
+                    line_selections = [
+                        {'invoice_line_id': line.id, 'coverage_percent': policy.effective_coverage_percent}
+                        for line in inv.lines.select_related('item').all()
+                        if not line.item.is_insurance_excluded
+                    ]
+                    if line_selections:
+                        insurance_services.create_claim_for_invoice(inv, policy, line_selections, request.user)
 
     except ValueError as e:
         return _json_error(str(e))
@@ -2365,7 +2384,7 @@ def pos_view(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    stocks = Stock.objects.filter(tenant=tenant, is_active=True).order_by('-is_default', 'name')
+    stocks = Stock.objects.filter(tenant=tenant, is_active=True).select_related('branch').order_by('-is_default', 'name')
     default_stock = stocks.filter(is_default=True).first() or stocks.first()
 
     from apps.items.models import Category
@@ -2566,6 +2585,7 @@ def pos_checkout_api(request):
     discount_type = body.get('discount_type', 'fixed')
     discount_value = Decimal(str(body.get('discount_value', 0) or 0))
     notes = body.get('notes', '')
+    insurance_policy_id = body.get('insurance_policy_id') or None
 
     lines_data = []
     for ln in lines_raw:
@@ -2608,6 +2628,24 @@ def pos_checkout_api(request):
                         reference=bank_reference,
                         user=request.user,
                     )
+
+            if payment_method == 'credit' and customer_id and insurance_policy_id:
+                from apps.insurance.models import CustomerInsurancePolicy
+                from apps.insurance import services as insurance_services
+                try:
+                    policy = CustomerInsurancePolicy.objects.get(
+                        tenant=tenant, pk=insurance_policy_id, customer_id=customer_id, is_active=True,
+                    )
+                except CustomerInsurancePolicy.DoesNotExist:
+                    raise ValueError('بوليصة التأمين المحددة غير موجودة أو غير نشطة')
+
+                line_selections = [
+                    {'invoice_line_id': line.id, 'coverage_percent': policy.effective_coverage_percent}
+                    for line in invoice.lines.select_related('item').all()
+                    if not line.item.is_insurance_excluded
+                ]
+                if line_selections:
+                    insurance_services.create_claim_for_invoice(invoice, policy, line_selections, request.user)
 
     except Exception as exc:
         return _json_error(str(exc))

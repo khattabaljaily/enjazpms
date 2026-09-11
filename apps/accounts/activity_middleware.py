@@ -53,7 +53,7 @@ ACTIVITY_MAP = {
     'customers:create':           ('إضافة عميل جديد',               'create'),
     'customers:update_api':       ('تعديل بيانات عميل',             'update'),
     'customers:delete_api':       ('حذف عميل',                       'delete'),
-    'customers:import_api':       ('استيراد عملاء من ملف',           'create'),
+    'data_import:customer_commit':('استيراد عملاء من ملف',           'create'),
     'customers:payments_create':  ('تسجيل دفعة من عميل',            'create'),
     'customers:payment_cancel':   ('إلغاء دفعة عميل',               'cancel'),
 
@@ -62,7 +62,7 @@ ACTIVITY_MAP = {
     'suppliers:create':           ('إضافة مورد جديد',               'create'),
     'suppliers:update_api':       ('تعديل بيانات مورد',             'update'),
     'suppliers:delete_api':       ('حذف مورد',                       'delete'),
-    'suppliers:import_api':       ('استيراد موردين من ملف',          'create'),
+    'data_import:supplier_commit':('استيراد موردين من ملف',          'create'),
     'suppliers:payments_create':  ('تسجيل دفعة للمورد',             'create'),
     'suppliers:payment_cancel':   ('إلغاء دفعة مورد',               'cancel'),
 

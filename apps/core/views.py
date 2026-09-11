@@ -348,7 +348,7 @@ def admin_dashboard(request):
     total_clients = Tenant.objects.count()
     active_clients = Tenant.objects.filter(is_active=True).count()
     expired_clients = Tenant.objects.filter(is_active=True, subscription_expires__lt=today).count()
-    trial_clients = Tenant.objects.filter(subscription_plan='trial').count()
+    trial_clients = Tenant.objects.filter(is_demo=True).count()
     basic_clients = Tenant.objects.filter(subscription_plan='basic').count()
     pro_clients = Tenant.objects.filter(subscription_plan='pro').count()
     enterprise_clients = Tenant.objects.filter(subscription_plan='enterprise').count()
@@ -1846,6 +1846,7 @@ def tenant_list(request):
         'country_timezone_map': COUNTRY_TIMEZONE_MAP,
         'country_currency_map': COUNTRY_CURRENCY_MAP,
         'currency_ar': CURRENCY_AR,
+        'plan_limits_json': json.dumps(Tenant.PLAN_LIMITS, ensure_ascii=False),
     }
     return render(request, 'core/tenant_list.html', context)
 
@@ -2332,9 +2333,35 @@ def tenant_approve_api(request, pk):
     if tenant.is_approved:
         return JsonResponse({'success': True, 'message': 'المشترك معتمد بالفعل', 'is_approved': True})
 
+    try:
+        payload = json.loads(request.body or '{}')
+    except (json.JSONDecodeError, ValueError):
+        payload = {}
+
+    update_fields = ['is_approved', 'approved_at', 'updated_at']
+
     tenant.is_approved = True
     tenant.approved_at = dj_timezone.now()
-    tenant.save(update_fields=['is_approved', 'approved_at', 'updated_at'])
+
+    # المشرف يقرر هنا إن كان الحساب يبقى تجريبياً أم يتحول لحساب حقيقي
+    if 'is_demo' in payload:
+        tenant.is_demo = bool(payload.get('is_demo'))
+        update_fields.append('is_demo')
+
+    # ومدة الاشتراك (بالأيام) من تاريخ اليوم أو من نهاية الفترة التجريبية الحالية أيهما أبعد
+    days = payload.get('days')
+    if days:
+        try:
+            days = int(days)
+        except (TypeError, ValueError):
+            days = None
+        if days and 0 < days <= 3650:
+            today = dj_timezone.localdate()
+            base_date = tenant.subscription_expires if (tenant.subscription_expires and tenant.subscription_expires >= today) else today
+            tenant.subscription_expires = base_date + timedelta(days=days)
+            update_fields.append('subscription_expires')
+
+    tenant.save(update_fields=update_fields)
 
     from apps.accounts.models import User
     admin_user = User.objects.filter(tenant=tenant, is_tenant_admin=True).order_by('id').first()
@@ -2434,6 +2461,7 @@ def pricing(request):
             'highlight': False,
             'features': [
                 {'text': '1 مخزن',                          'ok': True},
+                {'text': 'بدون فروع',                        'ok': False},
                 {'text': 'حتى 5 مستخدمين',                  'ok': True},
                 {'text': f'تجربة مجانية {trial_days} أيام', 'ok': True},
                 {'text': 'فواتير مبيعات وشراء',              'ok': True},
@@ -2457,6 +2485,7 @@ def pricing(request):
             'highlight': True,
             'features': [
                 {'text': 'حتى 5 مخازن',                      'ok': True},
+                {'text': 'بدون فروع',                        'ok': False},
                 {'text': 'حتى 15 مستخدمًا',                  'ok': True},
                 {'text': f'تجربة مجانية {trial_days} أيام', 'ok': True},
                 {'text': 'فواتير مبيعات وشراء',              'ok': True},
@@ -2473,13 +2502,14 @@ def pricing(request):
             'key': 'enterprise',
             'name': 'Enterprise',
             'title_ar': 'مؤسسات',
-            'description': 'فروع ومخازن متعددة مع تحكم كامل',
+            'description': 'حتى 20 مخزن و10 فروع مع تحكم كامل',
             'monthly': '$149',
             'annual': '$1,610',
             'perpetual': '$14,490',
             'highlight': False,
             'features': [
                 {'text': 'حتى 20 مخزن',                      'ok': True},
+                {'text': 'حتى 10 فروع',                       'ok': True},
                 {'text': 'حتى 40 مستخدمًا',                  'ok': True},
                 {'text': f'تجربة مجانية {trial_days} أيام', 'ok': True},
                 {'text': 'فواتير مبيعات وشراء',              'ok': True},
@@ -2931,6 +2961,11 @@ def branch_list(request):
     tenant = request.tenant
     if not tenant:
         return redirect('core:no_tenant')
+    if tenant.version_type != 'multi_branch':
+        return render(request, 'agents/plan_upgrade.html', {
+            'feature': 'الفروع',
+            'required_plan': 'مؤسسات',
+        })
     return render(request, 'core/branch_list.html', {
         'form': BranchForm(),
         'section': 'branches',
@@ -2972,9 +3007,11 @@ def branch_create_api(request):
         return _branch_json_error('طريقة غير مسموحة', status=405)
 
     if not Branch.can_add_branch(tenant):
-        return _branch_json_error(
-            f'لقد وصلت للحد الأقصى المسموح به من الفروع ({tenant.max_branches}). تواصل مع الدعم لزيادة الحد.'
-        )
+        if tenant.version_type != 'multi_branch':
+            message = 'الفروع متاحة فقط لنسخة "فروع متعددة". يرجى ترقية الباقة لتفعيل هذه الميزة.'
+        else:
+            message = f'لقد وصلت للحد الأقصى المسموح به من الفروع ({tenant.max_branches}). يرجى ترقية الباقة لزيادة الحد.'
+        return _branch_json_error(message)
 
     form = BranchForm(request.POST)
     if form.is_valid():

@@ -1,0 +1,125 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block extra_css %}
+<style>
+.di-steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; margin-bottom:1rem; }
+.di-step { border:1px solid var(--border-light,#e5e7eb); border-radius:14px; padding:1.25rem; background:var(--surface,#fff); }
+.di-step-num {
+  display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px;
+  border-radius:50%; background:var(--indigo-500,#c9840f); color:#fff; font-weight:700; font-size:.8rem; margin-left:.5rem;
+}
+.di-step-title { font-weight:700; font-size:.95rem; display:flex; align-items:center; margin-bottom:.6rem; }
+.di-results-table-wrap { max-height:300px; overflow-y:auto; border:1px solid var(--border-light,#e5e7eb); border-radius:8px; }
+.di-results-table { width:100%; font-size:.82rem; border-collapse:collapse; }
+.di-results-table th, .di-results-table td { padding:.5rem .7rem; border-bottom:1px solid var(--border-light,#e5e7eb); text-align:right; }
+.di-results-table th { position:sticky; top:0; background:var(--surface-alt,#f9fafb); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+{% csrf_token %}
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap">
+                <i class="fas {{ icon }}"></i>
+            </div>
+            <div>
+                <h1 class="cx-hero-title">{{ title }}</h1>
+                <p class="cx-hero-desc">حمّل القالب، عبّئه، ثم ارفعه لإضافة بياناتك دفعة واحدة</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url hub_url %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>استيراد البيانات</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="di-steps">
+    <div class="di-step">
+        <div class="di-step-title"><span class="di-step-num">١</span>حمّل القالب</div>
+        <p class="cx-hero-desc mb-3">قالب Excel جاهز بكل الحقول المناسبة.</p>
+        <a href="{% url template_url %}" class="cx-btn-primary" data-no-spinner>
+            <i class="fas fa-download me-1"></i> تحميل القالب
+        </a>
+    </div>
+    <div class="di-step">
+        <div class="di-step-title"><span class="di-step-num">٢</span>ارفع الملف المعبأ</div>
+        <div class="mb-3">
+            <input type="file" class="form-control" id="simpleImportFile" accept=".xlsx,.xls,.csv">
+        </div>
+        <button type="button" class="cx-btn-primary" id="confirmSimpleImportBtn">
+            <i class="fas fa-upload me-1"></i> استيراد
+        </button>
+    </div>
+</div>
+
+<div id="simpleImportResult" class="cx-panel d-none" style="padding:1.25rem"></div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+    $('#confirmSimpleImportBtn').on('click', function () {
+        const file = $('#simpleImportFile')[0].files[0];
+        if (!file) { Enjaz.toast('الرجاء اختيار ملف', 'error'); return; }
+
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').first().val());
+
+        const $btn = $(this);
+        Enjaz.showLoading($btn);
+
+        $.ajax({
+            url: "{% url commit_url %}",
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function (resp) {
+                Enjaz.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
+                renderResult(resp);
+            },
+            error: function (xhr) {
+                Enjaz.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
+                const resp = xhr.responseJSON;
+                if (resp) { renderResult(resp); }
+                else { Enjaz.toast('حدث خطأ أثناء الاستيراد', 'error'); }
+            }
+        });
+    });
+
+    function renderResult(resp) {
+        const alertClass = resp.success ? 'alert-success' : 'alert-danger';
+        let html = `<div class="alert ${alertClass} mb-3">${resp.message}</div>`;
+
+        if (resp.errors && resp.errors.length) {
+            html += '<div class="di-results-table-wrap"><table class="di-results-table">';
+            html += '<thead><tr><th>الصف</th><th>الحقل</th><th>السبب</th></tr></thead><tbody>';
+            resp.errors.forEach(function (e) {
+                html += `<tr><td>${e.row || '-'}</td><td>${e.field || '-'}</td><td>${e.message}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+        }
+
+        $('#simpleImportResult').removeClass('d-none').html(html);
+        if (resp.success && resp.created > 0) {
+            Enjaz.toast(resp.message, 'success');
+        }
+    }
+});
+</script>
+{% endblock %}

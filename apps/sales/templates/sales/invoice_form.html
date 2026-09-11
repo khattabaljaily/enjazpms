@@ -118,7 +118,7 @@
                             <option value="{{ s.id }}"
                                 {% if invoice and invoice.stock_id == s.id %}selected
                                 {% elif default_stock and default_stock.id == s.id %}selected{% endif %}>
-                                {{ s.name }}
+                                {{ s.name }}{% if s.branch %} — {{ s.branch.name }}{% endif %}
                             </option>
                             {% endfor %}
                         </select>
@@ -250,6 +250,14 @@
                         <input type="date" id="dueDate" name="due_date" class="cx-input"
                                value="{{ invoice.due_date|date:'Y-m-d'|default:'' }}">
                     </div>
+                    <div class="col-12 sales-field-hidden" id="insuranceWrap">
+                        <label class="cx-label" style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+                            <input type="checkbox" id="insuranceToggle" onchange="updateInsuranceEstimate()">
+                            <span id="insuranceLabel">تفعيل التأمين لهذه الفاتورة</span>
+                        </label>
+                        <select id="insurancePolicySelect" class="cx-input sales-field-hidden" onchange="updateInsuranceEstimate()"></select>
+                        <small class="text-muted d-block sales-field-hidden" id="insuranceEstimate"></small>
+                    </div>
                     <div id="mixedPaymentWrap" class="col-12 sales-field-hidden">
                         <div class="row g-2">
                             <div class="col-6">
@@ -347,6 +355,9 @@
 const ITEM_INFO_URL = "{% url 'sales:item_info_api' %}";
 const STOCK_ITEMS_URL = "{% url 'sales:stock_items_api' %}";
 const CUSTOMER_INFO_URL = "{% url 'sales:customer_info_api' %}";
+const CUSTOMER_POLICIES_URL = "{% url 'insurance:customer_policies_api' 0 %}";
+let customerPolicies = [];
+let currentGrandTotal = 0;
 const FORM_ACTION = "{{ action }}";
 const CUSTOMERS_DATA = [
     { id: '', name: '— زبون عابر —' },
@@ -490,6 +501,7 @@ function handlePaymentMethodChange() {
     toggleHidden('bankRefWrap', !(pm === 'bank' || pm === 'mixed'));
     toggleHidden('creditRow', pm !== 'mixed');
     updatePaymentMethodBadge(pm);
+    updateInsuranceVisibility();
     recalcTotals();
 }
 
@@ -758,11 +770,13 @@ function recalcTotals() {
     discAmt = Math.min(discAmt, subtotal);
 
     const grandTotal = subtotal - discAmt + taxTotal;
+    currentGrandTotal = grandTotal;
 
     document.getElementById('displaySubtotal').textContent = Enjaz.formatMoney(subtotal);
     document.getElementById('displayDiscount').textContent = Enjaz.formatMoney(discAmt);
     document.getElementById('displayTax').textContent = Enjaz.formatMoney(taxTotal);
     document.getElementById('displayGrandTotal').textContent = Enjaz.formatMoney(grandTotal);
+    updateInsuranceEstimate();
 
     const pm = document.getElementById('paymentMethod').value;
     if (pm === 'mixed') {
@@ -792,6 +806,65 @@ function fetchCustomerInfo() {
         document.getElementById('custPhone').textContent = c.phone || '—';
         card.classList.remove('sales-field-hidden');
     });
+
+    fetchCustomerPolicies(id);
+}
+
+// ────────────────────────────────────────────────────────────────
+// Insurance (credit sales only)
+// ────────────────────────────────────────────────────────────────
+function fetchCustomerPolicies(customerId) {
+    customerPolicies = [];
+    document.getElementById('insuranceToggle').checked = false;
+    if (!customerId) { updateInsuranceVisibility(); return; }
+
+    fetch(CUSTOMER_POLICIES_URL.replace('/0/', '/' + customerId + '/'))
+        .then(r => r.ok ? r.json() : { success: false })
+        .then(resp => {
+            if (resp.success) customerPolicies = (resp.data || []).filter(p => p.is_active);
+            updateInsuranceVisibility();
+        })
+        .catch(() => updateInsuranceVisibility());
+}
+
+function selectedPolicy() {
+    if (!customerPolicies.length) return null;
+    const sel = document.getElementById('insurancePolicySelect');
+    const id = sel.value || String(customerPolicies[0].id);
+    return customerPolicies.find(p => String(p.id) === id) || customerPolicies[0];
+}
+
+function updateInsuranceVisibility() {
+    const pm = document.getElementById('paymentMethod').value;
+    const wrap = document.getElementById('insuranceWrap');
+    const show = pm === 'credit' && customerPolicies.length > 0;
+    wrap.classList.toggle('sales-field-hidden', !show);
+    if (!show) { document.getElementById('insuranceToggle').checked = false; updateInsuranceEstimate(); return; }
+
+    const sel = document.getElementById('insurancePolicySelect');
+    const label = document.getElementById('insuranceLabel');
+    if (customerPolicies.length > 1) {
+        sel.innerHTML = customerPolicies.map(p =>
+            `<option value="${p.id}">${p.insurance_company_name} — ${p.coverage_percent}%</option>`
+        ).join('');
+        sel.classList.remove('sales-field-hidden');
+        label.textContent = 'تفعيل التأمين لهذه الفاتورة';
+    } else {
+        sel.classList.add('sales-field-hidden');
+        label.textContent = `تفعيل التأمين (${customerPolicies[0].insurance_company_name} — ${customerPolicies[0].coverage_percent}%)`;
+    }
+    updateInsuranceEstimate();
+}
+
+function updateInsuranceEstimate() {
+    const est = document.getElementById('insuranceEstimate');
+    const checked = document.getElementById('insuranceToggle').checked;
+    const policy = checked ? selectedPolicy() : null;
+    if (!policy) { est.classList.add('sales-field-hidden'); return; }
+    const grand = currentGrandTotal;
+    const covered = grand * parseFloat(policy.coverage_percent) / 100;
+    est.textContent = `تقديرياً: ${Enjaz.formatMoney(covered)} من التأمين، والباقي ${Enjaz.formatMoney(grand - covered)} على حساب العميل (قد يختلف قليلاً حسب الأصناف المستثناة من التغطية).`;
+    est.classList.remove('sales-field-hidden');
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -848,6 +921,7 @@ function submitForm(action) {
         bank_amount: Enjaz.parseNumber(document.getElementById('bankAmount')?.value || 0).toFixed(2),
         bank_reference: document.getElementById('bankReference')?.value || '',
         notes: document.getElementById('notes').value,
+        insurance_policy_id: (document.getElementById('insuranceToggle')?.checked && selectedPolicy()) ? selectedPolicy().id : null,
     };
 
     const url = FORM_ACTION === 'edit' && INVOICE_ID

@@ -42,21 +42,27 @@
 
 <div class="cx-panel">
     <div class="di-cards">
+        {% if can_import_items %}
         <a href="{% url 'data_import:product_page' %}" class="di-card">
             <div class="di-card-icon"><i class="fas fa-box-open"></i></div>
             <div class="di-card-title">استيراد المنتجات</div>
             <div class="di-card-desc">قالب Excel مصمم حسب نشاطك، يشمل الأسعار والمخزون والرصيد الافتتاحي</div>
         </a>
-        <div class="di-card di-card-soon">
+        {% endif %}
+        {% if can_import_customers %}
+        <a href="{% url 'data_import:customer_page' %}" class="di-card">
             <div class="di-card-icon"><i class="fas fa-users"></i></div>
             <div class="di-card-title">استيراد العملاء</div>
-            <div class="di-card-desc">قريباً</div>
-        </div>
-        <div class="di-card di-card-soon">
+            <div class="di-card-desc">قالب Excel يشمل بيانات التواصل والمديونية الافتتاحية</div>
+        </a>
+        {% endif %}
+        {% if can_import_suppliers %}
+        <a href="{% url 'data_import:supplier_page' %}" class="di-card">
             <div class="di-card-icon"><i class="fas fa-truck"></i></div>
             <div class="di-card-title">استيراد الموردين</div>
-            <div class="di-card-desc">قريباً</div>
-        </div>
+            <div class="di-card-desc">قالب Excel يشمل بيانات التواصل والمديونية الافتتاحية والعملة</div>
+        </a>
+        {% endif %}
     </div>
 </div>
 

@@ -50,6 +50,12 @@
                             <i class="fas fa-star"></i>
                             {{ current_tenant.get_subscription_plan_display|default:"-" }}
                         </span>
+                        {% if current_tenant.is_demo %}
+                        <span class="sub-pill sub-pill--ghost">
+                            <i class="fas fa-flask"></i>
+                            تجريبي
+                        </span>
+                        {% endif %}
                         <span class="sub-pill sub-pill--status sub-pill--{{ subscription_status_tone }}">
                             <i class="fas fa-circle"></i>
                             {{ subscription_status_label }}

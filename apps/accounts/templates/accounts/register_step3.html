@@ -19,7 +19,7 @@
         <div class="progress-step-circle">
             <i class="fas fa-check"></i>
         </div>
-        <span class="progress-step-label">بيانات الصيدلية</span>
+        <span class="progress-step-label">بيانات النشاط</span>
     </div>
     <div class="progress-step active">
         <div class="progress-step-circle">
@@ -37,12 +37,15 @@
     <div class="mb-3 field-span-2">
         {{ form.subscription_plan.label_tag }}
         {{ form.subscription_plan }}
+        <small class="text-muted">حسابك يبدأ بفترة تجريبية مجانية بهذه الباقة، وتفعيله النهائي يتم بعد مراجعتنا لطلبك.</small>
         {% if form.subscription_plan.errors %}
         <div class="text-danger small js-field-errors" data-field="subscription_plan">{{ form.subscription_plan.errors }}</div>
         {% endif %}
     </div>
 
-    <div class="mb-3 field-span-2">
+    <!-- نوع النسخة/المنطقة الزمنية/العملة مخفية عمداً — تُشتق تلقائياً من
+         الباقة (خطوة 3) والبلد (خطوة 2)، لكن قيمها لا تزال تُرسَل مع النموذج -->
+    <div class="mb-3 field-span-2" style="display:none;">
         {{ form.version_type.label_tag }}
         {{ form.version_type }}
         {% if form.version_type.errors %}
@@ -50,19 +53,8 @@
         {% endif %}
     </div>
 
-    <div class="mb-3 field-span-2 js-num-stocks-field" style="display: none;">
-        {{ form.num_stocks.label_tag }}
-        {{ form.num_stocks }}
-        {% if form.num_stocks.help_text %}
-        <small class="text-muted">{{ form.num_stocks.help_text }}</small>
-        {% endif %}
-        {% if form.num_stocks.errors %}
-        <div class="text-danger small js-field-errors" data-field="num_stocks">{{ form.num_stocks.errors }}</div>
-        {% endif %}
-    </div>
-
     <div class="auth-form-grid">
-        <div class="mb-3 field-start">
+        <div class="mb-3 field-start" style="display:none;">
             {{ form.timezone.label_tag }}
             {{ form.timezone }}
             {% if form.timezone.errors %}
@@ -70,7 +62,7 @@
             {% endif %}
         </div>
 
-        <div class="mb-3 field-end">
+        <div class="mb-3 field-end" style="display:none;">
             <label class="form-label">العملة <small class="text-muted fw-normal">(تُضبط تلقائياً)</small></label>
             <input id="currencyDisplay" class="form-control" readonly
                    value="{{ suggested_currency }}"
@@ -80,7 +72,7 @@
             <div class="text-danger small js-field-errors" data-field="currency">{{ form.currency.errors }}</div>
             {% endif %}
         </div>
-        
+
         <div class="mb-3 field-span-2">
             <hr>
             <div class="form-check">
@@ -160,24 +152,28 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ── num_stocks toggle ─────────────────────────────────────
+    // ── Plan → allowed version types / stock limit ─────────────
+    const PLAN_LIMITS = {{ plan_limits_json|safe }};
+    const planField = document.querySelector('#{{ form.subscription_plan.id_for_label }}');
     const versionTypeField = document.querySelector('#{{ form.version_type.id_for_label }}');
-    const numStocksField = document.querySelector('.js-num-stocks-field');
-    const numStocksInput = document.querySelector('#{{ form.num_stocks.id_for_label }}');
+    const versionTypeHint = document.createElement('small');
+    versionTypeHint.className = 'text-muted d-block mt-1 js-version-type-hint';
+    versionTypeField.closest('.mb-3').appendChild(versionTypeHint);
 
-    function toggleNumStocksField() {
-        const selectedValue = versionTypeField.value;
-        if (selectedValue === 'multi_stock' || selectedValue === 'multi_branch') {
-            numStocksField.style.display = 'block';
-            numStocksInput.required = true;
-        } else {
-            numStocksField.style.display = 'none';
-            numStocksInput.required = false;
-            numStocksInput.value = '1';
-        }
+    // نوع النسخة معطّل هنا ومشتق إجبارياً من الباقة (نفس المنطق في لوحة
+    // الإدارة) — التحقق الحقيقي مفروض أيضاً من السيرفر في Step3SettingsForm.clean().
+    function applyPlanConstraints() {
+        const limits = PLAN_LIMITS[planField.value] || PLAN_LIMITS['basic'];
+        versionTypeField.value = limits.allowed_version_types[limits.allowed_version_types.length - 1];
+
+        const parts = [`حتى ${limits.max_stocks} مخازن`];
+        if (limits.max_branches > 0) parts.push(`حتى ${limits.max_branches} فروع`);
+        parts.push(`حتى ${limits.max_users} مستخدمين`);
+        versionTypeHint.textContent = 'باقتك تشمل ' + parts.join(' و') + '.';
     }
-    toggleNumStocksField();
-    versionTypeField.addEventListener('change', toggleNumStocksField);
+
+    planField.addEventListener('change', applyPlanConstraints);
+    applyPlanConstraints();
 
     // ── Hard Currency Mode toggle ─────────────────────────────
     const hcCheckbox = document.querySelector('#{{ form.hard_currency_mode.id_for_label }}');

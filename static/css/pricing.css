@@ -632,7 +632,7 @@
 
 .pr-footer__copy {
     font-size: 0.8rem;
-    color: #64748b;
+    color: rgba(251, 191, 36, .75);
 }
 
 .pr-footer__links {
@@ -642,13 +642,13 @@
 
 .pr-footer__links a {
     font-size: 0.8rem;
-    color: #475569;
+    color: rgba(251, 191, 36, .75);
     text-decoration: none;
     transition: color 0.15s ease;
 }
 
 .pr-footer__links a:hover {
-    color: #f6a821;
+    color: #fbbf24;
 }
 
 /* ── Responsive ──────────────────────────────────────────── */

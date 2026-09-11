@@ -194,8 +194,8 @@ def user_create_api(request):
             {
                 'success': False,
                 'message': (
-                    f'وصلت إلى الحد الأقصى للمستخدمين ({tenant.max_users}). '
-                    'يرجى التواصل مع الدعم لترقية الاشتراك.'
+                    f'لقد وصلت للحد الأقصى المسموح به من المستخدمين ({tenant.max_users}). '
+                    'يرجى ترقية الباقة لزيادة الحد.'
                 ),
             },
             status=403,
@@ -693,8 +693,10 @@ def register_step3(request):
                     from apps.core.models import BusinessType
                     business_type = BusinessType.objects.get(id=step2_data['business_type_id'])
                     
-                    subscription_plan = form.cleaned_data.get('subscription_plan', 'trial')
-                    trial_duration = 30
+                    from apps.core.models import PlatformSettings
+                    subscription_plan = form.cleaned_data.get('subscription_plan', 'basic')
+                    trial_duration = PlatformSettings.get().default_trial_days
+                    plan_limits = Tenant.PLAN_LIMITS.get(subscription_plan, Tenant.PLAN_LIMITS['basic'])
 
                     hard_currency_mode = form.cleaned_data.get('hard_currency_mode', False)
                     tenant = Tenant.objects.create(
@@ -705,9 +707,16 @@ def register_step3(request):
                         city=step2_data['city'],
                         subscription_plan=subscription_plan,
                         subscription_start=_tz.localdate(),
-                        subscription_expires=_tz.localdate() + timedelta(days=trial_duration),  # شهران تجريبيان مجاناً
+                        subscription_expires=_tz.localdate() + timedelta(days=trial_duration),
+                        # كل تسجيل ذاتي يبدأ كحساب تجريبي — المشرف يقرر عند
+                        # الاعتماد إن كان يبقى تجريبياً أم يتحول لحساب حقيقي.
+                        is_demo=True,
                         version_type=form.cleaned_data['version_type'],
-                        max_stocks=form.cleaned_data['num_stocks'],
+                        # المخازن والفروع وعدد المستخدمين تتحدد من الباقة مباشرة، مو من
+                        # إدخال حر بالنموذج — نفس حدود صفحة الأسعار بالضبط.
+                        max_stocks=plan_limits['max_stocks'],
+                        max_branches=plan_limits['max_branches'],
+                        max_users=plan_limits['max_users'],
                         timezone=form.cleaned_data['timezone'],
                         currency=form.cleaned_data['currency'],
                         hard_currency_mode=hard_currency_mode,
@@ -842,6 +851,7 @@ def register_step3(request):
         'total_steps': 3,
         'timezone_currency_map_json': json.dumps(TIMEZONE_CURRENCY_MAP, ensure_ascii=False),
         'currency_ar_json': json.dumps(CURRENCY_AR, ensure_ascii=False),
+        'plan_limits_json': json.dumps(Tenant.PLAN_LIMITS, ensure_ascii=False),
         'suggested_currency': suggested_currency,
     })
 

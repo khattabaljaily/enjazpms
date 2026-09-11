@@ -112,8 +112,13 @@ class Stock(TenantMixin):
         """
         هل يستطيع هذا الـ tenant إضافة مخزن جديد؟
         يُستخدم في الـ view للتحقق قبل السماح بالإضافة.
+        نسخة "محل واحد بمخزن واحد" محدودة بمخزن واحد بغض النظر عن max_stocks
+        (المخزن الأول لازم يُسمح به دائماً، حتى لو الباقة لسه ما زُرعت له
+        max_stocks صحيح لأي سبب).
         """
         current_count = Stock.objects.filter(tenant=tenant, is_active=True).count()
+        if tenant.version_type == 'single_store':
+            return current_count < 1
         return current_count < tenant.max_stocks
 
 

@@ -36,10 +36,10 @@ class TenantForm(forms.ModelForm):
             'country': forms.Select(attrs={'class': 'form-select'}, choices=COUNTRY_CHOICES),
             'address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'العنوان التفصيلي'}),
             'subscription_plan': forms.Select(attrs={'class': 'form-select'}),
-            'version_type': forms.Select(attrs={'class': 'form-select'}),
-            'max_users': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'max_stocks': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'max_branches': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'version_type': forms.Select(attrs={'class': 'form-select', 'disabled': True, 'tabindex': '-1'}),
+            'max_users': forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'tabindex': '-1', 'inputmode': 'numeric'}),
+            'max_stocks': forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'tabindex': '-1', 'inputmode': 'numeric'}),
+            'max_branches': forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'tabindex': '-1', 'inputmode': 'numeric'}),
             'timezone': forms.TextInput(attrs={'class': 'form-control', 'readonly': True, 'placeholder': 'يتحدد تلقائياً من البلد'}),
             'currency': forms.HiddenInput(),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -59,8 +59,22 @@ class TenantForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['business_type'].queryset = BusinessType.objects.filter(is_active=True).order_by('display_order', 'name_ar')
         self.fields['business_type'].label = 'نوع النشاط'
+        self.fields['version_type'].required = False
         if not self.instance.pk:
             self.fields['subscription_start'].initial = timezone.localdate()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        plan = cleaned_data.get('subscription_plan')
+        limits = Tenant.PLAN_LIMITS.get(plan, Tenant.PLAN_LIMITS['basic'])
+
+        # نوع النسخة والحدود الرقمية كلها إجبارية ومشتقة من الباقة مباشرة —
+        # الحقل معطّل بالواجهة، وهنا يُفرض بغض النظر عمّا وصل في الطلب.
+        cleaned_data['version_type'] = limits['allowed_version_types'][-1]
+        cleaned_data['max_stocks'] = limits['max_stocks']
+        cleaned_data['max_branches'] = limits['max_branches']
+        cleaned_data['max_users'] = limits['max_users']
+        return cleaned_data
 
 
 class BranchForm(forms.ModelForm):

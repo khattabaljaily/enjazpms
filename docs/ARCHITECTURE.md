@@ -183,7 +183,7 @@ class Tenant(models.Model):
     updated_at = DateTimeField
 ```
 
-#### 2. BusinessType (نوع النشاط — صيدلية حالياً فقط)
+#### 2. BusinessType (نوع النشاط — صيدلية أو شركة توزيع أدوية)
 ```python
 class BusinessType(models.Model):
     name = CharField               # pharmacy

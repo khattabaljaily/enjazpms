@@ -88,8 +88,10 @@ class Tenant(models.Model):
         ('multi_branch', 'فروع متعددة (محلات ومخازن)'),
     )
     
+    # "تجريبي" ليس باقة — هو حالة الحساب (is_demo)، مستقلة تماماً عن الباقة
+    # المطلوبة. المسجّل يختار إحدى الباقات الحقيقية أدناه منذ التسجيل، والمشرف
+    # هو من يقرر عند الاعتماد إن كان الحساب تجريبياً أم حقيقياً (is_demo).
     SUBSCRIPTION_PLANS = (
-        ('trial', 'تجريبي'),
         ('basic', 'أساسي'),
         ('pro', 'احترافي'),
         ('enterprise', 'مؤسسات'),
@@ -97,12 +99,22 @@ class Tenant(models.Model):
 
     # Features available per plan
     PLAN_FEATURES = {
-        'trial':      {'ai_assistant': True,  'smart_tips': True,  'store': True,  'agents': True,  'auto_backup': True,  'auto_backup_daily': 1},
         'basic':      {'ai_assistant': False, 'smart_tips': False, 'store': False, 'agents': False, 'auto_backup': False, 'auto_backup_daily': 0},
         'pro':        {'ai_assistant': True,  'smart_tips': True,  'store': True,  'agents': True,  'auto_backup': True,  'auto_backup_daily': 1},
         'enterprise': {'ai_assistant': True,  'smart_tips': True,  'store': True,  'agents': True,  'auto_backup': True,  'auto_backup_daily': 2},
     }
-    
+
+    # Version-type / stock / branch / user ceilings per plan — must match the
+    # numbers promised on the pricing page (apps/core/views.py `pricing`).
+    # 'enterprise' branch cap has no marketed number ("فروع متعددة"); 10 is a
+    # sensible default, adjustable per-tenant via the admin tenant form like
+    # any other limit.
+    PLAN_LIMITS = {
+        'basic':      {'allowed_version_types': ['single_store'], 'max_stocks': 1,  'max_branches': 0,  'max_users': 5},
+        'pro':        {'allowed_version_types': ['single_store', 'multi_stock'], 'max_stocks': 5,  'max_branches': 0,  'max_users': 15},
+        'enterprise': {'allowed_version_types': ['single_store', 'multi_stock', 'multi_branch'], 'max_stocks': 20, 'max_branches': 10, 'max_users': 40},
+    }
+
     # Basic Info
     name = models.CharField('اسم النشاط التجاري', max_length=200)
     slug = models.SlugField('الرمز', max_length=200, unique=True)
@@ -126,7 +138,7 @@ class Tenant(models.Model):
         'الباقة',
         max_length=20,
         choices=SUBSCRIPTION_PLANS,
-        default='trial'
+        default='basic'
     )
     subscription_start = models.DateField('بداية الاشتراك', default=timezone.now)
     subscription_expires = models.DateField('نهاية الاشتراك', null=True, blank=True)
@@ -219,6 +231,14 @@ class Tenant(models.Model):
     def plan_allows(self, feature: str) -> bool:
         """هل الباقة الحالية تتيح ميزة معينة"""
         return bool(self.PLAN_FEATURES.get(self.subscription_plan, {}).get(feature, False))
+
+    @property
+    def plan_limits(self) -> dict:
+        """حدود نوع النسخة/المخازن/الفروع/المستخدمين المسموح بها لباقة هذا المشترك"""
+        return self.PLAN_LIMITS.get(self.subscription_plan, self.PLAN_LIMITS['basic'])
+
+    def plan_allows_version_type(self, version_type: str) -> bool:
+        return version_type in self.plan_limits['allowed_version_types']
 
     def auto_backup_daily_count(self) -> int:
         """عدد النسخ الاحتياطية التلقائية يومياً حسب الباقة"""
@@ -365,6 +385,8 @@ class Branch(models.Model):
     @staticmethod
     def can_add_branch(tenant):
         """هل يستطيع هذا الـ tenant إضافة فرع جديد؟"""
+        if tenant.version_type != 'multi_branch':
+            return False
         current_count = Branch.objects.filter(tenant=tenant, is_active=True).count()
         return current_count < tenant.max_branches
 

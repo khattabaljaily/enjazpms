@@ -925,6 +925,54 @@
 .pos-bank-ref.visible { display: block; }
 .pos-bank-ref:focus { outline: none; border-color: var(--primary); }
 
+/* ── Insurance (credit sales only) ───────────────────────── */
+
+.pos-insurance-box {
+    display: none;
+    flex-direction: column;
+    gap: .4rem;
+    padding: .55rem .65rem;
+    margin-bottom: .5rem;
+    border: 1.5px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+}
+
+.pos-insurance-box.visible { display: flex; }
+
+.pos-insurance-check {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .82rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    user-select: none;
+}
+
+.pos-insurance-select {
+    width: 100%;
+    padding: .35rem .5rem;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: .8rem;
+    display: none;
+}
+
+.pos-insurance-select.visible { display: block; }
+
+.pos-insurance-estimate {
+    display: none;
+    font-size: .75rem;
+    color: var(--text-secondary);
+    direction: rtl;
+}
+
+.pos-insurance-estimate.visible { display: block; }
+
 /* ── Cash change calculator ──────────────────────────────── */
 
 .pos-cash-row {

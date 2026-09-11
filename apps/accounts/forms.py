@@ -288,9 +288,11 @@ class Step3SettingsForm(forms.Form):
         apply_arabic_error_messages(self)
         for field in self.fields.values():
             field.widget.attrs['autocomplete'] = 'off'
-    
+
     PLAN_CHOICES = (
-        ('trial', 'تجريبي'),
+        ('basic', 'أساسي'),
+        ('pro', 'احترافي'),
+        ('enterprise', 'مؤسسات'),
     )
 
     VERSION_CHOICES = (
@@ -300,9 +302,9 @@ class Step3SettingsForm(forms.Form):
     )
     
     subscription_plan = forms.ChoiceField(
-        label='الخطة',
+        label='الباقة المطلوبة',
         choices=PLAN_CHOICES,
-        initial='trial',
+        initial='basic',
         widget=forms.Select(attrs={
             'class': 'form-select'
         })
@@ -312,25 +314,14 @@ class Step3SettingsForm(forms.Form):
         label='نوع النسخة',
         choices=VERSION_CHOICES,
         initial='single_store',
+        required=False,
         widget=forms.Select(attrs={
-            'class': 'form-select'
+            'class': 'form-select',
+            'disabled': True,
+            'tabindex': '-1',
         })
     )
-    
-    num_stocks = forms.IntegerField(
-        label='عدد المخازن',
-        min_value=1,
-        max_value=50,
-        initial=1,
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'min': '1',
-            'max': '50'
-        }),
-        help_text='حدد عدد المخازن التي تحتاجها (1-50)'
-    )
-    
+
     timezone = forms.CharField(
         label='المنطقة الزمنية',
         widget=forms.TextInput(attrs={
@@ -397,20 +388,18 @@ class Step3SettingsForm(forms.Form):
     )
 
     def clean(self):
+        from apps.core.models import Tenant
         cleaned_data = super().clean()
-        version_type = cleaned_data.get('version_type')
-        num_stocks = cleaned_data.get('num_stocks')
-        
-        if version_type in ['multi_stock', 'multi_branch']:
-            if not num_stocks or num_stocks < 1:
-                self.add_error('num_stocks', 'يجب تحديد عدد المخازن للنسخة المختارة')
-            elif version_type == 'multi_stock' and num_stocks > 10:
-                self.add_error('num_stocks', 'للنسخة "محل واحد بمخازن متعددة" الحد الأقصى 10 مخازن')
-            elif version_type == 'multi_branch' and num_stocks > 50:
-                self.add_error('num_stocks', 'للنسخة "فروع متعددة" الحد الأقصى 50 مخزن')
-        else:
-            # للنسخة الفردية، اجعل num_stocks = 1
-            cleaned_data['num_stocks'] = 1
+        plan = cleaned_data.get('subscription_plan')
+
+        plan_limits = Tenant.PLAN_LIMITS.get(plan, Tenant.PLAN_LIMITS['basic'])
+
+        # نوع النسخة وحدود المخازن/الفروع/المستخدمين كلها إجبارية ومشتقة من
+        # الباقة مباشرة — الحقل معطّل بالواجهة، ويُفرض هنا بغض النظر عمّا وصل.
+        cleaned_data['version_type'] = plan_limits['allowed_version_types'][-1]
+        cleaned_data['max_stocks'] = plan_limits['max_stocks']
+        cleaned_data['max_branches'] = plan_limits['max_branches']
+        cleaned_data['max_users'] = plan_limits['max_users']
 
         if cleaned_data.get('hard_currency_mode'):
             if not cleaned_data.get('exchange_rate'):

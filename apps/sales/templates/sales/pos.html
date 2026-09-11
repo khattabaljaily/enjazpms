@@ -46,7 +46,7 @@
 
             <select id="posStock" class="pos-stock-select">
                 {% for s in stocks %}
-                <option value="{{ s.id }}" {% if s == default_stock %}selected{% endif %}>{{ s.name }}</option>
+                <option value="{{ s.id }}" {% if s == default_stock %}selected{% endif %}>{{ s.name }}{% if s.branch %} — {{ s.branch.name }}{% endif %}</option>
                 {% endfor %}
             </select>
 
@@ -158,6 +158,16 @@
                 </button>
             </div>
 
+            <!-- Insurance (credit sales, customer with an active policy only) -->
+            <div class="pos-insurance-box" id="posInsuranceBox">
+                <label class="pos-insurance-check">
+                    <input type="checkbox" id="posInsuranceToggle">
+                    <span id="posInsuranceLabel">تفعيل التأمين لهذه الفاتورة</span>
+                </label>
+                <select class="pos-insurance-select" id="posInsurancePolicySelect"></select>
+                <div class="pos-insurance-estimate" id="posInsuranceEstimate"></div>
+            </div>
+
             <!-- Cash: received + change -->
             <div class="pos-cash-row" id="cashRow">
                 <input type="number" id="cashReceived" class="pos-cash-received" placeholder="المبلغ المستلم" min="0" step="1">
@@ -254,6 +264,10 @@ const CAP = {
     hasBranchStockLookup:  {{ tenant_capabilities.has_branch_stock_lookup|yesno:"true,false" }},
 };
 const CHECKOUT_URL = '{% url "sales:pos_checkout_api" %}';
+const CUSTOMER_POLICIES_URL = '{% url "insurance:customer_policies_api" 0 %}';
+
+/* ── Insurance state (credit sales only) ─────────────────── */
+let customerPolicies = [];
 
 /* ── State ───────────────────────────────────────────── */
 let cart = [];
@@ -298,6 +312,7 @@ const $customer   = document.getElementById('posCustomerId');
             clearBtn.style.display = 'none';
         }
         drop.style.display = 'none';
+        fetchCustomerPolicies(id);
     }
 
     function renderDrop(list) {
@@ -683,6 +698,7 @@ function updateTotals() {
 
     updateChangeCalc();
     updateQuickCash(t.grand);
+    updateInsuranceEstimate();
 }
 
 /* ── Change calculator ───────────────────────────────── */
@@ -726,6 +742,67 @@ function updateQuickCash(grand) {
     );
 }
 
+/* ── Insurance (credit sales) ───────────────────────────── */
+const $insBox      = document.getElementById('posInsuranceBox');
+const $insToggle    = document.getElementById('posInsuranceToggle');
+const $insLabel     = document.getElementById('posInsuranceLabel');
+const $insSelect    = document.getElementById('posInsurancePolicySelect');
+const $insEstimate  = document.getElementById('posInsuranceEstimate');
+
+function fetchCustomerPolicies(customerId) {
+    customerPolicies = [];
+    $insToggle.checked = false;
+    if (!customerId) { updateInsuranceUI(); return; }
+
+    fetch(CUSTOMER_POLICIES_URL.replace('/0/', '/' + customerId + '/'))
+        .then(r => r.ok ? r.json() : { success: false })
+        .then(resp => {
+            if (resp.success) {
+                customerPolicies = (resp.data || []).filter(p => p.is_active);
+            }
+            updateInsuranceUI();
+        })
+        .catch(() => updateInsuranceUI());
+}
+
+function selectedPolicy() {
+    if (!customerPolicies.length) return null;
+    const id = $insSelect.value || String(customerPolicies[0].id);
+    return customerPolicies.find(p => String(p.id) === id) || customerPolicies[0];
+}
+
+function updateInsuranceUI() {
+    const show = currentMethod === 'credit' && customerPolicies.length > 0;
+    $insBox.classList.toggle('visible', show);
+    if (!show) { $insToggle.checked = false; updateInsuranceEstimate(); return; }
+
+    if (customerPolicies.length > 1) {
+        $insSelect.innerHTML = customerPolicies.map(p =>
+            `<option value="${p.id}">${p.insurance_company_name} — ${p.coverage_percent}%</option>`
+        ).join('');
+        $insSelect.classList.add('visible');
+        $insLabel.textContent = 'تفعيل التأمين لهذه الفاتورة';
+    } else {
+        $insSelect.classList.remove('visible');
+        $insLabel.textContent = `تفعيل التأمين (${customerPolicies[0].insurance_company_name} — ${customerPolicies[0].coverage_percent}%)`;
+    }
+    updateInsuranceEstimate();
+}
+
+function updateInsuranceEstimate() {
+    if (!$insToggle.checked) { $insEstimate.classList.remove('visible'); return; }
+    const policy = selectedPolicy();
+    if (!policy) { $insEstimate.classList.remove('visible'); return; }
+    const grand = calcTotals().grand;
+    const covered = grand * parseFloat(policy.coverage_percent) / 100;
+    $insEstimate.textContent =
+        `تقديرياً: ${fmt(covered)} من التأمين، والباقي ${fmt(grand - covered)} على حساب العميل (قد يختلف قليلاً حسب الأصناف المستثناة من التغطية).`;
+    $insEstimate.classList.add('visible');
+}
+
+$insToggle.addEventListener('change', updateInsuranceEstimate);
+$insSelect.addEventListener('change', updateInsuranceEstimate);
+
 /* ── Payment method toggle ───────────────────────────── */
 document.querySelectorAll('.pos-pay-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -740,6 +817,7 @@ document.querySelectorAll('.pos-pay-btn').forEach(btn => {
         const needRef = currentMethod === 'bank' || currentMethod === 'split';
         $bankRef.classList.toggle('visible', needRef);
 
+        updateInsuranceUI();
         updateTotals();
     });
 });
@@ -794,6 +872,7 @@ $checkoutBtn.addEventListener('click', async () => {
         discount_type:  $discType.value,
         discount_value: parseFloat($discVal.value) || 0,
         notes:          $notes.value,
+        insurance_policy_id: (currentMethod === 'credit' && $insToggle.checked && selectedPolicy()) ? selectedPolicy().id : null,
         lines: cart.map(c => ({
             item_id:          c.item_id,
             quantity:         c.qty,

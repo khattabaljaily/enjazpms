@@ -828,85 +828,6 @@ def supplier_create(request):
     return redirect('suppliers:list')
 
 
-_SUPPLIER_FIELD_SCHEMA = [
-    {"field": "name",            "description": "اسم المورد أو الشركة أو المصنع", "required": True},
-    {"field": "phone",           "description": "رقم الهاتف أو الجوال أو الموبايل"},
-    {"field": "email",           "description": "البريد الإلكتروني"},
-    {"field": "city",            "description": "المدينة أو المنطقة أو الموقع"},
-    {"field": "address",         "description": "العنوان التفصيلي أو الشارع"},
-    {"field": "opening_balance", "description": "المديونية الافتتاحية أو مديونية البداية أو الرصيد الافتتاحي"},
-    {"field": "credit_limit",    "description": "حد الائتمان أو سقف الدين"},
-    {"field": "notes",           "description": "ملاحظات أو تعليقات"},
-]
-
-
-@login_required
-@require_permission('import_suppliers')
-def supplier_import_api(request):
-    """Import suppliers from Excel/CSV with AI-assisted column mapping."""
-    from apps.core.io_utils import parse_uploaded_file, smart_get, safe_decimal, clean_phone, clean_email
-    from apps.ai.services import smart_map_headers
-
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
-
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
-
-    if 'file' not in request.FILES:
-        return JsonResponse({'success': False, 'message': 'لم يتم رفع أي ملف'}, status=400, json_dumps_params={'ensure_ascii': False})
-
-    rows, err = parse_uploaded_file(request.FILES['file'])
-    if err:
-        return JsonResponse({'success': False, 'message': err}, status=400, json_dumps_params={'ensure_ascii': False})
-
-    if not rows:
-        return JsonResponse({'success': False, 'message': 'الملف فارغ أو لا يحتوي على بيانات'}, status=400, json_dumps_params={'ensure_ascii': False})
-
-    actual_headers = list(rows[0].keys())
-    try:
-        mapping = smart_map_headers(actual_headers, _SUPPLIER_FIELD_SCHEMA)
-    except Exception:
-        mapping = {}
-
-    imported_count, errors = 0, []
-    for row_num, row in enumerate(rows, start=2):
-        try:
-            name = smart_get(row, 'name', mapping, 'الاسم', 'اسم المورد', 'المورد', 'الشركة', 'name')
-            if not name:
-                errors.append(f'الصف {row_num}: اسم المورد مطلوب')
-                continue
-
-            Supplier.objects.create(
-                tenant=tenant,
-                name=name,
-                phone=clean_phone(smart_get(row, 'phone', mapping, 'الهاتف', 'الجوال', 'الموبايل', 'phone')) or '',
-                email=clean_email(smart_get(row, 'email', mapping, 'البريد', 'البريد الإلكتروني', 'email')) or '',
-                city=smart_get(row, 'city', mapping, 'المدينة', 'المنطقة', 'city'),
-                address=smart_get(row, 'address', mapping, 'العنوان', 'address'),
-                opening_balance=safe_decimal(smart_get(row, 'opening_balance', mapping, 'المديونية الافتتاحية', 'المديونية', 'مديونية البداية', 'الرصيد الافتتاحي', 'الرصيد', 'opening_balance', default='0')),
-                credit_limit=safe_decimal(smart_get(row, 'credit_limit', mapping, 'حد الائتمان', 'حد_الائتمان', 'credit_limit', default='0')),
-                notes=smart_get(row, 'notes', mapping, 'الملاحظات', 'ملاحظات', 'notes'),
-                is_active=True,
-            )
-            imported_count += 1
-        except Exception as e:
-            import logging, traceback
-            logging.getLogger('suppliers').error('import row %d: %s\n%s', row_num, e, traceback.format_exc())
-            errors.append(f'الصف {row_num}: {str(e)}')
-
-    message = f'تم استيراد {imported_count} مورد بنجاح'
-    if errors:
-        message += f'. حدثت {len(errors)} أخطاء'
-
-    return JsonResponse({
-        'success': True,
-        'message': message,
-        'imported': imported_count,
-        'errors': errors[:10],
-    }, json_dumps_params={'ensure_ascii': False})
-
 
 @login_required
 @require_permission('export_suppliers')
@@ -946,32 +867,5 @@ def supplier_export_api(request):
             supplier.notes or '',
             'نعم' if supplier.is_active else 'لا'
         ])
-    
-    return response
-
-
-@login_required
-@require_permission('import_suppliers')
-def download_template(request):
-    """Download CSV template for import"""
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = 'attachment; filename="suppliers_template.csv"'
-    
-    # Add BOM for Excel UTF-8 support
-    response.write('\ufeff')
-    
-    writer = csv.writer(response)
-    
-    # Write headers
-    writer.writerow([
-        'الاسم', 'الهاتف', 'البريد', 'المدينة', 'العنوان',
-        'المديونية الافتتاحية', 'حد الائتمان'
-    ])
-    
-    # Write example row
-    writer.writerow([
-        'شركة التوريدات المحدودة', '0512345678', 'supplier@example.com', 'الرياض', 'شارع الملك فهد',
-        '0', '10000'
-    ])
     
     return response

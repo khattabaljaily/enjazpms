@@ -1,6 +1,6 @@
-# ENJAZ PMS — Pharmacy Management System
+# ENJAZ PMS — Pharmaceutical Sector Management System
 
-A multi-tenant SaaS system for pharmacy inventory and sales management, initially targeting the Sudanese market with full Arabic (RTL) support.
+A multi-tenant SaaS system for inventory and sales management, built for both pharmacies and pharmaceutical distribution companies, initially targeting the Sudanese market with full Arabic (RTL) support.
 
 ---
 

@@ -11,9 +11,7 @@ urlpatterns = [
     path('api/<int:pk>/transactions/', views.supplier_transactions_api, name='transactions_api'),
     path('api/<int:pk>/update/', views.supplier_update_api, name='update_api'),
     path('api/<int:pk>/delete/', views.supplier_delete_api, name='delete_api'),
-    path('api/import/', views.supplier_import_api, name='import_api'),
     path('api/export/', views.supplier_export_api, name='export_api'),
-    path('api/download-template/', views.download_template, name='download_template'),
 
     path('payments/', views.supplier_payments, name='payments'),
     path('payments/api/', views.supplier_payments_table_api, name='payments_api'),

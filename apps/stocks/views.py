@@ -149,13 +149,13 @@ def stock_create_api(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    # التحقق من الحد المسموح به حسب الباقة
-    current_active = Stock.objects.for_tenant(tenant).filter(is_active=True).count()
-    if current_active >= tenant.max_stocks:
-        return JsonResponse({
-            'success': False,
-            'message': f'لقد وصلت للحد الأقصى المسموح به ({tenant.max_stocks} مخازن). يرجى ترقية الباقة.',
-        }, status=403)
+    # التحقق من الحد المسموح به حسب نوع النسخة والباقة
+    if not Stock.can_add_stock(tenant):
+        if tenant.version_type == 'single_store':
+            message = 'نسخة "محل واحد بمخزن واحد" لا تسمح بأكثر من مخزن واحد. يرجى ترقية الباقة لإضافة مخازن متعددة.'
+        else:
+            message = f'لقد وصلت للحد الأقصى المسموح به ({tenant.max_stocks} مخازن). يرجى ترقية الباقة.'
+        return JsonResponse({'success': False, 'message': message}, status=403)
 
     form = StockForm(request.POST, tenant=tenant)
     if form.is_valid():

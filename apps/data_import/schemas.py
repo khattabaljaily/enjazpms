@@ -236,3 +236,99 @@ def get_product_schema(tenant):
             continue
         resolved.append(spec)
     return resolved
+
+
+# ============================================================
+# Customers & Suppliers — much simpler than products: plain fields only,
+# no tenant master-data dropdowns and no capability gating, so the schema
+# is static and `get_*_schema(tenant)` is a trivial passthrough (kept for
+# symmetry with `get_product_schema`, and as the extension point if a
+# tenant-specific field is ever needed later).
+# ============================================================
+
+CUSTOMER_IMPORT_SCHEMA = [
+    {
+        'field': 'name', 'header_ar': 'اسم العميل *', 'required': True, 'dtype': 'text',
+        'typical_width': 24, 'description': 'اسم العميل أو الزبون',
+    },
+    {
+        'field': 'phone', 'header_ar': 'رقم الهاتف', 'required': False, 'dtype': 'text',
+        'typical_width': 16, 'description': 'رقم الهاتف أو الجوال',
+    },
+    {
+        'field': 'email', 'header_ar': 'البريد الإلكتروني', 'required': False, 'dtype': 'text',
+        'typical_width': 24, 'description': 'البريد الإلكتروني',
+    },
+    {
+        'field': 'city', 'header_ar': 'المدينة', 'required': False, 'dtype': 'text',
+        'typical_width': 16, 'description': 'المدينة أو المنطقة',
+    },
+    {
+        'field': 'address', 'header_ar': 'العنوان', 'required': False, 'dtype': 'text',
+        'typical_width': 30, 'description': 'العنوان التفصيلي',
+    },
+    {
+        'field': 'opening_balance', 'header_ar': 'المديونية الافتتاحية', 'required': False, 'dtype': 'decimal',
+        'typical_width': 18, 'description': 'الرصيد الافتتاحي المستحق على العميل',
+    },
+    {
+        'field': 'credit_limit', 'header_ar': 'الحد الائتماني', 'required': False, 'dtype': 'decimal',
+        'typical_width': 16, 'description': 'أقصى دين مسموح به للعميل',
+    },
+    {
+        'field': 'notes', 'header_ar': 'ملاحظات', 'required': False, 'dtype': 'text',
+        'typical_width': 30, 'description': 'ملاحظات',
+    },
+]
+
+SUPPLIER_IMPORT_SCHEMA = [
+    {
+        'field': 'name', 'header_ar': 'اسم المورد *', 'required': True, 'dtype': 'text',
+        'typical_width': 24, 'description': 'اسم المورد',
+    },
+    {
+        'field': 'phone', 'header_ar': 'رقم الهاتف', 'required': False, 'dtype': 'text',
+        'typical_width': 16, 'description': 'رقم الهاتف أو الجوال',
+    },
+    {
+        'field': 'email', 'header_ar': 'البريد الإلكتروني', 'required': False, 'dtype': 'text',
+        'typical_width': 24, 'description': 'البريد الإلكتروني',
+    },
+    {
+        'field': 'city', 'header_ar': 'المدينة', 'required': False, 'dtype': 'text',
+        'typical_width': 16, 'description': 'المدينة أو المنطقة',
+    },
+    {
+        'field': 'address', 'header_ar': 'العنوان', 'required': False, 'dtype': 'text',
+        'typical_width': 30, 'description': 'العنوان التفصيلي',
+    },
+    {
+        'field': 'currency', 'header_ar': 'عملة المورد', 'required': False, 'dtype': 'choice_fixed',
+        'typical_width': 16, 'description': 'العملة التي يتعامل بها المورد',
+    },
+    {
+        'field': 'opening_balance', 'header_ar': 'المديونية الافتتاحية', 'required': False, 'dtype': 'decimal',
+        'typical_width': 18, 'description': 'الرصيد الافتتاحي المستحق للمورد',
+    },
+    {
+        'field': 'credit_limit', 'header_ar': 'الحد الائتماني', 'required': False, 'dtype': 'decimal',
+        'typical_width': 16, 'description': 'أقصى دين مسموح به مع هذا المورد',
+    },
+    {
+        'field': 'notes', 'header_ar': 'ملاحظات', 'required': False, 'dtype': 'text',
+        'typical_width': 30, 'description': 'ملاحظات',
+    },
+]
+
+
+def get_customer_schema(tenant):
+    return list(CUSTOMER_IMPORT_SCHEMA)
+
+
+def get_supplier_schema(tenant):
+    from apps.core.constants import CURRENCY_CHOICES
+    schema = list(SUPPLIER_IMPORT_SCHEMA)
+    for spec in schema:
+        if spec['field'] == 'currency':
+            spec['choices'] = CURRENCY_CHOICES
+    return schema
