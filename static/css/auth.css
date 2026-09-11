@@ -121,7 +121,6 @@
     background: var(--primary);
     color: #fff;
     border-color: var(--primary);
-    transform: scale(1.08);
     box-shadow: 0 3px 14px rgba(246,168,33, 0.35);
 }
 
@@ -348,7 +347,6 @@
 }
 
 .auth-side-panel:hover {
-    transform: translateX(-14px) scale(1.01);
     box-shadow: 0 32px 72px rgba(169, 103, 14, 0.28);
 }
 
@@ -506,7 +504,6 @@
     transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
 }
 .auth-feature-item:hover {
-    transform: translateY(-3px);
     box-shadow: 0 10px 24px rgba(0,0,0,.06);
     border-color: rgba(246,168,33,.35);
 }
@@ -570,7 +567,6 @@
 
 .auth-card:hover {
     box-shadow: 0 22px 46px rgba(15, 23, 42, 0.12);
-    transform: translateX(18px) translateY(-2px);
 }
 
 .auth-card::before {
@@ -810,8 +806,7 @@
     transform: translateX(-100%);
     transition: transform 0.45s ease;
 }
-.btn-auth:hover::after  { transform: translateX(100%); }
-.btn-auth:hover         { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(246,168,33, 0.48); }
+.btn-auth:hover         { box-shadow: 0 10px 28px rgba(246,168,33, 0.48); }
 .btn-auth:active        { transform: translateY(0); opacity: 0.95; }
 .btn-auth:disabled {
     cursor: progress;
@@ -1059,7 +1054,6 @@
     box-shadow: 0 4px 14px rgba(246,168,33, 0.32);
 }
 .auth-card .btn-primary:hover {
-    transform: translateY(-2px);
     box-shadow: 0 8px 22px rgba(246,168,33, 0.42);
     color: #fff;
 }
@@ -1076,7 +1070,6 @@
 .auth-card .btn-outline-primary:hover {
     background: var(--primary);
     color: #fff;
-    transform: translateY(-1px);
     box-shadow: 0 4px 14px rgba(246,168,33, 0.3);
 }
 
@@ -1098,7 +1091,6 @@
     box-shadow: 0 4px 14px rgba(16, 185, 129, 0.32);
 }
 .auth-card .btn-success:hover {
-    transform: translateY(-2px);
     box-shadow: 0 8px 22px rgba(16, 185, 129, 0.42);
     color: #fff;
 }
@@ -1302,7 +1294,6 @@
     transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease,
         transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.biz-type-card:hover { transform: translateY(-1px); }
 
 .biz-type-radio {
     position: absolute;
@@ -1344,6 +1335,28 @@
     background: var(--primary);
     color: #fff;
     animation: authIconPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ─────────────────────────────────────────────
+   Hover-lift transforms — real pointer devices only.
+   On touch, tapping an element can leave it stuck in the :hover state
+   (no mouseleave to clear it), which made the auth card/buttons visibly
+   jump and stay shifted after any tap — most noticeably right after
+   submitting a form with errors. Restricting these transforms to
+   (hover: hover) and (pointer: fine) keeps the desktop lift effects
+   and removes the stuck-offset bug on mobile/touch.
+   ───────────────────────────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+    .auth-theme-btn:hover { transform: scale(1.08); }
+    .auth-side-panel:hover { transform: translateX(-14px) scale(1.01); }
+    .auth-feature-item:hover { transform: translateY(-3px); }
+    .auth-card:hover { transform: translateX(18px) translateY(-2px); }
+    .btn-auth:hover::after { transform: translateX(100%); }
+    .btn-auth:hover { transform: translateY(-2px); }
+    .auth-card .btn-primary:hover { transform: translateY(-2px); }
+    .auth-card .btn-outline-primary:hover { transform: translateY(-1px); }
+    .auth-card .btn-success:hover { transform: translateY(-2px); }
+    .biz-type-card:hover { transform: translateY(-1px); }
 }
 
 /* ─────────────────────────────────────────────
