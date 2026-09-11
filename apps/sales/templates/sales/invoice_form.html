@@ -599,6 +599,7 @@ function selectItem(itemId) {
             track_batch: !!item.track_batch,
             track_serial: !!item.track_serial,
             track_expiry: !!item.track_expiry,
+            is_insurance_excluded: !!item.is_insurance_excluded,
         });
         closeItemSearch();
     });
@@ -625,6 +626,7 @@ function addLineToTable(lineData) {
     row.dataset.trackBatch = lineData.track_batch ? '1' : '0';
     row.dataset.trackSerial = lineData.track_serial ? '1' : '0';
     row.dataset.trackExpiry = lineData.track_expiry ? '1' : '0';
+    row.dataset.insuranceExcluded = lineData.is_insurance_excluded ? '1' : '0';
 
     const qty = Enjaz.parseNumber(lineData.quantity) || 1;
     const price = Enjaz.parseNumber(lineData.unit_price) || 0;
@@ -901,15 +903,28 @@ function updateInsuranceVisibility() {
     updateInsuranceEstimate();
 }
 
-// تقدير فقط — الرقم الفعلي المعتمد يُحسَب في السيرفر لكل بند مع استبعاد
-// أصناف is_insurance_excluded، فقد يختلف قليلاً.
+// يحسب لكل بند على حدة ويستبعد is_insurance_excluded — نفس منطق السيرفر
+// بالضبط (build_line_selections) لضمان تطابق الرقم المعروض مع ما سيُعتمد فعلياً.
 function estimatedInsuranceCovered() {
     const checked = document.getElementById('insuranceToggle').checked;
     if (!checked) return 0;
     const policy = customerPolicies.length ? selectedPolicy() : null;
     const company = customerPolicies.length ? null : selectedCompany();
     const pct = policy ? parseFloat(policy.coverage_percent) : (company ? parseFloat(company.default_coverage_percent) : 0);
-    return pct ? currentGrandTotal * pct / 100 : 0;
+    if (!pct) return 0;
+
+    let covered = 0;
+    document.querySelectorAll('#linesBody tr').forEach(row => {
+        if (row.dataset.insuranceExcluded === '1') return;
+        const id = row.id.replace('line-', '');
+        const qty = Enjaz.parseNumber(document.getElementById(`qty-${id}`)?.value) || 0;
+        const price = Enjaz.parseNumber(document.getElementById(`price-${id}`)?.value) || 0;
+        const disc = Enjaz.parseNumber(document.getElementById(`disc-${id}`)?.value) || 0;
+        const tax = Enjaz.parseNumber(document.getElementById(`tax-${id}`)?.value) || 0;
+        const lineTotal = calcLineTotal(qty, price, disc, tax);
+        covered += Math.round(lineTotal * pct) / 100;
+    });
+    return covered;
 }
 
 function updateInsuranceEstimate() {

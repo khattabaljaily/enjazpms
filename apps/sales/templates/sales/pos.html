@@ -535,6 +535,7 @@ function addAlternativeToCart(alt) {
             unit_price: parseFloat(alt.selling_price) || 0,
             discount_percent: 0, tax_rate: parseFloat(alt.tax_rate) || 0,
             cost_price: 0, unit_id: '', unit_factor: 1, unit_name: '', units: [],
+            is_insurance_excluded: !!alt.is_insurance_excluded,
         });
     }
     renderCart();
@@ -558,12 +559,15 @@ function addToCart(card) {
     const unit_factor = parseFloat(card.dataset.unitFactor) || 1;
     const unit_name   = card.dataset.unitName || '';
 
+    const itemInfo = allItems.find(i => i.id === id);
+    const isInsuranceExcluded = !!(itemInfo && itemInfo.is_insurance_excluded);
+
     const existing = cart.find(c => c.item_id === id);
     if (existing) {
         existing.qty += 1;
     } else {
         cart.push({ item_id: id, name, qty: 1, unit_price: price, discount_percent: 0, tax_rate: tax, cost_price: cost,
-                    unit_id, unit_factor, unit_name, units });
+                    unit_id, unit_factor, unit_name, units, is_insurance_excluded: isInsuranceExcluded });
     }
 
     // Flash card
@@ -824,13 +828,23 @@ function updateInsuranceUI() {
 
 // تقدير فقط (مبني على الإجمالي كاملاً) — الرقم الفعلي المعتمد يُحسَب في
 // السيرفر لكل بند مع استبعاد أصناف is_insurance_excluded، فقد يختلف قليلاً.
+// يحسب لكل بند على حدة ويستبعد is_insurance_excluded — نفس منطق السيرفر
+// بالضبط (build_line_selections) لضمان تطابق الرقم المعروض مع ما سيُعتمد فعلياً.
 function estimatedInsuranceCovered() {
     if (!$insToggle.checked) return 0;
     const policy = customerPolicies.length ? selectedPolicy() : null;
     const company = customerPolicies.length ? null : selectedCompany();
     const pct = policy ? parseFloat(policy.coverage_percent) : (company ? parseFloat(company.default_coverage_percent) : 0);
     if (!pct) return 0;
-    return calcTotals().grand * pct / 100;
+
+    let covered = 0;
+    cart.forEach(line => {
+        if (line.is_insurance_excluded) return;
+        const base = line.qty * line.unit_price * (1 - line.discount_percent / 100);
+        const lineTotal = base * (1 + line.tax_rate / 100);
+        covered += Math.round(lineTotal * pct) / 100;
+    });
+    return covered;
 }
 
 function updateInsuranceEstimate() {

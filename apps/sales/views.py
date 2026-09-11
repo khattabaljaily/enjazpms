@@ -414,6 +414,7 @@ def invoice_edit(request, pk):
             'track_batch': line.item.track_batch,
             'track_serial': line.item.track_serial,
             'track_expiry': line.item.track_expiry,
+            'is_insurance_excluded': line.item.is_insurance_excluded,
         })
 
     context = {
@@ -1101,6 +1102,7 @@ def item_info_api(request):
             'unit_name': base_unit_name,
             'unit_factor': '1',
             'units': units,
+            'is_insurance_excluded': item.is_insurance_excluded,
         }
     })
 
@@ -2465,6 +2467,7 @@ def pos_items_api(request):
             'image_url': image_url,
             'requires_prescription': item.requires_prescription,
             'is_controlled_substance': item.is_controlled_substance,
+            'is_insurance_excluded': item.is_insurance_excluded,
         })
 
     return JsonResponse({'items': items}, json_dumps_params={'ensure_ascii': False})
@@ -2504,6 +2507,7 @@ def item_alternatives_api(request):
             'selling_price': str(a.selling_price or 0),
             'tax_rate': str(a.tax_rate or 0),
             'available_qty': qty_map.get(a.id, 0),
+            'is_insurance_excluded': a.is_insurance_excluded,
         }
         for a in alternatives
     ]
