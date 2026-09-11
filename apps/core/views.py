@@ -15,6 +15,7 @@ from apps.accounts.decorators import require_permission
 from apps.accounts.activity_service import log_activity
 from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from datetime import datetime, timedelta, date as date_type
 from django.utils import timezone as dj_timezone
 
@@ -1828,6 +1829,7 @@ def _superuser_required(request, perm=None):
 
 
 @login_required
+@never_cache
 def tenant_list(request):
     """قائمة المشتركين (المشتركين) - للمشرف فقط"""
     if not request.user.has_platform_perm('manage_tenants'):
