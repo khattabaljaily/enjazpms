@@ -2242,18 +2242,32 @@ def _delete_tenant_data(tenant):
             StocktakeLine, Stocktake,
             StockTransferLine, StockTransfer,
             ManufacturingOrder,
+            StockDestructionLine, StockDestruction,
         )
         from apps.purchases.models import PurchaseRFQLine, PurchaseRFQ
         from apps.items.models import BOMRecipe
         from apps.store.models import OnlineOrderLine, OnlineOrder
         from apps.agents.models import AgentInvoiceRequestLine, AgentInvoiceRequest, AgentLedger
+        from apps.insurance.models import (
+            InsuranceClaimLine, InsuranceClaimSettlement, InsuranceClaim, CustomerInsurancePolicy,
+        )
 
         # --- agent sub-documents (AgentLedger.agent / AgentInvoiceRequest.agent PROTECT Agent,
         #     AgentInvoiceRequestLine.item PROTECT Item) ---
         AgentInvoiceRequestLine.objects.filter(**t).delete()
         AgentInvoiceRequest.objects.filter(**t).delete()
         AgentLedger.objects.filter(**t).delete()
+        # --- insurance (InsuranceClaimLine.invoice_line PROTECT SaleInvoiceLine,
+        #     InsuranceClaim.invoice PROTECT SaleInvoice, .customer PROTECT Customer,
+        #     InsuranceClaim/InsuranceClaimSettlement/CustomerInsurancePolicy.insurance_company
+        #     PROTECT InsuranceCompany) ---
+        InsuranceClaimLine.objects.filter(**t).delete()
+        InsuranceClaimSettlement.objects.filter(**t).delete()
+        InsuranceClaim.objects.filter(**t).delete()
+        CustomerInsurancePolicy.objects.filter(**t).delete()
         # --- stock sub-documents (all PROTECT Stock or Item) ---
+        StockDestructionLine.objects.filter(**t).delete()
+        StockDestruction.objects.filter(**t).delete()
         StocktakeLine.objects.filter(**t).delete()
         Stocktake.objects.filter(**t).delete()
         StockTransferLine.objects.filter(**t).delete()

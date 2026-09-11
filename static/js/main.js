@@ -302,7 +302,14 @@ const Enjaz = {
             if (existingError.length) {
                 existingError.html(messages.join('<br>'));
             } else {
-                field.last().after(`<div class="text-danger small mt-1 js-field-errors" data-field="${fieldName}">${messages.join('<br>')}</div>`);
+                // If the field is wrapped in a Bootstrap .input-group (e.g. the
+                // num-stepper +/- wrapper), insert after the whole group instead of
+                // right after the <input> — otherwise the error div becomes an extra
+                // flex child squeezed between the input and its trailing button,
+                // visually collapsing the input.
+                const inputGroup = field.last().closest('.input-group');
+                const insertAfter = inputGroup.length ? inputGroup : field.last();
+                insertAfter.after(`<div class="text-danger small mt-1 js-field-errors" data-field="${fieldName}">${messages.join('<br>')}</div>`);
             }
         });
     },

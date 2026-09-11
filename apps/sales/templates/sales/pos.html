@@ -758,6 +758,11 @@ $checkoutBtn.addEventListener('click', async () => {
 
     if (currentMethod === 'cash') {
         cashAmt = t.grand;
+        const cashReceived = parseFloat($cashRcvd.value) || 0;
+        if (!$customer.value && cashReceived < t.grand - 0.01) {
+            showError('المبلغ المستلم أقل من الإجمالي المطلوب — لا يمكن قبول ذلك من زبون عابر');
+            return;
+        }
     } else if (currentMethod === 'bank') {
         bankAmt = t.grand;
     } else if (currentMethod === 'split') {
