@@ -100,7 +100,7 @@ class InsuranceClaim(TenantMixin):
         related_name='insurance_claim', verbose_name='الفاتورة'
     )
     customer = models.ForeignKey(
-        'customers.Customer', on_delete=models.PROTECT,
+        'customers.Customer', on_delete=models.PROTECT, null=True, blank=True,
         related_name='insurance_claims', verbose_name='العميل'
     )
     insurance_company = models.ForeignKey(

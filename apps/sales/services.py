@@ -464,7 +464,8 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
             else:
                 cash_amt = invoice.cash_amount or Decimal('0')
                 bank_amt = invoice.bank_amount or Decimal('0')
-                credit_amount = max(total - cash_amt - bank_amt, Decimal('0'))
+                insurance_amt = invoice.insurance_amount or Decimal('0')
+                credit_amount = max(total - cash_amt - bank_amt - insurance_amt, Decimal('0'))
 
             if credit_amount > 0 and (current_balance + credit_amount) > credit_limit:
                 available = credit_limit - current_balance
@@ -523,7 +524,8 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
     elif pm == 'mixed':
         cash_amt = invoice.cash_amount or Decimal('0')
         bank_amt = invoice.bank_amount or Decimal('0')
-        credit_amt = total - cash_amt - bank_amt
+        insurance_amt = invoice.insurance_amount or Decimal('0')
+        credit_amt = total - cash_amt - bank_amt - insurance_amt
 
         if credit_amt > Decimal('0.005') and not invoice.customer:
             raise ValueError('الفاتورة المختلطة التي تحتوي على جزء آجل تتطلب اختيار عميل قبل التأكيد.')
@@ -533,9 +535,12 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
         if bank_amt > 0:
             _apply_payment(tenant, invoice, 'bank', bank_amt, invoice.invoice_date,
                            reference=invoice.bank_reference)
+        # المبلغ المتوقع من التأمين (insurance_amt) ليس ديناً على العميل ولا دفعة
+        # مستلمة فعلياً — يبقى معلَّقاً بالكامل عبر InsuranceClaim.covered_amount
+        # التي تُنشأ بعد التأكيد مباشرة، فلا يُسجَّل هنا كقيد على العميل.
         if invoice.customer:
             _apply_customer_ledger(
-                tenant=tenant, customer=invoice.customer, amount=total,
+                tenant=tenant, customer=invoice.customer, amount=total - insurance_amt,
                 entry_type='invoice', reference_type='sale_invoice',
                 reference_id=invoice.id, date=invoice.invoice_date,
                 notes=f"فاتورة {invoice.invoice_number}",
@@ -657,6 +662,9 @@ def cancel_sale_invoice(invoice: SaleInvoice, user, reason: str = '') -> SaleInv
     if hasattr(invoice, 'insurance_claim') and invoice.insurance_claim.status not in ('draft', 'cancelled'):
         raise ValueError('لا يمكن إلغاء فاتورة مرتبطة بمطالبة تأمين نشطة — يجب إلغاء المطالبة أولاً.')
 
+    from apps.insurance.services import discard_draft_claim
+    discard_draft_claim(invoice)
+
     tenant = invoice.tenant
 
     if invoice.status == 'pending_delivery':
@@ -747,6 +755,9 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
     if hasattr(invoice, 'insurance_claim') and invoice.insurance_claim.status not in ('draft', 'cancelled'):
         raise ValueError('لا يمكن تعديل فاتورة مرتبطة بمطالبة تأمين نشطة — يجب إلغاء المطالبة أولاً.')
 
+    from apps.insurance.services import discard_draft_claim
+    discard_draft_claim(invoice)
+
     tenant = invoice.tenant
 
     # ── الخطوة 1: عكس كل التأثيرات ─────────────────────
@@ -801,6 +812,21 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
     # إعادة جلب مع id
     invoice.lines.set(SaleInvoiceLine.objects.filter(invoice=invoice))
 
+    # نفس منطق build_invoice_from_post: المبلغ المتوقع من التأمين يُحسَب من
+    # السيرفر دائماً بناءً على اختيار التأمين الجديد (إن وُجد) بعد التعديل.
+    insurance_policy_id = header_data.get('insurance_policy_id')
+    insurance_company_id = header_data.get('insurance_company_id')
+    insurance_coverage_percent = header_data.get('insurance_coverage_percent')
+    invoice.insurance_amount = Decimal('0')
+    if insurance_policy_id or insurance_company_id:
+        from apps.insurance.services import resolve_insurance_selection, build_line_selections
+        _policy, _ins_company, _coverage_pct = resolve_insurance_selection(
+            tenant, invoice.customer_id, insurance_policy_id, insurance_company_id, insurance_coverage_percent,
+        )
+        if _ins_company:
+            _line_selections, _covered_total = build_line_selections(invoice, _coverage_pct)
+            invoice.insurance_amount = _covered_total
+
     invoice.recalculate_totals()
     invoice.paid_amount = Decimal('0')
     invoice.save()
@@ -810,6 +836,13 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
     invoice.status = 'draft'
     invoice.save(update_fields=['status'])
     confirm_sale_invoice(invoice, user)
+
+    if insurance_policy_id or insurance_company_id:
+        from apps.insurance.services import create_claim_from_sale
+        create_claim_from_sale(
+            invoice, tenant, insurance_policy_id, insurance_company_id,
+            insurance_coverage_percent, user,
+        )
 
     return invoice
 
@@ -850,6 +883,12 @@ def confirm_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
 
     if hasattr(invoice, 'insurance_claim') and invoice.insurance_claim.status not in ('draft', 'cancelled'):
         raise ValueError('لا يمكن إرجاع فاتورة مرتبطة بمطالبة تأمين نشطة — يجب إلغاء المطالبة أولاً.')
+
+    # مطالبة draft محسوبة على إجمالي الفاتورة قبل الإرجاع — بقت أرقامها غلط
+    # بعد تخفيض الفاتورة، فتُحذف؛ يقدر الموظف يعمل مطالبة جديدة يدوياً بالمبلغ
+    # الصحيح من زر "إنشاء مطالبة تأمين" في صفحة الفاتورة.
+    from apps.insurance.services import discard_draft_claim
+    discard_draft_claim(invoice)
 
     tenant = sale_return.tenant
     return_lines = list(sale_return.lines.select_related('invoice_line', 'item'))
@@ -975,6 +1014,14 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
 
     tenant = sale_return.tenant
     invoice = sale_return.original_invoice
+
+    if hasattr(invoice, 'insurance_claim') and invoice.insurance_claim.status not in ('draft', 'cancelled'):
+        raise ValueError('لا يمكن إلغاء هذا المرتجع لأن الفاتورة مرتبطة بمطالبة تأمين نشطة — يجب إلغاء المطالبة أولاً.')
+
+    # إلغاء المرتجع بيرجّع الفاتورة لمبلغها الأصلي (الأكبر) — أي مطالبة draft
+    # كانت اتعملت بمبلغ الفاتورة المخفَّض بعد المرتجع بقت غلط تاني، فتُحذف.
+    from apps.insurance.services import discard_draft_claim
+    discard_draft_claim(invoice)
 
     # ── عكس حركات المخزون ────────────────────────────────
     movements = StockMovement.objects.filter(
@@ -1476,6 +1523,19 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
         )
         line.calculate()
         line.save()
+
+    # المبلغ المتوقع من التأمين يُحسَب من السيرفر دائماً (مش من رقم الواجهة)
+    # لضمان تطابقه بالضبط مع المبلغ اللي هتُبنى عليه المطالبة لاحقاً.
+    if data.get('insurance_policy_id') or data.get('insurance_company_id'):
+        from apps.insurance.services import resolve_insurance_selection, build_line_selections
+        _policy, _ins_company, _coverage_pct = resolve_insurance_selection(
+            tenant, invoice.customer_id,
+            data.get('insurance_policy_id'), data.get('insurance_company_id'),
+            data.get('insurance_coverage_percent'),
+        )
+        if _ins_company:
+            _line_selections, _covered_total = build_line_selections(invoice, _coverage_pct)
+            invoice.insurance_amount = _covered_total
 
     invoice.recalculate_totals()
     invoice.save()

@@ -14,6 +14,7 @@ urlpatterns = [
     path('companies/api/<int:pk>/delete/', views.company_delete_api, name='company_delete_api'),
 
     # Customer insurance policies
+    path('companies/api/active/', views.active_companies_api, name='active_companies_api'),
     path('policies/api/customer/<int:customer_id>/', views.customer_policies_api, name='customer_policies_api'),
     path('policies/api/create/', views.policy_create_api, name='policy_create_api'),
     path('policies/api/<int:pk>/delete/', views.policy_delete_api, name='policy_delete_api'),

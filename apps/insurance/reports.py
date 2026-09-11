@@ -66,7 +66,7 @@ class InsuranceReportGenerator:
             data.append({
                 'claim_number': claim.claim_number,
                 'invoice_number': claim.invoice.invoice_number,
-                'customer_name': claim.customer.name,
+                'customer_name': claim.customer.name if claim.customer else 'بدون عميل مسجَّل',
                 'insurance_company_name': claim.insurance_company.name,
                 'status_display': claim.get_status_display(),
                 'due_date': claim.due_date,

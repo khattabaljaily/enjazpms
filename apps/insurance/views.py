@@ -183,6 +183,22 @@ def company_delete_api(request, pk):
 
 @login_required
 @require_permission('view_insurance_companies')
+def active_companies_api(request):
+    """قائمة شركات التأمين النشطة — تُستخدم في POS/الفاتورة لبيع بدون عميل
+    مسجَّل أو بدون بوليصة (اختيار شركة التأمين مباشرة)."""
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+    companies = InsuranceCompany.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    data = [
+        {'id': c.id, 'name': c.name, 'default_coverage_percent': str(c.default_coverage_percent)}
+        for c in companies
+    ]
+    return _json_ok(data)
+
+
+@login_required
+@require_permission('view_insurance_companies')
 def customer_policies_api(request, customer_id):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -290,7 +306,8 @@ def claim_table_api(request):
     data = [
         {
             'id': c.id, 'claim_number': c.claim_number,
-            'invoice_number': c.invoice.invoice_number, 'customer_name': c.customer.name,
+            'invoice_number': c.invoice.invoice_number,
+            'customer_name': c.customer.name if c.customer else 'بدون عميل مسجَّل',
             'insurance_company_name': c.insurance_company.name,
             'status': c.status, 'status_display': c.get_status_display(),
             'covered_amount': str(c.covered_amount), 'approved_amount': str(c.approved_amount) if c.approved_amount is not None else None,
@@ -368,7 +385,9 @@ def claim_create_api(request):
         return _json_error('بيانات غير صالحة')
 
     try:
-        claim = services.create_claim_for_invoice(invoice, policy, line_selections, request.user)
+        claim = services.create_claim_for_invoice(
+            invoice, policy.insurance_company, line_selections, request.user, policy=policy,
+        )
     except ValueError as e:
         return _json_error(str(e))
 
@@ -397,7 +416,8 @@ def claim_detail_api(request, pk):
     ]
     return _json_ok({
         'id': c.id, 'claim_number': c.claim_number, 'status': c.status, 'status_display': c.get_status_display(),
-        'invoice_number': c.invoice.invoice_number, 'customer_name': c.customer.name,
+        'invoice_number': c.invoice.invoice_number,
+        'customer_name': c.customer.name if c.customer else 'بدون عميل مسجَّل',
         'insurance_company_name': c.insurance_company.name,
         'covered_amount': str(c.covered_amount), 'patient_amount': str(c.patient_amount),
         'approved_amount': str(c.approved_amount) if c.approved_amount is not None else None,

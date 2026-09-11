@@ -172,42 +172,6 @@
         </li>
     </ul>
 
-    <!-- ── Transactions ── -->
-    <div class="sidebar-divider"></div>
-    <ul class="nav flex-column">
-        <li class="nav-item has-submenu">
-            <a class="nav-link nav-link-toggle" href="#">
-                <span class="nav-icon nav-icon--sales"><i class="fas fa-receipt"></i></span>
-                المبيعات
-                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
-            </a>
-            <ul class="nav-submenu">
-                {% if tenant_capabilities|has_capability:"has_pos" %}
-                <li><a href="{% url 'sales:pos' %}" class="nav-sublink"><i class="fas fa-cash-register me-2"></i>نقطة البيع (POS)</a></li>
-                {% endif %}
-                <li><a href="{% url 'sales:quote_list' %}" class="nav-sublink"><i class="fas fa-file-contract me-2"></i>عروض الأسعار</a></li>
-                {% if tenant_capabilities|has_capability:"has_sales_invoice" %}
-                <li><a href="{% url 'sales:invoice_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>فاتورة مبيعات</a></li>
-                {% endif %}
-                <li><a href="{% url 'sales:invoice_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الفواتير</a></li>
-                <li><a href="{% url 'sales:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
-            </ul>
-        </li>
-        <li class="nav-item has-submenu">
-            <a class="nav-link nav-link-toggle" href="#">
-                <span class="nav-icon nav-icon--buy"><i class="fas fa-cart-arrow-down"></i></span>
-                المشتريات
-                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
-            </a>
-            <ul class="nav-submenu">
-                <li><a href="{% url 'purchases:rfq_list' %}" class="nav-sublink"><i class="fas fa-file-invoice me-2"></i>طلبات عروض الأسعار</a></li>
-                <li><a href="{% url 'purchases:order_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>أمر شراء جديد</a></li>
-                <li><a href="{% url 'purchases:order_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة أوامر الشراء</a></li>
-                <li><a href="{% url 'purchases:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
-            </ul>
-        </li>
-    </ul>
-
     <!-- ── Initial Setup ── -->
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
@@ -250,9 +214,6 @@
                         {% endif %}
                     </ul>
                 </li>
-                {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
-                <li><a href="{% url 'insurance:company_list' %}" class="nav-sublink"><i class="fas fa-briefcase-medical me-2"></i>شركات التأمين</a></li>
-                {% endif %}
                 {% if user|has_perm_key:'import_items' or user|has_perm_key:'import_customers' or user|has_perm_key:'import_suppliers' %}
                 <li class="nav-item has-submenu">
                     <a class="nav-sublink nav-link-toggle" href="#">
@@ -276,22 +237,78 @@
         </li>
     </ul>
 
-    <!-- ── Inventory ── -->
+    {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
+    <!-- ── Insurance ── -->
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
-                <span class="nav-icon nav-icon--stock"><i class="fas fa-box-open"></i></span>
-                المنتجات
+                <span class="nav-icon" style="background:rgba(37,99,235,.12);color:#2563eb;"><i class="fas fa-briefcase-medical"></i></span>
+                التأمين
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
-                <li><a href="{% url 'items:list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة المنتجات</a></li>
-                {% if tenant_capabilities|has_capability:"has_manufacturing" %}
-                <li><a href="{% url 'items:bom_list' %}" class="nav-sublink"><i class="fas fa-flask me-2"></i>وصفات التصنيع</a></li>
-                {% endif %}
+                <li><a href="{% url 'insurance:company_list' %}" class="nav-sublink"><i class="fas fa-briefcase-medical me-2"></i>شركات التأمين</a></li>
+                <li><a href="{% url 'insurance:claim_list' %}" class="nav-sublink"><i class="fas fa-file-medical me-2"></i>مطالبات التأمين</a></li>
+                <li><a href="{% url 'sales:pos' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>فاتورة تأمين جديدة</a></li>
             </ul>
         </li>
+    </ul>
+    {% endif %}
+
+    <!-- ── Transactions ── -->
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item has-submenu">
+            <a class="nav-link nav-link-toggle" href="#">
+                <span class="nav-icon nav-icon--sales"><i class="fas fa-receipt"></i></span>
+                المبيعات
+                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+            </a>
+            <ul class="nav-submenu">
+                {% if tenant_capabilities|has_capability:"has_pos" %}
+                <li><a href="{% url 'sales:pos' %}" class="nav-sublink"><i class="fas fa-cash-register me-2"></i>نقطة البيع (POS)</a></li>
+                {% endif %}
+                <li><a href="{% url 'sales:quote_list' %}" class="nav-sublink"><i class="fas fa-file-contract me-2"></i>عروض الأسعار</a></li>
+                {% if tenant_capabilities|has_capability:"has_sales_invoice" %}
+                <li><a href="{% url 'sales:invoice_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>فاتورة مبيعات</a></li>
+                {% endif %}
+                <li><a href="{% url 'sales:invoice_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الفواتير</a></li>
+                <li><a href="{% url 'sales:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
+            </ul>
+        </li>
+        <li class="nav-item has-submenu">
+            <a class="nav-link nav-link-toggle" href="#">
+                <span class="nav-icon nav-icon--buy"><i class="fas fa-cart-arrow-down"></i></span>
+                المشتريات
+                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+            </a>
+            <ul class="nav-submenu">
+                <li><a href="{% url 'purchases:rfq_list' %}" class="nav-sublink"><i class="fas fa-file-invoice me-2"></i>طلبات عروض الأسعار</a></li>
+                <li><a href="{% url 'purchases:order_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>أمر شراء جديد</a></li>
+                <li><a href="{% url 'purchases:order_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة أوامر الشراء</a></li>
+                <li><a href="{% url 'purchases:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
+            </ul>
+        </li>
+    </ul>
+
+    <!-- ── Inventory ── -->
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'items:list' %}">
+                <span class="nav-icon nav-icon--stock"><i class="fas fa-box-open"></i></span>
+                المنتجات
+            </a>
+        </li>
+        {% if tenant_capabilities|has_capability:"has_manufacturing" %}
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'items:bom_list' %}">
+                <span class="nav-icon nav-icon--stock"><i class="fas fa-flask"></i></span>
+                وصفات التصنيع
+            </a>
+        </li>
+        {% endif %}
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
                 <span class="nav-icon nav-icon--stock"><i class="fas fa-warehouse"></i></span>
@@ -347,14 +364,6 @@
             <a class="nav-link" href="{% url 'agents:requests_list' %}">
                 <span class="nav-icon" style="background:rgba(246,168,33,.12);color:#c9840f;"><i class="fas fa-paper-plane"></i></span>
                 طلبات المناديب
-            </a>
-        </li>
-        {% endif %}
-        {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'insurance:claim_list' %}">
-                <span class="nav-icon" style="background:rgba(37,99,235,.12);color:#2563eb;"><i class="fas fa-file-medical"></i></span>
-                مطالبات التأمين
             </a>
         </li>
         {% endif %}

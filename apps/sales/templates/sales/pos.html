@@ -158,13 +158,14 @@
                 </button>
             </div>
 
-            <!-- Insurance (credit sales, customer with an active policy only) -->
+            <!-- Insurance — متاح بشكل مستقل عن طريقة الدفع، يفعّل "مختلط" تلقائياً -->
             <div class="pos-insurance-box" id="posInsuranceBox">
                 <label class="pos-insurance-check">
                     <input type="checkbox" id="posInsuranceToggle">
                     <span id="posInsuranceLabel">تفعيل التأمين لهذه الفاتورة</span>
                 </label>
                 <select class="pos-insurance-select" id="posInsurancePolicySelect"></select>
+                <select class="pos-insurance-select" id="posInsuranceCompanySelect"></select>
                 <div class="pos-insurance-estimate" id="posInsuranceEstimate"></div>
             </div>
 
@@ -265,9 +266,11 @@ const CAP = {
 };
 const CHECKOUT_URL = '{% url "sales:pos_checkout_api" %}';
 const CUSTOMER_POLICIES_URL = '{% url "insurance:customer_policies_api" 0 %}';
+const ACTIVE_COMPANIES_URL = '{% url "insurance:active_companies_api" %}';
 
-/* ── Insurance state (credit sales only) ─────────────────── */
+/* ── Insurance state — مستقل عن طريقة الدفع، يفعّل "مختلط" تلقائياً ── */
 let customerPolicies = [];
+let activeCompanies = [];
 
 /* ── State ───────────────────────────────────────────── */
 let cart = [];
@@ -742,12 +745,18 @@ function updateQuickCash(grand) {
     );
 }
 
-/* ── Insurance (credit sales) ───────────────────────────── */
-const $insBox      = document.getElementById('posInsuranceBox');
-const $insToggle    = document.getElementById('posInsuranceToggle');
-const $insLabel     = document.getElementById('posInsuranceLabel');
-const $insSelect    = document.getElementById('posInsurancePolicySelect');
-const $insEstimate  = document.getElementById('posInsuranceEstimate');
+/* ── Insurance — مستقل عن طريقة الدفع، يفعّل "مختلط" تلقائياً ─────── */
+const $insBox            = document.getElementById('posInsuranceBox');
+const $insToggle         = document.getElementById('posInsuranceToggle');
+const $insLabel          = document.getElementById('posInsuranceLabel');
+const $insSelect         = document.getElementById('posInsurancePolicySelect');
+const $insCompanySelect  = document.getElementById('posInsuranceCompanySelect');
+const $insEstimate       = document.getElementById('posInsuranceEstimate');
+
+fetch(ACTIVE_COMPANIES_URL)
+    .then(r => r.ok ? r.json() : { success: false })
+    .then(resp => { activeCompanies = (resp.success && resp.data) || []; updateInsuranceUI(); })
+    .catch(() => {});
 
 function fetchCustomerPolicies(customerId) {
     customerPolicies = [];
@@ -771,37 +780,78 @@ function selectedPolicy() {
     return customerPolicies.find(p => String(p.id) === id) || customerPolicies[0];
 }
 
+function selectedCompany() {
+    if (!activeCompanies.length) return null;
+    const id = $insCompanySelect.value || String(activeCompanies[0].id);
+    return activeCompanies.find(c => String(c.id) === id) || activeCompanies[0];
+}
+
+// يبني الاسم المعروض + النسبة لحالة "التأمين مفعَّل بدون خيارات متعددة"
 function updateInsuranceUI() {
-    const show = currentMethod === 'credit' && customerPolicies.length > 0;
+    const hasPolicies = customerPolicies.length > 0;
+    const hasCompanies = activeCompanies.length > 0;
+    const show = hasPolicies || hasCompanies;
     $insBox.classList.toggle('visible', show);
     if (!show) { $insToggle.checked = false; updateInsuranceEstimate(); return; }
 
-    if (customerPolicies.length > 1) {
-        $insSelect.innerHTML = customerPolicies.map(p =>
-            `<option value="${p.id}">${p.insurance_company_name} — ${p.coverage_percent}%</option>`
-        ).join('');
-        $insSelect.classList.add('visible');
-        $insLabel.textContent = 'تفعيل التأمين لهذه الفاتورة';
+    if (hasPolicies) {
+        $insCompanySelect.classList.remove('visible');
+        if (customerPolicies.length > 1) {
+            $insSelect.innerHTML = customerPolicies.map(p =>
+                `<option value="${p.id}">${p.insurance_company_name} — ${p.coverage_percent}%</option>`
+            ).join('');
+            $insSelect.classList.add('visible');
+            $insLabel.textContent = 'تفعيل التأمين لهذه الفاتورة';
+        } else {
+            $insSelect.classList.remove('visible');
+            $insLabel.textContent = `تفعيل التأمين (${customerPolicies[0].insurance_company_name} — ${customerPolicies[0].coverage_percent}%)`;
+        }
     } else {
         $insSelect.classList.remove('visible');
-        $insLabel.textContent = `تفعيل التأمين (${customerPolicies[0].insurance_company_name} — ${customerPolicies[0].coverage_percent}%)`;
+        if (activeCompanies.length > 1) {
+            $insCompanySelect.innerHTML = activeCompanies.map(c =>
+                `<option value="${c.id}">${c.name} — ${c.default_coverage_percent}%</option>`
+            ).join('');
+            $insCompanySelect.classList.add('visible');
+            $insLabel.textContent = 'تفعيل التأمين (بدون عميل مسجَّل — اختر شركة التأمين)';
+        } else {
+            $insCompanySelect.classList.remove('visible');
+            $insLabel.textContent = `تفعيل التأمين (${activeCompanies[0].name} — ${activeCompanies[0].default_coverage_percent}%)`;
+        }
     }
     updateInsuranceEstimate();
 }
 
+// تقدير فقط (مبني على الإجمالي كاملاً) — الرقم الفعلي المعتمد يُحسَب في
+// السيرفر لكل بند مع استبعاد أصناف is_insurance_excluded، فقد يختلف قليلاً.
+function estimatedInsuranceCovered() {
+    if (!$insToggle.checked) return 0;
+    const policy = customerPolicies.length ? selectedPolicy() : null;
+    const company = customerPolicies.length ? null : selectedCompany();
+    const pct = policy ? parseFloat(policy.coverage_percent) : (company ? parseFloat(company.default_coverage_percent) : 0);
+    if (!pct) return 0;
+    return calcTotals().grand * pct / 100;
+}
+
 function updateInsuranceEstimate() {
     if (!$insToggle.checked) { $insEstimate.classList.remove('visible'); return; }
-    const policy = selectedPolicy();
-    if (!policy) { $insEstimate.classList.remove('visible'); return; }
+    const covered = estimatedInsuranceCovered();
+    if (!covered) { $insEstimate.classList.remove('visible'); return; }
     const grand = calcTotals().grand;
-    const covered = grand * parseFloat(policy.coverage_percent) / 100;
     $insEstimate.textContent =
         `تقديرياً: ${fmt(covered)} من التأمين، والباقي ${fmt(grand - covered)} على حساب العميل (قد يختلف قليلاً حسب الأصناف المستثناة من التغطية).`;
     $insEstimate.classList.add('visible');
 }
 
-$insToggle.addEventListener('change', updateInsuranceEstimate);
+$insToggle.addEventListener('change', () => {
+    if ($insToggle.checked && currentMethod !== 'split') {
+        const splitBtn = document.querySelector('.pos-pay-btn[data-method="split"]');
+        if (splitBtn) splitBtn.click();
+    }
+    updateInsuranceEstimate();
+});
 $insSelect.addEventListener('change', updateInsuranceEstimate);
+$insCompanySelect.addEventListener('change', updateInsuranceEstimate);
 
 /* ── Payment method toggle ───────────────────────────── */
 document.querySelectorAll('.pos-pay-btn').forEach(btn => {
@@ -817,7 +867,7 @@ document.querySelectorAll('.pos-pay-btn').forEach(btn => {
         const needRef = currentMethod === 'bank' || currentMethod === 'split';
         $bankRef.classList.toggle('visible', needRef);
 
-        updateInsuranceUI();
+        if (currentMethod !== 'split') { $insToggle.checked = false; updateInsuranceEstimate(); }
         updateTotals();
     });
 });
@@ -846,8 +896,10 @@ $checkoutBtn.addEventListener('click', async () => {
     } else if (currentMethod === 'split') {
         cashAmt = parseFloat($splitCash.value) || 0;
         bankAmt = parseFloat($splitBank.value) || 0;
-        if (cashAmt + bankAmt < t.grand - 0.01) {
-            showError('مجموع النقدي + البنك أقل من الإجمالي');
+        const insuranceCovered = estimatedInsuranceCovered();
+        const remainder = t.grand - cashAmt - bankAmt - insuranceCovered;
+        if (remainder > 0.01 && !$customer.value) {
+            showError('المبلغ المتبقي بعد النقدي/البنك/التأمين يتطلب اختيار عميل');
             return;
         }
     } else if (currentMethod === 'credit') {
@@ -872,7 +924,8 @@ $checkoutBtn.addEventListener('click', async () => {
         discount_type:  $discType.value,
         discount_value: parseFloat($discVal.value) || 0,
         notes:          $notes.value,
-        insurance_policy_id: (currentMethod === 'credit' && $insToggle.checked && selectedPolicy()) ? selectedPolicy().id : null,
+        insurance_policy_id: ($insToggle.checked && customerPolicies.length && selectedPolicy()) ? selectedPolicy().id : null,
+        insurance_company_id: ($insToggle.checked && !customerPolicies.length && selectedCompany()) ? selectedCompany().id : null,
         lines: cart.map(c => ({
             item_id:          c.item_id,
             quantity:         c.qty,

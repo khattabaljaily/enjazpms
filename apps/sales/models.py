@@ -153,6 +153,9 @@ class SaleInvoice(TenantMixin):
     bank_amount = models.DecimalField(
         'المبلغ بنكياً (مختلط)', max_digits=14, decimal_places=2, default=0
     )
+    insurance_amount = models.DecimalField(
+        'المبلغ المتوقع من التأمين (مختلط)', max_digits=14, decimal_places=2, default=0
+    )
     bank_reference = models.CharField(
         'مرجع التحويل البنكي', max_length=100, blank=True
     )

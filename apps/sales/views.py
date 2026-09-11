@@ -487,6 +487,9 @@ def _process_invoice_post(request, tenant, invoice):
                         'bank_reference': header.get('bank_reference', ''),
                         'notes': header.get('notes', ''),
                         'reference_number': header.get('reference_number', ''),
+                        'insurance_policy_id': header.get('insurance_policy_id') or None,
+                        'insurance_company_id': header.get('insurance_company_id') or None,
+                        'insurance_coverage_percent': header.get('insurance_coverage_percent') or None,
                     }
 
                     # FK mapping for service layer (expects objects, not *_id keys)
@@ -582,23 +585,13 @@ def _process_invoice_post(request, tenant, invoice):
                 confirm_sale_invoice(inv, request.user)
 
                 insurance_policy_id = header.get('insurance_policy_id') or None
-                if inv.payment_method == 'credit' and inv.customer_id and insurance_policy_id:
-                    from apps.insurance.models import CustomerInsurancePolicy
+                insurance_company_id = header.get('insurance_company_id') or None
+                if insurance_policy_id or insurance_company_id:
                     from apps.insurance import services as insurance_services
-                    try:
-                        policy = CustomerInsurancePolicy.objects.get(
-                            tenant=tenant, pk=insurance_policy_id, customer_id=inv.customer_id, is_active=True,
-                        )
-                    except CustomerInsurancePolicy.DoesNotExist:
-                        raise ValueError('بوليصة التأمين المحددة غير موجودة أو غير نشطة')
-
-                    line_selections = [
-                        {'invoice_line_id': line.id, 'coverage_percent': policy.effective_coverage_percent}
-                        for line in inv.lines.select_related('item').all()
-                        if not line.item.is_insurance_excluded
-                    ]
-                    if line_selections:
-                        insurance_services.create_claim_for_invoice(inv, policy, line_selections, request.user)
+                    insurance_services.create_claim_from_sale(
+                        inv, tenant, insurance_policy_id, insurance_company_id,
+                        header.get('insurance_coverage_percent') or None, request.user,
+                    )
 
     except ValueError as e:
         return _json_error(str(e))
@@ -2586,6 +2579,8 @@ def pos_checkout_api(request):
     discount_value = Decimal(str(body.get('discount_value', 0) or 0))
     notes = body.get('notes', '')
     insurance_policy_id = body.get('insurance_policy_id') or None
+    insurance_company_id = body.get('insurance_company_id') or None
+    insurance_coverage_percent = body.get('insurance_coverage_percent') or None
 
     lines_data = []
     for ln in lines_raw:
@@ -2608,6 +2603,9 @@ def pos_checkout_api(request):
         'bank_reference': bank_reference,
         'notes': notes,
         'customer_id': customer_id,
+        'insurance_policy_id': insurance_policy_id,
+        'insurance_company_id': insurance_company_id,
+        'insurance_coverage_percent': insurance_coverage_percent,
     }
     if customer_id:
         invoice_data['due_date'] = timezone.localdate()
@@ -2629,23 +2627,12 @@ def pos_checkout_api(request):
                         user=request.user,
                     )
 
-            if payment_method == 'credit' and customer_id and insurance_policy_id:
-                from apps.insurance.models import CustomerInsurancePolicy
+            if insurance_policy_id or insurance_company_id:
                 from apps.insurance import services as insurance_services
-                try:
-                    policy = CustomerInsurancePolicy.objects.get(
-                        tenant=tenant, pk=insurance_policy_id, customer_id=customer_id, is_active=True,
-                    )
-                except CustomerInsurancePolicy.DoesNotExist:
-                    raise ValueError('بوليصة التأمين المحددة غير موجودة أو غير نشطة')
-
-                line_selections = [
-                    {'invoice_line_id': line.id, 'coverage_percent': policy.effective_coverage_percent}
-                    for line in invoice.lines.select_related('item').all()
-                    if not line.item.is_insurance_excluded
-                ]
-                if line_selections:
-                    insurance_services.create_claim_for_invoice(invoice, policy, line_selections, request.user)
+                insurance_services.create_claim_from_sale(
+                    invoice, tenant, insurance_policy_id, insurance_company_id,
+                    insurance_coverage_percent, request.user,
+                )
 
     except Exception as exc:
         return _json_error(str(exc))

@@ -47,18 +47,104 @@ def _apply_settlement_ledger(tenant, insurance_company, claim, amount, entry_typ
     )
 
 
+def build_line_selections(invoice, coverage_percent):
+    """
+    يبني قائمة الأصناف المؤهلة للتأمين في فاتورة (يستبعد is_insurance_excluded)
+    مع مبلغ التغطية الإجمالي المتوقع — مصدر واحد يُستخدم قبل التأكيد (لتقدير
+    insurance_amount) وبعده (لإنشاء المطالبة الفعلية) بنفس الأرقام بالضبط.
+    """
+    line_selections = []
+    covered_total = Decimal('0')
+    pct = Decimal(str(coverage_percent or 0))
+    for line in invoice.lines.select_related('item').all():
+        if line.item.is_insurance_excluded:
+            continue
+        amt = (line.line_total * pct / Decimal('100')).quantize(Decimal('0.01'))
+        line_selections.append({'invoice_line_id': line.id, 'coverage_percent': pct})
+        covered_total += amt
+    return line_selections, covered_total
+
+
+def resolve_insurance_selection(tenant, customer_id, insurance_policy_id,
+                                 insurance_company_id, insurance_coverage_percent):
+    """
+    يحوّل بيانات اختيار التأمين المرسلة من الواجهة (بوليصة عميل مسجَّل، أو
+    شركة تأمين مباشرة لبيع بدون عميل/بوليصة) إلى (policy, insurance_company,
+    coverage_percent) — أو (None, None, None) لو التأمين غير مفعَّل.
+    """
+    if insurance_policy_id:
+        from .models import CustomerInsurancePolicy
+        try:
+            policy = CustomerInsurancePolicy.objects.get(
+                tenant=tenant, pk=insurance_policy_id, customer_id=customer_id, is_active=True,
+            )
+        except CustomerInsurancePolicy.DoesNotExist:
+            raise ValueError('بوليصة التأمين المحددة غير موجودة أو غير نشطة')
+        return policy, policy.insurance_company, policy.effective_coverage_percent
+
+    if insurance_company_id:
+        from .models import InsuranceCompany
+        try:
+            company = InsuranceCompany.objects.get(tenant=tenant, pk=insurance_company_id, is_active=True)
+        except InsuranceCompany.DoesNotExist:
+            raise ValueError('شركة التأمين المحددة غير موجودة')
+        pct = Decimal(str(insurance_coverage_percent)) if insurance_coverage_percent else company.default_coverage_percent
+        return None, company, pct
+
+    return None, None, None
+
+
+def create_claim_from_sale(invoice, tenant, insurance_policy_id, insurance_company_id,
+                            insurance_coverage_percent, user):
+    """
+    ينشئ مطالبة تأمين تلقائياً بعد تأكيد فاتورة تحمل بيانات تأمين — نقطة
+    استدعاء واحدة مشتركة بين POS والفاتورة اليدوية (إنشاء وتعديل). يتجاهل
+    الطلب بصمت لو مفيش بيانات تأمين إطلاقاً.
+    """
+    policy, insurance_company, coverage_percent = resolve_insurance_selection(
+        tenant, invoice.customer_id, insurance_policy_id, insurance_company_id, insurance_coverage_percent,
+    )
+    if not insurance_company:
+        return None
+    if invoice.payment_method != 'mixed':
+        raise ValueError('تفعيل التأمين يتطلب اختيار طريقة دفع «مختلط».')
+
+    line_selections, _covered_total = build_line_selections(invoice, coverage_percent)
+    if not line_selections:
+        return None
+    return create_claim_for_invoice(invoice, insurance_company, line_selections, user, policy=policy)
+
+
+def discard_draft_claim(invoice):
+    """
+    يحذف مطالبة تأمين لسه مسودة (لم تُقدَّم لشركة التأمين) مرتبطة بالفاتورة،
+    إن وُجدت — يُستدعى قبل أي تعديل/إلغاء/استرجاع يغيّر مبلغ الفاتورة، لضمان
+    عدم بقاء مطالبة بأرقام قديمة/غير صحيحة. لا يلمس أي مطالبة تجاوزت draft.
+    """
+    if hasattr(invoice, 'insurance_claim') and invoice.insurance_claim.status == 'draft':
+        claim = invoice.insurance_claim
+        InsuranceClaimLine.objects.filter(claim=claim).delete()
+        claim.delete()
+        # لازم نمسح الكاش الداخلي لـ OneToOne العكسي على invoice نفسه، وإلا
+        # hasattr(invoice, 'insurance_claim') لاحقاً في نفس الطلب هيرجع True
+        # برغم إن الصف اتحذف فعلاً من القاعدة (كاش Django القياسي لعلاقات o2o).
+        invoice._state.fields_cache.pop('insurance_claim', None)
+        return True
+    return False
+
+
 @transaction.atomic
-def create_claim_for_invoice(invoice, policy, line_selections, user):
+def create_claim_for_invoice(invoice, insurance_company, line_selections, user, policy=None):
     """
     ينشئ مطالبة تأمين جديدة (مسودة) لفاتورة مؤكدة.
     line_selections: [{'invoice_line_id': int, 'coverage_percent': Decimal}, ...]
+    policy اختياري — يُترك فارغاً لبيع بدون عميل مسجَّل أو بدون بوليصة (يُحدَّد
+    insurance_company مباشرة في هذه الحالة بدلاً من أخذه من policy.insurance_company).
     """
     if hasattr(invoice, 'insurance_claim'):
         raise ValueError('يوجد بالفعل مطالبة تأمين مرتبطة بهذه الفاتورة.')
     if invoice.status not in ('confirmed', 'partially_returned'):
         raise ValueError('لا يمكن إنشاء مطالبة تأمين إلا لفاتورة مؤكدة.')
-    if not invoice.customer:
-        raise ValueError('لا يمكن إنشاء مطالبة تأمين لفاتورة غير مرتبطة بعميل.')
     if not line_selections:
         raise ValueError('يجب اختيار بند واحد على الأقل للمطالبة.')
 
@@ -67,15 +153,16 @@ def create_claim_for_invoice(invoice, policy, line_selections, user):
         tenant=tenant,
         invoice=invoice,
         customer=invoice.customer,
-        insurance_company=policy.insurance_company,
+        insurance_company=insurance_company,
         policy=policy,
         status='draft',
     )
 
     covered_total = Decimal('0')
+    default_pct = policy.effective_coverage_percent if policy else Decimal('0')
     for sel in line_selections:
         line = invoice.lines.get(pk=sel['invoice_line_id'])
-        pct = Decimal(str(sel.get('coverage_percent') or policy.effective_coverage_percent))
+        pct = Decimal(str(sel.get('coverage_percent') or default_pct))
         claimed = (line.line_total * pct / Decimal('100')).quantize(Decimal('0.01'))
         InsuranceClaimLine.objects.create(
             tenant=tenant,
