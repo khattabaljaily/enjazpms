@@ -76,6 +76,7 @@
     --text-primary: #111827;
     --text-secondary: #374151;
     --text-tertiary: #6b7280;
+    --text-heading: #111827;
     --text-main: #1e293b;
     --text-inverse: #ffffff;
     --input-bg: #f8fafc;
@@ -206,6 +207,7 @@
     --text-primary: #f8fafc;
     --text-secondary: #cbd5e1;
     --text-tertiary: #94a3b8;
+    --text-heading: #f8fafc;
     --text-main: #f8fafc;
     --text-inverse: #0f172a;
     --input-bg: #334155;
