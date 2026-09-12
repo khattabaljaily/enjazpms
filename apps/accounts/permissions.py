@@ -49,6 +49,48 @@ def get_permission_choices():
     return flatten
 
 
+def filter_schema_for_tenant(schema, tenant):
+    """
+    يحذف من شجرة الصلاحيات أي تصنيف/مفتاح يخص ميزة غير متاحة لباقة أو قدرات
+    هذا الـ tenant، عشان شاشة إدارة المجموعات ما تعرضش صلاحيات لمزايا هو أصلاً
+    ما يقدرش يستخدمها. نفس الشروط المستخدمة لإخفاء روابط القائمة الجانبية
+    (apps/core/templates/components/sidebar.html) — لازم يفضلوا متطابقين.
+    """
+    caps = getattr(tenant, 'capabilities', None)
+
+    def has_cap(name):
+        return bool(getattr(caps, name, False))
+
+    # تصنيفات كاملة تُحذف لو الميزة غير متاحة
+    hidden_categories = set()
+    if getattr(tenant, 'version_type', None) != 'multi_branch':
+        hidden_categories.add('الفروع')
+    if not (has_cap('has_agents_module') and tenant.plan_allows('agents')):
+        hidden_categories.add('المناديب')
+        hidden_categories.add('تقارير المناديب')
+    if not has_cap('has_insurance_billing'):
+        hidden_categories.add('التأمين')
+    if not tenant.plan_allows('ai_assistant'):
+        hidden_categories.add('الذكاء الاصطناعي')
+    if not tenant.plan_allows('store'):
+        hidden_categories.add('المتجر الإلكتروني')
+    if not has_cap('has_expiry_alerts'):
+        hidden_categories.add('إتلاف المخزون')
+
+    # مفاتيح مفردة تُحذف داخل تصنيف يفضل ظاهر
+    hidden_keys = set()
+    if not getattr(tenant, 'hard_currency_mode', False):
+        hidden_keys.add('transfer_treasuries')
+    if not has_cap('has_drug_classification'):
+        hidden_keys.add('view_stocks_controlled_substances_report')
+
+    return {
+        section: {k: v for k, v in perms.items() if k not in hidden_keys}
+        for section, perms in schema.items()
+        if section not in hidden_categories
+    }
+
+
 def access_allowed(user_group_id, perm):
     from .models import PermissionGroup
 

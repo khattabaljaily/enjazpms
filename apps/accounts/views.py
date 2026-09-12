@@ -29,7 +29,7 @@ from .activity_service import log_activity
 from apps.core.constants import COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country
 from .models import PermissionGroup, User
 from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, RegistrationRequestForm, LoginForm, UserManagementForm, PasswordResetForm, SetPasswordForm
-from .permissions import get_permission_keys, get_permission_schema
+from .permissions import get_permission_keys, get_permission_schema, filter_schema_for_tenant
 
 
 def _wants_json(request):
@@ -295,15 +295,7 @@ def permission_group_list(request):
     # تمرير المستخدمين والمجموعات إلى الـ template
     users = User.objects.for_tenant(tenant).filter(is_active=True).values('id', 'username', 'first_name', 'last_name')
     
-    schema = get_permission_schema()
-
-    # Remove permissions for features the tenant doesn't have enabled
-    if not getattr(tenant, 'hard_currency_mode', False):
-        hc_keys = {'transfer_treasuries'}
-        schema = {
-            section: {k: v for k, v in perms.items() if k not in hc_keys}
-            for section, perms in schema.items()
-        }
+    schema = filter_schema_for_tenant(get_permission_schema(), tenant)
 
     return render(request, 'accounts/permission_group_list.html', {
         'permission_schema': json.dumps(schema, ensure_ascii=False),
@@ -355,7 +347,10 @@ def permission_group_table_api(request):
 @login_required
 @require_permission('view_permissiongroups')
 def permission_group_schema_api(request):
-    return _json_ok(get_permission_schema())
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return _json_error('لا يوجد نشاط تجاري')
+    return _json_ok(filter_schema_for_tenant(get_permission_schema(), tenant))
 
 
 @login_required

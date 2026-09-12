@@ -104,7 +104,8 @@
         "change_expenses": "تعديل مصروف",
         "delete_expenses": "حذف مصروف",
         "view_expenses": "عرض قائمة المصروفات",
-        "add_expense_categories": "إضافة تصنيف مصروفات"
+        "add_expense_categories": "إضافة تصنيف مصروفات",
+        "view_expense_categories": "عرض تصنيفات المصروفات"
     },
     "الخزائن": {
         "add_treasuries": "إضافة خزينة جديدة",
@@ -159,6 +160,7 @@
     "حوافز الموظفين": {
         "view_employee_incentives": "عرض الحوافز والخصومات",
         "add_employee_incentives": "تسجيل حافز أو خصم",
+        "pay_employee_incentives": "صرف حافز أو خصم",
         "cancel_employee_incentives": "إلغاء حافز أو خصم"
     },
     "الذكاء الاصطناعي": {
@@ -171,7 +173,8 @@
         "manage_store_orders": "قبول ورفض طلبات المتجر الإلكتروني"
     },
     "الإشعارات": {
-        "view_notifications": "عرض الإشعارات"
+        "view_notifications": "عرض الإشعارات",
+        "generate_notifications": "توليد الإشعارات يدوياً"
     },
     "تقارير المبيعات": {
         "view_sales_summary_report": "تقرير ملخص المبيعات",
@@ -216,6 +219,7 @@
         "view_expenses_by_date_report": "تقرير المصروفات حسب التاريخ",
         "view_treasury_balances_report": "تقرير أرصدة الخزائن",
         "view_treasury_movements_report": "تقرير حركة الخزائن",
+        "view_treasury_statement_report": "كشف حساب خزينة",
         "view_income_statement_report": "قائمة الدخل (الأرباح والخسائر)"
     },
     "تقارير المناديب": {

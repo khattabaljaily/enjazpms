@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from apps.accounts.activity_service import log_activity
-from apps.accounts.decorators import require_permission
+from apps.accounts.decorators import require_permission, require_capability
 from apps.sales.models import SaleInvoice
 
 from .forms import InsuranceCompanyForm
@@ -40,6 +40,7 @@ def _serialize_form_errors(form):
 # ════════════════════════════════════════════════════════════
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_companies')
 def company_list(request):
     tenant = _ensure_tenant(request)
@@ -52,6 +53,7 @@ def company_list(request):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_companies')
 def company_table_api(request):
     tenant = _ensure_tenant(request)
@@ -91,6 +93,7 @@ def company_table_api(request):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('add_insurance_companies')
 def company_create_api(request):
     tenant = _ensure_tenant(request)
@@ -115,6 +118,7 @@ def company_create_api(request):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_companies')
 def company_detail_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -134,6 +138,7 @@ def company_detail_api(request, pk):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('change_insurance_companies')
 def company_update_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -157,6 +162,7 @@ def company_update_api(request, pk):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('change_insurance_companies')
 def company_delete_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -177,6 +183,7 @@ def company_delete_api(request, pk):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_companies')
 def active_companies_api(request):
     """قائمة شركات التأمين النشطة — تُستخدم لتسجيل بطاقة جديدة أول مرة."""
@@ -199,6 +206,7 @@ def active_companies_api(request):
 # وقت البيع، وتسجّلها تلقائياً لتسريع الزيارات القادمة لنفس البطاقة.
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_companies')
 def card_lookup_api(request):
     """
@@ -223,6 +231,7 @@ def card_lookup_api(request):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('add_insurance_companies')
 def card_quick_register_api(request):
     """تسجيل سريع لمشترك جديد أول مرة، مباشرة من شاشة البيع."""
@@ -257,6 +266,7 @@ def card_quick_register_api(request):
 # ════════════════════════════════════════════════════════════
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_claims')
 def claim_list(request):
     tenant = _ensure_tenant(request)
@@ -269,6 +279,7 @@ def claim_list(request):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_claims')
 def claim_table_api(request):
     tenant = _ensure_tenant(request)
@@ -314,6 +325,7 @@ def claim_table_api(request):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_claims')
 def invoice_eligible_lines_api(request, invoice_id):
     """يُعيد بنود فاتورة مؤكدة لاختيار ما يُطالَب به — لإنشاء مطالبة تأمين لاحقاً لفاتورة لم تُربط بتأمين وقت البيع."""
@@ -340,6 +352,7 @@ def invoice_eligible_lines_api(request, invoice_id):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('add_insurance_claims')
 def claim_create_api(request):
     """إنشاء مطالبة تأمين لفاتورة مؤكدة مسبقاً عبر البحث برقم البطاقة."""
@@ -382,6 +395,7 @@ def claim_create_api(request):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_claims')
 def claim_detail_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -416,6 +430,7 @@ def claim_detail_api(request, pk):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('submit_insurance_claims')
 def claim_submit_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -436,6 +451,7 @@ def claim_submit_api(request, pk):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('respond_insurance_claims')
 def claim_respond_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -464,6 +480,7 @@ def claim_respond_api(request, pk):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('settle_insurance_claims')
 def claim_settle_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -493,6 +510,7 @@ def claim_settle_api(request, pk):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('cancel_insurance_claims')
 def claim_cancel_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -519,6 +537,7 @@ def claim_cancel_api(request, pk):
 # ════════════════════════════════════════════════════════════
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_statement')
 def insurance_statement(request):
     tenant = _ensure_tenant(request)
@@ -545,6 +564,7 @@ def insurance_statement(request):
 
 
 @login_required
+@require_capability('has_insurance_billing')
 @require_permission('view_insurance_claims_aging')
 def claims_aging_report(request):
     tenant = _ensure_tenant(request)

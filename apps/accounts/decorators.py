@@ -68,3 +68,46 @@ def require_all_permissions(*permission_keys):
             return view_func(request, *args, **kwargs)
         return wrapper
     return decorator
+
+
+def require_capability(capability_name):
+    """
+    يتحقق إن قدرة الـ tenant (TenantCapabilities.<capability_name>) مفعّلة قبل
+    تنفيذ الـ view — يمنع الوصول المباشر (برابط معروف) لميزة كانت مخفية بس من
+    القائمة الجانبية لعدم توفرها في باقة/قدرات هذا الـ tenant. بخلاف
+    require_permission، ده تقييد على مستوى الاشتراك نفسه فلا يُستثنى منه حتى
+    مدير الحساب (tenant_admin) — بس السوبريوزر (فريق الدعم/المنصة) بيتجاوزه.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect('accounts:login')
+            if request.user.is_superuser:
+                return view_func(request, *args, **kwargs)
+            tenant = getattr(request, 'tenant', None)
+            if not tenant:
+                return view_func(request, *args, **kwargs)
+            caps = getattr(tenant, 'capabilities', None)
+            if getattr(caps, capability_name, False):
+                return view_func(request, *args, **kwargs)
+            return _deny(request)
+        return wrapper
+    return decorator
+
+
+def require_plan_feature(feature_name):
+    """مثل require_capability لكن للتحقق من ميزة باقة الاشتراك (Tenant.plan_allows)."""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect('accounts:login')
+            if request.user.is_superuser:
+                return view_func(request, *args, **kwargs)
+            tenant = getattr(request, 'tenant', None)
+            if not tenant or tenant.plan_allows(feature_name):
+                return view_func(request, *args, **kwargs)
+            return _deny(request)
+        return wrapper
+    return decorator

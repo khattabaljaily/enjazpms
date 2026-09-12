@@ -12,7 +12,7 @@ from decimal import Decimal
 import csv
 import json
 
-from apps.accounts.decorators import require_permission
+from apps.accounts.decorators import require_permission, require_capability, require_plan_feature
 from .forms import AgentForm
 from .models import Agent, AgentLedger
 from .services import _apply_agent_ledger, agent_ledger_display_label
@@ -49,6 +49,7 @@ def _agent_balance(tenant, agent):
 # ─── List ──────────────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
 @require_permission('view_agents')
 def agent_list(request):
     tenant = _ensure_tenant(request)
@@ -74,6 +75,8 @@ def agent_list(request):
 # ─── Table API ─────────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('view_agents')
 def agent_table_api(request):
     tenant = _ensure_tenant(request)
@@ -149,6 +152,8 @@ def agent_table_api(request):
 # ─── Create ────────────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('add_agents')
 def agent_create_api(request):
     tenant = _ensure_tenant(request)
@@ -175,6 +180,8 @@ def agent_create_api(request):
 # ─── Detail ────────────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('view_agents')
 def agent_detail_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -209,6 +216,8 @@ def agent_detail_api(request, pk):
 # ─── Transactions ──────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('view_agent_transactions')
 def agent_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -256,6 +265,8 @@ def agent_transactions_api(request, pk):
 # ─── Update ────────────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('change_agents')
 def agent_update_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -280,6 +291,8 @@ def agent_update_api(request, pk):
 # ─── Delete ────────────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('delete_agents')
 def agent_delete_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -299,6 +312,8 @@ def agent_delete_api(request, pk):
 
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('add_agents')
 def agent_create(request):
     return redirect('agents:list')
@@ -307,6 +322,8 @@ def agent_create(request):
 # ─── Payments list ─────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('view_agent_payments')
 def agent_payments(request):
     tenant = _ensure_tenant(request)
@@ -360,6 +377,8 @@ def agent_payments(request):
 # ─── Payments table API ────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('view_agent_payments')
 def agent_payments_table_api(request):
     tenant = _ensure_tenant(request)
@@ -422,6 +441,8 @@ def agent_payments_table_api(request):
 # ─── Payment detail ────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('view_agent_payments')
 def agent_payment_detail_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -461,6 +482,8 @@ def agent_payment_detail_api(request, pk):
 # ─── Payment create ────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('add_agent_payments')
 @require_POST
 def agent_payment_create_api(request):
@@ -540,6 +563,8 @@ def agent_payment_create_api(request):
 # ─── Payment cancel ────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('cancel_agent_payments')
 @require_POST
 def agent_payment_cancel_api(request, pk):
@@ -588,6 +613,8 @@ def agent_payment_cancel_api(request, pk):
 # ─── Export ────────────────────────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('export_agents')
 def agent_export_api(request):
     tenant = _ensure_tenant(request)
@@ -624,6 +651,8 @@ _AGENT_FIELD_SCHEMA = [
 
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('import_agents')
 def agent_import_api(request):
     from apps.core.io_utils import parse_uploaded_file, smart_get, safe_decimal, clean_phone, clean_email
@@ -680,6 +709,8 @@ def agent_import_api(request):
 
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('import_agents')
 def download_template(request):
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -696,6 +727,8 @@ def download_template(request):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('view_agent_statement_report')
 def agent_statement(request):
     tenant = _ensure_tenant(request)
@@ -768,6 +801,8 @@ def agent_statement(request):
 # ─────────────────────────────────────────────
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('view_agent_balances_report')
 def agent_balances(request):
     tenant = _ensure_tenant(request)
@@ -794,6 +829,8 @@ def agent_balances(request):
 # ═════════════════════════════════════════════════════
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('change_agents')
 @require_POST
 def agent_create_user_api(request, pk):
@@ -843,6 +880,8 @@ def agent_create_user_api(request, pk):
 
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('change_agents')
 @require_POST
 def agent_reset_password_api(request, pk):
@@ -1147,6 +1186,8 @@ def agent_portal_request_detail(request, pk):
 # ═════════════════════════════════════════════════════
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('change_sales')
 def agent_requests_list(request):
     tenant = _ensure_tenant(request)
@@ -1174,6 +1215,8 @@ def agent_requests_list(request):
 
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('change_sales')
 def agent_request_detail(request, pk):
     tenant = _ensure_tenant(request)
@@ -1192,6 +1235,8 @@ def agent_request_detail(request, pk):
 
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('change_sales')
 @require_POST
 def agent_request_approve(request, pk):
@@ -1260,6 +1305,8 @@ def agent_request_approve(request, pk):
 
 
 @login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
 @require_permission('change_sales')
 @require_POST
 def agent_request_reject(request, pk):
