@@ -583,7 +583,8 @@ $.extend(true, $.fn.dataTable.defaults, {
     pageLength: 25,
     ordering: true,
     searching: true,
-    responsive: true
+    responsive: true,
+    autoWidth: false
 });
 
 // Initialize all data tables
