@@ -417,9 +417,25 @@ def invoice_edit(request, pk):
             'is_insurance_excluded': line.item.is_insurance_excluded,
         })
 
+    existing_insurance = None
+    if hasattr(invoice, 'insurance_claim'):
+        claim = invoice.insurance_claim
+        first_line = claim.lines.first()
+        coverage_percent = (
+            str(first_line.coverage_percent) if first_line
+            else str(claim.insurance_company.default_coverage_percent)
+        )
+        existing_insurance = {
+            'policy_id': claim.policy_id,
+            'insurance_company_id': claim.insurance_company_id,
+            'coverage_percent': coverage_percent,
+            'claim_status': claim.status,
+        }
+
     context = {
         'invoice': invoice,
         'existing_lines': json.dumps(existing_lines, ensure_ascii=False),
+        'existing_insurance': json.dumps(existing_insurance, ensure_ascii=False),
         'customers': customers,
         'stocks': stocks,
         'items': items,

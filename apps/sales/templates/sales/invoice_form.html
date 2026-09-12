@@ -382,6 +382,8 @@ const EXISTING_LINES = {{ existing_lines|safe }};
 {% else %}
 const EXISTING_LINES = [];
 {% endif %}
+const EXISTING_INSURANCE = {{ existing_insurance|default:"null"|safe }};
+let existingInsuranceApplied = false;
 
 // ────────────────────────────────────────────────────────────────
 // State
@@ -899,6 +901,35 @@ function updateInsuranceVisibility() {
             compSel.classList.add('sales-field-hidden');
             label.textContent = `تفعيل التأمين (${activeCompanies[0].name} — ${activeCompanies[0].default_coverage_percent}%)`;
         }
+    }
+    applyExistingInsurance();
+    updateInsuranceEstimate();
+}
+
+// عند فتح فاتورة مؤكدة فيها مطالبة تأمين للتعديل، لازم نعرض حالتها الحالية
+// (مفعّلة + البوليصة/الشركة الصحيحة) بدل ما تظهر مقفولة — وإلا أي حفظ من غير
+// لمس صندوق التأمين هيمسح المطالبة الموجودة فعلياً (discard_draft_claim في
+// السيرفر) ويصفّر insurance_amount، مما يحوّل نصيب التأمين لدين على العميل
+// أو يمنع الحفظ لو مفيش عميل. تُطبَّق مرة واحدة فقط.
+function applyExistingInsurance() {
+    if (existingInsuranceApplied || !EXISTING_INSURANCE) return;
+    const hasPolicies = customerPolicies.length > 0;
+    const hasCompanies = activeCompanies.length > 0;
+
+    if (EXISTING_INSURANCE.policy_id && hasPolicies) {
+        const match = customerPolicies.find(p => String(p.id) === String(EXISTING_INSURANCE.policy_id));
+        if (!match) return;
+        document.getElementById('insurancePolicySelect').value = String(match.id);
+        document.getElementById('insuranceToggle').checked = true;
+        existingInsuranceApplied = true;
+    } else if (EXISTING_INSURANCE.insurance_company_id && !EXISTING_INSURANCE.policy_id && hasCompanies) {
+        const match = activeCompanies.find(c => String(c.id) === String(EXISTING_INSURANCE.insurance_company_id));
+        if (!match) return;
+        document.getElementById('insuranceCompanySelect').value = String(match.id);
+        document.getElementById('insuranceToggle').checked = true;
+        existingInsuranceApplied = true;
+    } else {
+        return;
     }
     updateInsuranceEstimate();
 }
