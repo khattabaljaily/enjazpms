@@ -213,7 +213,7 @@
         <table id="itemsTable" class="cx-table">
             <thead>
                 <tr>
-                    <th style="min-width:220px">المنتج</th>
+                    <th>المنتج</th>
                     <th>الـ SKU</th>
                     <th>التصنيف</th>
                     <th>وحدة البيع</th>
@@ -1137,7 +1137,6 @@
         columns: [
             {
                 data: null,
-                width: '220px',
                 render: function(_, __, r) {
                     let badges = '';
                     if (CAP.hasExpiryDates  && r.track_expiry) badges += `<span class="badge bg-danger ms-1" style="font-size:0.6rem" title="تتبع الانتهاء"><i class="fas fa-calendar-xmark"></i></span>`;
