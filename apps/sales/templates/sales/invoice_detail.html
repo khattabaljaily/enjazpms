@@ -351,17 +351,19 @@
         </div>
     </div>
 
-    {% if tenant_capabilities.has_insurance_billing and invoice.customer and invoice.customer.insurance_policies.exists %}
+    {% if tenant_capabilities.has_insurance_billing %}
     <div class="doc-totals-card mt-3">
         <div class="doc-totals-head"><i class="fas fa-briefcase-medical"></i> التأمين الطبي</div>
         <div class="doc-totals-body">
             {% if invoice.insurance_claim %}
             <div class="doc-trow"><span class="doc-trow-lbl">رقم المطالبة</span><span class="doc-trow-val">{{ invoice.insurance_claim.claim_number }}</span></div>
+            <div class="doc-trow"><span class="doc-trow-lbl">المؤمَّن عليه</span><span class="doc-trow-val">{{ invoice.insurance_claim.member.full_name|default:"—" }}</span></div>
+            <div class="doc-trow"><span class="doc-trow-lbl">رقم البطاقة</span><span class="doc-trow-val">{{ invoice.insurance_claim.card_number|default:"—" }}</span></div>
             <div class="doc-trow"><span class="doc-trow-lbl">الحالة</span><span class="doc-trow-val">{{ invoice.insurance_claim.get_status_display }}</span></div>
             <div class="doc-trow"><span class="doc-trow-lbl">المطالَب به</span><span class="doc-trow-val">{{ invoice.insurance_claim.covered_amount|money }}</span></div>
             <div class="doc-trow"><span class="doc-trow-lbl">المتبقي</span><span class="doc-trow-val">{{ invoice.insurance_claim.remaining_amount|money }}</span></div>
             <a href="{% url 'insurance:claim_list' %}" class="cx-btn-secondary w-100 mt-2"><i class="fas fa-eye me-1"></i>إدارة المطالبة</a>
-            {% else %}
+            {% elif invoice.status == 'confirmed' or invoice.status == 'partially_returned' %}
             <button type="button" class="cx-btn-add w-100" id="btnCreateClaim"><i class="fas fa-file-medical me-1"></i>إنشاء مطالبة تأمين</button>
             {% endif %}
         </div>
@@ -681,12 +683,15 @@ function submitEmail() {
 }
 
 {% if tenant_capabilities.has_insurance_billing and not invoice.insurance_claim %}
-/* ── Insurance claim creation ────────────────────────────── */
+/* ── Insurance claim creation — عبر البحث برقم البطاقة ─────────── */
 (function() {
     const btn = document.getElementById('btnCreateClaim');
     if (!btn) return;
     const urlEligible = "{% url 'insurance:invoice_eligible_lines_api' invoice.id %}";
     const urlCreate = "{% url 'insurance:claim_create_api' %}";
+    const urlCardLookup = "{% url 'insurance:card_lookup_api' %}";
+    let eligibleLines = [];
+    let foundCard = null;
 
     function openCreateClaimModal() {
         document.getElementById('createClaimModalBackdrop').classList.remove('sales-field-hidden');
@@ -695,54 +700,72 @@ function submitEmail() {
         document.getElementById('createClaimModalBackdrop').classList.add('sales-field-hidden');
     };
 
+    function renderLinesTable() {
+        const anyExcluded = eligibleLines.some(l => l.is_insurance_excluded);
+        const linesHtml = eligibleLines.map(l => `
+            <tr${l.is_insurance_excluded ? ' style="background:rgba(180,83,9,.07);"' : ''}>
+                <td><input type="checkbox" class="js-line-check" data-id="${l.id}" ${l.is_insurance_excluded ? '' : 'checked'}></td>
+                <td>${l.item_name}${l.is_insurance_excluded ? ' <span class="badge" style="background:#b45309;font-size:.65rem;"><i class="fas fa-ban me-1"></i>غير مغطى بالتأمين</span>' : ''}</td>
+                <td class="text-center">${l.quantity}</td>
+                <td class="text-center">${l.line_total}</td>
+            </tr>`).join('');
+        return `
+            ${anyExcluded ? '<div class="alert alert-warning py-2 px-3" style="font-size:.85rem;"><i class="fas fa-triangle-exclamation me-1"></i>بعض الأصناف مُعلَّمة كغير مغطاة بالتأمين وتم استبعادها تلقائياً — يمكنك تضمينها يدوياً إذا لزم الأمر.</div>' : ''}
+            <table class="table table-sm">
+                <thead><tr><th></th><th>الصنف</th><th class="text-center">الكمية</th><th class="text-center">المبلغ</th></tr></thead>
+                <tbody>${linesHtml}</tbody>
+            </table>`;
+    }
+
     btn.addEventListener('click', function() {
         document.getElementById('createClaimBody').innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>';
         openCreateClaimModal();
         fetch(urlEligible).then(r => r.json()).then(resp => {
             if (!resp.success) { document.getElementById('createClaimBody').innerHTML = `<div class="alert alert-danger">${resp.message}</div>`; return; }
-            const d = resp.data;
-            if (!d.policies.length) {
-                document.getElementById('createClaimBody').innerHTML = '<div class="alert alert-warning">لا توجد بوليصة تأمين نشطة لهذا العميل.</div>';
-                return;
-            }
-            const policyOptions = d.policies.map(p => `<option value="${p.id}" data-coverage="${p.coverage_percent}">${p.insurance_company_name} (${p.coverage_percent}%)</option>`).join('');
-            const anyExcluded = d.lines.some(l => l.is_insurance_excluded);
-            const linesHtml = d.lines.map(l => `
-                <tr${l.is_insurance_excluded ? ' style="background:rgba(180,83,9,.07);"' : ''}>
-                    <td><input type="checkbox" class="js-line-check" data-id="${l.id}" ${l.is_insurance_excluded ? '' : 'checked'}></td>
-                    <td>${l.item_name}${l.is_insurance_excluded ? ' <span class="badge" style="background:#b45309;font-size:.65rem;"><i class="fas fa-ban me-1"></i>غير مغطى بالتأمين</span>' : ''}</td>
-                    <td class="text-center">${l.quantity}</td>
-                    <td class="text-center">${l.line_total}</td>
-                </tr>`).join('');
+            eligibleLines = resp.data.lines;
             document.getElementById('createClaimBody').innerHTML = `
-                <div class="mb-3">
-                    <label class="cx-label">البوليصة</label>
-                    <select id="claimPolicySelect" class="form-select">${policyOptions}</select>
+                <div class="alert alert-danger d-none js-form-errors mb-2"></div>
+                <div class="mb-3 d-flex gap-2">
+                    <input type="text" id="claimCardNumber" class="form-control" placeholder="رقم بطاقة التأمين">
+                    <button type="button" class="cx-btn-secondary" id="btnLookupClaimCard">بحث</button>
                 </div>
-                ${anyExcluded ? '<div class="alert alert-warning py-2 px-3" style="font-size:.85rem;"><i class="fas fa-triangle-exclamation me-1"></i>بعض الأصناف مُعلَّمة كغير مغطاة بالتأمين وتم استبعادها تلقائياً — يمكنك تضمينها يدوياً إذا لزم الأمر.</div>' : ''}
-                <table class="table table-sm">
-                    <thead><tr><th></th><th>الصنف</th><th class="text-center">الكمية</th><th class="text-center">المبلغ</th></tr></thead>
-                    <tbody>${linesHtml}</tbody>
-                </table>`;
-            document.getElementById('createClaimBody').dataset.policies = JSON.stringify(d.policies);
+                <div id="claimCardResult" class="sales-field-hidden mb-3" style="font-size:.85rem;"></div>
+                <div id="claimLinesBox" class="sales-field-hidden">${renderLinesTable()}</div>`;
+
+            document.getElementById('btnLookupClaimCard').addEventListener('click', function() {
+                const cardNumber = document.getElementById('claimCardNumber').value.trim();
+                const resultBox = document.getElementById('claimCardResult');
+                if (!cardNumber) { resultBox.textContent = 'أدخل رقم البطاقة'; resultBox.classList.remove('sales-field-hidden'); return; }
+                fetch(`${urlCardLookup}?card_number=${encodeURIComponent(cardNumber)}`)
+                    .then(r => r.json().then(body => ({ ok: r.ok, body })))
+                    .then(({ ok, body }) => {
+                        if (!ok || !body.success) {
+                            foundCard = null;
+                            resultBox.textContent = body.message || 'تعذر العثور على البطاقة';
+                            resultBox.classList.remove('sales-field-hidden');
+                            document.getElementById('claimLinesBox').classList.add('sales-field-hidden');
+                            return;
+                        }
+                        foundCard = body.data;
+                        resultBox.innerHTML = `<strong>${foundCard.member_name}</strong> — ${foundCard.insurance_company_name} — تغطية ${foundCard.coverage_percent}%`;
+                        resultBox.classList.remove('sales-field-hidden');
+                        document.getElementById('claimLinesBox').classList.remove('sales-field-hidden');
+                    });
+            });
         });
     });
 
     document.getElementById('btnSubmitClaim').addEventListener('click', function() {
-        const body = document.getElementById('createClaimBody');
-        const policyId = document.getElementById('claimPolicySelect') ? document.getElementById('claimPolicySelect').value : null;
-        if (!policyId) return;
-        const policies = JSON.parse(body.dataset.policies || '[]');
-        const policy = policies.find(p => String(p.id) === String(policyId));
+        if (!foundCard) { alert('ابحث عن بطاقة تأمين صالحة أولاً'); return; }
         const lines = Array.from(document.querySelectorAll('.js-line-check:checked')).map(el => ({
             invoice_line_id: parseInt(el.dataset.id),
-            coverage_percent: policy ? policy.coverage_percent : 0,
+            coverage_percent: foundCard.coverage_percent,
         }));
         if (!lines.length) { alert('اختر بنداً واحداً على الأقل'); return; }
         fetch(urlCreate, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-            body: JSON.stringify({ invoice_id: {{ invoice.id }}, policy_id: policyId, lines: lines }),
+            body: JSON.stringify({ invoice_id: {{ invoice.id }}, card_number: foundCard.card_number, lines: lines }),
         }).then(r => r.json()).then(resp => {
             if (resp.success) { location.reload(); } else { alert(resp.message); }
         });

@@ -66,6 +66,37 @@
         </div>
     </section>
 
+    {% if invoice.insurance_claim %}
+    <!-- بيانات التأمين -->
+    <section class="print-box insurance-box">
+        <div class="print-box-header">
+                        <h3 class="print-box-title">بيانات التأمين</h3>
+        </div>
+        <div class="print-info-grid">
+            <div class="print-info-item">
+                <span class="print-info-label">شركة التأمين</span>
+                <span class="print-info-value">{{ invoice.insurance_claim.insurance_company.name }}</span>
+            </div>
+            <div class="print-info-item">
+                <span class="print-info-label">المشترك</span>
+                <span class="print-info-value">{{ invoice.insurance_claim.member.full_name|default:"—" }}</span>
+            </div>
+            <div class="print-info-item">
+                <span class="print-info-label">رقم البطاقة</span>
+                <span class="print-info-value">{{ invoice.insurance_claim.card_number|default:"—" }}</span>
+            </div>
+            <div class="print-info-item">
+                <span class="print-info-label">المبلغ المغطى بالتأمين</span>
+                <span class="print-info-value">{{ invoice.insurance_claim.covered_amount|money }}</span>
+            </div>
+            <div class="print-info-item">
+                <span class="print-info-label">نصيب المريض</span>
+                <span class="print-info-value">{{ invoice.insurance_claim.patient_amount|money }}</span>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
     <div class="section-separator" aria-hidden="true"></div>
 
     <!-- جدول البنود -->

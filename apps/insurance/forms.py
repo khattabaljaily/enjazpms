@@ -1,9 +1,22 @@
+from decimal import Decimal
+
 from django import forms
 
-from .models import InsuranceCompany, CustomerInsurancePolicy
+from .models import InsuranceCompany
 
 
 class InsuranceCompanyForm(forms.ModelForm):
+    default_coverage_percent = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
+        label='نسبة التغطية الافتراضية %',
+    )
+    settlement_period_days = forms.IntegerField(
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+        label='مدة التسوية المتوقعة (يوم)',
+    )
+
     class Meta:
         model = InsuranceCompany
         fields = [
@@ -17,25 +30,14 @@ class InsuranceCompanyForm(forms.ModelForm):
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'default_coverage_percent': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
-            'settlement_period_days': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
+    def clean_default_coverage_percent(self):
+        value = self.cleaned_data.get('default_coverage_percent')
+        return value if value is not None else Decimal('0')
 
-class CustomerInsurancePolicyForm(forms.ModelForm):
-    class Meta:
-        model = CustomerInsurancePolicy
-        fields = [
-            'customer', 'insurance_company', 'policy_number', 'coverage_percent',
-            'valid_from', 'valid_to', 'is_active', 'notes',
-        ]
-        widgets = {
-            'policy_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'coverage_percent': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100'}),
-            'valid_from': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'valid_to': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-        }
+    def clean_settlement_period_days(self):
+        value = self.cleaned_data.get('settlement_period_days')
+        return value if value is not None else 30

@@ -220,6 +220,14 @@
                         <span>الإجمالي النهائي</span>
                         <strong id="displayGrandTotal">0.00</strong>
                     </div>
+                    <div class="cx-totals-row sales-field-hidden" id="insuranceCoveredRow">
+                        <span>تغطية التأمين المتوقعة</span>
+                        <strong id="displayInsuranceCovered" class="text-success">0.00</strong>
+                    </div>
+                    <div class="cx-totals-row sales-field-hidden" id="patientShareRow">
+                        <span>تحمل المريض (يُحصَّل الآن)</span>
+                        <strong id="displayPatientShare">0.00</strong>
+                    </div>
                     <div class="cx-totals-row text-muted sales-field-hidden" id="creditRow">
                         <span>الجزء الآجل</span>
                         <span id="displayCredit">0.00</span>
@@ -253,11 +261,19 @@
                     <div class="col-12 sales-field-hidden" id="insuranceWrap">
                         <label class="cx-label" style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
                             <input type="checkbox" id="insuranceToggle" onchange="handleInsuranceToggle()">
-                            <span id="insuranceLabel">تفعيل التأمين لهذه الفاتورة</span>
+                            <span>تفعيل التأمين لهذه الفاتورة</span>
                         </label>
-                        <select id="insurancePolicySelect" class="cx-input sales-field-hidden" onchange="updateInsuranceEstimate()"></select>
-                        <select id="insuranceCompanySelect" class="cx-input sales-field-hidden" onchange="updateInsuranceEstimate()"></select>
+                        <div id="insuranceCardBox" class="sales-field-hidden">
+                            <small class="text-muted d-block mb-1">يبحث في البطاقات المسجَّلة مسبقاً في صيدليتك فقط (وليس في قاعدة بيانات شركة التأمين) — إذا كانت هذه أول مرة لهذه البطاقة، سجِّلها في النموذج الذي سيظهر أدناه.</small>
+                            <div class="d-flex gap-2">
+                                <input type="text" id="insuranceCardNumber" class="cx-input" placeholder="رقم بطاقة التأمين" onkeydown="if(event.key==='Enter'){event.preventDefault();lookupInsuranceCard();}">
+                                <button type="button" class="cx-btn-secondary" onclick="lookupInsuranceCard()">بحث</button>
+                            </div>
+                            <div id="insuranceCardMsg" class="sales-field-hidden" style="font-size:.8rem;margin-top:.3rem;"></div>
+                            <div id="insuranceCardResult" class="sales-field-hidden" style="font-size:.85rem;margin-top:.4rem;padding:.5rem;border:1px solid var(--border-color,#e5e7eb);border-radius:.4rem;"></div>
+                        </div>
                         <small class="text-muted d-block sales-field-hidden" id="insuranceEstimate"></small>
+                        <input type="hidden" id="insuranceMemberId">
                     </div>
                     <div id="mixedPaymentWrap" class="col-12 sales-field-hidden">
                         <div class="row g-2">
@@ -347,6 +363,47 @@
     </div>
 </div>
 
+<!-- ══════════════════════ تسجيل بطاقة تأمين جديدة ══════════════════════ -->
+<div class="cx-modal-backdrop sales-field-hidden" id="insuranceNewCardBackdrop">
+    <div class="cx-modal sales-modal-md">
+        <div class="cx-modal-header">
+            <h3 class="cx-modal-title">تسجيل بطاقة تأمين جديدة</h3>
+            <button type="button" class="cx-modal-close" onclick="closeInsuranceNewCardModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cx-modal-body">
+            <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.85rem;">لا توجد بطاقة بهذا الرقم في سجلاتك — سجِّل بياناتها كما وردت على البطاقة.</div>
+            <div class="row g-2">
+                <div class="col-12">
+                    <label class="cx-label">رقم البطاقة</label>
+                    <input type="text" id="insuranceNewCardNumber" class="cx-input" readonly>
+                </div>
+                <div class="col-12">
+                    <label class="cx-label">شركة التأمين</label>
+                    <select id="insuranceNewCompany" class="cx-input"></select>
+                </div>
+                <div class="col-12">
+                    <label class="cx-label">اسم المشترك</label>
+                    <input type="text" id="insuranceNewMemberName" class="cx-input">
+                </div>
+                <div class="col-6">
+                    <label class="cx-label">رقم العضوية (اختياري)</label>
+                    <input type="text" id="insuranceNewMemberId" class="cx-input">
+                </div>
+                <div class="col-6">
+                    <label class="cx-label">نسبة التغطية %</label>
+                    <input type="number" id="insuranceNewCoverage" class="cx-input" step="0.01" min="0" max="100">
+                </div>
+            </div>
+        </div>
+        <div class="cx-modal-footer">
+            <button type="button" class="cx-btn-ghost" onclick="closeInsuranceNewCardModal()">إلغاء</button>
+            <button type="button" class="cx-btn-add" onclick="registerInsuranceCard()">تسجيل البطاقة ومتابعة</button>
+        </div>
+    </div>
+</div>
+
 </div><!-- cx-scene -->
 {% endblock %}
 
@@ -356,10 +413,11 @@
 const ITEM_INFO_URL = "{% url 'sales:item_info_api' %}";
 const STOCK_ITEMS_URL = "{% url 'sales:stock_items_api' %}";
 const CUSTOMER_INFO_URL = "{% url 'sales:customer_info_api' %}";
-const CUSTOMER_POLICIES_URL = "{% url 'insurance:customer_policies_api' 0 %}";
 const ACTIVE_COMPANIES_URL = "{% url 'insurance:active_companies_api' %}";
-let customerPolicies = [];
+const CARD_LOOKUP_URL = "{% url 'insurance:card_lookup_api' %}";
+const CARD_QUICK_REGISTER_URL = "{% url 'insurance:card_quick_register_api' %}";
 let activeCompanies = [];
+let currentInsuranceCoveragePct = 0;
 let currentGrandTotal = 0;
 const FORM_ACTION = "{{ action }}";
 const CUSTOMERS_DATA = [
@@ -506,7 +564,6 @@ function handlePaymentMethodChange() {
     toggleHidden('bankRefWrap', !(pm === 'bank' || pm === 'mixed'));
     toggleHidden('creditRow', pm !== 'mixed');
     updatePaymentMethodBadge(pm);
-    updateInsuranceVisibility();
     recalcTotals();
 }
 
@@ -814,134 +871,151 @@ function fetchCustomerInfo() {
         document.getElementById('custPhone').textContent = c.phone || '—';
         card.classList.remove('sales-field-hidden');
     });
-
-    fetchCustomerPolicies(id);
 }
 
 // ────────────────────────────────────────────────────────────────
-// Insurance — مستقل عن طريقة الدفع، يفعّل "مختلط" تلقائياً
+// Insurance — مستقل تماماً عن العميل، عن طريق البحث برقم البطاقة.
+// مستقل عن طريقة الدفع لكنه يفعّل "مختلط" تلقائياً.
 // ────────────────────────────────────────────────────────────────
 fetch(ACTIVE_COMPANIES_URL)
     .then(r => r.ok ? r.json() : { success: false })
-    .then(resp => { activeCompanies = (resp.success && resp.data) || []; updateInsuranceVisibility(); })
+    .then(resp => {
+        activeCompanies = (resp.success && resp.data) || [];
+        document.getElementById('insuranceWrap').classList.toggle('sales-field-hidden', !activeCompanies.length);
+        applyExistingInsurance();
+    })
     .catch(() => {});
-
-function fetchCustomerPolicies(customerId) {
-    customerPolicies = [];
-    document.getElementById('insuranceToggle').checked = false;
-    if (!customerId) { updateInsuranceVisibility(); return; }
-
-    fetch(CUSTOMER_POLICIES_URL.replace('/0/', '/' + customerId + '/'))
-        .then(r => r.ok ? r.json() : { success: false })
-        .then(resp => {
-            if (resp.success) customerPolicies = (resp.data || []).filter(p => p.is_active);
-            updateInsuranceVisibility();
-        })
-        .catch(() => updateInsuranceVisibility());
-}
-
-function selectedPolicy() {
-    if (!customerPolicies.length) return null;
-    const sel = document.getElementById('insurancePolicySelect');
-    const id = sel.value || String(customerPolicies[0].id);
-    return customerPolicies.find(p => String(p.id) === id) || customerPolicies[0];
-}
-
-function selectedCompany() {
-    if (!activeCompanies.length) return null;
-    const sel = document.getElementById('insuranceCompanySelect');
-    const id = sel.value || String(activeCompanies[0].id);
-    return activeCompanies.find(c => String(c.id) === id) || activeCompanies[0];
-}
 
 function handleInsuranceToggle() {
     const checked = document.getElementById('insuranceToggle').checked;
+    document.getElementById('insuranceCardBox').classList.toggle('sales-field-hidden', !checked);
     const pmSelect = document.getElementById('paymentMethod');
     if (checked && pmSelect.value !== 'mixed') {
         pmSelect.value = 'mixed';
         handlePaymentMethodChange();
         document.getElementById('insuranceToggle').checked = true;
     }
+    if (!checked) {
+        document.getElementById('insuranceMemberId').value = '';
+        currentInsuranceCoveragePct = 0;
+        document.getElementById('insuranceCardResult').classList.add('sales-field-hidden');
+        closeInsuranceNewCardModal();
+    }
     updateInsuranceEstimate();
     recalcTotals();
 }
 
-function updateInsuranceVisibility() {
-    const wrap = document.getElementById('insuranceWrap');
-    const polSel = document.getElementById('insurancePolicySelect');
-    const compSel = document.getElementById('insuranceCompanySelect');
-    const label = document.getElementById('insuranceLabel');
-    const hasPolicies = customerPolicies.length > 0;
-    const hasCompanies = activeCompanies.length > 0;
-    const show = hasPolicies || hasCompanies;
-    wrap.classList.toggle('sales-field-hidden', !show);
-    if (!show) { document.getElementById('insuranceToggle').checked = false; updateInsuranceEstimate(); return; }
+function _insuranceCardMsg(text, ok) {
+    const el = document.getElementById('insuranceCardMsg');
+    el.textContent = text;
+    el.style.color = ok ? 'var(--success,#16a34a)' : 'var(--danger,#dc2626)';
+    el.classList.remove('sales-field-hidden');
+}
 
-    if (hasPolicies) {
-        compSel.classList.add('sales-field-hidden');
-        if (customerPolicies.length > 1) {
-            polSel.innerHTML = customerPolicies.map(p =>
-                `<option value="${p.id}">${p.insurance_company_name} — ${p.coverage_percent}%</option>`
-            ).join('');
-            polSel.classList.remove('sales-field-hidden');
-            label.textContent = 'تفعيل التأمين لهذه الفاتورة';
-        } else {
-            polSel.classList.add('sales-field-hidden');
-            label.textContent = `تفعيل التأمين (${customerPolicies[0].insurance_company_name} — ${customerPolicies[0].coverage_percent}%)`;
-        }
-    } else {
-        polSel.classList.add('sales-field-hidden');
-        if (activeCompanies.length > 1) {
-            compSel.innerHTML = activeCompanies.map(c =>
-                `<option value="${c.id}">${c.name} — ${c.default_coverage_percent}%</option>`
-            ).join('');
-            compSel.classList.remove('sales-field-hidden');
-            label.textContent = 'تفعيل التأمين (بدون عميل مسجَّل — اختر شركة التأمين)';
-        } else {
-            compSel.classList.add('sales-field-hidden');
-            label.textContent = `تفعيل التأمين (${activeCompanies[0].name} — ${activeCompanies[0].default_coverage_percent}%)`;
+function openInsuranceNewCardModal(cardNumber) {
+    document.getElementById('insuranceNewCardNumber').value = cardNumber;
+    document.getElementById('insuranceNewCompany').innerHTML = activeCompanies.map(c =>
+        `<option value="${c.id}" data-coverage="${c.default_coverage_percent}">${c.name}</option>`
+    ).join('');
+    document.getElementById('insuranceNewMemberName').value = '';
+    document.getElementById('insuranceNewMemberId').value = '';
+    document.getElementById('insuranceNewCoverage').value = '';
+    document.getElementById('insuranceNewCardBackdrop').classList.remove('sales-field-hidden');
+}
+function closeInsuranceNewCardModal() {
+    document.getElementById('insuranceNewCardBackdrop').classList.add('sales-field-hidden');
+}
+
+function _applyFoundCard(d) {
+    document.getElementById('insuranceMemberId').value = d.member_id;
+    document.getElementById('insuranceCardNumber').value = d.card_number;
+    currentInsuranceCoveragePct = parseFloat(d.coverage_percent) || 0;
+    closeInsuranceNewCardModal();
+    document.getElementById('insuranceCardMsg').classList.add('sales-field-hidden');
+    const res = document.getElementById('insuranceCardResult');
+    res.innerHTML = `<strong>${d.member_name}</strong> — ${d.insurance_company_name} — تغطية ${d.coverage_percent}%`;
+    res.classList.remove('sales-field-hidden');
+    updateInsuranceEstimate();
+    recalcTotals();
+
+    // تعبئة تلقائية لنصيب المريض في حقل النقدي كنقطة بداية مريحة — الصيدلاني
+    // يقدر يعدّلها (مثلاً يحوّل جزء للبنكي) قبل الحفظ.
+    const cashEl = document.getElementById('cashAmount');
+    const bankEl = document.getElementById('bankAmount');
+    const cashVal = Enjaz.parseNumber(cashEl.value) || 0;
+    const bankVal = Enjaz.parseNumber(bankEl.value) || 0;
+    if (cashVal === 0 && bankVal === 0) {
+        const covered = estimatedInsuranceCovered();
+        const patientShare = currentGrandTotal - covered;
+        if (patientShare > 0) {
+            cashEl.value = patientShare.toFixed(2);
+            recalcTotals();
         }
     }
-    applyExistingInsurance();
-    updateInsuranceEstimate();
+}
+
+function lookupInsuranceCard() {
+    const cardNumber = document.getElementById('insuranceCardNumber').value.trim();
+    document.getElementById('insuranceCardResult').classList.add('sales-field-hidden');
+    if (!cardNumber) { _insuranceCardMsg('أدخل رقم البطاقة أولاً', false); return; }
+
+    fetch(`${CARD_LOOKUP_URL}?card_number=${encodeURIComponent(cardNumber)}`)
+        .then(r => r.json().then(body => ({ ok: r.ok, body })))
+        .then(({ ok, body }) => {
+            if (ok && body.success) { _applyFoundCard(body.data); return; }
+            document.getElementById('insuranceMemberId').value = '';
+            currentInsuranceCoveragePct = 0;
+            _insuranceCardMsg(body.message || 'تعذر العثور على البطاقة', false);
+            if ((body.message || '').includes('لا توجد بطاقة')) {
+                openInsuranceNewCardModal(cardNumber);
+            }
+        })
+        .catch(() => _insuranceCardMsg('تعذر الاتصال بالخادم', false));
+}
+
+function registerInsuranceCard() {
+    const body = new URLSearchParams({
+        csrfmiddlewaretoken: getCookie('csrftoken'),
+        insurance_company_id: document.getElementById('insuranceNewCompany').value,
+        card_number: document.getElementById('insuranceNewCardNumber').value.trim(),
+        full_name: document.getElementById('insuranceNewMemberName').value.trim(),
+        member_id: document.getElementById('insuranceNewMemberId').value.trim(),
+        coverage_percent: document.getElementById('insuranceNewCoverage').value || '',
+    });
+    fetch(CARD_QUICK_REGISTER_URL, { method: 'POST', body })
+        .then(r => r.json())
+        .then(resp => {
+            if (!resp.success) { _insuranceCardMsg(resp.message || 'تعذر التسجيل', false); return; }
+            _applyFoundCard(resp.data);
+            Enjaz.toast(resp.message || 'تم تسجيل البطاقة', 'success');
+        })
+        .catch(() => _insuranceCardMsg('تعذر الاتصال بالخادم', false));
 }
 
 // عند فتح فاتورة مؤكدة فيها مطالبة تأمين للتعديل، لازم نعرض حالتها الحالية
-// (مفعّلة + البوليصة/الشركة الصحيحة) بدل ما تظهر مقفولة — وإلا أي حفظ من غير
+// (مفعّلة + بيانات البطاقة الصحيحة) بدل ما تظهر مقفولة — وإلا أي حفظ من غير
 // لمس صندوق التأمين هيمسح المطالبة الموجودة فعلياً (discard_draft_claim في
-// السيرفر) ويصفّر insurance_amount، مما يحوّل نصيب التأمين لدين على العميل
-// أو يمنع الحفظ لو مفيش عميل. تُطبَّق مرة واحدة فقط.
+// السيرفر) ويصفّر insurance_amount. تُطبَّق مرة واحدة فقط.
 function applyExistingInsurance() {
-    if (existingInsuranceApplied || !EXISTING_INSURANCE) return;
-    const hasPolicies = customerPolicies.length > 0;
-    const hasCompanies = activeCompanies.length > 0;
-
-    if (EXISTING_INSURANCE.policy_id && hasPolicies) {
-        const match = customerPolicies.find(p => String(p.id) === String(EXISTING_INSURANCE.policy_id));
-        if (!match) return;
-        document.getElementById('insurancePolicySelect').value = String(match.id);
-        document.getElementById('insuranceToggle').checked = true;
-        existingInsuranceApplied = true;
-    } else if (EXISTING_INSURANCE.insurance_company_id && !EXISTING_INSURANCE.policy_id && hasCompanies) {
-        const match = activeCompanies.find(c => String(c.id) === String(EXISTING_INSURANCE.insurance_company_id));
-        if (!match) return;
-        document.getElementById('insuranceCompanySelect').value = String(match.id);
-        document.getElementById('insuranceToggle').checked = true;
-        existingInsuranceApplied = true;
-    } else {
-        return;
-    }
-    updateInsuranceEstimate();
+    if (existingInsuranceApplied || !EXISTING_INSURANCE || !EXISTING_INSURANCE.member_id) return;
+    existingInsuranceApplied = true;
+    document.getElementById('insuranceToggle').checked = true;
+    document.getElementById('insuranceCardBox').classList.remove('sales-field-hidden');
+    _applyFoundCard({
+        member_id: EXISTING_INSURANCE.member_id,
+        member_name: EXISTING_INSURANCE.member_name,
+        card_number: EXISTING_INSURANCE.card_number,
+        insurance_company_name: EXISTING_INSURANCE.insurance_company_name,
+        coverage_percent: EXISTING_INSURANCE.coverage_percent,
+    });
 }
 
 // يحسب لكل بند على حدة ويستبعد is_insurance_excluded — نفس منطق السيرفر
 // بالضبط (build_line_selections) لضمان تطابق الرقم المعروض مع ما سيُعتمد فعلياً.
 function estimatedInsuranceCovered() {
     const checked = document.getElementById('insuranceToggle').checked;
-    if (!checked) return 0;
-    const policy = customerPolicies.length ? selectedPolicy() : null;
-    const company = customerPolicies.length ? null : selectedCompany();
-    const pct = policy ? parseFloat(policy.coverage_percent) : (company ? parseFloat(company.default_coverage_percent) : 0);
+    if (!checked || !document.getElementById('insuranceMemberId').value) return 0;
+    const pct = currentInsuranceCoveragePct;
     if (!pct) return 0;
 
     let covered = 0;
@@ -961,9 +1035,21 @@ function estimatedInsuranceCovered() {
 function updateInsuranceEstimate() {
     const est = document.getElementById('insuranceEstimate');
     const covered = estimatedInsuranceCovered();
-    if (!covered) { est.classList.add('sales-field-hidden'); return; }
+    const coveredRow = document.getElementById('insuranceCoveredRow');
+    const shareRow = document.getElementById('patientShareRow');
+    if (!covered) {
+        est.classList.add('sales-field-hidden');
+        coveredRow.classList.add('sales-field-hidden');
+        shareRow.classList.add('sales-field-hidden');
+        return;
+    }
     const grand = currentGrandTotal;
-    est.textContent = `تقديرياً: ${Enjaz.formatMoney(covered)} من التأمين، والباقي ${Enjaz.formatMoney(grand - covered)} على حساب العميل (قد يختلف قليلاً حسب الأصناف المستثناة من التغطية).`;
+    const patientShare = grand - covered;
+    document.getElementById('displayInsuranceCovered').textContent = Enjaz.formatMoney(covered);
+    document.getElementById('displayPatientShare').textContent = Enjaz.formatMoney(patientShare);
+    coveredRow.classList.remove('sales-field-hidden');
+    shareRow.classList.remove('sales-field-hidden');
+    est.textContent = 'قد يختلف المبلغان قليلاً حسب الأصناف المستثناة من التغطية — تحمل المريض يُحصَّل الآن نقداً أو بنكياً.';
     est.classList.remove('sales-field-hidden');
 }
 
@@ -1021,8 +1107,8 @@ function submitForm(action) {
         bank_amount: Enjaz.parseNumber(document.getElementById('bankAmount')?.value || 0).toFixed(2),
         bank_reference: document.getElementById('bankReference')?.value || '',
         notes: document.getElementById('notes').value,
-        insurance_policy_id: (document.getElementById('insuranceToggle')?.checked && customerPolicies.length && selectedPolicy()) ? selectedPolicy().id : null,
-        insurance_company_id: (document.getElementById('insuranceToggle')?.checked && !customerPolicies.length && selectedCompany()) ? selectedCompany().id : null,
+        insurance_member_id: (document.getElementById('insuranceToggle')?.checked && document.getElementById('insuranceMemberId').value) ? document.getElementById('insuranceMemberId').value : null,
+        insurance_card_number: document.getElementById('insuranceToggle')?.checked ? document.getElementById('insuranceCardNumber').value.trim() : '',
     };
 
     const url = FORM_ACTION === 'edit' && INVOICE_ID

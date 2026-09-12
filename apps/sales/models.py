@@ -86,6 +86,18 @@ class SaleInvoice(TenantMixin):
         verbose_name='العميل',
         help_text='اتركه فارغاً للبيع الفوري (زبون عابر)'
     )
+    insurance_member = models.ForeignKey(
+        'insurance.InsuranceMember',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='sale_invoices',
+        verbose_name='المؤمَّن عليه',
+        help_text='المؤمَّن عليه (صاحب البطاقة) لبيع بالتأمين — مستقل تماماً عن العميل'
+    )
+    insurance_card_number = models.CharField(
+        'رقم بطاقة التأمين وقت البيع', max_length=100, blank=True,
+        help_text='لقطة من رقم البطاقة وقت البيع'
+    )
     stock = models.ForeignKey(
         'stocks.Stock',
         on_delete=models.PROTECT,

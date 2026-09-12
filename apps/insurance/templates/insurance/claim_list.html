@@ -58,7 +58,7 @@
                 <tr>
                     <th>رقم المطالبة</th>
                     <th>الفاتورة</th>
-                    <th>العميل</th>
+                    <th>المؤمَّن عليه</th>
                     <th>شركة التأمين</th>
                     <th>الحالة</th>
                     <th>المطالَب به</th>
@@ -103,9 +103,23 @@
                             </div>
                         </div>
                         <div class="cx-info-card">
+                            <div class="cx-info-card-icon"><i class="fas fa-user-shield"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">المؤمَّن عليه</span>
+                                <span class="cx-info-card-value" id="viewClaimMember"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
+                            <div class="cx-info-card-icon"><i class="fas fa-id-card"></i></div>
+                            <div class="cx-info-card-content">
+                                <span class="cx-info-card-label">رقم البطاقة</span>
+                                <span class="cx-info-card-value" id="viewClaimCardNumber"></span>
+                            </div>
+                        </div>
+                        <div class="cx-info-card">
                             <div class="cx-info-card-icon"><i class="fas fa-user"></i></div>
                             <div class="cx-info-card-content">
-                                <span class="cx-info-card-label">العميل</span>
+                                <span class="cx-info-card-label">العميل المرتبط</span>
                                 <span class="cx-info-card-value" id="viewClaimCustomer"></span>
                             </div>
                         </div>
@@ -275,7 +289,7 @@
                 <div class="cx-supplier-card-head">
                     <div class="cx-supplier-card-title-wrap">
                         <h2 class="cx-supplier-card-title">${r.claim_number}</h2>
-                        <p class="cx-supplier-card-code"><code>${r.invoice_number}</code> — ${r.customer_name}</p>
+                        <p class="cx-supplier-card-code"><code>${r.invoice_number}</code> — ${r.member_name}</p>
                     </div>
                     ${statusBadge(r.status, r.status_display)}
                 </div>
@@ -315,7 +329,7 @@
         columns: [
             { data: 'claim_number', render: n => `<span class="cxr-name">${n}</span>` },
             { data: 'invoice_number', render: n => `<code class="cxr-code">${n}</code>` },
-            { data: 'customer_name' },
+            { data: null, render: (_, __, r) => `${r.member_name}${r.card_number && r.card_number !== '—' ? ' <span class="cxr-code">' + r.card_number + '</span>' : ''}` },
             { data: 'insurance_company_name' },
             { data: null, render: (_, __, r) => statusBadge(r.status, r.status_display) },
             { data: 'covered_amount', render: v => `<span class="cxr-bal">${Enjaz.formatMoney(v)}</span>` },
@@ -369,6 +383,8 @@
                 $('#viewClaimNumber').text(d.claim_number);
                 $('#viewClaimStatus').text(d.status_display);
                 $('#viewClaimInvoice').text(d.invoice_number);
+                $('#viewClaimMember').text(d.member_name || '—');
+                $('#viewClaimCardNumber').text(d.card_number || '—');
                 $('#viewClaimCustomer').text(d.customer_name);
                 $('#viewClaimCompany').text(d.insurance_company_name);
                 $('#viewClaimDueDate').text(d.due_date || '—');
@@ -445,6 +461,13 @@
                 <input type="number" step="0.01" min="0" class="form-control" id="settleAmount">
             </div>
             <div class="mb-3">
+                <label class="cx-label">طريقة الاستلام</label>
+                <select class="form-control" id="settleReceivedMethod">
+                    <option value="cash">نقداً</option>
+                    <option value="bank">تحويل بنكي</option>
+                </select>
+            </div>
+            <div class="mb-3">
                 <label class="cx-label">رقم مرجعي (اختياري)</label>
                 <input type="text" class="form-control" id="settleReference">
             </div>`);
@@ -471,7 +494,11 @@
             };
             url = apiUrl(urlRespond, currentClaimId);
         } else {
-            data = { amount: $('#settleAmount').val() || 0, reference: $('#settleReference').val() || '' };
+            data = {
+                amount: $('#settleAmount').val() || 0,
+                reference: $('#settleReference').val() || '',
+                received_method: $('#settleReceivedMethod').val() || 'cash',
+            };
             url = apiUrl(urlSettle, currentClaimId);
         }
 

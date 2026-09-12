@@ -164,35 +164,6 @@
                             </div>
                         </div>
 
-                        {% if tenant_capabilities.has_insurance_billing %}
-                        <div class="cx-form-group-label" id="insuranceSectionLabel" style="display:none;">
-                            <span class="cx-form-group-icon"><i class="fas fa-briefcase-medical"></i></span> التأمين الصحي
-                        </div>
-                        <div class="row g-3 mb-4" id="insuranceSection" style="display:none;">
-                            <div class="col-12" id="customerPoliciesList"></div>
-                            <div class="col-md-5">
-                                <label class="cx-label">شركة التأمين</label>
-                                <select id="policyInsuranceCompany" class="form-select">
-                                    <option value="">اختر شركة التأمين</option>
-                                    {% for c in insurance_companies %}
-                                    <option value="{{ c.id }}" data-default-coverage="{{ c.default_coverage_percent }}">{{ c.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="cx-label">رقم البوليصة</label>
-                                <input type="text" id="policyNumber" class="form-control">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="cx-label">نسبة التغطية %</label>
-                                <input type="number" id="policyCoverage" class="form-control" step="0.01" min="0" max="100">
-                            </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button type="button" class="cx-btn-secondary w-100" id="btnAddPolicy">إضافة</button>
-                            </div>
-                        </div>
-                        {% endif %}
-
                         <div class="cx-form-group-label">
                             <span class="cx-form-group-icon"><i class="fas fa-list-check"></i></span> ملاحظات وحالة
                         </div>
@@ -457,11 +428,6 @@
     const urlTransactions = "{% url 'customers:transactions_api' 0 %}";
     const urlUpdate = "{% url 'customers:update_api' 0 %}";
     const urlDelete = "{% url 'customers:delete_api' 0 %}";
-    {% if tenant_capabilities.has_insurance_billing %}
-    const urlCustomerPolicies = "{% url 'insurance:customer_policies_api' 0 %}";
-    const urlPolicyCreate = "{% url 'insurance:policy_create_api' %}";
-    const urlPolicyDelete = "{% url 'insurance:policy_delete_api' 0 %}";
-    {% endif %}
     const CAN_VIEW_TRANSACTIONS = {% if request.user|has_perm_key:"view_customer_transactions" %}true{% else %}false{% endif %};
     const CAN_CHANGE = {% if request.user|has_perm_key:"change_customers" %}true{% else %}false{% endif %};
     const CAN_DELETE = {% if request.user|has_perm_key:"delete_customers" %}true{% else %}false{% endif %};
@@ -665,7 +631,6 @@
         setModalSidebar('عميل جديد', '+', 'var(--primary)');
         $('#customerModalTitle').text('إضافة عميل جديد');
         $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ');
-        $('#insuranceSection, #insuranceSectionLabel').hide();
         customerModal.show();
     }
 
@@ -693,75 +658,11 @@
                 $('#customerModalTitle').text('تعديل بيانات العميل');
                 $('#customerModalSubtitle').text(d.name);
                 $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
-                if (typeof urlCustomerPolicies !== 'undefined') {
-                    $('#insuranceSection, #insuranceSectionLabel').show();
-                    loadCustomerPolicies(d.id);
-                }
                 customerModal.show();
             },
             error: function () { Enjaz.toast('تعذر تحميل البيانات', 'error'); }
         });
     }
-
-    {% if tenant_capabilities.has_insurance_billing %}
-    /* ── Insurance policies ───────────────────────────────────── */
-    function loadCustomerPolicies(customerId) {
-        $.get(apiUrl(urlCustomerPolicies, customerId), function (resp) {
-            if (!resp.success) return;
-            const $list = $('#customerPoliciesList');
-            if (!resp.data.length) {
-                $list.html('<div class="text-muted" style="font-size:.85rem;">لا توجد بوالص تأمين لهذا العميل</div>');
-                return;
-            }
-            $list.html(resp.data.map(function (p) {
-                return `<div class="d-flex align-items-center justify-content-between border rounded p-2 mb-2">
-                    <div>
-                        <strong>${p.insurance_company_name}</strong>
-                        <span class="text-muted"> — ${p.policy_number || 'بدون رقم'} — تغطية ${p.coverage_percent}%</span>
-                        ${p.is_active ? '' : '<span class="badge bg-secondary ms-2">موقوفة</span>'}
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-danger js-delete-policy" data-id="${p.id}"><i class="fas fa-trash"></i></button>
-                </div>`;
-            }).join(''));
-        });
-    }
-
-    $('#policyInsuranceCompany').on('change', function () {
-        const pct = $(this).find(':selected').data('default-coverage');
-        if (pct !== undefined && !$('#policyCoverage').val()) $('#policyCoverage').val(pct);
-    });
-
-    $('#btnAddPolicy').on('click', function () {
-        const customerId = $idInput.val();
-        if (!customerId) { Enjaz.toast('احفظ بيانات العميل أولاً', 'error'); return; }
-        const companyId = $('#policyInsuranceCompany').val();
-        if (!companyId) { Enjaz.toast('اختر شركة التأمين', 'error'); return; }
-        $.post(urlPolicyCreate, {
-            csrfmiddlewaretoken: getCookie('csrftoken'),
-            customer: customerId,
-            insurance_company: companyId,
-            policy_number: $('#policyNumber').val(),
-            coverage_percent: $('#policyCoverage').val() || 0,
-            is_active: 'on',
-        }, function (resp) {
-            if (resp.success) {
-                $('#policyNumber').val(''); $('#policyCoverage').val(''); $('#policyInsuranceCompany').val('');
-                loadCustomerPolicies(customerId);
-            } else {
-                Enjaz.toast(resp.message || 'تعذرت الإضافة', 'error');
-            }
-        });
-    });
-
-    $('#customerPoliciesList').on('click', '.js-delete-policy', function () {
-        const id = $(this).data('id');
-        const customerId = $idInput.val();
-        if (!confirm('حذف هذه البوليصة؟')) return;
-        $.post(apiUrl(urlPolicyDelete, id), { csrfmiddlewaretoken: getCookie('csrftoken') }, function (resp) {
-            if (resp.success) { loadCustomerPolicies(customerId); } else { Enjaz.toast(resp.message, 'error'); }
-        });
-    });
-    {% endif %}
 
     /* ── Save ───────────────────────────────────────────────── */
     $form.on('submit', function (e) {

@@ -9,15 +9,14 @@ urlpatterns = [
     path('companies/', views.company_list, name='company_list'),
     path('companies/api/table/', views.company_table_api, name='company_table_api'),
     path('companies/api/create/', views.company_create_api, name='company_create_api'),
+    path('companies/api/active/', views.active_companies_api, name='active_companies_api'),
     path('companies/api/<int:pk>/detail/', views.company_detail_api, name='company_detail_api'),
     path('companies/api/<int:pk>/update/', views.company_update_api, name='company_update_api'),
     path('companies/api/<int:pk>/delete/', views.company_delete_api, name='company_delete_api'),
 
-    # Customer insurance policies
-    path('companies/api/active/', views.active_companies_api, name='active_companies_api'),
-    path('policies/api/customer/<int:customer_id>/', views.customer_policies_api, name='customer_policies_api'),
-    path('policies/api/create/', views.policy_create_api, name='policy_create_api'),
-    path('policies/api/<int:pk>/delete/', views.policy_delete_api, name='policy_delete_api'),
+    # Insurance card lookup / quick registration (no separate policy management)
+    path('cards/api/lookup/', views.card_lookup_api, name='card_lookup_api'),
+    path('cards/api/quick-register/', views.card_quick_register_api, name='card_quick_register_api'),
 
     # Claims
     path('claims/', views.claim_list, name='claim_list'),

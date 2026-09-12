@@ -2252,7 +2252,7 @@ def _delete_tenant_data(tenant):
         from apps.store.models import OnlineOrderLine, OnlineOrder
         from apps.agents.models import AgentInvoiceRequestLine, AgentInvoiceRequest, AgentLedger
         from apps.insurance.models import (
-            InsuranceClaimLine, InsuranceClaimSettlement, InsuranceClaim, CustomerInsurancePolicy,
+            InsuranceClaimLine, InsuranceClaimSettlement, InsuranceClaim, InsuranceMember,
         )
 
         # --- agent sub-documents (AgentLedger.agent / AgentInvoiceRequest.agent PROTECT Agent,
@@ -2262,12 +2262,12 @@ def _delete_tenant_data(tenant):
         AgentLedger.objects.filter(**t).delete()
         # --- insurance (InsuranceClaimLine.invoice_line PROTECT SaleInvoiceLine,
         #     InsuranceClaim.invoice PROTECT SaleInvoice, .customer PROTECT Customer,
-        #     InsuranceClaim/InsuranceClaimSettlement/CustomerInsurancePolicy.insurance_company
+        #     InsuranceClaim/InsuranceClaimSettlement/InsuranceMember.insurance_company
         #     PROTECT InsuranceCompany) ---
         InsuranceClaimLine.objects.filter(**t).delete()
         InsuranceClaimSettlement.objects.filter(**t).delete()
         InsuranceClaim.objects.filter(**t).delete()
-        CustomerInsurancePolicy.objects.filter(**t).delete()
+        InsuranceMember.objects.filter(**t).delete()
         # --- stock sub-documents (all PROTECT Stock or Item) ---
         StockDestructionLine.objects.filter(**t).delete()
         StockDestruction.objects.filter(**t).delete()

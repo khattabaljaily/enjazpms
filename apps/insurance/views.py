@@ -8,11 +8,10 @@ from django.utils import timezone
 
 from apps.accounts.activity_service import log_activity
 from apps.accounts.decorators import require_permission
-from apps.customers.models import Customer
 from apps.sales.models import SaleInvoice
 
-from .forms import InsuranceCompanyForm, CustomerInsurancePolicyForm
-from .models import InsuranceCompany, CustomerInsurancePolicy, InsuranceClaim, InsuranceClaimSettlement
+from .forms import InsuranceCompanyForm
+from .models import InsuranceCompany, InsuranceMember, InsuranceClaim, InsuranceClaimSettlement
 from .reports import InsuranceReportGenerator
 from . import services
 
@@ -177,15 +176,10 @@ def company_delete_api(request, pk):
     return _json_ok(msg=f'تم حذف "{name}" بنجاح')
 
 
-# ════════════════════════════════════════════════════════════
-# Customer insurance policies
-# ════════════════════════════════════════════════════════════
-
 @login_required
 @require_permission('view_insurance_companies')
 def active_companies_api(request):
-    """قائمة شركات التأمين النشطة — تُستخدم في POS/الفاتورة لبيع بدون عميل
-    مسجَّل أو بدون بوليصة (اختيار شركة التأمين مباشرة)."""
+    """قائمة شركات التأمين النشطة — تُستخدم لتسجيل بطاقة جديدة أول مرة."""
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
@@ -197,68 +191,66 @@ def active_companies_api(request):
     return _json_ok(data)
 
 
+# ════════════════════════════════════════════════════════════
+# Insurance card lookup / quick registration
+# ════════════════════════════════════════════════════════════
+# لا توجد شاشة إدارة "بوليصات" مستقلة — البوليصة والعضوية بيانات شركة
+# التأمين نفسها، لا تديرها الصيدلية. الصيدلية فقط تتعرّف على المشترك ببطاقته
+# وقت البيع، وتسجّلها تلقائياً لتسريع الزيارات القادمة لنفس البطاقة.
+
 @login_required
 @require_permission('view_insurance_companies')
-def customer_policies_api(request, customer_id):
+def card_lookup_api(request):
+    """
+    البحث عن مشترك تأمين برقم بطاقته والتحقق من صلاحيته — نقطة الدخول
+    الأساسية لبيع بالتأمين من POS/الفاتورة اليدوية.
+    """
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
-    policies = CustomerInsurancePolicy.objects.filter(
-        tenant=tenant, customer_id=customer_id
-    ).select_related('insurance_company').order_by('-is_active', '-created_at')
-    data = [
-        {
-            'id': p.id, 'insurance_company_id': p.insurance_company_id,
-            'insurance_company_name': p.insurance_company.name,
-            'policy_number': p.policy_number,
-            'coverage_percent': str(p.effective_coverage_percent),
-            'is_active': p.is_active,
-        }
-        for p in policies
-    ]
-    return _json_ok(data)
+    card_number = request.GET.get('card_number', '')
+    try:
+        result = services.lookup_insurance_card(tenant, card_number)
+    except ValueError as e:
+        return _json_error(str(e), status=404)
+    return _json_ok({
+        'member_id': result['member'].id, 'member_name': result['member'].full_name,
+        'card_number': result['member'].card_number,
+        'insurance_company_id': result['insurance_company'].id,
+        'insurance_company_name': result['insurance_company'].name,
+        'coverage_percent': str(result['coverage_percent']),
+    })
 
 
 @login_required
 @require_permission('add_insurance_companies')
-def policy_create_api(request):
+def card_quick_register_api(request):
+    """تسجيل سريع لمشترك جديد أول مرة، مباشرة من شاشة البيع."""
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     if request.method != 'POST':
         return _json_error('طريقة غير مسموحة', status=405)
 
-    form = CustomerInsurancePolicyForm(request.POST)
-    form.fields['customer'].queryset = Customer.objects.filter(tenant=tenant)
-    form.fields['insurance_company'].queryset = InsuranceCompany.objects.filter(tenant=tenant, is_active=True)
-    if form.is_valid():
-        policy = form.save(commit=False)
-        policy.tenant = tenant
-        policy.created_by = request.user
-        policy.updated_by = request.user
-        policy.save()
-        log_activity(request, 'إضافة بوليصة تأمين', f'{policy.customer.name} — {policy.insurance_company.name}', 'create')
-        return _json_ok({'id': policy.id}, 'تم إضافة البوليصة بنجاح')
-    return JsonResponse({'success': False, 'errors': _serialize_form_errors(form)}, status=400, json_dumps_params={'ensure_ascii': False})
-
-
-@login_required
-@require_permission('change_insurance_companies')
-def policy_delete_api(request, pk):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return _json_error('لا يوجد نشاط تجاري')
-    if request.method != 'POST':
-        return _json_error('طريقة غير مسموحة', status=405)
+    data = {
+        'insurance_company_id': request.POST.get('insurance_company_id'),
+        'card_number': request.POST.get('card_number'),
+        'full_name': request.POST.get('full_name'),
+        'member_id': request.POST.get('member_id'),
+        'coverage_percent': request.POST.get('coverage_percent'),
+    }
     try:
-        p = CustomerInsurancePolicy.objects.get(tenant=tenant, pk=pk)
-    except CustomerInsurancePolicy.DoesNotExist:
-        return _json_error('البوليصة غير موجودة', status=404)
-    if p.claims.exclude(status='cancelled').exists():
-        return _json_error('لا يمكن حذف بوليصة مرتبطة بمطالبات نشطة.')
-    p.delete()
-    return _json_ok(msg='تم حذف البوليصة بنجاح')
-
+        result = services.quick_register_card(tenant, data, request.user)
+    except ValueError as e:
+        return _json_error(str(e))
+    log_activity(request, 'تسجيل مشترك تأمين جديد', result['member'].card_number, 'create')
+    return _json_ok({
+        'member_id': result['member'].id, 'member_name': result['member'].full_name,
+        'card_number': result['member'].card_number,
+        'insurance_company_id': result['insurance_company'].id,
+        'insurance_company_name': result['insurance_company'].name,
+        'coverage_percent': str(result['coverage_percent']),
+    }, 'تم تسجيل المشترك بنجاح')
 
 # ════════════════════════════════════════════════════════════
 # Claims
@@ -289,14 +281,15 @@ def claim_table_api(request):
     status = request.GET.get('status', '').strip()
     search = request.GET.get('search[value]', '').strip()
 
-    qs = InsuranceClaim.objects.filter(tenant=tenant).select_related('customer', 'insurance_company', 'invoice')
+    qs = InsuranceClaim.objects.filter(tenant=tenant).select_related('customer', 'member', 'insurance_company', 'invoice')
     records_total = qs.count()
 
     if status:
         qs = qs.filter(status=status)
     if search:
         qs = qs.filter(
-            Q(claim_number__icontains=search) | Q(customer__name__icontains=search) |
+            Q(claim_number__icontains=search) | Q(member__full_name__icontains=search) |
+            Q(card_number__icontains=search) |
             Q(invoice__invoice_number__icontains=search) | Q(insurance_company__name__icontains=search)
         )
     records_filtered = qs.count()
@@ -307,7 +300,8 @@ def claim_table_api(request):
         {
             'id': c.id, 'claim_number': c.claim_number,
             'invoice_number': c.invoice.invoice_number,
-            'customer_name': c.customer.name if c.customer else 'بدون عميل مسجَّل',
+            'member_name': c.member.full_name if c.member else (c.customer.name if c.customer else '—'),
+            'card_number': c.card_number or '—',
             'insurance_company_name': c.insurance_company.name,
             'status': c.status, 'status_display': c.get_status_display(),
             'covered_amount': str(c.covered_amount), 'approved_amount': str(c.approved_amount) if c.approved_amount is not None else None,
@@ -322,23 +316,17 @@ def claim_table_api(request):
 @login_required
 @require_permission('view_insurance_claims')
 def invoice_eligible_lines_api(request, invoice_id):
-    """يُعيد بنود فاتورة مؤكدة (لعميل مؤمَّن) لاختيار ما يُطالَب به + بوالص العميل النشطة."""
+    """يُعيد بنود فاتورة مؤكدة لاختيار ما يُطالَب به — لإنشاء مطالبة تأمين لاحقاً لفاتورة لم تُربط بتأمين وقت البيع."""
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     try:
-        invoice = SaleInvoice.objects.select_related('customer').get(tenant=tenant, pk=invoice_id)
+        invoice = SaleInvoice.objects.get(tenant=tenant, pk=invoice_id)
     except SaleInvoice.DoesNotExist:
         return _json_error('الفاتورة غير موجودة', status=404)
 
     if hasattr(invoice, 'insurance_claim'):
         return _json_error('يوجد بالفعل مطالبة تأمين لهذه الفاتورة.')
-    if not invoice.customer:
-        return _json_error('الفاتورة غير مرتبطة بعميل.')
-
-    policies = CustomerInsurancePolicy.objects.filter(
-        tenant=tenant, customer=invoice.customer, is_active=True
-    ).select_related('insurance_company')
 
     lines = [
         {
@@ -348,20 +336,13 @@ def invoice_eligible_lines_api(request, invoice_id):
         }
         for line in invoice.lines.select_related('item').all()
     ]
-    policies_data = [
-        {
-            'id': p.id, 'insurance_company_id': p.insurance_company_id,
-            'insurance_company_name': p.insurance_company.name,
-            'coverage_percent': str(p.effective_coverage_percent),
-        }
-        for p in policies
-    ]
-    return _json_ok({'lines': lines, 'policies': policies_data, 'grand_total': str(invoice.grand_total)})
+    return _json_ok({'lines': lines, 'grand_total': str(invoice.grand_total)})
 
 
 @login_required
 @require_permission('add_insurance_claims')
 def claim_create_api(request):
+    """إنشاء مطالبة تأمين لفاتورة مؤكدة مسبقاً عبر البحث برقم البطاقة."""
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
@@ -375,18 +356,23 @@ def claim_create_api(request):
         return _json_error('بيانات غير صالحة')
 
     invoice_id = body.get('invoice_id')
-    policy_id = body.get('policy_id')
+    card_number = body.get('card_number')
     line_selections = body.get('lines', [])
 
     try:
         invoice = SaleInvoice.objects.get(tenant=tenant, pk=invoice_id)
-        policy = CustomerInsurancePolicy.objects.get(tenant=tenant, pk=policy_id)
-    except (SaleInvoice.DoesNotExist, CustomerInsurancePolicy.DoesNotExist):
-        return _json_error('بيانات غير صالحة')
+    except SaleInvoice.DoesNotExist:
+        return _json_error('الفاتورة غير موجودة')
+
+    try:
+        result = services.lookup_insurance_card(tenant, card_number)
+    except ValueError as e:
+        return _json_error(str(e))
 
     try:
         claim = services.create_claim_for_invoice(
-            invoice, policy.insurance_company, line_selections, request.user, policy=policy,
+            invoice, result['insurance_company'], line_selections, request.user,
+            member=result['member'], card_number=result['member'].card_number,
         )
     except ValueError as e:
         return _json_error(str(e))
@@ -402,7 +388,7 @@ def claim_detail_api(request, pk):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     try:
-        c = InsuranceClaim.objects.select_related('customer', 'insurance_company', 'invoice').get(tenant=tenant, pk=pk)
+        c = InsuranceClaim.objects.select_related('customer', 'member', 'insurance_company', 'invoice').get(tenant=tenant, pk=pk)
     except InsuranceClaim.DoesNotExist:
         return _json_error('المطالبة غير موجودة', status=404)
 
@@ -417,6 +403,8 @@ def claim_detail_api(request, pk):
     return _json_ok({
         'id': c.id, 'claim_number': c.claim_number, 'status': c.status, 'status_display': c.get_status_display(),
         'invoice_number': c.invoice.invoice_number,
+        'member_name': c.member.full_name if c.member else '—',
+        'card_number': c.card_number or '—',
         'customer_name': c.customer.name if c.customer else 'بدون عميل مسجَّل',
         'insurance_company_name': c.insurance_company.name,
         'covered_amount': str(c.covered_amount), 'patient_amount': str(c.patient_amount),
@@ -494,9 +482,10 @@ def claim_settle_api(request, pk):
         return _json_error('مبلغ غير صالح')
     reference = request.POST.get('reference', '')
     date = request.POST.get('date') or timezone.localdate()
+    received_method = request.POST.get('received_method', 'cash')
 
     try:
-        services.settle_claim_payment(claim, amount, date, reference, request.user)
+        services.settle_claim_payment(claim, amount, date, reference, request.user, received_method=received_method)
     except ValueError as e:
         return _json_error(str(e))
     log_activity(request, 'تسوية مطالبة تأمين', claim.claim_number, 'update')

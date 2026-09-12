@@ -134,6 +134,14 @@
                 <span>الإجمالي</span>
                 <span class="pos-total-val" id="totGrand">0.00</span>
             </div>
+            <div class="pos-total-row" id="totInsuranceCoveredRow" style="display:none;">
+                <span>تغطية التأمين المتوقعة</span>
+                <span class="pos-total-val" id="totInsuranceCovered" style="color:var(--success,#16a34a)">0.00</span>
+            </div>
+            <div class="pos-total-row" id="totPatientShareRow" style="display:none;">
+                <span>تحمل المريض (يُحصَّل الآن)</span>
+                <span class="pos-total-val" id="totPatientShare">0.00</span>
+            </div>
         </div>
 
         <!-- Notes -->
@@ -158,15 +166,23 @@
                 </button>
             </div>
 
-            <!-- Insurance — متاح بشكل مستقل عن طريقة الدفع، يفعّل "مختلط" تلقائياً -->
+            <!-- Insurance — مستقل تماماً عن العميل، عن طريق البحث برقم البطاقة -->
             <div class="pos-insurance-box" id="posInsuranceBox">
                 <label class="pos-insurance-check">
                     <input type="checkbox" id="posInsuranceToggle">
-                    <span id="posInsuranceLabel">تفعيل التأمين لهذه الفاتورة</span>
+                    <span>تفعيل التأمين لهذه الفاتورة</span>
                 </label>
-                <select class="pos-insurance-select" id="posInsurancePolicySelect"></select>
-                <select class="pos-insurance-select" id="posInsuranceCompanySelect"></select>
+                <div id="posInsuranceCardBox" class="pos-insurance-subbox">
+                    <small class="text-muted d-block mb-1" style="font-size:.72rem;">يبحث في البطاقات المسجَّلة مسبقاً في صيدليتك فقط — إذا كانت أول مرة لهذه البطاقة، سجِّلها في النموذج الذي سيظهر أدناه.</small>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="posInsuranceCardNumber" class="pos-insurance-input" placeholder="رقم بطاقة التأمين" onkeydown="if(event.key==='Enter'){event.preventDefault();posLookupInsuranceCard();}">
+                        <button type="button" class="cx-btn-secondary" onclick="posLookupInsuranceCard()">بحث</button>
+                    </div>
+                    <div id="posInsuranceCardMsg" class="pos-insurance-subbox" style="font-size:.8rem;"></div>
+                    <div id="posInsuranceCardResult" class="pos-insurance-subbox" style="font-size:.85rem;"></div>
+                </div>
                 <div class="pos-insurance-estimate" id="posInsuranceEstimate"></div>
+                <input type="hidden" id="posInsuranceMemberId">
             </div>
 
             <!-- Cash: received + change -->
@@ -252,6 +268,40 @@
     </div>
 </div>
 
+<!-- ══════════════════════ تسجيل بطاقة تأمين جديدة ══════════════════════ -->
+<div class="pos-success-overlay" id="posInsuranceNewCardOverlay">
+    <div class="pos-success-box" style="max-width:420px;text-align:right;">
+        <div class="pos-success-title" style="margin-bottom:1rem;">تسجيل بطاقة تأمين جديدة</div>
+        <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.85rem;">لا توجد بطاقة بهذا الرقم في سجلاتك — سجِّل بياناتها كما وردت على البطاقة.</div>
+        <div class="mb-2">
+            <label class="cx-label">رقم البطاقة</label>
+            <input type="text" id="posInsuranceNewCardNumber" class="pos-insurance-input" readonly>
+        </div>
+        <div class="mb-2">
+            <label class="cx-label">شركة التأمين</label>
+            <select id="posInsuranceNewCompany" class="pos-insurance-input"></select>
+        </div>
+        <div class="mb-2">
+            <label class="cx-label">اسم المشترك</label>
+            <input type="text" id="posInsuranceNewMemberName" class="pos-insurance-input">
+        </div>
+        <div class="row g-2">
+            <div class="col-6">
+                <label class="cx-label">رقم العضوية (اختياري)</label>
+                <input type="text" id="posInsuranceNewMemberId" class="pos-insurance-input">
+            </div>
+            <div class="col-6">
+                <label class="cx-label">نسبة التغطية %</label>
+                <input type="number" id="posInsuranceNewCoverage" class="pos-insurance-input" step="0.01" min="0" max="100">
+            </div>
+        </div>
+        <div class="pos-success-btns" style="margin-top:1.25rem;">
+            <button class="pos-success-btn" id="posInsuranceNewCardCancelBtn" style="width:50%;">إلغاء</button>
+            <button class="pos-success-btn primary" id="posInsuranceNewCardSaveBtn" style="width:50%;">تسجيل ومتابعة</button>
+        </div>
+    </div>
+</div>
+
 <script>
 (function() {
 'use strict';
@@ -265,12 +315,13 @@ const CAP = {
     hasBranchStockLookup:  {{ tenant_capabilities.has_branch_stock_lookup|yesno:"true,false" }},
 };
 const CHECKOUT_URL = '{% url "sales:pos_checkout_api" %}';
-const CUSTOMER_POLICIES_URL = '{% url "insurance:customer_policies_api" 0 %}';
 const ACTIVE_COMPANIES_URL = '{% url "insurance:active_companies_api" %}';
+const CARD_LOOKUP_URL = '{% url "insurance:card_lookup_api" %}';
+const CARD_QUICK_REGISTER_URL = '{% url "insurance:card_quick_register_api" %}';
 
-/* ── Insurance state — مستقل عن طريقة الدفع، يفعّل "مختلط" تلقائياً ── */
-let customerPolicies = [];
+/* ── Insurance state — مستقل تماماً عن العميل، عن طريق البحث برقم البطاقة ── */
 let activeCompanies = [];
+let currentInsuranceCoveragePct = 0;
 
 /* ── State ───────────────────────────────────────────── */
 let cart = [];
@@ -315,7 +366,6 @@ const $customer   = document.getElementById('posCustomerId');
             clearBtn.style.display = 'none';
         }
         drop.style.display = 'none';
-        fetchCustomerPolicies(id);
     }
 
     function renderDrop(list) {
@@ -749,92 +799,114 @@ function updateQuickCash(grand) {
     );
 }
 
-/* ── Insurance — مستقل عن طريقة الدفع، يفعّل "مختلط" تلقائياً ─────── */
+/* ── Insurance — مستقل تماماً عن العميل، عن طريق البحث برقم البطاقة ─────── */
 const $insBox            = document.getElementById('posInsuranceBox');
 const $insToggle         = document.getElementById('posInsuranceToggle');
-const $insLabel          = document.getElementById('posInsuranceLabel');
-const $insSelect         = document.getElementById('posInsurancePolicySelect');
-const $insCompanySelect  = document.getElementById('posInsuranceCompanySelect');
+const $insCardBox        = document.getElementById('posInsuranceCardBox');
+const $insCardNumber     = document.getElementById('posInsuranceCardNumber');
+const $insCardMsg        = document.getElementById('posInsuranceCardMsg');
+const $insCardResult     = document.getElementById('posInsuranceCardResult');
+const $insNewCardOverlay = document.getElementById('posInsuranceNewCardOverlay');
+const $insMemberId       = document.getElementById('posInsuranceMemberId');
 const $insEstimate       = document.getElementById('posInsuranceEstimate');
 
 fetch(ACTIVE_COMPANIES_URL)
     .then(r => r.ok ? r.json() : { success: false })
-    .then(resp => { activeCompanies = (resp.success && resp.data) || []; updateInsuranceUI(); })
+    .then(resp => { activeCompanies = (resp.success && resp.data) || []; $insBox.classList.toggle('visible', !!activeCompanies.length); })
     .catch(() => {});
 
-function fetchCustomerPolicies(customerId) {
-    customerPolicies = [];
-    $insToggle.checked = false;
-    if (!customerId) { updateInsuranceUI(); return; }
-
-    fetch(CUSTOMER_POLICIES_URL.replace('/0/', '/' + customerId + '/'))
-        .then(r => r.ok ? r.json() : { success: false })
-        .then(resp => {
-            if (resp.success) {
-                customerPolicies = (resp.data || []).filter(p => p.is_active);
-            }
-            updateInsuranceUI();
-        })
-        .catch(() => updateInsuranceUI());
+function posInsuranceCardMsg(text, ok) {
+    $insCardMsg.textContent = text;
+    $insCardMsg.style.color = ok ? 'var(--success,#16a34a)' : 'var(--danger,#dc2626)';
+    $insCardMsg.classList.add('visible');
 }
 
-function selectedPolicy() {
-    if (!customerPolicies.length) return null;
-    const id = $insSelect.value || String(customerPolicies[0].id);
-    return customerPolicies.find(p => String(p.id) === id) || customerPolicies[0];
+function openInsuranceNewCardModal(cardNumber) {
+    document.getElementById('posInsuranceNewCardNumber').value = cardNumber;
+    document.getElementById('posInsuranceNewCompany').innerHTML = activeCompanies.map(c =>
+        `<option value="${c.id}" data-coverage="${c.default_coverage_percent}">${c.name}</option>`
+    ).join('');
+    document.getElementById('posInsuranceNewMemberName').value = '';
+    document.getElementById('posInsuranceNewMemberId').value = '';
+    document.getElementById('posInsuranceNewCoverage').value = '';
+    $insNewCardOverlay.classList.add('show');
 }
-
-function selectedCompany() {
-    if (!activeCompanies.length) return null;
-    const id = $insCompanySelect.value || String(activeCompanies[0].id);
-    return activeCompanies.find(c => String(c.id) === id) || activeCompanies[0];
+function closeInsuranceNewCardModal() {
+    $insNewCardOverlay.classList.remove('show');
 }
+document.getElementById('posInsuranceNewCardCancelBtn').addEventListener('click', closeInsuranceNewCardModal);
+document.getElementById('posInsuranceNewCardSaveBtn').addEventListener('click', posRegisterInsuranceCard);
 
-// يبني الاسم المعروض + النسبة لحالة "التأمين مفعَّل بدون خيارات متعددة"
-function updateInsuranceUI() {
-    const hasPolicies = customerPolicies.length > 0;
-    const hasCompanies = activeCompanies.length > 0;
-    const show = hasPolicies || hasCompanies;
-    $insBox.classList.toggle('visible', show);
-    if (!show) { $insToggle.checked = false; updateInsuranceEstimate(); return; }
+function posApplyFoundCard(d) {
+    $insMemberId.value = d.member_id;
+    $insCardNumber.value = d.card_number;
+    currentInsuranceCoveragePct = parseFloat(d.coverage_percent) || 0;
+    closeInsuranceNewCardModal();
+    $insCardMsg.classList.remove('visible');
+    $insCardResult.innerHTML = `<strong>${d.member_name}</strong> — ${d.insurance_company_name} — تغطية ${d.coverage_percent}%`;
+    $insCardResult.classList.add('visible');
+    updateInsuranceEstimate();
+    updateTotals();
 
-    if (hasPolicies) {
-        $insCompanySelect.classList.remove('visible');
-        if (customerPolicies.length > 1) {
-            $insSelect.innerHTML = customerPolicies.map(p =>
-                `<option value="${p.id}">${p.insurance_company_name} — ${p.coverage_percent}%</option>`
-            ).join('');
-            $insSelect.classList.add('visible');
-            $insLabel.textContent = 'تفعيل التأمين لهذه الفاتورة';
-        } else {
-            $insSelect.classList.remove('visible');
-            $insLabel.textContent = `تفعيل التأمين (${customerPolicies[0].insurance_company_name} — ${customerPolicies[0].coverage_percent}%)`;
-        }
-    } else {
-        $insSelect.classList.remove('visible');
-        if (activeCompanies.length > 1) {
-            $insCompanySelect.innerHTML = activeCompanies.map(c =>
-                `<option value="${c.id}">${c.name} — ${c.default_coverage_percent}%</option>`
-            ).join('');
-            $insCompanySelect.classList.add('visible');
-            $insLabel.textContent = 'تفعيل التأمين (بدون عميل مسجَّل — اختر شركة التأمين)';
-        } else {
-            $insCompanySelect.classList.remove('visible');
-            $insLabel.textContent = `تفعيل التأمين (${activeCompanies[0].name} — ${activeCompanies[0].default_coverage_percent}%)`;
+    // تعبئة تلقائية لنصيب المريض في خانة النقدي (المقسّم) كنقطة بداية مريحة
+    const cashVal = parseFloat($splitCash.value) || 0;
+    const bankVal = parseFloat($splitBank.value) || 0;
+    if (cashVal === 0 && bankVal === 0) {
+        const covered = estimatedInsuranceCovered();
+        const patientShare = calcTotals().grand - covered;
+        if (patientShare > 0) {
+            $splitCash.value = patientShare.toFixed(2);
+            updateTotals();
         }
     }
-    updateInsuranceEstimate();
 }
+
+function posLookupInsuranceCard() {
+    const cardNumber = $insCardNumber.value.trim();
+    $insCardResult.classList.remove('visible');
+    if (!cardNumber) { posInsuranceCardMsg('أدخل رقم البطاقة أولاً', false); return; }
+
+    fetch(`${CARD_LOOKUP_URL}?card_number=${encodeURIComponent(cardNumber)}`)
+        .then(r => r.json().then(body => ({ ok: r.ok, body })))
+        .then(({ ok, body }) => {
+            if (ok && body.success) { posApplyFoundCard(body.data); return; }
+            $insMemberId.value = '';
+            currentInsuranceCoveragePct = 0;
+            posInsuranceCardMsg(body.message || 'تعذر العثور على البطاقة', false);
+            if ((body.message || '').includes('لا توجد بطاقة')) {
+                openInsuranceNewCardModal(cardNumber);
+            }
+        })
+        .catch(() => posInsuranceCardMsg('تعذر الاتصال بالخادم', false));
+}
+
+function posRegisterInsuranceCard() {
+    const body = new URLSearchParams({
+        csrfmiddlewaretoken: CSRF,
+        insurance_company_id: document.getElementById('posInsuranceNewCompany').value,
+        card_number: document.getElementById('posInsuranceNewCardNumber').value.trim(),
+        full_name: document.getElementById('posInsuranceNewMemberName').value.trim(),
+        member_id: document.getElementById('posInsuranceNewMemberId').value.trim(),
+        coverage_percent: document.getElementById('posInsuranceNewCoverage').value || '',
+    });
+    fetch(CARD_QUICK_REGISTER_URL, { method: 'POST', body })
+        .then(r => r.json())
+        .then(resp => {
+            if (!resp.success) { posInsuranceCardMsg(resp.message || 'تعذر التسجيل', false); return; }
+            posApplyFoundCard(resp.data);
+        })
+        .catch(() => posInsuranceCardMsg('تعذر الاتصال بالخادم', false));
+}
+
+// مطلوبة كـ window.* لأن onclick= في الـ HTML يُنفَّذ في النطاق العام، والدالة
+// معرَّفة داخل الـ IIFE الرئيسي للملف فلا تكون متاحة له إلا بهذا التصريح الصريح.
+window.posLookupInsuranceCard = posLookupInsuranceCard;
 
 // تقدير فقط (مبني على الإجمالي كاملاً) — الرقم الفعلي المعتمد يُحسَب في
 // السيرفر لكل بند مع استبعاد أصناف is_insurance_excluded، فقد يختلف قليلاً.
-// يحسب لكل بند على حدة ويستبعد is_insurance_excluded — نفس منطق السيرفر
-// بالضبط (build_line_selections) لضمان تطابق الرقم المعروض مع ما سيُعتمد فعلياً.
 function estimatedInsuranceCovered() {
-    if (!$insToggle.checked) return 0;
-    const policy = customerPolicies.length ? selectedPolicy() : null;
-    const company = customerPolicies.length ? null : selectedCompany();
-    const pct = policy ? parseFloat(policy.coverage_percent) : (company ? parseFloat(company.default_coverage_percent) : 0);
+    if (!$insToggle.checked || !$insMemberId.value) return 0;
+    const pct = currentInsuranceCoveragePct;
     if (!pct) return 0;
 
     let covered = 0;
@@ -848,24 +920,44 @@ function estimatedInsuranceCovered() {
 }
 
 function updateInsuranceEstimate() {
-    if (!$insToggle.checked) { $insEstimate.classList.remove('visible'); return; }
+    const coveredRow = document.getElementById('totInsuranceCoveredRow');
+    const shareRow = document.getElementById('totPatientShareRow');
+    if (!$insToggle.checked) {
+        $insEstimate.classList.remove('visible');
+        coveredRow.style.display = 'none';
+        shareRow.style.display = 'none';
+        return;
+    }
     const covered = estimatedInsuranceCovered();
-    if (!covered) { $insEstimate.classList.remove('visible'); return; }
+    if (!covered) {
+        $insEstimate.classList.remove('visible');
+        coveredRow.style.display = 'none';
+        shareRow.style.display = 'none';
+        return;
+    }
     const grand = calcTotals().grand;
-    $insEstimate.textContent =
-        `تقديرياً: ${fmt(covered)} من التأمين، والباقي ${fmt(grand - covered)} على حساب العميل (قد يختلف قليلاً حسب الأصناف المستثناة من التغطية).`;
+    document.getElementById('totInsuranceCovered').textContent = fmt(covered);
+    document.getElementById('totPatientShare').textContent = fmt(grand - covered);
+    coveredRow.style.display = '';
+    shareRow.style.display = '';
+    $insEstimate.textContent = 'قد يختلف المبلغان قليلاً حسب الأصناف المستثناة من التغطية — تحمل المريض يُحصَّل الآن.';
     $insEstimate.classList.add('visible');
 }
 
 $insToggle.addEventListener('change', () => {
+    $insCardBox.classList.toggle('visible', $insToggle.checked);
     if ($insToggle.checked && currentMethod !== 'split') {
         const splitBtn = document.querySelector('.pos-pay-btn[data-method="split"]');
         if (splitBtn) splitBtn.click();
     }
+    if (!$insToggle.checked) {
+        $insMemberId.value = '';
+        currentInsuranceCoveragePct = 0;
+        $insCardResult.classList.remove('visible');
+        closeInsuranceNewCardModal();
+    }
     updateInsuranceEstimate();
 });
-$insSelect.addEventListener('change', updateInsuranceEstimate);
-$insCompanySelect.addEventListener('change', updateInsuranceEstimate);
 
 /* ── Payment method toggle ───────────────────────────── */
 document.querySelectorAll('.pos-pay-btn').forEach(btn => {
@@ -881,7 +973,13 @@ document.querySelectorAll('.pos-pay-btn').forEach(btn => {
         const needRef = currentMethod === 'bank' || currentMethod === 'split';
         $bankRef.classList.toggle('visible', needRef);
 
-        if (currentMethod !== 'split') { $insToggle.checked = false; updateInsuranceEstimate(); }
+        if (currentMethod !== 'split') {
+            $insToggle.checked = false;
+            $insCardBox.classList.remove('visible');
+            $insMemberId.value = '';
+            currentInsuranceCoveragePct = 0;
+            updateInsuranceEstimate();
+        }
         updateTotals();
     });
 });
@@ -938,8 +1036,8 @@ $checkoutBtn.addEventListener('click', async () => {
         discount_type:  $discType.value,
         discount_value: parseFloat($discVal.value) || 0,
         notes:          $notes.value,
-        insurance_policy_id: ($insToggle.checked && customerPolicies.length && selectedPolicy()) ? selectedPolicy().id : null,
-        insurance_company_id: ($insToggle.checked && !customerPolicies.length && selectedCompany()) ? selectedCompany().id : null,
+        insurance_member_id: ($insToggle.checked && $insMemberId.value) ? $insMemberId.value : null,
+        insurance_card_number: $insToggle.checked ? $insCardNumber.value.trim() : '',
         lines: cart.map(c => ({
             item_id:          c.item_id,
             quantity:         c.qty,

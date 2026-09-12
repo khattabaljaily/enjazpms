@@ -426,8 +426,11 @@ def invoice_edit(request, pk):
             else str(claim.insurance_company.default_coverage_percent)
         )
         existing_insurance = {
-            'policy_id': claim.policy_id,
+            'member_id': claim.member_id,
+            'member_name': claim.member.full_name if claim.member else '',
+            'card_number': claim.card_number,
             'insurance_company_id': claim.insurance_company_id,
+            'insurance_company_name': claim.insurance_company.name,
             'coverage_percent': coverage_percent,
             'claim_status': claim.status,
         }
@@ -504,8 +507,6 @@ def _process_invoice_post(request, tenant, invoice):
                         'bank_reference': header.get('bank_reference', ''),
                         'notes': header.get('notes', ''),
                         'reference_number': header.get('reference_number', ''),
-                        'insurance_policy_id': header.get('insurance_policy_id') or None,
-                        'insurance_company_id': header.get('insurance_company_id') or None,
                         'insurance_coverage_percent': header.get('insurance_coverage_percent') or None,
                     }
 
@@ -515,6 +516,15 @@ def _process_invoice_post(request, tenant, invoice):
                         confirmed_header['customer'] = Customer.objects.get(id=customer_raw, tenant=tenant)
                     else:
                         confirmed_header['customer'] = None
+
+                    insurance_member_raw = header.get('insurance_member_id')
+                    if insurance_member_raw:
+                        from apps.insurance.models import InsuranceMember
+                        confirmed_header['insurance_member'] = InsuranceMember.objects.get(id=insurance_member_raw, tenant=tenant)
+                        confirmed_header['insurance_card_number'] = header.get('insurance_card_number', '') or ''
+                    else:
+                        confirmed_header['insurance_member'] = None
+                        confirmed_header['insurance_card_number'] = ''
 
                     stock_raw = header.get('stock_id')
                     if stock_raw:
@@ -553,6 +563,11 @@ def _process_invoice_post(request, tenant, invoice):
                     if 'customer_id' in header:
                         customer_raw = header.get('customer_id')
                         invoice.customer_id = int(customer_raw) if customer_raw else None
+
+                    if 'insurance_member_id' in header:
+                        member_raw = header.get('insurance_member_id')
+                        invoice.insurance_member_id = int(member_raw) if member_raw else None
+                        invoice.insurance_card_number = header.get('insurance_card_number', '') or ''
 
                     if 'invoice_date' in header:
                         invoice.invoice_date = header.get('invoice_date') or invoice.invoice_date
@@ -601,13 +616,10 @@ def _process_invoice_post(request, tenant, invoice):
             if action == 'confirm':
                 confirm_sale_invoice(inv, request.user)
 
-                insurance_policy_id = header.get('insurance_policy_id') or None
-                insurance_company_id = header.get('insurance_company_id') or None
-                if insurance_policy_id or insurance_company_id:
+                if inv.insurance_member_id:
                     from apps.insurance import services as insurance_services
                     insurance_services.create_claim_from_sale(
-                        inv, tenant, insurance_policy_id, insurance_company_id,
-                        header.get('insurance_coverage_percent') or None, request.user,
+                        inv, tenant, header.get('insurance_coverage_percent') or None, request.user,
                     )
 
     except ValueError as e:
@@ -2598,8 +2610,8 @@ def pos_checkout_api(request):
     discount_type = body.get('discount_type', 'fixed')
     discount_value = Decimal(str(body.get('discount_value', 0) or 0))
     notes = body.get('notes', '')
-    insurance_policy_id = body.get('insurance_policy_id') or None
-    insurance_company_id = body.get('insurance_company_id') or None
+    insurance_member_id = body.get('insurance_member_id') or None
+    insurance_card_number = body.get('insurance_card_number', '') or ''
     insurance_coverage_percent = body.get('insurance_coverage_percent') or None
 
     lines_data = []
@@ -2623,8 +2635,8 @@ def pos_checkout_api(request):
         'bank_reference': bank_reference,
         'notes': notes,
         'customer_id': customer_id,
-        'insurance_policy_id': insurance_policy_id,
-        'insurance_company_id': insurance_company_id,
+        'insurance_member_id': insurance_member_id,
+        'insurance_card_number': insurance_card_number,
         'insurance_coverage_percent': insurance_coverage_percent,
     }
     if customer_id:
@@ -2647,11 +2659,10 @@ def pos_checkout_api(request):
                         user=request.user,
                     )
 
-            if insurance_policy_id or insurance_company_id:
+            if insurance_member_id:
                 from apps.insurance import services as insurance_services
                 insurance_services.create_claim_from_sale(
-                    invoice, tenant, insurance_policy_id, insurance_company_id,
-                    insurance_coverage_percent, request.user,
+                    invoice, tenant, insurance_coverage_percent, request.user,
                 )
 
     except Exception as exc:

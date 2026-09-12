@@ -49,33 +49,45 @@ class InsuranceCompany(TenantMixin):
         super().save(*args, **kwargs)
 
 
-class CustomerInsurancePolicy(TenantMixin):
-    customer = models.ForeignKey(
-        'customers.Customer', on_delete=models.CASCADE,
-        related_name='insurance_policies', verbose_name='العميل'
-    )
+class InsuranceMember(TenantMixin):
+    """
+    مشترك تأمين لدى شركة التأمين — الصيدلية لا تدير بوليصات ولا شبكات، فقط
+    تتعرّف على المشترك ببطاقته (الشركة تتولى العضوية والبوليصة من جهتها).
+    يُنشأ تلقائياً أول مرة يُقدَّم فيها كارت جديد وقت البيع (بدون شاشة إدارة
+    مستقلة) لتسريع الزيارات القادمة لنفس البطاقة.
+    """
     insurance_company = models.ForeignKey(
         InsuranceCompany, on_delete=models.PROTECT,
-        related_name='policies', verbose_name='شركة التأمين'
+        related_name='members', verbose_name='شركة التأمين'
     )
-    policy_number = models.CharField('رقم البوليصة / العضوية', max_length=100, blank=True)
-    coverage_percent = models.DecimalField('نسبة التغطية %', max_digits=5, decimal_places=2, default=0)
-    valid_from = models.DateField('سارية من', null=True, blank=True)
-    valid_to = models.DateField('سارية حتى', null=True, blank=True)
-    is_active = models.BooleanField('نشطة', default=True)
+    card_number = models.CharField('رقم البطاقة', max_length=100)
+    member_id = models.CharField('رقم العضوية (إن وُجد على البطاقة)', max_length=100, blank=True)
+    full_name = models.CharField('اسم المشترك', max_length=200)
+    customer = models.ForeignKey(
+        'customers.Customer', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='insurance_memberships', verbose_name='العميل المرتبط',
+        help_text='اختياري — فقط لو الصيدلية عندها هذا الشخص مسجَّلاً كعميل لأسباب أخرى'
+    )
+    coverage_percent = models.DecimalField(
+        'نسبة التغطية %', max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text='تتجاوز نسبة الشركة الافتراضية لو حُدِّدت'
+    )
+    is_active = models.BooleanField('نشط', default=True)
     notes = models.TextField('ملاحظات', blank=True)
 
     class Meta:
-        db_table = 'customer_insurance_policies'
-        verbose_name = 'بوليصة تأمين عميل'
-        verbose_name_plural = 'بوليصات تأمين العملاء'
+        db_table = 'insurance_members'
+        verbose_name = 'مشترك تأمين'
+        verbose_name_plural = 'مشتركو التأمين'
         ordering = ['-created_at']
+        unique_together = [('tenant', 'card_number')]
         indexes = [
-            models.Index(fields=['tenant', 'customer', 'is_active']),
+            models.Index(fields=['tenant', 'insurance_company', 'is_active']),
+            models.Index(fields=['tenant', 'card_number']),
         ]
 
     def __str__(self):
-        return f"{self.customer.name} — {self.insurance_company.name}"
+        return f"{self.full_name} — {self.card_number}"
 
     @property
     def effective_coverage_percent(self):
@@ -107,9 +119,13 @@ class InsuranceClaim(TenantMixin):
         InsuranceCompany, on_delete=models.PROTECT,
         related_name='claims', verbose_name='شركة التأمين'
     )
-    policy = models.ForeignKey(
-        CustomerInsurancePolicy, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='claims', verbose_name='البوليصة'
+    member = models.ForeignKey(
+        InsuranceMember, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='claims', verbose_name='المؤمَّن عليه'
+    )
+    card_number = models.CharField(
+        'رقم البطاقة وقت البيع', max_length=100, blank=True,
+        help_text='لقطة من رقم البطاقة وقت البيع — تبقى ثابتة حتى لو البطاقة تغيّرت لاحقاً'
     )
     status = models.CharField('الحالة', max_length=20, choices=STATUS_CHOICES, default='draft')
 

@@ -65,54 +65,95 @@ def build_line_selections(invoice, coverage_percent):
     return line_selections, covered_total
 
 
-def resolve_insurance_selection(tenant, customer_id, insurance_policy_id,
-                                 insurance_company_id, insurance_coverage_percent):
+def lookup_insurance_card(tenant, card_number):
     """
-    يحوّل بيانات اختيار التأمين المرسلة من الواجهة (بوليصة عميل مسجَّل، أو
-    شركة تأمين مباشرة لبيع بدون عميل/بوليصة) إلى (policy, insurance_company,
-    coverage_percent) — أو (None, None, None) لو التأمين غير مفعَّل.
+    يبحث عن مشترك تأمين برقم بطاقته ويتحقق من صلاحيته: العضو نشط وشركة التأمين
+    نشطة. البوليصة والعضوية نفسها بيانات شركة التأمين — لسنا مصدرها، فقط
+    نسجّل رقم البطاقة والاسم والنسبة كما وردت لتسريع الزيارات القادمة.
     """
-    if insurance_policy_id:
-        from .models import CustomerInsurancePolicy
-        try:
-            policy = CustomerInsurancePolicy.objects.get(
-                tenant=tenant, pk=insurance_policy_id, customer_id=customer_id, is_active=True,
-            )
-        except CustomerInsurancePolicy.DoesNotExist:
-            raise ValueError('بوليصة التأمين المحددة غير موجودة أو غير نشطة')
-        return policy, policy.insurance_company, policy.effective_coverage_percent
+    from .models import InsuranceMember
 
-    if insurance_company_id:
-        from .models import InsuranceCompany
-        try:
-            company = InsuranceCompany.objects.get(tenant=tenant, pk=insurance_company_id, is_active=True)
-        except InsuranceCompany.DoesNotExist:
-            raise ValueError('شركة التأمين المحددة غير موجودة')
-        pct = Decimal(str(insurance_coverage_percent)) if insurance_coverage_percent else company.default_coverage_percent
-        return None, company, pct
+    card_number = (card_number or '').strip()
+    if not card_number:
+        raise ValueError('أدخل رقم البطاقة.')
 
-    return None, None, None
+    try:
+        member = InsuranceMember.objects.select_related('insurance_company').get(
+            tenant=tenant, card_number=card_number,
+        )
+    except InsuranceMember.DoesNotExist:
+        raise ValueError('لا توجد بطاقة بهذا الرقم — يمكنك تسجيلها كبطاقة جديدة.')
+
+    if not member.is_active:
+        raise ValueError('عضوية هذا المشترك غير نشطة.')
+    if not member.insurance_company.is_active:
+        raise ValueError('شركة التأمين غير نشطة.')
+
+    return {
+        'member': member, 'insurance_company': member.insurance_company,
+        'coverage_percent': member.effective_coverage_percent,
+    }
 
 
-def create_claim_from_sale(invoice, tenant, insurance_policy_id, insurance_company_id,
-                            insurance_coverage_percent, user):
+@transaction.atomic
+def quick_register_card(tenant, data, user):
+    """
+    تسجيل سريع لبطاقة تأمين جديدة عند أول زيارة لمشترك غير مسجَّل من قبل —
+    مباشرة من شاشة البيع، بدون أي شاشة إدارة منفصلة.
+    """
+    from .models import InsuranceCompany, InsuranceMember
+
+    company_id = data.get('insurance_company_id')
+    if not company_id:
+        raise ValueError('اختر شركة التأمين.')
+    try:
+        company = InsuranceCompany.objects.get(tenant=tenant, pk=company_id, is_active=True)
+    except InsuranceCompany.DoesNotExist:
+        raise ValueError('شركة التأمين غير موجودة أو غير نشطة.')
+
+    card_number = (data.get('card_number') or '').strip()
+    if not card_number:
+        raise ValueError('أدخل رقم البطاقة.')
+    if InsuranceMember.objects.filter(tenant=tenant, card_number=card_number).exists():
+        raise ValueError('يوجد مشترك بهذا الرقم مسجَّل مسبقاً — ابحث عنه بدل تسجيله من جديد.')
+
+    full_name = (data.get('full_name') or '').strip()
+    if not full_name:
+        raise ValueError('أدخل اسم المشترك.')
+
+    member = InsuranceMember.objects.create(
+        tenant=tenant, insurance_company=company, card_number=card_number,
+        member_id=(data.get('member_id') or '').strip(), full_name=full_name,
+        coverage_percent=Decimal(str(data['coverage_percent'])) if data.get('coverage_percent') else None,
+        is_active=True, created_by=user, updated_by=user,
+    )
+    return {
+        'member': member, 'insurance_company': company,
+        'coverage_percent': member.effective_coverage_percent,
+    }
+
+
+def create_claim_from_sale(invoice, tenant, insurance_coverage_percent, user):
     """
     ينشئ مطالبة تأمين تلقائياً بعد تأكيد فاتورة تحمل بيانات تأمين — نقطة
     استدعاء واحدة مشتركة بين POS والفاتورة اليدوية (إنشاء وتعديل). يتجاهل
-    الطلب بصمت لو مفيش بيانات تأمين إطلاقاً.
+    الطلب بصمت لو مفيش عضو تأمين مرتبط بالفاتورة أصلاً.
     """
-    policy, insurance_company, coverage_percent = resolve_insurance_selection(
-        tenant, invoice.customer_id, insurance_policy_id, insurance_company_id, insurance_coverage_percent,
-    )
-    if not insurance_company:
+    if not invoice.insurance_member_id:
         return None
     if invoice.payment_method != 'mixed':
         raise ValueError('تفعيل التأمين يتطلب اختيار طريقة دفع «مختلط».')
 
+    member = invoice.insurance_member
+    coverage_percent = Decimal(str(insurance_coverage_percent)) if insurance_coverage_percent else member.effective_coverage_percent
+
     line_selections, _covered_total = build_line_selections(invoice, coverage_percent)
     if not line_selections:
         return None
-    return create_claim_for_invoice(invoice, insurance_company, line_selections, user, policy=policy)
+    return create_claim_for_invoice(
+        invoice, member.insurance_company, line_selections, user,
+        member=member, card_number=invoice.insurance_card_number,
+    )
 
 
 def discard_draft_claim(invoice):
@@ -134,12 +175,11 @@ def discard_draft_claim(invoice):
 
 
 @transaction.atomic
-def create_claim_for_invoice(invoice, insurance_company, line_selections, user, policy=None):
+def create_claim_for_invoice(invoice, insurance_company, line_selections, user,
+                              member=None, card_number=''):
     """
     ينشئ مطالبة تأمين جديدة (مسودة) لفاتورة مؤكدة.
     line_selections: [{'invoice_line_id': int, 'coverage_percent': Decimal}, ...]
-    policy اختياري — يُترك فارغاً لبيع بدون عميل مسجَّل أو بدون بوليصة (يُحدَّد
-    insurance_company مباشرة في هذه الحالة بدلاً من أخذه من policy.insurance_company).
     """
     if hasattr(invoice, 'insurance_claim'):
         raise ValueError('يوجد بالفعل مطالبة تأمين مرتبطة بهذه الفاتورة.')
@@ -154,12 +194,13 @@ def create_claim_for_invoice(invoice, insurance_company, line_selections, user, 
         invoice=invoice,
         customer=invoice.customer,
         insurance_company=insurance_company,
-        policy=policy,
+        member=member,
+        card_number=card_number or '',
         status='draft',
     )
 
     covered_total = Decimal('0')
-    default_pct = policy.effective_coverage_percent if policy else Decimal('0')
+    default_pct = member.effective_coverage_percent if member else Decimal('0')
     for sel in line_selections:
         line = invoice.lines.get(pk=sel['invoice_line_id'])
         pct = Decimal(str(sel.get('coverage_percent') or default_pct))
@@ -244,9 +285,18 @@ def record_claim_response(claim, approved_amount, status, rejection_reason, user
 
 
 @transaction.atomic
-def settle_claim_payment(claim, amount, date, reference, user, treasury=None):
-    """يُسجِّل دفعة تسوية من شركة التأمين — تُقفَل عبر apps.sales.services.record_customer_payment."""
+def settle_claim_payment(claim, amount, date, reference, user, treasury=None, received_method='cash'):
+    """
+    يُسجِّل دفعة تسوية من شركة التأمين — تُقفَل عبر apps.sales.services.record_customer_payment.
+
+    received_method: 'cash' أو 'bank' — طريقة استلام شركة التأمين للمبلغ فعلياً.
+    'cash' يُرحَّل للخزينة كوارد (مثل تحصيل نقدي عادي)، و'bank' يُسجَّل فقط
+    دون أثر على رصيد الخزينة — بنفس منطق طريقة الدفع 'bank' لدفعات العملاء.
+    """
     from apps.sales.services import record_customer_payment
+
+    if received_method not in ('cash', 'bank'):
+        raise ValueError('طريقة الاستلام يجب أن تكون نقداً أو تحويلاً بنكياً.')
 
     claim = InsuranceClaim.objects.select_for_update().get(pk=claim.pk)
     if claim.status not in ('approved', 'partially_approved', 'partially_paid'):
@@ -258,10 +308,11 @@ def settle_claim_payment(claim, amount, date, reference, user, treasury=None):
     if amount > claim.remaining_amount + Decimal('0.01'):
         raise ValueError(f'المبلغ ({amount}) يتجاوز المتبقي على المطالبة ({claim.remaining_amount}).')
 
+    method_label = 'نقداً' if received_method == 'cash' else 'تحويلاً بنكياً'
     payment = record_customer_payment(
         invoice=claim.invoice, amount=amount, method='insurance', date=date,
-        reference=reference, notes=f'تسوية مطالبة تأمين {claim.claim_number}', user=user,
-        treasury=treasury,
+        reference=reference, notes=f'تسوية مطالبة تأمين {claim.claim_number} — استُلمت {method_label}', user=user,
+        treasury=treasury, post_to_treasury=(received_method == 'cash'),
     )
 
     claim.paid_amount = (claim.paid_amount or Decimal('0')) + amount

@@ -168,9 +168,13 @@ def _restore_stock(tenant, stock, item, qty, unit_cost, reference_type, referenc
     )
 
 
-def _apply_payment(tenant, invoice, method, amount, date, reference='', notes='', treasury=None):
+def _apply_payment(tenant, invoice, method, amount, date, reference='', notes='', treasury=None, post_to_treasury=None):
     """
     يُنشئ SalePayment ويُحدِّث paid_amount في الفاتورة.
+
+    post_to_treasury: تحكّم صريح في ترحيل الحركة للخزينة، يتجاوز الافتراضي
+    المبني على method — يُستخدم مثلاً لتسوية تأمين استُلمت بنكياً (method='insurance'
+    لكن بدون أثر على الخزينة، تماماً كطريقة 'bank' العادية).
     """
     amount = Decimal(str(amount or 0))
     if amount == 0:
@@ -191,7 +195,10 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
         from apps.agents.services import apply_collection_commission
         apply_collection_commission(tenant, invoice, payment)
 
-    if method in ('cash', 'insurance'):
+    if post_to_treasury is None:
+        post_to_treasury = method in ('cash', 'insurance')
+
+    if post_to_treasury:
         treasury_notes = notes or f'فاتورة {invoice.invoice_number}'
         if amount > 0:
             post_treasury_receipt(
@@ -773,7 +780,7 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
         'customer', 'stock', 'agent', 'invoice_date', 'due_date',
         'payment_method', 'invoice_discount_type', 'invoice_discount_value',
         'cash_amount', 'bank_amount', 'bank_reference', 'notes',
-        'reference_number',
+        'reference_number', 'insurance_member', 'insurance_card_number',
     }
     for field, value in header_data.items():
         if field in allowed_header_fields:
@@ -814,18 +821,13 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
 
     # نفس منطق build_invoice_from_post: المبلغ المتوقع من التأمين يُحسَب من
     # السيرفر دائماً بناءً على اختيار التأمين الجديد (إن وُجد) بعد التعديل.
-    insurance_policy_id = header_data.get('insurance_policy_id')
-    insurance_company_id = header_data.get('insurance_company_id')
     insurance_coverage_percent = header_data.get('insurance_coverage_percent')
     invoice.insurance_amount = Decimal('0')
-    if insurance_policy_id or insurance_company_id:
-        from apps.insurance.services import resolve_insurance_selection, build_line_selections
-        _policy, _ins_company, _coverage_pct = resolve_insurance_selection(
-            tenant, invoice.customer_id, insurance_policy_id, insurance_company_id, insurance_coverage_percent,
-        )
-        if _ins_company:
-            _line_selections, _covered_total = build_line_selections(invoice, _coverage_pct)
-            invoice.insurance_amount = _covered_total
+    if invoice.insurance_member_id:
+        from apps.insurance.services import build_line_selections
+        _coverage_pct = Decimal(str(insurance_coverage_percent)) if insurance_coverage_percent else invoice.insurance_member.effective_coverage_percent
+        _line_selections, _covered_total = build_line_selections(invoice, _coverage_pct)
+        invoice.insurance_amount = _covered_total
 
     invoice.recalculate_totals()
     invoice.paid_amount = Decimal('0')
@@ -837,12 +839,9 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
     invoice.save(update_fields=['status'])
     confirm_sale_invoice(invoice, user)
 
-    if insurance_policy_id or insurance_company_id:
+    if invoice.insurance_member_id:
         from apps.insurance.services import create_claim_from_sale
-        create_claim_from_sale(
-            invoice, tenant, insurance_policy_id, insurance_company_id,
-            insurance_coverage_percent, user,
-        )
+        create_claim_from_sale(invoice, tenant, insurance_coverage_percent, user)
 
     return invoice
 
@@ -1130,7 +1129,8 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
 @transaction.atomic
 def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
                             method: str, date, reference: str = '',
-                            notes: str = '', user=None, treasury=None) -> SalePayment:
+                            notes: str = '', user=None, treasury=None,
+                            post_to_treasury=None) -> SalePayment:
     """
     تسجيل دفعة جديدة من عميل على فاتورة آجلة (credit).
     يُحدِّث paid_amount ويُنشئ قيداً عكسياً في CustomerLedger.
@@ -1140,7 +1140,9 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
     if invoice.status not in ('confirmed', 'partially_returned'):
         raise ValueError("يمكن تسجيل الدفعات على الفواتير المؤكدة فقط.")
 
-    if not invoice.customer:
+    # تسوية تأمين قد تخص فاتورة بدون عميل مسجَّل (بيع لمريض غير مسجَّل)،
+    # فلا يُشترط وجود عميل إلا لدفعات العميل نفسه.
+    if not invoice.customer and method != 'insurance':
         raise ValueError("لا يمكن تسجيل دفعة لفاتورة غير مرتبطة بعميل.")
 
     remaining = invoice.remaining_amount
@@ -1155,6 +1157,7 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
         invoice=invoice,
         method=method,
         amount=amount,
+        post_to_treasury=post_to_treasury,
         date=date,
         reference=reference,
         notes=notes or f"دفعة على فاتورة {invoice.invoice_number}",
@@ -1479,10 +1482,17 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
         except Agent.DoesNotExist:
             pass
 
+    insurance_member = None
+    if data.get('insurance_member_id'):
+        from apps.insurance.models import InsuranceMember
+        insurance_member = InsuranceMember.objects.get(id=data['insurance_member_id'], tenant=tenant)
+
     invoice = SaleInvoice(
         tenant=tenant,
         customer=customer,
         agent=agent,
+        insurance_member=insurance_member,
+        insurance_card_number=data.get('insurance_card_number', '') or '',
         stock=stock,
         invoice_date=data['invoice_date'],
         due_date=data.get('due_date'),
@@ -1526,16 +1536,11 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
 
     # المبلغ المتوقع من التأمين يُحسَب من السيرفر دائماً (مش من رقم الواجهة)
     # لضمان تطابقه بالضبط مع المبلغ اللي هتُبنى عليه المطالبة لاحقاً.
-    if data.get('insurance_policy_id') or data.get('insurance_company_id'):
-        from apps.insurance.services import resolve_insurance_selection, build_line_selections
-        _policy, _ins_company, _coverage_pct = resolve_insurance_selection(
-            tenant, invoice.customer_id,
-            data.get('insurance_policy_id'), data.get('insurance_company_id'),
-            data.get('insurance_coverage_percent'),
-        )
-        if _ins_company:
-            _line_selections, _covered_total = build_line_selections(invoice, _coverage_pct)
-            invoice.insurance_amount = _covered_total
+    if insurance_member:
+        from apps.insurance.services import build_line_selections
+        _coverage_pct = Decimal(str(data['insurance_coverage_percent'])) if data.get('insurance_coverage_percent') else insurance_member.effective_coverage_percent
+        _line_selections, _covered_total = build_line_selections(invoice, _coverage_pct)
+        invoice.insurance_amount = _covered_total
 
     invoice.recalculate_totals()
     invoice.save()
