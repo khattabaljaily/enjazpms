@@ -16,6 +16,8 @@ from apps.accounts.decorators import require_permission
 from apps.core.utils import convert_arabic_numerals
 from apps.treasury.models import Treasury
 from apps.treasury.services import post_treasury_disbursement
+from apps.bank_accounts.models import BankAccount
+from apps.bank_accounts.services import post_bank_account_disbursement
 
 from .models import Employee, EmployeeAdvance, EmployeeIncentive, EmployeeSalaryPayment
 
@@ -267,6 +269,7 @@ def advance_list(request):
         },
         'employees':  Employee.objects.filter(tenant=tenant, is_active=True).order_by('name'),
         'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
+        'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True),
     }
     return render(request, 'employees/advance_list.html', context)
 
@@ -285,7 +288,7 @@ def advance_table_api(request):
     status = request.GET.get('status', '').strip()
     emp_id = request.GET.get('employee', '').strip()
 
-    qs = EmployeeAdvance.objects.filter(tenant=tenant).select_related('employee', 'treasury')
+    qs = EmployeeAdvance.objects.filter(tenant=tenant).select_related('employee', 'treasury', 'bank_account')
     records_total = qs.count()
 
     if status:
@@ -306,7 +309,7 @@ def advance_table_api(request):
             'employee_id': adv.employee_id,
             'amount': str(adv.amount),
             'date': str(adv.date),
-            'treasury': adv.treasury.name if adv.treasury else '—',
+            'treasury': (adv.treasury.name if adv.treasury else (adv.bank_account.name if adv.bank_account else '—')),
             'status': adv.status,
             'status_display': adv.get_status_display(),
             'notes': adv.notes,
@@ -347,6 +350,8 @@ def advance_create(request):
     payment_method = data.get('payment_method', 'cash')
     treasury_id    = data.get('treasury')
     treasury       = None
+    bank_account_id = data.get('bank_account')
+    bank_account    = None
     if payment_method == 'cash':
         if not treasury_id:
             return _err('يجب اختيار الخزينة للدفع النقدي')
@@ -354,8 +359,16 @@ def advance_create(request):
         current_balance = treasury.current_balance or Decimal('0')
         if current_balance < amount:
             return _err(f"رصيد الخزينة غير كافٍ. الرصيد الحالي: {current_balance:.2f} والمطلوب صرفه: {amount:.2f}.")
-    elif treasury_id:
-        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+    elif payment_method == 'bank':
+        if not bank_account_id:
+            return _err('يجب اختيار الحساب البنكي للتحويل البنكي')
+        bank_account = get_object_or_404(BankAccount, pk=bank_account_id, tenant=tenant, is_active=True)
+        current_balance = bank_account.current_balance or Decimal('0')
+        if current_balance < amount:
+            return _err(f"رصيد الحساب البنكي غير كافٍ. الرصيد الحالي: {current_balance:.2f} والمطلوب صرفه: {amount:.2f}.")
+    else:
+        if treasury_id:
+            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
 
     from django.db import transaction
     try:
@@ -367,6 +380,7 @@ def advance_create(request):
                 date=data.get('date') or timezone.localdate(),
                 payment_method=payment_method,
                 treasury=treasury,
+                bank_account=bank_account,
                 bank_reference=(data.get('bank_reference') or '').strip(),
                 notes=(data.get('notes') or '').strip(),
                 created_by=request.user,
@@ -387,6 +401,20 @@ def advance_create(request):
                 if mv:
                     adv.treasury_movement = mv
                     adv.save(update_fields=['treasury_movement', 'updated_at'])
+            elif payment_method == 'bank' and bank_account:
+                mv = post_bank_account_disbursement(
+                    tenant=tenant,
+                    amount=amount,
+                    date=adv.date,
+                    reference_type='employee_advance',
+                    reference_id=adv.pk,
+                    description=f'سلفة {emp.name}',
+                    user=request.user,
+                    bank_account=bank_account,
+                )
+                if mv:
+                    adv.bank_account_movement = mv
+                    adv.save(update_fields=['bank_account_movement', 'updated_at'])
     except ValueError as e:
         return _err(str(e))
 
@@ -430,6 +458,7 @@ def salary_list(request):
         },
         'employees':  Employee.objects.filter(tenant=tenant, is_active=True).order_by('name'),
         'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
+        'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True),
     }
     return render(request, 'employees/salary_list.html', context)
 
@@ -448,7 +477,7 @@ def salary_table_api(request):
     status = request.GET.get('status', '').strip()
     emp_id = request.GET.get('employee', '').strip()
 
-    qs = EmployeeSalaryPayment.objects.filter(tenant=tenant).select_related('employee', 'treasury')
+    qs = EmployeeSalaryPayment.objects.filter(tenant=tenant).select_related('employee', 'treasury', 'bank_account')
     records_total = qs.count()
 
     if status:
@@ -474,7 +503,7 @@ def salary_table_api(request):
             'advances_deducted': str(sp.advances_deducted),
             'deductions':        str(sp.deductions),
             'total_due':         str(sp.total_due),
-            'treasury': sp.treasury.name if sp.treasury else '—',
+            'treasury': (sp.treasury.name if sp.treasury else (sp.bank_account.name if sp.bank_account else '—')),
             'payment_method': sp.payment_method,
             'status': sp.status,
             'status_display': sp.get_status_display(),
@@ -518,12 +547,19 @@ def salary_create(request):
     payment_method = data.get('payment_method', 'cash')
     treasury_id    = data.get('treasury')
     treasury       = None
+    bank_account_id = data.get('bank_account')
+    bank_account    = None
     if payment_method == 'cash':
         if not treasury_id:
             return _err('يجب اختيار الخزينة للدفع النقدي')
         treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
-    elif treasury_id:
-        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+    elif payment_method == 'bank':
+        if not bank_account_id:
+            return _err('يجب اختيار الحساب البنكي للتحويل البنكي')
+        bank_account = get_object_or_404(BankAccount, pk=bank_account_id, tenant=tenant, is_active=True)
+    else:
+        if treasury_id:
+            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
 
     advances_deducted = _dec(data.get('advances_deducted', 0))
 
@@ -567,6 +603,7 @@ def salary_create(request):
         deductions_notes=(data.get('deductions_notes') or '').strip(),
         payment_method=payment_method,
         treasury=treasury,
+        bank_account=bank_account,
         bank_reference=(data.get('bank_reference') or '').strip(),
         notes=(data.get('notes') or '').strip(),
         created_by=request.user,
@@ -584,8 +621,10 @@ def salary_pay(request, pk):
     sp = get_object_or_404(EmployeeSalaryPayment, pk=pk, tenant=tenant)
     if sp.status != 'draft':
         return _err('الكشف ليس في حالة مسودة')
-    if sp.payment_method != 'bank' and not sp.treasury:
+    if sp.payment_method == 'cash' and not sp.treasury:
         return _err('يجب تحديد الخزينة قبل الدفع')
+    if sp.payment_method == 'bank' and not sp.bank_account:
+        return _err('يجب تحديد الحساب البنكي قبل الدفع')
     try:
         sp.pay()
     except ValueError as e:
@@ -635,8 +674,9 @@ def salary_detail_api(request, pk):
         'deductions':        str(sp.deductions),
         'deductions_notes':  sp.deductions_notes,
         'total_due':         str(sp.total_due),
-        'treasury': sp.treasury.name if sp.treasury else '—',
+        'treasury': (sp.treasury.name if sp.treasury else (sp.bank_account.name if sp.bank_account else '—')),
         'treasury_id': sp.treasury_id,
+        'bank_account_id': sp.bank_account_id,
         'status': sp.status,
         'status_display': sp.get_status_display(),
         'notes': sp.notes,
@@ -667,6 +707,7 @@ def incentive_list(request):
         },
         'employees':  Employee.objects.filter(tenant=tenant, is_active=True).order_by('name'),
         'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
+        'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True),
     }
     return render(request, 'employees/incentive_list.html', context)
 
@@ -686,7 +727,7 @@ def incentive_table_api(request):
     itype  = request.GET.get('type', '').strip()
     emp_id = request.GET.get('employee', '').strip()
 
-    qs = EmployeeIncentive.objects.filter(tenant=tenant).select_related('employee', 'treasury')
+    qs = EmployeeIncentive.objects.filter(tenant=tenant).select_related('employee', 'treasury', 'bank_account')
     records_total = qs.count()
 
     if status:
@@ -716,7 +757,7 @@ def incentive_table_api(request):
             'payout': inc.payout,
             'payout_display': inc.get_payout_display(),
             'date': str(inc.date),
-            'treasury': inc.treasury.name if inc.treasury else '—',
+            'treasury': (inc.treasury.name if inc.treasury else (inc.bank_account.name if inc.bank_account else '—')),
             'status': inc.status,
             'status_display': inc.get_status_display(),
             'notes': inc.notes,
@@ -765,6 +806,8 @@ def incentive_create(request):
     payment_method = data.get('payment_method', 'cash')
     treasury_id    = data.get('treasury')
     treasury       = None
+    bank_account_id = data.get('bank_account')
+    bank_account    = None
 
     if itype == 'deduction':
         payout = 'with_salary'
@@ -777,10 +820,20 @@ def incentive_create(request):
             current_balance = treasury.current_balance or Decimal('0')
             if current_balance < amount:
                 return _err(f"رصيد الخزينة غير كافٍ. الرصيد الحالي: {current_balance:.2f} والمطلوب صرفه: {amount:.2f}.")
+        elif payment_method == 'bank':
+            if not bank_account_id:
+                return _err('الحوافز الفورية البنكية تتطلب تحديد الحساب البنكي')
+            bank_account = get_object_or_404(BankAccount, pk=bank_account_id, tenant=tenant, is_active=True)
+            current_balance = bank_account.current_balance or Decimal('0')
+            if current_balance < amount:
+                return _err(f"رصيد الحساب البنكي غير كافٍ. الرصيد الحالي: {current_balance:.2f} والمطلوب صرفه: {amount:.2f}.")
         elif treasury_id:
             treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
-    elif treasury_id:
-        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+    else:
+        if treasury_id:
+            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+        elif bank_account_id:
+            bank_account = get_object_or_404(BankAccount, pk=bank_account_id, tenant=tenant, is_active=True)
 
     from django.db import transaction
     try:
@@ -794,6 +847,7 @@ def incentive_create(request):
                 payout=payout,
                 payment_method=payment_method,
                 treasury=treasury,
+                bank_account=bank_account,
                 bank_reference=(data.get('bank_reference') or '').strip(),
                 date=data.get('date') or timezone.localdate(),
                 notes=(data.get('notes') or '').strip(),
@@ -816,6 +870,21 @@ def incentive_create(request):
                     inc.treasury_movement = mv
                     inc.status = 'paid'
                     inc.save(update_fields=['treasury_movement', 'status', 'updated_at'])
+            elif itype == 'bonus' and payout == 'immediate' and payment_method == 'bank' and bank_account:
+                mv = post_bank_account_disbursement(
+                    tenant=tenant,
+                    amount=amount,
+                    date=inc.date,
+                    reference_type='employee_incentive',
+                    reference_id=inc.pk,
+                    description=f'حافز {emp.name} — {description}',
+                    user=request.user,
+                    bank_account=bank_account,
+                )
+                if mv:
+                    inc.bank_account_movement = mv
+                    inc.status = 'paid'
+                    inc.save(update_fields=['bank_account_movement', 'status', 'updated_at'])
     except ValueError as e:
         return _err(str(e))
 
@@ -833,8 +902,10 @@ def incentive_pay(request, pk):
         return _err('الحافز ليس في حالة معلق')
     if inc.type != 'bonus':
         return _err('الخصومات لا تُصرف من الخزينة')
-    if not inc.treasury:
+    if inc.payment_method == 'cash' and not inc.treasury:
         return _err('يجب تحديد الخزينة')
+    if inc.payment_method == 'bank' and not inc.bank_account:
+        return _err('يجب تحديد الحساب البنكي')
     try:
         inc.pay()
     except ValueError as e:

@@ -21,6 +21,8 @@ from apps.purchases.models import SupplierLedger
 from apps.purchases.services import _apply_supplier_ledger
 from apps.treasury.models import Treasury, TreasuryMovement
 from apps.treasury.services import post_treasury_disbursement, post_treasury_receipt
+from apps.bank_accounts.models import BankAccount, BankAccountMovement
+from apps.bank_accounts.services import post_bank_account_disbursement, post_bank_account_receipt
 
 
 def _ensure_tenant(request):
@@ -380,6 +382,7 @@ def supplier_payments(request):
     ).order_by('name')
     treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False).order_by('name')
     hc_treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=True).order_by('name') if hc_mode else []
+    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name')
     stats = SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment').aggregate(
         total=Coalesce(
             Sum('amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
@@ -404,6 +407,7 @@ def supplier_payments(request):
     context = {
         'suppliers': suppliers,
         'treasuries': treasuries,
+        'bank_accounts': bank_accounts,
         'stats': {
             'total': SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment').count(),
             'total_amount': positive(stats['total']),
@@ -544,6 +548,14 @@ def supplier_payment_detail_api(request, pk):
         ).select_related('treasury').first()
         if treasury_movement:
             cash_treasury = treasury_movement.treasury.name
+    bank_account_name = None
+    if payment.reference_type == 'supplier_payment_bank':
+        bank_movement = BankAccountMovement.objects.for_tenant(tenant).filter(
+            reference_type=payment.reference_type,
+            reference_id=payment.id,
+        ).select_related('bank_account').first()
+        if bank_movement:
+            bank_account_name = bank_movement.bank_account.name
 
     supplier_currency = (payment.supplier.currency or '').strip()
     is_hc_supplier = _is_hc_supplier(tenant, supplier_currency)
@@ -562,6 +574,7 @@ def supplier_payment_detail_api(request, pk):
         'cancellation_note': cancellation.notes if cancellation else '',
         'cancellation_date': cancellation.entry_date.strftime('%Y-%m-%d') if cancellation else None,
         'cash_treasury': cash_treasury,
+        'bank_account': bank_account_name,
     }
     return _json_ok(data=response_data)
 
@@ -584,6 +597,7 @@ def supplier_payment_create_api(request):
         payment_date = body.get('payment_date') or timezone.localdate().isoformat()
         method = body.get('method', 'cash')
         treasury_id = body.get('treasury_id')
+        bank_account_id = body.get('bank_account_id')
         reference = str(body.get('reference', '') or '').strip()
         notes = str(body.get('notes', '') or '').strip()
         exchange_rate_input = body.get('exchange_rate')
@@ -690,6 +704,22 @@ def supplier_payment_create_api(request):
                 )
                 if not movement:
                     raise ValueError('تعذر تسجيل حركة الخزينة')
+            elif method == 'bank':
+                if not bank_account_id:
+                    raise ValueError('يجب اختيار الحساب البنكي عند الدفع بنكياً')
+                bank_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=int(bank_account_id))
+                movement = post_bank_account_disbursement(
+                    tenant=tenant,
+                    amount=local_amount,
+                    date=payment_date,
+                    reference_type=reference_type,
+                    reference_id=payment_entry.id if payment_entry else None,
+                    description=f'دفعة مورد {supplier.name}',
+                    user=request.user,
+                    bank_account=bank_account,
+                )
+                if not movement:
+                    raise ValueError('تعذر تسجيل حركة الحساب البنكي')
     except ValueError as e:
         return _json_error(str(e), status=400)
     except Exception:
@@ -746,6 +776,22 @@ def supplier_payment_cancel_api(request, pk):
                     description=f'إلغاء دفعة مورد {payment.supplier.name}',
                     user=request.user,
                     treasury=treasury_movement.treasury,
+                )
+        elif payment.reference_type == 'supplier_payment_bank':
+            bank_movement = BankAccountMovement.objects.for_tenant(tenant).filter(
+                reference_type=payment.reference_type,
+                reference_id=payment.id,
+            ).first()
+            if bank_movement:
+                post_bank_account_receipt(
+                    tenant=tenant,
+                    amount=bank_movement.amount,
+                    date=timezone.localdate(),
+                    reference_type=f'{payment.reference_type}_cancel',
+                    reference_id=payment.id,
+                    description=f'إلغاء دفعة مورد {payment.supplier.name}',
+                    user=request.user,
+                    bank_account=bank_movement.bank_account,
                 )
 
         _apply_supplier_ledger(

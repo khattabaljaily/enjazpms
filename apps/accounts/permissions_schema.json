@@ -115,6 +115,14 @@
         "view_treasury_transactions": "عرض حركات وسجل معاملات الخزينة",
         "transfer_treasuries": "تحويل الأموال بين الخزائن (بما فيها خزينة العملة الصعبة)"
     },
+    "الحسابات البنكية": {
+        "add_bank_accounts": "إضافة حساب بنكي جديد",
+        "change_bank_accounts": "تعديل بيانات الحساب البنكي",
+        "delete_bank_accounts": "حذف حساب بنكي",
+        "view_bank_accounts": "عرض الحسابات البنكية وأرصدتها",
+        "view_bank_account_transactions": "عرض حركات وسجل معاملات الحساب البنكي",
+        "transfer_bank_accounts": "تحويل الأموال بين الحسابات البنكية والخزينة"
+    },
     "المناديب": {
         "add_agents": "إضافة مندوب جديد",
         "change_agents": "تعديل بيانات المندوب",
@@ -220,6 +228,9 @@
         "view_treasury_balances_report": "تقرير أرصدة الخزائن",
         "view_treasury_movements_report": "تقرير حركة الخزائن",
         "view_treasury_statement_report": "كشف حساب خزينة",
+        "view_bank_account_balances_report": "تقرير أرصدة الحسابات البنكية",
+        "view_bank_account_movements_report": "تقرير حركة الحسابات البنكية",
+        "view_bank_account_statement_report": "كشف حساب بنكي",
         "view_income_statement_report": "قائمة الدخل (الأرباح والخسائر)"
     },
     "تقارير المناديب": {

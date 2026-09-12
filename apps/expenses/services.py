@@ -3,14 +3,14 @@ from decimal import Decimal
 from django.db import transaction
 
 from apps.treasury.services import post_treasury_disbursement, post_treasury_movement
+from apps.bank_accounts.services import post_bank_account_disbursement, post_bank_account_movement
 
 
 @transaction.atomic
 def confirm_expense(expense, user=None):
     """
     Confirm an expense.
-    Cash payments deduct from the linked treasury.
-    Bank payments do not affect treasury and are confirmed without a treasury movement.
+    Cash payments deduct from the linked treasury; bank payments deduct from the linked bank account.
     """
     if expense.status != expense.STATUS_DRAFT:
         raise ValueError('المصروف ليس في حالة مسودة.')
@@ -27,19 +27,34 @@ def confirm_expense(expense, user=None):
             treasury=expense.treasury,
         )
         expense.treasury_movement = movement
+        expense.bank_account_movement = None
+    elif expense.payment_method == expense.PAYMENT_BANK:
+        movement = post_bank_account_disbursement(
+            tenant=expense.tenant,
+            amount=expense.amount,
+            date=expense.expense_date,
+            reference_type='expense',
+            reference_id=expense.pk,
+            description=f'مصروف {expense.code}: {expense.description}',
+            user=user,
+            bank_account=expense.bank_account,
+        )
+        expense.bank_account_movement = movement
+        expense.treasury_movement = None
     else:
         expense.treasury_movement = None
+        expense.bank_account_movement = None
 
     expense.status = expense.STATUS_CONFIRMED
     expense.updated_by = user
-    expense.save(update_fields=['status', 'treasury_movement', 'updated_by', 'updated_at'])
+    expense.save(update_fields=['status', 'treasury_movement', 'bank_account_movement', 'updated_by', 'updated_at'])
     return expense
 
 
 @transaction.atomic
 def cancel_expense(expense, user=None):
     """
-    Cancel a confirmed expense: reverse the treasury movement.
+    Cancel a confirmed expense: reverse the treasury or bank account movement.
     """
     if expense.status not in (expense.STATUS_DRAFT, expense.STATUS_CONFIRMED):
         raise ValueError('لا يمكن إلغاء مصروف بهذه الحالة.')
@@ -59,7 +74,22 @@ def cancel_expense(expense, user=None):
         )
         expense.treasury_movement = None
 
+    if expense.bank_account_movement:
+        # Reverse: receipt back to bank account
+        post_bank_account_movement(
+            tenant=expense.tenant,
+            movement_type='receipt',
+            amount=expense.amount,
+            date=expense.expense_date,
+            reference_type='expense_cancel',
+            reference_id=expense.pk,
+            description=f'إلغاء مصروف {expense.code}',
+            user=user,
+            bank_account=expense.bank_account_movement.bank_account,
+        )
+        expense.bank_account_movement = None
+
     expense.status = expense.STATUS_CANCELLED
     expense.updated_by = user
-    expense.save(update_fields=['status', 'treasury_movement', 'updated_by', 'updated_at'])
+    expense.save(update_fields=['status', 'treasury_movement', 'bank_account_movement', 'updated_by', 'updated_at'])
     return expense

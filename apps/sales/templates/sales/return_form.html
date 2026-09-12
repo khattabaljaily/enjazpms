@@ -43,13 +43,20 @@
                 </div>
                 <div class="col-md-4">
                     <label class="cx-label">طريقة الاسترداد</label>
-                    <select id="refundMethod" class="cx-input">
+                    <select id="refundMethod" class="cx-input" onchange="toggleRefundBankHint()">
                         <option value="cash">نقداً</option>
                         <option value="bank">تحويل بنكي</option>
                         {% if invoice.customer %}
                         <option value="balance">مديونية العميل</option>
                         {% endif %}
                     </select>
+                    <small class="text-muted d-block mt-1 sales-field-hidden" id="refundBankHint">
+                        {% if invoice.bank_account %}
+                        سيُسترد إلى الحساب البنكي: <strong>{{ invoice.bank_account.name }}</strong>
+                        {% else %}
+                        <span class="text-danger">لا يوجد حساب بنكي محدد على الفاتورة الأصلية — لا يمكن الاسترداد بنكياً.</span>
+                        {% endif %}
+                    </small>
                 </div>
                 <div class="col-12">
                     <label class="cx-label">سبب الإرجاع</label>
@@ -137,6 +144,13 @@
 const INVOICE_PK = {{ invoice.pk }};
 const CSRF = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')?.[2];
 
+const INVOICE_HAS_BANK_ACCOUNT = {{ invoice.bank_account_id|yesno:"true,false" }};
+
+function toggleRefundBankHint() {
+    const method = document.getElementById('refundMethod').value;
+    document.getElementById('refundBankHint').classList.toggle('sales-field-hidden', method !== 'bank');
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.ret-sold-qty, .ret-returned-qty, .ret-returnable-qty').forEach(el => {
         const raw = el.dataset.value ?? el.textContent;
@@ -190,9 +204,15 @@ function submitReturn(action) {
 
     if (!lines.length) { showAlert('أضف كمية واحدة على الأقل للإرجاع', 'warning'); return; }
 
+    const refundMethod = document.getElementById('refundMethod').value;
+    if (refundMethod === 'bank' && !INVOICE_HAS_BANK_ACCOUNT) {
+        showAlert('لا يوجد حساب بنكي محدد على الفاتورة الأصلية — لا يمكن الاسترداد بنكياً', 'warning');
+        return;
+    }
+
     const header = {
         return_date: document.getElementById('returnDate').value,
-        refund_method: document.getElementById('refundMethod').value,
+        refund_method: refundMethod,
         reason: document.getElementById('returnReason').value,
     };
 

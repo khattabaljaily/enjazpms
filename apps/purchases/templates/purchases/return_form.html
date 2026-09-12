@@ -44,6 +44,10 @@
         <label class="cx-label">السبب</label>
         <input id="reason" class="cx-input" type="text" placeholder="سبب المرتجع">
       </div>
+      <div class="col-md-4" id="refundBankAccountWrap" style="display:none;">
+        <label class="cx-label">الحساب البنكي المستخدم</label>
+        <div class="cx-input" style="background:var(--surface-alt,#f3f4f6);">{{ invoice.bank_account.name|default:"— لا يوجد حساب بنكي محدد لأمر الشراء —" }}</div>
+      </div>
     </div>
 
     <div class="table-responsive">
@@ -106,6 +110,13 @@
 
   document.querySelectorAll('.js-ret-qty').forEach(function(i){ i.addEventListener('input', recalc); });
   recalc();
+
+  function toggleRefundBankAccountHint(){
+    document.getElementById('refundBankAccountWrap').style.display =
+      document.getElementById('refundMethod').value === 'bank' ? '' : 'none';
+  }
+  document.getElementById('refundMethod').addEventListener('change', toggleRefundBankAccountHint);
+  toggleRefundBankAccountHint();
 
   function submit(action){
     const lines=[];

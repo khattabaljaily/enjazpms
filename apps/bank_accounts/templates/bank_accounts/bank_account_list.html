@@ -1,0 +1,861 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/treasury.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-building-columns"></i></div>
+            <div>
+                <h1 class="cx-hero-title">الحسابات البنكية</h1>
+                <p class="cx-hero-desc">إدارة الحسابات البنكية وأرصدتها وحالتها التشغيلية</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <button type="button" class="cx-btn-secondary" id="btnOpenTransfer" data-require-perm="transfer_bank_accounts">
+                    <i class="fas fa-exchange-alt"></i><span>تحويل</span>
+                </button>
+                <button type="button" class="cx-btn-add" id="btnOpenCreateBankAccount" data-require-perm="add_bank_accounts">
+                    <i class="fas fa-plus"></i><span>إضافة حساب بنكي</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary"><i class="fas fa-building-columns"></i><strong id="kpiTotal">{{ stats.total }}</strong><span>حساب بنكي</span></span>
+        <span class="cx-stat-badge cx-stat-badge--success"><i class="fas fa-check-circle"></i><strong id="kpiActive">{{ stats.active }}</strong><span>نشطة</span></span>
+        <span class="cx-stat-badge cx-stat-badge--muted"><i class="fas fa-pause-circle"></i><strong id="kpiInactive">{{ stats.inactive }}</strong><span>موقوفة</span></span>
+        <span class="cx-stat-badge cx-stat-badge--info"><i class="fas fa-star"></i><strong id="kpiDefault">{{ stats.default }}</strong><span>افتراضي</span></span>
+    </div>
+</div>
+
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="bankAccountSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو البنك أو رقم الحساب...">
+        </div>
+        <div class="cx-toolbar-end">
+            <div class="cx-filter-tabs" role="group">
+                <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
+                <button type="button" class="cx-filter-tab" data-status="active">نشطة</button>
+                <button type="button" class="cx-filter-tab" data-status="inactive">موقوفة</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="bankAccountTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>الحساب</th>
+                    <th>البنك</th>
+                    <th>رقم الحساب</th>
+                    <th>الآيبان</th>
+                    <th>الرصيد الحالي</th>
+                    <th>الحالة</th>
+                    <th>الافتراضي</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div id="bankAccountCardsMobile" class="treasury-mobile-card-list d-none p-3" aria-live="polite"></div>
+</div>
+
+</div>
+
+<div class="modal fade" id="bankAccountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <form id="bankAccountForm" novalidate>
+                {% csrf_token %}
+                <input type="hidden" id="bankAccountId" value="">
+                <div class="cx-modal-main">
+                    <div class="cx-modal-header">
+                        <div>
+                            <h5 class="cx-modal-title" id="bankAccountModalTitle">إضافة حساب بنكي</h5>
+                        </div>
+                        <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="cx-modal-body">
+                        <div class="alert alert-danger d-none js-form-errors mb-4"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_name">{{ form.name.label }} <sup class="cx-required">*</sup></label>
+                                {{ form.name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_bank_name">{{ form.bank_name.label }}</label>
+                                {{ form.bank_name }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_account_number">{{ form.account_number.label }}</label>
+                                {{ form.account_number }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_iban">{{ form.iban.label }}</label>
+                                {{ form.iban }}
+                            </div>
+                            <div class="col-12">
+                                <label class="cx-label" for="id_notes">{{ form.notes.label }}</label>
+                                {{ form.notes }}
+                            </div>
+                            <!-- الرصيد الافتتاحي -->
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_opening_balance">الرصيد الافتتاحي</label>
+                                <input type="number" id="id_opening_balance" name="opening_balance"
+                                       class="form-control cx-input text-end" min="0" step="0.01" placeholder="0.00">
+                                <div class="form-text text-muted" style="font-size:.78rem;margin-top:.3rem;">
+                                    يظهر كأول حركة في كشف الحساب البنكي
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_opening_balance_date">تاريخ الرصيد الافتتاحي</label>
+                                <input type="date" id="id_opening_balance_date" name="opening_balance_date"
+                                       class="form-control cx-input" value="{{ today }}">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_is_default">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ form.is_default.label }}</span>
+                                        <span class="cx-toggle-desc">يُستخدم افتراضياً في الحركات البنكية</span>
+                                    </div>
+                                    {{ form.is_default }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-toggle-card" for="id_is_active">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ form.is_active.label }}</span>
+                                        <span class="cx-toggle-desc">الحساب النشط متاح في العمليات اليومية</span>
+                                    </div>
+                                    {{ form.is_active }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cx-modal-footer">
+                        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="cx-btn-primary" id="bankAccountSubmitBtn"><i class="fas fa-check me-1"></i>حفظ</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteBankAccountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+        <div class="modal-content cx-delete-modal">
+            <div class="cx-delete-body">
+                <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+                <h5 class="cx-delete-title">حذف الحساب البنكي؟</h5>
+                <p class="cx-delete-desc">ستقوم بحذف <strong id="deleteBankAccountName"></strong> نهائياً.</p>
+                <input type="hidden" id="deleteBankAccountId" value="">
+            </div>
+            <div class="cx-delete-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="confirmDeleteBankAccountBtn">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="transferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-main">
+                <div class="cx-modal-header">
+                    <div>
+                        <h5 class="cx-modal-title">
+                            <i class="fas fa-exchange-alt me-2" style="color:#d97706;"></i>
+                            تحويل الأموال
+                        </h5>
+                    </div>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cx-modal-body">
+                    <div class="alert alert-danger d-none js-transfer-errors mb-3"></div>
+
+                    <!-- Transfer type selector -->
+                    <div class="d-flex gap-2 mb-4" id="transferTypeBtns">
+                        <button type="button" class="flex-fill btn btn-outline-warning fw-semibold js-type-btn active" data-type="bank_to_bank">
+                            <span style="font-size:1.05rem;letter-spacing:.5px;"><i class="fas fa-building-columns me-1"></i> بين حسابين بنكيين</span>
+                            <small class="d-block fw-normal opacity-75 mt-1">تحويل من حساب بنكي إلى حساب بنكي آخر</small>
+                        </button>
+                        <button type="button" class="flex-fill btn btn-outline-success fw-semibold js-type-btn" data-type="treasury_bank">
+                            <span style="font-size:1.05rem;letter-spacing:.5px;"><i class="fas fa-vault me-1"></i> مع الخزينة</span>
+                            <small class="d-block fw-normal opacity-75 mt-1">تحويل بين الخزينة والحساب البنكي</small>
+                        </button>
+                    </div>
+
+                    <!-- ── Bank to bank ───────────────────────────── -->
+                    <div id="panelBankToBank">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="cx-label">من حساب بنكي</label>
+                                <div class="cx-field">
+                                    <span class="cx-field__icon"><i class="fas fa-building-columns"></i></span>
+                                    <select id="transferFromBankAccount" class="form-select cx-input">
+                                        {% for b in transfer_bank_accounts %}
+                                        <option value="{{ b.id }}">{{ b.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label">إلى حساب بنكي</label>
+                                <div class="cx-field">
+                                    <span class="cx-field__icon"><i class="fas fa-building-columns"></i></span>
+                                    <select id="transferToBankAccount" class="form-select cx-input">
+                                        {% for b in transfer_bank_accounts %}
+                                        <option value="{{ b.id }}">{{ b.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label">المبلغ المحوَّل</label>
+                                <div class="cx-field">
+                                    <span class="cx-field__icon"><i class="fas fa-money-bill"></i></span>
+                                    <input type="number" id="transferFromAmount" class="form-control cx-input" step="0.01" min="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label">المبلغ المُستَلَم</label>
+                                <div class="cx-field">
+                                    <span class="cx-field__icon"><i class="fas fa-money-bill-wave"></i></span>
+                                    <input type="number" id="transferToAmount" class="form-control cx-input" step="0.01" min="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label">سعر الصرف</label>
+                                <div class="cx-field">
+                                    <span class="cx-field__icon"><i class="fas fa-chart-line"></i></span>
+                                    <input type="number" id="transferRate" class="form-control cx-input" step="0.0001" min="0.0001" value="1" placeholder="مثال: 1">
+                                </div>
+                                <small class="text-muted">وحدات العملة الهدف مقابل وحدة واحدة من عملة المصدر</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Treasury <-> bank ──────────────────────── -->
+                    <div id="panelTreasuryBank" style="display:none;">
+                        <div class="d-flex gap-2 mb-3" id="tbDirectionBtns">
+                            <button type="button" class="flex-fill btn btn-outline-secondary fw-semibold js-tb-dir-btn active" data-dir="treasury_to_bank">
+                                من الخزينة إلى الحساب البنكي
+                            </button>
+                            <button type="button" class="flex-fill btn btn-outline-secondary fw-semibold js-tb-dir-btn" data-dir="bank_to_treasury">
+                                من الحساب البنكي إلى الخزينة
+                            </button>
+                        </div>
+                        <input type="hidden" id="tbDirection" value="treasury_to_bank">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="cx-label">الخزينة</label>
+                                <div class="cx-field">
+                                    <span class="cx-field__icon"><i class="fas fa-vault"></i></span>
+                                    <select id="tbTreasury" class="form-select cx-input">
+                                        {% for t in transfer_treasuries %}
+                                        <option value="{{ t.id }}">{{ t.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label">الحساب البنكي</label>
+                                <div class="cx-field">
+                                    <span class="cx-field__icon"><i class="fas fa-building-columns"></i></span>
+                                    <select id="tbBankAccount" class="form-select cx-input">
+                                        {% for b in transfer_bank_accounts %}
+                                        <option value="{{ b.id }}">{{ b.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label">المبلغ</label>
+                                <div class="cx-field">
+                                    <span class="cx-field__icon"><i class="fas fa-money-bill"></i></span>
+                                    <input type="number" id="tbAmount" class="form-control cx-input" step="0.01" min="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label class="cx-label">تاريخ التحويل</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-calendar"></i></span>
+                                <input type="date" id="transferDate" class="form-control cx-input">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">ملاحظات (اختياري)</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-align-left"></i></span>
+                                <input type="text" id="transferNotes" class="form-control cx-input" placeholder="مثال: إيداع نقدي في البنك">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="cx-btn-primary" id="confirmTransferBtn">
+                        <i class="fas fa-exchange-alt me-1"></i> تنفيذ التحويل
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="bankAccountLedgerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered cx-view-dialog cx-ledger-dialog">
+        <div class="modal-content cx-view-modal">
+            <div class="cx-view-header">
+                <div class="cx-view-header-content">
+                    <div>
+                        <h5 class="cx-view-title">سجل حركات الحساب البنكي</h5>
+                        <p class="cx-view-subtitle" id="bankAccountLedgerSubtitle">—</p>
+                    </div>
+                </div>
+                <button type="button" class="cx-view-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="cx-view-body">
+                <div class="table-responsive cx-table-wrap">
+                    <table class="cx-table">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>النوع</th>
+                                <th>المرجع / الوصف</th>
+                                <th>المبلغ</th>
+                                <th>الرصيد</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bankAccountLedgerBody">
+                            <tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="cx-view-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+    const hasPerm = window.hasPerm || (function(){ return false; });
+
+    const BANK_ACCOUNT_TABLE_API = "{% url 'bank_accounts:table_api' %}";
+    const BANK_ACCOUNT_CREATE_API = "{% url 'bank_accounts:create_api' %}";
+    const BANK_ACCOUNT_DETAIL_API_BASE = "/bank-accounts/api/";
+
+    const getCookie = (name) => {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    };
+
+    const bankAccountModalEl = document.getElementById('bankAccountModal');
+    const deleteModalEl = document.getElementById('deleteBankAccountModal');
+    const ledgerModalEl = document.getElementById('bankAccountLedgerModal');
+    const transferModalEl = document.getElementById('transferModal');
+
+    // Move modals to body level
+    [bankAccountModalEl, deleteModalEl, ledgerModalEl, transferModalEl].forEach(function (el) {
+        if (el && el.parentElement !== document.body) {
+            document.body.appendChild(el);
+        }
+    });
+
+    const bankAccountModal = new bootstrap.Modal(bankAccountModalEl);
+    const deleteModal = new bootstrap.Modal(deleteModalEl);
+    const ledgerModal = new bootstrap.Modal(ledgerModalEl);
+    const transferModal = transferModalEl ? new bootstrap.Modal(transferModalEl) : null;
+
+    const $form = $('#bankAccountForm');
+    const $submitBtn = $('#bankAccountSubmitBtn');
+    const $idInput = $('#bankAccountId');
+    let currentStatus = '';
+    let bankAccountTable;
+
+    function resetForm() {
+        $form[0].reset();
+        $idInput.val('');
+        document.getElementById('id_is_active').checked = true;
+        document.getElementById('id_is_default').checked = false;
+        document.getElementById('id_is_default').disabled = false;
+        document.getElementById('id_is_active').disabled = false;
+        document.getElementById('id_opening_balance').value = '';
+        document.getElementById('id_opening_balance_date').value = '{{ today }}';
+        Enjaz.clearFormErrors($form);
+    }
+
+    function openCreate() {
+        resetForm();
+        document.getElementById('bankAccountModalTitle').textContent = 'إضافة حساب بنكي';
+        $submitBtn.html('<i class="fas fa-check me-1"></i>حفظ');
+        bankAccountModal.show();
+    }
+
+    function openEdit(id) {
+        resetForm();
+        fetch(`${BANK_ACCOUNT_DETAIL_API_BASE}${id}/detail/`)
+            .then(r => r.json())
+            .then(resp => {
+                if (!resp.success) {
+                    Enjaz.toast(resp.message || 'تعذر تحميل البيانات', 'error');
+                    return;
+                }
+                const d = resp.data;
+                $idInput.val(d.id);
+                document.getElementById('id_name').value = d.name || '';
+                document.getElementById('id_bank_name').value = d.bank_name || '';
+                document.getElementById('id_account_number').value = d.account_number || '';
+                document.getElementById('id_iban').value = d.iban || '';
+                document.getElementById('id_notes').value = d.notes || '';
+                document.getElementById('id_is_default').checked = !!d.is_default;
+                document.getElementById('id_is_active').checked = !!d.is_active;
+                const obVal = parseFloat(d.opening_balance || 0);
+                document.getElementById('id_opening_balance').value = obVal > 0 ? obVal : '';
+                document.getElementById('id_opening_balance_date').value = d.opening_balance_date || '';
+
+                document.getElementById('bankAccountModalTitle').textContent = 'تعديل حساب بنكي';
+                $submitBtn.html('<i class="fas fa-check me-1"></i>حفظ التعديلات');
+                bankAccountModal.show();
+            })
+            .catch(() => Enjaz.toast('تعذر تحميل البيانات', 'error'));
+    }
+
+    function openDelete(id, name) {
+        document.getElementById('deleteBankAccountId').value = id;
+        document.getElementById('deleteBankAccountName').textContent = name;
+        deleteModal.show();
+    }
+
+    function loadBankAccountTransactions(id) {
+        const tbody = document.getElementById('bankAccountLedgerBody');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">جاري التحميل...</td></tr>';
+
+        fetch(`${BANK_ACCOUNT_DETAIL_API_BASE}${id}/transactions/`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
+            .then(r => r.json())
+            .then(resp => {
+                if (!resp.success) {
+                    const msg = resp.message || 'ليس لديك صلاحية لعرض الحركات';
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-warning py-4"><i class="fas fa-lock me-2"></i>${msg}</td></tr>`;
+                    return;
+                }
+                if (!Array.isArray(resp.data) || !resp.data.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = resp.data.map(row => {
+                    const key = row.movement_type_key || '';
+                    let rowBg = 'transparent';
+                    let badgeStyle = 'background:rgba(246,168,33,.15);color:#a8660c;';
+                    let amtColor = '#111827';
+                    if (key === 'receipt') {
+                        rowBg = 'rgba(17,153,142,.05)';
+                        badgeStyle = 'background:rgba(17,153,142,.15);color:#0d7a72;';
+                        amtColor = '#11998e';
+                    } else if (key === 'disbursement') {
+                        rowBg = 'rgba(239,68,68,.04)';
+                        badgeStyle = 'background:rgba(239,68,68,.15);color:#dc2626;';
+                        amtColor = '#ef4444';
+                    }
+                    const refHtml = row.reference_type
+                        ? `<span style="color:#c9840f;font-weight:600;">${row.reference_type}</span>${row.description ? ' — <span style="color:#6b7280;">' + row.description + '</span>' : ''}`
+                        : (row.description ? `<span style="color:#6b7280;">${row.description}</span>` : '—');
+                    return `<tr style="background:${rowBg};">
+                        <td style="font-size:.8rem;color:#6b7280;">${row.movement_date || '—'}</td>
+                        <td><span class="badge" style="${badgeStyle}font-size:.72rem;border-radius:6px;padding:.25rem .55rem;font-weight:700;">${row.movement_type || '—'}</span></td>
+                        <td style="font-size:.8rem;">${refHtml}</td>
+                        <td style="font-weight:700;color:${amtColor};">${Enjaz.formatMoney(row.amount || 0)}</td>
+                        <td style="font-weight:700;color:#c9840f;">${Enjaz.formatMoney(row.running_balance || 0)}</td>
+                    </tr>`;
+                }).join('');
+            })
+            .catch(() => {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-warning py-4"><i class="fas fa-lock me-2"></i>ليس لديك صلاحية لعرض الحركات</td></tr>';
+            });
+    }
+
+    function openBankAccountLedger(id) {
+        fetch(`${BANK_ACCOUNT_DETAIL_API_BASE}${id}/detail/`)
+            .then(r => r.json())
+            .then(resp => {
+                if (!resp.success) {
+                    Enjaz.toast(resp.message || 'تعذر تحميل البيانات', 'error');
+                    return;
+                }
+                const d = resp.data;
+                document.getElementById('bankAccountLedgerSubtitle').textContent = `${d.name || '—'} (${d.bank_name || '—'}) — الرصيد الحالي: ${Enjaz.formatMoney(d.current_balance || 0)}`;
+                loadBankAccountTransactions(id);
+                ledgerModal.show();
+            })
+            .catch(() => Enjaz.toast('تعذر تحميل البيانات', 'error'));
+    }
+
+    /* ── Mobile card renderer ───────────────────────────────── */
+    function renderMobileBankAccountCards(rows) {
+        const $cards = $('#bankAccountCardsMobile');
+        if (!$cards.length) return;
+
+        if (!rows || !rows.length) {
+            $cards.html('<div class="cx-empty-state">لا توجد حسابات بنكية للعرض</div>');
+            return;
+        }
+
+        const cardsHtml = rows.map(function (r) {
+            const balance = Enjaz.formatMoney(r.current_balance || 0);
+            const balanceClass = Enjaz.parseNumber(r.current_balance || 0) >= 0 ? 'cx-treasury-card-balance--positive' : 'cx-treasury-card-balance--negative';
+            const status = r.is_active
+                ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشطة</span>'
+                : '<span class="cx-status cx-status--off"><span class="cx-status-dot"></span>موقوفة</span>';
+            const defaultBadge = r.is_default
+                ? '<span class="cx-treasury-card-badge cx-treasury-card-badge--default">افتراضي</span>'
+                : '';
+
+            return `<article class="cx-treasury-card">
+                <div class="cx-treasury-card-head">
+                    <div class="cx-treasury-card-title-wrap">
+                        <h2 class="cx-treasury-card-title"><i class="fas fa-building-columns me-2 text-muted"></i>${r.name || '—'}</h2>
+                        <p class="cx-treasury-card-code">${r.bank_name || '—'} <code>${r.account_number || '—'}</code></p>
+                        ${defaultBadge}
+                    </div>
+                    ${status}
+                </div>
+                <div class="cx-treasury-card-meta">
+                    <div class="cx-treasury-card-balance ${balanceClass}">
+                        <span class="cx-treasury-card-balance-label">الرصيد الحالي</span>
+                        <strong class="cx-treasury-card-balance-value">${balance}</strong>
+                    </div>
+                </div>
+                <div class="cx-treasury-card-actions">
+                    <button class="cxr-act cxr-act--view js-view-bank-account" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>
+                    ${hasPerm('change_bank_accounts') ? `<button class="cxr-act js-edit-bank-account" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${hasPerm('delete_bank_accounts') ? (!r.is_default ? `<button class="cxr-act cxr-act--del js-delete-bank-account" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : '') : ''}
+                </div>
+            </article>`;
+        }).join('');
+
+        $cards.html(cardsHtml);
+    }
+
+    /* ── Currency symbols map ────────────────────────────────────── */
+    const CURRENCY_SYMBOLS = {{ currency_symbols_json|safe }};
+    function curSym(code) {
+        return CURRENCY_SYMBOLS[(code || '').toUpperCase()] || code || '';
+    }
+
+    /* ── DataTable ──────────────────────────────────────────── */
+    bankAccountTable = $('#bankAccountTable').DataTable({
+        processing: true,
+        serverSide: true,
+        searching: true,
+        ordering: true,
+        dom: '<"d-none"f><"d-none"l>rt<"cx-dt-bottom"ip>',
+        language: {
+            processing: 'جاري المعالجة...',
+            zeroRecords: 'لا توجد نتائج',
+            emptyTable: 'لا توجد حسابات بنكية بعد',
+            paginate: { previous: 'السابق', next: 'التالي' }
+        },
+        ajax: {
+            url: BANK_ACCOUNT_TABLE_API,
+            data: function (d) {
+                d.status = currentStatus;
+            }
+        },
+        columns: [
+            { data: 'name' },
+            { data: 'bank_name' },
+            { data: 'account_number' },
+            { data: 'iban' },
+            { data: 'current_balance', className: 'text-end', render: (v, _, row) => `${Enjaz.formatMoney(v || 0)} <span class="text-muted" style="font-size:.8rem;">${curSym(row.currency)}</span>` },
+            { data: 'is_active', render: v => v ? '<span class="cx-badge cx-badge--success">نشطة</span>' : '<span class="cx-badge cx-badge--muted">موقوفة</span>' },
+            { data: 'is_default', render: v => v ? '<span class="cx-badge cx-badge--primary">افتراضي</span>' : '—' },
+            {
+                data: null,
+                orderable: false,
+                searchable: false,
+                className: 'text-center',
+                render: function(_, __, row) {
+                    const canDelete = !row.is_default;
+                    return `<div class="cx-actions">
+                        <button class="cx-btn-icon" onclick="window.openBankAccountLedger(${row.id})" title="السجل"><i class="fas fa-list"></i></button>
+                        ${hasPerm('change_bank_accounts') ? `<button class="cx-btn-icon" onclick="window.openEdit(${row.id})" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
+                        ${hasPerm('delete_bank_accounts') ? (canDelete ? `<button class="cx-btn-icon cx-btn-icon--danger" onclick="window.openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>') : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
+                    </div>`;
+                }
+            }
+        ],
+        order: [[0, 'asc']],
+        pageLength: 25,
+        drawCallback: function () {
+            renderMobileBankAccountCards(bankAccountTable.rows({ page: 'current' }).data().toArray());
+        }
+    });
+
+    /* ── Event Listeners ────────────────────────────────────── */
+    document.getElementById('btnOpenCreateBankAccount').addEventListener('click', openCreate);
+
+    document.querySelectorAll('.cx-filter-tab').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.cx-filter-tab').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentStatus = this.dataset.status || '';
+            bankAccountTable.ajax.reload();
+        });
+    });
+
+    document.getElementById('bankAccountSearchInput').addEventListener('input', function () {
+        bankAccountTable.search(this.value).draw();
+    });
+
+    $form.on('submit', function (e) {
+        e.preventDefault();
+        const id = $idInput.val();
+        const url = id ? `${BANK_ACCOUNT_DETAIL_API_BASE}${id}/update/` : BANK_ACCOUNT_CREATE_API;
+
+        Enjaz.clearFormErrors($form);
+        const orig = $submitBtn.html();
+        Enjaz.showLoading($submitBtn);
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body: new FormData($form[0]),
+        })
+        .then(r => r.json())
+        .then(resp => {
+            Enjaz.hideLoading($submitBtn, orig);
+            if (resp.success) {
+                bankAccountModal.hide();
+                Enjaz.toast(resp.message || 'تم الحفظ بنجاح', 'success');
+                bankAccountTable.ajax.reload(null, false);
+                return;
+            }
+            const box = document.querySelector('.js-form-errors');
+            box.classList.remove('d-none');
+            box.textContent = resp.message || 'تعذر الحفظ';
+        })
+        .catch(() => {
+            Enjaz.hideLoading($submitBtn, orig);
+            Enjaz.toast('حدث خطأ في الاتصال', 'error');
+        });
+    });
+
+    document.getElementById('confirmDeleteBankAccountBtn').addEventListener('click', function () {
+        const id = document.getElementById('deleteBankAccountId').value;
+        fetch(`${BANK_ACCOUNT_DETAIL_API_BASE}${id}/delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        })
+        .then(r => r.json())
+        .then(resp => {
+            if (resp.success) {
+                deleteModal.hide();
+                Enjaz.toast(resp.message || 'تم الحذف', 'success');
+                bankAccountTable.ajax.reload(null, false);
+            } else {
+                Enjaz.toast(resp.message || 'تعذر الحذف', 'error');
+            }
+        })
+        .catch(() => Enjaz.toast('حدث خطأ في الاتصال', 'error'));
+    });
+
+    // Make functions global
+    window.openEdit = openEdit;
+    window.openDelete = openDelete;
+    window.openBankAccountLedger = openBankAccountLedger;
+
+    /* ── Transfer Modal ─────────────────────────────────────────── */
+    const TRANSFER_API = "{% url 'bank_accounts:transfer_api' %}";
+    const TREASURY_TRANSFER_API = "{% url 'bank_accounts:treasury_transfer_api' %}";
+
+    const transferDateEl = document.getElementById('transferDate');
+
+    function todayStr() {
+        return new Date().toISOString().split('T')[0];
+    }
+
+    let currentTransferType = 'bank_to_bank';
+
+    document.querySelectorAll('.js-type-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.js-type-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentTransferType = this.dataset.type;
+            document.getElementById('panelBankToBank').style.display = currentTransferType === 'bank_to_bank' ? '' : 'none';
+            document.getElementById('panelTreasuryBank').style.display = currentTransferType === 'treasury_bank' ? '' : 'none';
+            document.querySelector('.js-transfer-errors')?.classList.add('d-none');
+        });
+    });
+
+    document.querySelectorAll('.js-tb-dir-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.js-tb-dir-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById('tbDirection').value = this.dataset.dir;
+        });
+    });
+
+    // Auto-compute amounts based on exchange rate
+    document.getElementById('transferFromAmount')?.addEventListener('input', function () {
+        const rate = parseFloat(document.getElementById('transferRate').value) || 0;
+        const fromAmt = parseFloat(this.value) || 0;
+        if (rate > 0 && fromAmt > 0) {
+            document.getElementById('transferToAmount').value = (fromAmt * rate).toFixed(2);
+        }
+    });
+    document.getElementById('transferToAmount')?.addEventListener('input', function () {
+        const rate = parseFloat(document.getElementById('transferRate').value) || 0;
+        const toAmt = parseFloat(this.value) || 0;
+        if (rate > 0 && toAmt > 0) {
+            document.getElementById('transferFromAmount').value = (toAmt / rate).toFixed(2);
+        }
+    });
+    document.getElementById('transferRate')?.addEventListener('input', function () {
+        const rate = parseFloat(this.value) || 0;
+        const fromAmt = parseFloat(document.getElementById('transferFromAmount').value) || 0;
+        if (rate > 0 && fromAmt > 0) {
+            document.getElementById('transferToAmount').value = (fromAmt * rate).toFixed(2);
+        }
+    });
+
+    function resetTransferModal() {
+        document.querySelectorAll('.js-type-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.js-type-btn[data-type="bank_to_bank"]')?.classList.add('active');
+        currentTransferType = 'bank_to_bank';
+        document.getElementById('panelBankToBank').style.display = '';
+        document.getElementById('panelTreasuryBank').style.display = 'none';
+
+        document.getElementById('transferFromAmount').value = '';
+        document.getElementById('transferToAmount').value = '';
+        document.getElementById('transferRate').value = 1;
+        document.getElementById('tbAmount').value = '';
+        document.getElementById('tbDirection').value = 'treasury_to_bank';
+        document.querySelectorAll('.js-tb-dir-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.js-tb-dir-btn[data-dir="treasury_to_bank"]')?.classList.add('active');
+        document.getElementById('transferNotes').value = '';
+        if (transferDateEl) transferDateEl.value = todayStr();
+        document.querySelector('.js-transfer-errors')?.classList.add('d-none');
+    }
+
+    function openTransferModal() {
+        resetTransferModal();
+        transferModal?.show();
+    }
+
+    document.getElementById('btnOpenTransfer')?.addEventListener('click', openTransferModal);
+
+    document.getElementById('confirmTransferBtn')?.addEventListener('click', function () {
+        const errEl = document.querySelector('.js-transfer-errors');
+        function showErr(msg) { if (errEl) { errEl.textContent = msg; errEl.classList.remove('d-none'); } }
+
+        const transferDate = document.getElementById('transferDate').value;
+        const notes = document.getElementById('transferNotes').value.trim();
+        if (!transferDate) { showErr('يرجى تحديد تاريخ التحويل'); return; }
+
+        const btn = this;
+        const origHtml = btn.innerHTML;
+
+        function doRequest(url, body) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري التحويل...';
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(body),
+            })
+            .then(r => r.json().catch(() => ({ success: false, message: `خطأ من الخادم (${r.status})` })))
+            .then(resp => {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+                if (resp.success) {
+                    transferModal?.hide();
+                    Enjaz.toast(resp.message || 'تم التحويل بنجاح', 'success');
+                    bankAccountTable.ajax.reload(null, false);
+                } else {
+                    showErr(resp.message || 'تعذر التحويل');
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+                showErr('تعذر الاتصال بالخادم — تحقق من الاتصال وأعد المحاولة');
+                console.error('Transfer error:', err);
+            });
+        }
+
+        if (currentTransferType === 'bank_to_bank') {
+            const fromId = document.getElementById('transferFromBankAccount').value;
+            const toId = document.getElementById('transferToBankAccount').value;
+            const fromAmount = parseFloat(document.getElementById('transferFromAmount').value) || 0;
+            const toAmount = parseFloat(document.getElementById('transferToAmount').value) || 0;
+            const rate = parseFloat(document.getElementById('transferRate').value) || 0;
+
+            if (!fromId || !toId) { showErr('يرجى اختيار الحسابين البنكيين'); return; }
+            if (fromId === toId) { showErr('لا يمكن التحويل من الحساب إلى نفسه'); return; }
+            if (!fromAmount || !toAmount || !rate) { showErr('يرجى تعبئة المبالغ وسعر الصرف'); return; }
+            errEl?.classList.add('d-none');
+
+            doRequest(TRANSFER_API, {
+                from_bank_account: fromId, to_bank_account: toId,
+                from_amount: fromAmount, to_amount: toAmount,
+                exchange_rate: rate, transfer_date: transferDate, notes: notes,
+            });
+        } else {
+            const direction = document.getElementById('tbDirection').value;
+            const treasuryId = document.getElementById('tbTreasury').value;
+            const bankAccountId = document.getElementById('tbBankAccount').value;
+            const amount = parseFloat(document.getElementById('tbAmount').value) || 0;
+
+            if (!treasuryId) { showErr('يرجى اختيار الخزينة'); return; }
+            if (!bankAccountId) { showErr('يرجى اختيار الحساب البنكي'); return; }
+            if (!amount) { showErr('يرجى تعبئة المبلغ'); return; }
+            errEl?.classList.add('d-none');
+
+            doRequest(TREASURY_TRANSFER_API, {
+                direction: direction, treasury_id: treasuryId, bank_account_id: bankAccountId,
+                amount: amount, transfer_date: transferDate, notes: notes,
+            });
+        }
+    });
+})();
+</script>
+{% endblock %}

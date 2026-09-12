@@ -23,6 +23,7 @@ from apps.sales.services import (
     reverse_customer_payment_by_ledger_entry,
 )
 from apps.treasury.models import Treasury, TreasuryMovement
+from apps.bank_accounts.models import BankAccount, BankAccountMovement
 
 
 def _ensure_tenant(request):
@@ -320,6 +321,7 @@ def customer_payments(request):
         )
     ).order_by('name')
     treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False).order_by('name')
+    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name')
     stats = CustomerLedger.objects.for_tenant(tenant).filter(entry_type='payment').aggregate(
         total=Coalesce(
             Sum('amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
@@ -344,6 +346,7 @@ def customer_payments(request):
     context = {
         'customers': customers,
         'treasuries': treasuries,
+        'bank_accounts': bank_accounts,
         'stats': {
             'total': CustomerLedger.objects.for_tenant(tenant).filter(entry_type='payment').count(),
             'total_amount': positive(stats['total']),
@@ -483,7 +486,9 @@ def customer_payment_detail_api(request, pk):
         linked_sale_payment = SalePayment.objects.for_tenant(tenant).filter(pk=payment.reference_id).first()
 
     is_hard = payment.reference_type.endswith('_cash')
+    is_bank = payment.reference_type.endswith('_bank')
     cash_treasury = None
+    bank_account_name = None
     cancellation = None
     if linked_sale_payment:
         if is_hard:
@@ -492,6 +497,12 @@ def customer_payment_detail_api(request, pk):
             ).select_related('treasury').first()
             if treasury_movement:
                 cash_treasury = treasury_movement.treasury.name
+        elif is_bank:
+            bank_movement = BankAccountMovement.objects.for_tenant(tenant).filter(
+                reference_type='sale_payment', reference_id=linked_sale_payment.id,
+            ).select_related('bank_account').first()
+            if bank_movement:
+                bank_account_name = bank_movement.bank_account.name
         if linked_sale_payment.is_reversed:
             cancellation = CustomerLedger.objects.for_tenant(tenant).filter(
                 reference_type=payment.reference_type, reference_id=payment.reference_id, is_reversal=True,
@@ -507,6 +518,12 @@ def customer_payment_detail_api(request, pk):
             ).select_related('treasury').first()
             if treasury_movement:
                 cash_treasury = treasury_movement.treasury.name
+        elif is_bank:
+            bank_movement = BankAccountMovement.objects.for_tenant(tenant).filter(
+                reference_type=payment.reference_type, reference_id=payment.id,
+            ).select_related('bank_account').first()
+            if bank_movement:
+                bank_account_name = bank_movement.bank_account.name
 
     response_data = {
         'id': payment.id,
@@ -519,6 +536,7 @@ def customer_payment_detail_api(request, pk):
         'cancellation_note': cancellation.notes if cancellation else '',
         'cancellation_date': cancellation.entry_date.strftime('%Y-%m-%d') if cancellation else None,
         'cash_treasury': cash_treasury,
+        'bank_account': bank_account_name,
     }
     return _json_ok(data=response_data)
 
@@ -541,6 +559,7 @@ def customer_payment_create_api(request):
         payment_date = body.get('payment_date') or timezone.localdate().isoformat()
         method = body.get('method', 'cash')
         treasury_id = body.get('treasury_id')
+        bank_account_id = body.get('bank_account_id')
         reference = str(body.get('reference', '') or '').strip()
         notes = str(body.get('notes', '') or '').strip()
     except (TypeError, ValueError, json.JSONDecodeError) as e:
@@ -555,16 +574,21 @@ def customer_payment_create_api(request):
         note_text = f"{note_text} | مرجع: {reference}" if note_text else f"مرجع: {reference}"
 
     treasury = None
+    bank_account = None
     if method == 'cash':
         if not treasury_id:
             return _json_error('يجب اختيار الخزينة عند دفع نقداً')
         treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False), pk=int(treasury_id))
+    elif method == 'bank':
+        if not bank_account_id:
+            return _json_error('يجب اختيار الحساب البنكي عند الدفع بنكياً')
+        bank_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=int(bank_account_id))
 
     try:
         allocation = record_customer_payment_allocated(
             tenant=tenant, customer=customer, amount=amount, method=method,
             date=payment_date, reference=reference, notes=note_text,
-            user=request.user, treasury=treasury,
+            user=request.user, treasury=treasury, bank_account=bank_account,
         )
     except ValueError as e:
         return _json_error(str(e), status=400)

@@ -22,6 +22,7 @@ from django.db import models
 from django.db.models import Sum
 
 from apps.core.models import TenantMixin
+from apps.bank_accounts.models import BankAccount
 
 
 # ============================================================
@@ -170,6 +171,14 @@ class SaleInvoice(TenantMixin):
     )
     bank_reference = models.CharField(
         'مرجع التحويل البنكي', max_length=100, blank=True
+    )
+    bank_account = models.ForeignKey(
+        BankAccount,
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='sale_invoices',
+        verbose_name='الحساب البنكي',
+        help_text='الحساب البنكي المستلِم للجزء البنكي من الفاتورة',
     )
 
     notes = models.TextField('ملاحظات', blank=True)

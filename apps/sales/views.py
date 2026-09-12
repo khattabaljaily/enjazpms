@@ -180,6 +180,8 @@ def invoice_list(request):
     stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
     from apps.agents.models import Agent as _Agent
     agents_qs = _Agent.objects.filter(tenant=tenant, is_active=True).values('id', 'name') if tenant.plan_allows('agents') else []
+    from apps.bank_accounts.models import BankAccount
+    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name', 'current_balance')
 
     context = {
         'stats': {
@@ -197,6 +199,7 @@ def invoice_list(request):
         'stocks': list(stocks),
         'agents': list(agents_qs),
         'active_agent_id': request.GET.get('agent', ''),
+        'bank_accounts': list(bank_accounts),
     }
     return render(request, 'sales/invoice_list.html', context)
 
@@ -327,6 +330,8 @@ def invoice_create(request):
     items = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
     from apps.agents.models import Agent as _Agent
     agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name') if tenant.plan_allows('agents') else []
+    from apps.bank_accounts.models import BankAccount
+    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True)
 
     # default stock
     default_stock = stocks.filter(is_default=True).first() or stocks.first()
@@ -350,6 +355,7 @@ def invoice_create(request):
         'stocks': stocks,
         'items': items,
         'agents': agents,
+        'bank_accounts': bank_accounts,
         'default_stock': default_stock,
         'today': timezone.localdate().isoformat(),
         'action': 'create',
@@ -374,6 +380,8 @@ def invoice_edit(request, pk):
     items = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
     from apps.agents.models import Agent as _Agent
     agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name') if tenant.plan_allows('agents') else []
+    from apps.bank_accounts.models import BankAccount
+    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True)
 
     if request.method == 'POST':
         result = _process_invoice_post(request, tenant, invoice=invoice)
@@ -443,6 +451,7 @@ def invoice_edit(request, pk):
         'stocks': stocks,
         'items': items,
         'agents': agents,
+        'bank_accounts': bank_accounts,
         'today': timezone.localdate().isoformat(),
         'action': 'edit',
     }
@@ -511,6 +520,13 @@ def _process_invoice_post(request, tenant, invoice):
                     }
 
                     # FK mapping for service layer (expects objects, not *_id keys)
+                    bank_account_raw = header.get('bank_account_id')
+                    if bank_account_raw:
+                        from apps.bank_accounts.models import BankAccount
+                        confirmed_header['bank_account'] = BankAccount.objects.get(id=bank_account_raw, tenant=tenant, is_active=True)
+                    else:
+                        confirmed_header['bank_account'] = None
+
                     customer_raw = header.get('customer_id')
                     if customer_raw:
                         confirmed_header['customer'] = Customer.objects.get(id=customer_raw, tenant=tenant)
@@ -587,6 +603,9 @@ def _process_invoice_post(request, tenant, invoice):
                         invoice.bank_amount = Decimal(str(header.get('bank_amount') or 0))
                     if 'bank_reference' in header:
                         invoice.bank_reference = header.get('bank_reference', '')
+                    if 'bank_account_id' in header:
+                        bank_account_raw = header.get('bank_account_id')
+                        invoice.bank_account_id = int(bank_account_raw) if bank_account_raw else None
                     if 'notes' in header:
                         invoice.notes = header.get('notes', '')
 
@@ -642,7 +661,7 @@ def invoice_detail(request, pk):
         return redirect('core:no_tenant')
 
     invoice = get_object_or_404(
-        SaleInvoice.objects.select_related('customer', 'stock', 'agent', 'confirmed_by', 'cancelled_by'),
+        SaleInvoice.objects.select_related('customer', 'stock', 'agent', 'confirmed_by', 'cancelled_by', 'bank_account'),
         pk=pk, tenant=tenant,
     )
     lines = list(invoice.lines.select_related('item').prefetch_related('item__item_units').all())
@@ -675,6 +694,10 @@ def invoice_detail(request, pk):
             and invoice.remaining_amount > 0
         ),
     }
+    from apps.bank_accounts.models import BankAccount
+    context['bank_accounts'] = list(
+        BankAccount.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name', 'current_balance')
+    )
 
     return render(request, 'sales/invoice_detail.html', context)
 
@@ -787,11 +810,19 @@ def record_payment_ajax(request, pk):
         date = body.get('date') or timezone.localdate().isoformat()
         reference = body.get('reference', '')
         notes = body.get('notes', '')
+        bank_account_id = body.get('bank_account_id')
     except (KeyError, InvalidOperation, json.JSONDecodeError) as e:
         return _json_error(f'بيانات الدفعة غير صالحة: {e}')
 
+    bank_account = None
+    if method == 'bank':
+        if not bank_account_id:
+            return _json_error('يجب اختيار الحساب البنكي عند الدفع بنكياً')
+        from apps.bank_accounts.models import BankAccount
+        bank_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=int(bank_account_id))
+
     try:
-        record_customer_payment(invoice, amount, method, date, reference, notes, request.user)
+        record_customer_payment(invoice, amount, method, date, reference, notes, request.user, bank_account=bank_account)
         return _json_ok(
             data={
                 'paid_amount': str(invoice.paid_amount),
@@ -1468,12 +1499,15 @@ def quote_detail(request, pk):
 
     from apps.core.models import Settings as TenantSettings
     settings_obj, _ = TenantSettings.objects.get_or_create(tenant=tenant)
+    from apps.bank_accounts.models import BankAccount
+    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True)
 
     return render(request, 'sales/quote_detail.html', {
         'quote': quote,
         'lines': lines,
         'settings_obj': settings_obj,
         'tenant': tenant,
+        'bank_accounts': bank_accounts,
         'can_edit': quote.status == 'draft',
         'can_send': quote.can_send,
         'can_accept': quote.status == 'sent',
@@ -1572,6 +1606,7 @@ def quote_convert_ajax(request, pk):
     cash_amount = body.get('cash_amount')
     bank_amount = body.get('bank_amount')
     bank_reference = body.get('bank_reference', '')
+    bank_account_id = body.get('bank_account_id') or None
 
     try:
         invoice = convert_quote_to_invoice(
@@ -1581,6 +1616,7 @@ def quote_convert_ajax(request, pk):
             cash_amount=cash_amount,
             bank_amount=bank_amount,
             bank_reference=bank_reference,
+            bank_account_id=bank_account_id,
         )
         log_activity(request, 'تحويل عرض سعر لفاتورة', f'{quote.quote_number} ← {invoice.invoice_number}', 'create')
         return _json_ok(
@@ -2413,12 +2449,15 @@ def pos_view(request):
     from apps.items.models import Category
     categories = Category.objects.filter(tenant=tenant, parent=None).order_by('display_order', 'name')
     customers = Customer.objects.filter(tenant=tenant, is_active=True).order_by('name').values('id', 'name')
+    from apps.bank_accounts.models import BankAccount
+    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name', 'current_balance')
 
     return render(request, 'sales/pos.html', {
         'stocks': stocks,
         'default_stock': default_stock,
         'categories': categories,
         'customers': list(customers),
+        'bank_accounts': list(bank_accounts),
         'section': 'pos',
     })
 
@@ -2606,6 +2645,7 @@ def pos_checkout_api(request):
     cash_amount = Decimal(str(body.get('cash_amount', 0) or 0))
     bank_amount = Decimal(str(body.get('bank_amount', 0) or 0))
     bank_reference = body.get('bank_reference', '')
+    bank_account_id = body.get('bank_account_id') or None
     customer_id = body.get('customer_id') or None
     discount_type = body.get('discount_type', 'fixed')
     discount_value = Decimal(str(body.get('discount_value', 0) or 0))
@@ -2633,6 +2673,7 @@ def pos_checkout_api(request):
         'cash_amount': cash_amount,
         'bank_amount': bank_amount,
         'bank_reference': bank_reference,
+        'bank_account_id': bank_account_id,
         'notes': notes,
         'customer_id': customer_id,
         'insurance_member_id': insurance_member_id,
@@ -2650,13 +2691,15 @@ def pos_checkout_api(request):
             if payment_method == 'credit' and customer_id and cash_amount + bank_amount > 0:
                 partial = cash_amount + bank_amount
                 if partial > 0:
+                    partial_method = 'cash' if cash_amount >= bank_amount else 'bank'
                     record_customer_payment(
                         invoice=invoice,
                         amount=partial,
-                        method='cash' if cash_amount >= bank_amount else 'bank',
+                        method=partial_method,
                         date=timezone.localdate(),
                         reference=bank_reference,
                         user=request.user,
+                        bank_account=invoice.bank_account if partial_method == 'bank' else None,
                     )
 
             if insurance_member_id:

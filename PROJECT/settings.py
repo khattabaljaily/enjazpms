@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'apps.sales',
     'apps.insurance',
     'apps.treasury',
+    'apps.bank_accounts',
     'apps.expenses',
     'apps.stocks',
     'apps.notifications',

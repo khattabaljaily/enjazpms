@@ -88,7 +88,7 @@
                     <th>الوصف</th>
                     <th>طريقة الصرف</th>
                     <th>التاريخ</th>
-                    <th>الخزينة</th>
+                    <th>الخزينة / الحساب البنكي</th>
                     <th>الحالة</th>
                     <th></th>
                 </tr>
@@ -169,6 +169,15 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        <div class="col-12" id="incBankAccountRow" style="display:none">
+                            <label class="cx-label">الحساب البنكي <sup class="cx-required">*</sup></label>
+                            <select id="incBankAccount" class="cx-input">
+                                <option value="">اختر حساب بنكي</option>
+                                {% for b in bank_accounts %}
+                                <option value="{{ b.pk }}">{{ b.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <div class="col-12" id="incBankRefRow" style="display:none">
                             <label class="cx-label">رقم الحوالة / المرجع</label>
                             <input type="text" id="incBankRef" class="cx-input" placeholder="رقم الحوالة البنكية...">
@@ -197,7 +206,7 @@
             <div class="cx-delete-body">
                 <div class="cx-delete-icon" style="background:linear-gradient(135deg,#22c55e,#16a34a)"><i class="fas fa-money-bill-wave"></i></div>
                 <h5 class="cx-delete-title">دفع الحافز؟</h5>
-                <p class="cx-delete-desc">سيتم خصم مبلغ الحافز من الخزينة المحددة وتسجيل الحركة.</p>
+                <p class="cx-delete-desc">سيتم خصم مبلغ الحافز من الخزينة أو الحساب البنكي المحدد وتسجيل الحركة.</p>
                 <input type="hidden" id="payIncentiveId">
             </div>
             <div class="cx-delete-footer">
@@ -215,7 +224,7 @@
             <div class="cx-delete-body">
                 <div class="cx-delete-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-ban"></i></div>
                 <h5 class="cx-delete-title">إلغاء الحافز؟</h5>
-                <p class="cx-delete-desc">سيتم إلغاء هذا السجل وإعادة المبلغ للخزينة إن كان مدفوعاً. لا يمكن التراجع.</p>
+                <p class="cx-delete-desc">سيتم إلغاء هذا السجل وإعادة المبلغ للخزينة أو الحساب البنكي إن كان مدفوعاً. لا يمكن التراجع.</p>
                 <input type="hidden" id="cancelIncentiveId">
             </div>
             <div class="cx-delete-footer">
@@ -336,9 +345,14 @@
         document.getElementById('incPaymentMethod').value = method;
         document.querySelectorAll('.inc-pm').forEach(b => b.classList.toggle('active', b.dataset.method === method));
         document.getElementById('incTreasuryRow').style.display = method === 'cash' ? '' : 'none';
+        document.getElementById('incBankAccountRow').style.display = method === 'bank' ? '' : 'none';
         document.getElementById('incBankRefRow').style.display  = method === 'bank' ? '' : 'none';
-        if (method === 'bank') document.getElementById('incTreasury').value = '';
-        else document.getElementById('incBankRef').value = '';
+        if (method === 'bank') {
+            document.getElementById('incTreasury').value = '';
+        } else {
+            document.getElementById('incBankRef').value = '';
+            document.getElementById('incBankAccount').value = '';
+        }
     }
 
     document.querySelectorAll('.inc-pm').forEach(b => b.addEventListener('click', () => setIncPM(b.dataset.method)));
@@ -358,8 +372,10 @@
         document.getElementById('incPaymentRow').style.display  = show ? '' : 'none';
         if (!show) {
             document.getElementById('incTreasuryRow').style.display = 'none';
+            document.getElementById('incBankAccountRow').style.display = 'none';
             document.getElementById('incBankRefRow').style.display  = 'none';
             document.getElementById('incTreasury').value = '';
+            document.getElementById('incBankAccount').value = '';
         } else {
             setIncPM(document.getElementById('incPaymentMethod').value);
         }
@@ -377,6 +393,7 @@
         document.getElementById('incDate').value = new Date().toISOString().split('T')[0];
         document.getElementById('incDescription').value = '';
         document.getElementById('incTreasury').value = '';
+        document.getElementById('incBankAccount').value = '';
         document.getElementById('incBankRef').value = '';
         document.getElementById('incPaymentMethod').value = 'cash';
         document.getElementById('incNotes').value = '';
@@ -393,11 +410,15 @@
         const payout   = document.getElementById('incPayout').value;
         const method   = document.getElementById('incPaymentMethod').value;
         const treasury = document.getElementById('incTreasury').value;
+        const bankAccount = document.getElementById('incBankAccount').value;
         if (!employee)    { Enjaz.toast('الرجاء اختيار الموظف', 'error'); return; }
         if (!amount || parseFloat(amount) <= 0) { Enjaz.toast('الرجاء إدخال مبلغ صحيح', 'error'); return; }
         if (!description) { Enjaz.toast('الرجاء إدخال وصف', 'error'); return; }
         if (type === 'bonus' && payout === 'immediate' && method === 'cash' && !treasury) {
             Enjaz.toast('الحوافز النقدية الفورية تتطلب تحديد الخزينة', 'error'); return;
+        }
+        if (type === 'bonus' && payout === 'immediate' && method === 'bank' && !bankAccount) {
+            Enjaz.toast('الحوافز البنكية الفورية تتطلب تحديد الحساب البنكي', 'error'); return;
         }
 
         const payload = {
@@ -409,6 +430,7 @@
             description,
             date:            document.getElementById('incDate').value,
             treasury:        treasury,
+            bank_account:    bankAccount,
             bank_reference:  document.getElementById('incBankRef').value.trim(),
             notes:           document.getElementById('incNotes').value.trim(),
         };

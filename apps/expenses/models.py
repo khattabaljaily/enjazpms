@@ -1,6 +1,7 @@
 from django.db import models
 from apps.core.models import TenantMixin
 from apps.treasury.models import Treasury
+from apps.bank_accounts.models import BankAccount
 
 
 class ExpenseCategory(TenantMixin):
@@ -54,12 +55,20 @@ class Expense(TenantMixin):
         null=True,
         blank=True,
     )
+    bank_account = models.ForeignKey(
+        BankAccount,
+        on_delete=models.PROTECT,
+        related_name='expenses',
+        verbose_name='الحساب البنكي',
+        null=True,
+        blank=True,
+    )
     reference_number = models.CharField('رقم المرجع', max_length=100, blank=True,
                                         help_text='رقم الحوالة أو أمر الدفع عند التحويل البنكي')
     notes = models.TextField('ملاحظات', blank=True)
     status = models.CharField('الحالة', max_length=15, choices=STATUS_CHOICES, default=STATUS_DRAFT)
 
-    # Treasury effect tracking
+    # Treasury / bank account effect tracking
     treasury_movement = models.OneToOneField(
         'treasury.TreasuryMovement',
         on_delete=models.SET_NULL,
@@ -67,6 +76,14 @@ class Expense(TenantMixin):
         blank=True,
         related_name='expense',
         verbose_name='حركة الخزينة',
+    )
+    bank_account_movement = models.OneToOneField(
+        'bank_accounts.BankAccountMovement',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='expense',
+        verbose_name='حركة الحساب البنكي',
     )
 
     class Meta:

@@ -334,9 +334,18 @@
                 </div>
                 <div class="mb-2">
                     <label class="cx-label" style="font-size:.78rem">الطريقة</label>
-                    <select id="payMethod" class="cx-input cx-input--sm">
+                    <select id="payMethod" class="cx-input cx-input--sm" onchange="togglePayBankAccount()">
                         <option value="cash">نقداً</option>
                         <option value="bank">تحويل بنكي</option>
+                    </select>
+                </div>
+                <div class="mb-2 sales-field-hidden" id="payBankAccountWrap">
+                    <label class="cx-label" style="font-size:.78rem">الحساب البنكي</label>
+                    <select id="payBankAccount" class="cx-input cx-input--sm">
+                        <option value="">— اختر الحساب البنكي —</option>
+                        {% for b in bank_accounts %}
+                        <option value="{{ b.id }}">{{ b.name }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="mb-2">
@@ -601,16 +610,23 @@ function submitCancel() {
 {% endif %}
 
 {% if can_pay %}
+function togglePayBankAccount() {
+    const method = document.getElementById('payMethod').value;
+    document.getElementById('payBankAccountWrap').classList.toggle('sales-field-hidden', method !== 'bank');
+}
+
 function doPayment() {
     const amount = document.getElementById('payAmount').value;
     const method = document.getElementById('payMethod').value;
     const reference = document.getElementById('payRef').value;
+    const bankAccountId = document.getElementById('payBankAccount')?.value || null;
     if (!amount || parseFloat(amount) <= 0) { showAlert('أدخل مبلغاً صحيحاً', 'warning'); return; }
+    if (method === 'bank' && !bankAccountId) { showAlert('اختر الحساب البنكي', 'warning'); return; }
 
     fetch(`/sales/${INVOICE_ID}/pay/`, {
         method: 'POST',
         headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, method, reference })
+        body: JSON.stringify({ amount, method, reference, bank_account_id: bankAccountId })
     }).then(r => r.json()).then(data => {
         if (data.success) {
             sessionStorage.setItem('__enjazFlash', JSON.stringify({

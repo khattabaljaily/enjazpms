@@ -132,6 +132,15 @@
                                                 {% endfor %}
                                             </select>
                                         </div>
+                                        <div class="col-md-6" id="paymentModalBankAccountRow" style="display:none">
+                                            <label class="cx-label">الحساب البنكي <span class="text-danger">*</span></label>
+                                            <select id="paymentModalBankAccount" class="cx-input">
+                                                <option value="">— اختر الحساب البنكي —</option>
+                                                {% for bank_account in bank_accounts %}
+                                                <option value="{{ bank_account.id }}">{{ bank_account.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
                                         <div class="col-12" id="paymentModalReferenceRow" style="display:none">
                                             <label class="cx-label">رقم المرجع / التحويل</label>
                                             <input type="text" id="paymentModalReference" class="cx-input" placeholder="رقم المرجع أو التحويل...">
@@ -232,6 +241,10 @@
                             <div class="cx-info-item">
                                 <span class="cx-info-label">الخزينة</span>
                                 <span class="cx-info-value" id="paymentDetailsTreasury">—</span>
+                            </div>
+                            <div class="cx-info-item">
+                                <span class="cx-info-label">الحساب البنكي</span>
+                                <span class="cx-info-value" id="paymentDetailsBankAccount">—</span>
                             </div>
                             <div class="cx-info-item">
                                 <span class="cx-info-label">الحالة</span>
@@ -401,6 +414,8 @@
     const paymentModalPmButtons = Array.from(document.querySelectorAll('.payment-modal-pm'));
     const paymentModalTreasuryRow = document.getElementById('paymentModalTreasuryRow');
     const paymentModalTreasury = document.getElementById('paymentModalTreasury');
+    const paymentModalBankAccountRow = document.getElementById('paymentModalBankAccountRow');
+    const paymentModalBankAccount = document.getElementById('paymentModalBankAccount');
     const paymentModalCustomerName = document.getElementById('paymentModalCustomerName');
     const paymentModalCustomerBalance = document.getElementById('paymentModalCustomerBalance');
     const paymentModalSaveBtn = document.getElementById('paymentModalSaveBtn');
@@ -417,6 +432,7 @@
         amount: document.getElementById('paymentDetailsAmount'),
         method: document.getElementById('paymentDetailsMethod'),
         treasury: document.getElementById('paymentDetailsTreasury'),
+        bankAccount: document.getElementById('paymentDetailsBankAccount'),
         notes: document.getElementById('paymentDetailsNotes'),
         status: document.getElementById('paymentDetailsStatus'),
         canceledAt: document.getElementById('paymentDetailsCanceledAt'),
@@ -428,8 +444,10 @@
         paymentModalPmButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.method === method));
         paymentModalReferenceRow.style.display = method === 'bank' ? '' : 'none';
         paymentModalTreasuryRow.style.display = method === 'cash' ? '' : 'none';
+        paymentModalBankAccountRow.style.display = method === 'bank' ? '' : 'none';
         if (method !== 'bank') {
             paymentModalReference.value = '';
+            paymentModalBankAccount.value = '';
         }
         if (method !== 'cash') {
             paymentModalTreasury.value = '';
@@ -443,6 +461,7 @@
         paymentModalDate.value = '{{ today }}';
         paymentModalAmount.value = '';
         paymentModalReference.value = '';
+        paymentModalBankAccount.value = '';
         paymentModalNotes.value = '';
         paymentModalCustomerName.textContent = '—';
         paymentModalCustomerBalance.textContent = '—';
@@ -486,6 +505,7 @@
         const paymentDate = paymentModalDate.value;
         const method = paymentModalMethodInput.value;
         const treasuryId = paymentModalTreasury.value;
+        const bankAccountId = paymentModalBankAccount.value;
         const reference = paymentModalReference.value.trim();
         const notes = paymentModalNotes.value.trim();
 
@@ -508,6 +528,7 @@
                 payment_date: paymentDate,
                 method,
                 treasury_id: method === 'cash' ? parseInt(treasuryId, 10) : null,
+                bank_account_id: method === 'bank' ? parseInt(bankAccountId, 10) : null,
                 reference,
                 notes,
             }),
@@ -558,6 +579,7 @@
                 paymentDetailsFields.amount.textContent = Enjaz.formatMoney(Math.abs(payment.amount));
                 paymentDetailsFields.method.textContent = payment.payment_method;
                 paymentDetailsFields.treasury.textContent = payment.cash_treasury || '—';
+                paymentDetailsFields.bankAccount.textContent = payment.bank_account || '—';
                 paymentDetailsFields.notes.textContent = payment.notes;
                 paymentDetailsFields.status.textContent = payment.is_canceled ? 'ملغاة' : 'مفعلة';
                 paymentDetailsFields.canceledAt.textContent = payment.cancellation_date || '—';

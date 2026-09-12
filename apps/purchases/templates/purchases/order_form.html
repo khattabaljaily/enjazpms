@@ -156,6 +156,15 @@
                             <label class="cx-label">مرجع التحويل البنكي</label>
                             <input type="text" id="bankReference" class="cx-input" value="{{ invoice.bank_reference|default:'' }}">
                         </div>
+                        <div class="col-12 sales-field-hidden" id="bankAccountWrap">
+                            <label class="cx-label">الحساب البنكي</label>
+                            <select id="bankAccountId" class="cx-input">
+                                <option value="">— اختر الحساب البنكي —</option>
+                                {% for b in bank_accounts %}
+                                <option value="{{ b.id }}" {% if invoice and invoice.bank_account_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
 
                     <div class="d-grid gap-2 mt-3">
@@ -264,6 +273,7 @@ function handlePaymentMethodChange() {
     const pm = document.getElementById('paymentMethod').value;
     toggleHidden('mixedPaymentWrap', pm !== 'mixed');
     toggleHidden('bankRefWrap', !(pm === 'bank' || pm === 'mixed'));
+    toggleHidden('bankAccountWrap', !(pm === 'bank' || pm === 'mixed'));
     updatePaymentMethodBadge(pm);
     recalc();
 }
@@ -474,6 +484,7 @@ function submitOrder(action) {
         cash_amount: document.getElementById('cashAmount')?.value || '0',
         bank_amount: document.getElementById('bankAmount')?.value || '0',
         bank_reference: document.getElementById('bankReference')?.value || '',
+        bank_account_id: document.getElementById('bankAccountId')?.value || null,
         notes: document.getElementById('notes').value,
     };
 
@@ -506,6 +517,11 @@ function submitOrder(action) {
 
     if ((pm === 'bank' || pm === 'mixed') && bankAmount > 0 && !header.bank_reference.trim() && action === 'confirm') {
         Enjaz.toast('يرجى إدخال مرجع التحويل البنكي', 'warning');
+        return;
+    }
+
+    if ((pm === 'bank' || pm === 'mixed') && bankAmount > 0 && !header.bank_account_id && action === 'confirm') {
+        Enjaz.toast('يرجى اختيار الحساب البنكي', 'warning');
         return;
     }
 

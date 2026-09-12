@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from apps.core.models import TenantMixin
 from apps.treasury.models import Treasury
+from apps.bank_accounts.models import BankAccount
 
 
 class Employee(TenantMixin):
@@ -88,6 +89,10 @@ class EmployeeAdvance(TenantMixin):
         Treasury, on_delete=models.SET_NULL,
         null=True, blank=True, verbose_name='الخزينة / الحساب'
     )
+    bank_account    = models.ForeignKey(
+        BankAccount, on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name='الحساب البنكي'
+    )
     bank_reference  = models.CharField('رقم الحوالة', max_length=100, blank=True)
     salary_payment  = models.ForeignKey(
         'EmployeeSalaryPayment', on_delete=models.SET_NULL,
@@ -96,13 +101,20 @@ class EmployeeAdvance(TenantMixin):
     status          = models.CharField('الحالة', max_length=20, choices=STATUS, default='pending')
     notes           = models.TextField('ملاحظات', blank=True)
 
-    # Treasury movement tracking
+    # Treasury / bank account movement tracking
     treasury_movement = models.OneToOneField(
         'treasury.TreasuryMovement',
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='employee_advance',
         verbose_name='حركة الخزينة',
+    )
+    bank_account_movement = models.OneToOneField(
+        'bank_accounts.BankAccountMovement',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='employee_advance',
+        verbose_name='حركة الحساب البنكي',
     )
 
     class Meta:
@@ -123,6 +135,7 @@ class EmployeeAdvance(TenantMixin):
             return
         from django.db import transaction
         from apps.treasury.services import post_treasury_receipt
+        from apps.bank_accounts.services import post_bank_account_receipt
         with transaction.atomic():
             if self.payment_method == 'cash' and self.treasury_movement and self.treasury:
                 post_treasury_receipt(
@@ -133,6 +146,16 @@ class EmployeeAdvance(TenantMixin):
                     reference_id=self.pk,
                     description=f'إلغاء سلفة {self.employee.name}',
                     treasury=self.treasury,
+                )
+            elif self.payment_method == 'bank' and self.bank_account_movement and self.bank_account:
+                post_bank_account_receipt(
+                    tenant=self.tenant,
+                    amount=self.amount,
+                    date=timezone.localdate(),
+                    reference_type='employee_advance_cancel',
+                    reference_id=self.pk,
+                    description=f'إلغاء سلفة {self.employee.name}',
+                    bank_account=self.bank_account,
                 )
             self.status = 'cancelled'
             self.save(update_fields=['status', 'updated_at'])
@@ -164,17 +187,28 @@ class EmployeeSalaryPayment(TenantMixin):
         Treasury, on_delete=models.SET_NULL,
         null=True, blank=True, verbose_name='الخزينة / الحساب'
     )
+    bank_account      = models.ForeignKey(
+        BankAccount, on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name='الحساب البنكي'
+    )
     bank_reference    = models.CharField('رقم الحوالة', max_length=100, blank=True)
     status            = models.CharField('الحالة', max_length=20, choices=STATUS, default='draft')
     notes             = models.TextField('ملاحظات', blank=True)
 
-    # Treasury movement tracking
+    # Treasury / bank account movement tracking
     treasury_movement = models.OneToOneField(
         'treasury.TreasuryMovement',
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='employee_salary',
         verbose_name='حركة الخزينة',
+    )
+    bank_account_movement = models.OneToOneField(
+        'bank_accounts.BankAccountMovement',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='employee_salary',
+        verbose_name='حركة الحساب البنكي',
     )
 
     class Meta:
@@ -212,6 +246,7 @@ class EmployeeSalaryPayment(TenantMixin):
             return
         from django.db import transaction
         from apps.treasury.services import post_treasury_disbursement
+        from apps.bank_accounts.services import post_bank_account_disbursement
         with transaction.atomic():
             self.status = 'paid'
             self.save(update_fields=['status', 'updated_at'])
@@ -229,6 +264,19 @@ class EmployeeSalaryPayment(TenantMixin):
                 if mv:
                     self.treasury_movement = mv
                     self.save(update_fields=['treasury_movement', 'updated_at'])
+            elif self.payment_method == 'bank' and self.bank_account and self.total_due > 0:
+                mv = post_bank_account_disbursement(
+                    tenant=self.tenant,
+                    amount=self.total_due,
+                    date=timezone.localdate(),
+                    reference_type='employee_salary',
+                    reference_id=self.pk,
+                    description=f'راتب {self.employee.name} — {self.period_start}',
+                    bank_account=self.bank_account,
+                )
+                if mv:
+                    self.bank_account_movement = mv
+                    self.save(update_fields=['bank_account_movement', 'updated_at'])
 
             # Mark linked advances as deducted
             self.advance_items.filter(status='pending').update(status='deducted')
@@ -245,6 +293,7 @@ class EmployeeSalaryPayment(TenantMixin):
             return
         from django.db import transaction
         from apps.treasury.services import post_treasury_receipt
+        from apps.bank_accounts.services import post_bank_account_receipt
         with transaction.atomic():
             if self.payment_method == 'cash' and self.treasury_movement and self.treasury and self.total_due > 0:
                 post_treasury_receipt(
@@ -255,6 +304,16 @@ class EmployeeSalaryPayment(TenantMixin):
                     reference_id=self.pk,
                     description=f'إلغاء راتب {self.employee.name} — {self.period_start}',
                     treasury=self.treasury,
+                )
+            elif self.payment_method == 'bank' and self.bank_account_movement and self.bank_account and self.total_due > 0:
+                post_bank_account_receipt(
+                    tenant=self.tenant,
+                    amount=self.total_due,
+                    date=timezone.localdate(),
+                    reference_type='employee_salary_cancel',
+                    reference_id=self.pk,
+                    description=f'إلغاء راتب {self.employee.name} — {self.period_start}',
+                    bank_account=self.bank_account,
                 )
 
             # Restore linked advances to pending
@@ -285,18 +344,29 @@ class EmployeeIncentive(TenantMixin):
         Treasury, on_delete=models.SET_NULL,
         null=True, blank=True, verbose_name='الخزينة / الحساب'
     )
+    bank_account    = models.ForeignKey(
+        BankAccount, on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name='الحساب البنكي'
+    )
     bank_reference  = models.CharField('رقم الحوالة', max_length=100, blank=True)
     status          = models.CharField('الحالة', max_length=20, choices=STATUS, default='pending')
     date            = models.DateField('التاريخ', default=timezone.localdate)
     notes           = models.TextField('ملاحظات', blank=True)
 
-    # Treasury movement tracking
+    # Treasury / bank account movement tracking
     treasury_movement = models.OneToOneField(
         'treasury.TreasuryMovement',
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='employee_incentive',
         verbose_name='حركة الخزينة',
+    )
+    bank_account_movement = models.OneToOneField(
+        'bank_accounts.BankAccountMovement',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='employee_incentive',
+        verbose_name='حركة الحساب البنكي',
     )
 
     class Meta:
@@ -314,11 +384,12 @@ class EmployeeIncentive(TenantMixin):
         return f'{self.get_type_display()} — {self.employee.name} — {self.amount}'
 
     def pay(self):
-        """دفع الحافز فوراً من الخزينة (للحوافز الفورية النقدية فقط)"""
+        """دفع الحافز فوراً من الخزينة أو الحساب البنكي (للحوافز الفورية فقط)"""
         if self.status != 'pending' or self.type != 'bonus':
             return
         from django.db import transaction
         from apps.treasury.services import post_treasury_disbursement
+        from apps.bank_accounts.services import post_bank_account_disbursement
         with transaction.atomic():
             self.status = 'paid'
             self.save(update_fields=['status', 'updated_at'])
@@ -336,12 +407,26 @@ class EmployeeIncentive(TenantMixin):
                 if mv:
                     self.treasury_movement = mv
                     self.save(update_fields=['treasury_movement', 'updated_at'])
+            elif self.payment_method == 'bank' and self.bank_account:
+                mv = post_bank_account_disbursement(
+                    tenant=self.tenant,
+                    amount=self.amount,
+                    date=timezone.localdate(),
+                    reference_type='employee_incentive',
+                    reference_id=self.pk,
+                    description=f'حافز {self.employee.name} — {self.description}',
+                    bank_account=self.bank_account,
+                )
+                if mv:
+                    self.bank_account_movement = mv
+                    self.save(update_fields=['bank_account_movement', 'updated_at'])
 
     def cancel(self):
         if self.status == 'cancelled':
             return
         from django.db import transaction
         from apps.treasury.services import post_treasury_receipt
+        from apps.bank_accounts.services import post_bank_account_receipt
         with transaction.atomic():
             if self.payment_method == 'cash' and self.treasury_movement and self.treasury and self.type == 'bonus':
                 post_treasury_receipt(
@@ -352,6 +437,16 @@ class EmployeeIncentive(TenantMixin):
                     reference_id=self.pk,
                     description=f'إلغاء حافز {self.employee.name} — {self.description}',
                     treasury=self.treasury,
+                )
+            elif self.payment_method == 'bank' and self.bank_account_movement and self.bank_account and self.type == 'bonus':
+                post_bank_account_receipt(
+                    tenant=self.tenant,
+                    amount=self.amount,
+                    date=timezone.localdate(),
+                    reference_type='employee_incentive_cancel',
+                    reference_id=self.pk,
+                    description=f'إلغاء حافز {self.employee.name} — {self.description}',
+                    bank_account=self.bank_account,
                 )
             self.status = 'cancelled'
             self.save(update_fields=['status', 'updated_at'])

@@ -6,6 +6,8 @@ from django.utils import timezone
 from apps.sales.models import StockMovement
 from apps.stocks.models import StockQuantity
 from apps.treasury.services import post_treasury_disbursement, post_treasury_receipt
+from apps.bank_accounts.models import BankAccountMovement
+from apps.bank_accounts.services import post_bank_account_disbursement, post_bank_account_receipt
 
 from .models import (
     PurchaseInvoice,
@@ -174,7 +176,7 @@ def _reverse_stock_movements(tenant, invoice):
         )
 
 
-def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''):
+def _apply_payment(tenant, invoice, method, amount, date, reference='', notes='', bank_account=None):
     amount = Decimal(str(amount or 0))
     if amount <= 0:
         return None
@@ -199,6 +201,17 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
             description=notes or f'دفعة أمر شراء {invoice.invoice_number}',
             user=getattr(invoice, 'updated_by', None) or getattr(invoice, 'created_by', None),
         )
+    elif method == 'bank':
+        post_bank_account_disbursement(
+            tenant=tenant,
+            amount=amount,
+            date=date,
+            reference_type='purchase_payment',
+            reference_id=payment.id,
+            description=notes or f'دفعة أمر شراء {invoice.invoice_number}',
+            user=getattr(invoice, 'updated_by', None) or getattr(invoice, 'created_by', None),
+            bank_account=bank_account,
+        )
 
     return payment
 
@@ -215,6 +228,21 @@ def _reverse_payments(tenant, invoice):
                 reference_id=payment.id,
                 description=f'عكس دفعة أمر شراء {invoice.invoice_number}',
             )
+        elif payment.payment_method == 'bank' and payment.amount > 0:
+            original_movement = BankAccountMovement.objects.filter(
+                tenant=tenant, reference_type='purchase_payment', reference_id=payment.id,
+            ).first()
+            movement_bank_account = original_movement.bank_account if original_movement else invoice.bank_account
+            if movement_bank_account:
+                post_bank_account_receipt(
+                    tenant=tenant,
+                    amount=payment.amount,
+                    date=timezone.localdate(),
+                    reference_type='purchase_payment',
+                    reference_id=payment.id,
+                    description=f'عكس دفعة أمر شراء {invoice.invoice_number}',
+                    bank_account=movement_bank_account,
+                )
 
         payment.is_reversed = True
         payment.save(update_fields=['is_reversed', 'updated_at'])
@@ -449,7 +477,9 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user, reapply_stock=True)
     elif pm == 'bank':
         if not bank_reference:
             raise ValueError('يرجى إدخال مرجع التحويل البنكي.')
-        _apply_payment(tenant, invoice, 'bank', total, invoice.invoice_date, reference=bank_reference)
+        if not invoice.bank_account:
+            raise ValueError('يرجى اختيار الحساب البنكي.')
+        _apply_payment(tenant, invoice, 'bank', total, invoice.invoice_date, reference=bank_reference, bank_account=invoice.bank_account)
         if invoice.supplier:
             hc_amt, hc_c, hc_r = _hc(total)
             _apply_supplier_ledger(
@@ -485,11 +515,13 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user, reapply_stock=True)
             raise ValueError('الجزء الآجل في الدفع المختلط يتطلب اختيار مورد.')
         if bank_amt > 0 and not bank_reference:
             raise ValueError('يرجى إدخال مرجع التحويل البنكي للجزء البنكي.')
+        if bank_amt > 0 and not invoice.bank_account:
+            raise ValueError('يرجى اختيار الحساب البنكي للجزء البنكي.')
 
         if cash_amt > 0:
             _apply_payment(tenant, invoice, 'cash', cash_amt, invoice.invoice_date)
         if bank_amt > 0:
-            _apply_payment(tenant, invoice, 'bank', bank_amt, invoice.invoice_date, reference=bank_reference)
+            _apply_payment(tenant, invoice, 'bank', bank_amt, invoice.invoice_date, reference=bank_reference, bank_account=invoice.bank_account)
 
         if invoice.supplier:
             hc_total_amt, hc_c, hc_r = _hc(total)
@@ -605,6 +637,19 @@ def confirm_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRe
             description=f'استلام مرتجع شراء {purchase_return.return_number}',
             user=user,
         )
+    elif purchase_return.refund_method == 'bank':
+        if not invoice.bank_account:
+            raise ValueError('استرداد المرتجع بنكياً يتطلب أن يكون لأمر الشراء حساب بنكي محدد.')
+        post_bank_account_receipt(
+            tenant=tenant,
+            amount=total,
+            date=purchase_return.return_date,
+            reference_type='purchase_return',
+            reference_id=purchase_return.id,
+            description=f'استلام مرتجع شراء {purchase_return.return_number}',
+            user=user,
+            bank_account=invoice.bank_account,
+        )
 
     if invoice.supplier:
         sup_currency = (invoice.supplier.currency or '').strip()
@@ -712,6 +757,22 @@ def cancel_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRet
             description=f'عكس استلام مرتجع شراء {purchase_return.return_number}',
             user=user,
         )
+    elif purchase_return.refund_method == 'bank' and purchase_return.total_returned > 0:
+        original_movement = BankAccountMovement.objects.filter(
+            tenant=tenant, reference_type='purchase_return', reference_id=purchase_return.id,
+        ).first()
+        movement_bank_account = original_movement.bank_account if original_movement else invoice.bank_account
+        if movement_bank_account:
+            post_bank_account_disbursement(
+                tenant=tenant,
+                amount=purchase_return.total_returned,
+                date=timezone.localdate(),
+                reference_type='purchase_return',
+                reference_id=purchase_return.id,
+                description=f'عكس استلام مرتجع شراء {purchase_return.return_number}',
+                user=user,
+                bank_account=movement_bank_account,
+            )
 
     _reverse_supplier_ledger(tenant, 'purchase_return', purchase_return.id)
 
@@ -737,7 +798,7 @@ def edit_confirmed_purchase_invoice(invoice: PurchaseInvoice, header_data: dict,
 
     allowed = {
         'supplier', 'stock', 'invoice_date', 'payment_method',
-        'cash_amount', 'bank_amount', 'bank_reference', 'notes',
+        'cash_amount', 'bank_amount', 'bank_reference', 'bank_account', 'notes',
     }
     for field, value in header_data.items():
         if field in allowed:
@@ -794,6 +855,11 @@ def build_purchase_from_post(tenant, stock, data: dict, lines_data: list, user) 
     if data.get('supplier_id'):
         supplier = Supplier.objects.get(id=data['supplier_id'], tenant=tenant)
 
+    bank_account = None
+    if data.get('bank_account_id'):
+        from apps.bank_accounts.models import BankAccount
+        bank_account = BankAccount.objects.get(id=data['bank_account_id'], tenant=tenant, is_active=True)
+
     invoice = PurchaseInvoice.objects.create(
         tenant=tenant,
         supplier=supplier,
@@ -803,6 +869,7 @@ def build_purchase_from_post(tenant, stock, data: dict, lines_data: list, user) 
         cash_amount=Decimal(str(data.get('cash_amount', 0))),
         bank_amount=Decimal(str(data.get('bank_amount', 0))),
         bank_reference=data.get('bank_reference', ''),
+        bank_account=bank_account,
         notes=data.get('notes', ''),
         status='draft',
         created_by=user,

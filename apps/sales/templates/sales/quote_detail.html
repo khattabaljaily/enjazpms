@@ -300,6 +300,15 @@
                     <input type="text" id="convertBankRef" class="cx-input">
                 </div>
             </div>
+            <div id="convertBankAccountField" class="mb-2 sales-field-hidden">
+                <label class="cx-label">الحساب البنكي</label>
+                <select id="convertBankAccount" class="cx-input">
+                    <option value="">— اختر الحساب البنكي —</option>
+                    {% for b in bank_accounts %}
+                    <option value="{{ b.id }}">{{ b.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
         <div class="cx-modal-footer">
             <button type="button" class="cx-btn-secondary" onclick="closeConvertModal()">إلغاء</button>
@@ -405,8 +414,10 @@ function closeConvertModal() {
     document.getElementById('convertModalBackdrop').classList.add('sales-field-hidden');
 }
 function toggleConvertMixed() {
-    const isMixed = document.getElementById('convertPaymentMethod').value === 'mixed';
+    const method = document.getElementById('convertPaymentMethod').value;
+    const isMixed = method === 'mixed';
     document.getElementById('convertMixedFields').classList.toggle('sales-field-hidden', !isMixed);
+    document.getElementById('convertBankAccountField').classList.toggle('sales-field-hidden', method !== 'bank' && method !== 'mixed');
 }
 function submitConvert() {
     const submitBtn = document.querySelector('#convertModalBackdrop .cx-btn-add[onclick="submitConvert()"]');
@@ -424,6 +435,9 @@ function submitConvert() {
         body.cash_amount = cashAmount.toFixed(2);
         body.bank_amount = bankAmount.toFixed(2);
         body.bank_reference = document.getElementById('convertBankRef').value;
+    }
+    if (method === 'bank' || method === 'mixed') {
+        body.bank_account_id = document.getElementById('convertBankAccount').value || null;
     }
 
     fetch(QUOTE_CONVERT_URL, {

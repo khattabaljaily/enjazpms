@@ -194,9 +194,11 @@ def order_create(request):
 
     _hc_mode = getattr(tenant, 'hard_currency_mode', False)
     _hc_rate = float(tenant.exchange_rate) if _hc_mode and getattr(tenant, 'exchange_rate', None) else 0
+    from apps.bank_accounts.models import BankAccount
     context = {
         'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'stocks': Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name'),
+        'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'today': timezone.localdate().isoformat(),
         'action': 'create',
         'existing_lines': '[]',
@@ -248,10 +250,12 @@ def order_edit(request, pk):
 
     _hc_mode = getattr(tenant, 'hard_currency_mode', False)
     _hc_rate = float(tenant.exchange_rate) if _hc_mode and getattr(tenant, 'exchange_rate', None) else 0
+    from apps.bank_accounts.models import BankAccount
     context = {
         'invoice': invoice,
         'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'stocks': Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name'),
+        'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'today': timezone.localdate().isoformat(),
         'action': 'edit',
         'existing_lines': json.dumps(existing_lines, ensure_ascii=False),
@@ -286,6 +290,7 @@ def _process_order_post(request, tenant, invoice):
         return _json_error('مبالغ الدفع يجب أن تكون أكبر من أو تساوي صفر')
 
     bank_reference = str(header.get('bank_reference') or '').strip()
+    bank_account_id = header.get('bank_account_id') or None
 
     if not lines_raw:
         return _json_error('لا يمكن حفظ أمر شراء بدون بنود')
@@ -315,6 +320,7 @@ def _process_order_post(request, tenant, invoice):
                 'cash_amount': cash_amount,
                 'bank_amount': bank_amount,
                 'bank_reference': bank_reference,
+                'bank_account_id': bank_account_id,
             }
             inv = build_purchase_from_post(tenant, stock, create_data, lines_data, request.user)
         else:
@@ -327,6 +333,11 @@ def _process_order_post(request, tenant, invoice):
                     'bank_reference': bank_reference,
                     'notes': header.get('notes', ''),
                 }
+                if bank_account_id:
+                    from apps.bank_accounts.models import BankAccount
+                    confirmed_header['bank_account'] = BankAccount.objects.get(id=bank_account_id, tenant=tenant, is_active=True)
+                else:
+                    confirmed_header['bank_account'] = None
 
                 supplier_raw = header.get('supplier_id')
                 if supplier_raw:
@@ -363,6 +374,7 @@ def _process_order_post(request, tenant, invoice):
             invoice.cash_amount = cash_amount
             invoice.bank_amount = bank_amount
             invoice.bank_reference = bank_reference
+            invoice.bank_account_id = int(bank_account_id) if bank_account_id else None
             invoice.notes = header.get('notes', '')
             invoice.recalculate_totals()
             invoice.save()

@@ -79,7 +79,7 @@
                         <th>الوصف</th>
                         <th>المبلغ</th>
                         <th>طريقة الدفع</th>
-                        <th>الخزينة</th>
+                        <th>الخزينة / الحساب البنكي</th>
                         <th>الحالة</th>
                         <th>الإجراءات</th>
                     </tr>
@@ -140,7 +140,7 @@
                                 <span class="cx-info-value" id="viewExpensePayment">—</span>
                             </div>
                             <div class="cx-info-item">
-                                <span class="cx-info-label">الخزينة</span>
+                                <span class="cx-info-label">الخزينة / الحساب البنكي</span>
                                 <span class="cx-info-value" id="viewExpenseTreasury">—</span>
                             </div>
                         </div>
@@ -233,6 +233,13 @@
                                                 <option value="">— الخزينة الافتراضية —</option>
                                             </select>
                                             <div id="expenseModalTreasuryBalance" class="cx-hint mt-1" style="display:none"></div>
+                                        </div>
+                                        <div class="col-12" id="expenseModalBankAccountRow" style="display:none">
+                                            <label class="cx-label">الحساب البنكي <span class="text-danger">*</span></label>
+                                            <select id="expenseModalBankAccount" class="cx-input">
+                                                <option value="">— اختر الحساب البنكي —</option>
+                                            </select>
+                                            <div id="expenseModalBankAccountBalance" class="cx-hint mt-1" style="display:none"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -328,6 +335,7 @@
 
     const EXPENSE_CATEGORIES = JSON.parse('{{ categories_json|escapejs }}');
     const EXPENSE_TREASURIES = JSON.parse('{{ treasuries_json|escapejs }}');
+    const EXPENSE_BANK_ACCOUNTS = JSON.parse('{{ bank_accounts_json|escapejs }}');
     const expenseRows = new Map();
     const expenseModalEl = document.getElementById('expenseModal');
     const expenseModal = new bootstrap.Modal(expenseModalEl);
@@ -336,6 +344,9 @@
     const expenseCategorySel = document.getElementById('expenseModalCategory');
     const expenseTreasurySel = document.getElementById('expenseModalTreasury');
     const expenseModalTreasuryRow = document.getElementById('expenseModalTreasuryRow');
+    const expenseBankAccountSel = document.getElementById('expenseModalBankAccount');
+    const expenseModalBankAccountRow = document.getElementById('expenseModalBankAccountRow');
+    const expenseModalBankAccountBalance = document.getElementById('expenseModalBankAccountBalance');
     const expensePaymentMethodInput = document.getElementById('expenseModalPaymentMethod');
     const expenseModalReferenceRow = document.getElementById('expenseModalReferenceRow');
     const expenseModalReference = document.getElementById('expenseModalReference');
@@ -378,6 +389,18 @@
         });
     }
 
+    function buildBankAccountOptions(select, selectedId) {
+        select.innerHTML = '<option value="">— اختر الحساب البنكي —</option>';
+        EXPENSE_BANK_ACCOUNTS.forEach(function (b) {
+            const opt = document.createElement('option');
+            opt.value = b.id;
+            opt.textContent = b.name;
+            opt.dataset.balance = b.current_balance;
+            if (selectedId && String(b.id) === String(selectedId)) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
     function updateTreasuryHint() {
         const opt = expenseTreasurySel.options[expenseTreasurySel.selectedIndex];
         const balance = opt?.dataset?.balance;
@@ -389,11 +412,30 @@
         }
     }
 
+    function updateBankAccountHint() {
+        const opt = expenseBankAccountSel.options[expenseBankAccountSel.selectedIndex];
+        const balance = opt?.dataset?.balance;
+        if (balance !== undefined && balance !== '') {
+            expenseModalBankAccountBalance.style.display = '';
+            expenseModalBankAccountBalance.textContent = 'الرصيد الحالي: ' + Enjaz.formatMoney(balance);
+        } else {
+            expenseModalBankAccountBalance.style.display = 'none';
+        }
+    }
+
     function toggleExpenseTreasuryField(visible) {
         expenseModalTreasuryRow.style.display = visible ? '' : 'none';
         if (!visible) {
             expenseTreasurySel.value = '';
             updateTreasuryHint();
+        }
+    }
+
+    function toggleExpenseBankAccountField(visible) {
+        expenseModalBankAccountRow.style.display = visible ? '' : 'none';
+        if (!visible) {
+            expenseBankAccountSel.value = '';
+            updateBankAccountHint();
         }
     }
 
@@ -404,12 +446,14 @@
         });
         expenseModalReferenceRow.style.display = method === 'bank' ? '' : 'none';
         toggleExpenseTreasuryField(method !== 'bank');
+        toggleExpenseBankAccountField(method === 'bank');
     }
 
     function resetExpenseForm() {
         expenseModalId.value = '';
         buildCategoryOptions(expenseCategorySel);
         buildTreasuryOptions(expenseTreasurySel);
+        buildBankAccountOptions(expenseBankAccountSel);
         expenseModalDate.value = new Date().toISOString().slice(0, 10);
         expenseModalDescription.value = '';
         expenseModalAmount.value = '';
@@ -417,12 +461,15 @@
         expenseModalReference.value = '';
         setPaymentMethod('cash');
         updateTreasuryHint();
+        updateBankAccountHint();
     }
 
     buildCategoryOptions(categoryFilterEl);
     buildCategoryOptions(expenseCategorySel);
     buildTreasuryOptions(expenseTreasurySel);
+    buildBankAccountOptions(expenseBankAccountSel);
     updateTreasuryHint();
+    updateBankAccountHint();
 
     function openExpenseModal(mode, data) {
         if (mode === 'create') {
@@ -437,6 +484,7 @@
             expenseModalId.value = data.id;
             buildCategoryOptions(expenseCategorySel, data.category_id);
             buildTreasuryOptions(expenseTreasurySel, data.treasury_id);
+            buildBankAccountOptions(expenseBankAccountSel, data.bank_account_id);
             expenseModalDate.value = data.expense_date || new Date().toISOString().slice(0, 10);
             expenseModalDescription.value = data.description || '';
             expenseModalAmount.value = data.amount || '';
@@ -444,6 +492,7 @@
             expenseModalReference.value = data.reference_number || '';
             setPaymentMethod(data.payment_method || 'cash');
             updateTreasuryHint();
+            updateBankAccountHint();
         }
         expenseModal.show();
     }
@@ -474,6 +523,7 @@
         const expenseDate = expenseModalDate.value;
         const paymentMethod = expensePaymentMethodInput.value;
         const treasuryId = paymentMethod === 'cash' ? (expenseTreasurySel.value || null) : null;
+        const bankAccountId = paymentMethod === 'bank' ? (expenseBankAccountSel.value || null) : null;
         const referenceNumber = expenseModalReference.value.trim();
         const notes = expenseModalNotes.value.trim();
         const expenseId = expenseModalId.value;
@@ -482,6 +532,7 @@
         if (!expenseDate) return Enjaz.toast('اختر التاريخ', 'error');
         if (!description) return Enjaz.toast('أدخل الوصف', 'error');
         if (!amount || amount <= 0) return Enjaz.toast('أدخل مبلغاً صحيحاً', 'error');
+        if (paymentMethod === 'bank' && !bankAccountId) return Enjaz.toast('اختر الحساب البنكي', 'error');
 
         const payload = {
             category_id: parseInt(categoryId, 10),
@@ -490,6 +541,7 @@
             expense_date: expenseDate,
             payment_method: paymentMethod,
             treasury_id: treasuryId ? parseInt(treasuryId, 10) : null,
+            bank_account_id: bankAccountId ? parseInt(bankAccountId, 10) : null,
             reference_number: referenceNumber,
             notes,
         };
@@ -573,7 +625,7 @@
                         <strong class="cx-expense-card-meta-value">${r.payment_method || '—'}</strong>
                     </div>
                     <div>
-                        <span class="cx-expense-card-meta-label">الخزينة</span>
+                        <span class="cx-expense-card-meta-label">الخزينة / الحساب البنكي</span>
                         <strong class="cx-expense-card-meta-value">${r.treasury || '—'}</strong>
                     </div>
                     <div class="cx-expense-card-meta-full">
@@ -677,6 +729,7 @@
     });
 
     expenseTreasurySel.addEventListener('change', updateTreasuryHint);
+    expenseBankAccountSel.addEventListener('change', updateBankAccountHint);
     expenseModalCategoryAddBtn.addEventListener('click', function () {
         expenseModal.hide();
         newExpenseCategoryName.value = '';
@@ -729,8 +782,8 @@
         document.getElementById('expenseActionConfirmAvatar').innerHTML = `<i class="fas ${confirmIcon}"></i>`;
         
         expenseActionConfirmMessage.textContent = isConfirm
-            ? 'سيتم تأكيد المصروف وخصمه من الخزينة. هل تريد المتابعة؟'
-            : 'سيتم إلغاء المصروف وعكس أثره على الخزينة. هل تريد المتابعة؟';
+            ? 'سيتم تأكيد المصروف وخصمه من الخزينة أو الحساب البنكي. هل تريد المتابعة؟'
+            : 'سيتم إلغاء المصروف وعكس أثره على الخزينة أو الحساب البنكي. هل تريد المتابعة؟';
         expenseActionConfirmModal.show();
     }
 

@@ -391,6 +391,7 @@
                 {% if tenant_capabilities|has_capability:"has_insurance_billing" %}<li><a href="{% url 'insurance:claims_aging' %}" class="nav-sublink"><i class="fas fa-hourglass-half me-2"></i>متأخرات التأمين</a></li>{% endif %}
                 <li><a href="{% url 'expenses:list' %}" class="nav-sublink"><i class="fas fa-receipt me-2"></i>المصروفات</a></li>
                 <li><a href="{% url 'treasury:list' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>الخزائن</a></li>
+                <li><a href="{% url 'bank_accounts:list' %}" class="nav-sublink"><i class="fas fa-building-columns me-2"></i>الحسابات البنكية</a></li>
                 <li><a href="{% url 'employees:advance_list' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>سلف الموظفين</a></li>
                 <li><a href="{% url 'employees:incentive_list' %}" class="nav-sublink"><i class="fas fa-star me-2"></i>الحوافز والخصومات</a></li>
                 <li><a href="{% url 'employees:salary_list' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشوف الرواتب</a></li>
@@ -493,6 +494,10 @@
                         <li class="nav-submenu-label">الخزائن</li>
                         <li><a href="{% url 'treasury:reports:balances_report' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>أرصدة الخزائن</a></li>
                         <li><a href="{% url 'treasury:reports:movements_report' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>حركة الخزائن</a></li>
+                        <li class="nav-submenu-label">الحسابات البنكية</li>
+                        <li><a href="{% url 'bank_accounts:reports:balances_report' %}" class="nav-sublink"><i class="fas fa-building-columns me-2"></i>أرصدة الحسابات البنكية</a></li>
+                        <li><a href="{% url 'bank_accounts:reports:statement_report' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب بنكي</a></li>
+                        <li><a href="{% url 'bank_accounts:reports:movements_report' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>حركة الحسابات البنكية</a></li>
                         <li class="nav-submenu-label">المالية</li>
                         <li><a href="{% url 'reports:income_statement' %}" class="nav-sublink"><i class="fas fa-chart-line me-2"></i>قائمة الدخل (ربح/خسارة)</a></li>
                     </ul>

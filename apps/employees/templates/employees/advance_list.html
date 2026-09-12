@@ -77,7 +77,7 @@
                     <th>الموظف</th>
                     <th>المبلغ</th>
                     <th>التاريخ</th>
-                    <th>الخزينة</th>
+                    <th>الخزينة / الحساب البنكي</th>
                     <th>الحالة</th>
                     <th>ملاحظات</th>
                     <th></th>
@@ -141,6 +141,15 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        <div class="col-12" id="advBankAccountRow" style="display:none">
+                            <label class="cx-label">الحساب البنكي <sup class="cx-required">*</sup></label>
+                            <select id="advBankAccount" class="cx-input">
+                                <option value="">اختر حساب بنكي</option>
+                                {% for b in bank_accounts %}
+                                <option value="{{ b.pk }}">{{ b.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <div class="col-12" id="advBankRefRow" style="display:none">
                             <label class="cx-label">رقم الحوالة / المرجع</label>
                             <input type="text" id="advBankRef" class="cx-input" placeholder="رقم الحوالة البنكية...">
@@ -169,7 +178,7 @@
             <div class="cx-delete-body">
                 <div class="cx-delete-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)"><i class="fas fa-ban"></i></div>
                 <h5 class="cx-delete-title">إلغاء السلفة؟</h5>
-                <p class="cx-delete-desc">سيتم إلغاء السلفة وإعادة المبلغ للخزينة إن وُجدت. لا يمكن التراجع.</p>
+                <p class="cx-delete-desc">سيتم إلغاء السلفة وإعادة المبلغ للخزينة أو الحساب البنكي إن وُجد. لا يمكن التراجع.</p>
                 <input type="hidden" id="cancelAdvanceId">
             </div>
             <div class="cx-delete-footer">
@@ -274,9 +283,14 @@
         document.getElementById('advPaymentMethod').value = method;
         document.querySelectorAll('.adv-pm').forEach(b => b.classList.toggle('active', b.dataset.method === method));
         document.getElementById('advTreasuryRow').style.display = method === 'cash' ? '' : 'none';
+        document.getElementById('advBankAccountRow').style.display = method === 'bank' ? '' : 'none';
         document.getElementById('advBankRefRow').style.display  = method === 'bank' ? '' : 'none';
-        if (method === 'bank') document.getElementById('advTreasury').value = '';
-        else document.getElementById('advBankRef').value = '';
+        if (method === 'bank') {
+            document.getElementById('advTreasury').value = '';
+        } else {
+            document.getElementById('advBankRef').value = '';
+            document.getElementById('advBankAccount').value = '';
+        }
     }
 
     document.querySelectorAll('.adv-pm').forEach(b => b.addEventListener('click', () => setAdvPM(b.dataset.method)));
@@ -287,6 +301,7 @@
         document.getElementById('advAmount').value = '';
         document.getElementById('advDate').value = new Date().toISOString().split('T')[0];
         document.getElementById('advTreasury').value = '';
+        document.getElementById('advBankAccount').value = '';
         document.getElementById('advBankRef').value = '';
         document.getElementById('advNotes').value = '';
         setAdvPM('cash');
@@ -299,9 +314,11 @@
         const amount   = document.getElementById('advAmount').value || '0';
         const method   = document.getElementById('advPaymentMethod').value;
         const treasury = document.getElementById('advTreasury').value;
+        const bankAccount = document.getElementById('advBankAccount').value;
         if (!employee) { Enjaz.toast('الرجاء اختيار الموظف', 'error'); return; }
         if (!amount || parseFloat(amount) <= 0) { Enjaz.toast('الرجاء إدخال مبلغ صحيح', 'error'); return; }
         if (method === 'cash' && !treasury) { Enjaz.toast('الرجاء اختيار الخزينة للدفع النقدي', 'error'); return; }
+        if (method === 'bank' && !bankAccount) { Enjaz.toast('الرجاء اختيار الحساب البنكي للتحويل البنكي', 'error'); return; }
 
         const payload = {
             employee,
@@ -309,6 +326,7 @@
             payment_method:  method,
             date:            document.getElementById('advDate').value,
             treasury:        treasury,
+            bank_account:    bankAccount,
             bank_reference:  document.getElementById('advBankRef').value.trim(),
             notes:           document.getElementById('advNotes').value.trim(),
         };

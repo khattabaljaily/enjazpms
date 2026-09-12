@@ -82,7 +82,7 @@
                     <th>السلف</th>
                     <th>الخصومات</th>
                     <th>الصافي</th>
-                    <th>الخزينة</th>
+                    <th>الخزينة / الحساب البنكي</th>
                     <th>الحالة</th>
                     <th></th>
                 </tr>
@@ -193,6 +193,15 @@
                                 <option value="">اختر خزينة</option>
                                 {% for t in treasuries %}
                                 <option value="{{ t.pk }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12" id="salBankAccountRow" style="display:none">
+                            <label class="cx-label">الحساب البنكي <sup class="cx-required">*</sup></label>
+                            <select id="salBankAccount" class="cx-input">
+                                <option value="">اختر حساب بنكي</option>
+                                {% for b in bank_accounts %}
+                                <option value="{{ b.pk }}">{{ b.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -504,9 +513,14 @@
         document.getElementById('salPaymentMethod').value = method;
         document.querySelectorAll('.sal-pm').forEach(b => b.classList.toggle('active', b.dataset.method === method));
         document.getElementById('salTreasuryRow').style.display = method === 'cash' ? '' : 'none';
+        document.getElementById('salBankAccountRow').style.display = method === 'bank' ? '' : 'none';
         document.getElementById('salBankRefRow').style.display  = method === 'bank' ? '' : 'none';
-        if (method === 'bank') document.getElementById('salTreasury').value = '';
-        else document.getElementById('salBankRef').value = '';
+        if (method === 'bank') {
+            document.getElementById('salTreasury').value = '';
+        } else {
+            document.getElementById('salBankRef').value = '';
+            document.getElementById('salBankAccount').value = '';
+        }
     }
 
     document.querySelectorAll('.sal-pm').forEach(b => b.addEventListener('click', () => setSalPM(b.dataset.method)));
@@ -518,6 +532,7 @@
         document.getElementById('salPeriodEnd').value = '';
         document.getElementById('salBaseSalary').value = '';
         document.getElementById('salTreasury').value = '';
+        document.getElementById('salBankAccount').value = '';
         document.getElementById('salBankRef') && (document.getElementById('salBankRef').value = '');
         document.getElementById('salNotes').value = '';
         document.getElementById('salNetDisplay').textContent = '0.00';
@@ -539,9 +554,11 @@
         const end      = document.getElementById('salPeriodEnd').value;
         const method   = document.getElementById('salPaymentMethod').value;
         const treasury = document.getElementById('salTreasury').value;
+        const bankAccount = document.getElementById('salBankAccount').value;
         if (!employee) { Enjaz.toast('الرجاء اختيار الموظف', 'error'); return; }
         if (!start || !end) { Enjaz.toast('الرجاء تحديد فترة الراتب', 'error'); return; }
         if (method === 'cash' && !treasury) { Enjaz.toast('الرجاء اختيار الخزينة للدفع النقدي', 'error'); return; }
+        if (method === 'bank' && !bankAccount) { Enjaz.toast('الرجاء اختيار الحساب البنكي للتحويل البنكي', 'error'); return; }
 
         const checked = pendingItems.filter(function (i) { return i.checked; });
         const bonus            = checked.filter(i => i.type === 'bonus').reduce((s,i) => s + i.amount, 0);
@@ -560,6 +577,7 @@
             selected_incentive_ids: selected_incentive_ids,
             payment_method:         method,
             treasury:               treasury,
+            bank_account:           bankAccount,
             bank_reference:         document.getElementById('salBankRef').value.trim(),
             notes:                  document.getElementById('salNotes').value.trim(),
         };
@@ -591,6 +609,12 @@
             .then(function (d) {
                 $('#viewSalEmployee').text(d.employee);
                 $('#viewSalPeriod').text(d.period_start + ' — ' + d.period_end);
+
+                let accountDisplay = (d.treasury && d.treasury !== '—') ? d.treasury : '';
+                if (!accountDisplay && d.bank_account_id) {
+                    const opt = document.querySelector('#salBankAccount option[value="' + d.bank_account_id + '"]');
+                    if (opt) accountDisplay = opt.textContent;
+                }
 
                 const deferredItemsHtml = Array.isArray(d.deferred_items) && d.deferred_items.length
                     ? d.deferred_items.map(item => `
@@ -629,7 +653,7 @@
                         <div class="cx-info-card-icon cx-info-icon--status"><i class="fas fa-circle-check"></i></div>
                         <div class="cx-info-card-content"><span class="cx-info-card-label">الحالة</span><span class="cx-info-card-value">${d.status_display}</span></div>
                     </div>
-                    ${d.treasury ? `<div class="cx-info-card"><div class="cx-info-card-icon cx-info-icon--credit"><i class="fas fa-building-columns"></i></div><div class="cx-info-card-content"><span class="cx-info-card-label">الخزينة</span><span class="cx-info-card-value">${d.treasury}</span></div></div>` : ''}
+                    ${accountDisplay ? `<div class="cx-info-card"><div class="cx-info-card-icon cx-info-icon--credit"><i class="fas fa-building-columns"></i></div><div class="cx-info-card-content"><span class="cx-info-card-label">الخزينة / الحساب البنكي</span><span class="cx-info-card-value">${accountDisplay}</span></div></div>` : ''}
                     ${deferredItemsHtml}
                     ${d.deductions_notes ? `<div class="cx-info-card" style="grid-column:1/-1"><div class="cx-info-card-icon cx-info-icon--notes"><i class="fas fa-note-sticky"></i></div><div class="cx-info-card-content"><span class="cx-info-card-label">تفاصيل الخصومات</span><span class="cx-info-card-value">${d.deductions_notes}</span></div></div>` : ''}
                     ${d.notes ? `<div class="cx-info-card" style="grid-column:1/-1"><div class="cx-info-card-icon cx-info-icon--notes"><i class="fas fa-note-sticky"></i></div><div class="cx-info-card-content"><span class="cx-info-card-label">ملاحظات</span><span class="cx-info-card-value">${d.notes}</span></div></div>` : ''}

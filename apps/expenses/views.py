@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 
 from apps.core.utils import convert_arabic_numerals
 from apps.treasury.models import Treasury
+from apps.bank_accounts.models import BankAccount
 
 from .models import Expense, ExpenseCategory
 from .services import cancel_expense, confirm_expense
@@ -106,13 +107,23 @@ def expense_list(request):
             }
             for t in Treasury.objects.filter(tenant=tenant, is_active=True, is_hard_currency=False).only('id', 'name', 'current_balance')
         ]
-        
+        bank_accounts = [
+            {
+                'id': b.id,
+                'name': b.name,
+                'current_balance': str(b.current_balance or Decimal('0'))
+            }
+            for b in BankAccount.objects.filter(tenant=tenant, is_active=True).only('id', 'name', 'current_balance')
+        ]
+
         return render(request, 'expenses/expense_list.html', {
             'stats': stats,
             'categories': categories,
             'treasuries': treasuries,
+            'bank_accounts': bank_accounts,
             'categories_json': json.dumps(categories),
             'treasuries_json': json.dumps(treasuries),
+            'bank_accounts_json': json.dumps(bank_accounts),
         })
     except Exception as e:
         print(f"Error in expense_list: {e}")
@@ -135,7 +146,7 @@ def expense_table_api(request):
     status_filter = request.GET.get('status', '').strip()
     category_filter = request.GET.get('category', '').strip()
 
-    qs = Expense.objects.filter(tenant=tenant).select_related('category', 'treasury')
+    qs = Expense.objects.filter(tenant=tenant).select_related('category', 'treasury', 'bank_account')
     total = qs.count()
 
     if status_filter:
@@ -173,7 +184,7 @@ def expense_table_api(request):
             'expense_date': exp.expense_date.strftime('%Y-%m-%d'),
             'amount': str(exp.amount),
             'payment_method': METHOD_LABELS.get(exp.payment_method, exp.payment_method),
-            'treasury': exp.treasury.name if exp.treasury else '—',
+            'treasury': (exp.treasury.name if exp.treasury else (exp.bank_account.name if exp.bank_account else '—')),
             'status': STATUS_LABELS.get(exp.status, exp.status),
             'status_raw': exp.status,
             'id': exp.pk,
@@ -250,6 +261,7 @@ def _process_expense_post(request, tenant, expense):
         payment_method = 'cash'
 
     treasury = None
+    bank_account = None
     if payment_method == 'cash':
         treasury_id = data.get('treasury_id')
         if treasury_id:
@@ -257,6 +269,14 @@ def _process_expense_post(request, tenant, expense):
                 treasury = Treasury.objects.get(pk=int(treasury_id), tenant=tenant, is_active=True, is_hard_currency=False)
             except (Treasury.DoesNotExist, ValueError):
                 return _err('الخزينة غير صالحة')
+    elif payment_method == 'bank':
+        bank_account_id = data.get('bank_account_id')
+        if not bank_account_id:
+            return _err('يجب اختيار الحساب البنكي')
+        try:
+            bank_account = BankAccount.objects.get(pk=int(bank_account_id), tenant=tenant, is_active=True)
+        except (BankAccount.DoesNotExist, ValueError):
+            return _err('الحساب البنكي غير صالح')
 
     reference_number = (data.get('reference_number') or '').strip()
     notes = (data.get('notes') or '').strip()
@@ -270,6 +290,7 @@ def _process_expense_post(request, tenant, expense):
     expense.expense_date = expense_date
     expense.payment_method = payment_method
     expense.treasury = treasury
+    expense.bank_account = bank_account
     expense.reference_number = reference_number
     expense.notes = notes
     expense.updated_by = request.user
@@ -303,7 +324,7 @@ def expense_detail_api(request, pk):
     if not tenant:
         return _err('لا يوجد نشاط تجاري')
 
-    expense = get_object_or_404(Expense.objects.select_related('category', 'treasury'), pk=pk, tenant=tenant)
+    expense = get_object_or_404(Expense.objects.select_related('category', 'treasury', 'bank_account'), pk=pk, tenant=tenant)
     return JsonResponse({'success': True, 'data': {
         'id': expense.pk,
         'code': expense.code,
@@ -313,6 +334,7 @@ def expense_detail_api(request, pk):
         'amount': str(expense.amount),
         'payment_method': expense.payment_method,
         'treasury_id': expense.treasury_id,
+        'bank_account_id': expense.bank_account_id,
         'reference_number': expense.reference_number or '',
         'notes': expense.notes or '',
         'status_raw': expense.status,

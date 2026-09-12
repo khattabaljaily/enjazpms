@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db import models
 
 from apps.core.models import TenantMixin
+from apps.bank_accounts.models import BankAccount
 
 
 class PurchaseInvoice(TenantMixin):
@@ -43,6 +44,14 @@ class PurchaseInvoice(TenantMixin):
     cash_amount = models.DecimalField('المبلغ نقداً (مختلط)', max_digits=14, decimal_places=2, default=0)
     bank_amount = models.DecimalField('المبلغ بنكياً (مختلط)', max_digits=14, decimal_places=2, default=0)
     bank_reference = models.CharField('مرجع التحويل البنكي', max_length=100, blank=True)
+    bank_account = models.ForeignKey(
+        BankAccount,
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='purchase_invoices',
+        verbose_name='الحساب البنكي',
+        help_text='الحساب البنكي الصادر منه الجزء البنكي من أمر الشراء',
+    )
 
     subtotal = models.DecimalField('المجموع الفرعي', max_digits=14, decimal_places=2, default=0)
     tax_amount = models.DecimalField('الضريبة', max_digits=14, decimal_places=2, default=0)

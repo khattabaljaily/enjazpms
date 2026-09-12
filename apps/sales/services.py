@@ -38,6 +38,8 @@ from django.utils import timezone
 from apps.stocks.models import StockQuantity
 from apps.treasury.models import TreasuryMovement
 from apps.treasury.services import post_treasury_disbursement, post_treasury_receipt
+from apps.bank_accounts.models import BankAccountMovement
+from apps.bank_accounts.services import post_bank_account_disbursement, post_bank_account_receipt
 
 from .models import (
     CustomerLedger,
@@ -168,7 +170,7 @@ def _restore_stock(tenant, stock, item, qty, unit_cost, reference_type, referenc
     )
 
 
-def _apply_payment(tenant, invoice, method, amount, date, reference='', notes='', treasury=None, post_to_treasury=None):
+def _apply_payment(tenant, invoice, method, amount, date, reference='', notes='', treasury=None, post_to_treasury=None, bank_account=None):
     """
     يُنشئ SalePayment ويُحدِّث paid_amount في الفاتورة.
 
@@ -197,6 +199,9 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
 
     if post_to_treasury is None:
         post_to_treasury = method in ('cash', 'insurance')
+    post_to_bank = method == 'bank'
+
+    user = getattr(invoice, 'confirmed_by', None) or getattr(invoice, 'updated_by', None) or getattr(invoice, 'created_by', None)
 
     if post_to_treasury:
         treasury_notes = notes or f'فاتورة {invoice.invoice_number}'
@@ -208,7 +213,7 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
                 reference_type='sale_payment',
                 reference_id=payment.id,
                 description=treasury_notes,
-                user=getattr(invoice, 'confirmed_by', None) or getattr(invoice, 'updated_by', None) or getattr(invoice, 'created_by', None),
+                user=user,
                 treasury=treasury,
             )
         else:
@@ -219,8 +224,32 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
                 reference_type='sale_payment',
                 reference_id=payment.id,
                 description=treasury_notes,
-                user=getattr(invoice, 'confirmed_by', None) or getattr(invoice, 'updated_by', None) or getattr(invoice, 'created_by', None),
+                user=user,
                 treasury=treasury,
+            )
+    elif post_to_bank:
+        bank_notes = notes or f'فاتورة {invoice.invoice_number}'
+        if amount > 0:
+            post_bank_account_receipt(
+                tenant=tenant,
+                amount=amount,
+                date=date,
+                reference_type='sale_payment',
+                reference_id=payment.id,
+                description=bank_notes,
+                user=user,
+                bank_account=bank_account,
+            )
+        else:
+            post_bank_account_disbursement(
+                tenant=tenant,
+                amount=abs(amount),
+                date=date,
+                reference_type='sale_payment',
+                reference_id=payment.id,
+                description=bank_notes,
+                user=user,
+                bank_account=bank_account,
             )
 
     return payment
@@ -345,6 +374,33 @@ def _reverse_single_payment(tenant, invoice, payment):
                 description=reverse_notes,
                 treasury=movement_treasury,
             )
+    elif payment.payment_method == 'bank':
+        reverse_notes = f"عكس حركة دفعة {invoice.invoice_number}"
+        original_movement = BankAccountMovement.objects.filter(
+            tenant=tenant, reference_type='sale_payment', reference_id=payment.id,
+        ).first()
+        movement_bank_account = original_movement.bank_account if original_movement else None
+        if movement_bank_account:
+            if payment.amount > 0:
+                post_bank_account_disbursement(
+                    tenant=tenant,
+                    amount=abs(payment.amount),
+                    date=timezone.localdate(),
+                    reference_type='sale_payment',
+                    reference_id=payment.id,
+                    description=reverse_notes,
+                    bank_account=movement_bank_account,
+                )
+            elif payment.amount < 0:
+                post_bank_account_receipt(
+                    tenant=tenant,
+                    amount=abs(payment.amount),
+                    date=timezone.localdate(),
+                    reference_type='sale_payment',
+                    reference_id=payment.id,
+                    description=reverse_notes,
+                    bank_account=movement_bank_account,
+                )
 
     if invoice.agent_id:
         _reverse_agent_ledger(tenant, 'sale_payment', payment.id)
@@ -455,6 +511,11 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
     if pm == 'credit' and not invoice.customer:
         raise ValueError('الفاتورة الآجلة تتطلب اختيار عميل قبل التأكيد.')
 
+    if pm == 'bank' and not invoice.bank_account:
+        raise ValueError('الفاتورة البنكية تتطلب اختيار الحساب البنكي قبل التأكيد.')
+    if pm == 'mixed' and (invoice.bank_amount or Decimal('0')) > 0 and not invoice.bank_account:
+        raise ValueError('الجزء البنكي من الفاتورة المختلطة يتطلب اختيار الحساب البنكي قبل التأكيد.')
+
     # ── فحص الحد الائتماني ──────────────────────────────
     if invoice.customer and pm in ('credit', 'mixed'):
         customer = invoice.customer
@@ -501,7 +562,7 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
 
     elif pm == 'bank':
         _apply_payment(tenant, invoice, 'bank', total, invoice.invoice_date,
-                       reference=invoice.bank_reference)
+                       reference=invoice.bank_reference, bank_account=invoice.bank_account)
         if invoice.customer:
             _apply_customer_ledger(
                 tenant=tenant, customer=invoice.customer, amount=total,
@@ -541,7 +602,7 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
             _apply_payment(tenant, invoice, 'cash', cash_amt, invoice.invoice_date)
         if bank_amt > 0:
             _apply_payment(tenant, invoice, 'bank', bank_amt, invoice.invoice_date,
-                           reference=invoice.bank_reference)
+                           reference=invoice.bank_reference, bank_account=invoice.bank_account)
         # المبلغ المتوقع من التأمين (insurance_amt) ليس ديناً على العميل ولا دفعة
         # مستلمة فعلياً — يبقى معلَّقاً بالكامل عبر InsuranceClaim.covered_amount
         # التي تُنشأ بعد التأكيد مباشرة، فلا يُسجَّل هنا كقيد على العميل.
@@ -779,7 +840,7 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
     allowed_header_fields = {
         'customer', 'stock', 'agent', 'invoice_date', 'due_date',
         'payment_method', 'invoice_discount_type', 'invoice_discount_value',
-        'cash_amount', 'bank_amount', 'bank_reference', 'notes',
+        'cash_amount', 'bank_amount', 'bank_reference', 'bank_account', 'notes',
         'reference_number', 'insurance_member', 'insurance_card_number',
     }
     for field, value in header_data.items():
@@ -934,6 +995,8 @@ def confirm_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
     refund = sale_return.refund_method
 
     if refund in ('cash', 'bank'):
+        if refund == 'bank' and not invoice.bank_account:
+            raise ValueError('استرداد المرتجع بنكياً يتطلب أن يكون للفاتورة حساب بنكي محدد.')
         _apply_payment(
             tenant=tenant,
             invoice=invoice,
@@ -941,6 +1004,7 @@ def confirm_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
             amount=-total_returned,
             date=sale_return.return_date,
             notes=f"استرداد مرتجع {sale_return.return_number}",
+            bank_account=invoice.bank_account if refund == 'bank' else None,
         )
         invoice.sync_paid_amount()
         invoice.save(update_fields=['paid_amount', 'updated_at'])
@@ -1095,6 +1159,33 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
                         reference_id=payment.id,
                         description=reverse_notes,
                     )
+            elif payment.payment_method == 'bank':
+                reverse_notes = f"عكس استرداد مرتجع {sale_return.return_number}"
+                original_movement = BankAccountMovement.objects.filter(
+                    tenant=tenant, reference_type='sale_payment', reference_id=payment.id,
+                ).first()
+                movement_bank_account = original_movement.bank_account if original_movement else invoice.bank_account
+                if movement_bank_account:
+                    if payment.amount < 0:
+                        post_bank_account_receipt(
+                            tenant=tenant,
+                            amount=abs(payment.amount),
+                            date=timezone.localdate(),
+                            reference_type='sale_payment',
+                            reference_id=payment.id,
+                            description=reverse_notes,
+                            bank_account=movement_bank_account,
+                        )
+                    elif payment.amount > 0:
+                        post_bank_account_disbursement(
+                            tenant=tenant,
+                            amount=abs(payment.amount),
+                            date=timezone.localdate(),
+                            reference_type='sale_payment',
+                            reference_id=payment.id,
+                            description=reverse_notes,
+                            bank_account=movement_bank_account,
+                        )
             # استعادة عمولة التحصيل (النسبية) التي عُكست عند تأكيد المرتجع
             if invoice.agent_id:
                 _reverse_agent_ledger(tenant, 'sale_payment', payment.id)
@@ -1130,7 +1221,7 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
 def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
                             method: str, date, reference: str = '',
                             notes: str = '', user=None, treasury=None,
-                            post_to_treasury=None) -> SalePayment:
+                            post_to_treasury=None, bank_account=None) -> SalePayment:
     """
     تسجيل دفعة جديدة من عميل على فاتورة آجلة (credit).
     يُحدِّث paid_amount ويُنشئ قيداً عكسياً في CustomerLedger.
@@ -1151,6 +1242,9 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
             f"المبلغ المدفوع ({amount}) يتجاوز المتبقي ({remaining})."
         )
 
+    if method == 'bank' and not bank_account:
+        raise ValueError('الدفع البنكي يتطلب اختيار الحساب البنكي.')
+
     # إنشاء الدفعة
     payment = _apply_payment(
         tenant=tenant,
@@ -1162,6 +1256,7 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
         reference=reference,
         notes=notes or f"دفعة على فاتورة {invoice.invoice_number}",
         treasury=treasury,
+        bank_account=bank_account,
     )
 
     # تقليل المطالبة في حساب العميل
@@ -1215,7 +1310,7 @@ def write_off_invoice_balance(invoice: SaleInvoice, amount: Decimal, reason: str
         )
 
 
-def _post_customer_direct_payment(tenant, customer, amount, method, date, reference, notes, user, treasury, kind):
+def _post_customer_direct_payment(tenant, customer, amount, method, date, reference, notes, user, treasury, kind, bank_account=None):
     """
     يسجّل جزءاً من دفعة عميل غير مرتبط بأي فاتورة: إما تسديد مستحقات
     افتتاحية (kind='opening') أو رصيد دائن لدفعة زائدة (kind='credit').
@@ -1236,12 +1331,19 @@ def _post_customer_direct_payment(tenant, customer, amount, method, date, refere
             reference_type=reference_type, reference_id=entry.id,
             description=note_text, user=user, treasury=treasury,
         )
+    elif method == 'bank' and entry:
+        post_bank_account_receipt(
+            tenant=tenant, amount=amount, date=date,
+            reference_type=reference_type, reference_id=entry.id,
+            description=note_text, user=user, bank_account=bank_account,
+        )
     return entry
 
 
 @transaction.atomic
 def record_customer_payment_allocated(tenant, customer, amount: Decimal, method: str, date,
-                                      reference: str = '', notes: str = '', user=None, treasury=None) -> dict:
+                                      reference: str = '', notes: str = '', user=None, treasury=None,
+                                      bank_account=None) -> dict:
     """
     يوزّع دفعة عميل تلقائياً بدل خصم رقم عام من رصيده:
       1. على فواتيره الآجلة/المختلطة المفتوحة، الأقدم أولاً (عبر record_customer_payment
@@ -1255,6 +1357,8 @@ def record_customer_payment_allocated(tenant, customer, amount: Decimal, method:
     amount = Decimal(str(amount or 0))
     if amount <= 0:
         raise ValueError('المبلغ يجب أن يكون أكبر من الصفر')
+    if method == 'bank' and not bank_account:
+        raise ValueError('الدفع البنكي يتطلب اختيار الحساب البنكي.')
 
     remaining = amount
     allocation = {'invoices': [], 'opening_balance': Decimal('0'), 'credit': Decimal('0')}
@@ -1279,6 +1383,7 @@ def record_customer_payment_allocated(tenant, customer, amount: Decimal, method:
         payment = record_customer_payment(
             invoice, chunk, method, date,
             reference=reference, notes=notes, user=user, treasury=treasury,
+            bank_account=bank_account,
         )
         allocation['invoices'].append({'invoice': invoice, 'amount': chunk, 'payment': payment})
         remaining -= chunk
@@ -1303,6 +1408,7 @@ def record_customer_payment_allocated(tenant, customer, amount: Decimal, method:
             chunk = min(non_invoice_dues, remaining)
             _post_customer_direct_payment(
                 tenant, customer, chunk, method, date, reference, notes, user, treasury, kind='opening',
+                bank_account=bank_account,
             )
             allocation['opening_balance'] = chunk
             remaining -= chunk
@@ -1310,6 +1416,7 @@ def record_customer_payment_allocated(tenant, customer, amount: Decimal, method:
     if remaining > Decimal('0.005'):
         _post_customer_direct_payment(
             tenant, customer, remaining, method, date, reference, notes, user, treasury, kind='credit',
+            bank_account=bank_account,
         )
         allocation['credit'] = remaining
 
@@ -1347,6 +1454,16 @@ def reverse_customer_payment_by_ledger_entry(tenant, ledger_entry, user=None):
                 tenant=tenant, amount=abs(ledger_entry.amount), date=timezone.localdate(),
                 reference_type=f'{ledger_entry.reference_type}_cancel', reference_id=ledger_entry.id,
                 description=reverse_notes, user=user, treasury=movement.treasury,
+            )
+    elif ledger_entry.reference_type.endswith('_bank'):
+        movement = BankAccountMovement.objects.filter(
+            tenant=tenant, reference_type=ledger_entry.reference_type, reference_id=ledger_entry.id,
+        ).first()
+        if movement:
+            post_bank_account_disbursement(
+                tenant=tenant, amount=abs(ledger_entry.amount), date=timezone.localdate(),
+                reference_type=f'{ledger_entry.reference_type}_cancel', reference_id=ledger_entry.id,
+                description=reverse_notes, user=user, bank_account=movement.bank_account,
             )
 
     _apply_customer_ledger(
@@ -1487,6 +1604,11 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
         from apps.insurance.models import InsuranceMember
         insurance_member = InsuranceMember.objects.get(id=data['insurance_member_id'], tenant=tenant)
 
+    bank_account = None
+    if data.get('bank_account_id'):
+        from apps.bank_accounts.models import BankAccount
+        bank_account = BankAccount.objects.get(id=data['bank_account_id'], tenant=tenant, is_active=True)
+
     invoice = SaleInvoice(
         tenant=tenant,
         customer=customer,
@@ -1503,6 +1625,7 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
         cash_amount=Decimal(str(data.get('cash_amount', 0))),
         bank_amount=Decimal(str(data.get('bank_amount', 0))),
         bank_reference=data.get('bank_reference', ''),
+        bank_account=bank_account,
         notes=data.get('notes', ''),
         reference_number=data.get('reference_number', ''),
         created_by=user,
@@ -1664,7 +1787,7 @@ def cancel_sale_quote(quote, user):
 
 @transaction.atomic
 def convert_quote_to_invoice(quote, user, payment_method='cash',
-                              cash_amount=None, bank_amount=None, bank_reference=''):
+                              cash_amount=None, bank_amount=None, bank_reference='', bank_account_id=None):
     """
     يحوّل عرض السعر إلى فاتورة بيع مسودة.
     ينسخ الرأس والبنود ويربط الفاتورة بالعرض.
@@ -1687,6 +1810,7 @@ def convert_quote_to_invoice(quote, user, payment_method='cash',
         'cash_amount': str(cash_amount or 0),
         'bank_amount': str(bank_amount or 0),
         'bank_reference': bank_reference or '',
+        'bank_account_id': bank_account_id,
     }
 
     # بناء بنود الفاتورة من بنود العرض

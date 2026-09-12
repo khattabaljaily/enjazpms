@@ -298,6 +298,17 @@
                         <input type="text" id="bankReference" name="bank_reference" class="cx-input"
                                value="{{ invoice.bank_reference|default:'' }}">
                     </div>
+                    <div class="col-12 sales-field-hidden" id="bankAccountWrap">
+                        <label class="cx-label">الحساب البنكي <span class="text-danger">*</span></label>
+                        <select id="bankAccountId" name="bank_account_id" class="cx-input" onchange="updateBankAccountBalanceHint()">
+                            <option value="">— اختر الحساب البنكي —</option>
+                            {% for b in bank_accounts %}
+                            <option value="{{ b.id }}" data-balance="{{ b.current_balance }}"
+                                {% if invoice and invoice.bank_account_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted d-block mt-1 sales-field-hidden" id="bankAccountBalanceHint"></small>
+                    </div>
                 </div>
 
                 <!-- أزرار الحفظ -->
@@ -562,9 +573,25 @@ function handlePaymentMethodChange() {
     toggleHidden('dueDateWrap', !(pm === 'credit' || pm === 'mixed'));
     toggleHidden('mixedPaymentWrap', pm !== 'mixed');
     toggleHidden('bankRefWrap', !(pm === 'bank' || pm === 'mixed'));
+    toggleHidden('bankAccountWrap', !(pm === 'bank' || pm === 'mixed'));
     toggleHidden('creditRow', pm !== 'mixed');
     updatePaymentMethodBadge(pm);
+    updateBankAccountBalanceHint();
     recalcTotals();
+}
+
+function updateBankAccountBalanceHint() {
+    const sel = document.getElementById('bankAccountId');
+    const hint = document.getElementById('bankAccountBalanceHint');
+    if (!sel || !hint) return;
+    const opt = sel.options[sel.selectedIndex];
+    const balance = opt ? opt.dataset.balance : undefined;
+    if (sel.value && balance !== undefined && balance !== '') {
+        hint.textContent = 'الرصيد الحالي: ' + Enjaz.formatMoney(balance);
+        hint.classList.remove('sales-field-hidden');
+    } else {
+        hint.classList.add('sales-field-hidden');
+    }
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -1086,6 +1113,14 @@ function submitForm(action) {
     if (!lines.length) { showAlert('أضف منتجاً واحداً على الأقل', 'warning'); return; }
     if (!document.getElementById('stockId').value) { showAlert('الرجاء اختيار المخزن', 'warning'); return; }
 
+    const pm = document.getElementById('paymentMethod').value;
+    const bankAccountId = document.getElementById('bankAccountId')?.value || null;
+    const bankAmountVal = Enjaz.parseNumber(document.getElementById('bankAmount')?.value || 0);
+    if ((pm === 'bank' || (pm === 'mixed' && bankAmountVal > 0)) && !bankAccountId) {
+        showAlert('اختر الحساب البنكي', 'warning');
+        return;
+    }
+
     const submitButtons = Array.from(document.querySelectorAll('button[onclick^="submitForm("]'));
     const originalLabels = submitButtons.map(btn => btn.innerHTML);
     submitButtons.forEach(btn => {
@@ -1106,6 +1141,7 @@ function submitForm(action) {
         cash_amount: Enjaz.parseNumber(document.getElementById('cashAmount')?.value || 0).toFixed(2),
         bank_amount: Enjaz.parseNumber(document.getElementById('bankAmount')?.value || 0).toFixed(2),
         bank_reference: document.getElementById('bankReference')?.value || '',
+        bank_account_id: bankAccountId,
         notes: document.getElementById('notes').value,
         insurance_member_id: (document.getElementById('insuranceToggle')?.checked && document.getElementById('insuranceMemberId').value) ? document.getElementById('insuranceMemberId').value : null,
         insurance_card_number: document.getElementById('insuranceToggle')?.checked ? document.getElementById('insuranceCardNumber').value.trim() : '',
