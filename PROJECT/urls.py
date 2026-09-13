@@ -13,7 +13,7 @@ urlpatterns = [
     path('manifest.json', pwa_manifest, name='pwa_manifest'),
 
     # Admin
-    path('admin/', admin.site.urls),
+    path('DDQR9KHA/', admin.site.urls),
     
     # Apps
     path('', include('apps.core.urls')),
