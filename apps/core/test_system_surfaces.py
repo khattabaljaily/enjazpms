@@ -11,11 +11,14 @@ from django.urls import reverse
 
 from apps.accounts.models import PermissionGroup, User
 from apps.core.backup_service import create_backup
+from apps.core.backup_service import restore_backup
 from apps.core.models import Branch, BusinessType, Tenant, TenantBackup, TenantCapabilities
 from apps.customers.models import Customer
 from apps.items.models import Category, Item
 from apps.notifications.models import Notification
 from apps.stocks.models import Stock
+from apps.stocks.models import StockQuantity
+from apps.notifications.services import generate_low_stock_notifications
 from apps.data_import.schemas import get_product_schema
 
 
@@ -171,6 +174,35 @@ class SystemSurfaceTests(TestCase):
             self.assertGreater(backup.file_size, 0)
             self.assertTrue(Path(backup.file_path).exists())
             self.assertTrue(Path(backup.file_path).read_text(encoding='utf-8').startswith('-- ENJAZ PMS Tenant Backup'))
+
+    def test_backup_restore_removes_post_backup_data_and_keeps_backup_successful(self):
+        with TemporaryDirectory() as directory:
+            with patch('apps.core.backup_service.BACKUP_ROOT', Path(directory)):
+                backup = create_backup(self.tenant, backup_type='manual')
+                self.assertEqual(backup.status, 'completed')
+                Item.objects.create(
+                    tenant=self.tenant, name='بيانات بعد النسخة', sku='AFTER-BACKUP',
+                    cost_price='1', selling_price='2', tax_rate='0',
+                )
+                ok, message = restore_backup(backup.id)
+
+            self.assertTrue(ok, message)
+            self.assertTrue(Item.objects.filter(tenant=self.tenant, sku='SURFACE-001').exists())
+            self.assertFalse(Item.objects.filter(tenant=self.tenant, sku='AFTER-BACKUP').exists())
+
+    def test_low_stock_notification_is_created_once(self):
+        stock = Stock.objects.filter(tenant=self.tenant, is_active=True).first()
+        quantity = StockQuantity.objects.get(stock=stock, item=self.item)
+        quantity.min_quantity = 2
+        quantity.quantity = 1
+        quantity.save(update_fields=['min_quantity', 'quantity', 'updated_at'])
+
+        self.assertEqual(generate_low_stock_notifications(self.tenant), 1)
+        self.assertEqual(generate_low_stock_notifications(self.tenant), 0)
+        self.assertEqual(
+            Notification.objects.filter(tenant=self.tenant, notification_type='low_stock').count(),
+            1,
+        )
 
     def test_branch_crud_endpoints_create_update_and_delete_empty_branch(self):
         create_response = self.post(
