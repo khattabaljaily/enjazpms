@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>خطة اختبار نظام إنجاز - النسخة الاحترافية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #192735;
+      --muted: #647481;
+      --line: #d8e0e5;
+      --paper: #ffffff;
+      --wash: #f3f7f8;
+      --navy: #123b52;
+      --teal: #087f7b;
+      --gold: #d69b35;
+      --danger: #a4403e;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: linear-gradient(135deg, #e8f0f1, #f8f5ed);
+      font-family: "Cairo", Tahoma, sans-serif;
+      line-height: 1.8;
+    }
+    .page {
+      width: min(1100px, calc(100% - 32px));
+      margin: 32px auto;
+      background: var(--paper);
+      box-shadow: 0 14px 40px rgba(18, 59, 82, .12);
+    }
+    header {
+      padding: 46px 56px 38px;
+      color: white;
+      background: var(--navy);
+      border-bottom: 7px solid var(--gold);
+    }
+    header h1 { margin: 0 0 8px; font-size: clamp(28px, 4vw, 42px); line-height: 1.3; }
+    header p { margin: 0; color: #d7e5e9; font-size: 17px; }
+    main { padding: 36px 56px 52px; }
+    h2 {
+      margin: 36px 0 14px;
+      padding-right: 14px;
+      color: var(--navy);
+      border-right: 5px solid var(--teal);
+      font-size: 25px;
+      line-height: 1.4;
+    }
+    h2:first-child { margin-top: 0; }
+    h3 { margin: 26px 0 8px; color: var(--teal); font-size: 20px; }
+    p { margin: 8px 0 14px; }
+    ul, ol { margin: 8px 0 18px; padding-right: 26px; }
+    li { margin: 4px 0; }
+    code {
+      direction: ltr;
+      unicode-bidi: embed;
+      padding: 2px 6px;
+      color: #174d62;
+      background: #edf4f5;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .9em;
+    }
+    .notice {
+      padding: 16px 20px;
+      background: #fff8e9;
+      border: 1px solid #ead29b;
+      border-right: 5px solid var(--gold);
+    }
+    table { width: 100%; margin: 14px 0 24px; border-collapse: collapse; background: white; }
+    th, td { padding: 10px 12px; text-align: right; vertical-align: top; border: 1px solid var(--line); }
+    th { color: white; background: var(--navy); font-weight: 700; }
+    tr:nth-child(even) td { background: var(--wash); }
+    .case {
+      margin: 22px 0;
+      padding: 18px 22px;
+      border: 1px solid var(--line);
+      border-right: 5px solid var(--teal);
+      break-inside: avoid;
+    }
+    .case h3 { margin-top: 0; }
+    .expected { margin-top: 12px; padding: 10px 14px; background: #eef8f6; }
+    .warning { padding: 12px 16px; color: #6f2f2e; background: #fff1f0; border-right: 4px solid var(--danger); }
+    .check { white-space: nowrap; }
+    .task { display: flex; gap: 9px; align-items: flex-start; margin: 8px 0; }
+    input[type="checkbox"] { width: 19px; height: 19px; margin-top: 6px; accent-color: var(--teal); }
+    .module-table td:first-child { width: 28%; font-weight: 700; color: var(--navy); }
+    .module-table td:last-child { width: 74px; text-align: center; }
+    .detail-table td:first-child { width: 7%; text-align: center; font-weight: 700; color: var(--teal); }
+    .detail-table td:nth-child(2) { width: 22%; font-weight: 700; color: var(--navy); }
+    .detail-table td:last-child { width: 62px; text-align: center; }
+    .detail-table input { display: block; margin: 0 auto; }
+    .phase { margin: 28px 0; break-inside: avoid; }
+    .phase h3 { padding-bottom: 6px; border-bottom: 2px solid #dcebea; }
+    footer { padding: 18px 56px; color: var(--muted); border-top: 1px solid var(--line); font-size: 14px; }
+    @media (max-width: 700px) {
+      .page { width: 100%; margin: 0; }
+      header, main, footer { padding-left: 20px; padding-right: 20px; }
+      table { display: block; overflow-x: auto; }
+      th, td { min-width: 150px; }
+    }
+    @media print {
+      body { background: white; }
+      .page { width: 100%; margin: 0; box-shadow: none; }
+      header { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .case, table { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>خطة اختبار نظام إنجاز - النسخة الاحترافية</h1>
+      <p>اختبار كامل لوظائف النسخة الاحترافية: عدة مخازن وتقارير وصلاحيات متقدمة</p>
+    </header>
+
+    <main>
+      <div class="notice">
+        <strong>قاعدة التنفيذ:</strong>
+        نفّذ الاختبارات على بيانات اختبار منفصلة لكل مستأجر، وسجّل الحالة قبل وبعد كل عملية. ضع علامة في المربع بعد التحقق الفعلي، ولا تعتبر الاختبار ناجحًا إلا بعد مطابقة النتائج.
+      </div>
+
+      <h2>1. اختبار الدخول والمستخدمين والصلاحيات</h2>
+      <table class="module-table">
+        <thead><tr><th>الاختبار</th><th>النتيجة المتوقعة</th><th>تم</th></tr></thead>
+        <tbody>
+          <tr><td>تسجيل الدخول الصحيح</td><td>يفتح المستخدم لوحة مستأجره فقط.</td><td><input type="checkbox" aria-label="تسجيل الدخول الصحيح"></td></tr>
+          <tr><td>كلمة مرور خاطئة</td><td>يرفض الدخول دون كشف معلومات الحساب.</td><td><input type="checkbox" aria-label="كلمة مرور خاطئة"></td></tr>
+          <tr><td>تسجيل الخروج وانتهاء الجلسة</td><td>لا يمكن فتح الصفحات المحمية بعد الخروج أو انتهاء الجلسة.</td><td><input type="checkbox" aria-label="تسجيل الخروج"></td></tr>
+          <tr><td>صلاحية القراءة</td><td>يستطيع المستخدم العرض دون الإضافة أو التعديل أو الحذف.</td><td><input type="checkbox" aria-label="صلاحية القراءة"></td></tr>
+          <tr><td>صلاحية الإضافة والتعديل والحذف</td><td>كل إجراء يتطلب الصلاحية المناسبة، وتظهر رسالة رفض واضحة عند المنع.</td><td><input type="checkbox" aria-label="صلاحيات العمليات"></td></tr>
+          <tr><td>فصل حسابات المنشآت</td><td>مستخدم المنشأة الأولى لا يرى بيانات المنشأة الثانية، والعكس.</td><td><input type="checkbox" aria-label="فصل حسابات المنشآت"></td></tr>
+          <tr><td>سجل النشاط</td><td>يسجل الإنشاء والتعديل والحذف والتأكيد والإلغاء باسم المستخدم والتاريخ.</td><td><input type="checkbox" aria-label="سجل النشاط"></td></tr>
+        </tbody>
+      </table>
+
+      <h2>2. الإعدادات والبيانات الأساسية</h2>
+      <table class="module-table">
+        <thead><tr><th>الاختبار</th><th>النتيجة المتوقعة</th><th>تم</th></tr></thead>
+        <tbody>
+          <tr><td>المستخدمون وحسابات المنشآت</td><td>إنشاء وتعديل المستخدم وربطه بحساب المنشأة الصحيح.</td><td><input type="checkbox" aria-label="المستخدمون وحسابات المنشآت"></td></tr>
+          <tr><td>التصنيفات والوحدات</td><td>إنشاء وتعديل وحذف السجل غير المستخدم، ومنع حذف السجل المرتبط بعمليات.</td><td><input type="checkbox" aria-label="التصنيفات والوحدات"></td></tr>
+          <tr><td>الأصناف والخدمات</td><td>حفظ رمز مميز للصنف، وتمييز الصنف الذي يُخزّن عن الخدمة التي لا تحتاج مخزونًا.</td><td><input type="checkbox" aria-label="الأصناف والخدمات"></td></tr>
+          <tr><td>العملاء</td><td>حفظ بيانات العميل والحد الائتماني والرصيد وسجل العمليات بصورة صحيحة.</td><td><input type="checkbox" aria-label="العملاء"></td></tr>
+          <tr><td>الموردون</td><td>حفظ بيانات المورد ورصيده وعمليات الشراء والسداد المرتبطة به.</td><td><input type="checkbox" aria-label="الموردون"></td></tr>
+          <tr><td>الموظفون والمندوبون</td><td>ربط الموظف أو المندوب بالعمليات والعمولات دون خلط بين حسابات المنشآت.</td><td><input type="checkbox" aria-label="الموظفون والمندوبون"></td></tr>
+          <tr><td>شركات التأمين</td><td>إضافة شركة التأمين وربط المطالبة بالعميل والفاتورة الصحيحة.</td><td><input type="checkbox" aria-label="شركات التأمين"></td></tr>
+        </tbody>
+      </table>
+
+      <h2>3. المخزون والمستودعات</h2>
+      <table class="module-table">
+        <thead><tr><th>الاختبار</th><th>النتيجة المتوقعة</th><th>تم</th></tr></thead>
+        <tbody>
+          <tr><td>الرصيد الافتتاحي</td><td>حفظ الكمية والتكلفة والمخزن، وتحديث الكمية دون كسور غير مقصودة.</td><td><input type="checkbox" aria-label="الرصيد الافتتاحي"></td></tr>
+          <tr><td>الإضافة والتحويل والتسوية</td><td>تتغير الكمية بالحركة الصحيحة، مع تسجيل المرجع والرصيد بعد الحركة.</td><td><input type="checkbox" aria-label="حركات المخزون"></td></tr>
+          <tr><td>المخزون المتاح والمحجوز</td><td>المتاح = الكمية - المحجوز، ولا يسمح النظام ببيع المتاح غير الكافي.</td><td><input type="checkbox" aria-label="المتاح والمحجوز"></td></tr>
+          <tr><td>تعدد المخازن</td><td>كل مخزن يحتفظ برصيده المستقل، ولا تنتقل الكمية دون حركة تحويل.</td><td><input type="checkbox" aria-label="تعدد المخازن"></td></tr>
+          <tr><td>الأرقام والتواريخ والتشغيلات</td><td>تحفظ بيانات التشغيلة والرقم التسلسلي وتاريخ الانتهاء وتظهر في التقارير.</td><td><input type="checkbox" aria-label="بيانات التشغيلات"></td></tr>
+          <tr><td>الخدمات غير المخزنية</td><td>يمكن بيع الخدمة دون إنشاء حركة مخزون أو خصم كمية.</td><td><input type="checkbox" aria-label="الخدمات غير المخزنية"></td></tr>
+        </tbody>
+      </table>
+
+      <h2>بيانات الاختبار المقترحة</h2>
+      <table>
+        <thead><tr><th>العنصر</th><th>القيمة</th></tr></thead>
+        <tbody>
+          <tr><td>المنتج</td><td>منتج مخزني واحد، كمية ابتدائية 5</td></tr>
+          <tr><td>سعر البيع</td><td>100</td></tr>
+          <tr><td>العميل</td><td>عميل بحد ائتماني 1,000</td></tr>
+          <tr><td>الخزينة قبل الاختبار</td><td>10,000</td></tr>
+          <tr><td>الحساب البنكي قبل الاختبار</td><td>5,000</td></tr>
+          <tr><td>المخزن</td><td>مخزن واحد واضح</td></tr>
+        </tbody>
+      </table>
+
+      <h2>الحالات الأساسية</h2>
+      <section class="case">
+        <h3>T01: فاتورة نقدية</h3>
+        <ol><li>أنشئ فاتورة بكمية 3 وإجمالي 300 وطريقة الدفع نقدي.</li><li>سجّل الكمية والخزينة قبل التأكيد.</li><li>أكّد الفاتورة.</li></ol>
+        <div class="expected"><strong>المتوقع:</strong><ul><li>تنخفض الكمية من 5 إلى 2، وتسجل حركة خروج من المخزون بكمية 3.</li><li>تزيد الخزينة 300، ويصبح المبلغ المدفوع مساويًا لـ 300.</li><li>تصبح الفاتورة مؤكدة، ويكون صافي حساب العميل صفرًا إن كان محددًا.</li></ul></div>
+      </section>
+      <section class="case">
+        <h3>T02: فاتورة بنكية</h3>
+        <p>أنشئ فاتورة بكمية 2 وإجمالي 200، اختر الحساب البنكي، ثم أكّدها.</p>
+        <div class="expected"><strong>المتوقع:</strong><ul><li>ينخفض المخزون بمقدار 2 فقط.</li><li>يزيد الحساب البنكي 200 ولا تتغير الخزينة.</li><li>تنشأ حركة بنكية مرتبطة بدفعة الفاتورة نفسها.</li></ul></div>
+      </section>
+      <section class="case">
+        <h3>T03: فاتورة آجلة</h3>
+        <p>أنشئ فاتورة بكمية 2 وإجمالي 200 للعميل، بطريقة دفع آجل، ثم أكّدها.</p>
+        <div class="expected"><strong>المتوقع:</strong><ul><li>ينخفض المخزون بمقدار 2 دون إنشاء دفعة نقدية أو بنكية.</li><li>يبقى المبلغ المدفوع صفرًا.</li><li>تُسجل مطالبة على العميل بمقدار 200 ويزيد رصيده بنفس القيمة.</li></ul></div>
+      </section>
+      <section class="case">
+        <h3>T04: فاتورة مختلطة</h3>
+        <p>أنشئ فاتورة إجماليها 1,000: نقدي 300، بنكي 400، وآجل 300.</p>
+        <div class="expected"><strong>المتوقع:</strong><ul><li>تزيد الخزينة 300 والحساب البنكي 400 فقط.</li><li>ينشأ قيد آجل للعميل بمقدار 300.</li><li>مجموع الدفعات المحصلة 700، ولا يسجّل الجزء الآجل كدفعة.</li></ul></div>
+      </section>
+
+      <h2>الإلغاء والتعديل</h2>
+      <section class="case">
+        <h3>T05: إلغاء فاتورة نقدية مؤكدة</h3>
+        <p>ألغِ فاتورة T01 بعد التأكيد.</p>
+        <div class="expected"><strong>المتوقع:</strong><ul><li>يعود المخزون إلى ما كان عليه قبل T01، مع تسجيل حركة عكسية دون حذف الحركة الأصلية.</li><li>تنشأ حركة صرف خزينة 300، وتُعلّم الدفعة بأنها معكوسة، ويعود المبلغ المدفوع إلى الصفر.</li><li>يُعكس حساب العميل، تصبح الفاتورة ملغاة، ويُرفض الإلغاء الثاني.</li></ul></div>
+      </section>
+      <section class="case">
+        <h3>T06: تعديل كمية فاتورة مؤكدة</h3>
+        <p>عدّل فاتورة مؤكدة من كمية 3 إلى كمية 5.</p>
+        <div class="expected"><strong>المتوقع:</strong><ul><li>يكون الأثر النهائي مساويًا لبيع 5 وحدات، وليس بيع 3 ثم 5.</li><li>لا توجد دفعات نشطة قديمة مع دفعات جديدة لنفس الأثر.</li><li>يظهر الفرق الصحيح في المخزون والرصيد دون حركة مكررة.</li></ul></div>
+      </section>
+      <section class="case">
+        <h3>T07: تعديل طريقة الدفع</h3>
+        <p>عدّل فاتورة نقدية مؤكدة إلى بنكية.</p>
+        <div class="expected"><strong>المتوقع:</strong><ul><li>تُعكس حركة الخزينة القديمة.</li><li>تُنشأ حركة بنكية جديدة بالقيمة الصحيحة.</li><li>لا يبقى أثر صافٍ في الخزينة ولا أكثر من دفع نشط لنفس المبلغ.</li></ul></div>
+      </section>
+      <section class="case">
+        <h3>T08: تغيير المنتج أو المخزن</h3>
+        <p>عدّل بند الفاتورة من المنتج A إلى B، أو انقلها إلى مخزن آخر.</p>
+        <div class="expected"><strong>المتوقع:</strong><ul><li>يعود أثر المنتج أو المخزن القديم بالكامل.</li><li>يُخصم نفس الأثر من المنتج أو المخزن الجديد.</li><li>لا تتغير كميات المنتجات غير الموجودة في الفاتورة.</li></ul></div>
+      </section>
+
+      <h2>المرتجعات والتسليم المؤجل</h2>
+      <section class="case">
+        <h3>T09: مرتجع كامل وجزئي</h3>
+        <p>أنشئ فاتورة مؤكدة بكمية 5، نفّذ مرتجعًا جزئيًا بكمية 1 ثم مرتجعًا للباقي.</p>
+        <div class="expected"><strong>المتوقع:</strong><ul><li>يعود المخزون أولًا 4 ثم 6.</li><li>لا يمكن إرجاع كمية أكبر من الكمية المباعة.</li><li>ينعكس المبلغ بما يتناسب مع الكمية المرتجعة فقط.</li></ul></div>
+      </section>
+      <section class="case">
+        <h3>T10: فاتورة تسليم مؤجل</h3>
+        <ol><li>أكّد فاتورة مؤجلة بكمية 5.</li><li>تحقق من زيادة الكمية المحجوزة دون نقص الكمية الفعلية.</li><li>سلّم الفاتورة، ثم ألغِ فاتورة مؤجلة أخرى قبل التسليم.</li></ol>
+        <div class="expected"><strong>المتوقع:</strong><ul><li>عند التأكيد المؤجل: تزيد الحجوزات فقط.</li><li>عند التسليم: تنخفض الكمية وتقل الحجوزات وتسجل حركة خروج من المخزون.</li><li>عند الإلغاء قبل التسليم: تزول الحجوزات ولا تنخفض الكمية.</li></ul></div>
+      </section>
+
+      <h2>4. المشتريات والموردون</h2>
+      <table class="module-table">
+        <thead><tr><th>الاختبار</th><th>النتيجة المتوقعة</th><th>تم</th></tr></thead>
+        <tbody>
+          <tr><td>إنشاء فاتورة شراء</td><td>تحسب الكميات والخصم والضريبة والإجمالي بصورة صحيحة.</td><td><input type="checkbox" aria-label="إنشاء فاتورة شراء"></td></tr>
+          <tr><td>تأكيد الشراء</td><td>يزيد المخزون، وتسجل حركة دخول للمخزون، وينشأ رصيد على المورد أو دفعة مناسبة.</td><td><input type="checkbox" aria-label="تأكيد الشراء"></td></tr>
+          <tr><td>شراء نقدي وبنكي وآجل</td><td>النقد ينقص الخزينة، والبنك ينقص الحساب، والآجل يزيد رصيد المورد فقط.</td><td><input type="checkbox" aria-label="طرق دفع الشراء"></td></tr>
+          <tr><td>تعديل وإلغاء الشراء</td><td>ينعكس المخزون والرصيد والدفعة دون تكرار أو بقاء أثر صافي غير صحيح.</td><td><input type="checkbox" aria-label="إلغاء الشراء"></td></tr>
+          <tr><td>مرتجع المشتريات</td><td>تنخفض الكمية ويُعكس مستحق المورد أو الدفعة بنفس قيمة المرتجع.</td><td><input type="checkbox" aria-label="مرتجع المشتريات"></td></tr>
+        </tbody>
+      </table>
+
+      <h2>5. الخزينة والحسابات البنكية</h2>
+      <table class="module-table">
+        <thead><tr><th>الاختبار</th><th>النتيجة المتوقعة</th><th>تم</th></tr></thead>
+        <tbody>
+          <tr><td>قبض وإيداع نقدي</td><td>تزيد الخزينة بالقيمة الصحيحة مع مرجع ووصف وتاريخ.</td><td><input type="checkbox" aria-label="قبض وإيداع نقدي"></td></tr>
+          <tr><td>صرف نقدي</td><td>تنقص الخزينة، ويُرفض الصرف إذا كان الرصيد غير كافٍ حسب قواعد النظام.</td><td><input type="checkbox" aria-label="صرف نقدي"></td></tr>
+          <tr><td>تحويل بين خزائن</td><td>ينقص المصدر ويزيد الوجهة بالقيمة نفسها، مع حركتين مرتبطتين.</td><td><input type="checkbox" aria-label="تحويل بين الخزائن"></td></tr>
+          <tr><td>إيداع وسحب بنكي</td><td>يتغير رصيد الحساب البنكي فقط، ولا تختلط الحركة بالخزينة.</td><td><input type="checkbox" aria-label="الحساب البنكي"></td></tr>
+          <tr><td>سداد عميل ومورد</td><td>ينعكس القيد على الطرف الصحيح، ويرتبط بالحركة والفاتورة أو المستند الصحيح.</td><td><input type="checkbox" aria-label="سداد عميل ومورد"></td></tr>
+          <tr><td>عكس حركة مالية</td><td>تنشأ حركة عكسية مساوية، ولا تُحذف الحركة الأصلية ولا تُعكس مرتين.</td><td><input type="checkbox" aria-label="عكس حركة مالية"></td></tr>
+        </tbody>
+      </table>
+
+      <h2>6. المصروفات والرواتب والعمولات</h2>
+      <table class="module-table">
+        <thead><tr><th>الاختبار</th><th>النتيجة المتوقعة</th><th>تم</th></tr></thead>
+        <tbody>
+          <tr><td>إنشاء مصروف</td><td>يُحفظ التصنيف والمبلغ والتاريخ والمرفق والملاحظات.</td><td><input type="checkbox" aria-label="إنشاء مصروف"></td></tr>
+          <tr><td>تأكيد المصروف</td><td>تنقص الخزينة أو البنك مرة واحدة، ويظهر المصروف في التقرير.</td><td><input type="checkbox" aria-label="تأكيد المصروف"></td></tr>
+          <tr><td>إلغاء المصروف</td><td>تُعكس الحركة المالية ويعود الرصيد دون حذف سجل المصروف.</td><td><input type="checkbox" aria-label="إلغاء المصروف"></td></tr>
+          <tr><td>عمولة المندوب</td><td>تحسب العمولة حسب القاعدة، وتتبع الفاتورة أو الدفعة، وتنعكس عند الإلغاء.</td><td><input type="checkbox" aria-label="عمولة المندوب"></td></tr>
+          <tr><td>تعديل راتب أو مستحق موظف</td><td>لا يتكرر الصرف عند إعادة فتح الصفحة أو إعادة الحفظ.</td><td><input type="checkbox" aria-label="مستحقات الموظفين"></td></tr>
+        </tbody>
+      </table>
+
+      <h2>7. التأمين والعملاء والبوابة</h2>
+      <table class="module-table">
+        <thead><tr><th>الاختبار</th><th>النتيجة المتوقعة</th><th>تم</th></tr></thead>
+        <tbody>
+          <tr><td>مطالبة تأمين</td><td>ترتبط بالعميل والفاتورة وشركة التأمين، ولا تُسجل كدفعة محصلة قبل التحصيل.</td><td><input type="checkbox" aria-label="مطالبة تأمين"></td></tr>
+          <tr><td>تسوية المطالبة</td><td>تُسجل التسوية في الحساب الصحيح ولا تُحمّل العميل أو الخزينة مرتين.</td><td><input type="checkbox" aria-label="تسوية المطالبة"></td></tr>
+          <tr><td>إلغاء مطالبة أو فاتورة مرتبطة</td><td>يُمنع الإلغاء عند وجود مطالبة نشطة أو يتم عكسها حسب الحالة المسموحة.</td><td><input type="checkbox" aria-label="إلغاء المطالبة"></td></tr>
+          <tr><td>بوابة العميل</td><td>يرى العميل بياناته وفواتيره ودفعاته فقط، ولا يستطيع تعديل بيانات النظام الداخلية.</td><td><input type="checkbox" aria-label="بوابة العميل"></td></tr>
+          <tr><td>إشعارات الحالة</td><td>تصل إشعارات التأكيد والسداد والإلغاء للمستخدم أو العميل الصحيح.</td><td><input type="checkbox" aria-label="الإشعارات"></td></tr>
+        </tbody>
+      </table>
+
+      <h2>8. الاستيراد والنسخ الاحتياطي والملفات</h2>
+      <table class="module-table">
+        <thead><tr><th>الاختبار</th><th>النتيجة المتوقعة</th><th>تم</th></tr></thead>
+        <tbody>
+          <tr><td>استيراد بيانات صحيحة</td><td>تُنشأ السجلات في حساب المنشأة الحالي مع تقرير بعدد السجلات الناجحة.</td><td><input type="checkbox" aria-label="استيراد بيانات صحيحة"></td></tr>
+          <tr><td>استيراد بيانات ناقصة أو مكررة</td><td>يُرفض الصف الخاطئ مع سبب واضح، ولا تُفسد الصفوف الصحيحة أو تُكررها.</td><td><input type="checkbox" aria-label="استيراد بيانات خاطئة"></td></tr>
+          <tr><td>رفع المرفقات</td><td>يُقبل النوع والحجم المسموحان، ولا يمكن الوصول للملف من مستأجر آخر.</td><td><input type="checkbox" aria-label="رفع المرفقات"></td></tr>
+          <tr><td>النسخ الاحتياطي والاستعادة</td><td>يمكن إنشاء نسخة احتياطية واستعادة البيانات دون فقد أو خلط.</td><td><input type="checkbox" aria-label="النسخ الاحتياطي"></td></tr>
+          <tr><td>المعاملات الفاشلة</td><td>عند فشل جزء من العملية لا يبقى نصف قيد أو نصف حركة مخزون.</td><td><input type="checkbox" aria-label="المعاملات الفاشلة"></td></tr>
+        </tbody>
+      </table>
+
+      <h2>9. التقارير والبحث والتصدير</h2>
+      <table class="module-table">
+        <thead><tr><th>الاختبار</th><th>النتيجة المتوقعة</th><th>تم</th></tr></thead>
+        <tbody>
+          <tr><td>لوحة المعلومات</td><td>الأرقام المعروضة تساوي مجموع البيانات الفعلية للفترة وحساب المنشأة.</td><td><input type="checkbox" aria-label="لوحة المعلومات"></td></tr>
+          <tr><td>تقارير المخزون</td><td>الرصيد والحركات والتكلفة والتصفية حسب المخزن والصنف صحيحة.</td><td><input type="checkbox" aria-label="تقارير المخزون"></td></tr>
+          <tr><td>تقارير المبيعات والمشتريات</td><td>تتطابق الفواتير والمرتجعات والضرائب والإجماليات مع المستندات.</td><td><input type="checkbox" aria-label="تقارير الفواتير"></td></tr>
+          <tr><td>تقارير العملاء والموردين</td><td>الرصيد الافتتاحي + القيود = الرصيد الظاهر، مع استثناء القيود المعكوسة.</td><td><input type="checkbox" aria-label="تقارير الأطراف"></td></tr>
+          <tr><td>التصفية بالتاريخ والتصدير</td><td>تُحترم الفترة والفلاتر، ويطابق الملف المطبوع أو الملف المُصدّر النتائج المعروضة.</td><td><input type="checkbox" aria-label="التصفية والتصدير"></td></tr>
+          <tr><td>البحث والترقيم</td><td>البحث يعرض النتائج الصحيحة، والترقيم لا يخفي أو يكرر سجلات.</td><td><input type="checkbox" aria-label="البحث والترقيم"></td></tr>
+        </tbody>
+      </table>
+
+      <h2>10. الأداء والأمان وتجربة الاستخدام</h2>
+      <table class="module-table">
+        <thead><tr><th>الاختبار</th><th>النتيجة المتوقعة</th><th>تم</th></tr></thead>
+        <tbody>
+          <tr><td>الهواتف والشاشات المختلفة</td><td>الجداول والنماذج والأزرار قابلة للاستخدام دون تداخل أو قص للنص.</td><td><input type="checkbox" aria-label="الشاشات المختلفة"></td></tr>
+          <tr><td>الحقول الرقمية</td><td>تقبل الأرقام الصحيحة والكسور المسموحة، وتمنع القيم السالبة أو غير المنطقية.</td><td><input type="checkbox" aria-label="الحقول الرقمية"></td></tr>
+          <tr><td>الحماية من الوصول المباشر</td><td>تُرفض الروابط المباشرة والطلبات المعدلة دون الصلاحية أو حساب المنشأة الصحيح.</td><td><input type="checkbox" aria-label="الوصول المباشر"></td></tr>
+          <tr><td>التكرار والنقر المزدوج</td><td>لا ينشئ النقر المزدوج فاتورتين أو دفعتين أو حركتين ماليتين.</td><td><input type="checkbox" aria-label="النقر المزدوج"></td></tr>
+          <tr><td>الأخطاء والرسائل</td><td>تظهر رسالة عربية مفهومة، وتبقى البيانات سليمة عند فشل العملية.</td><td><input type="checkbox" aria-label="رسائل الأخطاء"></td></tr>
+          <tr><td>التحميل والبيانات الكبيرة</td><td>تعمل الصفحات والتقارير بزمن مقبول دون تكرار الاستعلامات أو فقد النتائج.</td><td><input type="checkbox" aria-label="الأداء"></td></tr>
+        </tbody>
+      </table>
+
+      <h2>خطة الاختبار التفصيلية: إنشاء وتعديل وحذف كل البيانات</h2>
+      <div class="notice">
+        <strong>طريقة التنفيذ:</strong>
+        نفّذ كل صف بالترتيب. بعد كل خطوة افحص الشاشة، ثم افحص الرصيد أو الكمية أو التقرير المرتبط بها. لا تنتقل إلى الخطوة التالية إذا ظهرت نتيجة مختلفة، وسجّل رقم الخطوة والملاحظة في آخر الصفحة.
+      </div>
+
+      <section class="phase">
+        <h3>المرحلة A: الحسابات والمستخدمون</h3>
+        <table class="detail-table">
+          <thead><tr><th>رقم</th><th>العملية</th><th>خطوات الاختبار</th><th>النتيجة الدقيقة المتوقعة</th><th>تم</th></tr></thead>
+          <tbody>
+            <tr><td>A1</td><td>إنشاء حساب منشأة</td><td>أنشئ حسابًا جديدًا باسم مختلف واملأ البيانات المطلوبة.</td><td>يظهر الحساب مرة واحدة، وتكون بياناته صحيحة في القائمة والتفاصيل.</td><td><input type="checkbox" aria-label="A1"></td></tr>
+            <tr><td>A2</td><td>تعديل حساب منشأة</td><td>غيّر الاسم والعنوان ثم أعد فتح الصفحة.</td><td>تظهر البيانات الجديدة في كل الصفحات دون تغيير السجلات القديمة.</td><td><input type="checkbox" aria-label="A2"></td></tr>
+            <tr><td>A3</td><td>حذف حساب منشأة</td><td>حاول حذف حساب بلا عمليات، ثم حاول حذف حساب لديه فواتير.</td><td>يُحذف الحساب الفارغ فقط، ويُمنع حذف الحساب المرتبط ببيانات مهمة مع رسالة واضحة.</td><td><input type="checkbox" aria-label="A3"></td></tr>
+            <tr><td>A4</td><td>إنشاء مستخدم</td><td>أنشئ مستخدمًا جديدًا واربطه بحساب منشأة.</td><td>يدخل المستخدم إلى حساب المنشأة المحدد فقط.</td><td><input type="checkbox" aria-label="A4"></td></tr>
+            <tr><td>A5</td><td>تعديل مستخدم</td><td>غيّر الاسم والصلاحيات وحالة المستخدم.</td><td>تتغير الصلاحيات فورًا، وتُمنع الصفحات غير المسموح بها.</td><td><input type="checkbox" aria-label="A5"></td></tr>
+            <tr><td>A6</td><td>تعطيل وحذف مستخدم</td><td>عطّل المستخدم ثم حاول الدخول، ثم احذفه إذا لم يكن مرتبطًا.</td><td>يُمنع الدخول بعد التعطيل، ولا يُحذف سجل النشاط السابق.</td><td><input type="checkbox" aria-label="A6"></td></tr>
+            <tr><td>A7</td><td>عزل البيانات</td><td>افتح الحسابين الموجودين وتصفح العملاء والفواتير والتقارير.</td><td>لا تظهر أي بيانات أو أرصدة أو ملفات للحساب الآخر.</td><td><input type="checkbox" aria-label="A7"></td></tr>
+        </tbody>
+      </table>
+      </section>
+
+      <section class="phase">
+        <h3>المرحلة B: البيانات الأساسية</h3>
+        <table class="detail-table">
+          <thead><tr><th>رقم</th><th>العملية</th><th>خطوات الاختبار</th><th>النتيجة الدقيقة المتوقعة</th><th>تم</th></tr></thead>
+          <tbody>
+            <tr><td>B1</td><td>التصنيف والوحدة</td><td>أنشئ تصنيفًا ووحدة، ثم عدّل الاسم والوصف.</td><td>تظهر البيانات الجديدة في قوائم الاختيار ولا تتأثر السجلات السابقة.</td><td><input type="checkbox" aria-label="B1"></td></tr>
+            <tr><td>B2</td><td>حذف تصنيف أو وحدة</td><td>احذف سجلًا غير مستخدم، ثم حاول حذف سجل مرتبط بصنف.</td><td>يُحذف غير المستخدم، ويُمنع حذف المرتبط حتى لا تتلف البيانات.</td><td><input type="checkbox" aria-label="B2"></td></tr>
+            <tr><td>B3</td><td>إنشاء صنف مخزني</td><td>أنشئ صنفًا برمز وسعر شراء وبيع ووحدة وتصنيف.</td><td>يظهر الصنف في البحث، ويُحفظ الرمز دون تكرار داخل المنشأة.</td><td><input type="checkbox" aria-label="B3"></td></tr>
+            <tr><td>B4</td><td>تعديل صنف</td><td>غيّر الاسم والسعر والتصنيف مع وجود حركات قديمة.</td><td>تتغير البيانات الحالية، ولا تتغير أسعار أو تفاصيل الفواتير القديمة.</td><td><input type="checkbox" aria-label="B4"></td></tr>
+            <tr><td>B5</td><td>حذف صنف</td><td>احذف صنفًا بلا حركة، ثم حاول حذف صنف مستخدم في فاتورة.</td><td>يُحذف الأول، ويُمنع الثاني أو يُؤرشف دون فقد تاريخ العمليات.</td><td><input type="checkbox" aria-label="B5"></td></tr>
+            <tr><td>B6</td><td>عميل ومورد</td><td>أنشئ ثم عدّل ثم احذف سجلًا فارغًا لكل منهما.</td><td>تعمل العمليات الثلاث، ولا يُحذف الطرف الذي له فواتير أو أرصدة.</td><td><input type="checkbox" aria-label="B6"></td></tr>
+            <tr><td>B7</td><td>موظف ومندوب</td><td>أنشئ موظفًا ومندوبًا، اربطه بعملية، ثم عدّل بياناته.</td><td>تبقى العملية القديمة مرتبطة بالشخص الصحيح، وتُحسب العمولة حسب البيانات الصحيحة.</td><td><input type="checkbox" aria-label="B7"></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="phase">
+        <h3>المرحلة C: المخزون من البداية إلى النهاية</h3>
+        <table class="detail-table">
+          <thead><tr><th>رقم</th><th>العملية</th><th>خطوات الاختبار</th><th>النتيجة الدقيقة المتوقعة</th><th>تم</th></tr></thead>
+          <tbody>
+            <tr><td>C1</td><td>رصيد افتتاحي</td><td>أدخل 5 وحدات بتكلفة 50، ثم احفظ وأعد فتح الصفحة.</td><td>يظهر الرصيد 5 والتكلفة 50، وتوجد حركة افتتاحية واحدة فقط.</td><td><input type="checkbox" aria-label="C1"></td></tr>
+            <tr><td>C2</td><td>تعديل رصيد افتتاحي</td><td>غيّر الكمية إلى 25، ثم راجع الكمية والحركة والتقرير.</td><td>يُطبق الفرق مرة واحدة، ولا تتكرر الكمية عند إعادة الحفظ.</td><td><input type="checkbox" aria-label="C2"></td></tr>
+            <tr><td>C3</td><td>إضافة مخزون</td><td>أضف 3 وحدات، ثم عدّلها إلى 2 وألغِ العملية إن كان مسموحًا.</td><td>يصبح الرصيد 8 بعد الإضافة، ثم 7 بعد التعديل، ويُعكس بالكامل عند الإلغاء.</td><td><input type="checkbox" aria-label="C3"></td></tr>
+            <tr><td>C4</td><td>تحويل بين مخزنين</td><td>حوّل وحدتين من المخزن الأول إلى الثاني.</td><td>ينقص الأول 2 ويزيد الثاني 2، ولا تتغير الكمية الإجمالية.</td><td><input type="checkbox" aria-label="C4"></td></tr>
+            <tr><td>C5</td><td>تسوية مخزون</td><td>عدّل الكمية الفعلية لتكون أقل أو أعلى من المسجلة.</td><td>يظهر الفرق كحركة تسوية مع السبب والتاريخ، ويطابق الرصيد الجديد الواقع.</td><td><input type="checkbox" aria-label="C5"></td></tr>
+            <tr><td>C6</td><td>حجز وتسليم</td><td>أنشئ طلبًا مؤجلًا بكمية 5 ثم سلّمه.</td><td>تزيد المحجوزات أولًا، ثم تنقص الكمية عند التسليم وتُغلق الحجوزات.</td><td><input type="checkbox" aria-label="C6"></td></tr>
+            <tr><td>C7</td><td>إلغاء حجز</td><td>ألغِ طلبًا مؤجلًا قبل التسليم.</td><td>تعود المحجوزات إلى الصفر، ولا تنقص الكمية الفعلية.</td><td><input type="checkbox" aria-label="C7"></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="phase">
+        <h3>المرحلة D: المبيعات والمرتجعات</h3>
+        <table class="detail-table">
+          <thead><tr><th>رقم</th><th>العملية</th><th>خطوات الاختبار</th><th>النتيجة الدقيقة المتوقعة</th><th>تم</th></tr></thead>
+          <tbody>
+            <tr><td>D1</td><td>مسودة بيع</td><td>أنشئ فاتورة، احفظها، أغلقها، ثم عدّل الكمية والسعر قبل التأكيد.</td><td>لا يتغير المخزون أو المال وهي مسودة، وتحسب القيم الجديدة بشكل صحيح.</td><td><input type="checkbox" aria-label="D1"></td></tr>
+            <tr><td>D2</td><td>تأكيد نقدي</td><td>أكد فاتورة بقيمة 300 نقدًا.</td><td>ينقص المخزون، تزيد الخزينة 300، وتظهر الفاتورة كـمؤكدة.</td><td><input type="checkbox" aria-label="D2"></td></tr>
+            <tr><td>D3</td><td>تأكيد بنكي</td><td>أكد فاتورة بقيمة 200 على حساب بنكي.</td><td>يزيد الحساب البنكي 200 فقط، ولا تتغير الخزينة.</td><td><input type="checkbox" aria-label="D3"></td></tr>
+            <tr><td>D4</td><td>تأكيد آجل</td><td>أكد فاتورة آجلة بقيمة 200 للعميل.</td><td>لا تدخل أموال للخزينة أو البنك، ويزيد رصيد العميل 200.</td><td><input type="checkbox" aria-label="D4"></td></tr>
+            <tr><td>D5</td><td>تأكيد مختلط</td><td>أكد فاتورة: 300 نقدًا، 400 بنك، 300 آجل.</td><td>تزيد الخزينة 300 والبنك 400 ورصيد العميل 300 فقط.</td><td><input type="checkbox" aria-label="D5"></td></tr>
+            <tr><td>D6</td><td>تعديل فاتورة مؤكدة</td><td>غيّر الكمية والمنتج والسعر وطريقة الدفع واحدة تلو الأخرى.</td><td>يُعكس الأثر القديم أولًا، ثم يُطبق الأثر الجديد دون مضاعفة.</td><td><input type="checkbox" aria-label="D6"></td></tr>
+            <tr><td>D7</td><td>إلغاء فاتورة</td><td>ألغِ فاتورة نقدية وأخرى آجلة وأخرى بنكية.</td><td>يعود المخزون، وتنعكس الخزينة أو البنك، ويعود حساب العميل للحالة السابقة.</td><td><input type="checkbox" aria-label="D7"></td></tr>
+            <tr><td>D8</td><td>مرتجع جزئي</td><td>أرجع وحدة واحدة من فاتورة تبيع 5 وحدات.</td><td>يعود المخزون بوحدة واحدة فقط، وينعكس المبلغ الخاص بها فقط.</td><td><input type="checkbox" aria-label="D8"></td></tr>
+            <tr><td>D9</td><td>مرتجع كامل</td><td>أرجع باقي الكمية بعد المرتجع الجزئي.</td><td>يعود كامل المخزون، وتصبح القيمة النهائية للفاتورة صفرًا حسب قواعد النظام.</td><td><input type="checkbox" aria-label="D9"></td></tr>
+            <tr><td>D10</td><td>منع التكرار</td><td>اضغط زر التأكيد مرتين وأعد تحميل الصفحة بعد الحفظ.</td><td>تنشأ فاتورة وحركة مالية وحركة مخزون واحدة فقط.</td><td><input type="checkbox" aria-label="D10"></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="phase">
+        <h3>المرحلة E: المشتريات والموردون</h3>
+        <table class="detail-table">
+          <thead><tr><th>رقم</th><th>العملية</th><th>خطوات الاختبار</th><th>النتيجة الدقيقة المتوقعة</th><th>تم</th></tr></thead>
+          <tbody>
+            <tr><td>E1</td><td>مسودة شراء</td><td>أنشئ فاتورة شراء وعدّل المورد والصنف والكمية قبل التأكيد.</td><td>لا يتغير المخزون أو المال قبل التأكيد، وتحفظ آخر بيانات صحيحة.</td><td><input type="checkbox" aria-label="E1"></td></tr>
+            <tr><td>E2</td><td>شراء نقدي</td><td>أكد شراء بقيمة 500 نقدًا.</td><td>يزيد المخزون، وتنقص الخزينة 500، ويظهر المورد مسددًا.</td><td><input type="checkbox" aria-label="E2"></td></tr>
+            <tr><td>E3</td><td>شراء آجل</td><td>أكد شراء بقيمة 700 آجلًا.</td><td>يزيد المخزون 700 من قيمة المشتريات، ويزيد رصيد المورد 700 دون صرف نقدي.</td><td><input type="checkbox" aria-label="E3"></td></tr>
+            <tr><td>E4</td><td>تعديل وإلغاء شراء</td><td>عدّل الكمية ثم ألغِ الفاتورة بعد التأكيد.</td><td>يظهر الأثر النهائي مرة واحدة، ثم يعود المخزون والمال ورصيد المورد لما قبلها.</td><td><input type="checkbox" aria-label="E4"></td></tr>
+            <tr><td>E5</td><td>مرتجع شراء</td><td>أرجع جزءًا من البضاعة ثم راجع المورد والمخزن.</td><td>تنقص الكمية، وينقص مستحق المورد أو تزيد أمواله بنفس قيمة المرتجع.</td><td><input type="checkbox" aria-label="E5"></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="phase">
+        <h3>المرحلة F: الخزينة والبنك والمصروفات</h3>
+        <table class="detail-table">
+          <thead><tr><th>رقم</th><th>العملية</th><th>خطوات الاختبار</th><th>النتيجة الدقيقة المتوقعة</th><th>تم</th></tr></thead>
+          <tbody>
+            <tr><td>F1</td><td>قبض نقدي</td><td>سجل قبضًا نقديًا بقيمة 1,000 ثم عدّل الوصف.</td><td>تزيد الخزينة 1,000، ويتغير الوصف دون إنشاء قبض ثانٍ.</td><td><input type="checkbox" aria-label="F1"></td></tr>
+            <tr><td>F2</td><td>صرف نقدي</td><td>سجل صرفًا بقيمة 300 ثم ألغِه.</td><td>تنقص الخزينة 300 ثم تعود، مع بقاء سجل العملية والعكس.</td><td><input type="checkbox" aria-label="F2"></td></tr>
+            <tr><td>F3</td><td>تحويل بين خزائن</td><td>حوّل 400 من خزينة إلى أخرى ثم راجع الرصيدين.</td><td>تنقص الأولى 400 وتزيد الثانية 400، والإجمالي لا يتغير.</td><td><input type="checkbox" aria-label="F3"></td></tr>
+            <tr><td>F4</td><td>حركة بنكية</td><td>أودع 800 في البنك واسحب 200.</td><td>يصبح الفرق في البنك +600، ولا تتغير الخزينة إلا إذا كانت العملية تحويلًا معلنًا.</td><td><input type="checkbox" aria-label="F4"></td></tr>
+            <tr><td>F5</td><td>مصروف</td><td>أنشئ مصروفًا، عدّله، أكّده، ثم ألغِه.</td><td>لا يخصم قبل التأكيد، يخصم مرة واحدة بعده، ثم يعود عند الإلغاء.</td><td><input type="checkbox" aria-label="F5"></td></tr>
+            <tr><td>F6</td><td>سداد عميل ومورد</td><td>سجل سدادًا جزئيًا ثم سدادًا للباقي.</td><td>ينخفض الرصيد بالجزء المدفوع، ثم يصل للصفر عند اكتمال السداد دون زيادة.</td><td><input type="checkbox" aria-label="F6"></td></tr>
+            <tr><td>F7</td><td>رفض رصيد غير كافٍ</td><td>حاول الصرف أو السداد بأكثر من رصيد الخزينة أو البنك.</td><td>تُرفض العملية وتبقى الأرصدة كما كانت دون حركة ناقصة.</td><td><input type="checkbox" aria-label="F7"></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="phase">
+        <h3>المرحلة G: التقارير والاستيراد والنسخ الاحتياطي</h3>
+        <table class="detail-table">
+          <thead><tr><th>رقم</th><th>العملية</th><th>خطوات الاختبار</th><th>النتيجة الدقيقة المتوقعة</th><th>تم</th></tr></thead>
+          <tbody>
+            <tr><td>G1</td><td>تقرير المخزون</td><td>قارن التقرير مع الكمية الافتتاحية وكل حركات الدخول والخروج.</td><td>الرصيد في التقرير يساوي الرصيد الفعلي لكل صنف ومخزن.</td><td><input type="checkbox" aria-label="G1"></td></tr>
+            <tr><td>G2</td><td>تقرير المبيعات</td><td>قارن مبيعات النقدي والبنك والآجل والمرتجعات.</td><td>تساوي الإجماليات مجموع الفواتير، ولا تُحسب الفاتورة الملغاة كمبيعات.</td><td><input type="checkbox" aria-label="G2"></td></tr>
+            <tr><td>G3</td><td>تقرير الخزينة والبنك</td><td>قارن الرصيد الافتتاحي مع كل قبض وصرف وتحويل.</td><td>الرصيد النهائي يساوي الحساب اليدوي، ولا تظهر حركة مرتين.</td><td><input type="checkbox" aria-label="G3"></td></tr>
+            <tr><td>G4</td><td>تقرير العملاء والموردين</td><td>قارن الفواتير والدفعات والمرتجعات مع الرصيد الظاهر.</td><td>الرصيد يساوي مجموع العمليات الفعلية بعد استبعاد العمليات المعكوسة.</td><td><input type="checkbox" aria-label="G4"></td></tr>
+            <tr><td>G5</td><td>فلاتر التاريخ</td><td>اعرض يومًا واحدًا وشهرًا كاملًا وفترة بلا بيانات.</td><td>تظهر عمليات الفترة فقط، وتظهر رسالة مناسبة عند عدم وجود نتائج.</td><td><input type="checkbox" aria-label="G5"></td></tr>
+            <tr><td>G6</td><td>استيراد صحيح</td><td>استورد ملفًا يحوي أصنافًا وعملاء وموردين.</td><td>تُنشأ السجلات مرة واحدة في حساب المنشأة الصحيح مع ملخص واضح.</td><td><input type="checkbox" aria-label="G6"></td></tr>
+            <tr><td>G7</td><td>استيراد خاطئ</td><td>استورد صفًا ناقصًا وصفًا مكررًا وصفًا بقيمة غير صحيحة.</td><td>يُرفض كل صف مع بيان السبب، ولا تتلف الصفوف السليمة ولا تتكرر.</td><td><input type="checkbox" aria-label="G7"></td></tr>
+            <tr><td>G8</td><td>نسخة احتياطية</td><td>أنشئ نسخة، أضف عملية جديدة، ثم استعد النسخة.</td><td>تعود البيانات إلى وقت النسخة، ولا تختلط بيانات الحسابين.</td><td><input type="checkbox" aria-label="G8"></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <h2>اختبارات خاصة بالنسخة الاحترافية</h2>
+      <section class="phase">
+        <table class="detail-table">
+          <thead><tr><th>رقم</th><th>العملية</th><th>خطوات الاختبار</th><th>النتيجة الدقيقة المتوقعة</th><th>تم</th></tr></thead>
+          <tbody>
+            <tr><td>PRO1</td><td>إنشاء المخازن</td><td>أنشئ مخزنين باسمين مختلفين، ثم عدّل اسم أحدهما.</td><td>يظهر كل مخزن مرة واحدة، وتظهر البيانات الجديدة في القوائم والتقارير.</td><td><input type="checkbox" aria-label="PRO1"></td></tr>
+            <tr><td>PRO2</td><td>أرصدة مستقلة</td><td>أدخل 3 وحدات في المخزن الأول ووحدتين في الثاني.</td><td>يظهر لكل مخزن رصيده المستقل، ويكون إجمالي الصنف 5 وحدات.</td><td><input type="checkbox" aria-label="PRO2"></td></tr>
+            <tr><td>PRO3</td><td>تحويل بين المخازن</td><td>حوّل وحدة واحدة ثم عدّل الطلب قبل تأكيده.</td><td>تتغير الكمية فقط بعد التأكيد، وينقص المصدر ويزيد الوجهة بالقيمة نفسها.</td><td><input type="checkbox" aria-label="PRO3"></td></tr>
+            <tr><td>PRO4</td><td>بيع من مخزن محدد</td><td>بع وحدة من المخزن الأول ثم راجع المخزن الثاني.</td><td>ينقص المخزن المختار فقط، ولا يتأثر المخزن الآخر.</td><td><input type="checkbox" aria-label="PRO4"></td></tr>
+            <tr><td>PRO5</td><td>تقرير المخازن</td><td>اعرض التقرير لكل مخزن ثم اعرض الإجمالي.</td><td>تطابق أرصدة المخازن مجموع الحركات، ولا تتكرر الكمية في الإجمالي.</td><td><input type="checkbox" aria-label="PRO5"></td></tr>
+            <tr><td>PRO6</td><td>صلاحية المخزن</td><td>أنشئ مستخدمًا يسمح له بمخزن واحد فقط وحاول فتح الآخر.</td><td>يرى المستخدم المخزن المسموح فقط ولا يستطيع تنفيذ عملية في غيره.</td><td><input type="checkbox" aria-label="PRO6"></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <h2>حالات الرفض والحماية</h2>
+      <div class="warning">يجب أن تفشل العملية برسالة واضحة، مع بقاء البيانات كما كانت قبلها، في كل حالة من الحالات التالية:</div>
+      <ul><li>فاتورة بلا بنود، أو بيع كمية أكبر من المتاح.</li><li>فاتورة آجلة بلا عميل، أو بنكية بلا حساب بنكي.</li><li>فاتورة مختلطة تحتوي جزءًا بنكيًا بلا حساب بنكي.</li><li>تجاوز الحد الائتماني، أو تأكيد فاتورة مؤكدة مرة ثانية.</li><li>تعديل فاتورة تحتوي على مرتجع مؤكد.</li><li>إلغاء فاتورة مرتبطة بمطالبة تأمين نشطة.</li></ul>
+
+      <h2>فحوص التوازن النهائية</h2>
+      <ol><li>لكل منتج ومخزن: الكمية الحالية = الكمية الافتتاحية + الداخل - الخارج.</li><li>لكل فاتورة: الدفعات الحالية + الرصيد الآجل = إجمالي الفاتورة، مع استثناء الجزء التأميني حسب قواعد التأمين.</li><li>لكل دفعة نقدية أو بنكية معكوسة: يوجد أثر عكسي مساوي لها.</li><li>مجموع حركات العميل يساوي الرصيد الظاهر له.</li><li>كل حركة مخزون أو مال مرتبطة بالمستند الصحيح وفي حساب المنشأة الصحيح.</li><li>لا تظهر بيانات منشأة في حساب منشأة أخرى.</li><li>إعادة تحميل الصفحات والتقارير لا تنشئ حركات جديدة.</li></ol>
+
+      <h2>تسجيل النتائج</h2>
+      <table>
+        <thead><tr><th>رقم الاختبار</th><th>النتيجة</th><th>ملاحظات</th><th>المنفذ</th><th>التاريخ</th></tr></thead>
+        <tbody>
+          <tr><td>T01</td><td class="check"><label><input type="checkbox"> ناجح</label> <label><input type="checkbox"> فاشل</label></td><td></td><td></td><td></td></tr>
+          <tr><td>T02</td><td class="check"><label><input type="checkbox"> ناجح</label> <label><input type="checkbox"> فاشل</label></td><td></td><td></td><td></td></tr>
+          <tr><td>T03</td><td class="check"><label><input type="checkbox"> ناجح</label> <label><input type="checkbox"> فاشل</label></td><td></td><td></td><td></td></tr>
+          <tr><td>T04</td><td class="check"><label><input type="checkbox"> ناجح</label> <label><input type="checkbox"> فاشل</label></td><td></td><td></td><td></td></tr>
+          <tr><td>T05</td><td class="check"><label><input type="checkbox"> ناجح</label> <label><input type="checkbox"> فاشل</label></td><td></td><td></td><td></td></tr>
+          <tr><td>T06</td><td class="check"><label><input type="checkbox"> ناجح</label> <label><input type="checkbox"> فاشل</label></td><td></td><td></td><td></td></tr>
+          <tr><td>T07</td><td class="check"><label><input type="checkbox"> ناجح</label> <label><input type="checkbox"> فاشل</label></td><td></td><td></td><td></td></tr>
+          <tr><td>T08</td><td class="check"><label><input type="checkbox"> ناجح</label> <label><input type="checkbox"> فاشل</label></td><td></td><td></td><td></td></tr>
+          <tr><td>T09</td><td class="check"><label><input type="checkbox"> ناجح</label> <label><input type="checkbox"> فاشل</label></td><td></td><td></td><td></td></tr>
+          <tr><td>T10</td><td class="check"><label><input type="checkbox"> ناجح</label> <label><input type="checkbox"> فاشل</label></td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+
+      <h2>سجل المشكلات المكتشفة</h2>
+      <p>استخدم هذا الجدول عند فشل أي خطوة. اكتب ما حدث فعليًا، ولا تكتفِ بعبارة «لا يعمل».</p>
+      <table>
+        <thead><tr><th>رقم</th><th>رقم الاختبار</th><th>ما حدث فعليًا</th><th>النتيجة المطلوبة</th><th>درجة المشكلة</th><th>تمت المعالجة</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td></td><td></td><td></td><td>☐ عادي ☐ مهم ☐ حرج</td><td>☐ نعم ☐ لا</td></tr>
+          <tr><td>2</td><td></td><td></td><td></td><td>☐ عادي ☐ مهم ☐ حرج</td><td>☐ نعم ☐ لا</td></tr>
+          <tr><td>3</td><td></td><td></td><td></td><td>☐ عادي ☐ مهم ☐ حرج</td><td>☐ نعم ☐ لا</td></tr>
+          <tr><td>4</td><td></td><td></td><td></td><td>☐ عادي ☐ مهم ☐ حرج</td><td>☐ نعم ☐ لا</td></tr>
+          <tr><td>5</td><td></td><td></td><td></td><td>☐ عادي ☐ مهم ☐ حرج</td><td>☐ نعم ☐ لا</td></tr>
+        </tbody>
+      </table>
+    </main>
+    <footer>خطة اختبار النسخة الاحترافية | نسخة مطبوعة للمختبرين لتسجيل النتائج والملاحظات.</footer>
+  </div>
+</body>
+</html>

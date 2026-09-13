@@ -67,19 +67,20 @@ def impersonation_context(request):
 
 
 def training_context(request):
-    """حقن مسار ملف التدريب المناسب للصفحة الحالية تلقائياً"""
+    """حقن شرح الصفحة الحالي، مع شرح عام للصفحات التي لا تملك ملفًا خاصًا."""
     if not (hasattr(request, 'tenant') and request.tenant):
         return {'training_template': None}
     if request.user.is_superuser:
         return {'training_template': None}
+    fallback = 'training/generic.html'
     try:
         match = request.resolver_match
         if not match:
-            return {'training_template': None}
+            return {'training_template': fallback, 'training_page_title': 'الصفحة الحالية'}
         namespace = match.namespace or ''
         url_name = match.url_name or ''
         if not namespace or not url_name:
-            return {'training_template': None}
+            return {'training_template': fallback, 'training_page_title': 'الصفحة الحالية'}
         candidate = f"training/{namespace}/{url_name}.html"
         from django.template.loader import get_template
         from django.template import TemplateDoesNotExist
@@ -87,9 +88,9 @@ def training_context(request):
             get_template(candidate)
             return {'training_template': candidate}
         except TemplateDoesNotExist:
-            return {'training_template': None}
+            return {'training_template': fallback, 'training_page_title': 'الصفحة الحالية'}
     except Exception:
-        return {'training_template': None}
+        return {'training_template': fallback, 'training_page_title': 'الصفحة الحالية'}
 
 
 def platform_context(request):

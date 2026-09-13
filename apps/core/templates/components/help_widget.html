@@ -55,6 +55,36 @@
                 <a href="{% url 'employees:salary_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-file-invoice-dollar"></i><span>الرواتب</span>
                 </a>
+                <a href="{% url 'stocks:opening_balance_list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-scale-balanced"></i><span>الأرصدة الافتتاحية</span>
+                </a>
+                <a href="{% url 'stocks:stocktake_list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-clipboard-check"></i><span>جرد المخزون</span>
+                </a>
+                <a href="{% url 'stocks:transfer_list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-right-left"></i><span>تحويلات المخزون</span>
+                </a>
+                <a href="{% url 'treasury:list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-vault"></i><span>الخزائن</span>
+                </a>
+                <a href="{% url 'bank_accounts:list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-building-columns"></i><span>الحسابات البنكية</span>
+                </a>
+                <a href="{% url 'insurance:company_list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-shield-heart"></i><span>شركات التأمين</span>
+                </a>
+                <a href="{% url 'insurance:claim_list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-file-circle-check"></i><span>مطالبات التأمين</span>
+                </a>
+                <a href="{% url 'agents:list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-person-chalkboard"></i><span>المندوبون</span>
+                </a>
+                <a href="{% url 'notifications:list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-bell"></i><span>الإشعارات</span>
+                </a>
+                <a href="{% url 'data_import:hub' %}" class="help-quick-link">
+                    <i class="fa-solid fa-file-import"></i><span>استيراد البيانات</span>
+                </a>
             </div>
         </div>
 
@@ -147,6 +177,64 @@
                         <li><strong>كشف الراتب:</strong> اختر موظفاً، حدد الفترة، أضف بنود الراتب، ثم ادفع</li>
                         <li><strong>سلفة فورية:</strong> سجّل السلفة من <em>سلف الموظفين</em> وتُخصم من الخزينة مباشرة</li>
                         <li><strong>الحوافز والخصومات:</strong> حافز فوري يُصرف نقداً، أو خصم يُضاف لكشف الراتب</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-finance">
+                    <i class="fa-solid fa-coins"></i> الخزائن والحسابات البنكية
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-finance">
+                    <ul>
+                        <li>استخدم <strong>الخزائن</strong> لتسجيل القبض والصرف والتحويل بين الخزائن</li>
+                        <li>استخدم <strong>الحسابات البنكية</strong> لمتابعة الإيداعات والسحوبات والتحويلات</li>
+                        <li>راجع الرصيد بعد كل حركة، ثم قارن الحركة بالتقرير المالي</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-insurance">
+                    <i class="fa-solid fa-shield-heart"></i> التأمين والمطالبات
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-insurance">
+                    <ol>
+                        <li>أضف شركة التأمين من <strong>شركات التأمين</strong></li>
+                        <li>اربط بطاقة التأمين بالعميل عند الحاجة</li>
+                        <li>أنشئ المطالبة من فاتورة العميل وتابع حالتها حتى التسوية</li>
+                        <li>لا تلغِ الفاتورة قبل إنهاء المطالبة النشطة</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-import">
+                    <i class="fa-solid fa-file-import"></i> استيراد البيانات
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-import">
+                    <ol>
+                        <li>اختر نوع البيانات المطلوب استيراده</li>
+                        <li>نزّل النموذج، املأ البيانات، ثم ارفعه</li>
+                        <li>راجع الأخطاء قبل اعتماد الاستيراد</li>
+                        <li>تحقق من عدد السجلات بعد الانتهاء</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-agents">
+                    <i class="fa-solid fa-person-chalkboard"></i> المندوبون والعمولات
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-agents">
+                    <ul>
+                        <li>أنشئ بيانات المندوب وحدد طريقة احتساب العمولة</li>
+                        <li>اربط المندوب بالفاتورة أو العميل عند إنشاء العملية</li>
+                        <li>راجع كشف المندوب قبل اعتماد أي دفعة أو إلغاء</li>
                     </ul>
                 </div>
             </div>
