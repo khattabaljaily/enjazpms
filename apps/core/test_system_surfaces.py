@@ -173,7 +173,7 @@ class SystemSurfaceTests(TestCase):
             self.assertEqual(backup.status, 'completed')
             self.assertGreater(backup.file_size, 0)
             self.assertTrue(Path(backup.file_path).exists())
-            self.assertTrue(Path(backup.file_path).read_text(encoding='utf-8').startswith('-- ENJAZ PMS Tenant Backup'))
+            self.assertTrue(Path(backup.file_path).read_text(encoding='utf-8').startswith('-- ENJAZ Tenant Backup'))
 
     def test_backup_restore_removes_post_backup_data_and_keeps_backup_successful(self):
         with TemporaryDirectory() as directory:

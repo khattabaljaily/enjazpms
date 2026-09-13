@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}خطط الأسعار | ENJAZ PMS{% endblock %}
+{% block title %}خطط الأسعار | ENJAZ{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pricing.css' %}?v=3.0">
@@ -39,7 +39,7 @@
                 </span>
                 <h1 class="pr-hero__title">
                     خطط مصممة<br>
-                    <span class="pr-hero__accent">لنشاطك الدوائي</span>
+                    <span class="pr-hero__accent">لنشاطك</span>
                 </h1>
                 <p class="pr-hero__desc">
                     سواء كنت صيدلية مستقلة أو سلسلة فروع أو شركة توزيع أدوية — نجد لك الخطة المثالية.<br>
@@ -137,7 +137,7 @@
     <section class="pr-features">
         <div class="pr-container">
             <div class="pr-section-head">
-                <span class="pr-section-kicker">لماذا ENJAZ PMS؟</span>
+                <span class="pr-section-kicker">لماذا ENJAZ؟</span>
                 <h2 class="pr-section-title">ميزات النظام الشاملة</h2>
                 <p class="pr-section-sub">كل ما تحتاجه لإدارة نشاطك من مكان واحد.</p>
             </div>
@@ -217,7 +217,7 @@
                 <div class="pr-cta__orb pr-cta__orb--2"></div>
                 <div class="pr-cta__content">
                     <h2 class="pr-cta__title">جاهز للبدء؟</h2>
-                    <p class="pr-cta__desc">جرّب ENJAZ PMS مجاناً لمدة {{ trial_days }} أيام — بدون أي التزام.</p>
+                    <p class="pr-cta__desc">جرّب ENJAZ مجاناً لمدة {{ trial_days }} أيام — بدون أي التزام.</p>
                     <a href="{% url 'accounts:register_step1' %}" class="pr-btn pr-btn--white pr-btn--lg">
                         <i class="fas fa-rocket"></i>
                         ابدأ الآن مجاناً
@@ -231,7 +231,7 @@
     <footer class="pr-footer">
         <div class="pr-container">
             <div class="pr-footer__inner">
-                <span class="pr-footer__copy">ENJAZ PMS &copy; 2026 — نظام إدارة المخزون</span>
+                <span class="pr-footer__copy">ENJAZ &copy; 2026 — نظام إدارة المخزون</span>
                 <div class="pr-footer__links">
                     <a href="{% url 'core:about' %}">عن النظام</a>
                     <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>

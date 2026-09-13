@@ -1,5 +1,5 @@
 """
-URL configuration for ENJAZ PMS project.
+URL configuration for ENJAZ project.
 """
 from django.contrib import admin
 from django.urls import path, include

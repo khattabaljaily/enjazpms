@@ -2049,7 +2049,7 @@ def tenant_create_api(request):
             msg = EmailMessage(
                 subject=f'New Tenant Registered: {tenant.name}',
                 body=html_body,
-                from_email='ENJAZ PMS <{}>'.format(settings.EMAIL_HOST_USER),
+                from_email='ENJAZ <{}>'.format(settings.EMAIL_HOST_USER),
                 to=['khattabaljaily@gmail.com'],
             )
             msg.content_subtype = 'html'
@@ -2380,7 +2380,7 @@ def tenant_approve_api(request, pk):
             msg = EmailMessage(
                 subject=f'تم تفعيل حسابك - {tenant.name}',
                 body=html_body,
-                from_email='ENJAZ PMS <{}>'.format(settings.EMAIL_HOST_USER),
+                from_email='ENJAZ <{}>'.format(settings.EMAIL_HOST_USER),
                 to=[admin_email],
             )
             msg.content_subtype = 'html'

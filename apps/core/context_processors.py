@@ -53,9 +53,9 @@ def app_context(request):
     معلومات عامة عن التطبيق
     """
     return {
-        'app_name': 'ENJAZ PMS',
+        'app_name': 'ENJAZ',
         'app_version': '1.0.0',
-        'app_description': 'نظام إدارة المخزون ونقاط البيع',
+        'app_description': 'نظام إدارة المخزون ونقاط البيع للصيدليات وشركات توزيع الأدوية',
         'current_year': timezone.localtime().year,
     }
 

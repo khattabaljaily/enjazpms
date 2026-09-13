@@ -1,4 +1,4 @@
-/* ENJAZ PMS Service Worker — app-shell only, no data caching */
+/* ENJAZ Service Worker — app-shell only, no data caching */
 const CACHE = 'enjazpms-shell-v4';
 const SHELL = [
   '/static/css/main.css',
