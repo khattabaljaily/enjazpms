@@ -245,9 +245,34 @@ class EmployeeSalaryPayment(TenantMixin):
         if self.status != 'draft':
             return
         from django.db import transaction
+        from django.db.models import Sum
         from apps.treasury.services import post_treasury_disbursement
         from apps.bank_accounts.services import post_bank_account_disbursement
         with transaction.atomic():
+            # تحقّق أن advances_deducted/bonus/deductions (المحسوبة عند إنشاء
+            # المسودة) لا تزال متّسقة مع حالة السلف/الحوافز المرتبطة فعلياً —
+            # قد تتغيّر حالة سلفة أو حافز مرتبط (إلغاء يدوي مثلاً) بين إنشاء
+            # المسودة ودفعها. الدفع بأرقام لا تطابق ما سيُصفَّى فعلياً كان
+            # يُسبِّب تناقضاً صامتاً (الرقم المصروف يخالف ما يُعلَّم كمخصوم).
+            linked_advances = self.advance_items.filter(status='pending').aggregate(t=Sum('amount'))['t'] or Decimal('0')
+            if linked_advances != self.advances_deducted:
+                raise ValueError(
+                    f'السلف المرتبطة بهذا الكشف ({linked_advances:g}) لم تعد تطابق '
+                    f'المبلغ المسجَّل ({self.advances_deducted:g}) — راجع الكشف قبل الدفع.'
+                )
+            linked_bonus = self.incentive_items.filter(status='pending', type='bonus').aggregate(t=Sum('amount'))['t'] or Decimal('0')
+            if linked_bonus != self.bonus:
+                raise ValueError(
+                    f'حوافز هذا الكشف ({linked_bonus:g}) لم تعد تطابق المبلغ المسجَّل '
+                    f'({self.bonus:g}) — راجع الكشف قبل الدفع.'
+                )
+            linked_deductions = self.incentive_items.filter(status='pending', type='deduction').aggregate(t=Sum('amount'))['t'] or Decimal('0')
+            if linked_deductions != self.deductions:
+                raise ValueError(
+                    f'خصومات هذا الكشف ({linked_deductions:g}) لم تعد تطابق المبلغ المسجَّل '
+                    f'({self.deductions:g}) — راجع الكشف قبل الدفع.'
+                )
+
             self.status = 'paid'
             self.save(update_fields=['status', 'updated_at'])
 
@@ -281,12 +306,11 @@ class EmployeeSalaryPayment(TenantMixin):
             # Mark linked advances as deducted
             self.advance_items.filter(status='pending').update(status='deducted')
 
-            # Mark deferred incentives/deductions as paid once the salary is paid
-            self.employee.incentives.filter(
-                status='pending',
-                payout='with_salary',
-                date__range=(self.period_start, self.period_end),
-            ).update(status='paid')
+            # Mark linked incentives/deductions as paid once the salary is paid.
+            # يُصفَّى عبر salary_payment (الربط الفعلي الذي حدَّدته
+            # create_salary_payment عند الإنشاء)، وليس بفترة تاريخية — تفادياً
+            # لضمّ حوافز لم تُخصَّص فعلياً لهذا الكشف بالذات.
+            self.incentive_items.filter(status='pending').update(status='paid')
 
     def cancel(self):
         if self.status == 'cancelled':
@@ -316,8 +340,13 @@ class EmployeeSalaryPayment(TenantMixin):
                     bank_account=self.bank_account,
                 )
 
-            # Restore linked advances to pending
+            # Restore linked advances and incentives to pending — يُصلح تناقضاً
+            # سابقاً: كان الإلغاء يُعيد السلف فقط ويترك الحوافز/الخصومات
+            # المرتبطة بحالة "مدفوع" رغم عكس كامل مبلغ الراتب مالياً.
             self.advance_items.filter(status='deducted').update(
+                status='pending', salary_payment=None
+            )
+            self.incentive_items.filter(status='paid').update(
                 status='pending', salary_payment=None
             )
             self.status = 'cancelled'
@@ -352,6 +381,10 @@ class EmployeeIncentive(TenantMixin):
     status          = models.CharField('الحالة', max_length=20, choices=STATUS, default='pending')
     date            = models.DateField('التاريخ', default=timezone.localdate)
     notes           = models.TextField('ملاحظات', blank=True)
+    salary_payment  = models.ForeignKey(
+        'EmployeeSalaryPayment', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='incentive_items', verbose_name='كشف الراتب'
+    )
 
     # Treasury / bank account movement tracking
     treasury_movement = models.OneToOneField(

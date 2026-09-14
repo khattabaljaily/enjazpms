@@ -15,9 +15,7 @@ from apps.accounts.activity_service import log_activity
 from apps.accounts.decorators import require_permission
 from apps.core.utils import convert_arabic_numerals
 from apps.treasury.models import Treasury
-from apps.treasury.services import post_treasury_disbursement
 from apps.bank_accounts.models import BankAccount
-from apps.bank_accounts.services import post_bank_account_disbursement
 
 from .models import Employee, EmployeeAdvance, EmployeeIncentive, EmployeeSalaryPayment
 
@@ -370,51 +368,15 @@ def advance_create(request):
         if treasury_id:
             treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
 
-    from django.db import transaction
+    from . import services as employee_services
     try:
-        with transaction.atomic():
-            adv = EmployeeAdvance.objects.create(
-                tenant=tenant,
-                employee=emp,
-                amount=amount,
-                date=data.get('date') or timezone.localdate(),
-                payment_method=payment_method,
-                treasury=treasury,
-                bank_account=bank_account,
-                bank_reference=(data.get('bank_reference') or '').strip(),
-                notes=(data.get('notes') or '').strip(),
-                created_by=request.user,
-                updated_by=request.user,
-            )
-
-            if payment_method == 'cash' and treasury:
-                mv = post_treasury_disbursement(
-                    tenant=tenant,
-                    amount=amount,
-                    date=adv.date,
-                    reference_type='employee_advance',
-                    reference_id=adv.pk,
-                    description=f'سلفة {emp.name}',
-                    user=request.user,
-                    treasury=treasury,
-                )
-                if mv:
-                    adv.treasury_movement = mv
-                    adv.save(update_fields=['treasury_movement', 'updated_at'])
-            elif payment_method == 'bank' and bank_account:
-                mv = post_bank_account_disbursement(
-                    tenant=tenant,
-                    amount=amount,
-                    date=adv.date,
-                    reference_type='employee_advance',
-                    reference_id=adv.pk,
-                    description=f'سلفة {emp.name}',
-                    user=request.user,
-                    bank_account=bank_account,
-                )
-                if mv:
-                    adv.bank_account_movement = mv
-                    adv.save(update_fields=['bank_account_movement', 'updated_at'])
+        adv = employee_services.create_advance(
+            tenant=tenant, employee=emp, amount=amount,
+            date=data.get('date') or timezone.localdate(), payment_method=payment_method,
+            treasury=treasury, bank_account=bank_account,
+            bank_reference=(data.get('bank_reference') or '').strip(),
+            notes=(data.get('notes') or '').strip(), user=request.user,
+        )
     except ValueError as e:
         return _err(str(e))
 
@@ -561,54 +523,23 @@ def salary_create(request):
         if treasury_id:
             treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
 
-    advances_deducted = _dec(data.get('advances_deducted', 0))
-
-    # Validate that pending advances cover the deducted amount
-    pending_total = emp.advances.filter(status='pending').aggregate(t=Sum('amount'))['t'] or Decimal('0')
-    if advances_deducted > pending_total:
-        return _err(f'السلف المطلوب خصمها ({advances_deducted}) أكبر من إجمالي السلف القائمة ({pending_total})')
-
     base_salary = _dec(data.get('base_salary', emp.base_salary))
+    advance_ids = data.get('selected_advance_ids') or []
+    incentive_ids = data.get('selected_incentive_ids') or []
 
-    if 'selected_incentive_ids' in data:
-        # Frontend computed selections — trust the sent values directly
-        bonus = _dec(data.get('bonus', 0))
-        deductions = _dec(data.get('deductions', 0))
-    else:
-        # Legacy: auto-add pending incentives within the period
-        pending_incentives = emp.incentives.filter(
-            status='pending',
-            payout='with_salary',
-            date__range=(period_start, period_end),
+    from . import services as employee_services
+    try:
+        sp = employee_services.create_salary_payment(
+            tenant=tenant, employee=emp, period_start=period_start, period_end=period_end,
+            base_salary=base_salary, payment_method=payment_method, treasury=treasury,
+            bank_account=bank_account, bank_reference=(data.get('bank_reference') or '').strip(),
+            notes=(data.get('notes') or '').strip(),
+            deductions_notes=(data.get('deductions_notes') or '').strip(),
+            advance_ids=advance_ids, incentive_ids=incentive_ids, user=request.user,
         )
-        auto_bonus = Decimal('0')
-        auto_deductions = Decimal('0')
-        for inc in pending_incentives:
-            if inc.type == 'bonus':
-                auto_bonus += inc.amount
-            else:
-                auto_deductions += inc.amount
-        bonus = _dec(data.get('bonus', 0)) + auto_bonus
-        deductions = _dec(data.get('deductions', 0)) + auto_deductions
+    except ValueError as e:
+        return _err(str(e))
 
-    sp = EmployeeSalaryPayment.objects.create(
-        tenant=tenant,
-        employee=emp,
-        period_start=period_start,
-        period_end=period_end,
-        base_salary=base_salary,
-        bonus=bonus,
-        advances_deducted=advances_deducted,
-        deductions=deductions,
-        deductions_notes=(data.get('deductions_notes') or '').strip(),
-        payment_method=payment_method,
-        treasury=treasury,
-        bank_account=bank_account,
-        bank_reference=(data.get('bank_reference') or '').strip(),
-        notes=(data.get('notes') or '').strip(),
-        created_by=request.user,
-        updated_by=request.user,
-    )
     log_activity(request, 'create', f'كشف راتب: {emp.name} — {period_start}')
     return JsonResponse({'success': True, 'id': sp.pk})
 
@@ -835,56 +766,16 @@ def incentive_create(request):
         elif bank_account_id:
             bank_account = get_object_or_404(BankAccount, pk=bank_account_id, tenant=tenant, is_active=True)
 
-    from django.db import transaction
+    from . import services as employee_services
     try:
-        with transaction.atomic():
-            inc = EmployeeIncentive.objects.create(
-                tenant=tenant,
-                employee=emp,
-                type=itype,
-                amount=amount,
-                description=description,
-                payout=payout,
-                payment_method=payment_method,
-                treasury=treasury,
-                bank_account=bank_account,
-                bank_reference=(data.get('bank_reference') or '').strip(),
-                date=data.get('date') or timezone.localdate(),
-                notes=(data.get('notes') or '').strip(),
-                created_by=request.user,
-                updated_by=request.user,
-            )
-
-            if itype == 'bonus' and payout == 'immediate' and payment_method == 'cash' and treasury:
-                mv = post_treasury_disbursement(
-                    tenant=tenant,
-                    amount=amount,
-                    date=inc.date,
-                    reference_type='employee_incentive',
-                    reference_id=inc.pk,
-                    description=f'حافز {emp.name} — {description}',
-                    user=request.user,
-                    treasury=treasury,
-                )
-                if mv:
-                    inc.treasury_movement = mv
-                    inc.status = 'paid'
-                    inc.save(update_fields=['treasury_movement', 'status', 'updated_at'])
-            elif itype == 'bonus' and payout == 'immediate' and payment_method == 'bank' and bank_account:
-                mv = post_bank_account_disbursement(
-                    tenant=tenant,
-                    amount=amount,
-                    date=inc.date,
-                    reference_type='employee_incentive',
-                    reference_id=inc.pk,
-                    description=f'حافز {emp.name} — {description}',
-                    user=request.user,
-                    bank_account=bank_account,
-                )
-                if mv:
-                    inc.bank_account_movement = mv
-                    inc.status = 'paid'
-                    inc.save(update_fields=['bank_account_movement', 'status', 'updated_at'])
+        inc = employee_services.create_incentive(
+            tenant=tenant, employee=emp, amount=amount, description=description,
+            itype=itype, payout=payout, payment_method=payment_method,
+            treasury=treasury, bank_account=bank_account,
+            bank_reference=(data.get('bank_reference') or '').strip(),
+            date=data.get('date') or timezone.localdate(),
+            notes=(data.get('notes') or '').strip(), user=request.user,
+        )
     except ValueError as e:
         return _err(str(e))
 

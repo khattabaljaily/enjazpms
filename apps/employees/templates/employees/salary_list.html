@@ -565,6 +565,7 @@
         const advances_deducted= checked.filter(i => i.type === 'advance').reduce((s,i) => s + i.amount, 0);
         const deductions       = checked.filter(i => i.type === 'deduction').reduce((s,i) => s + i.amount, 0);
         const selected_incentive_ids = checked.filter(i => i.itemType === 'incentive').map(i => i.id);
+        const selected_advance_ids   = checked.filter(i => i.itemType === 'advance').map(i => i.id);
 
         const payload = {
             employee,
@@ -575,6 +576,7 @@
             advances_deducted:      advances_deducted.toFixed(2),
             deductions:             deductions.toFixed(2),
             selected_incentive_ids: selected_incentive_ids,
+            selected_advance_ids:   selected_advance_ids,
             payment_method:         method,
             treasury:               treasury,
             bank_account:           bankAccount,
