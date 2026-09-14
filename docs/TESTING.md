@@ -1,16 +1,18 @@
 # تشغيل الاختبارات
 
 ```bash
-source .env/bin/activate
-
-# كل الاختبارات (باستثناء المتصفح، انظر أدناه)
-python manage.py test
+# الطريقة الموصى بها — كل الاختبارات (باستثناء المتصفح، انظر أدناه)
+scripts/test.sh
 
 # تطبيق واحد
-python manage.py test apps.sales
+scripts/test.sh apps.sales
 
-# أسرع أثناء التطوير — لا يعيد إنشاء قاعدة بيانات الاختبار في كل مرة
-python manage.py test --keepdb
+# إعادة إنشاء قاعدة بيانات الاختبار من الصفر (افتراضياً يُستخدم --keepdb)
+KEEPDB=0 scripts/test.sh
+
+# أو مباشرة عبر manage.py
+source .env/bin/activate
+python manage.py test apps.sales --keepdb
 ```
 
 يحتاج الأمر قاعدة MySQL حقيقية يمكن الوصول إليها بنفس بيانات `secrets.json`
@@ -51,3 +53,14 @@ class MyFlowTests(TenantTestCase):
 
 `apps/core/tests_harness.py` اختبار ذاتي لهذا الأساس نفسه — إذا فشل فالمشكلة
 في البنية المشتركة، وليس في منطق عمل.
+
+## ملاحظات عن ملفات اختبار خاصة
+
+- `apps/accounts/tests_permission_matrix.py` يكتشف تلقائياً كل view محمي
+  بصلاحية عبر مسح urlpatterns بالكامل (~390 مساراً) ويفحص كل واحد بطلبين
+  HTTP فعليين — أبطأ من بقية الاختبارات (دقيقتان تقريباً). طبيعي.
+- `apps/sales/tests_concurrency.py` يستخدم `TransactionTestCase` (وليس
+  `TestCase`) لأنه يحتاج threads باتصالات قاعدة بيانات منفصلة فعلياً لاختبار
+  أقفال `select_for_update` تحت تنافس حقيقي — لا ترثه من `TenantTestCase`.
+- `apps/core/test_browser_surfaces.py` (Playwright) مُستبعد عمداً من
+  `scripts/test.sh` — شغِّله يدوياً حسب القسم أعلاه.
