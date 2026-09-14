@@ -500,6 +500,16 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
     if not lines:
         raise ValueError("لا يمكن تأكيد فاتورة فارغة (لا توجد بنود).")
 
+    # الأسعار في بنود المسودة snapshot من وقت إنشائها/آخر تعديل لها. لو تغيّر
+    # سعر الصرف بعد ذلك (ووضع العملة الصعبة مفعَّل)، هذه الأسعار بقت قديمة —
+    # يُرفض التأكيد بدل تمريره بصمت بسعر خاطئ.
+    if (tenant.hard_currency_mode and tenant.exchange_rate_updated_at
+            and invoice.updated_at < tenant.exchange_rate_updated_at):
+        raise ValueError(
+            'تغيّر سعر الصرف بعد آخر تعديل لهذه الفاتورة — يرجى مراجعة الأسعار '
+            'وإعادة حفظ الفاتورة قبل التأكيد.'
+        )
+
     # ── 1. تأثير المخزون ────────────────────────────────
     deferred = invoice.delivery_type == 'deferred'
     for line in lines:
