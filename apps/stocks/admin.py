@@ -15,4 +15,6 @@ class StockQuantityAdmin(admin.ModelAdmin):
     list_display = ['item', 'stock', 'quantity', 'reserved_quantity', 'tenant']
     list_filter = ['tenant', 'stock']
     search_fields = ['item__name', 'stock__name']
-    readonly_fields = ['created_at', 'updated_at']
+    # الكمية والمحجوز تتغيران فقط عبر apps/stocks/services.py (StockMovement audit
+    # trail) — تعديلها مباشرة من الأدمن يتجاوز ذلك السجل ويكسر الحساب.
+    readonly_fields = ['created_at', 'updated_at', 'quantity', 'reserved_quantity']

@@ -184,6 +184,14 @@ class StockQuantity(TenantMixin):
             models.Index(fields=['tenant', 'item']),
             models.Index(fields=['tenant', 'stock', 'quantity']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(quantity__gte=0), name='stockquantity_quantity_gte_0'
+            ),
+            models.CheckConstraint(
+                check=models.Q(reserved_quantity__gte=0), name='stockquantity_reserved_quantity_gte_0'
+            ),
+        ]
 
     def __str__(self):
         return f"{self.item.name} @ {self.stock.name} = {self.quantity}"
