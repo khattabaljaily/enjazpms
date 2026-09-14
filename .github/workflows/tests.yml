@@ -1,0 +1,69 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: enjazpms
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install system dependencies (mysqlclient build headers)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-libmysqlclient-dev build-essential pkg-config
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create CI secrets.json
+        run: |
+          cat > secrets.json <<'JSON'
+          {
+            "SECRET_KEY": "ci-test-secret-key-not-for-production",
+            "DEBUG": true,
+            "ALLOWED_HOSTS": ["*"],
+            "DATABASE": {
+              "ENGINE": "django.db.backends.mysql",
+              "NAME": "enjazpms",
+              "USER": "root",
+              "PASSWORD": "root",
+              "HOST": "127.0.0.1",
+              "PORT": "3306"
+            }
+          }
+          JSON
+
+      - name: Wait for MySQL
+        run: |
+          for i in $(seq 1 30); do
+            mysqladmin ping -h127.0.0.1 -uroot -proot --silent && break
+            sleep 2
+          done
+
+      - name: Run test suite
+        run: bash scripts/test.sh
