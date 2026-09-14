@@ -62,6 +62,7 @@ run_tests.sh
 generate_report.py
 .coverage
 .pytest_cache/
+deploy.cnf
 htmlcov/
 
 # Backup files
