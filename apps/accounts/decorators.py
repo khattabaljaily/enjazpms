@@ -34,6 +34,18 @@ def require_permission(permission_key):
             if request.user.has_perm_key(permission_key):
                 return view_func(request, *args, **kwargs)
             return _deny(request)
+        # ميتاداتا فقط للاستبطان (مثلاً اختبار مصفوفة الصلاحيات) — لا تؤثر
+        # على السلوك، انظر apps/accounts/tests_permission_matrix.py.
+        # بعض الـ views تُكدِّس أكثر من @require_permission فوق بعضها (كل
+        # طبقة تفحص وترفض باستقلالية، فالنتيجة الفعلية AND بين المفاتيح) —
+        # نجمعها هنا بدل الاكتفاء بأقرب طبقة للـ view المُسجَّل في urls.py.
+        existing_keys = getattr(view_func, '_required_permission_keys', ())
+        existing_mode = getattr(view_func, '_permission_check_mode', 'all')
+        if existing_mode == 'all':
+            wrapper._required_permission_keys = tuple(existing_keys) + (permission_key,)
+        else:
+            wrapper._required_permission_keys = (permission_key,)
+        wrapper._permission_check_mode = 'all'
         return wrapper
     return decorator
 
@@ -50,6 +62,8 @@ def require_any_permission(*permission_keys):
                 if request.user.has_perm_key(perm_key):
                     return view_func(request, *args, **kwargs)
             return _deny(request)
+        wrapper._required_permission_keys = permission_keys
+        wrapper._permission_check_mode = 'any'
         return wrapper
     return decorator
 
@@ -66,6 +80,8 @@ def require_all_permissions(*permission_keys):
                 if not request.user.has_perm_key(perm_key):
                     return _deny(request)
             return view_func(request, *args, **kwargs)
+        wrapper._required_permission_keys = permission_keys
+        wrapper._permission_check_mode = 'all'
         return wrapper
     return decorator
 
