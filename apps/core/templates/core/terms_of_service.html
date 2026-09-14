@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>اتفاقية الاستخدام — ENJAZ</title>
+  <title>اتفاقية الاستخدام — {{ app_name }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -412,8 +412,8 @@
   <header class="topbar">
     <div class="brand">
       <span class="brand-mark">
-        <img src="{% static 'img/logo/enjaz-mark-dark.png' %}" alt="" class="brand-mark__icon">
-        <span class="brand-wordmark">ENJAZ</span>
+        <img src="{% static 'logo/logo-dark.png' %}" alt="" class="brand-mark__icon">
+        <span class="brand-wordmark">{{ app_name }}</span>
       </span>
     </div>
     <div style="display:flex;align-items:center;gap:.75rem;">
@@ -429,7 +429,7 @@
   <div class="hero">
     <div class="hero-label">وثيقة رسمية معتمدة</div>
     <h1>اتفاقية الاستخدام وشروط الخدمة</h1>
-    <p>يُرجى قراءة هذه الاتفاقية بعناية. تحدد هذه الوثيقة حقوقك والتزاماتك عند استخدام نظام Enjaz.</p>
+    <p>يُرجى قراءة هذه الاتفاقية بعناية. تحدد هذه الوثيقة حقوقك والتزاماتك عند استخدام نظام {{ app_name }}.</p>
   </div>
 
   <!-- WAVE -->
@@ -462,7 +462,7 @@
           </div>
           <p>
             هذه الاتفاقية مبرمة بين <strong>إنجاز لتقنية المعلومات</strong> ("الجهة المطوّرة للنظام" أو مزوّد الخدمة)، وبين <strong>المشترك</strong>
-            (أي شخص أو كيان تجاري يستخدم نظام ENJAZ).
+            (أي شخص أو كيان تجاري يستخدم نظام {{ app_name }}).
             باستخدامك للنظام فأنت تُقرّ بأنك مفوَّض للموافقة على هذه الاتفاقية باسم نشاطك التجاري.
           </p>
         </div>
@@ -586,7 +586,7 @@
             <h2>حدود المسؤولية</h2>
           </div>
           <p>
-            نظام ENJAZ أداة لإدارة الأعمال وليس مستشاراً مالياً أو قانونياً. القرارات التجارية
+            نظام {{ app_name }} أداة لإدارة الأعمال وليس مستشاراً مالياً أو قانونياً. القرارات التجارية
             المبنية على بيانات النظام هي مسؤولية المشترك الكاملة. لا تتجاوز المسؤولية القصوى
             لمزوّد الخدمة في أي حال مبلغ رسوم اشتراك شهر واحد.
           </p>
@@ -657,7 +657,7 @@
             <input type="checkbox" id="termsCheck" onchange="toggleBtn()">
             <label for="termsCheck">
               قرأت اتفاقية الاستخدام كاملاً وأوافق على جميع بنودها.
-              أُقرّ بأن استمراري في استخدام <strong>نظام ENJAZ</strong>
+              أُقرّ بأن استمراري في استخدام <strong>نظام {{ app_name }}</strong>
               يُعدّ التزاماً قانونياً بهذه الاتفاقية.
             </label>
           </label>

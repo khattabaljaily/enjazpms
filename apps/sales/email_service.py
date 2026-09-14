@@ -40,6 +40,8 @@ def send_invoice_email(invoice, recipient_email: str, request=None) -> tuple[boo
     else:
         logo_abs_url = ''
 
+    from apps.core.branding import get_brand_name
+
     brand_color = (settings_obj.invoice_color or '#c9840f').strip()
     context = {
         'invoice': invoice,
@@ -50,6 +52,7 @@ def send_invoice_email(invoice, recipient_email: str, request=None) -> tuple[boo
         'brand_color': brand_color,
         'brand_color_bg': brand_color + '18',
         'brand_color_border': brand_color + '50',
+        'app_name': get_brand_name(),
     }
 
     subject = f'فاتورة {invoice.invoice_number} — {tenant.name}'

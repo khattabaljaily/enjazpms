@@ -24,7 +24,7 @@
             <div class="sub-expired-alert__title">انتهى اشتراكك</div>
             <div class="sub-expired-alert__desc">
                 تم إيقاف الوصول للنظام مؤقتاً. بياناتك محفوظة ومؤمّنة وستعود للعمل فور التجديد.
-                تواصل مع فريق ENJAZ لتجديد الاشتراك.
+                تواصل مع فريق {{ app_name }} لتجديد الاشتراك.
             </div>
         </div>
         <a href="{% url 'core:tenant_support' %}" class="sub-expired-alert__btn">
@@ -211,7 +211,7 @@
                     </div>
                     <div class="sub-action-step">
                         <div class="sub-action-step__num">٢</div>
-                        <p class="sub-action-step__text">سيتواصل معك فريق ENJAZ لإتمام التجديد وإعادة تفعيل حسابك.</p>
+                        <p class="sub-action-step__text">سيتواصل معك فريق {{ app_name }} لإتمام التجديد وإعادة تفعيل حسابك.</p>
                     </div>
                     <div class="sub-action-step">
                         <div class="sub-action-step__num">٣</div>
@@ -224,7 +224,7 @@
                 </a>
                 {% with user_name=request.user.get_full_name|default:request.user.username tenant_name=request.tenant.name|default:"" %}
                 {# Mobile: direct link — Desktop: open QR modal #}
-                <a href="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج Enjaz.{% endfilter %}"
+                <a href="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج {{ app_name }}.{% endfilter %}"
                    target="_blank" rel="noopener"
                    class="sub-wa-btn sub-wa-btn--mobile"
                    id="subWaLinkMobile">
@@ -234,7 +234,7 @@
                 <button type="button"
                         class="sub-wa-btn sub-wa-btn--desktop"
                         id="subWaBtnDesktop"
-                        data-wa-url="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج Enjaz.{% endfilter %}"
+                        data-wa-url="https://wa.me/249110100110?text={% filter urlencode %}مرحباً، أنا {{ user_name }} من {{ tenant_name }} - مستخدم برنامج {{ app_name }}.{% endfilter %}"
                         data-bs-toggle="modal" data-bs-target="#waQrModal">
                     <i class="fab fa-whatsapp"></i>
                     تواصل عبر واتساب

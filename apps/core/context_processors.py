@@ -3,6 +3,7 @@ Context Processors - معالجات السياق
 توفر متغيرات عامة لجميع Templates
 """
 from django.utils import timezone
+from apps.core.branding import get_brand_name
 from apps.core.models import Settings, TenantCapabilities
 
 
@@ -53,7 +54,7 @@ def app_context(request):
     معلومات عامة عن التطبيق
     """
     return {
-        'app_name': 'ENJAZ',
+        'app_name': get_brand_name(),
         'app_version': '1.0.0',
         'app_description': 'نظام إدارة المخزون ونقاط البيع للصيدليات وشركات توزيع الأدوية',
         'current_year': timezone.localtime().year,

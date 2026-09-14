@@ -2038,6 +2038,7 @@ def tenant_create_api(request):
             from django.template.loader import render_to_string
             from django.utils import timezone
 
+            from apps.core.branding import get_brand_name
             html_body = render_to_string('core/email/new_tenant_notification.html', {
                 'tenant': tenant,
                 'admin_full_name': full_name,
@@ -2045,11 +2046,12 @@ def tenant_create_api(request):
                 'admin_email': email,
                 'created_at': timezone.now(),
                 'dashboard_url': dashboard_url,
+                'app_name': get_brand_name(),
             })
             msg = EmailMessage(
                 subject=f'New Tenant Registered: {tenant.name}',
                 body=html_body,
-                from_email='ENJAZ <{}>'.format(settings.EMAIL_HOST_USER),
+                from_email='{} <{}>'.format(get_brand_name(), settings.EMAIL_HOST_USER),
                 to=['khattabaljaily@gmail.com'],
             )
             msg.content_subtype = 'html'
@@ -2372,15 +2374,17 @@ def tenant_approve_api(request, pk):
         try:
             from django.core.mail import EmailMessage
             from django.template.loader import render_to_string
+            from apps.core.branding import get_brand_name
             html_body = render_to_string('core/email/tenant_approved_email.html', {
                 'tenant': tenant,
                 'admin_full_name': admin_full_name,
                 'login_url': login_url,
+                'app_name': get_brand_name(),
             })
             msg = EmailMessage(
                 subject=f'تم تفعيل حسابك - {tenant.name}',
                 body=html_body,
-                from_email='ENJAZ <{}>'.format(settings.EMAIL_HOST_USER),
+                from_email='{} <{}>'.format(get_brand_name(), settings.EMAIL_HOST_USER),
                 to=[admin_email],
             )
             msg.content_subtype = 'html'
@@ -2562,10 +2566,25 @@ def service_worker(request):
 
 
 def pwa_manifest(request):
-    """Serve the PWA manifest from /manifest.json"""
+    """
+    Serve the PWA manifest from /manifest.json — name/short_name are injected
+    from branding/brand.txt at request time so a white-label copy needs no
+    edit here (see apps/core/branding.py, branding/README.md).
+    """
+    import json
     import os
+
+    from apps.core.branding import get_brand_name
+
     manifest_path = os.path.join(settings.BASE_DIR, 'static', 'manifest.json')
-    return FileResponse(open(manifest_path, 'rb'), content_type='application/manifest+json')
+    with open(manifest_path, encoding='utf-8') as f:
+        manifest = json.load(f)
+
+    brand_name = get_brand_name()
+    manifest['name'] = brand_name
+    manifest['short_name'] = brand_name
+
+    return JsonResponse(manifest, content_type='application/manifest+json', json_dumps_params={'ensure_ascii': False})
 
 
 @login_required

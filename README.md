@@ -98,8 +98,17 @@ enjazpms/
 │   ├── css/          # CSS files (main, layout, dashboard + per-feature)
 │   └── js/
 ├── media/
+├── branding/         # App name + logo + favicon — see branding/README.md
 └── manage.py
 ```
+
+### White-labeling
+
+Everything that displays the product name, logo, or favicon (login, register,
+password reset, navbar, sidebar, footer, about, pricing, PWA manifest,
+transactional emails) reads from the `branding/` folder — see
+[`branding/README.md`](branding/README.md). Replacing its contents (and
+restarting the service) re-skins the whole app; no template edits needed.
 
 ---
 

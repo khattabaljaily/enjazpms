@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}خطط الأسعار | ENJAZ{% endblock %}
+{% block title %}خطط الأسعار | {{ app_name }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pricing.css' %}?v=3.0">
@@ -14,9 +14,9 @@
     <nav class="pr-topbar">
         <a href="/" class="pr-topbar__brand">
             <span class="brand-mark brand-mark--on-light">
-                <img src="{% static 'img/logo/enjaz-mark-dark.png' %}" alt="" class="brand-mark__icon brand-mark__icon--dark">
-                <img src="{% static 'img/logo/enjaz-mark-light.png' %}" alt="" class="brand-mark__icon brand-mark__icon--light">
-                <span class="brand-wordmark">ENJAZ</span>
+                <img src="{% static 'logo/logo-dark.png' %}" alt="" class="brand-mark__icon brand-mark__icon--dark">
+                <img src="{% static 'logo/logo-light.png' %}" alt="" class="brand-mark__icon brand-mark__icon--light">
+                <span class="brand-wordmark">{{ app_name }}</span>
             </span>
         </a>
         <div class="pr-topbar__links">
@@ -137,7 +137,7 @@
     <section class="pr-features">
         <div class="pr-container">
             <div class="pr-section-head">
-                <span class="pr-section-kicker">لماذا ENJAZ؟</span>
+                <span class="pr-section-kicker">لماذا {{ app_name }}؟</span>
                 <h2 class="pr-section-title">ميزات النظام الشاملة</h2>
                 <p class="pr-section-sub">كل ما تحتاجه لإدارة نشاطك من مكان واحد.</p>
             </div>
@@ -217,7 +217,7 @@
                 <div class="pr-cta__orb pr-cta__orb--2"></div>
                 <div class="pr-cta__content">
                     <h2 class="pr-cta__title">جاهز للبدء؟</h2>
-                    <p class="pr-cta__desc">جرّب ENJAZ مجاناً لمدة {{ trial_days }} أيام — بدون أي التزام.</p>
+                    <p class="pr-cta__desc">جرّب {{ app_name }} مجاناً لمدة {{ trial_days }} أيام — بدون أي التزام.</p>
                     <a href="{% url 'accounts:register_step1' %}" class="pr-btn pr-btn--white pr-btn--lg">
                         <i class="fas fa-rocket"></i>
                         ابدأ الآن مجاناً
@@ -231,7 +231,7 @@
     <footer class="pr-footer">
         <div class="pr-container">
             <div class="pr-footer__inner">
-                <span class="pr-footer__copy">ENJAZ &copy; 2026 — نظام إدارة المخزون</span>
+                <span class="pr-footer__copy">{{ app_name }} &copy; 2026 — نظام إدارة المخزون</span>
                 <div class="pr-footer__links">
                     <a href="{% url 'core:about' %}">عن النظام</a>
                     <a href="{% url 'accounts:login' %}">تسجيل الدخول</a>

@@ -518,6 +518,7 @@ def registration_request_api(request):
     data = form.cleaned_data
     version_label = dict(RegistrationRequestForm.VERSION_CHOICES).get(data['version_type'], data['version_type'])
 
+    from apps.core.branding import get_brand_name
     email_context = {
         'personal_email': data['personal_email'],
         'business_name': data['business_name'],
@@ -526,6 +527,7 @@ def registration_request_api(request):
         'version_type': version_label,
         'hard_currency_mode': 'مفعّل' if data['hard_currency_mode'] else 'غير مفعّل',
         'now': _tz.now(),
+        'app_name': get_brand_name(),
     }
 
     subject = f"طلب إنشاء حساب جديد - {data['business_name']}"
@@ -754,6 +756,7 @@ def register_step3(request):
                         from django.template.loader import render_to_string
                         from django.utils import timezone as tz
                         from django.conf import settings as django_settings
+                        from apps.core.branding import get_brand_name
                         html_body = render_to_string('core/email/new_tenant_notification.html', {
                             'tenant': tenant,
                             'admin_full_name': user.get_full_name() or step1_data['username'],
@@ -761,11 +764,12 @@ def register_step3(request):
                             'admin_email': step1_data.get('email', ''),
                             'created_at': tz.now(),
                             'dashboard_url': request.build_absolute_uri('/tenants/'),
+                            'app_name': get_brand_name(),
                         })
                         msg = EmailMessage(
                             subject=f'New Tenant Registered: {tenant.name}',
                             body=html_body,
-                            from_email='ENJAZ <{}>'.format(django_settings.EMAIL_HOST_USER),
+                            from_email='{} <{}>'.format(get_brand_name(), django_settings.EMAIL_HOST_USER),
                             to=['khattabaljaily@gmail.com'],
                         )
                         msg.content_subtype = 'html'
@@ -781,15 +785,17 @@ def register_step3(request):
                             from django.core.mail import EmailMessage
                             from django.template.loader import render_to_string
                             from django.conf import settings as django_settings
+                            from apps.core.branding import get_brand_name
                             tenant_obj = Tenant.objects.get(pk=tenant_id)
                             html_body = render_to_string('accounts/email/trial_pending_email.html', {
                                 'tenant': tenant_obj,
                                 'admin_full_name': admin_full_name,
+                                'app_name': get_brand_name(),
                             })
                             msg = EmailMessage(
                                 subject=f'طلبك قيد المراجعة - {tenant_obj.name}',
                                 body=html_body,
-                                from_email='ENJAZ <{}>'.format(django_settings.EMAIL_HOST_USER),
+                                from_email='{} <{}>'.format(get_brand_name(), django_settings.EMAIL_HOST_USER),
                                 to=[admin_email],
                             )
                             msg.content_subtype = 'html'
@@ -1015,10 +1021,12 @@ def password_reset_request(request):
                 reverse('accounts:password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
             )
 
-            subject = 'إعادة تعيين كلمة المرور - منصة ENJAZ'
+            from apps.core.branding import get_brand_name
+            subject = f'إعادة تعيين كلمة المرور - منصة {get_brand_name()}'
             message = render_to_string('accounts/email/password_reset_email.html', {
                 'user': user,
                 'reset_url': reset_url,
+                'app_name': get_brand_name(),
             })
 
             try:

@@ -152,7 +152,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL  = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+# branding/ يُضاف كمصدر ملفات ثابتة إضافي — يجعل branding/logo/*.png و
+# branding/favicon/*.png قابلة للوصول عبر {% static 'logo/...' %} و
+# {% static 'favicon/...' %} بلا أي view أو رابط جديد. راجع branding/README.md.
+STATICFILES_DIRS = [BASE_DIR / 'static', BASE_DIR / 'branding']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL   = 'media/'
