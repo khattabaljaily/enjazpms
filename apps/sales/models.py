@@ -570,6 +570,81 @@ class SaleReturnLine(TenantMixin):
 
 
 # ============================================================
+# BATCH ALLOCATION  (تخصيص الدفعات — FEFO)
+# ============================================================
+
+class SaleInvoiceLineBatchAllocation(TenantMixin):
+    """
+    يسجّل من أي دفعة (ItemBatch) خُصمت كمية سطر فاتورة معيّن، حسب منطق
+    "الأقرب انتهاءً أولاً" (FEFO) — انظر apps/sales/batch_allocation.py.
+
+    quantity هنا تمثّل الكمية "القائمة" (لم تُرتجَع بعد) من هذه الدفعة لهذا
+    السطر — تنقص عند تأكيد مرتجع (SaleReturnLineBatchRestoration) وتُحذف
+    عند الوصول للصفر، وتُعاد بالكامل عند إلغاء/تعديل الفاتورة.
+
+    batch=None يعني أن الكمية خُصمت من مخزون غير مرتبط بأي دفعة مسجَّلة
+    (رصيد افتتاحي أو إدخال يدوي قبل تفعيل تتبع الدفعات) — حالة طبيعية
+    ومتوقّعة، وليست خطأ.
+    """
+    sale_line = models.ForeignKey(
+        SaleInvoiceLine, on_delete=models.CASCADE,
+        related_name='batch_allocations', verbose_name='سطر الفاتورة'
+    )
+    batch = models.ForeignKey(
+        'items.ItemBatch', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sale_allocations', verbose_name='الدفعة'
+    )
+    batch_number_snapshot = models.CharField('رقم الدفعة', max_length=100, blank=True)
+    expiry_date_snapshot = models.DateField('تاريخ انتهاء الصلاحية', null=True, blank=True)
+    quantity = models.DecimalField('الكمية القائمة', max_digits=12, decimal_places=4)
+
+    class Meta:
+        db_table = 'sale_invoice_line_batch_allocations'
+        verbose_name = 'تخصيص دفعة لبند فاتورة'
+        verbose_name_plural = 'تخصيصات الدفعات لبنود الفواتير'
+        indexes = [
+            models.Index(fields=['tenant', 'sale_line']),
+            models.Index(fields=['tenant', 'batch']),
+        ]
+        constraints = [
+            models.CheckConstraint(check=models.Q(quantity__gt=0), name='sale_line_batch_alloc_qty_gt_0'),
+        ]
+
+    def __str__(self):
+        return f"{self.sale_line_id} ← {self.batch_number_snapshot or 'بدون دفعة'} × {self.quantity}"
+
+
+class SaleReturnLineBatchRestoration(TenantMixin):
+    """
+    يسجّل إلى أي دفعة أُعيدت كمية سطر مرتجع معيّن عند تأكيده — يُستخدم
+    لعكس العملية بدقة عند إلغاء المرتجع (بدل إعادة حساب FEFO من جديد).
+    """
+    return_line = models.ForeignKey(
+        SaleReturnLine, on_delete=models.CASCADE,
+        related_name='batch_restorations', verbose_name='سطر المرتجع'
+    )
+    batch = models.ForeignKey(
+        'items.ItemBatch', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='return_restorations', verbose_name='الدفعة'
+    )
+    quantity = models.DecimalField('الكمية المُعادة', max_digits=12, decimal_places=4)
+
+    class Meta:
+        db_table = 'sale_return_line_batch_restorations'
+        verbose_name = 'إعادة دفعة لبند مرتجع'
+        verbose_name_plural = 'إعادات الدفعات لبنود المرتجعات'
+        indexes = [
+            models.Index(fields=['tenant', 'return_line']),
+        ]
+        constraints = [
+            models.CheckConstraint(check=models.Q(quantity__gt=0), name='sale_return_line_batch_restore_qty_gt_0'),
+        ]
+
+    def __str__(self):
+        return f"{self.return_line_id} → {self.batch_id or 'بدون دفعة'} × {self.quantity}"
+
+
+# ============================================================
 # STOCK MOVEMENT  (حركات المخزون)
 # ============================================================
 

@@ -169,7 +169,15 @@ def confirm_stocktake(stocktake):
             continue
 
         sq = _get_sq(tenant, stocktake.stock, item)
-        sq.quantity += diff
+        new_quantity = sq.quantity + diff
+        if new_quantity < 0:
+            # نادر لكن ممكن: system_quantity المُسجَّلة وقت بدء الجرد أصبحت
+            # قديمة بسبب عملية بيع/تحويل جرت بعدها وقبل تأكيد الجرد.
+            raise ValueError(
+                f"تعذّر تأكيد الجرد: تطبيق فرق «{item.name}» ({diff:g}) على الرصيد "
+                f"الحالي ({sq.quantity:g}) يُنتج كمية سالبة. أعد عدّ هذا الصنف."
+            )
+        sq.quantity = new_quantity
         sq.save(update_fields=['quantity', 'updated_at'])
 
         direction = 'in' if diff > 0 else 'out'

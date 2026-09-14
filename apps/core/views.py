@@ -1653,19 +1653,19 @@ def exchange_rate_update_api(request):
         ExchangeRateHistory.objects.create(
             tenant=tenant,
             rate=new_rate,
-            changed_by=request.user,
+            changed_by=request.user if request.user.is_authenticated else None,
             notes=notes or f'السعر السابق: {previous_rate}',
         )
 
-        from apps.core.models import ExchangeRateHistory
-        ExchangeRateHistory.objects.create(
-            tenant=tenant,
-            rate=new_rate,
-            changed_by=request.user if request.user.is_authenticated else None,
-            notes=notes,
+        # أي صنف له سعر بيع أو تكلفة أو حد أدنى بالعملة الصعبة يجب أن يُعاد
+        # تسعيره — فلترة selling_price_hc فقط كانت تتجاهل صنفاً له cost_price_hc
+        # فقط (بلا سعر بيع بالعملة الصعبة)، فتبقى تكلفته قديمة بعد تغيير السعر.
+        from django.db.models import Q
+        items = Item.objects.for_tenant(tenant).filter(
+            Q(selling_price_hc__isnull=False)
+            | Q(cost_price_hc__isnull=False)
+            | Q(min_selling_price_hc__isnull=False)
         )
-
-        items = Item.objects.for_tenant(tenant).filter(selling_price_hc__isnull=False)
         updated = 0
         bulk = []
         for item in items:

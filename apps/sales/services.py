@@ -109,7 +109,7 @@ def _release_reservation(tenant, stock, item, qty):
     sq.save(update_fields=['reserved_quantity', 'updated_at'])
 
 
-def _deduct_stock(tenant, stock, item, qty, unit_cost, invoice):
+def _deduct_stock(tenant, stock, item, qty, unit_cost, invoice, line=None):
     """
     يخصم qty من المخزون ويُسجِّل حركة sale_out.
     يُفرز ValueError إذا كانت الكمية غير كافية.
@@ -140,6 +140,10 @@ def _deduct_stock(tenant, stock, item, qty, unit_cost, invoice):
         balance_after=sq.quantity,
         notes=f'بيع — فاتورة {invoice.invoice_number}',
     )
+
+    if line is not None:
+        from .batch_allocation import consume_fefo
+        consume_fefo(tenant, stock, item, line, qty)
 
 
 def _restore_stock(tenant, stock, item, qty, unit_cost, reference_type, reference_id,
@@ -307,7 +311,16 @@ def _reverse_stock_movements(tenant, invoice):
     يعكس كل حركات sale_out المرتبطة بالفاتورة:
       - يُعيد الكمية إلى StockQuantity
       - يُسجّل حركة عكسية (is_reversal=True) بدلاً من الحذف
+      - يُعيد كل تخصيصات الدفعات (FEFO) القائمة لسطور الفاتورة إلى دفعاتها
+
+    يُستدعى فقط من cancel_sale_invoice (حالة confirmed، أي بلا مرتجعات
+    مؤكدة بحكم شرط الحالة) و edit_confirmed_invoice (يرفض صراحة التعديل
+    إن وُجدت مرتجعات مؤكدة) — لذلك عكس كامل تخصيصات الدفعات هنا آمن دائماً.
     """
+    from .batch_allocation import reverse_all_for_line
+    for line in invoice.lines.select_related('item'):
+        reverse_all_for_line(line)
+
     movements = StockMovement.objects.filter(
         tenant=tenant,
         reference_type='sale_invoice',
@@ -501,7 +514,7 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
                 tenant=tenant, stock=invoice.stock,
                 item=line.item, qty=qty_base,
                 unit_cost=line.cost_price_snapshot,
-                invoice=invoice,
+                invoice=invoice, line=line,
             )
 
     # ── 2. تسجيل الدفع ──────────────────────────────────
@@ -518,7 +531,11 @@ def confirm_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
 
     # ── فحص الحد الائتماني ──────────────────────────────
     if invoice.customer and pm in ('credit', 'mixed'):
-        customer = invoice.customer
+        # قفل صف العميل لمنع Race Condition: فاتورتان آجلتان لنفس العميل
+        # تُؤكَّدان في نفس اللحظة قد تقرآن current_balance القديم معاً وتتجاوزان
+        # الحد الائتماني معاً رغم أن كل واحدة على حدة كانت ستُرفض.
+        from apps.customers.models import Customer
+        customer = Customer.objects.select_for_update().get(pk=invoice.customer_id)
         credit_limit = customer.credit_limit or Decimal('0')
         if credit_limit > 0:
             from django.db.models import Sum as _CLSum
@@ -694,6 +711,8 @@ def deliver_sale_invoice(invoice: SaleInvoice, user) -> SaleInvoice:
             balance_after=sq.quantity,
             notes=f'تسليم فاتورة {invoice.invoice_number}',
         )
+        from .batch_allocation import consume_fefo
+        consume_fefo(tenant, invoice.stock, line.item, line, qty_base)
 
     invoice.status = 'confirmed'
     invoice.delivered_at = timezone.now()
@@ -979,6 +998,9 @@ def confirm_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
             notes=f'مرتجع بيع {sale_return.return_number} — فاتورة {invoice.invoice_number}',
         )
 
+        from .batch_allocation import restore_for_return_line
+        restore_for_return_line(rl, rl.returned_quantity)
+
         # تحديث returned_quantity في سطر الفاتورة
         inv_line.returned_quantity += rl.returned_quantity
         inv_line.save(update_fields=['returned_quantity', 'updated_at'])
@@ -1120,12 +1142,14 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
         )
 
     # ── عكس سطور returned_quantity ───────────────────────
+    from .batch_allocation import reconsume_for_return_line
     for rl in sale_return.lines.select_related('invoice_line'):
         inv_line = SaleInvoiceLine.objects.select_for_update().get(pk=rl.invoice_line_id)
         inv_line.returned_quantity -= rl.returned_quantity
         if inv_line.returned_quantity < 0:
             inv_line.returned_quantity = Decimal('0')
         inv_line.save(update_fields=['returned_quantity', 'updated_at'])
+        reconsume_for_return_line(rl)
 
     # ── عكس التأثيرات المالية ─────────────────────────────
     from apps.agents.services import _reverse_agent_ledger, apply_collection_commission
@@ -1227,6 +1251,10 @@ def record_customer_payment(invoice: SaleInvoice, amount: Decimal,
     يُحدِّث paid_amount ويُنشئ قيداً عكسياً في CustomerLedger.
     """
     tenant = invoice.tenant
+
+    # قفل صف الفاتورة لمنع دفعتين متزامنتين من قراءة remaining_amount القديم
+    # معاً وتسجيل دفعة أكبر من المتبقي فعلياً (Race Condition).
+    invoice = SaleInvoice.objects.select_for_update().get(pk=invoice.pk)
 
     if invoice.status not in ('confirmed', 'partially_returned'):
         raise ValueError("يمكن تسجيل الدفعات على الفواتير المؤكدة فقط.")

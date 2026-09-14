@@ -411,7 +411,10 @@ def confirm_purchase_invoice(invoice: PurchaseInvoice, user, reapply_stock=True)
     # ── فحص الحد الائتماني للمورد ──────────────────────────────
     if invoice.supplier and pm in ('credit', 'mixed'):
         from django.db.models import Sum as _CLSum
-        supplier = invoice.supplier
+        # قفل صف المورد لمنع تجاوز الحد الائتماني عبر Race Condition بين
+        # أمري شراء آجلين لنفس المورد يُؤكَّدان في نفس اللحظة.
+        from apps.suppliers.models import Supplier
+        supplier = Supplier.objects.select_for_update().get(pk=invoice.supplier_id)
         credit_limit = supplier.credit_limit or Decimal('0')
         if credit_limit > 0:
             current_balance = (
