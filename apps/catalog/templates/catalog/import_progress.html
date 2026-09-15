@@ -39,6 +39,7 @@ $(function () {
         $.ajax({
             url: '/catalog/import/' + batchId + '/process-chunk/',
             type: 'POST',
+            global: false,
             headers: {'X-CSRFToken': csrf},
             success: function (resp) {
                 const pct = resp.total ? Math.round(100 * resp.processed / resp.total) : 100;
