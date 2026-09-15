@@ -7,6 +7,10 @@
 <style>
 .cp-row td { vertical-align: middle; }
 .cp-row input[type=text], .cp-row input[type=number] { font-size:.82rem; padding:.25rem .4rem; }
+/* أسماء الشركات/الأشكال الصيدلانية إنجليزية — بدون هذا، اتجاه RTL على
+   عنصر select يقلب ترتيب النص فيبدو كأن فيه حرف زائد بالبداية (فعلياً
+   هي علامة ترقيم بنهاية الاسم انعكس مكانها بصرياً فقط). */
+#dosageFormFilter, #agentFilter { direction: ltr; text-align: right; }
 </style>
 {% endblock %}
 
