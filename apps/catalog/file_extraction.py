@@ -19,6 +19,8 @@ that only have a name column), so this still feeds the same pipeline.
 """
 import io
 import logging
+import os
+import shutil
 
 logger = logging.getLogger('data_import')
 
@@ -29,6 +31,11 @@ MIN_TEXT_LEN_PER_PAGE = 20  # below this, treat the PDF page as scanned/image-on
 OCR_LANGS = 'ara+eng'
 OCR_CONFIG = '--psm 6'  # assume a uniform block of text (works better for tabular scans than default)
 OCR_DPI = 300
+
+# Fallback locations to check when `tesseract` isn't resolvable via PATH —
+# e.g. a systemd service unit whose PATH is restricted to the venv's bin/
+# directory won't see /usr/bin even though an interactive login shell does.
+TESSERACT_FALLBACK_PATHS = ('/usr/bin/tesseract', '/usr/local/bin/tesseract', '/opt/homebrew/bin/tesseract')
 
 
 def is_pdf_or_image(filename: str) -> bool:
@@ -100,6 +107,12 @@ def _table_to_rows(table_data: list) -> list:
 def _ocr_image_bytes(img_bytes: bytes) -> str:
     import pytesseract
     from PIL import Image
+
+    if not shutil.which('tesseract'):
+        for candidate in TESSERACT_FALLBACK_PATHS:
+            if os.path.isfile(candidate):
+                pytesseract.pytesseract.tesseract_cmd = candidate
+                break
 
     image = Image.open(io.BytesIO(img_bytes))
     return pytesseract.image_to_string(image, lang=OCR_LANGS, config=OCR_CONFIG)
