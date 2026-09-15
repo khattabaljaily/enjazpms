@@ -114,14 +114,99 @@ def catalog_fix_missing_generic_names_api(request):
 
 @_require_platform_staff
 def master_drug_list(request):
-    q = request.GET.get('q', '').strip()
-    qs = MasterDrug.objects.filter(status='active').select_related('category')
-    if q:
-        qs = qs.filter(generic_name_normalized__icontains=normalize_text(q))
-    qs = qs.order_by('generic_name')[:200]
+    total_count = MasterDrug.objects.filter(status='active').count()
     missing_generic_count = MasterDrug.objects.filter(status='active', generic_name='').count()
     return render(request, 'catalog/master_drug_list.html', {
-        'drugs': qs, 'q': q, 'missing_generic_count': missing_generic_count,
+        'total_count': total_count, 'missing_generic_count': missing_generic_count,
+    })
+
+
+@_require_platform_staff
+def master_drug_table_api(request):
+    from django.db.models import Count, Q
+
+    draw = int(request.GET.get('draw', 1))
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 100))
+    search_value = request.GET.get('search[value]', '').strip()
+
+    qs = MasterDrug.objects.filter(status='active').select_related('category').annotate(alias_count=Count('aliases'))
+    records_total = qs.count()
+
+    if search_value:
+        norm = normalize_text(search_value)
+        qs = qs.filter(
+            Q(generic_name_normalized__icontains=norm)
+            | Q(dosage_form_normalized__icontains=norm)
+            | Q(aliases__trade_name_normalized__icontains=norm)
+            | Q(aliases__manufacturer__icontains=search_value)
+        ).distinct()
+
+    records_filtered = qs.count()
+
+    order_col = request.GET.get('order[0][column]', '0')
+    order_dir = request.GET.get('order[0][dir]', 'asc')
+    col_name = request.GET.get(f'columns[{order_col}][data]', 'generic_name')
+    allowed = {
+        'generic_name': 'generic_name', 'strength': 'strength', 'dosage_form': 'dosage_form',
+        'category': 'category__name', 'alias_count': 'alias_count',
+    }
+    order_field = allowed.get(col_name, 'generic_name')
+    if order_dir == 'desc':
+        order_field = f'-{order_field}'
+
+    qs = qs.order_by(order_field)[start:start + length]
+
+    data = [
+        {
+            'id': d.id,
+            'generic_name': d.generic_name,
+            'strength': d.strength or '-',
+            'dosage_form': d.dosage_form or '-',
+            'category': d.category.name if d.category_id else '-',
+            'alias_count': d.alias_count,
+        }
+        for d in qs
+    ]
+
+    return JsonResponse({
+        'draw': draw,
+        'recordsTotal': records_total,
+        'recordsFiltered': records_filtered,
+        'data': data,
+    })
+
+
+@_require_platform_staff
+def master_drug_view_api(request, pk):
+    """Read-only full-detail payload for the list page's "view" modal."""
+    drug = get_object_or_404(MasterDrug.objects.select_related('category'), pk=pk)
+    aliases = [
+        {
+            'id': a.id,
+            'trade_name': a.trade_name,
+            'manufacturer': a.manufacturer or '-',
+            'country_of_origin': a.country_of_origin or '-',
+            'sudan_agent': a.sudan_agent or '-',
+            'pack_size': a.pack_size or '-',
+            'barcode': a.barcode or '-',
+            'is_primary': a.is_primary,
+        }
+        for a in drug.aliases.order_by('-is_primary', 'trade_name')
+    ]
+    return JsonResponse({
+        'id': drug.id,
+        'generic_name': drug.generic_name,
+        'dosage_form': drug.dosage_form or '-',
+        'strength': drug.strength or '-',
+        'category': drug.category.name if drug.category_id else '-',
+        'item_type': drug.item_type,
+        'description': drug.description or '',
+        'default_unit_name': drug.default_unit_name or '-',
+        'requires_prescription': drug.requires_prescription,
+        'is_controlled_substance': drug.is_controlled_substance,
+        'is_insurance_excluded': drug.is_insurance_excluded,
+        'aliases': aliases,
     })
 
 
@@ -166,10 +251,24 @@ def master_drug_detail(request, pk):
                 MasterDrugAlias.objects.create(
                     master_drug=drug, trade_name=trade_name,
                     manufacturer=request.POST.get('manufacturer', '').strip(),
+                    country_of_origin=request.POST.get('country_of_origin', '').strip(),
+                    sudan_agent=request.POST.get('sudan_agent', '').strip(),
+                    pack_size=request.POST.get('pack_size', '').strip(),
                     barcode=request.POST.get('barcode', '').strip(),
                     is_primary=not drug.aliases.exists(),
                     created_by=request.user,
                 )
+        elif action == 'edit_alias':
+            alias = get_object_or_404(MasterDrugAlias, pk=request.POST.get('alias_id'), master_drug=drug)
+            trade_name = request.POST.get('trade_name', '').strip()
+            if trade_name:
+                alias.trade_name = trade_name
+                alias.manufacturer = request.POST.get('manufacturer', '').strip()
+                alias.country_of_origin = request.POST.get('country_of_origin', '').strip()
+                alias.sudan_agent = request.POST.get('sudan_agent', '').strip()
+                alias.pack_size = request.POST.get('pack_size', '').strip()
+                alias.barcode = request.POST.get('barcode', '').strip()
+                alias.save()
         return redirect('catalog:master_drug_detail', pk=drug.pk)
 
     from apps.items.models import Item

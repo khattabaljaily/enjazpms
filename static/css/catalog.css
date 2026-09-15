@@ -1,0 +1,169 @@
+/* ============================================================
+   ENJAZ PMS - Master Drug Catalog Page Specific Styles
+   خاص بصفحة الكتالوج المركزي للأدوية فقط
+   ============================================================ */
+
+/* ══════════════════════════ MOBILE CARD LAYOUT — DRUGS TABLE ══════════════════════════ */
+@media (max-width: 768px) {
+    .cx-table-wrap { display: none !important; }
+    #drugCardsMobile {
+        display: grid !important;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+    .cx-drug-card {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 0.9rem;
+        background: var(--bg-card, #ffffff);
+        border: 1px solid var(--border-color);
+        border-radius: 18px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .cx-drug-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(246,168,33, 0.24);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    }
+    .cx-drug-card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.65rem;
+        align-items: flex-start;
+    }
+    .cx-drug-card-title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.18rem;
+        min-width: 0;
+    }
+    .cx-drug-card-title {
+        margin: 0;
+        font-size: 0.99rem;
+        font-weight: 700;
+        color: var(--text-heading, #111827);
+        line-height: 1.2;
+    }
+    .cx-drug-card-sub {
+        margin: 0;
+        font-size: 0.78rem;
+        color: var(--text-secondary, #6b7280);
+    }
+    .cx-drug-card-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+    .cx-drug-card-meta div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.16rem;
+        padding: 0.65rem 0.75rem;
+        background: rgba(15, 23, 42, 0.03);
+        border-radius: 14px;
+    }
+    .cx-drug-card-meta-label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-tertiary, #6b7280);
+        letter-spacing: 0.36px;
+        text-transform: uppercase;
+    }
+    .cx-drug-card-meta-value {
+        font-size: 0.92rem;
+        color: var(--text-heading, #111827);
+        font-weight: 700;
+    }
+    .cx-drug-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        justify-content: flex-end;
+    }
+    .cx-drug-card-actions .cxr-act {
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+        border-radius: 14px;
+        padding: 0.62rem 0.75rem;
+        border: 1px solid transparent;
+        transition: background 160ms ease, border-color 160ms ease;
+    }
+    .cx-drug-card-actions .cxr-act:hover {
+        border-color: rgba(15, 23, 42, 0.12);
+    }
+    .cx-drug-card-actions .cxr-act--view {
+        background: rgba(246,168,33, 0.08);
+    }
+    .cx-drug-card-actions .cxr-act--del {
+        background: rgba(239, 68, 68, 0.08);
+    }
+}
+
+@media (max-width: 576px) {
+    #drugCardsMobile { gap: 0.75rem; }
+    .cx-drug-card-meta { grid-template-columns: 1fr 1fr; }
+}
+
+[data-theme="dark"] .cx-drug-card {
+    background: var(--surface);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] .cx-drug-card-meta div {
+    background: rgba(255,255,255,0.04);
+}
+
+@media (max-width: 360px) {
+    .cx-drug-card-meta { grid-template-columns: 1fr; }
+    .cx-drug-card-actions { justify-content: flex-start; }
+}
+
+/* ══════════════════════════ VIEW-DETAILS MODAL ══════════════════════════ */
+#viewDrugModal .cx-view-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+@media (max-width: 576px) {
+    #viewDrugModal .cx-view-meta { grid-template-columns: 1fr 1fr; }
+}
+#viewDrugModal .cx-view-meta div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+    padding: 0.65rem 0.75rem;
+    background: rgba(15, 23, 42, 0.03);
+    border-radius: 14px;
+}
+[data-theme="dark"] #viewDrugModal .cx-view-meta div {
+    background: rgba(255,255,255,0.04);
+}
+#viewDrugModal .cx-view-meta-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-tertiary, #6b7280);
+    letter-spacing: 0.36px;
+    text-transform: uppercase;
+}
+#viewDrugModal .cx-view-meta-value {
+    font-size: 0.92rem;
+    color: var(--text-heading, #111827);
+    font-weight: 700;
+}
+
+/* ── جدول الأسماء التجارية (نافذة العرض + صفحة التعديل): جدول دائماً، بعرضه الكامل مع تمرير أفقي على الموبايل ── */
+.cx-alias-table-wrap {
+    -webkit-overflow-scrolling: touch;
+}
+.cx-alias-table {
+    width: auto;
+    min-width: 100%;
+}
+@media (max-width: 768px) {
+    .cx-alias-table th,
+    .cx-alias-table td {
+        white-space: nowrap;
+    }
+}

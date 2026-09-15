@@ -223,6 +223,9 @@ class Item(TenantMixin):
     # ------ بيانات صيدلانية (تظهر فقط للصيدليات) ------
     generic_name = models.CharField('الاسم العلمي / المادة الفعالة', max_length=300, blank=True)
     manufacturer = models.CharField('الشركة المصنعة', max_length=200, blank=True)
+    country_of_origin = models.CharField('بلد المنشأ', max_length=100, blank=True)
+    sudan_agent = models.CharField('الوكيل أو الموزع في السودان', max_length=200, blank=True)
+    pack_size = models.CharField('حجم العبوة', max_length=300, blank=True)
     dosage_form = models.CharField(
         'الشكل الصيدلاني', max_length=100, blank=True,
         help_text='مثال: أقراص، شراب، حقن، كبسولات'

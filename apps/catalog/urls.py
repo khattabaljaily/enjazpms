@@ -17,6 +17,8 @@ urlpatterns = [
     path('fix-missing-generic-names/', views.catalog_fix_missing_generic_names_api, name='fix_missing_generic_names_api'),
 
     path('', views.master_drug_list, name='master_drug_list'),
+    path('table-api/', views.master_drug_table_api, name='master_drug_table_api'),
+    path('<int:pk>/view-api/', views.master_drug_view_api, name='master_drug_view_api'),
     path('<int:pk>/', views.master_drug_detail, name='master_drug_detail'),
     path('<int:pk>/delete/', views.master_drug_delete_api, name='master_drug_delete_api'),
     path('<int:pk>/aliases/<int:alias_id>/delete/', views.master_drug_alias_delete_api, name='master_drug_alias_delete_api'),

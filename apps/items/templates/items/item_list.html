@@ -499,6 +499,18 @@
                                 {{ item_form.manufacturer }}
                             </div>
                             <div class="col-md-6">
+                                <label class="cx-label" for="id_country_of_origin">{{ item_form.country_of_origin.label }}</label>
+                                {{ item_form.country_of_origin }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_sudan_agent">{{ item_form.sudan_agent.label }}</label>
+                                {{ item_form.sudan_agent }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_pack_size">{{ item_form.pack_size.label }}</label>
+                                {{ item_form.pack_size }}
+                            </div>
+                            <div class="col-md-6">
                                 <label class="cx-label" for="id_dosage_form">{{ item_form.dosage_form.label }}</label>
                                 {{ item_form.dosage_form }}
                             </div>
@@ -1503,6 +1515,9 @@
                 if (CAP.hasDrugClassification) {
                     $('#id_generic_name').val(d.generic_name || '');
                     $('#id_manufacturer').val(d.manufacturer || '');
+                    $('#id_country_of_origin').val(d.country_of_origin || '');
+                    $('#id_sudan_agent').val(d.sudan_agent || '');
+                    $('#id_pack_size').val(d.pack_size || '');
                     $('#id_dosage_form').val(d.dosage_form || '');
                     $('#id_strength').val(d.strength || '');
                     $('#id_requires_prescription').prop('checked', !!d.requires_prescription);

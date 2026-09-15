@@ -3,6 +3,10 @@
 
 {% block page_header %}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/catalog.css' %}?v=1.0">
+{% endblock %}
+
 {% block content %}
 <div class="cx-scene">
 {% csrf_token %}
@@ -13,7 +17,7 @@
             <div class="cx-hero-icon-wrap"><i class="fas fa-capsules"></i></div>
             <div>
                 <h1 class="cx-hero-title">الكتالوج المركزي للأدوية</h1>
-                <p class="cx-hero-desc">{{ drugs|length }} دواء</p>
+                <p class="cx-hero-desc">{{ total_count }} دواء</p>
             </div>
         </div>
         <div class="cx-hero-right">
@@ -47,31 +51,75 @@
 {% endif %}
 
 <div class="cx-panel" style="padding:1.25rem">
-    <form method="get" class="mb-3 d-flex gap-2">
-        <input type="text" name="q" class="form-control" placeholder="ابحث بالاسم العلمي..." value="{{ q }}">
-        <button type="submit" class="cx-btn-secondary">بحث</button>
-    </form>
-    <table class="table table-sm">
-        <thead><tr><th>الاسم العلمي</th><th>التركيز</th><th>الشكل الصيدلاني</th><th>التصنيف</th><th>الأسماء التجارية</th><th></th></tr></thead>
-        <tbody>
-        {% for d in drugs %}
-            <tr>
-                <td><a href="{% url 'catalog:master_drug_detail' d.pk %}">{{ d.generic_name }}</a></td>
-                <td>{{ d.strength|default:'-' }}</td>
-                <td>{{ d.dosage_form|default:'-' }}</td>
-                <td>{{ d.category|default:'-' }}</td>
-                <td>{{ d.aliases.count }}</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-outline-danger js-delete-drug" data-id="{{ d.pk }}" data-name="{{ d.generic_name }}">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        {% empty %}
-            <tr><td colspan="6" class="text-muted text-center">لا توجد نتائج بعد — استورد قائمة أسعار أو أضف دواءً يدوياً</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="drugSearchInput" class="cx-search-input" placeholder="ابحث بالاسم العلمي أو الاسم التجاري أو الشركة المصنعة...">
+        </div>
+    </div>
+
+    <div class="table-responsive cx-table-wrap">
+        <table id="drugsTable" class="cx-table">
+            <thead>
+                <tr>
+                    <th>الاسم العلمي</th>
+                    <th>التركيز</th>
+                    <th>الشكل الصيدلاني</th>
+                    <th>التصنيف</th>
+                    <th>الأسماء التجارية</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div id="drugCardsMobile" class="d-none p-0" aria-live="polite"></div>
+</div>
+
+<!-- ── VIEW DETAILS MODAL ───────────────────────────────────────── -->
+<div class="modal fade" id="viewDrugModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="viewDrugTitle">—</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="cx-view-meta">
+            <div><span class="cx-view-meta-label">الشكل الصيدلاني</span><span class="cx-view-meta-value" id="viewDrugForm">-</span></div>
+            <div><span class="cx-view-meta-label">التركيز</span><span class="cx-view-meta-value" id="viewDrugStrength">-</span></div>
+            <div><span class="cx-view-meta-label">التصنيف</span><span class="cx-view-meta-value" id="viewDrugCategory">-</span></div>
+            <div><span class="cx-view-meta-label">الوحدة الأساسية المقترحة</span><span class="cx-view-meta-value" id="viewDrugUnit">-</span></div>
+            <div><span class="cx-view-meta-label">يُصرف بوصفة</span><span class="cx-view-meta-value" id="viewDrugRx">-</span></div>
+            <div><span class="cx-view-meta-label">خاضع للرقابة</span><span class="cx-view-meta-value" id="viewDrugControlled">-</span></div>
+        </div>
+        <p id="viewDrugDescription" class="text-muted mb-3"></p>
+        <h6 class="mb-2">الأسماء التجارية</h6>
+        <div class="table-responsive cx-alias-table-wrap">
+            <table class="table table-sm cx-alias-table">
+                <thead>
+                    <tr>
+                        <th>الاسم التجاري</th>
+                        <th>الشركة المصنعة</th>
+                        <th>بلد المنشأ</th>
+                        <th>الوكيل/الموزع في السودان</th>
+                        <th>حجم العبوة</th>
+                        <th>الباركود</th>
+                        <th>أساسي</th>
+                    </tr>
+                </thead>
+                <tbody id="viewDrugAliasesBody">
+                    <tr><td colspan="7" class="text-muted text-center">جاري التحميل...</td></tr>
+                </tbody>
+            </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a href="#" id="viewDrugEditLink" class="cx-btn-secondary"><i class="fas fa-pen-to-square"></i> تعديل</a>
+        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ── DELETE MODAL ───────────────────────────────────────── -->
@@ -100,6 +148,137 @@
 $(function () {
     const csrf = $('[name=csrfmiddlewaretoken]').first().val();
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteDrugModal'));
+    const viewModal = new bootstrap.Modal(document.getElementById('viewDrugModal'));
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function renderMobileDrugCards(rows) {
+        const $cards = $('#drugCardsMobile');
+        if (!rows.length) {
+            $cards.html('<p class="text-muted text-center p-3">لا توجد نتائج بعد — استورد قائمة أسعار أو أضف دواءً يدوياً</p>');
+            return;
+        }
+        const html = rows.map(function (r) {
+            return `<article class="cx-drug-card">
+                <div class="cx-drug-card-head">
+                    <div class="cx-drug-card-title-wrap">
+                        <h2 class="cx-drug-card-title">${esc(r.generic_name)}</h2>
+                        <p class="cx-drug-card-sub">${esc(r.dosage_form)} — ${esc(r.strength)}</p>
+                    </div>
+                </div>
+                <div class="cx-drug-card-meta">
+                    <div>
+                        <span class="cx-drug-card-meta-label">التصنيف</span>
+                        <strong class="cx-drug-card-meta-value">${esc(r.category)}</strong>
+                    </div>
+                    <div>
+                        <span class="cx-drug-card-meta-label">الأسماء التجارية</span>
+                        <strong class="cx-drug-card-meta-value">${esc(r.alias_count)}</strong>
+                    </div>
+                </div>
+                <div class="cx-drug-card-actions">
+                    <button class="cxr-act cxr-act--view js-view-drug" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
+                    <a class="cxr-act" href="/catalog/${r.id}/" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></a>
+                    <button class="cxr-act cxr-act--del js-delete-drug" data-id="${r.id}" data-name="${esc(r.generic_name)}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                </div>
+            </article>`;
+        }).join('');
+        $cards.html(html);
+    }
+
+    function openView(id) {
+        $('#viewDrugTitle').text('...');
+        $('#viewDrugAliasesBody').html('<tr><td colspan="7" class="text-muted text-center">جاري التحميل...</td></tr>');
+        viewModal.show();
+        $.get('/catalog/' + id + '/view-api/', function (d) {
+            $('#viewDrugTitle').text(d.generic_name);
+            $('#viewDrugForm').text(d.dosage_form);
+            $('#viewDrugStrength').text(d.strength);
+            $('#viewDrugCategory').text(d.category);
+            $('#viewDrugUnit').text(d.default_unit_name);
+            $('#viewDrugRx').text(d.requires_prescription ? 'نعم' : 'لا');
+            $('#viewDrugControlled').text(d.is_controlled_substance ? 'نعم' : 'لا');
+            $('#viewDrugDescription').text(d.description || '');
+            $('#viewDrugEditLink').attr('href', '/catalog/' + d.id + '/');
+
+            if (!d.aliases.length) {
+                $('#viewDrugAliasesBody').html('<tr><td colspan="7" class="text-muted text-center">لا توجد أسماء تجارية</td></tr>');
+            } else {
+                const rows = d.aliases.map(function (a) {
+                    return `<tr>
+                        <td>${esc(a.trade_name)}</td>
+                        <td>${esc(a.manufacturer)}</td>
+                        <td>${esc(a.country_of_origin)}</td>
+                        <td>${esc(a.sudan_agent)}</td>
+                        <td>${esc(a.pack_size)}</td>
+                        <td>${esc(a.barcode)}</td>
+                        <td>${a.is_primary ? '<i class="fas fa-check text-success"></i>' : ''}</td>
+                    </tr>`;
+                }).join('');
+                $('#viewDrugAliasesBody').html(rows);
+            }
+        }).fail(function () {
+            viewModal.hide();
+            Enjaz.toast('تعذر تحميل بيانات الدواء', 'error');
+        });
+    }
+
+    /* ── DataTable ─────────────────────────────────────────── */
+    const dt = $('#drugsTable').DataTable({
+        processing : true,
+        serverSide : true,
+        dom        : '<"d-none"f>rt<"cx-dt-bottom"ip>',
+        pageLength : 100,
+        order      : [[0, 'asc']],
+        language   : {
+            emptyTable  : 'لا توجد نتائج بعد — استورد قائمة أسعار أو أضف دواءً يدوياً',
+            info        : 'عرض _START_ إلى _END_ من _TOTAL_',
+            infoEmpty   : 'لا توجد بيانات',
+            zeroRecords : 'لا توجد نتائج مطابقة',
+            paginate    : { next: 'التالي', previous: 'السابق' },
+            processing  : 'جاري التحميل...',
+        },
+        ajax: {
+            url: "{% url 'catalog:master_drug_table_api' %}"
+        },
+        drawCallback: function () {
+            renderMobileDrugCards(dt.rows({ page: 'current' }).data().toArray());
+        },
+        columns: [
+            {
+                data: 'generic_name',
+                render: function (name, _, r) {
+                    return `<a href="/catalog/${r.id}/">${esc(name)}</a>`;
+                }
+            },
+            { data: 'strength' },
+            { data: 'dosage_form' },
+            { data: 'category' },
+            { data: 'alias_count' },
+            {
+                data: null, orderable: false, searchable: false,
+                render: function (_, __, r) {
+                    return `<div class="cxr-actions">
+                        <button type="button" class="cxr-act cxr-act--view js-view-drug" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
+                        <a class="cxr-act" href="/catalog/${r.id}/" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></a>
+                        <button type="button" class="cxr-act cxr-act--del js-delete-drug" data-id="${r.id}" data-name="${esc(r.generic_name)}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                    </div>`;
+                }
+            }
+        ]
+    });
+
+    $('#drugsTable').on('click', '.js-view-drug', function () { openView($(this).data('id')); });
+    $('#drugCardsMobile').on('click', '.js-view-drug', function () { openView($(this).data('id')); });
+
+    let searchTimer;
+    $('#drugSearchInput').on('input', function () {
+        clearTimeout(searchTimer);
+        const val = $(this).val();
+        searchTimer = setTimeout(() => dt.search(val).draw(), 350);
+    });
 
     $(document).on('click', '.js-delete-drug', function () {
         $('#deleteDrugId').val($(this).data('id'));
@@ -118,7 +297,7 @@ $(function () {
                 deleteModal.hide();
                 if (resp.success) {
                     Enjaz.toast(resp.message, 'success');
-                    $('.js-delete-drug[data-id="' + id + '"]').closest('tr').remove();
+                    dt.ajax.reload(null, false);
                 } else {
                     Enjaz.toast(resp.message || 'تعذر الحذف', 'error');
                 }

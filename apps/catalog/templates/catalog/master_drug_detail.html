@@ -3,6 +3,10 @@
 
 {% block page_header %}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/catalog.css' %}?v=1.0">
+{% endblock %}
+
 {% block content %}
 <div class="cx-scene">
 {% csrf_token %}
@@ -106,26 +110,40 @@
 
 <div class="cx-panel" style="padding:1.25rem">
     <h5 class="mb-3">الأسماء التجارية</h5>
-    <table class="table table-sm">
-        <thead><tr><th>الاسم التجاري</th><th>الشركة المصنعة</th><th>الباركود</th><th>أساسي</th><th></th></tr></thead>
+    <div class="table-responsive cx-alias-table-wrap">
+    <table class="table table-sm cx-alias-table">
+        <thead><tr>
+            <th>الاسم التجاري</th><th>الشركة المصنعة</th><th>بلد المنشأ</th>
+            <th>الوكيل/الموزع في السودان</th><th>حجم العبوة</th><th>الباركود</th><th>أساسي</th><th></th>
+        </tr></thead>
         <tbody>
         {% for a in aliases %}
             <tr>
                 <td>{{ a.trade_name }}</td>
                 <td>{{ a.manufacturer|default:'-' }}</td>
+                <td>{{ a.country_of_origin|default:'-' }}</td>
+                <td>{{ a.sudan_agent|default:'-' }}</td>
+                <td>{{ a.pack_size|default:'-' }}</td>
                 <td>{{ a.barcode|default:'-' }}</td>
                 <td>{% if a.is_primary %}<i class="fas fa-check text-success"></i>{% endif %}</td>
-                <td>
+                <td class="text-nowrap">
+                    <button type="button" class="btn btn-sm btn-outline-secondary js-edit-alias"
+                        data-id="{{ a.pk }}" data-trade_name="{{ a.trade_name }}" data-manufacturer="{{ a.manufacturer }}"
+                        data-country_of_origin="{{ a.country_of_origin }}" data-sudan_agent="{{ a.sudan_agent }}"
+                        data-pack_size="{{ a.pack_size }}" data-barcode="{{ a.barcode }}">
+                        <i class="fas fa-pen-to-square"></i>
+                    </button>
                     <button type="button" class="btn btn-sm btn-outline-danger js-delete-alias" data-id="{{ a.pk }}" data-name="{{ a.trade_name }}">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="5" class="text-muted text-center">لا توجد أسماء تجارية</td></tr>
+            <tr><td colspan="8" class="text-muted text-center">لا توجد أسماء تجارية</td></tr>
         {% endfor %}
         </tbody>
     </table>
+    </div>
 
     <form method="post" class="row g-2 align-items-end mt-2">
         {% csrf_token %}
@@ -134,18 +152,77 @@
             <label class="form-label">اسم تجاري جديد</label>
             <input type="text" name="trade_name" class="form-control" required>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <label class="form-label">الشركة المصنعة</label>
             <input type="text" name="manufacturer" class="form-control">
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
+            <label class="form-label">بلد المنشأ</label>
+            <input type="text" name="country_of_origin" class="form-control">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">الوكيل/الموزع في السودان</label>
+            <input type="text" name="sudan_agent" class="form-control">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">حجم العبوة</label>
+            <input type="text" name="pack_size" class="form-control">
+        </div>
+        <div class="col-md-4">
             <label class="form-label">الباركود</label>
             <input type="text" name="barcode" class="form-control">
         </div>
-        <div class="col-md-2">
-            <button type="submit" class="cx-btn-secondary w-100"><i class="fas fa-plus"></i> إضافة</button>
+        <div class="col-md-12">
+            <button type="submit" class="cx-btn-secondary"><i class="fas fa-plus"></i> إضافة</button>
         </div>
     </form>
+</div>
+
+<!-- ── EDIT ALIAS MODAL ───────────────────────────────────────── -->
+<div class="modal fade" id="editAliasModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit_alias">
+        <input type="hidden" name="alias_id" id="editAliasId">
+        <div class="modal-header">
+            <h5 class="modal-title">تعديل الاسم التجاري</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body row g-3">
+            <div class="col-md-6">
+                <label class="form-label">الاسم التجاري</label>
+                <input type="text" name="trade_name" id="editAliasTradeName" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">الشركة المصنعة</label>
+                <input type="text" name="manufacturer" id="editAliasManufacturer" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">بلد المنشأ</label>
+                <input type="text" name="country_of_origin" id="editAliasCountry" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">الوكيل/الموزع في السودان</label>
+                <input type="text" name="sudan_agent" id="editAliasAgent" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">حجم العبوة</label>
+                <input type="text" name="pack_size" id="editAliasPackSize" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">الباركود</label>
+                <input type="text" name="barcode" id="editAliasBarcode" class="form-control">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+            <button type="submit" class="cx-btn-primary"><i class="fas fa-save me-1"></i> حفظ</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <div class="cx-panel" style="padding:1.25rem">
@@ -220,6 +297,20 @@
 <script>
 $(function () {
     const csrf = $('[name=csrfmiddlewaretoken]').first().val();
+
+    /* تعديل اسم تجاري */
+    const editAliasModal = new bootstrap.Modal(document.getElementById('editAliasModal'));
+    $(document).on('click', '.js-edit-alias', function () {
+        const d = $(this).data();
+        $('#editAliasId').val(d.id);
+        $('#editAliasTradeName').val(d.trade_name);
+        $('#editAliasManufacturer').val(d.manufacturer);
+        $('#editAliasCountry').val(d.country_of_origin);
+        $('#editAliasAgent').val(d.sudan_agent);
+        $('#editAliasPackSize').val(d.pack_size);
+        $('#editAliasBarcode').val(d.barcode);
+        editAliasModal.show();
+    });
 
     /* حذف الدواء نفسه */
     const deleteDrugModal = new bootstrap.Modal(document.getElementById('deleteDrugModal'));

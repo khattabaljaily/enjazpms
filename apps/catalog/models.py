@@ -46,7 +46,7 @@ class MasterDrug(models.Model):
     generic_name_normalized = models.CharField(max_length=300, db_index=True, editable=False, blank=True)
     dosage_form = models.CharField('الشكل الصيدلاني', max_length=100, blank=True)
     dosage_form_normalized = models.CharField(max_length=100, db_index=True, editable=False, blank=True)
-    strength = models.CharField('التركيز', max_length=100, blank=True)
+    strength = models.CharField('التركيز', max_length=300, blank=True)
     strength_normalized = models.CharField(max_length=100, db_index=True, editable=False, blank=True)
 
     category = models.ForeignKey(
@@ -132,6 +132,9 @@ class MasterDrugAlias(models.Model):
     trade_name = models.CharField('الاسم التجاري', max_length=300)
     trade_name_normalized = models.CharField(max_length=300, db_index=True, editable=False, blank=True)
     manufacturer = models.CharField('الشركة المصنعة', max_length=200, blank=True)
+    country_of_origin = models.CharField('بلد المنشأ', max_length=100, blank=True)
+    sudan_agent = models.CharField('الوكيل أو الموزع في السودان', max_length=200, blank=True)
+    pack_size = models.CharField('حجم العبوة', max_length=300, blank=True)
     barcode = models.CharField('الباركود', max_length=100, blank=True, db_index=True)
     is_primary = models.BooleanField('الاسم الأساسي', default=False)
     source_batch = models.ForeignKey(
@@ -152,7 +155,7 @@ class MasterDrugAlias(models.Model):
         verbose_name = 'اسم تجاري'
         verbose_name_plural = 'الأسماء التجارية'
         ordering = ['trade_name']
-        unique_together = [('trade_name_normalized', 'manufacturer')]
+        unique_together = [('trade_name_normalized', 'manufacturer', 'master_drug')]
         indexes = [
             models.Index(fields=['master_drug']),
         ]
