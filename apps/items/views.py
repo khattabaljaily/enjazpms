@@ -274,6 +274,8 @@ def catalog_search_api(request):
         return JsonResponse({'results': [], 'has_more': False})
 
     q = normalize_text(request.GET.get('q', ''))
+    dosage_form = request.GET.get('dosage_form', '').strip()
+    agent = request.GET.get('agent', '').strip()
     try:
         offset = max(0, int(request.GET.get('offset', 0)))
     except ValueError:
@@ -289,6 +291,10 @@ def catalog_search_api(request):
             | Q(manufacturer__icontains=q)
             | Q(master_drug__generic_name_normalized__icontains=q)
         )
+    if dosage_form:
+        aliases_qs = aliases_qs.filter(master_drug__dosage_form=dosage_form)
+    if agent:
+        aliases_qs = aliases_qs.filter(sudan_agent=agent)
 
     page = list(aliases_qs[offset:offset + limit + 1])
     has_more = len(page) > limit
@@ -300,6 +306,7 @@ def catalog_search_api(request):
             'alias_id': alias.id if alias else None,
             'display_name': f'{alias.trade_name} ({alias.manufacturer})' if alias and alias.manufacturer
                              else (alias.trade_name if alias else drug.generic_name),
+            'trade_name': alias.trade_name if alias else '',
             'generic_name': drug.generic_name,
             'dosage_form': drug.dosage_form,
             'strength': drug.strength,
@@ -315,6 +322,27 @@ def catalog_search_api(request):
 
     results = [_row(a, a.master_drug) for a in page]
     return JsonResponse({'results': results, 'has_more': has_more, 'next_offset': offset + limit})
+
+
+@login_required
+@require_permission('view_items')
+def catalog_filters_api(request):
+    """Distinct values to populate the catalog picker's filter dropdowns."""
+    from apps.catalog.models import MasterDrug, MasterDrugAlias
+
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'dosage_forms': [], 'agents': []})
+
+    dosage_forms = list(
+        MasterDrug.objects.filter(status='active').exclude(dosage_form='')
+        .order_by('dosage_form').values_list('dosage_form', flat=True).distinct()
+    )
+    agents = list(
+        MasterDrugAlias.objects.filter(master_drug__status='active').exclude(sudan_agent='')
+        .order_by('sudan_agent').values_list('sudan_agent', flat=True).distinct()
+    )
+    return JsonResponse({'dosage_forms': dosage_forms, 'agents': agents})
 
 
 def _resolve_tenant_category(tenant, name: str, user):

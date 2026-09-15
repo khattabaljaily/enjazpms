@@ -58,6 +58,7 @@ urlpatterns = [
     # ------- Onboarding from the shared master catalog -------
     path('catalog/', views.catalog_picker, name='catalog_picker'),
     path('catalog/search/', views.catalog_search_api, name='catalog_search_api'),
+    path('catalog/filters/', views.catalog_filters_api, name='catalog_filters_api'),
     path('catalog/create/', views.item_create_from_catalog, name='item_create_from_catalog'),
     path('catalog/bulk-create/', views.bulk_create_from_catalog, name='bulk_create_from_catalog'),
 
