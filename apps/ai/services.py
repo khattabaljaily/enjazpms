@@ -593,3 +593,145 @@ def find_similar_post(text: str, existing_posts: list, threshold: float = 0.72):
     if best_match and best_ratio >= threshold:
         return {'content': best_match, 'ratio': round(best_ratio, 2)}
     return None
+
+
+# ──────────────────────────────────────────────────────────────
+# Public API — Catalog ingestion (heterogeneous price-list extraction)
+# ──────────────────────────────────────────────────────────────
+
+_DRUG_EXTRACTION_FIELDS = ('name', 'generic_name', 'dosage_form', 'strength', 'manufacturer', 'barcode')
+
+
+def extract_drug_rows_batch(rows: list, batch_size: int = 20) -> list:
+    """
+    Extracts structured drug fields from a batch of raw price-list row dicts,
+    in ONE AI call per batch (not per row) — mirrors the existing
+    smart_map_headers/match_category_name "one call per unit of work" pattern
+    so ingesting thousands of rows doesn't mean thousands of HTTP calls.
+
+    Handles supplier files that only have a free-text name column (no
+    dedicated strength/dosage_form columns) by explicitly asking the model
+    to infer those from the name text.
+
+    Returns a list aligned by index to `rows`, each element a dict with keys
+    from _DRUG_EXTRACTION_FIELDS (missing/unparseable = ''). On total failure
+    for a chunk, its rows come back as empty dicts (caller marks them
+    needs_review) rather than raising.
+    """
+    if not rows:
+        return []
+
+    api_key = settings.DEEPSEEK_API_KEY
+    if not api_key:
+        return [{} for _ in rows]
+
+    results: list = []
+    for start in range(0, len(rows), batch_size):
+        chunk = rows[start:start + batch_size]
+        results.extend(_extract_drug_chunk(chunk))
+    return results
+
+
+def _extract_drug_chunk(chunk: list, retry: bool = True) -> list:
+    compact_rows = [
+        {str(k): ('' if v is None else str(v)) for k, v in row.items()}
+        for row in chunk
+    ]
+    prompt = (
+        "هذه صفوف من قائمة أسعار أدوية من مورّد، بأعمدة قد تكون غير مكتملة:\n"
+        f"{json.dumps(compact_rows, ensure_ascii=False)}\n\n"
+        "استخرج لكل صف الحقول التالية: name (الاسم التجاري)، generic_name (الاسم العلمي/المادة الفعالة)، "
+        "dosage_form (الشكل الصيدلاني مثل أقراص/شراب/حقن)، strength (التركيز مثل 500 مجم)، "
+        "manufacturer (الشركة المصنعة)، barcode (الباركود إن وجد).\n"
+        "إذا لم يوجد عمود مخصص للتركيز أو الشكل الصيدلاني، استنتجهما من نص اسم الصنف نفسه إن أمكن.\n"
+        "اترك أي حقل غير متوفر فارغاً \"\". أجب بمصفوفة JSON فقط بنفس عدد وترتيب الصفوف المُدخلة، "
+        'بالشكل: [{"name": "...", "generic_name": "...", "dosage_form": "...", "strength": "...", '
+        '"manufacturer": "...", "barcode": "..."}, ...] بلا أي نص إضافي.'
+    )
+    messages = [
+        {"role": "system", "content": "أنت نظام استخراج بيانات دوائية دقيق. أجب بمصفوفة JSON صحيحة فقط بلا مقدمة أو شرح."},
+        {"role": "user", "content": prompt},
+    ]
+
+    max_tokens = min(4000, max(400, len(chunk) * 60))
+    raw = _call_deepseek(messages, max_tokens=max_tokens)
+
+    parsed = _parse_json_array(raw)
+    if parsed is not None and len(parsed) == len(chunk):
+        return [_clean_extracted_row(item) for item in parsed]
+
+    if retry:
+        return _extract_drug_chunk(chunk, retry=False)
+
+    logger.warning("extract_drug_rows_batch: failed to parse AI response for chunk of %d rows", len(chunk))
+    return [{} for _ in chunk]
+
+
+def _parse_json_array(raw: str):
+    import re
+    match = re.search(r'\[.*\]', raw, re.DOTALL)
+    if not match:
+        return None
+    try:
+        parsed = json.loads(match.group())
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, list) else None
+
+
+def _clean_extracted_row(item) -> dict:
+    if not isinstance(item, dict):
+        return {}
+    return {field: str(item.get(field) or '').strip() for field in _DRUG_EXTRACTION_FIELDS}
+
+
+def match_drug_to_master(candidate: dict, candidate_master_names: list) -> str | None:
+    """
+    Second-pass AI tiebreaker for ambiguous (fuzzy-band) drug matches only —
+    the stdlib difflib pass in apps.catalog.matching is the primary/cheap
+    dedup mechanism; this is called just for the handful of genuinely
+    ambiguous rows, same cost-control principle as match_category_name's
+    per-distinct-string caching in product_importer.py.
+
+    Returns the matched name from candidate_master_names, or None (caller
+    should treat the candidate as a new drug).
+    """
+    if not candidate_master_names:
+        return None
+
+    api_key = settings.DEEPSEEK_API_KEY
+    if not api_key:
+        return None
+
+    label = candidate.get('generic_name') or candidate.get('name') or ''
+    strength = candidate.get('strength', '')
+    dosage_form = candidate.get('dosage_form', '')
+    names_text = "، ".join(f'"{n}"' for n in candidate_master_names[:30])
+
+    prompt = (
+        f'الدواء المستخرج من قائمة الأسعار: "{label}"، التركيز: "{strength}"، الشكل الصيدلاني: "{dosage_form}"\n'
+        f'أدوية موجودة بالفعل في الكتالوج الرئيسي (بنفس المادة الفعالة تقريباً): {names_text}\n\n'
+        'هل هذا الدواء نفس أحد الأدوية الموجودة (نفس المادة الفعالة والتركيز والشكل الصيدلاني، '
+        'مع تجاهل اختلافات إملائية بسيطة)؟\n'
+        'إذا نعم: اكتب الاسم الدقيق من القائمة فقط بدون أي نص آخر.\n'
+        'إذا لا (دواء مختلف فعلاً): اكتب كلمة "جديد" فقط.'
+    )
+    messages = [
+        {"role": "system", "content": "أنت صيدلي خبير في مطابقة الأدوية. أجب بالاسم الدقيق من القائمة أو بكلمة 'جديد' فقط."},
+        {"role": "user", "content": prompt},
+    ]
+
+    try:
+        result = _call_deepseek(messages, max_tokens=60).strip().strip('"').strip("'")
+    except Exception:
+        return None
+
+    if not result or result == 'جديد':
+        return None
+    if result in candidate_master_names:
+        return result
+    result_lower = result.lower()
+    for name in candidate_master_names:
+        if name.lower() == result_lower:
+            return name
+    return None

@@ -161,6 +161,14 @@ class Item(TenantMixin):
         verbose_name='وحدة الشراء'
     )
     has_multiple_units = models.BooleanField('وحدات متعددة', default=False)
+    supplier = models.ForeignKey(
+        'suppliers.Supplier',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='supplied_items',
+        verbose_name='الشركة الموردة',
+        help_text='الشركة/المورد الذي يوفر هذا الصنف — يُستخدم للتصفية، وهو غير الشركة المصنعة'
+    )
 
     # ------ التسعير ------
     cost_price = models.DecimalField(
@@ -234,6 +242,11 @@ class Item(TenantMixin):
         verbose_name='بدائل / أصناف مكافئة',
         help_text='أصناف يمكن اقتراحها كبديل عند نفاد هذا الصنف'
     )
+    master_drug = models.ForeignKey(
+        'catalog.MasterDrug', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tenant_items', verbose_name='مرتبط بالكتالوج الرئيسي',
+        help_text='يُملأ تلقائياً عند إنشاء الصنف من الكتالوج الرئيسي — يُستخدم لاقتراح البدائل تلقائياً'
+    )
 
     # ------ تفاصيل إضافية ------
     description = models.TextField('الوصف', blank=True)
@@ -254,8 +267,10 @@ class Item(TenantMixin):
             models.Index(fields=['tenant', 'is_active']),
             models.Index(fields=['tenant', 'barcode']),
             models.Index(fields=['tenant', 'category']),
+            models.Index(fields=['tenant', 'supplier']),
             models.Index(fields=['tenant', 'name']),
             models.Index(fields=['tenant', 'is_controlled_substance']),
+            models.Index(fields=['tenant', 'generic_name', 'dosage_form', 'strength']),
         ]
 
     def __str__(self):

@@ -99,7 +99,7 @@ class ItemForm(forms.ModelForm):
         model = Item
         fields = [
             'name', 'name_en', 'sku', 'barcode', 'item_type',
-            'category',
+            'category', 'supplier',
             'cost_price', 'selling_price', 'min_selling_price', 'tax_rate',
             'cost_price_hc', 'selling_price_hc', 'min_selling_price_hc',
             'min_quantity', 'max_quantity',
@@ -115,6 +115,7 @@ class ItemForm(forms.ModelForm):
             'barcode': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'امسح أو أدخل الباركود'}),
             'item_type': forms.Select(attrs={'class': 'form-select'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
+            'supplier': forms.Select(attrs={'class': 'form-select'}),
             'track_expiry': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'track_batch': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'track_serial': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -139,6 +140,7 @@ class ItemForm(forms.ModelForm):
             'barcode': 'الباركود',
             'item_type': 'نوع الصنف',
             'category': 'التصنيف',
+            'supplier': 'الشركة الموردة',
             'track_expiry': 'تتبع تاريخ الانتهاء',
             'track_batch': 'تتبع رقم الدفعة',
             'track_serial': 'تتبع الرقم التسلسلي',
@@ -169,19 +171,33 @@ class ItemForm(forms.ModelForm):
             (v, l) for v, l in Item.ITEM_TYPE_CHOICES if v in allowed_types
         ]
 
+        from apps.suppliers.models import Supplier
+
         if tenant:
             self.fields['category'].queryset = Category.objects.filter(
                 tenant=tenant, is_active=True
             )
+            self.fields['supplier'].queryset = Supplier.objects.filter(tenant=tenant, is_active=True)
             alt_qs = Item.objects.filter(tenant=tenant, is_active=True)
             if self.instance and self.instance.pk:
                 alt_qs = alt_qs.exclude(pk=self.instance.pk)
+                # نفس المادة الفعالة أول اختيارات القائمة — اختصار للصيدلي بدل تصفح كل الأصناف
+                if self.instance.generic_name:
+                    from django.db.models import Case, When, Value, IntegerField
+                    alt_qs = alt_qs.annotate(
+                        _same_generic=Case(
+                            When(generic_name__iexact=self.instance.generic_name.strip(), then=Value(0)),
+                            default=Value(1), output_field=IntegerField(),
+                        )
+                    ).order_by('_same_generic', 'name')
             self.fields['alternatives'].queryset = alt_qs
         else:
             self.fields['category'].queryset = Category.objects.none()
+            self.fields['supplier'].queryset = Supplier.objects.none()
             self.fields['alternatives'].queryset = Item.objects.none()
 
         self.fields['alternatives'].required = False
+        self.fields['supplier'].required = False
 
     def _zero_if_none(self, field):
         value = self.cleaned_data.get(field)

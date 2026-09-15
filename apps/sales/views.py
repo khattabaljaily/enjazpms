@@ -39,6 +39,7 @@ from django.views.decorators.http import require_POST
 
 from apps.customers.models import Customer
 from apps.items.models import Item
+from apps.items.alternatives import get_all_alternatives
 from apps.stocks.models import Stock, StockQuantity
 
 from .models import (
@@ -2558,7 +2559,7 @@ def item_alternatives_api(request):
     except Item.DoesNotExist:
         return _json_error('الصنف غير موجود', status=404)
 
-    alternatives = list(item.alternatives.filter(tenant=tenant, is_active=True, is_sellable=True))
+    alternatives = get_all_alternatives(item)
     alt_ids = [a.id for a in alternatives]
 
     qty_map = {}

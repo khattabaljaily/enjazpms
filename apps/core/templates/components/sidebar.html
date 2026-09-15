@@ -104,6 +104,19 @@
     </ul>
     {% endif %}
 
+    <!-- الكتالوج المركزي للأدوية -->
+    {% if user.is_superuser or user.is_platform_staff %}
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link{% if request.resolver_match.app_name == 'catalog' %} active{% endif %}" href="{% url 'catalog:master_drug_list' %}">
+                <span class="nav-icon"><i class="fas fa-capsules"></i></span>
+                الكتالوج المركزي للأدوية
+            </a>
+        </li>
+    </ul>
+    {% endif %}
+
     <!-- التسويق -->
     {% if user.is_superuser or 'manage_marketing' in user.platform_permissions %}
     <div class="sidebar-divider"></div>

@@ -1,0 +1,105 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-plus"></i></div>
+            <div>
+                <h1 class="cx-hero-title">إضافة دواء يدوياً للكتالوج الرئيسي</h1>
+                <p class="cx-hero-desc">لإضافة دواء واحد بسرعة بدون المرور بمسار الاستيراد</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <a href="{% url 'catalog:master_drug_list' %}" class="cx-btn-secondary">
+                <i class="fas fa-arrow-right"></i><span>الكتالوج</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">الاسم العلمي / المادة الفعالة *</label>
+                <input type="text" name="generic_name" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الشكل الصيدلاني</label>
+                <input type="text" name="dosage_form" class="form-control" placeholder="أقراص، شراب، حقن...">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">التركيز</label>
+                <input type="text" name="strength" class="form-control" placeholder="500 مجم">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">التصنيف</label>
+                <input type="text" name="category" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">نوع الصنف</label>
+                <select name="item_type" class="form-select">
+                    <option value="product" selected>منتج</option>
+                    <option value="service">خدمة</option>
+                    <option value="raw_material">مادة خام</option>
+                    <option value="semi_finished">منتج نصف مصنع</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الوحدة الأساسية المقترحة</label>
+                <input type="text" name="default_unit_name" class="form-control" placeholder="حبة، قرص...">
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">الوصف</label>
+                <textarea name="description" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">صورة تعريفية</label>
+                <input type="file" name="image" class="form-control" accept="image/*">
+            </div>
+            <div class="col-md-12 d-flex align-items-end gap-4">
+                <div class="form-check">
+                    <input type="checkbox" name="requires_prescription" class="form-check-input" id="rp">
+                    <label class="form-check-label" for="rp">يُصرف بوصفة</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="is_controlled_substance" class="form-check-input" id="cs">
+                    <label class="form-check-label" for="cs">خاضع للرقابة</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="track_expiry" class="form-check-input" id="te" checked>
+                    <label class="form-check-label" for="te">تتبع تاريخ الانتهاء (مقترح)</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="track_batch" class="form-check-input" id="tb" checked>
+                    <label class="form-check-label" for="tb">تتبع رقم الدفعة (مقترح)</label>
+                </div>
+            </div>
+            <hr class="my-2">
+            <div class="col-md-4">
+                <label class="form-label">اسم تجاري (اختياري)</label>
+                <input type="text" name="trade_name" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الشركة المصنعة</label>
+                <input type="text" name="manufacturer" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الباركود</label>
+                <input type="text" name="barcode" class="form-control">
+            </div>
+        </div>
+        <button type="submit" class="cx-btn-primary mt-3"><i class="fas fa-save me-1"></i> حفظ</button>
+    </form>
+</div>
+
+</div>
+{% endblock %}

@@ -63,6 +63,11 @@ CLASSIFICATION_FIELDS = [
         'tenant_source': 'category', 'capability': None, 'typical_width': 22,
         'description': 'التصنيف أو القسم أو الفئة',
     },
+    {
+        'field': 'supplier', 'header_ar': 'الشركة الموردة', 'required': False, 'dtype': 'text',
+        'capability': None, 'typical_width': 22,
+        'description': 'اسم الشركة أو المورّد الذي جاء منه هذا الصنف — تُنشأ تلقائياً إن لم تكن موجودة، وتُستخدم للتصفية لاحقاً',
+    },
     # NOTE: units are intentionally free text, not a choice_tenant dropdown from a
     # shared Unit list. The manual "add product" form has no such shared list either —
     # every product defines its own units via ItemUnit (see apps/items/views.py

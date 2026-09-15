@@ -8,12 +8,13 @@ from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import HttpResponseNotAllowed, HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from decimal import Decimal
 from apps.accounts.decorators import require_permission
 from .forms import CategoryForm, ItemForm, UnitForm
 from .models import Category, Item, Unit, BOMRecipe, BOMLine, ItemBatch
+from apps.catalog.models import MasterDrug, MasterDrugAlias
 from apps.sales.models import StockMovement
 from apps.stocks.models import StockQuantity
 
@@ -64,10 +65,12 @@ def item_list(request):
 
     caps = _get_capabilities(tenant)
     from apps.core.utils import currency_symbol, CURRENCY_SYMBOLS
+    from apps.suppliers.models import Supplier
     hc_cur = tenant.hard_currency if tenant.hard_currency_mode else ''
     local_cur = tenant.currency or 'SDG'
     context = {
         'item_form': ItemForm(tenant=tenant, capabilities=caps),
+        'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'hc_mode': tenant.hard_currency_mode,
         'hc_currency': hc_cur,
         'hc_currency_symbol': currency_symbol(hc_cur),
@@ -150,9 +153,10 @@ def item_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status_filter = request.GET.get('status', '').strip()
     category_id = request.GET.get('category', '').strip()
+    supplier_id = request.GET.get('supplier', '').strip()
 
     from .models import ItemUnit
-    qs = Item.objects.for_tenant(tenant).select_related('category').prefetch_related('item_units')
+    qs = Item.objects.for_tenant(tenant).select_related('category', 'supplier').prefetch_related('item_units')
     records_total = qs.count()
 
     if status_filter == 'active':
@@ -162,6 +166,9 @@ def item_table_api(request):
 
     if category_id:
         qs = qs.filter(category_id=category_id)
+
+    if supplier_id:
+        qs = qs.filter(supplier_id=supplier_id)
 
     if search_value:
         qs = qs.filter(
@@ -206,6 +213,7 @@ def item_table_api(request):
             'item_type': item.item_type,
             'barcode': item.barcode or '-',
             'category': item.category.name if item.category else '-',
+            'supplier': item.supplier.name if item.supplier else '-',
             'unit': _unit_label(item),
             'has_multiple_units': item.has_multiple_units,
             'cost_price': str(item.cost_price),
@@ -228,6 +236,285 @@ def item_table_api(request):
         'recordsFiltered': records_filtered,
         'data': data,
     })
+
+
+# ============================================================
+# Onboarding from the shared master catalog — the fast path meant to replace
+# entering every product by hand. See apps/catalog for the master data these
+# views read from.
+# ============================================================
+
+@login_required
+@require_permission('view_items')
+def catalog_picker(request):
+    from apps.stocks.models import Stock
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return redirect('core:no_tenant')
+    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name')
+    return render(request, 'items/catalog_picker.html', {'stocks': stocks})
+
+
+@login_required
+@require_permission('view_items')
+def catalog_search_api(request):
+    """
+    Powers the catalog picker. With no `q`, browses the catalog alphabetically
+    (so the tenant isn't forced to already know a drug name to see anything);
+    with `q`, filters by trade name / manufacturer / generic name. `offset`/
+    `limit` page through results — `has_more` tells the picker whether to
+    show a "load more" button.
+    """
+    from django.db.models import Q
+    from apps.catalog.matching import normalize_text
+    from apps.catalog.models import MasterDrugAlias
+
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'results': [], 'has_more': False})
+
+    q = normalize_text(request.GET.get('q', ''))
+    try:
+        offset = max(0, int(request.GET.get('offset', 0)))
+    except ValueError:
+        offset = 0
+    limit = min(50, max(1, int(request.GET.get('limit', 30) or 30)))
+
+    aliases_qs = MasterDrugAlias.objects.filter(
+        master_drug__status='active'
+    ).select_related('master_drug', 'master_drug__category').order_by('trade_name_normalized')
+    if q:
+        aliases_qs = aliases_qs.filter(
+            Q(trade_name_normalized__icontains=q)
+            | Q(manufacturer__icontains=q)
+            | Q(master_drug__generic_name_normalized__icontains=q)
+        )
+
+    page = list(aliases_qs[offset:offset + limit + 1])
+    has_more = len(page) > limit
+    page = page[:limit]
+
+    def _row(alias, drug):
+        return {
+            'master_drug_id': drug.id,
+            'alias_id': alias.id if alias else None,
+            'display_name': f'{alias.trade_name} ({alias.manufacturer})' if alias and alias.manufacturer
+                             else (alias.trade_name if alias else drug.generic_name),
+            'generic_name': drug.generic_name,
+            'dosage_form': drug.dosage_form,
+            'strength': drug.strength,
+            'manufacturer': alias.manufacturer if alias else '',
+            'barcode': alias.barcode if alias else '',
+            'category_name': drug.category.name if drug.category_id else '',
+            'requires_prescription': drug.requires_prescription,
+            'is_controlled_substance': drug.is_controlled_substance,
+        }
+
+    results = [_row(a, a.master_drug) for a in page]
+    return JsonResponse({'results': results, 'has_more': has_more, 'next_offset': offset + limit})
+
+
+def _resolve_tenant_category(tenant, name: str, user):
+    name = (name or '').strip()
+    if not name:
+        return None
+    existing = Category.objects.for_tenant(tenant).filter(name__iexact=name).first()
+    if existing:
+        return existing
+    return Category.objects.create(tenant=tenant, name=name, created_by=user, updated_by=user)
+
+
+@login_required
+@require_permission('add_items')
+def item_create_from_catalog(request):
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    master_drug_id = request.GET.get('master_drug_id') or request.POST.get('master_drug_id')
+    alias_id = request.GET.get('alias_id') or request.POST.get('alias_id')
+    drug = get_object_or_404(MasterDrug, pk=master_drug_id) if master_drug_id else None
+    alias = MasterDrugAlias.objects.filter(pk=alias_id).first() if alias_id else None
+
+    if request.method != 'POST':
+        from apps.stocks.models import Stock
+        stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+        capabilities = _get_capabilities(tenant)
+        return render(request, 'items/catalog_create.html', {
+            'drug': drug, 'alias': alias, 'stocks': stocks,
+            'tenant': tenant, 'capabilities': capabilities,
+            'item_type_choices': Item.ITEM_TYPE_CHOICES,
+        })
+
+    if not drug:
+        return JsonResponse({'success': False, 'message': 'الدواء غير موجود في الكتالوج'}, status=400)
+
+    from apps.stocks.models import Stock
+    from .dedup import find_existing_item_match
+    from .services import apply_opening_stock
+
+    name = request.POST.get('name') or (alias.trade_name if alias else drug.generic_name)
+    barcode = request.POST.get('barcode', '') or (alias.barcode if alias else '')
+
+    dup = find_existing_item_match(tenant, name=name, generic_name=drug.generic_name,
+                                    dosage_form=drug.dosage_form, strength=drug.strength, barcode=barcode)
+    if dup and dup['match_type'] in ('barcode', 'exact'):
+        return JsonResponse({
+            'success': False,
+            'message': f"يوجد صنف مطابق بالفعل: {dup['item'].name}",
+            'existing_item_id': dup['item'].id,
+        }, status=400)
+
+    category = _resolve_tenant_category(tenant, request.POST.get('category') or (drug.category.name if drug.category_id else ''), request.user)
+    allowed_item_types = {v for v, _ in Item.ITEM_TYPE_CHOICES}
+    item_type = request.POST.get('item_type') or drug.item_type
+    if item_type not in allowed_item_types:
+        item_type = 'product'
+
+    # كل حقل موجود في Item إما متاح من الكتالوج (يُملأ هنا تلقائياً) أو
+    # مُدخل من المشترك عبر النموذج — ما فيش حقل بيتجاهل بصمت.
+    item = Item(
+        tenant=tenant, created_by=request.user, updated_by=request.user,
+        name=name, name_en=request.POST.get('name_en', '').strip(),
+        sku=request.POST.get('sku', '').strip(),
+        barcode=barcode, item_type=item_type, category=category,
+        generic_name=drug.generic_name, manufacturer=alias.manufacturer if alias else '',
+        dosage_form=drug.dosage_form, strength=drug.strength,
+        requires_prescription='requires_prescription' in request.POST,
+        is_controlled_substance='is_controlled_substance' in request.POST,
+        is_insurance_excluded='is_insurance_excluded' in request.POST,
+        description=request.POST.get('description', '').strip() or drug.description,
+        cost_price=safe_decimal_or_zero(request.POST.get('cost_price')),
+        selling_price=safe_decimal_or_zero(request.POST.get('selling_price')),
+        min_selling_price=safe_decimal_or_zero(request.POST.get('min_selling_price')),
+        tax_rate=safe_decimal_or_zero(request.POST.get('tax_rate')),
+        min_quantity=safe_decimal_or_zero(request.POST.get('min_quantity')),
+        max_quantity=safe_decimal_or_zero(request.POST.get('max_quantity')),
+        track_expiry='track_expiry' in request.POST,
+        track_batch='track_batch' in request.POST,
+        track_serial='track_serial' in request.POST,
+        is_sellable='is_sellable' in request.POST,
+        is_purchasable='is_purchasable' in request.POST,
+        master_drug=drug, is_active=True,
+    )
+    if request.FILES.get('image'):
+        item.image = request.FILES['image']
+    elif drug.image:
+        from django.core.files.base import ContentFile
+        drug.image.open('rb')
+        item.image.save(drug.image.name.split('/')[-1], ContentFile(drug.image.read()), save=False)
+        drug.image.close()
+
+    if tenant.hard_currency_mode:
+        item.cost_price_hc = safe_decimal_or_zero(request.POST.get('cost_price_hc'))
+        item.selling_price_hc = safe_decimal_or_zero(request.POST.get('selling_price_hc'))
+        item.min_selling_price_hc = safe_decimal_or_zero(request.POST.get('min_selling_price_hc'))
+        _apply_hc_prices(item, tenant)
+    item.save()
+
+    base_unit = request.POST.get('base_unit_name', '').strip() or drug.default_unit_name
+    large_unit = request.POST.get('large_unit_name', '').strip()
+    large_unit_count = safe_decimal_or_zero(request.POST.get('large_unit_count'))
+    if base_unit:
+        import json as _json
+        units_data = [{'name': base_unit, 'factor': 1}]
+        if large_unit and large_unit_count > 0:
+            units_data.append({'name': large_unit, 'factor': float(large_unit_count)})
+        _save_item_units(item, _json.dumps(units_data), tenant)
+
+    stock_id = request.POST.get('stock_id')
+    opening_qty = safe_decimal_or_zero(request.POST.get('opening_quantity'))
+    if stock_id and opening_qty:
+        stock = Stock.objects.for_tenant(tenant).filter(pk=stock_id, is_active=True).first()
+        if stock:
+            apply_opening_stock(
+                tenant, item, stock, opening_qty,
+                batch_number=request.POST.get('batch_number', '').strip(),
+                expiry_date=_parse_date_or_none(request.POST.get('expiry_date')),
+            )
+
+    log_activity(request, 'إضافة منتج من الكتالوج الرئيسي',
+                 f"المنتج: {item.name}\nمرتبط بـ: {drug}", 'create')
+    return JsonResponse({'success': True, 'message': 'تم إضافة المنتج بنجاح', 'id': item.id})
+
+
+def _parse_date_or_none(val):
+    if not val:
+        return None
+    from apps.core.io_utils import safe_date
+    return safe_date(val)
+
+
+def safe_decimal_or_zero(val):
+    from decimal import Decimal, InvalidOperation
+    if val in (None, ''):
+        return Decimal('0')
+    try:
+        return Decimal(str(val))
+    except InvalidOperation:
+        return Decimal('0')
+
+
+@login_required
+@require_permission('add_items')
+@require_POST
+def bulk_create_from_catalog(request):
+    """Accepts a JSON body: {stock_id, items: [{master_drug_id, alias_id, cost_price, selling_price, opening_quantity}]}"""
+    import json as _json
+    from apps.stocks.models import Stock
+    from .dedup import find_existing_item_match
+    from .services import apply_opening_stock
+
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    try:
+        body = _json.loads(request.body or '{}')
+    except _json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'بيانات غير صالحة'}, status=400)
+
+    stock = None
+    if body.get('stock_id'):
+        stock = Stock.objects.for_tenant(tenant).filter(pk=body['stock_id'], is_active=True).first()
+
+    created = 0
+    skipped = []
+    for row in body.get('items', []):
+        drug = MasterDrug.objects.filter(pk=row.get('master_drug_id')).first()
+        if not drug:
+            continue
+        alias = MasterDrugAlias.objects.filter(pk=row.get('alias_id')).first() if row.get('alias_id') else None
+        name = alias.trade_name if alias else drug.generic_name
+        barcode = alias.barcode if alias else ''
+
+        dup = find_existing_item_match(tenant, name=name, generic_name=drug.generic_name,
+                                        dosage_form=drug.dosage_form, strength=drug.strength, barcode=barcode)
+        if dup and dup['match_type'] in ('barcode', 'exact'):
+            skipped.append({'name': name, 'reason': f"موجود بالفعل: {dup['item'].name}"})
+            continue
+
+        with transaction.atomic():
+            category = _resolve_tenant_category(tenant, drug.category.name if drug.category_id else '', request.user)
+            item = Item.objects.create(
+                tenant=tenant, created_by=request.user, updated_by=request.user,
+                name=name, barcode=barcode, category=category,
+                generic_name=drug.generic_name, manufacturer=alias.manufacturer if alias else '',
+                dosage_form=drug.dosage_form, strength=drug.strength,
+                requires_prescription=drug.requires_prescription,
+                is_controlled_substance=drug.is_controlled_substance,
+                is_insurance_excluded=drug.is_insurance_excluded,
+                cost_price=safe_decimal_or_zero(row.get('cost_price')),
+                selling_price=safe_decimal_or_zero(row.get('selling_price')),
+                master_drug=drug,
+            )
+            opening_qty = safe_decimal_or_zero(row.get('opening_quantity'))
+            if stock and opening_qty:
+                apply_opening_stock(tenant, item, stock, opening_qty)
+        created += 1
+
+    log_activity(request, 'إضافة منتجات من الكتالوج الرئيسي (دفعة)', f"عدد المنتجات: {created}", 'create')
+    return JsonResponse({'success': True, 'created': created, 'skipped': skipped})
 
 
 # ============================================================
@@ -320,7 +607,7 @@ def item_detail_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
 
     try:
-        item = Item.objects.for_tenant(tenant).select_related('category', 'unit', 'purchase_unit').get(pk=pk)
+        item = Item.objects.for_tenant(tenant).select_related('category', 'unit', 'purchase_unit', 'supplier').get(pk=pk)
     except Item.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المنتج غير موجود'}, status=404)
 
@@ -336,6 +623,8 @@ def item_detail_api(request, pk):
             'item_type': item.item_type,
             'category': item.category_id,
             'category_name': item.category.name if item.category else '',
+            'supplier': item.supplier_id,
+            'supplier_name': item.supplier.name if item.supplier else '',
             'unit': item.unit_id,
             'unit_name': item.unit.name if item.unit else '',
             'purchase_unit': item.purchase_unit_id,

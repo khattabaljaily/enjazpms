@@ -1,0 +1,39 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:#fee2e2;color:#991b1b"><i class="fas fa-triangle-exclamation"></i></div>
+            <div>
+                <h1 class="cx-hero-title">مسح الكتالوج الرئيسي بالكامل</h1>
+                <p class="cx-hero-desc">إجراء نهائي لا يمكن التراجع عنه — سيحذف كل الأدوية والأسماء التجارية ودفعات الاستيراد</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    <div class="alert alert-danger">
+        <strong>تحذير:</strong> هذا الإجراء سيحذف الكتالوج الرئيسي بالكامل (كل الأدوية، الأسماء التجارية، ودفعات الاستيراد المحفوظة).
+        لن تُحذف منتجات أي نشاط تجاري (Item)، لكنها ستفقد ربطها بالكتالوج، وبالتالي سيتوقف اقتراح البدائل التلقائي لها حتى تُربط من جديد.
+    </div>
+    {% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <label class="form-label">اكتب العبارة التالية حرفياً للتأكيد: <strong>{{ confirm_phrase }}</strong></label>
+        <input type="text" name="confirm_phrase" class="form-control mb-3" autocomplete="off">
+        <button type="submit" class="cx-btn-secondary text-danger">
+            <i class="fas fa-trash me-1"></i> حذف الكتالوج نهائياً
+        </button>
+        <a href="{% url 'catalog:master_drug_list' %}" class="cx-btn-secondary">إلغاء</a>
+    </form>
+</div>
+
+</div>
+{% endblock %}

@@ -166,6 +166,10 @@
                     <i class="fas fa-file-export"></i>
                     <span>تصدير</span>
                 </a>
+                <a href="{% url 'items:catalog_picker' %}" class="cx-btn-secondary" data-require-perm="add_items">
+                    <i class="fas fa-capsules"></i>
+                    <span>اختر من الكتالوج الرئيسي</span>
+                </a>
                 <button type="button" class="cx-btn-add" id="btnOpenCreateItem" data-require-perm="add_items">
                     <i class="fas fa-plus"></i>
                     <span>إضافة منتج</span>
@@ -201,6 +205,12 @@
             <input type="text" id="itemSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو الـ SKU أو الباركود...">
         </div>
         <div class="cx-toolbar-end">
+            <select id="supplierFilter" class="form-select form-select-sm" style="width:auto">
+                <option value="">كل الشركات الموردة</option>
+                {% for s in suppliers %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
             <div class="cx-filter-tabs" role="group">
                 <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
                 <button type="button" class="cx-filter-tab" data-status="active">نشط</button>
@@ -273,6 +283,10 @@
                             <div class="col-md-4">
                                 <label class="cx-label" for="id_category">{{ item_form.category.label }}</label>
                                 {{ item_form.category }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="cx-label" for="id_supplier">{{ item_form.supplier.label }}</label>
+                                {{ item_form.supplier }}
                             </div>
                             <div class="col-md-4">
                                 <label class="cx-label" for="id_barcode">{{ item_form.barcode.label }}</label>
@@ -898,9 +912,9 @@
         });
     }
 
-    // القيمة الدقيقة (4 خانات عشرية) هي اللي بتتحفظ فعلياً وتُستخدم لإعادة حساب
-    // السعر المحلي في السيرفر — لازم تفضل دقيقة عشان السعر المحلي المحفوظ يطابق
-    // اللي المشترك كتبه بالظبط. العرض للمستخدم بس بيتقرّب لخانتين عشريتين.
+    // القيمة الدقيقة (4 خانات عشرية) هي التي تُحفظ فعلياً وتُستخدم لإعادة حساب
+    // السعر المحلي في الخادم — يجب أن تبقى دقيقة حتى يطابق السعر المحلي المحفوظ
+    // ما كتبه المشترك تماماً. العرض للمستخدم فقط يُقرَّب إلى خانتين عشريتين.
     function _calcHcPrecise(localVal) {
         var n = parseFloat(localVal);
         return (isNaN(n) || n === 0 || !HC_EXCHANGE_RATE) ? '' : (n / HC_EXCHANGE_RATE).toFixed(4);
@@ -1129,7 +1143,7 @@
         },
         ajax: {
             url : urlTable,
-            data: function (d) { d.status = activeStatus; }
+            data: function (d) { d.status = activeStatus; d.supplier = $('#supplierFilter').val(); }
         },
         drawCallback: function () {
             renderMobileItemCards(dt.rows({ page: 'current' }).data().toArray());
@@ -1215,6 +1229,7 @@
         activeStatus = $(this).data('status');
         dt.ajax.reload();
     });
+    $('#supplierFilter').on('change', function () { dt.ajax.reload(); });
 
     /* ── Reset form ────────────────────────────────────────── */
     /* ══════════════════════════════════════════════════════════
@@ -1467,6 +1482,7 @@
                 $('#id_barcode').val(d.barcode || '');
                 $('#id_item_type').val(d.item_type || '');
                 $('#id_category').val(d.category || '');
+                $('#id_supplier').val(d.supplier || '');
                 // Load units from ItemUnit data
                 loadUnitsFromData(d.item_units || []);
                 if (d.item_units && d.item_units.length === 1) {

@@ -17,6 +17,8 @@ from django.utils import timezone
 
 from apps.items.models import Category, Item, ItemBatch
 from apps.items.views import _apply_hc_prices, _save_item_units
+from apps.items.dedup import find_existing_item_match
+from apps.suppliers.models import Supplier
 from apps.stocks.models import Stock, StockQuantity
 from apps.sales.models import StockMovement
 from apps.ai.services import smart_map_headers, match_category_name
@@ -33,15 +35,16 @@ def _name_lookup(queryset):
 
 
 def import_products(tenant, uploaded_file, user):
-    """Returns {'created': int, 'errors': [{'row', 'field', 'message'}, ...]}"""
+    """Returns {'created': int, 'updated': int, 'errors': [...], 'possible_duplicates': [...]}"""
+    empty_result = {'created': 0, 'updated': 0, 'possible_duplicates': []}
     if products_import_blocked_reason(tenant):
-        return {'created': 0, 'errors': [{'row': 0, 'field': '', 'message': 'أضف تصنيفاً واحداً على الأقل أولاً'}]}
+        return {**empty_result, 'errors': [{'row': 0, 'field': '', 'message': 'أضف تصنيفاً واحداً على الأقل أولاً'}]}
 
     rows, err = parse_uploaded_file(uploaded_file)
     if err:
-        return {'created': 0, 'errors': [{'row': 0, 'field': '', 'message': err}]}
+        return {**empty_result, 'errors': [{'row': 0, 'field': '', 'message': err}]}
     if not rows:
-        return {'created': 0, 'errors': [{'row': 0, 'field': '', 'message': 'الملف فارغ أو لا يحتوي على بيانات'}]}
+        return {**empty_result, 'errors': [{'row': 0, 'field': '', 'message': 'الملف فارغ أو لا يحتوي على بيانات'}]}
 
     schema = get_product_schema(tenant)
     schema_by_field = {s['field']: s for s in schema}
@@ -59,6 +62,7 @@ def import_products(tenant, uploaded_file, user):
 
     categories = _name_lookup(Category.objects.for_tenant(tenant).filter(is_active=True))
     stocks = _name_lookup(Stock.objects.for_tenant(tenant).filter(is_active=True))
+    suppliers = _name_lookup(Supplier.objects.for_tenant(tenant).filter(is_active=True))
 
     default_stock = None
     if not has_stock_column:
@@ -90,8 +94,24 @@ def import_products(tenant, uploaded_file, user):
             return stocks[key], None
         return None, f'المخزن "{raw}" غير موجود'
 
+    def resolve_supplier(raw: str):
+        """Unlike category/stock, an unknown supplier name is created on the
+        fly — pricelists rarely have a pre-curated supplier list, and this
+        field exists purely for the tenant's own later filtering."""
+        raw = (raw or '').strip()
+        if not raw:
+            return None
+        key = raw.lower()
+        if key in suppliers:
+            return suppliers[key]
+        supplier = Supplier.objects.create(tenant=tenant, name=raw, created_by=user, updated_by=user)
+        suppliers[key] = supplier
+        return supplier
+
     created = 0
+    updated = 0
     errors = []
+    possible_duplicates = []
 
     for i, row in enumerate(rows, start=2):
         try:
@@ -106,6 +126,9 @@ def import_products(tenant, uploaded_file, user):
                 if cat_err:
                     errors.append({'row': i, 'field': 'category', 'message': cat_err})
                     continue
+
+                supplier_raw = smart_get(row, 'supplier', mapping, schema_by_field.get('supplier', {}).get('header_ar', ''), 'الشركة الموردة', 'supplier')
+                supplier = resolve_supplier(supplier_raw)
 
                 base_unit_name = smart_get(row, 'base_unit_name', mapping, schema_by_field.get('base_unit_name', {}).get('header_ar', ''), 'اسم الوحدة الأساسية', 'base_unit_name')
                 large_unit_name = smart_get(row, 'large_unit_name', mapping, schema_by_field.get('large_unit_name', {}).get('header_ar', ''), 'اسم وحدة أكبر', 'large_unit_name')
@@ -134,13 +157,13 @@ def import_products(tenant, uploaded_file, user):
 
                 kwargs = {
                     'tenant': tenant, 'created_by': user, 'updated_by': user,
-                    'name': name, 'category': category,
+                    'name': name, 'category': category, 'supplier': supplier,
                     'is_active': True,
                 }
 
                 for spec in schema:
                     field = spec['field']
-                    if field in ('name', 'category', 'base_unit_name', 'large_unit_name', 'large_unit_count',
+                    if field in ('name', 'category', 'supplier', 'base_unit_name', 'large_unit_name', 'large_unit_count',
                                  'opening_quantity', 'stock', 'batch_number', 'expiry_date'):
                         continue
                     raw_value = smart_get(row, field, mapping, spec['header_ar'], field)
@@ -153,6 +176,41 @@ def import_products(tenant, uploaded_file, user):
                         kwargs[field] = label_to_value.get(raw_value, spec['choices'][0][0])
                     else:
                         kwargs[field] = raw_value
+
+                dup_match = find_existing_item_match(
+                    tenant, name=name,
+                    generic_name=kwargs.get('generic_name', ''),
+                    dosage_form=kwargs.get('dosage_form', ''),
+                    strength=kwargs.get('strength', ''),
+                    barcode=kwargs.get('barcode', ''),
+                )
+
+                if dup_match and dup_match['match_type'] in ('barcode', 'exact'):
+                    # Re-importing/overlapping supplier lists should update the
+                    # existing tenant-specific fields, not create a full duplicate.
+                    existing = dup_match['item']
+                    update_fields = []
+                    for field in ('cost_price', 'selling_price', 'min_selling_price', 'tax_rate',
+                                  'min_quantity', 'max_quantity'):
+                        if field in kwargs:
+                            setattr(existing, field, kwargs[field])
+                            update_fields.append(field)
+                    existing.updated_by = user
+                    update_fields.append('updated_by')
+                    if tenant.hard_currency_mode:
+                        _apply_hc_prices(existing, tenant)
+                        update_fields += ['cost_price', 'selling_price', 'min_selling_price']
+                    existing.save(update_fields=list(set(update_fields)))
+                    updated += 1
+                    continue
+
+                if dup_match and dup_match['match_type'] == 'fuzzy':
+                    possible_duplicates.append({
+                        'row': i, 'field': 'name',
+                        'existing_item_id': dup_match['item'].id,
+                        'existing_item_name': dup_match['item'].name,
+                        'confidence': dup_match['confidence'],
+                    })
 
                 item = Item(**kwargs)
                 if tenant.hard_currency_mode:
@@ -206,4 +264,4 @@ def import_products(tenant, uploaded_file, user):
             logger.error('product import row %d: %s', i, exc, exc_info=True)
             errors.append({'row': i, 'field': '', 'message': str(exc)})
 
-    return {'created': created, 'errors': errors}
+    return {'created': created, 'updated': updated, 'errors': errors, 'possible_duplicates': possible_duplicates}

@@ -1,0 +1,111 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+{% csrf_token %}
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-capsules"></i></div>
+            <div>
+                <h1 class="cx-hero-title">الكتالوج المركزي للأدوية</h1>
+                <p class="cx-hero-desc">ارفع قائمة أسعار لاستخراج الأدوية منها وإضافتها إلى الكتالوج المشترك</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <a href="{% url 'catalog:master_drug_list' %}" class="cx-btn-secondary">
+                <i class="fas fa-list"></i><span>تصفح الكتالوج</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    <div class="mb-3">
+        <label class="form-label">مصدر القائمة (اسم المورد/الشركة — اختياري)</label>
+        <input type="text" class="form-control" id="sourceLabel" placeholder="مثال: شركة النيل للأدوية">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">ملف قائمة الأسعار — PDF، صورة، أو Excel/CSV</label>
+        <input type="file" class="form-control" id="catalogImportFile" accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tiff,.xlsx,.xls,.csv">
+        <div class="form-text">إذا كان الملف PDF ممسوحاً ضوئياً أو صورة لورقة، سيُقرأ تلقائياً عبر تقنية التعرف الضوئي على الحروف (OCR) — وقد يحتاج ذلك إلى مراجعة أدق في الخطوة التالية.</div>
+    </div>
+    <button type="button" class="cx-btn-primary" id="uploadBtn">
+        <i class="fas fa-upload me-1"></i> رفع ومعالجة
+    </button>
+</div>
+
+{% if recent_batches %}
+<div class="cx-panel" style="padding:1.25rem">
+    <h5 class="mb-3">آخر الدفعات</h5>
+    <table class="table table-sm">
+        <thead><tr><th>الملف</th><th>المصدر</th><th>الحالة</th><th>التقدّم</th><th></th></tr></thead>
+        <tbody>
+        {% for b in recent_batches %}
+            <tr>
+                <td>{{ b.original_filename }}</td>
+                <td>{{ b.source_label|default:'-' }}</td>
+                <td>{{ b.get_status_display }}</td>
+                <td>{{ b.processed_rows }} / {{ b.total_rows }}</td>
+                <td>
+                    {% if b.status == 'reviewing' %}
+                        <a href="{% url 'catalog:import_review' b.id %}" class="cx-btn-secondary btn-sm">مراجعة</a>
+                    {% elif b.status == 'committed' %}
+                        <span class="text-success">مكتمل</span>
+                    {% else %}
+                        <a href="{% url 'catalog:import_progress' b.id %}" class="cx-btn-secondary btn-sm">متابعة</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+    $('#uploadBtn').on('click', function () {
+        const file = $('#catalogImportFile')[0].files[0];
+        if (!file) { Enjaz.toast('الرجاء اختيار ملف', 'error'); return; }
+
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('source_label', $('#sourceLabel').val());
+        fd.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').first().val());
+
+        const $btn = $(this);
+        Enjaz.showLoading($btn);
+
+        $.ajax({
+            url: "{% url 'catalog:import_upload' %}",
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function (resp) {
+                if (resp.success) {
+                    window.location.href = '/catalog/import/' + resp.batch_id + '/progress/';
+                } else {
+                    Enjaz.hideLoading($btn, '<i class="fas fa-upload me-1"></i> رفع ومعالجة');
+                    Enjaz.toast(resp.message, 'error');
+                }
+            },
+            error: function (xhr) {
+                Enjaz.hideLoading($btn, '<i class="fas fa-upload me-1"></i> رفع ومعالجة');
+                const resp = xhr.responseJSON;
+                Enjaz.toast(resp ? resp.message : 'حدث خطأ أثناء الرفع', 'error');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

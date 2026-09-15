@@ -1,0 +1,156 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+{% csrf_token %}
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-capsules"></i></div>
+            <div>
+                <h1 class="cx-hero-title">الكتالوج المركزي للأدوية</h1>
+                <p class="cx-hero-desc">{{ drugs|length }} دواء</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'catalog:master_drug_create' %}" class="cx-btn-secondary">
+                    <i class="fas fa-plus"></i><span>إضافة دواء يدوياً</span>
+                </a>
+                <a href="{% url 'catalog:import_upload' %}" class="cx-btn-primary">
+                    <i class="fas fa-upload"></i><span>استيراد قائمة أسعار جديدة</span>
+                </a>
+                <a href="{% url 'catalog:clear_all' %}" class="cx-btn-secondary text-danger">
+                    <i class="fas fa-trash"></i><span>مسح الكتالوج بالكامل</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if missing_generic_count %}
+<div class="cx-panel" style="padding:1.25rem">
+    <div class="alert alert-warning d-flex justify-content-between align-items-center mb-0">
+        <div>
+            <strong>{{ missing_generic_count }}</strong> دواء في الكتالوج بلا اسم علمي (مادة فعالة) —
+            هذه أدوية تم حفظها أثناء الاستيراد دون أن يتمكن الذكاء الاصطناعي من استنتاج مادتها الفعالة، وتظهر بعلامة (-) لدى المشترك.
+        </div>
+        <button type="button" class="cx-btn-secondary" id="fixGenericNamesBtn">
+            <i class="fas fa-wand-magic-sparkles me-1"></i> إصلاح تلقائي
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<div class="cx-panel" style="padding:1.25rem">
+    <form method="get" class="mb-3 d-flex gap-2">
+        <input type="text" name="q" class="form-control" placeholder="ابحث بالاسم العلمي..." value="{{ q }}">
+        <button type="submit" class="cx-btn-secondary">بحث</button>
+    </form>
+    <table class="table table-sm">
+        <thead><tr><th>الاسم العلمي</th><th>التركيز</th><th>الشكل الصيدلاني</th><th>التصنيف</th><th>الأسماء التجارية</th><th></th></tr></thead>
+        <tbody>
+        {% for d in drugs %}
+            <tr>
+                <td><a href="{% url 'catalog:master_drug_detail' d.pk %}">{{ d.generic_name }}</a></td>
+                <td>{{ d.strength|default:'-' }}</td>
+                <td>{{ d.dosage_form|default:'-' }}</td>
+                <td>{{ d.category|default:'-' }}</td>
+                <td>{{ d.aliases.count }}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger js-delete-drug" data-id="{{ d.pk }}" data-name="{{ d.generic_name }}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6" class="text-muted text-center">لا توجد نتائج بعد — استورد قائمة أسعار أو أضف دواءً يدوياً</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ── DELETE MODAL ───────────────────────────────────────── -->
+<div class="modal fade" id="deleteDrugModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+    <div class="modal-content cx-delete-modal">
+      <div class="cx-delete-body">
+        <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+        <h5 class="cx-delete-title">حذف الدواء؟</h5>
+        <p class="cx-delete-desc">سيتم حذف <strong id="deleteDrugName"></strong> نهائياً من الكتالوج الرئيسي. لا يمكن التراجع.</p>
+        <input type="hidden" id="deleteDrugId" value="">
+      </div>
+      <div class="cx-delete-footer">
+        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="cx-btn-danger" id="confirmDeleteDrugBtn">نعم، احذف</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+    const csrf = $('[name=csrfmiddlewaretoken]').first().val();
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteDrugModal'));
+
+    $(document).on('click', '.js-delete-drug', function () {
+        $('#deleteDrugId').val($(this).data('id'));
+        $('#deleteDrugName').text($(this).data('name'));
+        deleteModal.show();
+    });
+
+    $('#confirmDeleteDrugBtn').on('click', function () {
+        const id = $('#deleteDrugId').val();
+        if (!id) return;
+        $.ajax({
+            url: '/catalog/' + id + '/delete/',
+            type: 'POST',
+            headers: {'X-CSRFToken': csrf},
+            success: function (resp) {
+                deleteModal.hide();
+                if (resp.success) {
+                    Enjaz.toast(resp.message, 'success');
+                    $('.js-delete-drug[data-id="' + id + '"]').closest('tr').remove();
+                } else {
+                    Enjaz.toast(resp.message || 'تعذر الحذف', 'error');
+                }
+            },
+            error: function () {
+                deleteModal.hide();
+                Enjaz.toast('تعذر الحذف', 'error');
+            }
+        });
+    });
+
+    $('#fixGenericNamesBtn').on('click', function () {
+        const $btn = $(this);
+        Enjaz.showLoading($btn);
+        $.ajax({
+            url: "{% url 'catalog:fix_missing_generic_names_api' %}",
+            type: 'POST',
+            headers: {'X-CSRFToken': csrf},
+            success: function (resp) {
+                Enjaz.hideLoading($btn, '<i class="fas fa-wand-magic-sparkles me-1"></i> إصلاح تلقائي');
+                let msg = 'تم إصلاح ' + resp.fixed + ' دواء';
+                if (resp.deleted_empty) msg += '، وحذف ' + resp.deleted_empty + ' صف فارغ تماماً';
+                if (resp.still_missing) msg += '، وتعذّر استنتاج المادة الفعالة لـ' + resp.still_missing + ' دواء — يحتاج إلى تعديل يدوي';
+                Enjaz.toast(msg, 'success');
+                setTimeout(function () { window.location.reload(); }, 1500);
+            },
+            error: function () {
+                Enjaz.hideLoading($btn, '<i class="fas fa-wand-magic-sparkles me-1"></i> إصلاح تلقائي');
+                Enjaz.toast('تعذر تنفيذ الإصلاح', 'error');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

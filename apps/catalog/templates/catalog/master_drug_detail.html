@@ -1,0 +1,286 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+{% csrf_token %}
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-capsules"></i></div>
+            <div>
+                <h1 class="cx-hero-title">{{ drug.generic_name }}</h1>
+                <p class="cx-hero-desc">{{ drug.strength|default:'-' }} — {{ drug.dosage_form|default:'-' }}</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'catalog:master_drug_list' %}" class="cx-btn-secondary">
+                    <i class="fas fa-arrow-right"></i><span>الكتالوج</span>
+                </a>
+                <button type="button" class="cx-btn-secondary text-danger" id="openDeleteDrugModalBtn">
+                    <i class="fas fa-trash"></i><span>حذف الدواء</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    <h5 class="mb-3">بيانات الدواء</h5>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">الاسم العلمي</label>
+                <input type="text" name="generic_name" class="form-control" value="{{ drug.generic_name }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الشكل الصيدلاني</label>
+                <input type="text" name="dosage_form" class="form-control" value="{{ drug.dosage_form }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">التركيز</label>
+                <input type="text" name="strength" class="form-control" value="{{ drug.strength }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">التصنيف</label>
+                <input type="text" name="category" class="form-control" value="{% if drug.category %}{{ drug.category.name }}{% endif %}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">نوع الصنف</label>
+                <select name="item_type" class="form-select">
+                    {% for value, label in item_type_choices %}
+                        <option value="{{ value }}" {% if drug.item_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الوحدة الأساسية المقترحة</label>
+                <input type="text" name="default_unit_name" class="form-control" value="{{ drug.default_unit_name }}" placeholder="حبة، قرص...">
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">الوصف</label>
+                <textarea name="description" class="form-control" rows="2">{{ drug.description }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">صورة تعريفية</label>
+                {% if drug.image %}<div class="mb-1"><img src="{{ drug.image.url }}" style="max-height:60px" alt=""></div>{% endif %}
+                <input type="file" name="image" class="form-control" accept="image/*">
+            </div>
+            <div class="col-md-12 d-flex align-items-end flex-wrap gap-4">
+                <div class="form-check">
+                    <input type="checkbox" name="requires_prescription" class="form-check-input" id="rp" {% if drug.requires_prescription %}checked{% endif %}>
+                    <label class="form-check-label" for="rp">يُصرف بوصفة</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="is_controlled_substance" class="form-check-input" id="cs" {% if drug.is_controlled_substance %}checked{% endif %}>
+                    <label class="form-check-label" for="cs">خاضع للرقابة</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="is_insurance_excluded" class="form-check-input" id="ie" {% if drug.is_insurance_excluded %}checked{% endif %}>
+                    <label class="form-check-label" for="ie">غير مغطى بالتأمين</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="track_expiry" class="form-check-input" id="te" {% if drug.track_expiry %}checked{% endif %}>
+                    <label class="form-check-label" for="te">تتبع تاريخ الانتهاء (مقترح)</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="track_batch" class="form-check-input" id="tb" {% if drug.track_batch %}checked{% endif %}>
+                    <label class="form-check-label" for="tb">تتبع رقم الدفعة (مقترح)</label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" name="track_serial" class="form-check-input" id="ts" {% if drug.track_serial %}checked{% endif %}>
+                    <label class="form-check-label" for="ts">تتبع الرقم التسلسلي (مقترح)</label>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="cx-btn-primary mt-3"><i class="fas fa-save me-1"></i> حفظ التعديلات</button>
+    </form>
+    <p class="cx-hero-desc mt-3 mb-0">مستخدم في {{ tenant_items_count }} صنف عبر الأنشطة المشتركة.</p>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    <h5 class="mb-3">الأسماء التجارية</h5>
+    <table class="table table-sm">
+        <thead><tr><th>الاسم التجاري</th><th>الشركة المصنعة</th><th>الباركود</th><th>أساسي</th><th></th></tr></thead>
+        <tbody>
+        {% for a in aliases %}
+            <tr>
+                <td>{{ a.trade_name }}</td>
+                <td>{{ a.manufacturer|default:'-' }}</td>
+                <td>{{ a.barcode|default:'-' }}</td>
+                <td>{% if a.is_primary %}<i class="fas fa-check text-success"></i>{% endif %}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger js-delete-alias" data-id="{{ a.pk }}" data-name="{{ a.trade_name }}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="5" class="text-muted text-center">لا توجد أسماء تجارية</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <form method="post" class="row g-2 align-items-end mt-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_alias">
+        <div class="col-md-4">
+            <label class="form-label">اسم تجاري جديد</label>
+            <input type="text" name="trade_name" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">الشركة المصنعة</label>
+            <input type="text" name="manufacturer" class="form-control">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">الباركود</label>
+            <input type="text" name="barcode" class="form-control">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="cx-btn-secondary w-100"><i class="fas fa-plus"></i> إضافة</button>
+        </div>
+    </form>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    <h5 class="mb-3">دمج هذا الدواء في دواء آخر (تكرار في الكتالوج)</h5>
+    <form method="post" id="mergeForm" class="d-flex gap-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="merge_into">
+        <input type="number" name="target_id" id="mergeTargetId" class="form-control" placeholder="رقم الدواء الأساسي (ID)" style="max-width:220px">
+        <button type="button" class="cx-btn-secondary" id="openMergeModalBtn">دمج</button>
+    </form>
+</div>
+
+<!-- ── DELETE DRUG MODAL ───────────────────────────────────────── -->
+<div class="modal fade" id="deleteDrugModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+    <div class="modal-content cx-delete-modal">
+      <div class="cx-delete-body">
+        <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+        <h5 class="cx-delete-title">حذف الدواء؟</h5>
+        <p class="cx-delete-desc">
+            سيتم حذف <strong>{{ drug.generic_name }}</strong> نهائياً من الكتالوج الرئيسي.
+            {{ tenant_items_count }} صنف مرتبط به سيبقى كما هو، لكن دون ربط بالكتالوج. لا يمكن التراجع عن هذا الإجراء.
+        </p>
+      </div>
+      <div class="cx-delete-footer">
+        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="cx-btn-danger" id="confirmDeleteDrugBtn">نعم، احذف</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DELETE ALIAS MODAL ───────────────────────────────────────── -->
+<div class="modal fade" id="deleteAliasModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+    <div class="modal-content cx-delete-modal">
+      <div class="cx-delete-body">
+        <div class="cx-delete-icon"><i class="fas fa-trash-alt"></i></div>
+        <h5 class="cx-delete-title">حذف الاسم التجاري؟</h5>
+        <p class="cx-delete-desc">سيتم حذف <strong id="deleteAliasName"></strong> نهائياً.</p>
+        <input type="hidden" id="deleteAliasId" value="">
+      </div>
+      <div class="cx-delete-footer">
+        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="cx-btn-danger" id="confirmDeleteAliasBtn">نعم، احذف</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MERGE CONFIRM MODAL ───────────────────────────────────────── -->
+<div class="modal fade" id="mergeConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered cx-delete-dialog">
+    <div class="modal-content cx-delete-modal">
+      <div class="cx-delete-body">
+        <div class="cx-delete-icon"><i class="fas fa-code-merge"></i></div>
+        <h5 class="cx-delete-title">دمج الدواء؟</h5>
+        <p class="cx-delete-desc">سيتم نقل جميع الأسماء التجارية لهذا الدواء إلى الدواء رقم <strong id="mergeTargetIdDisplay"></strong>. هل أنت متأكد؟</p>
+      </div>
+      <div class="cx-delete-footer">
+        <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="cx-btn-danger" id="confirmMergeBtn">نعم، ادمج</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+    const csrf = $('[name=csrfmiddlewaretoken]').first().val();
+
+    /* حذف الدواء نفسه */
+    const deleteDrugModal = new bootstrap.Modal(document.getElementById('deleteDrugModal'));
+    $('#openDeleteDrugModalBtn').on('click', function () { deleteDrugModal.show(); });
+    $('#confirmDeleteDrugBtn').on('click', function () {
+        $.ajax({
+            url: "{% url 'catalog:master_drug_delete_api' drug.pk %}",
+            type: 'POST',
+            headers: {'X-CSRFToken': csrf},
+            success: function (resp) {
+                deleteDrugModal.hide();
+                if (resp.success) {
+                    Enjaz.toast(resp.message, 'success');
+                    setTimeout(function () { window.location.href = "{% url 'catalog:master_drug_list' %}"; }, 800);
+                } else {
+                    Enjaz.toast(resp.message || 'تعذر الحذف', 'error');
+                }
+            },
+            error: function () { deleteDrugModal.hide(); Enjaz.toast('تعذر الحذف', 'error'); }
+        });
+    });
+
+    /* حذف اسم تجاري */
+    const deleteAliasModal = new bootstrap.Modal(document.getElementById('deleteAliasModal'));
+    $(document).on('click', '.js-delete-alias', function () {
+        $('#deleteAliasId').val($(this).data('id'));
+        $('#deleteAliasName').text($(this).data('name'));
+        deleteAliasModal.show();
+    });
+    $('#confirmDeleteAliasBtn').on('click', function () {
+        const aliasId = $('#deleteAliasId').val();
+        if (!aliasId) return;
+        $.ajax({
+            url: '/catalog/{{ drug.pk }}/aliases/' + aliasId + '/delete/',
+            type: 'POST',
+            headers: {'X-CSRFToken': csrf},
+            success: function (resp) {
+                deleteAliasModal.hide();
+                if (resp.success) {
+                    Enjaz.toast(resp.message, 'success');
+                    $('.js-delete-alias[data-id="' + aliasId + '"]').closest('tr').remove();
+                } else {
+                    Enjaz.toast(resp.message || 'تعذر الحذف', 'error');
+                }
+            },
+            error: function () { deleteAliasModal.hide(); Enjaz.toast('تعذر الحذف', 'error'); }
+        });
+    });
+
+    /* دمج */
+    const mergeModal = new bootstrap.Modal(document.getElementById('mergeConfirmModal'));
+    $('#openMergeModalBtn').on('click', function () {
+        const targetId = $('#mergeTargetId').val();
+        if (!targetId) { Enjaz.toast('اكتب رقم الدواء الأساسي أولاً', 'error'); return; }
+        $('#mergeTargetIdDisplay').text(targetId);
+        mergeModal.show();
+    });
+    $('#confirmMergeBtn').on('click', function () {
+        mergeModal.hide();
+        $('#mergeForm').trigger('submit');
+    });
+});
+</script>
+{% endblock %}

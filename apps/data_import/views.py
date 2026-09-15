@@ -110,14 +110,20 @@ def product_import_commit(request):
     result = import_products(tenant, request.FILES['file'], request.user)
 
     msg = f"تم استيراد {result['created']} منتج بنجاح"
+    if result.get('updated'):
+        msg += f"، وتحديث {result['updated']} منتج موجود مسبقاً"
     if result['errors']:
         msg += f". {len(result['errors'])} صف به أخطاء"
+    if result.get('possible_duplicates'):
+        msg += f". {len(result['possible_duplicates'])} صف يشبه منتجاً موجوداً — يُنصح بمراجعتها"
 
     return JsonResponse({
         'success': True,
         'message': msg,
         'created': result['created'],
+        'updated': result.get('updated', 0),
         'errors': result['errors'],
+        'possible_duplicates': result.get('possible_duplicates', []),
     })
 
 

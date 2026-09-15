@@ -1,0 +1,257 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+{% csrf_token %}
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-capsules"></i></div>
+            <div>
+                <h1 class="cx-hero-title">{% if alias %}{{ alias.trade_name }}{% elif drug %}{{ drug.generic_name }}{% else %}إضافة من الكتالوج{% endif %}</h1>
+                <p class="cx-hero-desc">{% if drug %}{{ drug.generic_name }} — {{ drug.strength|default:'' }} {{ drug.dosage_form|default:'' }}{% endif %}</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <a href="{% url 'items:catalog_picker' %}" class="cx-btn-secondary">
+                <i class="fas fa-arrow-right"></i><span>الكتالوج</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if not drug %}
+<div class="cx-panel" style="padding:1.25rem">
+    <p class="text-muted mb-0">لم يتم تحديد دواء. عد إلى صفحة الكتالوج واختر دواءً أولاً.</p>
+</div>
+{% else %}
+<form id="catalogCreateForm" enctype="multipart/form-data">
+<input type="hidden" name="master_drug_id" value="{{ drug.id }}">
+<input type="hidden" name="alias_id" value="{{ alias.id|default:'' }}">
+
+<div class="cx-panel" style="padding:1.25rem">
+    <h5 class="mb-3">البيانات الأساسية <span class="cx-hero-desc" style="font-size:.75rem">(مأخوذة من الكتالوج — يمكن تعديلها عند الحاجة)</span></h5>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">اسم المنتج</label>
+            <input type="text" name="name" class="form-control" value="{% if alias %}{{ alias.trade_name }}{% else %}{{ drug.generic_name }}{% endif %}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">الاسم بالإنجليزية</label>
+            <input type="text" name="name_en" class="form-control">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">رمز المنتج (SKU) — اتركه فارغاً للتوليد التلقائي</label>
+            <input type="text" name="sku" class="form-control">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">الباركود</label>
+            <input type="text" name="barcode" class="form-control" value="{% if alias %}{{ alias.barcode }}{% endif %}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">نوع الصنف</label>
+            <select name="item_type" class="form-select">
+                {% for value, label in item_type_choices %}
+                    <option value="{{ value }}" {% if drug.item_type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">التصنيف</label>
+            <input type="text" name="category" class="form-control" value="{% if drug.category %}{{ drug.category.name }}{% endif %}">
+        </div>
+        <div class="col-md-12">
+            <label class="form-label">الوصف</label>
+            <textarea name="description" class="form-control" rows="2">{{ drug.description }}</textarea>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">صورة المنتج</label>
+            {% if drug.image %}<div class="mb-1"><img src="{{ drug.image.url }}" style="max-height:60px" alt=""><div class="cx-hero-desc">الصورة الافتراضية من الكتالوج — ارفع صورة لتغييرها</div></div>{% endif %}
+            <input type="file" name="image" class="form-control" accept="image/*">
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    <h5 class="mb-3">الأسعار</h5>
+    <div class="row g-3">
+        {% if tenant.hard_currency_mode %}
+            <div class="col-md-4">
+                <label class="form-label">سعر التكلفة (عملة صعبة)</label>
+                <input type="number" step="0.0001" name="cost_price_hc" class="form-control" value="0">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">سعر البيع (عملة صعبة)</label>
+                <input type="number" step="0.0001" name="selling_price_hc" class="form-control" value="0">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">أدنى سعر بيع (عملة صعبة)</label>
+                <input type="number" step="0.0001" name="min_selling_price_hc" class="form-control" value="0">
+            </div>
+        {% else %}
+            <div class="col-md-4">
+                <label class="form-label">سعر التكلفة</label>
+                <input type="number" step="0.01" name="cost_price" class="form-control" value="0">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">سعر البيع</label>
+                <input type="number" step="0.01" name="selling_price" class="form-control" value="0">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الحد الأدنى للبيع</label>
+                <input type="number" step="0.01" name="min_selling_price" class="form-control" value="0">
+            </div>
+        {% endif %}
+        <div class="col-md-4">
+            <label class="form-label">نسبة الضريبة %</label>
+            <input type="number" step="0.01" name="tax_rate" class="form-control" value="0">
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    <h5 class="mb-3">الوحدات</h5>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">اسم الوحدة الأساسية (الأصغر)</label>
+            <input type="text" name="base_unit_name" class="form-control" value="{{ drug.default_unit_name }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">اسم وحدة أكبر (اختياري)</label>
+            <input type="text" name="large_unit_name" class="form-control" value="{{ drug.default_dosage_conversion.0.name|default:'' }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">كم وحدة أساسية داخل الوحدة الأكبر؟</label>
+            <input type="number" step="0.01" name="large_unit_count" class="form-control" value="{{ drug.default_dosage_conversion.0.factor|default:'' }}">
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    <h5 class="mb-3">المخزون</h5>
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">الحد الأدنى للمخزون</label>
+            <input type="number" step="0.01" name="min_quantity" class="form-control" value="0">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">الحد الأقصى للمخزون</label>
+            <input type="number" step="0.01" name="max_quantity" class="form-control" value="0">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">المخزن (للرصيد الافتتاحي)</label>
+            <select name="stock_id" class="form-select">
+                <option value="">بدون رصيد افتتاحي</option>
+                {% for s in stocks %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">الكمية الافتتاحية</label>
+            <input type="number" step="0.01" name="opening_quantity" class="form-control" value="0">
+        </div>
+        {% if drug.track_batch or capabilities.has_batch_numbers %}
+        <div class="col-md-4">
+            <label class="form-label">رقم الدفعة</label>
+            <input type="text" name="batch_number" class="form-control">
+        </div>
+        {% endif %}
+        {% if drug.track_expiry or capabilities.has_expiry_dates %}
+        <div class="col-md-4">
+            <label class="form-label">تاريخ الانتهاء</label>
+            <input type="date" name="expiry_date" class="form-control">
+        </div>
+        {% endif %}
+        <div class="col-md-12 d-flex flex-wrap gap-4 mt-1">
+            <div class="form-check">
+                <input type="checkbox" name="track_expiry" class="form-check-input" id="te" {% if drug.track_expiry %}checked{% endif %}>
+                <label class="form-check-label" for="te">تتبع تاريخ الانتهاء</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" name="track_batch" class="form-check-input" id="tb" {% if drug.track_batch %}checked{% endif %}>
+                <label class="form-check-label" for="tb">تتبع رقم الدفعة</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" name="track_serial" class="form-check-input" id="ts" {% if drug.track_serial %}checked{% endif %}>
+                <label class="form-check-label" for="ts">تتبع الرقم التسلسلي</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    <h5 class="mb-3">بيانات صيدلانية وخيارات أخرى</h5>
+    <div class="row g-3">
+        <div class="col-md-12 d-flex flex-wrap gap-4">
+            <div class="form-check">
+                <input type="checkbox" name="requires_prescription" class="form-check-input" id="rp" {% if drug.requires_prescription %}checked{% endif %}>
+                <label class="form-check-label" for="rp">يُصرف بوصفة طبية</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" name="is_controlled_substance" class="form-check-input" id="cs" {% if drug.is_controlled_substance %}checked{% endif %}>
+                <label class="form-check-label" for="cs">خاضع للرقابة / مخدرات</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" name="is_insurance_excluded" class="form-check-input" id="ie" {% if drug.is_insurance_excluded %}checked{% endif %}>
+                <label class="form-check-label" for="ie">غير مغطى بالتأمين</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" name="is_sellable" class="form-check-input" id="isell" checked>
+                <label class="form-check-label" for="isell">قابل للبيع</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" name="is_purchasable" class="form-check-input" id="ipurch" checked>
+                <label class="form-check-label" for="ipurch">قابل للشراء</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button type="button" class="cx-btn-primary" id="saveBtn">
+    <i class="fas fa-save me-1"></i> حفظ المنتج
+</button>
+</form>
+{% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+    const csrf = $('[name=csrfmiddlewaretoken]').first().val();
+    $('#saveBtn').on('click', function () {
+        const $btn = $(this);
+        Enjaz.showLoading($btn);
+        const fd = new FormData($('#catalogCreateForm')[0]);
+        $.ajax({
+            url: "{% url 'items:item_create_from_catalog' %}",
+            type: 'POST',
+            headers: {'X-CSRFToken': csrf},
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function (resp) {
+                Enjaz.hideLoading($btn, '<i class="fas fa-save me-1"></i> حفظ المنتج');
+                if (resp.success) {
+                    Enjaz.toast(resp.message, 'success');
+                    setTimeout(function () { window.location.href = "{% url 'items:list' %}"; }, 1000);
+                } else {
+                    Enjaz.toast(resp.message || 'حدث خطأ', 'error');
+                }
+            },
+            error: function (xhr) {
+                Enjaz.hideLoading($btn, '<i class="fas fa-save me-1"></i> حفظ المنتج');
+                const resp = xhr.responseJSON;
+                Enjaz.toast(resp ? resp.message : 'حدث خطأ أثناء الحفظ', 'error');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

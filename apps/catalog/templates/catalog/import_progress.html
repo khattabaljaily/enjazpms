@@ -1,0 +1,66 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+{% csrf_token %}
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-magnifying-glass-chart"></i></div>
+            <div>
+                <h1 class="cx-hero-title">جاري استخراج الأدوية من: {{ batch.original_filename }}</h1>
+                <p class="cx-hero-desc" id="progressText">جاري المعالجة...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel" style="padding:1.25rem">
+    <div class="progress" style="height:22px">
+        <div class="progress-bar" id="progressBar" role="progressbar" style="width:0%">0%</div>
+    </div>
+    <div class="mt-3" id="progressActions"></div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+    const batchId = {{ batch.id }};
+    const csrf = $('[name=csrfmiddlewaretoken]').first().val();
+
+    function processNextChunk() {
+        $.ajax({
+            url: '/catalog/import/' + batchId + '/process-chunk/',
+            type: 'POST',
+            headers: {'X-CSRFToken': csrf},
+            success: function (resp) {
+                const pct = resp.total ? Math.round(100 * resp.processed / resp.total) : 100;
+                $('#progressBar').css('width', pct + '%').text(pct + '%');
+                $('#progressText').text('تمت معالجة ' + resp.processed + ' من ' + resp.total + ' صف');
+
+                if (resp.done) {
+                    $('#progressActions').html(
+                        '<a href="/catalog/import/' + batchId + '/review/" class="cx-btn-primary">' +
+                        '<i class="fas fa-clipboard-check me-1"></i> مراجعة النتائج</a>'
+                    );
+                } else {
+                    setTimeout(processNextChunk, 200);
+                }
+            },
+            error: function () {
+                Enjaz.toast('حدث خطأ أثناء المعالجة — حاول تحديث الصفحة', 'error');
+            }
+        });
+    }
+
+    processNextChunk();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block page_header %}{% endblock %}
+
+{% block extra_css %}
+<style>
+.cr-table { width:100%; font-size:.82rem; border-collapse:collapse; }
+.cr-table th, .cr-table td { padding:.5rem .6rem; border-bottom:1px solid var(--border-light,#e5e7eb); vertical-align:top; }
+.cr-table input[type=text], .cr-table select { font-size:.8rem; padding:.25rem .4rem; }
+.cr-badge { font-size:.72rem; padding:.15rem .5rem; border-radius:6px; }
+.cr-badge-new { background:#e0f2fe; color:#075985; }
+.cr-badge-dup { background:#fef3c7; color:#92400e; }
+.cr-badge-review { background:#fee2e2; color:#991b1b; }
+.cr-hint { font-size:.72rem; color:var(--text-secondary,#6b7280); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+{% csrf_token %}
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-clipboard-check"></i></div>
+            <div>
+                <h1 class="cx-hero-title">مراجعة: {{ batch.original_filename }}</h1>
+                <p class="cx-hero-desc">راجع كل صف، صحّح البيانات المستخرجة إذا احتاجت، ثم اعتمد الدفعة</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <button type="button" class="cx-btn-primary" id="commitBtn">
+                <i class="fas fa-check me-1"></i> اعتماد الدفعة
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel" style="padding:1rem; overflow-x:auto">
+{% if rows %}
+<table class="cr-table">
+<thead>
+<tr>
+    <th>#</th><th>الحالة</th><th>الاسم التجاري</th><th>الاسم العلمي</th><th>الشكل</th>
+    <th>التركيز</th><th>الشركة</th><th>الباركود</th><th>التصنيف</th><th>بوصفة</th>
+    <th>الإجراء</th><th>ربط بدواء موجود</th>
+</tr>
+</thead>
+<tbody>
+{% for row in rows %}
+<tr data-row-id="{{ row.id }}" {% if not row.extracted_data.name and not row.extracted_data.generic_name %}style="background:#fee2e2"{% endif %}>
+    <td>{{ row.row_number }}</td>
+    <td>
+        {% if row.match_status == 'new' %}<span class="cr-badge cr-badge-new">جديد</span>
+        {% elif row.match_status == 'duplicate_exact' %}<span class="cr-badge cr-badge-dup">مطابق</span>
+        {% elif row.match_status == 'duplicate_fuzzy' %}<span class="cr-badge cr-badge-dup">مشابه</span>
+        {% else %}<span class="cr-badge cr-badge-review">مراجعة</span>{% endif %}
+        {% if row.matched_master_drug %}<div class="cr-hint">{{ row.matched_master_drug }}</div>{% endif %}
+        {% if row.review_notes %}<div class="cr-hint">{{ row.review_notes }}</div>{% endif %}
+        {% if not row.extracted_data.name and not row.extracted_data.generic_name %}<div class="cr-hint text-danger">⚠ لا يوجد اسم مستخرج — الأفضل "تجاهل"</div>{% endif %}
+        {% if row.extracted_data.name and not row.extracted_data.generic_name %}<div class="cr-hint text-warning">بدون اسم علمي</div>{% endif %}
+    </td>
+    <td>
+        <input type="text" class="form-control f-trade_name" value="{{ row.extracted_data.name|default:'' }}">
+        {% if row.raw_data.text %}<div class="cr-hint">الأصل: {{ row.raw_data.text }}</div>{% endif %}
+    </td>
+    <td><input type="text" class="form-control f-generic_name" value="{{ row.extracted_data.generic_name|default:'' }}"></td>
+    <td><input type="text" class="form-control f-dosage_form" value="{{ row.extracted_data.dosage_form|default:'' }}"></td>
+    <td><input type="text" class="form-control f-strength" value="{{ row.extracted_data.strength|default:'' }}"></td>
+    <td><input type="text" class="form-control f-manufacturer" value="{{ row.extracted_data.manufacturer|default:'' }}"></td>
+    <td><input type="text" class="form-control f-barcode" value="{{ row.extracted_data.barcode|default:'' }}"></td>
+    <td><input type="text" class="form-control f-category" value=""></td>
+    <td><input type="checkbox" class="form-check-input f-prescription"></td>
+    <td>
+        <select class="form-select f-action">
+            <option value="create_new" {% if row.match_status == 'new' or row.match_status == 'needs_review' %}selected{% endif %}>دواء جديد</option>
+            <option value="link_alias" {% if row.match_status == 'duplicate_exact' or row.match_status == 'duplicate_fuzzy' %}selected{% endif %}>ربط باسم تجاري لدواء موجود</option>
+            <option value="skip">تجاهل هذا الصف</option>
+        </select>
+    </td>
+    <td>
+        <input type="text" class="form-control f-master-search" placeholder="ابحث عن دواء..."
+               value="{% if row.matched_master_drug %}{{ row.matched_master_drug }}{% endif %}">
+        <input type="hidden" class="f-master-id" value="{% if row.matched_master_drug %}{{ row.matched_master_drug.id }}{% endif %}">
+        <div class="cr-hint f-master-results"></div>
+    </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p class="text-muted mb-0">لا توجد صفوف متبقية للمراجعة — كل الصفوف تمت معالجتها.</p>
+{% endif %}
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+    const csrf = $('[name=csrfmiddlewaretoken]').first().val();
+
+    // بحث بسيط عن دواء موجود لربط الاسم التجاري به
+    let searchTimer = null;
+    $(document).on('keyup', '.f-master-search', function () {
+        const $input = $(this);
+        const $results = $input.closest('td').find('.f-master-results');
+        const q = $input.val().trim();
+        clearTimeout(searchTimer);
+        if (q.length < 2) { $results.empty(); return; }
+        searchTimer = setTimeout(function () {
+            $.get("{% url 'catalog:master_drug_search_api' %}", {q: q}, function (resp) {
+                $results.empty();
+                resp.results.forEach(function (d) {
+                    $('<a href="#" class="d-block">' + d.label + '</a>')
+                        .on('click', function (e) {
+                            e.preventDefault();
+                            $input.val(d.label);
+                            $input.closest('td').find('.f-master-id').val(d.id);
+                            $results.empty();
+                        })
+                        .appendTo($results);
+                });
+            });
+        }, 250);
+    });
+
+    $('#commitBtn').on('click', function () {
+        const decisions = {};
+        $('tr[data-row-id]').each(function () {
+            const $row = $(this);
+            const rowId = $row.data('row-id');
+            const action = $row.find('.f-action').val();
+            decisions[rowId] = {
+                action: action,
+                trade_name: $row.find('.f-trade_name').val(),
+                generic_name: $row.find('.f-generic_name').val(),
+                dosage_form: $row.find('.f-dosage_form').val(),
+                strength: $row.find('.f-strength').val(),
+                manufacturer: $row.find('.f-manufacturer').val(),
+                barcode: $row.find('.f-barcode').val(),
+                category: $row.find('.f-category').val(),
+                requires_prescription: $row.find('.f-prescription').is(':checked'),
+                master_drug_id: $row.find('.f-master-id').val() || null,
+            };
+        });
+
+        const $btn = $(this);
+        Enjaz.showLoading($btn);
+        $.ajax({
+            url: "{% url 'catalog:import_commit_api' batch.id %}",
+            type: 'POST',
+            headers: {'X-CSRFToken': csrf},
+            contentType: 'application/json',
+            data: JSON.stringify(decisions),
+            success: function (resp) {
+                Enjaz.hideLoading($btn, '<i class="fas fa-check me-1"></i> اعتماد الدفعة');
+                if (resp.success) {
+                    Enjaz.toast('تم اعتماد ' + resp.committed + ' صف' + (resp.skipped ? '، وتجاهل ' + resp.skipped : ''), 'success');
+                    setTimeout(function () { window.location.reload(); }, 1200);
+                } else {
+                    Enjaz.toast(resp.message || 'حدث خطأ', 'error');
+                }
+            },
+            error: function () {
+                Enjaz.hideLoading($btn, '<i class="fas fa-check me-1"></i> اعتماد الدفعة');
+                Enjaz.toast('حدث خطأ أثناء الاعتماد', 'error');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
