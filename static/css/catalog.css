@@ -3,6 +3,13 @@
    خاص بصفحة الكتالوج المركزي للأدوية فقط
    ============================================================ */
 
+/* الأعمدة الضيقة (التركيز/الشكل/التصنيف/العدد/الأزرار) تأخذ عرضاً ثابتاً،
+   والاسم العلمي يمتص باقي المساحة — بدل الحساب التلقائي لـ DataTables
+   الذي كان يعطي الأعمدة القصيرة المحتوى (مثل "-") مساحة أكبر من اللازم. */
+#drugsTable { table-layout: fixed; }
+#drugsTable td { word-break: break-word; }
+#drugsTable .cxr-actions { flex-wrap: nowrap; white-space: nowrap; }
+
 /* ══════════════════════════ MOBILE CARD LAYOUT — DRUGS TABLE ══════════════════════════ */
 @media (max-width: 768px) {
     .cx-table-wrap { display: none !important; }
