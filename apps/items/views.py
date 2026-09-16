@@ -530,7 +530,7 @@ def bulk_create_from_catalog(request):
 
         with transaction.atomic():
             category = _resolve_tenant_category(tenant, drug.category.name if drug.category_id else '', request.user)
-            item = Item.objects.create(
+            item = Item(
                 tenant=tenant, created_by=request.user, updated_by=request.user,
                 name=name, barcode=barcode, category=category,
                 generic_name=drug.generic_name, manufacturer=alias.manufacturer if alias else '',
@@ -542,6 +542,12 @@ def bulk_create_from_catalog(request):
                 selling_price=safe_decimal_or_zero(row.get('selling_price')),
                 master_drug=drug,
             )
+            if tenant.hard_currency_mode and tenant.exchange_rate:
+                rate = Decimal(str(tenant.exchange_rate))
+                if rate > 0:
+                    item.cost_price_hc = (item.cost_price / rate).quantize(Decimal('0.0001'))
+                    item.selling_price_hc = (item.selling_price / rate).quantize(Decimal('0.0001'))
+            item.save()
             opening_qty = safe_decimal_or_zero(row.get('opening_quantity'))
             if stock and opening_qty:
                 apply_opening_stock(tenant, item, stock, opening_qty)

@@ -46,3 +46,35 @@ def apply_opening_stock(tenant, item, stock, quantity: Decimal, batch_number: st
                 quantity_received=quantity, quantity_remaining=quantity,
                 purchase_date=timezone.localdate(),
             )
+
+
+def reprice_items_for_rate(tenant, new_rate):
+    """
+    إعادة تسعير كل الأصناف التي لها سعر بالعملة الصعبة بعد تغيير سعر الصرف:
+    السعر المحلي = السعر بالعملة الصعبة × سعر الصرف الجديد.
+    يغطي الأصناف التي لها سعر بيع أو تكلفة أو حد أدنى بالعملة الصعبة (أي منهما),
+    ويعيد عدد الأصناف التي أُعيد تسعيرها.
+    """
+    from django.db.models import Q
+    from .models import Item
+
+    rate = Decimal(str(new_rate))
+    items = Item.objects.for_tenant(tenant).filter(
+        Q(selling_price_hc__isnull=False)
+        | Q(cost_price_hc__isnull=False)
+        | Q(min_selling_price_hc__isnull=False)
+    )
+    updated = 0
+    bulk = []
+    for item in items:
+        if item.selling_price_hc:
+            item.selling_price = (item.selling_price_hc * rate).quantize(Decimal('0.01'))
+        if item.cost_price_hc:
+            item.cost_price = (item.cost_price_hc * rate).quantize(Decimal('0.01'))
+        if item.min_selling_price_hc:
+            item.min_selling_price = (item.min_selling_price_hc * rate).quantize(Decimal('0.01'))
+        bulk.append(item)
+        updated += 1
+    if bulk:
+        Item.objects.bulk_update(bulk, ['selling_price', 'cost_price', 'min_selling_price'])
+    return updated

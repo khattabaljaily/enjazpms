@@ -1625,7 +1625,6 @@ def tenant_settings_update_api(request):
 @require_POST
 def exchange_rate_update_api(request):
     """API: تحديث سعر الصرف وإعادة حساب أسعار كل المنتجات تلقائياً."""
-    from apps.items.models import Item
     from django.db import transaction as db_transaction
 
     tenant = getattr(request, 'tenant', None)
@@ -1660,25 +1659,8 @@ def exchange_rate_update_api(request):
         # أي صنف له سعر بيع أو تكلفة أو حد أدنى بالعملة الصعبة يجب أن يُعاد
         # تسعيره — فلترة selling_price_hc فقط كانت تتجاهل صنفاً له cost_price_hc
         # فقط (بلا سعر بيع بالعملة الصعبة)، فتبقى تكلفته قديمة بعد تغيير السعر.
-        from django.db.models import Q
-        items = Item.objects.for_tenant(tenant).filter(
-            Q(selling_price_hc__isnull=False)
-            | Q(cost_price_hc__isnull=False)
-            | Q(min_selling_price_hc__isnull=False)
-        )
-        updated = 0
-        bulk = []
-        for item in items:
-            if item.selling_price_hc:
-                item.selling_price = (item.selling_price_hc * new_rate).quantize(Decimal('0.01'))
-            if item.cost_price_hc:
-                item.cost_price = (item.cost_price_hc * new_rate).quantize(Decimal('0.01'))
-            if item.min_selling_price_hc:
-                item.min_selling_price = (item.min_selling_price_hc * new_rate).quantize(Decimal('0.01'))
-            bulk.append(item)
-            updated += 1
-        if bulk:
-            Item.objects.bulk_update(bulk, ['selling_price', 'cost_price', 'min_selling_price'])
+        from apps.items.services import reprice_items_for_rate
+        updated = reprice_items_for_rate(tenant, new_rate)
 
     log_activity(request, 'تغيير سعر الصرف', f'{previous_rate} ← {new_rate}', 'update')
     return JsonResponse({
@@ -2148,6 +2130,7 @@ def tenant_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     tenant = get_object_or_404(Tenant, pk=pk)
+    old_exchange_rate = tenant.exchange_rate
     form = TenantForm(request.POST, instance=tenant)
 
     from apps.accounts.models import User
@@ -2175,6 +2158,21 @@ def tenant_update_api(request, pk):
     from django.db import transaction
     with transaction.atomic():
         form.save()
+
+        # إذا تغيّر سعر الصرف في وضع العملة الصعبة، أعد تسعير كل المنتجات
+        # ذات السعر بالعملة الصعبة حتى لا تبقى أسعارها المحلية قديمة.
+        if tenant.hard_currency_mode and tenant.exchange_rate != old_exchange_rate:
+            from .models import ExchangeRateHistory
+            from apps.items.services import reprice_items_for_rate
+            tenant.exchange_rate_updated_at = dj_timezone.now()
+            tenant.save(update_fields=['exchange_rate_updated_at', 'updated_at'])
+            ExchangeRateHistory.objects.create(
+                tenant=tenant,
+                rate=tenant.exchange_rate,
+                changed_by=request.user if request.user.is_authenticated else None,
+                notes=f'عبر تعديل بيانات المشترك — السعر السابق: {old_exchange_rate}',
+            )
+            reprice_items_for_rate(tenant, tenant.exchange_rate)
 
         if admin_user:
             first, _, last = full_name.partition(' ')
