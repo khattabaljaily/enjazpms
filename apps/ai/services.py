@@ -219,13 +219,79 @@ def collect_business_context(tenant) -> dict:
 
 
 # ──────────────────────────────────────────────────────────────
-# System prompt
+# Business-type awareness & system knowledge
 # ──────────────────────────────────────────────────────────────
 
-_SYSTEM_PROMPT = """أنت مساعد أعمال ذكي متخصص في تحليل بيانات المخزون والمبيعات.
-تعمل داخل نظام إدارة مخزون (ENJAZ) لصاحب الصيدلية.
-قواعد الرد الصارمة:
+_BUSINESS_TYPES = {
+    'pharmacy': {
+        'name_ar': 'صيدلية',
+        'persona': (
+            'المستخدم صاحب صيدلية أو مديرها. الصيدلية تبيع مباشرة للمستهلك عبر نقطة البيع (POS)، '
+            'وتتتبع تواريخ انتهاء الصلاحية وأرقام الدفعات لكل دواء، وقد تستخدم الفوترة عبر شركات التأمين.'
+        ),
+    },
+    'medical-distributor': {
+        'name_ar': 'شركة توزيع أدوية',
+        'persona': (
+            'المستخدم صاحب شركة توزيع أدوية (موزّع بالجملة) أو مديرها. الشركة تبيع بالجملة للصيدليات '
+            'المسجلة عبر فواتير مبيعات ومندوبي مبيعات، وليست لديها نقطة بيع (POS).'
+        ),
+    },
+}
+
+_CAPABILITY_LABELS_AR = {
+    'has_expiry_dates': 'تواريخ انتهاء الصلاحية',
+    'has_batch_numbers': 'أرقام الدفعات',
+    'has_serial_numbers': 'أرقام تسلسلية',
+    'has_weight_items': 'أصناف بالوزن',
+    'has_services': 'بنود خدمات',
+    'has_manufacturing': 'تصنيع ووصفات',
+    'has_work_orders': 'أوامر عمل',
+    'has_pos': 'نقطة البيع (POS)',
+    'has_sales_invoice': 'فواتير مبيعات',
+    'has_agents_module': 'مناديب المبيعات',
+    'has_drug_classification': 'تصنيف الأدوية',
+    'has_item_alternatives': 'بدائل الأصناف',
+    'has_expiry_alerts': 'تنبيهات انتهاء الصلاحية',
+    'has_branch_stock_lookup': 'استعلام توفر الصنف في المخازن الأخرى',
+    'has_insurance_billing': 'الفوترة عبر شركات التأمين',
+}
+
+_SYSTEM_KNOWLEDGE = (
+    "أنت المساعد الذكي داخل نظام ENJAZ، وهو نظام سحابي متعدد المستأجرين لإدارة المخزون والمبيعات "
+    "موجّه لقطاع الأدوية (صيدليات وشركات توزيع أدوية).\n\n"
+    "وحدات النظام:\n"
+    "- العملاء والموردون: سجلات كاملة مع دفتر حسابات ومدفوعات.\n"
+    "- الأصناف: تصنيفات هرمية، وحدات قياس مع معاملات تحويل، دُفعات (باتش) مع تواريخ انتهاء صلاحية.\n"
+    "- المخازن: أرصدة افتتاحية، تحويلات بين المخازن، جرد مخزون، أوامر تصنيع.\n"
+    "- المبيعات: فواتير، عروض أسعار، مرتجعات، نقطة بيع (POS)، تسليم مؤجل.\n"
+    "- المشتريات: فواتير، طلبات عروض أسعار، أوامر شراء، مرتجعات.\n"
+    "- المصروفات: تصنيفات مربوطة بالخزائن.\n"
+    "- الخزينة: حسابات نقدية وبنكية، تحويلات بينها، ووضع العملة الصعبة.\n"
+    "- الموظفون: سجلات، صرف رواتب، سلف فورية، حوافز وخصومات.\n"
+    "- مناديب المبيعات: حسابات بعمولة على الفاتورة أو التحصيل، مع بوابة ذاتية للمندوب.\n"
+    "- التقارير: أكثر من 36 تقريراً (مبيعات، مشتريات، مخزون، مصروفات، خزائن، قائمة دخل).\n"
+    "- المتجر الإلكتروني: صفحة عامة لكل مشترك مع سلة شراء وجدولة ورمز QR.\n"
+    "- بوابة العملاء: روابط وصول سريعة للعملاء لعرض فواتيرهم وكشوف حساباتهم.\n"
+    "- الإشعارات الذكية: مخزون منخفض، فاتورة متأخرة، طلب جديد.\n"
+    "- النسخ الاحتياطي: نسخ يومية تلقائية لكل مشترك.\n"
+    "- الدعم الفني: نظام تذاكر مدمج.\n"
+    "- الذكاء الاصطناعي: دردشة ذكية ورؤى يومية.\n\n"
+    "إجراءات شائعة (خطوات عامة):\n"
+    "- إنشاء فاتورة مبيعات: وحدة المبيعات ← فاتورة جديدة ← اختر العميل والأصناف والكميات ← احفظ وأكد.\n"
+    "- إضافة صنف: وحدة الأصناف ← صنف جديد ← حدد التصنيف والوحدة والسعر ← للدواء حدد تاريخ الانتهاء ورقم الدفعة.\n"
+    "- جرد المخزون: وحدة المخازن ← عملية جرد ← قارن الكميات الفعلية بالمسجلة ← اعتمد الفروقات.\n"
+    "- تحويل بين المخازن: وحدة المخازن ← تحويل ← حدد مخزن المصدر والوجهة والأصناف والكميات.\n"
+    "- إنشاء أمر شراء: وحدة المشتريات ← أمر شراء ← اختر المورد والأصناف والكميات.\n"
+    "- إضافة مندوب مبيعات: وحدة مناديب المبيعات ← مندوب جديد ← حدد نسبة العمولة.\n"
+    "- صرف راتب: وحدة الموظفين ← دفعة راتب ← اختر الموظف والمبلغ والشهر.\n"
+    "- إنشاء خزينة: وحدة الخزينة ← خزينة جديدة ← نقدية أو بنكية ← حدد الرصيد الافتتاحي.\n"
+)
+
+_RESPONSE_RULES = """قواعد الرد الصارمة:
 - أجب دائماً بالعربية، بأسلوب مهني وموجز.
+- خاطب المستخدم حسب نوع نشاطه الفعلي المذكور في ملف المشترك: لا تفترض أنه صيدلية إذا كان شركة توزيع أدوية، ولا العكس.
+- عند شرح ميزة أو إجراء، اذكر الخطوات على مستوى وحدات النظام المذكورة أعلاه فقط، ولا تخترع أسماء قوائم أو أزرار غير مذكورة.
 - استخدم دائماً رمز العملة العربي الموجود في البيانات ولا تُبدّله بعملة أخرى.
 - إذا كانت العملة معروفة برمز عربي مثل ج.س أو د.إ فاذكرها بدلاً من رمز العملة الإنجليزي.
 - اكتب النص بدون أي تنسيق Markdown: لا نجوم (**) ولا شرطات سفلية ولا علامات # للعناوين.
@@ -234,6 +300,70 @@ _SYSTEM_PROMPT = """أنت مساعد أعمال ذكي متخصص في تحلي
 - قدّم توصيات عملية قابلة للتنفيذ.
 - لا تتجاوز 300 كلمة ما لم يطلب المستخدم تفصيلاً أكثر.
 - لا تخترع أرقاماً أو معلومات غير موجودة في السياق."""
+
+
+def _capabilities_summary(tenant) -> str:
+    """ملخص عربي للميزات المفعّلة لنوع نشاط هذا المشترك."""
+    features = {}
+    try:
+        features = tenant.business_type.features or {}
+    except Exception:
+        features = {}
+
+    if not isinstance(features, dict):
+        return ''
+
+    enabled = [
+        _CAPABILITY_LABELS_AR[k]
+        for k, v in features.items()
+        if v and k in _CAPABILITY_LABELS_AR
+    ]
+    return '، '.join(enabled) if enabled else ''
+
+
+def _build_tenant_profile(tenant) -> str:
+    """نص عربي يصف المشترك (النشاط، الباقة، العملة، الميزات المفعّلة)."""
+    bt = getattr(tenant, 'business_type', None)
+    slug = getattr(bt, 'slug', '') or 'pharmacy'
+    name_ar = getattr(bt, 'name_ar', '') or _BUSINESS_TYPES.get(slug, {}).get('name_ar', 'صيدلية')
+    persona = _BUSINESS_TYPES.get(slug, _BUSINESS_TYPES['pharmacy'])['persona']
+
+    try:
+        plan_label = tenant.get_subscription_plan_display()
+    except Exception:
+        plan_label = tenant.subscription_plan
+
+    try:
+        version_label = tenant.get_version_type_display()
+    except Exception:
+        version_label = tenant.version_type
+
+    cur = (tenant.currency or 'SDG').strip().upper()
+    cur_label = CURRENCY_AR.get(cur, cur)
+
+    caps = _capabilities_summary(tenant)
+
+    lines = [
+        'ملف المشترك الحالي:',
+        f'  • اسم النشاط: {tenant.name}',
+        f'  • نوع النشاط: {name_ar}',
+        f'  • {persona}',
+        f'  • الباقة: {plan_label}',
+        f'  • نسخة النظام: {version_label}',
+        f'  • العملة: {cur_label}',
+    ]
+    if tenant.country:
+        lines.append(f'  • الدولة: {tenant.country}')
+    if caps:
+        lines.append(f'  • الميزات المفعّلة: {caps}')
+
+    return '\n'.join(lines)
+
+
+def _build_system_prompt(tenant) -> str:
+    """يبني system prompt واعٍ بنوع نشاط المشترك."""
+    profile = _build_tenant_profile(tenant)
+    return f"{_SYSTEM_KNOWLEDGE}\n\n{profile}\n\n{_RESPONSE_RULES}"
 
 
 def _build_context_message(context: dict) -> str:
@@ -299,7 +429,7 @@ def chat(user_message: str, history: list, tenant) -> str:
     context_text = _build_context_message(context)
 
     messages = [
-        {"role": "system", "content": _SYSTEM_PROMPT},
+        {"role": "system", "content": _build_system_prompt(tenant)},
         {"role": "user", "content": context_text},
         {"role": "assistant", "content": "حسناً، لديّ البيانات. كيف يمكنني مساعدتك؟"},
     ]
@@ -325,7 +455,7 @@ def generate_daily_insights(tenant) -> str:
     context_text = _build_context_message(context)
 
     messages = [
-        {"role": "system", "content": _SYSTEM_PROMPT},
+        {"role": "system", "content": _build_system_prompt(tenant)},
         {
             "role": "user",
             "content": (
@@ -468,7 +598,7 @@ def enrich_notification(notification_type: str, raw_message: str, tenant) -> str
     )
 
     messages = [
-        {"role": "system", "content": _SYSTEM_PROMPT},
+        {"role": "system", "content": _build_system_prompt(tenant)},
         {"role": "user", "content": prompt},
     ]
 
