@@ -157,7 +157,7 @@ def portal_invoice_detail(request, pk):
         SaleInvoice,
         pk=pk, tenant=tenant, customer=customer, status='confirmed',
     )
-    lines = invoice.lines.select_related('item', 'variant', 'unit').all()
+    lines = invoice.lines.select_related('item', 'unit').all()
 
     return render(request, 'portal/invoice_detail.html', {
         'customer': customer,
