@@ -500,7 +500,7 @@ def return_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None))
+    qs = filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None), field='original_invoice__stock__branch')
     context = {
         'stats': {
             'total': qs.count(),
@@ -525,7 +525,7 @@ def return_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status_filter = request.GET.get('status', '')
 
-    qs = filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None)).select_related(
+    qs = filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None), field='original_invoice__stock__branch').select_related(
         'original_invoice', 'original_invoice__supplier'
     )
     total = qs.count()
