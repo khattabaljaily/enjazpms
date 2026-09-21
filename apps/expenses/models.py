@@ -85,6 +85,14 @@ class Expense(TenantMixin):
         related_name='expense',
         verbose_name='حركة الحساب البنكي',
     )
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        related_name='expenses',
+        verbose_name='الفرع',
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         db_table = 'expenses'

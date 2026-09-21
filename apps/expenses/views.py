@@ -84,7 +84,7 @@ def expense_list(request):
         if not tenant:
             return redirect('core:no_tenant')
 
-        qs = Expense.objects.filter(tenant=tenant)
+        qs = Expense.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None))
         today = timezone.localdate()
         stats = {
             'total': qs.count(),
@@ -146,7 +146,7 @@ def expense_table_api(request):
     status_filter = request.GET.get('status', '').strip()
     category_filter = request.GET.get('category', '').strip()
 
-    qs = Expense.objects.filter(tenant=tenant).select_related('category', 'treasury', 'bank_account')
+    qs = Expense.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).select_related('category', 'treasury', 'bank_account')
     total = qs.count()
 
     if status_filter:
@@ -282,7 +282,7 @@ def _process_expense_post(request, tenant, expense):
     notes = (data.get('notes') or '').strip()
 
     if expense is None:
-        expense = Expense(tenant=tenant, created_by=request.user)
+        expense = Expense(tenant=tenant, branch=getattr(request, 'branch', None), created_by=request.user)
 
     expense.category = category
     expense.description = description
