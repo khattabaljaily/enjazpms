@@ -196,10 +196,12 @@
                 <input type="checkbox" name="is_controlled_substance" class="form-check-input" id="cs" {% if drug.is_controlled_substance %}checked{% endif %}>
                 <label class="form-check-label" for="cs">خاضع للرقابة / مخدرات</label>
             </div>
+            {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
             <div class="form-check">
                 <input type="checkbox" name="is_insurance_excluded" class="form-check-input" id="ie" {% if drug.is_insurance_excluded %}checked{% endif %}>
                 <label class="form-check-label" for="ie">غير مغطى بالتأمين</label>
             </div>
+            {% endif %}
             <div class="form-check">
                 <input type="checkbox" name="is_sellable" class="form-check-input" id="isell" checked>
                 <label class="form-check-label" for="isell">قابل للبيع</label>

@@ -70,12 +70,14 @@
                 <a href="{% url 'bank_accounts:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-building-columns"></i><span>الحسابات البنكية</span>
                 </a>
+                {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
                 <a href="{% url 'insurance:company_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-shield-heart"></i><span>شركات التأمين</span>
                 </a>
                 <a href="{% url 'insurance:claim_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-file-circle-check"></i><span>مطالبات التأمين</span>
                 </a>
+                {% endif %}
                 <a href="{% url 'agents:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-person-chalkboard"></i><span>المندوبون</span>
                 </a>
@@ -195,6 +197,7 @@
                 </div>
             </div>
 
+            {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-insurance">
                     <i class="fa-solid fa-shield-heart"></i> التأمين والمطالبات
@@ -209,6 +212,7 @@
                     </ol>
                 </div>
             </div>
+            {% endif %}
 
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-import">
