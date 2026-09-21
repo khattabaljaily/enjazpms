@@ -35,13 +35,13 @@ def bank_account_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = BankAccount.objects.for_tenant(tenant)
+    qs = BankAccount.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
     total = qs.count()
     active = qs.filter(is_active=True).count()
     default = qs.filter(is_default=True).count()
 
     local_cur = tenant.currency or 'SDG'
-    treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True)
+    treasuries = Treasury.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
 
     context = {
         'form': BankAccountForm(),
@@ -74,7 +74,7 @@ def bank_account_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status = request.GET.get('status', '').strip()
 
-    queryset = BankAccount.objects.for_tenant(tenant)
+    queryset = BankAccount.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
     records_total = queryset.count()
 
     if status == 'active':
@@ -151,6 +151,7 @@ def bank_account_create_api(request):
     if form.is_valid():
         account = form.save(commit=False)
         account.tenant = tenant
+        account.branch = getattr(request, 'branch', None)
         account.created_by = request.user
         account.updated_by = request.user
 

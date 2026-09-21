@@ -51,7 +51,7 @@ def supplier_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = Supplier.objects.for_tenant(tenant)
+    qs = Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
     total = qs.count()
     active = qs.filter(is_active=True).count()
     inactive = total - active
@@ -101,7 +101,7 @@ def supplier_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status = request.GET.get('status', '').strip()
 
-    queryset = Supplier.objects.for_tenant(tenant)
+    queryset = Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
     records_total = queryset.count()
 
     if status == 'active':
@@ -201,6 +201,7 @@ def supplier_create_api(request):
     if form.is_valid():
         supplier = form.save(commit=False)
         supplier.tenant = tenant
+        supplier.branch = getattr(request, 'branch', None)
         supplier.created_by = request.user
         supplier.updated_by = request.user
         supplier.save()
@@ -368,7 +369,7 @@ def supplier_payments(request):
         return redirect('core:no_tenant')
 
     hc_mode = getattr(tenant, 'hard_currency_mode', False)
-    suppliers = Supplier.objects.for_tenant(tenant).filter(is_active=True).annotate(
+    suppliers = Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).annotate(
         ledger_total=Coalesce(
             Sum('ledger_entries__amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
             Value(0, output_field=DecimalField(max_digits=14, decimal_places=2)),
