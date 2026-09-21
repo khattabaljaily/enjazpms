@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="{% static 'css/store_price_list.css' %}?v=4.0">
+<link rel="stylesheet" href="{% static 'css/store_price_list.css' %}?v=5.0">
 <style>:root { --brand: {{ store.accent_color }}; }</style>
 </head>
 <body>
@@ -33,18 +33,20 @@
   </div>
 </div>
 
-<!-- ── Print-only header ───────────────────────────────── -->
+<!-- ── Print-only company letterhead ──────────────────────── -->
 <div class="pl-print-header">
   <div class="pl-print-header__brand">
-    {% if store.cover_image %}<img src="{{ store.cover_image.url }}" alt="" class="pl-print-header__img">{% endif %}
+    {% if store.tenant.logo %}<img src="{{ store.tenant.logo.url }}" alt="" class="pl-print-header__img">{% elif store.cover_image %}<img src="{{ store.cover_image.url }}" alt="" class="pl-print-header__img">{% endif %}
     <div>
-      <div class="pl-print-header__name">{{ store.display_name }}</div>
-      <div class="pl-print-header__sub">قائمة الأسعار</div>
+      <div class="pl-print-header__name">{{ store.tenant.name_ar|default:store.display_name }}</div>
+      <div class="pl-print-header__title">PRICE LIST — قائمة الأسعار</div>
     </div>
   </div>
   <div class="pl-print-header__meta">
+    {% if store.tenant.address or store.tenant.city %}<span><i class="fas fa-location-dot"></i> {{ store.tenant.address }}{% if store.tenant.city %}{% if store.tenant.address %}، {% endif %}{{ store.tenant.city }}{% endif %}</span>{% endif %}
+    {% if store.tenant.phone %}<span><i class="fas fa-phone"></i> {{ store.tenant.phone }}</span>{% endif %}
+    {% if store.tenant.email %}<span><i class="fas fa-envelope"></i> {{ store.tenant.email }}</span>{% endif %}
     <span id="plPrintDate"></span>
-    <span><span id="plPrintCount">{{ total_count }}</span> منتج</span>
   </div>
 </div>
 
@@ -54,71 +56,69 @@
     <div class="pl-search">
       <i class="fas fa-search pl-search__icon"></i>
       <input id="plSearch" class="pl-search__input" type="search"
-             placeholder="ابحث عن منتج..." autocomplete="off">
+             placeholder="ابحث عن منتج أو وكيل..." autocomplete="off">
       <button type="button" id="plSearchClear" class="pl-search__clear" title="مسح البحث">
         <i class="fas fa-times"></i>
       </button>
     </div>
-    {% if categories %}
-    <select id="plCatSelect" class="pl-sort">
-      <option value="all">كل الفئات ({{ total_count }})</option>
-      {% for cat in categories %}
-      <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.count }})</option>
-      {% endfor %}
-    </select>
-    {% endif %}
-    <select id="plSort" class="pl-sort">
-      <option value="name-asc">الاسم (أ - ي)</option>
-      <option value="name-desc">الاسم (ي - أ)</option>
-      {% if store.show_prices %}
-      <option value="price-asc">السعر (الأقل أولاً)</option>
-      <option value="price-desc">السعر (الأعلى أولاً)</option>
-      {% endif %}
-    </select>
   </div>
 </div>
 
-<!-- ── Price list ───────────────────────────────────────── -->
+<!-- ── Price list (grouped by agent/distributor) ─────────── -->
 <main class="pl-main">
   <div class="pl-list" id="plList">
-    <div class="pl-list__head">
-      <span class="pl-list__head-name">المنتج</span>
-      {% if store.show_prices %}<span class="pl-list__head-price">السعر</span>{% endif %}
+    {% for group in agent_groups %}
+    <section class="pl-agent" data-agent="{{ group.name|lower }}">
+      <h2 class="pl-agent__title"><i class="fas fa-building"></i> {{ group.name }}</h2>
+      <table class="pl-table">
+        <thead>
+          <tr>
+            <th class="pl-col-idx">#</th>
+            <th class="pl-col-name">الصنف</th>
+            <th class="pl-col-desc">الوصف</th>
+            <th class="pl-col-unit">الوحدة</th>
+            {% if store.show_prices %}
+            <th class="pl-col-price">سعر الجملة</th>
+            <th class="pl-col-price">سعر التجزئة</th>
+            {% endif %}
+            <th class="pl-col-pack">الكمية/الكرتون</th>
+            <th class="pl-col-exp">تاريخ الانتهاء</th>
+            {% if store.show_stock_quantity %}<th class="pl-col-qty">الكمية المتاحة</th>{% else %}<th class="pl-col-qty">الكمية</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in group.items %}
+          <tr class="pl-row" data-name="{{ item.name|lower }}" data-agent="{{ group.name|lower }}">
+            <td class="pl-col-idx">{{ forloop.counter }}</td>
+            <td class="pl-col-name">{{ item.name }}{% if item.sku %}<div class="pl-row__sku">{{ item.sku }}</div>{% endif %}</td>
+            <td class="pl-col-desc">{{ item.generic_name|default:item.description|truncatechars:60 }}</td>
+            <td class="pl-col-unit">{{ item.unit.name|default:'-' }}</td>
+            {% if store.show_prices %}
+            <td class="pl-col-price">{{ item.cost_price|format_price }}</td>
+            <td class="pl-col-price">{{ item.selling_price|format_price }}</td>
+            {% endif %}
+            <td class="pl-col-pack">{{ item.pack_qty|default:'-' }}</td>
+            <td class="pl-col-exp">{{ item.expiry_date|date:"M Y"|default:'-' }}</td>
+            <td class="pl-col-qty"></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endfor %}
+
+    <div class="pl-empty" id="plEmpty" style="display:none;">
+      <div class="pl-empty__icon"><i class="fas fa-box-open"></i></div>
+      <h3 class="pl-empty__title">لا توجد نتائج</h3>
+      <p class="pl-empty__text" id="plEmptyText">لم يتم العثور على منتجات مطابقة للبحث.</p>
     </div>
-
-    <div id="plBody">
-      {% for item in products %}
-      <div class="pl-item"
-           data-name="{{ item.name|lower }}"
-           data-sku="{{ item.sku|default:''|lower }}"
-           data-cat="{{ item.category_id|default:'' }}"
-           data-price="{{ item.selling_price|default:0 }}">
-        <div class="pl-item__lead">
-          <span class="pl-item__dot">{{ item.name|first|upper }}</span>
-          <div class="pl-item__text">
-            <div class="pl-item__name">{{ item.name }}</div>
-            <div class="pl-item__meta">
-              {% if item.category %}<span class="pl-item__cat">{{ item.category.name }}</span>{% endif %}
-              {% if item.sku %}<span class="pl-item__sku">{{ item.sku }}</span>{% endif %}
-            </div>
-          </div>
-        </div>
-
-        {% if store.show_prices %}
-        <div class="pl-item__price">
-          {{ item.selling_price|format_price }}
-          <span class="pl-cur">{{ store.tenant.currency|currency_ar }}</span>
-        </div>
-        {% endif %}
-      </div>
-      {% endfor %}
-    </div>
-
-    <div class="pl-empty" id="plEmpty" {% if products %}style="display:none;"{% endif %}>
+    {% if not agent_groups %}
+    <div class="pl-empty">
       <div class="pl-empty__icon"><i class="fas fa-box-open"></i></div>
       <h3 class="pl-empty__title">لا توجد منتجات</h3>
-      <p class="pl-empty__text" id="plEmptyText">لا توجد منتجات متاحة حالياً.</p>
+      <p class="pl-empty__text">لا توجد منتجات متاحة حالياً.</p>
     </div>
+    {% endif %}
   </div>
 </main>
 
@@ -138,23 +138,14 @@
 (function () {
   var searchInput = document.getElementById('plSearch');
   var clearBtn    = document.getElementById('plSearchClear');
-  var sortSelect  = document.getElementById('plSort');
-  var catSelect   = document.getElementById('plCatSelect');
-  var body        = document.getElementById('plBody');
   var countEl     = document.getElementById('plCount');
-  var printCountEl = document.getElementById('plPrintCount');
   var emptyEl     = document.getElementById('plEmpty');
   var emptyText   = document.getElementById('plEmptyText');
+  var sections    = Array.prototype.slice.call(document.querySelectorAll('.pl-agent'));
 
   var printDateEl = document.getElementById('plPrintDate');
   if (printDateEl) {
     printDateEl.textContent = 'تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-EG-u-nu-latn');
-  }
-
-  var activeCat = 'all';
-
-  function currentRows() {
-    return Array.prototype.slice.call(body.querySelectorAll('.pl-item'));
   }
 
   function applyFilters() {
@@ -162,41 +153,28 @@
     clearBtn.classList.toggle('show', !!q);
     var visible = 0;
 
-    currentRows().forEach(function (row) {
-      var matchesCat = activeCat === 'all' || row.dataset.cat === activeCat;
-      var matchesSearch = !q ||
-        row.dataset.name.indexOf(q) !== -1 ||
-        (row.dataset.sku && row.dataset.sku.indexOf(q) !== -1);
-      var show = matchesCat && matchesSearch;
-      row.style.display = show ? '' : 'none';
-      if (show) visible++;
+    sections.forEach(function (section) {
+      var rows = Array.prototype.slice.call(section.querySelectorAll('.pl-row'));
+      var sectionVisible = 0;
+      rows.forEach(function (row) {
+        var match = !q ||
+          row.dataset.name.indexOf(q) !== -1 ||
+          row.dataset.agent.indexOf(q) !== -1;
+        row.style.display = match ? '' : 'none';
+        if (match) { sectionVisible++; visible++; }
+      });
+      section.style.display = sectionVisible ? '' : 'none';
     });
 
     countEl.textContent = visible;
-    if (printCountEl) printCountEl.textContent = visible;
     if (visible === 0) {
       emptyEl.style.display = '';
       emptyText.textContent = q
         ? 'لم يتم العثور على منتجات تطابق "' + searchInput.value.trim() + '".'
-        : 'لا توجد منتجات في هذه الفئة.';
+        : 'لا توجد منتجات.';
     } else {
       emptyEl.style.display = 'none';
     }
-  }
-
-  function applySort() {
-    var val = sortSelect.value;
-    var rows = currentRows();
-    var dir = val.indexOf('desc') !== -1 ? -1 : 1;
-    var key = val.indexOf('price') !== -1 ? 'price' : 'name';
-
-    rows.sort(function (a, b) {
-      if (key === 'price') {
-        return (parseFloat(a.dataset.price) - parseFloat(b.dataset.price)) * dir;
-      }
-      return a.dataset.name.localeCompare(b.dataset.name, 'ar') * dir;
-    });
-    rows.forEach(function (row) { body.appendChild(row); });
   }
 
   searchInput.addEventListener('input', applyFilters);
@@ -205,13 +183,6 @@
     applyFilters();
     searchInput.focus();
   });
-  sortSelect.addEventListener('change', applySort);
-  if (catSelect) {
-    catSelect.addEventListener('change', function () {
-      activeCat = catSelect.value;
-      applyFilters();
-    });
-  }
 })();
 </script>
 </body>

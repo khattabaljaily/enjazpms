@@ -218,27 +218,69 @@ def price_list(request, slug):
     if not store.show_price_list:
         return _price_list_disabled_response(store)
 
-    products = _get_products(store).order_by('name')
+    products = list(
+        _get_products(store)
+        .select_related('purchase_unit')
+        .order_by('sudan_agent', 'name')
+    )
 
-    from apps.items.models import Category
+    from apps.items.models import Category, ItemBatch
     from django.db.models import Count
+    from django.utils import timezone
+
     categories = Category.objects.filter(
         tenant=store.tenant, is_active=True
     ).order_by('display_order', 'name')
 
     cat_counts = dict(
-        products.values_list('category_id').annotate(c=Count('id')).order_by()
+        _get_products(store).values_list('category_id').annotate(c=Count('id')).order_by()
     )
     categories = [
         {'id': cat.id, 'name': cat.name, 'count': cat_counts.get(cat.id, 0)}
         for cat in categories
     ]
 
+    # Soonest-expiring open batch per item (for the "تاريخ الانتهاء" column)
+    batch_rows = (
+        ItemBatch.objects
+        .filter(tenant=store.tenant, item__in=products, quantity_remaining__gt=0,
+                expiry_date__isnull=False)
+        .order_by('item_id', 'expiry_date')
+        .values('item_id', 'expiry_date')
+    )
+    earliest_expiry = {}
+    for row in batch_rows:
+        earliest_expiry.setdefault(row['item_id'], row['expiry_date'])
+
+    for item in products:
+        item.expiry_date = earliest_expiry.get(item.id)
+        item.pack_qty = (
+            item.purchase_unit.conversion_factor
+            if item.purchase_unit_id else None
+        )
+
+    # Group by agent/distributor (المورد/الوكيل بحسب الكتالوج) — items with no
+    # agent set fall into a single "أخرى" group at the end.
+    groups = {}
+    order = []
+    for item in products:
+        key = (item.sudan_agent or '').strip() or 'أخرى'
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(item)
+    if 'أخرى' in groups:
+        order.remove('أخرى')
+        order.append('أخرى')
+    agent_groups = [{'name': name, 'items': groups[name]} for name in order]
+
     return render(request, 'store/price_list.html', {
         'store':         store,
         'products':      products,
+        'agent_groups':  agent_groups,
         'total_count':   len(products),
         'categories':    categories,
+        'print_date':    timezone.localdate(),
     })
 
 
