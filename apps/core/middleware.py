@@ -61,12 +61,14 @@ class TenantMiddleware:
         # Skip middleware for superuser in admin
         if request.path.startswith('/admin/'):
             request.tenant = None
+            request.branch = None
             return self.get_response(request)
-        
+
         # Get tenant from user
         if request.user.is_authenticated:
             if request.user.is_superuser or getattr(request.user, 'is_platform_staff', False):
                 request.tenant = None
+                request.branch = None
 
                 admin_dashboard_path = reverse('core:admin_dashboard')
                 safe_paths = [
@@ -96,6 +98,7 @@ class TenantMiddleware:
                     return redirect(admin_dashboard_path)
             else:
                 request.tenant = request.user.tenant
+                request.branch = request.user.branch
 
                 # Check if tenant is approved, active, and subscription is valid
                 if request.tenant:
@@ -120,7 +123,8 @@ class TenantMiddleware:
                             return redirect('/subscription/')
         else:
             request.tenant = None
-        
+            request.branch = None
+
         response = self.get_response(request)
         return response
 
