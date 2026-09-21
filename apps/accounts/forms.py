@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from apps.core.constants import COUNTRY_CHOICES, DEFAULT_COUNTRY
-from apps.core.models import BusinessType, Tenant, Settings
+from apps.core.models import BusinessType, Tenant, Settings, Branch
 from .models import PermissionGroup, User
 
 
@@ -134,6 +134,7 @@ class UserManagementForm(forms.ModelForm):
             'last_name',
             'email',
             'phone',
+            'branch',
             'is_tenant_admin',
             'is_active',
             'permission_groups',
@@ -144,6 +145,7 @@ class UserManagementForm(forms.ModelForm):
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم العائلة'}),
             'email': forms.EmailInput(attrs={'class': 'form-control text-start', 'placeholder': 'example@email.com', 'dir': 'ltr'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+000 000 000000'}),
+            'branch': forms.Select(attrs={'class': 'form-select'}),
             'is_tenant_admin': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'permission_groups': forms.SelectMultiple(attrs={
@@ -161,6 +163,11 @@ class UserManagementForm(forms.ModelForm):
                 tenant=self.tenant,
                 is_active=True
             ).order_by('name')
+            self.fields['branch'].queryset = Branch.objects.filter(
+                tenant=self.tenant,
+                is_active=True
+            ).order_by('name')
+        self.fields['branch'].required = False
         for field_name, field in self.fields.items():
             if field_name in ['password', 'password_confirm']:
                 field.widget.attrs['autocomplete'] = 'new-password'

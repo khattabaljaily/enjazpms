@@ -62,7 +62,7 @@ def agent_list(request):
             'required_plan': 'Pro أو Enterprise',
         })
 
-    qs = Agent.objects.for_tenant(tenant)
+    qs = Agent.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
     total = qs.count()
     active = qs.filter(is_active=True).count()
     context = {
@@ -89,7 +89,7 @@ def agent_table_api(request):
     search = request.GET.get('search[value]', '').strip()
     status = request.GET.get('status', '').strip()
 
-    qs = Agent.objects.for_tenant(tenant)
+    qs = Agent.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
     records_total = qs.count()
 
     if status == 'active':
@@ -166,6 +166,7 @@ def agent_create_api(request):
     if form.is_valid():
         agent = form.save(commit=False)
         agent.tenant = tenant
+        agent.branch = getattr(request, 'branch', None)
         agent.created_by = request.user
         agent.updated_by = request.user
         agent.save()
@@ -330,7 +331,7 @@ def agent_payments(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    agents = Agent.objects.for_tenant(tenant).filter(is_active=True).annotate(
+    agents = Agent.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).annotate(
         ledger_total=Coalesce(
             Sum('ledger_entries__amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
             Value(0, output_field=DecimalField(max_digits=14, decimal_places=2)),

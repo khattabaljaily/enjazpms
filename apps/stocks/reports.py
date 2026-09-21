@@ -33,16 +33,18 @@ def format_number(value, decimals=2):
 class StocksReportGenerator:
     """فئة شاملة لإنشاء تقارير المخزن"""
 
-    def __init__(self, tenant, start_date=None, end_date=None):
+    def __init__(self, tenant, start_date=None, end_date=None, branch=None):
         self.tenant = tenant
+        self.branch = branch
         self.start_date = start_date or (tz.localdate() - timedelta(days=30))
         self.end_date = end_date or tz.localdate()
 
     def get_summary_report(self):
         """تقرير ملخص المخزن - إجمالي الكميات والقيمة"""
-        stock_quantities = StockQuantity.objects.filter(
+        from apps.core.utils import filter_by_branch_via
+        stock_quantities = filter_by_branch_via(StockQuantity.objects.filter(
             tenant=self.tenant
-        ).select_related('item', 'stock')
+        ), self.branch, field='stock__branch').select_related('item', 'stock')
 
         total_quantity = Decimal('0')
         total_reserved = Decimal('0')

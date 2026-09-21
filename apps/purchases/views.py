@@ -21,6 +21,7 @@ from apps.purchases.models import PurchaseInvoice, PurchaseReturn, PurchaseRetur
 from apps.purchases.services import build_purchase_from_post, cancel_purchase_invoice, cancel_purchase_return, confirm_purchase_invoice, confirm_purchase_return, edit_confirmed_purchase_invoice
 from apps.stocks.models import Stock
 from apps.suppliers.models import Supplier
+from apps.core.utils import filter_by_branch_via
 
 from .reports import PurchasesReportGenerator
 
@@ -83,7 +84,7 @@ def order_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = PurchaseInvoice.objects.filter(tenant=tenant)
+    qs = filter_by_branch_via(PurchaseInvoice.objects.filter(tenant=tenant), getattr(request, 'branch', None))
     context = {
         'stats': {
             'total': qs.count(),
@@ -117,7 +118,7 @@ def order_table_api(request):
             .values('t')
         )
 
-        qs = PurchaseInvoice.objects.filter(tenant=tenant).select_related('supplier', 'stock')
+        qs = filter_by_branch_via(PurchaseInvoice.objects.filter(tenant=tenant), getattr(request, 'branch', None)).select_related('supplier', 'stock')
         total = qs.count()
 
         if status_filter:
@@ -197,7 +198,7 @@ def order_create(request):
     from apps.bank_accounts.models import BankAccount
     context = {
         'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
-        'stocks': Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name'),
+        'stocks': Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name'),
         'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'today': timezone.localdate().isoformat(),
         'action': 'create',
@@ -254,7 +255,7 @@ def order_edit(request, pk):
     context = {
         'invoice': invoice,
         'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
-        'stocks': Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name'),
+        'stocks': Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name'),
         'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'today': timezone.localdate().isoformat(),
         'action': 'edit',
@@ -499,7 +500,7 @@ def return_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = PurchaseReturn.objects.filter(tenant=tenant)
+    qs = filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None), field='original_invoice__stock__branch')
     context = {
         'stats': {
             'total': qs.count(),
@@ -524,7 +525,7 @@ def return_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status_filter = request.GET.get('status', '')
 
-    qs = PurchaseReturn.objects.filter(tenant=tenant).select_related(
+    qs = filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None), field='original_invoice__stock__branch').select_related(
         'original_invoice', 'original_invoice__supplier'
     )
     total = qs.count()
@@ -760,7 +761,7 @@ def purchases_summary_report(request):
         end_date = timezone.localdate()
 
     # Generate report
-    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_summary_report()
 
     # Chart data: daily trend for the selected period
@@ -801,7 +802,7 @@ def purchases_summary_report_export(request):
         end_date = timezone.localdate()
 
     # Generate report
-    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_summary_report()
 
     # Create CSV
@@ -846,7 +847,7 @@ def purchases_by_supplier_report(request):
     supplier_id = request.GET.get('supplier_id')
 
     # Generate report
-    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_supplier_report(supplier_id=supplier_id)
 
     # suppliers list for filter dropdown
@@ -897,7 +898,7 @@ def purchases_by_supplier_report_export(request):
     supplier_id = request.GET.get('supplier_id')
 
     # Generate report
-    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_supplier_report(supplier_id=supplier_id)
 
     # Create CSV
@@ -964,7 +965,7 @@ def purchases_by_item_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_item_report(item_id=item_id)
 
     items = Item.objects.filter(
@@ -998,7 +999,7 @@ def purchases_by_item_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_item_report(item_id=item_id)
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -1041,7 +1042,7 @@ def purchases_by_date_report(request):
         end_date = timezone.localdate()
 
     # Generate report
-    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_date_report(group_by)
 
     return render(request, 'purchases/reports/by_date.html', {
@@ -1076,7 +1077,7 @@ def purchases_by_date_report_export(request):
         end_date = timezone.localdate()
 
     # Generate report
-    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_date_report(group_by)
 
     # Create CSV
@@ -1118,7 +1119,7 @@ def purchases_supplier_statement(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_supplier_statement(supplier_id) if supplier_id else None
     suppliers = Supplier.objects.filter(tenant=tenant).order_by('name')
 
@@ -1145,7 +1146,7 @@ def purchases_supplier_statement_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = PurchasesReportGenerator(tenant, start_date, end_date).get_supplier_statement(supplier_id) if supplier_id else None
+    report = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_supplier_statement(supplier_id) if supplier_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="supplier_statement_{end_date}.csv"'
     response.write('﻿')
@@ -1167,7 +1168,7 @@ def purchases_supplier_balances(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = PurchasesReportGenerator(tenant).get_supplier_balances()
+    report = PurchasesReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_supplier_balances()
 
     return render(request, 'purchases/reports/supplier_balances.html', {
         'report': report,
@@ -1184,7 +1185,7 @@ def purchases_supplier_balances_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = PurchasesReportGenerator(tenant).get_supplier_balances()
+    report = PurchasesReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_supplier_balances()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="supplier_balances.csv"'
     response.write('﻿')
@@ -1206,7 +1207,7 @@ def purchases_payments_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     supplier_id = request.GET.get('supplier_id') or None
 
-    report = PurchasesReportGenerator(tenant, start_date, end_date).get_payments_report(supplier_id=supplier_id or None)
+    report = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_payments_report(supplier_id=supplier_id or None)
     suppliers = Supplier.objects.filter(tenant=tenant).order_by('name')
 
     return render(request, 'purchases/reports/payments.html', {
@@ -1231,7 +1232,7 @@ def purchases_payments_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = PurchasesReportGenerator(tenant, start_date, end_date).get_payments_report()
+    report = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_payments_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="purchase_payments_{end_date}.csv"'
     response.write('﻿')
@@ -1252,7 +1253,7 @@ def purchases_returns_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = PurchasesReportGenerator(tenant, start_date, end_date).get_returns_report()
+    report = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_returns_report()
 
     return render(request, 'purchases/reports/returns.html', {
         'report': report,
@@ -1274,7 +1275,7 @@ def purchases_returns_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = PurchasesReportGenerator(tenant, start_date, end_date).get_returns_report()
+    report = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_returns_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="purchase_returns_{end_date}.csv"'
     response.write('﻿')
@@ -1300,7 +1301,7 @@ def purchases_by_user_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     user_id = request.GET.get('user_id') or None
 
-    generator = PurchasesReportGenerator(tenant, start_date, end_date)
+    generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_by_user_report(user_id=user_id)
 
     from django.contrib.auth import get_user_model
@@ -1330,7 +1331,7 @@ def purchases_by_user_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     user_id = request.GET.get('user_id') or None
 
-    report = PurchasesReportGenerator(tenant, start_date, end_date).get_by_user_report(user_id=user_id)
+    report = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_user_report(user_id=user_id)
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="purchases_by_user_{end_date}.csv"'
     response.write('\ufeff')
@@ -1368,7 +1369,7 @@ def purchases_price_history_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    report = PurchasesReportGenerator(tenant, start_date, end_date).get_price_history_report(item_id=item_id)
+    report = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_price_history_report(item_id=item_id)
 
     items = Item.objects.filter(
         tenant=tenant,
@@ -1399,7 +1400,7 @@ def purchases_price_history_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    report = PurchasesReportGenerator(tenant, start_date, end_date).get_price_history_report(item_id=item_id)
+    report = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_price_history_report(item_id=item_id)
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="price_history_{end_date}.csv"'
     response.write('﻿')
@@ -1514,7 +1515,7 @@ def rfq_create(request):
         return redirect('core:no_tenant')
 
     suppliers = Supplier.objects.for_tenant(tenant).filter(is_active=True)
-    stocks    = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks    = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
     items     = Item.objects.for_tenant(tenant).filter(is_active=True).exclude(item_type='service')
 
     if request.method == 'POST':

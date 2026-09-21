@@ -1114,6 +1114,10 @@ def activity_log(request):
     else:
         qs = UserActivity.objects.filter(tenant=tenant, user=request.user)
 
+    branch = getattr(request, 'branch', None)
+    if branch is not None:
+        qs = qs.filter(Q(branch=branch) | Q(branch__isnull=True))
+
     qs = qs.order_by('-created_at')[:500]
 
     return render(request, 'accounts/activity_log.html', {

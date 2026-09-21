@@ -18,6 +18,15 @@ class Employee(TenantMixin):
         ('daily',  'بالأيام'),
     ]
 
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        verbose_name='الفرع',
+        related_name='employees',
+        null=True,
+        blank=True,
+    )
+
     name        = models.CharField('الاسم', max_length=200)
     employee_id = models.CharField('رقم الموظف', max_length=30, blank=True)
     phone       = models.CharField('الهاتف', max_length=20, blank=True)

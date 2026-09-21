@@ -20,7 +20,7 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('first_name', 'last_name', 'email', 'phone', 'avatar')
         }),
         ('المشترك والصلاحيات', {
-            'fields': ('tenant', 'is_tenant_admin')
+            'fields': ('tenant', 'branch', 'is_tenant_admin')
         }),
         ('صلاحيات النظام', {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),

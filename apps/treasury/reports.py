@@ -49,14 +49,15 @@ REFERENCE_TYPE_AR = {
 
 class TreasuryReportGenerator:
 
-    def __init__(self, tenant, start_date=None, end_date=None):
+    def __init__(self, tenant, start_date=None, end_date=None, branch=None):
         self.tenant = tenant
+        self.branch = branch
         self.start_date = start_date or (timezone.localdate() - timedelta(days=30))
         self.end_date = end_date or timezone.localdate()
 
     def get_balances_report(self):
         """أرصدة جميع الخزائن لحظياً"""
-        treasuries = Treasury.objects.filter(tenant=self.tenant, is_active=True).order_by('name')
+        treasuries = Treasury.objects.filter(tenant=self.tenant, is_active=True).for_branch(self.branch).order_by('name')
         data = []
         for t in treasuries:
             data.append({

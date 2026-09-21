@@ -46,7 +46,7 @@ def employee_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = Employee.objects.filter(tenant=tenant)
+    qs = Employee.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None))
     context = {
         'stats': {
             'total': qs.count(),
@@ -71,7 +71,7 @@ def employee_table_api(request):
     search = request.GET.get('search[value]', '').strip()
     status = request.GET.get('status', '').strip()
 
-    qs = Employee.objects.filter(tenant=tenant)
+    qs = Employee.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None))
     records_total = qs.count()
 
     if status == 'active':
@@ -137,6 +137,7 @@ def employee_create(request):
 
     emp = Employee.objects.create(
         tenant=tenant,
+        branch=getattr(request, 'branch', None),
         name=name,
         phone=(data.get('phone') or '').strip(),
         position=(data.get('position') or '').strip(),
@@ -265,7 +266,7 @@ def advance_list(request):
             'deducted':  qs.filter(status='deducted').count(),
             'cancelled': qs.filter(status='cancelled').count(),
         },
-        'employees':  Employee.objects.filter(tenant=tenant, is_active=True).order_by('name'),
+        'employees':  Employee.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name'),
         'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
         'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True),
     }
@@ -418,7 +419,7 @@ def salary_list(request):
             'paid':      qs.filter(status='paid').count(),
             'cancelled': qs.filter(status='cancelled').count(),
         },
-        'employees':  Employee.objects.filter(tenant=tenant, is_active=True).order_by('name'),
+        'employees':  Employee.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name'),
         'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
         'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True),
     }
@@ -636,7 +637,7 @@ def incentive_list(request):
             'paid':       qs.filter(status='paid').count(),
             'cancelled':  qs.filter(status='cancelled').count(),
         },
-        'employees':  Employee.objects.filter(tenant=tenant, is_active=True).order_by('name'),
+        'employees':  Employee.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name'),
         'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
         'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True),
     }

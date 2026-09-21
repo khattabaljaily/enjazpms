@@ -22,3 +22,14 @@ def convert_arabic_numerals(value):
     arabic_digits = '٠١٢٣٤٥٦٧٨٩'
     english_digits = '0123456789'
     return ''.join(english_digits[arabic_digits.index(c)] if c in arabic_digits else c for c in str(value))
+
+
+def filter_by_branch_via(qs, branch, field='stock__branch'):
+    """
+    فلترة queryset حسب الفرع عبر علاقة غير مباشرة (مثال: فاتورة → مخزن → فرع).
+    branch=None لا يفلتر شيء. السجلات المرتبطة بمخزن بدون فرع تظل ظاهرة.
+    """
+    if branch is None:
+        return qs
+    from django.db.models import Q
+    return qs.filter(Q(**{field: branch}) | Q(**{f'{field}__isnull': True}))

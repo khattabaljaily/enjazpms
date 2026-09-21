@@ -84,7 +84,7 @@ def expense_list(request):
         if not tenant:
             return redirect('core:no_tenant')
 
-        qs = Expense.objects.filter(tenant=tenant)
+        qs = Expense.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None))
         today = timezone.localdate()
         stats = {
             'total': qs.count(),
@@ -146,7 +146,7 @@ def expense_table_api(request):
     status_filter = request.GET.get('status', '').strip()
     category_filter = request.GET.get('category', '').strip()
 
-    qs = Expense.objects.filter(tenant=tenant).select_related('category', 'treasury', 'bank_account')
+    qs = Expense.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).select_related('category', 'treasury', 'bank_account')
     total = qs.count()
 
     if status_filter:
@@ -282,7 +282,7 @@ def _process_expense_post(request, tenant, expense):
     notes = (data.get('notes') or '').strip()
 
     if expense is None:
-        expense = Expense(tenant=tenant, created_by=request.user)
+        expense = Expense(tenant=tenant, branch=getattr(request, 'branch', None), created_by=request.user)
 
     expense.category = category
     expense.description = description
@@ -405,7 +405,7 @@ def expenses_summary_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    gen = ExpensesReportGenerator(tenant, start_date, end_date)
+    gen = ExpensesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = gen.get_summary_report()
     by_cat = gen.get_by_category_report()
 
@@ -432,7 +432,7 @@ def expenses_summary_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_category_report()
+    report = ExpensesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_category_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="expenses_summary_{end_date}.csv"'
     response.write('﻿')
@@ -456,7 +456,7 @@ def expenses_details_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = ExpensesReportGenerator(tenant, start_date, end_date).get_details_report(category_id=category_id)
+    report = ExpensesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_details_report(category_id=category_id)
 
     return render(request, 'expenses/reports/details.html', {
         'report': report,
@@ -482,7 +482,7 @@ def expenses_details_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = ExpensesReportGenerator(tenant, start_date, end_date).get_details_report(category_id=category_id)
+    report = ExpensesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_details_report(category_id=category_id)
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="expenses_details_{end_date}.csv"'
     response.write('﻿')
@@ -509,7 +509,7 @@ def expenses_by_category_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_category_report()
+    report = ExpensesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_category_report()
 
     return render(request, 'expenses/reports/by_category.html', {
         'report': report,
@@ -533,7 +533,7 @@ def expenses_by_category_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_category_report()
+    report = ExpensesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_category_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="expenses_by_category_{end_date}.csv"'
     response.write('﻿')
@@ -565,7 +565,7 @@ def expenses_by_date_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     group_by = request.GET.get('group_by', 'day')
 
-    report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_date_report(group_by=group_by)
+    report = ExpensesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_date_report(group_by=group_by)
 
     return render(request, 'expenses/reports/by_date.html', {
         'report': report,
@@ -591,7 +591,7 @@ def expenses_by_date_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     group_by = request.GET.get('group_by', 'day')
 
-    report = ExpensesReportGenerator(tenant, start_date, end_date).get_by_date_report(group_by=group_by)
+    report = ExpensesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_date_report(group_by=group_by)
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="expenses_by_date_{end_date}.csv"'
     response.write('﻿')

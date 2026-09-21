@@ -4,6 +4,14 @@ from apps.core.models import TenantMixin
 
 
 class Supplier(TenantMixin):
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        verbose_name='الفرع',
+        related_name='suppliers',
+        null=True,
+        blank=True,
+    )
     code = models.CharField('كود المورد', max_length=20, blank=True)
     name = models.CharField('اسم المورد', max_length=200)
     phone = models.CharField('رقم الهاتف', max_length=20, blank=True)

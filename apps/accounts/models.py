@@ -65,6 +65,16 @@ class User(AbstractUser):
         blank=True
     )
     
+    # Branch Relationship (للنسخة multi_branch — كل مستخدم مربوط بفرع واحد فقط)
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        verbose_name='الفرع',
+        related_name='users',
+        null=True,
+        blank=True,
+    )
+
     # Profile
     phone = models.CharField('رقم الهاتف', max_length=20, blank=True)
     avatar = models.ImageField('الصورة الشخصية', upload_to='users/avatars/', blank=True, null=True)
@@ -239,6 +249,14 @@ class UserActivity(models.Model):
         blank=True,
         verbose_name='المستخدم',
         related_name='activities',
+    )
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='الفرع',
+        related_name='user_activities',
     )
     title       = models.CharField('العنوان', max_length=200)
     action_type = models.CharField('نوع الإجراء', max_length=50, choices=ACTION_CHOICES, default=ACTION_OTHER)

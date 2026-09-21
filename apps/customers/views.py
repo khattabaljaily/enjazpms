@@ -40,7 +40,7 @@ def customer_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = Customer.objects.for_tenant(tenant)
+    qs = Customer.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
     total = qs.count()
     active = qs.filter(is_active=True).count()
     inactive = total - active
@@ -90,7 +90,7 @@ def customer_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status = request.GET.get('status', '').strip()
 
-    queryset = Customer.objects.for_tenant(tenant).annotate(
+    queryset = Customer.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).annotate(
         ledger_total=Coalesce(
             Sum('ledger_entries__amount'),
             Value(0),
@@ -173,6 +173,7 @@ def customer_create_api(request):
     if form.is_valid():
         customer = form.save(commit=False)
         customer.tenant = tenant
+        customer.branch = getattr(request, 'branch', None)
         customer.created_by = request.user
         customer.updated_by = request.user
         customer.save()
@@ -313,7 +314,7 @@ def customer_payments(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    customers = Customer.objects.for_tenant(tenant).filter(is_active=True).annotate(
+    customers = Customer.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).annotate(
         ledger_total=Coalesce(
             Sum('ledger_entries__amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
             Value(0, output_field=DecimalField(max_digits=14, decimal_places=2)),

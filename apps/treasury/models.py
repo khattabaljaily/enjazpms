@@ -4,6 +4,14 @@ from apps.core.models import TenantMixin
 
 
 class Treasury(TenantMixin):
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        verbose_name='الفرع',
+        related_name='treasuries',
+        null=True,
+        blank=True,
+    )
     name = models.CharField('اسم الخزينة', max_length=200)
     code = models.CharField('الرمز', max_length=30, blank=True)
     is_default = models.BooleanField('افتراضية', default=False)
