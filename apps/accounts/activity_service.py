@@ -21,6 +21,7 @@ def log_activity(request, title: str, details: str = '', action_type: str = 'oth
         UserActivity.objects.create(
             tenant=tenant,
             user=request.user,
+            branch=getattr(request, 'branch', None),
             title=title,
             action_type=action_type,
             details=details,

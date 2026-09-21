@@ -250,6 +250,14 @@ class UserActivity(models.Model):
         verbose_name='المستخدم',
         related_name='activities',
     )
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='الفرع',
+        related_name='user_activities',
+    )
     title       = models.CharField('العنوان', max_length=200)
     action_type = models.CharField('نوع الإجراء', max_length=50, choices=ACTION_CHOICES, default=ACTION_OTHER)
     details     = models.TextField('التفاصيل', blank=True)
