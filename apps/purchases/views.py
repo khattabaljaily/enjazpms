@@ -21,6 +21,7 @@ from apps.purchases.models import PurchaseInvoice, PurchaseReturn, PurchaseRetur
 from apps.purchases.services import build_purchase_from_post, cancel_purchase_invoice, cancel_purchase_return, confirm_purchase_invoice, confirm_purchase_return, edit_confirmed_purchase_invoice
 from apps.stocks.models import Stock
 from apps.suppliers.models import Supplier
+from apps.core.utils import filter_by_branch_via
 
 from .reports import PurchasesReportGenerator
 
@@ -83,7 +84,7 @@ def order_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = PurchaseInvoice.objects.filter(tenant=tenant)
+    qs = filter_by_branch_via(PurchaseInvoice.objects.filter(tenant=tenant), getattr(request, 'branch', None))
     context = {
         'stats': {
             'total': qs.count(),
@@ -117,7 +118,7 @@ def order_table_api(request):
             .values('t')
         )
 
-        qs = PurchaseInvoice.objects.filter(tenant=tenant).select_related('supplier', 'stock')
+        qs = filter_by_branch_via(PurchaseInvoice.objects.filter(tenant=tenant), getattr(request, 'branch', None)).select_related('supplier', 'stock')
         total = qs.count()
 
         if status_filter:
@@ -197,7 +198,7 @@ def order_create(request):
     from apps.bank_accounts.models import BankAccount
     context = {
         'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
-        'stocks': Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name'),
+        'stocks': Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name'),
         'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'today': timezone.localdate().isoformat(),
         'action': 'create',
@@ -254,7 +255,7 @@ def order_edit(request, pk):
     context = {
         'invoice': invoice,
         'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
-        'stocks': Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name'),
+        'stocks': Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name'),
         'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'today': timezone.localdate().isoformat(),
         'action': 'edit',
@@ -499,7 +500,7 @@ def return_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = PurchaseReturn.objects.filter(tenant=tenant)
+    qs = filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None))
     context = {
         'stats': {
             'total': qs.count(),
@@ -524,7 +525,7 @@ def return_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status_filter = request.GET.get('status', '')
 
-    qs = PurchaseReturn.objects.filter(tenant=tenant).select_related(
+    qs = filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None)).select_related(
         'original_invoice', 'original_invoice__supplier'
     )
     total = qs.count()
@@ -1514,7 +1515,7 @@ def rfq_create(request):
         return redirect('core:no_tenant')
 
     suppliers = Supplier.objects.for_tenant(tenant).filter(is_active=True)
-    stocks    = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks    = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
     items     = Item.objects.for_tenant(tenant).filter(is_active=True).exclude(item_type='service')
 
     if request.method == 'POST':

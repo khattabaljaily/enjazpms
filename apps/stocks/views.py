@@ -47,7 +47,7 @@ def stock_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = Stock.objects.for_tenant(tenant)
+    qs = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
     total = qs.count()
     active = qs.filter(is_active=True).count()
 
@@ -85,7 +85,7 @@ def stock_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status_filter = request.GET.get('status', '').strip()
 
-    qs = Stock.objects.for_tenant(tenant)
+    qs = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
     records_total = qs.count()
 
     if status_filter == 'active':
@@ -335,7 +335,7 @@ def opening_balance_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name')
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name')
     default_stock = stocks.filter(is_default=True).first() or stocks.first()
 
     return render(request, 'stocks/opening_balance_list.html', {
@@ -541,7 +541,7 @@ def stock_quantities_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name')
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name')
     default_stock = stocks.filter(is_default=True).first() or stocks.first()
 
     return render(request, 'stocks/stock_quantities_list.html', {
@@ -828,7 +828,7 @@ def stocks_by_stock_report(request):
     report_data = generator.get_by_stock_report(stock_id=stock_id)
 
     # stocks list for dropdown
-    stocks_list = Stock.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    stocks_list = Stock.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name')
 
     return render(request, 'stocks/reports/by_stock.html', {
         'report': report_data,
@@ -1163,7 +1163,7 @@ def transfer_list(request):
         'confirmed': qs.filter(status='confirmed').count(),
         'cancelled': qs.filter(status='cancelled').count(),
     }
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
     return render(request, 'stocks/transfer_list.html', {'stats': stats, 'stocks': stocks})
 
 
@@ -1231,7 +1231,7 @@ def transfer_create(request):
         return redirect('core:no_tenant')
 
     from apps.items.models import Item
-    stocks  = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks  = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
     items   = Item.objects.for_tenant(tenant).filter(is_active=True, item_type__in=['product', 'material'])
 
     if request.method == 'POST':
@@ -1436,7 +1436,7 @@ def stocktake_list(request):
         'confirmed': qs.filter(status='confirmed').count(),
         'cancelled': qs.filter(status='cancelled').count(),
     }
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
     return render(request, 'stocks/stocktake_list.html', {'stats': stats, 'stocks': stocks})
 
 
@@ -1499,7 +1499,7 @@ def stocktake_create(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
 
     if request.method == 'POST':
         try:
@@ -1652,7 +1652,7 @@ def destruction_list(request):
         'confirmed': qs.filter(status='confirmed').count(),
         'cancelled': qs.filter(status='cancelled').count(),
     }
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
     return render(request, 'stocks/destruction_list.html', {'stats': stats, 'stocks': stocks})
 
 
@@ -1710,7 +1710,7 @@ def destruction_create(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
 
     if request.method == 'POST':
         try:
@@ -2003,7 +2003,7 @@ def manufacturing_create(request):
 
     from apps.items.models import BOMRecipe
     recipes = BOMRecipe.objects.filter(tenant=tenant, is_active=True).select_related('item')
-    stocks = Stock.objects.filter(tenant=tenant, is_active=True)
+    stocks = Stock.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None))
     return render(request, 'stocks/manufacturing_form.html', {
         'recipes': recipes,
         'stocks': stocks,

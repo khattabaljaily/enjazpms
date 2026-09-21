@@ -41,6 +41,7 @@ from apps.customers.models import Customer
 from apps.items.models import Item
 from apps.items.alternatives import get_all_alternatives
 from apps.stocks.models import Stock, StockQuantity
+from apps.core.utils import filter_by_branch_via
 
 from .models import (
     CustomerLedger,
@@ -146,7 +147,7 @@ def invoice_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = SaleInvoice.objects.for_tenant(tenant)
+    qs = filter_by_branch_via(SaleInvoice.objects.for_tenant(tenant), getattr(request, 'branch', None))
     total = qs.count()
     confirmed = qs.filter(status='confirmed').count()
     pending_delivery = qs.filter(status='pending_delivery').count()
@@ -178,7 +179,7 @@ def invoice_list(request):
 
     # للفلترة في الـ DataTable
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).values('id', 'name')
     from apps.agents.models import Agent as _Agent
     agents_qs = _Agent.objects.filter(tenant=tenant, is_active=True).values('id', 'name') if tenant.plan_allows('agents') else []
     from apps.bank_accounts.models import BankAccount
@@ -229,7 +230,7 @@ def invoice_table_api(request):
         .values('t')
     )
 
-    qs = SaleInvoice.objects.for_tenant(tenant).select_related('customer', 'stock')
+    qs = filter_by_branch_via(SaleInvoice.objects.for_tenant(tenant), getattr(request, 'branch', None)).select_related('customer', 'stock')
     total = qs.count()
 
     if status_filter:
@@ -327,7 +328,7 @@ def invoice_create(request):
         return redirect('core:no_tenant')
 
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True)
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).select_related('branch')
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).select_related('branch')
     items = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
     from apps.agents.models import Agent as _Agent
     agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name') if tenant.plan_allows('agents') else []
@@ -377,7 +378,7 @@ def invoice_edit(request, pk):
         return redirect('sales:invoice_detail', pk=pk)
 
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True)
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).select_related('branch')
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).select_related('branch')
     items = Item.objects.for_tenant(tenant).filter(is_active=True, is_sellable=True)
     from apps.agents.models import Agent as _Agent
     agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name') if tenant.plan_allows('agents') else []
@@ -846,7 +847,7 @@ def return_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = SaleReturn.objects.for_tenant(tenant)
+    qs = filter_by_branch_via(SaleReturn.objects.for_tenant(tenant), getattr(request, 'branch', None))
     total = qs.count()
     confirmed = qs.filter(status='confirmed').count()
     draft = qs.filter(status='draft').count()
@@ -881,7 +882,7 @@ def return_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status_filter = request.GET.get('status', '')
 
-    qs = SaleReturn.objects.for_tenant(tenant).select_related(
+    qs = filter_by_branch_via(SaleReturn.objects.for_tenant(tenant), getattr(request, 'branch', None)).select_related(
         'original_invoice', 'original_invoice__customer'
     )
     total = qs.count()
@@ -1279,9 +1280,9 @@ def quote_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = SaleQuote.objects.for_tenant(tenant)
+    qs = filter_by_branch_via(SaleQuote.objects.for_tenant(tenant), getattr(request, 'branch', None))
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name')
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).values('id', 'name')
 
     stats = {
         'total':     qs.count(),
@@ -1318,7 +1319,7 @@ def quote_table_api(request):
     status_filter = request.GET.get('status', '')
     customer_filter = request.GET.get('customer_id', '')
 
-    qs = SaleQuote.objects.for_tenant(tenant).select_related('customer', 'stock')
+    qs = filter_by_branch_via(SaleQuote.objects.for_tenant(tenant), getattr(request, 'branch', None)).select_related('customer', 'stock')
     total = qs.count()
 
     if status_filter:
@@ -1381,7 +1382,7 @@ def quote_create(request):
         return redirect('core:no_tenant')
 
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True)
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
 
     if request.method == 'POST':
         try:
@@ -1429,7 +1430,7 @@ def quote_edit(request, pk):
         return redirect('sales:quote_detail', pk=pk)
 
     customers = Customer.objects.for_tenant(tenant).filter(is_active=True)
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
 
     if request.method == 'POST':
         try:
