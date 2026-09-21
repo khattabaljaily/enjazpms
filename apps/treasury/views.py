@@ -444,7 +444,7 @@ def treasury_balances_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = TreasuryReportGenerator(tenant).get_balances_report()
+    report = TreasuryReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_balances_report()
 
     return render(request, 'treasury/reports/balances.html', {
         'report': report,
@@ -462,7 +462,7 @@ def treasury_balances_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = TreasuryReportGenerator(tenant).get_balances_report()
+    report = TreasuryReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_balances_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="treasury_balances.csv"'
     response.write('﻿')
@@ -487,7 +487,7 @@ def treasury_statement_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    gen = TreasuryReportGenerator(tenant, start_date, end_date)
+    gen = TreasuryReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = gen.get_statement_report(treasury_id) if treasury_id else None
     treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).order_by('name')
 
@@ -517,7 +517,7 @@ def treasury_statement_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = TreasuryReportGenerator(tenant, start_date, end_date).get_statement_report(treasury_id) if treasury_id else None
+    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_statement_report(treasury_id) if treasury_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="treasury_statement_{end_date}.csv"'
     response.write('﻿')
@@ -546,7 +546,7 @@ def treasury_movements_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     treasury_id = request.GET.get('treasury_id') or None
 
-    report = TreasuryReportGenerator(tenant, start_date, end_date).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
+    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
     treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).order_by('name')
 
     return render(request, 'treasury/reports/movements.html', {
@@ -575,7 +575,7 @@ def treasury_movements_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     treasury_id = request.GET.get('treasury_id') or None
 
-    report = TreasuryReportGenerator(tenant, start_date, end_date).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
+    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="treasury_movements_{end_date}.csv"'
     response.write('﻿')

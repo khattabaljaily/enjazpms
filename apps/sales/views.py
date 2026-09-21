@@ -1652,7 +1652,7 @@ def sales_summary_report(request):
         end_date = timezone.localdate()
     
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_summary_report()
 
     # Chart data: daily trend for the selected period
@@ -1693,7 +1693,7 @@ def sales_summary_report_export(request):
         end_date = timezone.localdate()
     
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_summary_report()
     
     # Create CSV
@@ -1739,7 +1739,7 @@ def sales_by_customer_report(request):
     customer_id = request.GET.get('customer_id')
 
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_customer_report(customer_id=customer_id)
 
     # customers list for filter
@@ -1789,7 +1789,7 @@ def sales_by_customer_report_export(request):
     customer_id = request.GET.get('customer_id')
 
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_customer_report(customer_id=customer_id)
     # fetch selected customer for header if available
     selected_customer = None
@@ -1857,7 +1857,7 @@ def sales_by_item_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_item_report(item_id=item_id)
 
     items = Item.objects.filter(
@@ -1891,7 +1891,7 @@ def sales_by_item_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_item_report(item_id=item_id)
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -1934,7 +1934,7 @@ def sales_by_date_report(request):
         end_date = timezone.localdate()
     
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_date_report(group_by)
     
     return render(request, 'sales/reports/by_date.html', {
@@ -1969,7 +1969,7 @@ def sales_by_date_report_export(request):
         end_date = timezone.localdate()
     
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_date_report(group_by)
     
     # Create CSV
@@ -2011,7 +2011,7 @@ def sales_customer_statement(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_customer_statement(customer_id) if customer_id else None
     customers = Customer.objects.filter(tenant=tenant).order_by('name')
 
@@ -2038,7 +2038,7 @@ def sales_customer_statement_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_customer_statement(customer_id) if customer_id else None
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -2063,7 +2063,7 @@ def sales_customer_balances(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    generator = SalesReportGenerator(tenant)
+    generator = SalesReportGenerator(tenant, branch=getattr(request, 'branch', None))
     report = generator.get_customer_balances()
 
     return render(request, 'sales/reports/customer_balances.html', {
@@ -2081,7 +2081,7 @@ def sales_customer_balances_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = SalesReportGenerator(tenant).get_customer_balances()
+    report = SalesReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_customer_balances()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="customer_balances.csv"'
     response.write('﻿')
@@ -2104,7 +2104,7 @@ def sales_payments_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     customer_id = request.GET.get('customer_id') or None
 
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_payments_report(customer_id=customer_id)
     customers = Customer.objects.filter(tenant=tenant, is_active=True).order_by('name')
 
@@ -2130,7 +2130,7 @@ def sales_payments_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = SalesReportGenerator(tenant, start_date, end_date).get_payments_report()
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_payments_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="sales_payments_{end_date}.csv"'
     response.write('﻿')
@@ -2151,7 +2151,7 @@ def sales_returns_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_returns_report()
 
     return render(request, 'sales/reports/returns.html', {
@@ -2174,7 +2174,7 @@ def sales_returns_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = SalesReportGenerator(tenant, start_date, end_date).get_returns_report()
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_returns_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="sales_returns_{end_date}.csv"'
     response.write('﻿')
@@ -2200,7 +2200,7 @@ def sales_by_user_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     user_id = request.GET.get('user_id') or None
 
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_by_user_report(user_id=user_id)
 
     from django.contrib.auth import get_user_model
@@ -2231,7 +2231,7 @@ def sales_by_user_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     user_id = request.GET.get('user_id') or None
 
-    report = SalesReportGenerator(tenant, start_date, end_date).get_by_user_report(user_id=user_id)
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_user_report(user_id=user_id)
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="sales_by_user_{end_date}.csv"'
     response.write('\ufeff')
@@ -2325,7 +2325,7 @@ def sales_profit_margin_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    generator = SalesReportGenerator(tenant, start_date, end_date)
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_profit_margin_report(item_id=item_id)
 
     items = Item.objects.filter(
@@ -2356,7 +2356,7 @@ def sales_profit_margin_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    report = SalesReportGenerator(tenant, start_date, end_date).get_profit_margin_report(item_id=item_id)
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_profit_margin_report(item_id=item_id)
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="profit_margin_{end_date}.csv"'
     response.write('﻿')
@@ -2394,7 +2394,7 @@ def sales_by_payment_method_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = SalesReportGenerator(tenant, start_date, end_date).get_by_payment_method_report()
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_payment_method_report()
 
     return render(request, 'sales/reports/by_payment_method.html', {
         'report': report,
@@ -2416,7 +2416,7 @@ def sales_by_payment_method_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = SalesReportGenerator(tenant, start_date, end_date).get_by_payment_method_report()
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_payment_method_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="sales_by_payment_{end_date}.csv"'
     response.write('﻿')

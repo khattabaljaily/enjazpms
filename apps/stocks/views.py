@@ -681,7 +681,7 @@ def stocks_summary_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    generator = StocksReportGenerator(tenant)
+    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
     report_data = generator.get_summary_report()
 
     return render(request, 'stocks/reports/summary.html', {
@@ -699,7 +699,7 @@ def stocks_summary_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    generator = StocksReportGenerator(tenant)
+    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
     report_data = generator.get_summary_report()
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -723,7 +723,7 @@ def stocks_by_item_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    generator = StocksReportGenerator(tenant)
+    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_item_report()
 
     return render(request, 'stocks/reports/by_item.html', {
@@ -741,7 +741,7 @@ def stocks_by_item_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    generator = StocksReportGenerator(tenant)
+    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_item_report()
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -772,7 +772,7 @@ def stocks_by_category_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    generator = StocksReportGenerator(tenant)
+    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_category_report()
 
     return render(request, 'stocks/reports/by_category.html', {
@@ -790,7 +790,7 @@ def stocks_by_category_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    generator = StocksReportGenerator(tenant)
+    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_category_report()
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -824,7 +824,7 @@ def stocks_by_stock_report(request):
     # Optional stock filter
     stock_id = request.GET.get('stock_id')
 
-    generator = StocksReportGenerator(tenant)
+    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_stock_report(stock_id=stock_id)
 
     # stocks list for dropdown
@@ -849,7 +849,7 @@ def stocks_by_stock_report_export(request):
 
     stock_id = request.GET.get('stock_id')
 
-    generator = StocksReportGenerator(tenant)
+    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
     report_data = generator.get_by_stock_report(stock_id=stock_id)
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -900,7 +900,7 @@ def stocks_item_movement_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    generator = StocksReportGenerator(tenant, start_date, end_date)
+    generator = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_item_movement_report(item_id=item_id, stock_id=stock_id)
 
     selected_item_name = ''
@@ -935,7 +935,7 @@ def stocks_item_movement_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = StocksReportGenerator(tenant, start_date, end_date).get_item_movement_report(item_id=item_id, stock_id=stock_id)
+    report = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_item_movement_report(item_id=item_id, stock_id=stock_id)
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="item_movement_{end_date}.csv"'
@@ -954,7 +954,7 @@ def stocks_low_stock_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = StocksReportGenerator(tenant).get_low_stock_report()
+    report = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_low_stock_report()
 
     return render(request, 'stocks/reports/low_stock.html', {
         'report': report,
@@ -972,7 +972,7 @@ def stocks_low_stock_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = StocksReportGenerator(tenant).get_low_stock_report()
+    report = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_low_stock_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="low_stock_alert.csv"'
     response.write('﻿')
@@ -997,7 +997,7 @@ def stocks_controlled_substances_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = StocksReportGenerator(tenant, start_date, end_date).get_controlled_substances_report()
+    report = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_controlled_substances_report()
 
     return render(request, 'stocks/reports/controlled_substances.html', {
         'report': report,
@@ -1017,7 +1017,7 @@ def stocks_controlled_substances_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = StocksReportGenerator(tenant, start_date, end_date).get_controlled_substances_report()
+    report = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_controlled_substances_report()
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="controlled_substances_{end_date}.csv"'
@@ -1040,7 +1040,7 @@ def stocks_valuation_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = StocksReportGenerator(tenant).get_valuation_report()
+    report = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_valuation_report()
 
     return render(request, 'stocks/reports/valuation.html', {
         'report': report,
@@ -1055,7 +1055,7 @@ def stocks_valuation_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = StocksReportGenerator(tenant).get_valuation_report()
+    report = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_valuation_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="inventory_valuation.csv"'
     response.write('﻿')
@@ -1101,7 +1101,7 @@ def stocks_non_moving_report(request):
     start_date = start_date or (timezone.localdate() - timedelta(days=30))
     end_date = end_date or timezone.localdate()
 
-    report = StocksReportGenerator(tenant, start_date, end_date).get_non_moving_report()
+    report = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_non_moving_report()
 
     return render(request, 'stocks/reports/non_moving.html', {
         'report': report,
@@ -1130,7 +1130,7 @@ def stocks_non_moving_report_export(request):
     start_date = start_date or (timezone.localdate() - timedelta(days=30))
     end_date = end_date or timezone.localdate()
 
-    report = StocksReportGenerator(tenant, start_date, end_date).get_non_moving_report()
+    report = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_non_moving_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="non_moving_items.csv"'
     response.write('﻿')

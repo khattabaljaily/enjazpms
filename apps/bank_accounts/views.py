@@ -468,7 +468,7 @@ def bank_account_balances_report(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = BankAccountReportGenerator(tenant).get_balances_report()
+    report = BankAccountReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_balances_report()
 
     return render(request, 'bank_accounts/reports/balances.html', {
         'report': report,
@@ -486,7 +486,7 @@ def bank_account_balances_report_export(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    report = BankAccountReportGenerator(tenant).get_balances_report()
+    report = BankAccountReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_balances_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="bank_account_balances.csv"'
     response.write('﻿')
@@ -511,7 +511,7 @@ def bank_account_statement_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    gen = BankAccountReportGenerator(tenant, start_date, end_date)
+    gen = BankAccountReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = gen.get_statement_report(bank_account_id) if bank_account_id else None
     accounts = BankAccount.objects.filter(tenant=tenant, is_active=True).order_by('name')
 
@@ -541,7 +541,7 @@ def bank_account_statement_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = BankAccountReportGenerator(tenant, start_date, end_date).get_statement_report(bank_account_id) if bank_account_id else None
+    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_statement_report(bank_account_id) if bank_account_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="bank_account_statement_{end_date}.csv"'
     response.write('﻿')
@@ -570,7 +570,7 @@ def bank_account_movements_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     bank_account_id = request.GET.get('bank_account_id') or None
 
-    report = BankAccountReportGenerator(tenant, start_date, end_date).get_movements_summary(bank_account_id=bank_account_id) if bank_account_id else None
+    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_movements_summary(bank_account_id=bank_account_id) if bank_account_id else None
     accounts = BankAccount.objects.filter(tenant=tenant, is_active=True).order_by('name')
 
     return render(request, 'bank_accounts/reports/movements.html', {
@@ -599,7 +599,7 @@ def bank_account_movements_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     bank_account_id = request.GET.get('bank_account_id') or None
 
-    report = BankAccountReportGenerator(tenant, start_date, end_date).get_movements_summary(bank_account_id=bank_account_id) if bank_account_id else None
+    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_movements_summary(bank_account_id=bank_account_id) if bank_account_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="bank_account_movements_{end_date}.csv"'
     response.write('﻿')

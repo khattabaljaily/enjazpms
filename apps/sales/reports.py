@@ -31,19 +31,21 @@ def format_number(value, decimals=2):
 class SalesReportGenerator:
     """فئة شاملة لإنشاء تقارير المبيعات"""
     
-    def __init__(self, tenant, start_date=None, end_date=None):
+    def __init__(self, tenant, start_date=None, end_date=None, branch=None):
         self.tenant = tenant
+        self.branch = branch
         self.start_date = start_date or (timezone.localdate() - timedelta(days=30))
         self.end_date = end_date or timezone.localdate()
         
     def get_summary_report(self):
         """تقرير ملخص المبيعات — مع قائمة الفواتير التفصيلية"""
-        invoices = SaleInvoice.objects.filter(
+        from apps.core.utils import filter_by_branch_via
+        invoices = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date
-        ).select_related('customer').prefetch_related('lines').order_by('-invoice_date')
+        ), self.branch).select_related('customer').prefetch_related('lines').order_by('-invoice_date')
 
         total_amount = Decimal('0')
         total_tax = Decimal('0')
