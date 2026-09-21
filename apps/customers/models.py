@@ -7,6 +7,14 @@ from apps.core.models import TenantMixin
 
 
 class Customer(TenantMixin):
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        verbose_name='الفرع',
+        related_name='customers',
+        null=True,
+        blank=True,
+    )
     code = models.CharField('كود العميل', max_length=20, blank=True)
     name = models.CharField('اسم العميل', max_length=200)
     phone = models.CharField('رقم الهاتف', max_length=20, blank=True)

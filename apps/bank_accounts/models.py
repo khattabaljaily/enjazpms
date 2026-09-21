@@ -5,6 +5,14 @@ from apps.treasury.models import Treasury
 
 
 class BankAccount(TenantMixin):
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        verbose_name='الفرع',
+        related_name='bank_accounts',
+        null=True,
+        blank=True,
+    )
     name = models.CharField('اسم الحساب', max_length=200)
     bank_name = models.CharField('اسم البنك', max_length=200, blank=True)
     account_number = models.CharField('رقم الحساب', max_length=100, blank=True)

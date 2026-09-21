@@ -14,6 +14,15 @@ class Agent(TenantMixin):
         ('fixed',      'مبلغ ثابت'),
     )
 
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        verbose_name='الفرع',
+        related_name='agents',
+        null=True,
+        blank=True,
+    )
+
     code = models.CharField('كود المندوب', max_length=20, blank=True)
     name = models.CharField('اسم المندوب', max_length=200)
     phone = models.CharField('رقم الهاتف', max_length=20, blank=True)
