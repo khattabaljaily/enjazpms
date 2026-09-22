@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 — الصفحة غير موجودة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root { --brand: #c9840f; --brand-light: #f6a821; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: 'Cairo', sans-serif; background: radial-gradient(circle at 30% 20%, #1c1f26, #0f1115 65%);
+    color: #f3f4f6; padding: 24px;
+  }
+  .card {
+    max-width: 480px; width: 100%; text-align: center; background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08); border-radius: 20px; padding: 48px 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .code {
+    font-size: 6rem; font-weight: 900; line-height: 1;
+    background: linear-gradient(135deg, var(--brand-light), var(--brand));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .icon { font-size: 2.2rem; color: var(--brand-light); margin-bottom: 8px; }
+  h1 { font-size: 1.4rem; font-weight: 800; margin: 12px 0 8px; color: #fff; }
+  p { color: #9ca3af; font-size: .95rem; margin: 0 0 28px; line-height: 1.7; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--brand-light), var(--brand)); color: #1a1200; font-weight: 700;
+    text-decoration: none; font-size: .95rem; transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(201,132,15,.35); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon"><i class="fas fa-map-signs"></i></div>
+    <div class="code">404</div>
+    <h1>الصفحة غير موجودة</h1>
+    <p>الرابط اللي بتدور عليه مش موجود، ممكن يكون اتنقل أو اتحذف أو إنك كتبت عنوان غلط.</p>
+    <a href="/" class="btn"><i class="fas fa-house"></i> الرجوع للرئيسية</a>
+  </div>
+</body>
+</html>
