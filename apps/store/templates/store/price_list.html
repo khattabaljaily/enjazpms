@@ -74,16 +74,16 @@
         <thead>
           <tr>
             <th class="pl-col-idx">#</th>
-            <th class="pl-col-name">الصنف</th>
-            <th class="pl-col-desc">الوصف</th>
-            <th class="pl-col-unit">الوحدة</th>
+            <th class="pl-col-name">Trade Name</th>
+            <th class="pl-col-desc">Generic Name</th>
+            <th class="pl-col-unit">Unit</th>
             {% if store.show_prices %}
-            <th class="pl-col-price">سعر الجملة</th>
-            <th class="pl-col-price">سعر التجزئة</th>
+            <th class="pl-col-price">W. Price</th>
+            <th class="pl-col-price">R. Price</th>
             {% endif %}
-            <th class="pl-col-pack">الكمية/الكرتون</th>
-            <th class="pl-col-exp">تاريخ الانتهاء</th>
-            {% if store.show_stock_quantity %}<th class="pl-col-qty">الكمية المتاحة</th>{% else %}<th class="pl-col-qty">الكمية</th>{% endif %}
+            <th class="pl-col-pack">Q/Box</th>
+            <th class="pl-col-exp">Exp Date</th>
+            <th class="pl-col-qty">Quantity</th>
           </tr>
         </thead>
         <tbody>
@@ -91,7 +91,7 @@
           <tr class="pl-row" data-name="{{ item.name|lower }}" data-agent="{{ group.name|lower }}">
             <td class="pl-col-idx">{{ forloop.counter }}</td>
             <td class="pl-col-name">{{ item.name }}{% if item.sku %}<div class="pl-row__sku">{{ item.sku }}</div>{% endif %}</td>
-            <td class="pl-col-desc">{{ item.generic_name|default:item.description|truncatechars:60 }}</td>
+            <td class="pl-col-desc">{{ item.generic_name|default:'-' }}</td>
             <td class="pl-col-unit">{{ item.unit.name|default:'-' }}</td>
             {% if store.show_prices %}
             <td class="pl-col-price">{{ item.cost_price|format_price }}</td>
