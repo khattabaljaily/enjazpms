@@ -53,6 +53,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('purchases', '0012_purchaseinvoice_branch_purchasereturn_branch'),
+        ('stocks', '0010_stock_branch_alter_stock_branch_name'),
     ]
 
     operations = [

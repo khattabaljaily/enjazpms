@@ -52,6 +52,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('sales', '0017_saleinvoice_branch_salereturn_branch'),
+        ('stocks', '0010_stock_branch_alter_stock_branch_name'),
     ]
 
     operations = [
