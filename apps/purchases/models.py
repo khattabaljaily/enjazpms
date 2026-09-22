@@ -37,6 +37,14 @@ class PurchaseInvoice(TenantMixin):
         related_name='purchase_invoices',
         verbose_name='المخزن',
     )
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='purchase_invoices',
+        verbose_name='الفرع',
+        help_text='الفرع المرتبط مباشرة بأمر الشراء (enterprise فقط؛ يُملأ تلقائياً من المخزن إن لم يُحدد)',
+    )
 
     invoice_date = models.DateField('تاريخ الأمر')
     status = models.CharField('الحالة', max_length=20, choices=STATUS_CHOICES, default='draft')
@@ -275,6 +283,14 @@ class PurchaseReturn(TenantMixin):
         on_delete=models.PROTECT,
         related_name='purchase_returns',
         verbose_name='أمر الشراء الأصلي',
+    )
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='purchase_returns',
+        verbose_name='الفرع',
+        help_text='الفرع المرتبط مباشرة بالمرتجع (enterprise فقط؛ يُملأ تلقائياً من أمر الشراء الأصلي إن لم يُحدد)',
     )
     status = models.CharField('الحالة', max_length=20, choices=STATUS_CHOICES, default='draft')
     refund_method = models.CharField('طريقة التسوية', max_length=10, choices=REFUND_CHOICES, default='balance')

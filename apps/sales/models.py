@@ -105,6 +105,14 @@ class SaleInvoice(TenantMixin):
         related_name='sale_invoices',
         verbose_name='المخزن'
     )
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='sale_invoices',
+        verbose_name='الفرع',
+        help_text='الفرع المرتبط مباشرة بالفاتورة (enterprise فقط؛ يُملأ تلقائياً من المخزن إن لم يُحدد)',
+    )
     agent = models.ForeignKey(
         'agents.Agent',
         on_delete=models.SET_NULL,
@@ -469,6 +477,14 @@ class SaleReturn(TenantMixin):
         on_delete=models.PROTECT,
         related_name='sale_returns',
         verbose_name='الفاتورة الأصلية'
+    )
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='sale_returns',
+        verbose_name='الفرع',
+        help_text='الفرع المرتبط مباشرة بالمرتجع (enterprise فقط؛ يُملأ تلقائياً من الفاتورة الأصلية إن لم يُحدد)',
     )
     status = models.CharField(
         'الحالة', max_length=15, choices=STATUS_CHOICES, default='draft'
