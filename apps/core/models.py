@@ -253,6 +253,14 @@ class Tenant(models.Model):
     def plan_allows_version_type(self, version_type: str) -> bool:
         return version_type in self.plan_limits['allowed_version_types']
 
+    def is_enterprise(self) -> bool:
+        """
+        Gate واحد مركزي لكل منطق Enterprise الجديد (خطة التنفيذ، القسم 1).
+        True فقط لو النسخة multi_branch. أي كود جديد خاص بـ Enterprise يجب أن
+        يُغلَّف بهذا الشرط لضمان عدم تأثر single_store/multi_stock إطلاقاً.
+        """
+        return self.version_type == 'multi_branch'
+
     def auto_backup_daily_count(self) -> int:
         """عدد النسخ الاحتياطية التلقائية يومياً حسب الباقة"""
         return self.PLAN_FEATURES.get(self.subscription_plan, {}).get('auto_backup_daily', 0)
