@@ -13,6 +13,7 @@ import csv
 import json
 
 from apps.accounts.decorators import require_permission, require_capability, require_plan_feature
+from apps.core.utils import filter_by_branch_via
 from .forms import AgentForm
 from .models import Agent, AgentLedger
 from .services import _apply_agent_ledger, agent_ledger_display_label
@@ -340,7 +341,10 @@ def agent_payments(request):
 
     treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False).order_by('name')
 
-    stats_qs = AgentLedger.objects.for_tenant(tenant).filter(entry_type='payment')
+    stats_qs = filter_by_branch_via(
+        AgentLedger.objects.for_tenant(tenant).filter(entry_type='payment'),
+        getattr(request, 'branch', None), field='agent__branch',
+    )
     stats = stats_qs.aggregate(
         total=Coalesce(
             Sum('amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
@@ -394,6 +398,7 @@ def agent_payments_table_api(request):
     method_filter = request.GET.get('payment_method', '')
 
     qs = AgentLedger.objects.for_tenant(tenant).filter(entry_type='payment')
+    qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='agent__branch')
     total = qs.count()
 
     if agent_filter:

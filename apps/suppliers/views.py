@@ -14,7 +14,7 @@ import io
 import json
 
 from apps.accounts.decorators import require_permission
-from apps.core.utils import CURRENCY_NAMES_AR
+from apps.core.utils import CURRENCY_NAMES_AR, filter_by_branch_via
 from .forms import SupplierForm
 from .models import Supplier
 from apps.purchases.models import SupplierLedger
@@ -384,7 +384,10 @@ def supplier_payments(request):
     treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False).order_by('name')
     hc_treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=True).order_by('name') if hc_mode else []
     bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name')
-    stats = SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment').aggregate(
+    branch = getattr(request, 'branch', None)
+    stats = filter_by_branch_via(
+        SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment'), branch, field='supplier__branch'
+    ).aggregate(
         total=Coalesce(
             Sum('amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
             Value(0, output_field=DecimalField(max_digits=14, decimal_places=2)),
@@ -410,7 +413,9 @@ def supplier_payments(request):
         'treasuries': treasuries,
         'bank_accounts': bank_accounts,
         'stats': {
-            'total': SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment').count(),
+            'total': filter_by_branch_via(
+                SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment'), branch, field='supplier__branch'
+            ).count(),
             'total_amount': positive(stats['total']),
             'cash_amount': positive(stats['cash']),
             'bank_amount': positive(stats['bank']),
@@ -439,6 +444,7 @@ def supplier_payments_table_api(request):
     method_filter = request.GET.get('payment_method', '')
 
     qs = SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment')
+    qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='supplier__branch')
     total = qs.count()
 
     if supplier_filter:

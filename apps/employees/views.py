@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.activity_service import log_activity
 from apps.accounts.decorators import require_permission
-from apps.core.utils import convert_arabic_numerals
+from apps.core.utils import convert_arabic_numerals, filter_by_branch_via
 from apps.treasury.models import Treasury
 from apps.bank_accounts.models import BankAccount
 
@@ -288,6 +288,7 @@ def advance_table_api(request):
     emp_id = request.GET.get('employee', '').strip()
 
     qs = EmployeeAdvance.objects.filter(tenant=tenant).select_related('employee', 'treasury', 'bank_account')
+    qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='employee__branch')
     records_total = qs.count()
 
     if status:
@@ -441,6 +442,7 @@ def salary_table_api(request):
     emp_id = request.GET.get('employee', '').strip()
 
     qs = EmployeeSalaryPayment.objects.filter(tenant=tenant).select_related('employee', 'treasury', 'bank_account')
+    qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='employee__branch')
     records_total = qs.count()
 
     if status:
@@ -660,6 +662,7 @@ def incentive_table_api(request):
     emp_id = request.GET.get('employee', '').strip()
 
     qs = EmployeeIncentive.objects.filter(tenant=tenant).select_related('employee', 'treasury', 'bank_account')
+    qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='employee__branch')
     records_total = qs.count()
 
     if status:

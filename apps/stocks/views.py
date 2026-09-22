@@ -17,6 +17,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from apps.sales.models import StockMovement
+from apps.core.utils import filter_by_branch_via
 
 from .forms import StockForm
 from .models import Stock, StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine, ManufacturingOrder, StockDestruction, StockDestructionLine
@@ -614,6 +615,10 @@ def stock_quantities_table_api(request):
             StockQuantity.objects
             .filter(tenant=tenant, item__is_active=True,
                     item__item_type__in=['product', 'raw_material', 'semi_finished'])
+        )
+        agg_qs = filter_by_branch_via(agg_qs, getattr(request, 'branch', None), field='stock__branch')
+        agg_qs = (
+            agg_qs
             .values('item_id')
             .annotate(
                 total_quantity=Sum('quantity'),
@@ -1455,6 +1460,7 @@ def stocktake_table_api(request):
     stock_f  = request.GET.get('stock_id', '').strip()
 
     qs = Stocktake.objects.for_tenant(tenant).select_related('stock')
+    qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='stock__branch')
     total = qs.count()
 
     if status_f:
@@ -1670,6 +1676,7 @@ def destruction_table_api(request):
     status_f = request.GET.get('status', '').strip()
 
     qs = StockDestruction.objects.for_tenant(tenant).select_related('stock')
+    qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='stock__branch')
     total = qs.count()
 
     if status_f:
@@ -1932,6 +1939,7 @@ def manufacturing_table_api(request):
     status_filter = request.GET.get('status', '').strip()
 
     qs = ManufacturingOrder.objects.filter(tenant=tenant).select_related('recipe__item', 'stock')
+    qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='stock__branch')
     records_total = qs.count()
 
     if status_filter:
