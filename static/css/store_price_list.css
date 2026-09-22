@@ -295,61 +295,89 @@ body {
 }
 
 /* ── Print — elegant landscape price list matching brand colors ── */
+.pl-print-bar, .pl-print-footer { display: none; }
+
 @media print {
-  @page { size: landscape; margin: 1cm 1.2cm; }
+  @page { size: landscape; margin: .9cm 1.1cm 1.3cm; }
 
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 
-  body { background: #fff; color: #1a1a1a; }
+  html, body {
+    background: #fff;
+    color: #1a1a1a;
+    font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+  }
 
   /* Screen-only chrome — hidden entirely on paper */
   .pl-hero, .pl-toolbar-wrap, .pl-footer, .pl-empty { display: none !important; }
+
+  /* Slim brand color bar across the very top of the page */
+  .pl-print-bar {
+    display: block;
+    height: 6px;
+    margin: 0 0 .55rem;
+    border-radius: 4px;
+    background: linear-gradient(90deg,
+      var(--brand),
+      color-mix(in srgb, var(--brand) 45%, #0f172a) 60%,
+      color-mix(in srgb, var(--brand) 20%, #0f172a));
+  }
 
   /* Dedicated print header replaces the hero */
   .pl-print-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1.25rem;
-    border-bottom: 3px solid var(--brand);
-    padding-bottom: .7rem;
-    margin: 0 0 1rem;
-    position: relative;
+    gap: 1.5rem;
+    padding: 0 0 .65rem;
+    margin: 0 0 1.1rem;
+    border-bottom: 1.5px solid color-mix(in srgb, var(--brand) 25%, #e2e8f0);
   }
-  .pl-print-header::after {
-    content: "";
-    position: absolute;
-    left: 0; right: 0; bottom: -3px;
-    height: 1px;
-    background: color-mix(in srgb, var(--brand) 35%, #fff);
-  }
-  .pl-print-header__brand { display: flex; align-items: center; gap: .75rem; }
+  .pl-print-header__brand { display: flex; align-items: center; gap: .85rem; }
   .pl-print-header__img {
-    height: 50px; width: 50px;
-    border-radius: 10px;
+    height: 56px; width: 56px;
+    border-radius: 12px;
     object-fit: cover;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 25%, #fff);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, #fff),
+                0 0 0 4px color-mix(in srgb, var(--brand) 40%, #fff);
   }
-  .pl-print-header__name { font-size: 1.35rem; font-weight: 900; color: #0f172a; }
+  .pl-print-header__name {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -.01em;
+  }
   .pl-print-header__title {
-    font-size: .78rem;
+    display: inline-block;
+    margin-top: .3rem;
+    padding: .18rem .65rem;
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--brand) 12%, #fff);
+    color: color-mix(in srgb, var(--brand) 78%, #000);
+    font-size: .72rem;
     font-weight: 800;
-    color: var(--brand);
-    letter-spacing: .06em;
-    margin-top: .15rem;
+    letter-spacing: .04em;
   }
   .pl-print-header__meta {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: .28rem;
+    gap: .32rem;
     font-size: .76rem;
     color: #475569;
+    font-weight: 600;
   }
-  .pl-print-header__meta i { color: var(--brand); width: 14px; text-align: center; }
+  .pl-print-header__meta i {
+    display: inline-block;
+    width: 15px;
+    margin-left: .3rem;
+    color: var(--brand);
+    text-align: center;
+  }
+  #plPrintDate { color: #94a3b8; font-weight: 700; font-size: .7rem; }
 
   .pl-main { max-width: none; margin: 0; padding: 0; }
-  .pl-list { gap: 1.1rem; }
+  .pl-list { gap: 1rem; }
 
   .pl-agent {
     background: none;
@@ -361,41 +389,71 @@ body {
   .pl-agent__title {
     display: flex;
     align-items: center;
-    gap: .45rem;
-    background: color-mix(in srgb, var(--brand) 10%, #fff);
-    color: color-mix(in srgb, var(--brand) 80%, #000);
-    border-right: 4px solid var(--brand);
+    gap: .5rem;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--brand) 14%, #fff), color-mix(in srgb, var(--brand) 4%, #fff) 85%);
+    color: color-mix(in srgb, var(--brand) 82%, #000);
+    border-right: 5px solid var(--brand);
     border-bottom: none;
-    padding: .4rem .7rem;
-    font-size: .92rem;
+    padding: .45rem .75rem;
+    font-size: .9rem;
     font-weight: 800;
-    border-radius: 4px;
-    margin-bottom: .35rem;
+    border-radius: 5px;
+    margin-bottom: .4rem;
   }
   .pl-agent__title i { color: var(--brand); }
 
   .pl-table {
-    border: 1px solid color-mix(in srgb, var(--brand) 30%, #ccc);
-    border-radius: 6px;
+    width: 100%;
+    border: none;
+    border-radius: 7px;
     overflow: hidden;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 25%, #d8dee8);
   }
   .pl-table thead { display: table-header-group; }
   .pl-table thead th {
-    background: var(--brand);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 92%, #000 0%), var(--brand));
     color: #fff;
-    border: 1px solid color-mix(in srgb, var(--brand) 60%, #000);
-    padding: .4rem .5rem;
-    font-size: .68rem;
-    letter-spacing: .03em;
+    border: none;
+    border-left: 1px solid rgba(255,255,255,.18);
+    padding: .45rem .55rem;
+    font-size: .66rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
   }
+  .pl-table thead th:first-child { border-left: none; }
   .pl-table tbody td {
-    border: 1px solid #e2e8f0;
-    padding: .35rem .5rem;
+    border: none;
+    border-bottom: 1px solid #edf1f6;
+    padding: .38rem .55rem;
     color: #1a1a1a;
-    font-size: .76rem;
+    font-size: .75rem;
   }
   .pl-table tbody tr { page-break-inside: avoid; }
-  .pl-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--brand) 4%, #fff); }
-  .pl-col-price { color: color-mix(in srgb, var(--brand) 75%, #000); font-weight: 800; }
-  .pl-row__sku { color: #64748b; }
+  .pl-table tbody tr:last-child td { border-bottom: none; }
+  .pl-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--brand) 4.5%, #fff); }
+  .pl-col-name { font-weight: 800; }
+  .pl-col-price { color: color-mix(in srgb, var(--brand) 78%, #000); font-weight: 800; }
+  .pl-row__sku { color: #94a3b8; }
+
+  /* Closing note */
+  .pl-print-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.1rem;
+    padding-top: .5rem;
+    border-top: 1px solid #e2e8f0;
+    font-size: .66rem;
+    color: #94a3b8;
+    font-weight: 600;
+  }
+  .pl-print-footer__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    color: var(--brand);
+    font-weight: 800;
+    letter-spacing: .03em;
+  }
 }

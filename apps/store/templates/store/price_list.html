@@ -34,18 +34,20 @@
 </div>
 
 <!-- ── Print-only company letterhead ──────────────────────── -->
+<div class="pl-print-bar"></div>
 <div class="pl-print-header">
   <div class="pl-print-header__brand">
     {% if store.tenant.logo %}<img src="{{ store.tenant.logo.url }}" alt="" class="pl-print-header__img">{% elif store.cover_image %}<img src="{{ store.cover_image.url }}" alt="" class="pl-print-header__img">{% endif %}
     <div>
       <div class="pl-print-header__name">{{ store.tenant.name_ar|default:store.display_name }}</div>
-      <div class="pl-print-header__title">PRICE LIST — قائمة الأسعار</div>
+      <div class="pl-print-header__title">PRICE LIST &nbsp;·&nbsp; قائمة الأسعار الرسمية</div>
     </div>
   </div>
   <div class="pl-print-header__meta">
     {% if store.tenant.address or store.tenant.city %}<span><i class="fas fa-location-dot"></i> {{ store.tenant.address }}{% if store.tenant.city %}{% if store.tenant.address %}، {% endif %}{{ store.tenant.city }}{% endif %}</span>{% endif %}
     {% if store.tenant.phone %}<span><i class="fas fa-phone"></i> {{ store.tenant.phone }}</span>{% endif %}
     {% if store.tenant.email %}<span><i class="fas fa-envelope"></i> {{ store.tenant.email }}</span>{% endif %}
+    {% if store.whatsapp %}<span><i class="fab fa-whatsapp"></i> {{ store.whatsapp }}</span>{% endif %}
     <span id="plPrintDate"></span>
   </div>
 </div>
@@ -133,6 +135,12 @@
     {% endif %}
   </div>
 </footer>
+
+<!-- ── Print-only closing note ──────────────────────────── -->
+<div class="pl-print-footer">
+  <span>{{ store.tenant.name_ar|default:store.display_name }} — قائمة الأسعار سارية حتى إشعار آخر وقابلة للتغيير دون إخطار مسبق.</span>
+  <span class="pl-print-footer__brand"><i class="fas fa-capsules"></i> ENJAZ PMS</span>
+</div>
 
 <script>
 (function () {
