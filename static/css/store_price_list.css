@@ -294,11 +294,13 @@ body {
   .pl-table { min-width: 640px; }
 }
 
-/* ── Print — plain bordered price-list table ─────────────── */
+/* ── Print — elegant landscape price list matching brand colors ── */
 @media print {
-  @page { margin: 1.2cm; }
+  @page { size: landscape; margin: 1cm 1.2cm; }
 
-  body { background: #fff; color: #000; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+  body { background: #fff; color: #1a1a1a; }
 
   /* Screen-only chrome — hidden entirely on paper */
   .pl-hero, .pl-toolbar-wrap, .pl-footer, .pl-empty { display: none !important; }
@@ -306,55 +308,94 @@ body {
   /* Dedicated print header replaces the hero */
   .pl-print-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    border-bottom: 2px solid #000;
-    padding-bottom: .6rem;
-    margin: 0 0 .9rem;
+    gap: 1.25rem;
+    border-bottom: 3px solid var(--brand);
+    padding-bottom: .7rem;
+    margin: 0 0 1rem;
+    position: relative;
   }
-  .pl-print-header__brand { display: flex; align-items: center; gap: .6rem; }
-  .pl-print-header__img { height: 42px; width: 42px; border-radius: 6px; object-fit: cover; }
-  .pl-print-header__name { font-size: 1.2rem; font-weight: 900; }
-  .pl-print-header__title { font-size: .78rem; color: #444; margin-top: .1rem; }
+  .pl-print-header::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -3px;
+    height: 1px;
+    background: color-mix(in srgb, var(--brand) 35%, #fff);
+  }
+  .pl-print-header__brand { display: flex; align-items: center; gap: .75rem; }
+  .pl-print-header__img {
+    height: 50px; width: 50px;
+    border-radius: 10px;
+    object-fit: cover;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 25%, #fff);
+  }
+  .pl-print-header__name { font-size: 1.35rem; font-weight: 900; color: #0f172a; }
+  .pl-print-header__title {
+    font-size: .78rem;
+    font-weight: 800;
+    color: var(--brand);
+    letter-spacing: .06em;
+    margin-top: .15rem;
+  }
   .pl-print-header__meta {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: .2rem;
-    font-size: .74rem;
-    color: #333;
+    gap: .28rem;
+    font-size: .76rem;
+    color: #475569;
   }
+  .pl-print-header__meta i { color: var(--brand); width: 14px; text-align: center; }
 
   .pl-main { max-width: none; margin: 0; padding: 0; }
-  .pl-list { gap: .9rem; }
+  .pl-list { gap: 1.1rem; }
 
-  .pl-agent { background: none; border: none; box-shadow: none; border-radius: 0; break-inside: avoid; }
-  .pl-agent__title {
+  .pl-agent {
     background: none;
-    color: #000;
-    border-bottom: 1.5px solid #000;
-    padding: .3rem 0;
-    font-size: .95rem;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    break-inside: avoid;
   }
+  .pl-agent__title {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    background: color-mix(in srgb, var(--brand) 10%, #fff);
+    color: color-mix(in srgb, var(--brand) 80%, #000);
+    border-right: 4px solid var(--brand);
+    border-bottom: none;
+    padding: .4rem .7rem;
+    font-size: .92rem;
+    font-weight: 800;
+    border-radius: 4px;
+    margin-bottom: .35rem;
+  }
+  .pl-agent__title i { color: var(--brand); }
 
-  .pl-table { border: 1px solid #000; }
+  .pl-table {
+    border: 1px solid color-mix(in srgb, var(--brand) 30%, #ccc);
+    border-radius: 6px;
+    overflow: hidden;
+  }
   .pl-table thead { display: table-header-group; }
   .pl-table thead th {
-    background: #eee;
-    color: #000;
-    border: 1px solid #000;
-    padding: .3rem .4rem;
+    background: var(--brand);
+    color: #fff;
+    border: 1px solid color-mix(in srgb, var(--brand) 60%, #000);
+    padding: .4rem .5rem;
     font-size: .68rem;
+    letter-spacing: .03em;
   }
   .pl-table tbody td {
-    border: 1px solid #999;
-    padding: .3rem .4rem;
-    color: #000;
-    font-size: .74rem;
+    border: 1px solid #e2e8f0;
+    padding: .35rem .5rem;
+    color: #1a1a1a;
+    font-size: .76rem;
   }
   .pl-table tbody tr { page-break-inside: avoid; }
-  .pl-table tbody tr:nth-child(even) { background: #f7f7f7; }
-  .pl-col-price { color: #000; }
-  .pl-row__sku { color: #333; }
+  .pl-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--brand) 4%, #fff); }
+  .pl-col-price { color: color-mix(in srgb, var(--brand) 75%, #000); font-weight: 800; }
+  .pl-row__sku { color: #64748b; }
 }
