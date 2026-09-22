@@ -111,11 +111,12 @@ class BankAccountReportGenerator:
 
     def get_movements_summary(self, bank_account_id=None):
         """حركات حساب بنكي محدد بالفترة مرتبة من الأقدم للأحدث"""
-        movements = BankAccountMovement.objects.filter(
+        from apps.core.utils import filter_by_branch_via
+        movements = filter_by_branch_via(BankAccountMovement.objects.filter(
             tenant=self.tenant,
             movement_date__gte=self.start_date,
             movement_date__lte=self.end_date,
-        ).select_related('bank_account').order_by('movement_date', 'id')
+        ), self.branch, field='bank_account__branch').select_related('bank_account').order_by('movement_date', 'id')
 
         if bank_account_id:
             movements = movements.filter(bank_account_id=bank_account_id)
@@ -141,7 +142,7 @@ class BankAccountReportGenerator:
                 'running_balance': format_number(float(m.running_balance), 2),
             })
 
-        accounts = BankAccount.objects.filter(tenant=self.tenant, is_active=True).order_by('name')
+        accounts = BankAccount.objects.filter(tenant=self.tenant, is_active=True).for_branch(self.branch).order_by('name')
 
         return {
             'period': {'start': self.start_date, 'end': self.end_date},

@@ -343,8 +343,12 @@ class ProfessionalEditionTests(TestCase):
             username='professional-edition-admin', password='secret123',
             tenant=self.tenant, is_tenant_admin=True,
         )
-        self.stock_one, self.stock_two = list(
-            Stock.objects.filter(tenant=self.tenant, is_active=True).order_by('id')[:2]
+        # إنشاء الـ tenant ينشئ مخزناً افتراضياً واحداً فقط (المشترك يضيف
+        # الباقي بنفسه حتى الحد المسموح به — max_stocks سقف وليس عدداً
+        # يُنشأ تلقائياً). نضيف مخزناً ثانياً يدوياً لاختبارات التحويل.
+        self.stock_one = Stock.objects.filter(tenant=self.tenant, is_active=True).order_by('id').first()
+        self.stock_two = Stock.objects.create(
+            tenant=self.tenant, name='مخزن ثانٍ', code='WH-002', stock_type='main', is_active=True,
         )
         self.item = Item.objects.create(
             tenant=self.tenant, name='منتج الاحترافية', sku='PRO-001',
@@ -357,11 +361,22 @@ class ProfessionalEditionTests(TestCase):
     def test_pro_plan_allows_multiple_stocks_but_not_branches(self):
         self.assertTrue(self.tenant.plan_allows_version_type('multi_stock'))
         self.assertFalse(self.tenant.plan_allows_version_type('multi_branch'))
-        self.assertFalse(Stock.can_add_stock(self.tenant))
+        # مخزنان فقط حتى الآن (الافتراضي + المُضاف يدوياً في setUp) — ما زال
+        # بإمكان المشترك إضافة المزيد حتى يبلغ الحد الأقصى (max_stocks).
+        self.assertEqual(
+            Stock.objects.filter(tenant=self.tenant, is_active=True).count(), 2,
+        )
+        self.assertTrue(Stock.can_add_stock(self.tenant))
+        for i in range(3, self.tenant.max_stocks + 1):
+            Stock.objects.create(
+                tenant=self.tenant, name=f'مخزن {i}', code=f'WH-{i:03d}',
+                stock_type='main', is_active=True,
+            )
         self.assertEqual(
             Stock.objects.filter(tenant=self.tenant, is_active=True).count(),
             self.tenant.max_stocks,
         )
+        self.assertFalse(Stock.can_add_stock(self.tenant))
         self.assertFalse(Branch.can_add_branch(self.tenant))
 
     def test_stock_transfer_confirm_and_cancel_preserve_total_quantity(self):

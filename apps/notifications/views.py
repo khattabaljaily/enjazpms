@@ -44,8 +44,9 @@ def notification_list(request):
 
     _maybe_generate(tenant)
 
-    notifications = Notification.objects.filter(tenant=tenant).order_by('-created_at')[:100]
-    unread_count  = Notification.objects.filter(tenant=tenant, is_read=False).count()
+    branch = getattr(request, 'branch', None)
+    notifications = Notification.objects.filter(tenant=tenant).for_branch(branch).order_by('-created_at')[:100]
+    unread_count  = Notification.objects.filter(tenant=tenant, is_read=False).for_branch(branch).count()
 
     return render(request, 'notifications/notification_list.html', {
         'notifications': notifications,
@@ -66,8 +67,9 @@ def notification_api(request):
 
     _maybe_generate(tenant)
 
-    unread = Notification.objects.filter(tenant=tenant, is_read=False).count()
-    recent = Notification.objects.filter(tenant=tenant).order_by('-created_at')[:8]
+    branch = getattr(request, 'branch', None)
+    unread = Notification.objects.filter(tenant=tenant, is_read=False).for_branch(branch).count()
+    recent = Notification.objects.filter(tenant=tenant).for_branch(branch).order_by('-created_at')[:8]
 
     ICONS = {
         'low_stock':       'fa-triangle-exclamation text-warning',
@@ -129,7 +131,8 @@ def mark_read_ajax(request, pk):
 @require_POST
 def mark_all_read_ajax(request):
     tenant = _tenant(request)
-    Notification.objects.filter(tenant=tenant, is_read=False).update(is_read=True)
+    branch = getattr(request, 'branch', None)
+    Notification.objects.filter(tenant=tenant, is_read=False).for_branch(branch).update(is_read=True)
     return JsonResponse({'success': True})
 
 

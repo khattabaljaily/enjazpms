@@ -160,16 +160,18 @@
                             <span class="cx-form-group-icon"><i class="fas fa-shield-halved"></i></span> الصلاحيات والحالة
                         </div>
                         <div class="row g-3 mb-4">
+                            {% if form.branch.field.queryset.exists %}
                             <div class="col-md-4">
-                                <label class="cx-toggle-card" for="id_is_tenant_admin">
+                                <label class="cx-toggle-card" for="id_is_branch_supervisor">
                                     <div class="cx-toggle-info">
-                                        <span class="cx-toggle-title">{{ form.is_tenant_admin.label }}</span>
-                                        <span class="cx-toggle-desc">يجعل المستخدم مديراً بإعدادات داخلية أوسع</span>
+                                        <span class="cx-toggle-title">{{ form.is_branch_supervisor.label }}</span>
+                                        <span class="cx-toggle-desc">يحصل تلقائياً على كل صلاحيات الفرع المختار، عدا صلاحيات مدير النشاط</span>
                                     </div>
-                                    {{ form.is_tenant_admin }}
+                                    {{ form.is_branch_supervisor }}
                                     <div class="cx-toggle-switch"></div>
                                 </label>
                             </div>
+                            {% endif %}
                             <div class="col-md-4">
                                 <label class="cx-toggle-card" for="id_is_active">
                                     <div class="cx-toggle-info">

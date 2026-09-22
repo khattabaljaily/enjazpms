@@ -144,6 +144,12 @@
                                 <label class="cx-label" for="id_city">{{ form.city.label }}</label>
                                 {{ form.city }}
                             </div>
+                            {% if form.branch %}
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_branch">{{ form.branch.label }}</label>
+                                {{ form.branch }}
+                            </div>
+                            {% endif %}
                             <div class="col-12">
                                 <label class="cx-label" for="id_address">{{ form.address.label }}</label>
                                 {{ form.address }}
@@ -650,6 +656,7 @@
                 $('#id_email').val(d.email || '');
                 $('#id_city').val(d.city || '');
                 $('#id_address').val(d.address || '');
+                if (d.branch) { $('#id_branch').val(d.branch); }
                 $('#id_opening_balance').val(Enjaz.parseNumber(d.opening_balance) || '');
                 $('#id_credit_limit').val(Enjaz.parseNumber(d.credit_limit) || '');
                 $('#id_notes').val(d.notes || '');

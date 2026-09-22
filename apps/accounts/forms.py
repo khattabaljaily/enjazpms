@@ -128,6 +128,10 @@ class UserManagementForm(forms.ModelForm):
 
     class Meta:
         model = User
+        # ملاحظة: is_tenant_admin عمداً غير مدرج هنا — كل نشاط تجاري له مدير
+        # واحد فقط (يُعيَّن عند التسجيل)، ولا يجوز ترقية مستخدم آخر لمدير
+        # النشاط من شاشة إدارة المستخدمين هذه (لا حتى عبر POST مباشر، بما أن
+        # الحقل غير موجود في الفورم أصلاً).
         fields = [
             'username',
             'first_name',
@@ -135,7 +139,7 @@ class UserManagementForm(forms.ModelForm):
             'email',
             'phone',
             'branch',
-            'is_tenant_admin',
+            'is_branch_supervisor',
             'is_active',
             'permission_groups',
         ]
@@ -146,7 +150,7 @@ class UserManagementForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control text-start', 'placeholder': 'example@email.com', 'dir': 'ltr'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+000 000 000000'}),
             'branch': forms.Select(attrs={'class': 'form-select'}),
-            'is_tenant_admin': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_branch_supervisor': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'permission_groups': forms.SelectMultiple(attrs={
                 'class': 'form-select',
@@ -201,6 +205,23 @@ class UserManagementForm(forms.ModelForm):
                 raise ValidationError('كلمات المرور غير متطابقة')
         elif not self.instance.pk:
             raise ValidationError('كلمة المرور مطلوبة عند إنشاء مستخدم جديد')
+
+        is_branch_supervisor = cleaned_data.get('is_branch_supervisor')
+        branch = cleaned_data.get('branch')
+        if is_branch_supervisor:
+            if not branch:
+                raise ValidationError('يجب اختيار الفرع أولاً لتعيين المستخدم كمشرف عليه')
+            existing = User.objects.filter(
+                tenant=self.tenant, branch=branch, is_branch_supervisor=True,
+            )
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            other = existing.first()
+            if other:
+                raise ValidationError(
+                    f'الفرع "{branch.name}" لديه مشرف بالفعل ({other.get_full_name()}). '
+                    'يرجى إلغاء إشراف المستخدم الحالي أولاً قبل تعيين مشرف جديد.'
+                )
         return cleaned_data
 
     def save(self, commit=True):

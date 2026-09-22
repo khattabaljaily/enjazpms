@@ -2268,7 +2268,7 @@ def income_statement_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = IncomeStatementGenerator(tenant, start_date, end_date).get_report()
+    report = IncomeStatementGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_report()
 
     return render(request, 'sales/reports/income_statement.html', {
         'report': report,
@@ -2291,7 +2291,7 @@ def income_statement_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = IncomeStatementGenerator(tenant, start_date, end_date).get_report()
+    report = IncomeStatementGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="income_statement_{end_date}.csv"'
     response.write('﻿')

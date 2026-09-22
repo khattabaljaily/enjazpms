@@ -35,7 +35,7 @@ class StockForm(forms.ModelForm):
             'is_default': 'مخزن افتراضي',
         }
 
-    def __init__(self, *args, tenant=None, **kwargs):
+    def __init__(self, *args, tenant=None, branch=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['branch'].required = False
         if tenant:
@@ -44,3 +44,9 @@ class StockForm(forms.ModelForm):
         else:
             from apps.core.models import Branch
             self.fields['branch'].queryset = Branch.objects.none()
+
+        # مستخدم مربوط بفرع: المخزن يُختم تلقائياً بفرعه — لا داعي لإظهار
+        # حقل اختيار الفرع (راجع BRANCH_SCOPING.md §3 نقطة 4).
+        if branch is not None:
+            self.fields['branch'].initial = branch.pk
+            del self.fields['branch']

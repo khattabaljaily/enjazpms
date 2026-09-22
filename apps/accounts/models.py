@@ -7,7 +7,10 @@ from pathlib import Path
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from apps.core.models import Tenant, TenantQuerySet
-from .permissions import get_permission_keys, load_permission_schema
+from .permissions import (
+    get_permission_keys, get_branch_supervisor_permission_keys, BRANCH_BLOCKED_KEYS,
+    load_permission_schema,
+)
 
 
 class UserQuerySet(TenantQuerySet):
@@ -80,6 +83,12 @@ class User(AbstractUser):
     avatar = models.ImageField('الصورة الشخصية', upload_to='users/avatars/', blank=True, null=True)
     is_tenant_admin    = models.BooleanField('مدير النشاط', default=False)
 
+    # Branch Supervisor (للنسخة multi_branch — يحصل تلقائياً على كل صلاحيات
+    # الفرع، ما عدا صلاحيات مدير النشاط الحصرية: إعدادات المنشأة/سعر الصرف،
+    # المستخدمين، مجموعات الصلاحيات، إدارة الفروع، والمتجر الإلكتروني —
+    # راجع permissions.py::get_branch_supervisor_permission_keys)
+    is_branch_supervisor = models.BooleanField('مشرف الفرع', default=False)
+
     # Platform staff (admin assistants — tenant=None, not full superuser)
     is_platform_staff   = models.BooleanField('مساعد منصة', default=False)
     platform_permissions = models.JSONField('صلاحيات المنصة', default=list, blank=True)
@@ -129,9 +138,14 @@ class User(AbstractUser):
     def get_permission_keys(self):
         if self.is_superuser or self.is_tenant_admin:
             return set(get_permission_keys())
-        keys = set()
-        for group in self.permission_groups.filter(is_active=True):
-            keys.update(group.get_permission_keys())
+        if self.is_branch_supervisor and self.branch_id:
+            keys = set(get_branch_supervisor_permission_keys())
+        else:
+            keys = set()
+            for group in self.permission_groups.filter(is_active=True):
+                keys.update(group.get_permission_keys())
+        if self.branch_id:
+            keys -= BRANCH_BLOCKED_KEYS
         return keys
 
     def has_perm_key(self, permission_key):
@@ -139,6 +153,13 @@ class User(AbstractUser):
             return False
         if self.is_superuser or self.is_tenant_admin:
             return True
+        # قيد مطلق: أي مستخدم مربوط بفرع لا يقدر أبداً على صلاحيات كتالوج
+        # المنتجات الحصرية (إضافة/تعديل/حذف/استيراد) — بصرف النظر عن مجموعة
+        # الصلاحيات المسندة له، لأن المنتج مورد مركزي مشترك بين كل الفروع.
+        if self.branch_id and permission_key in BRANCH_BLOCKED_KEYS:
+            return False
+        if self.is_branch_supervisor and self.branch_id:
+            return permission_key in get_branch_supervisor_permission_keys()
         for group in self.permission_groups.filter(is_active=True):
             if group.has_permission(permission_key):
                 return True

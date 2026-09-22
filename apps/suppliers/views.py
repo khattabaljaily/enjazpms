@@ -59,7 +59,7 @@ def supplier_list(request):
     hc_mode = getattr(tenant, 'hard_currency_mode', False)
     hc_currency = tenant.hard_currency if hc_mode else ''
     context = {
-        'form': SupplierForm(),
+        'form': SupplierForm(tenant=tenant, branch=getattr(request, 'branch', None)),
         'stats': {
             'total': total,
             'active': active,
@@ -197,11 +197,13 @@ def supplier_create_api(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    form = SupplierForm(request.POST)
+    branch = getattr(request, 'branch', None)
+    form = SupplierForm(request.POST, tenant=tenant, branch=branch)
     if form.is_valid():
         supplier = form.save(commit=False)
         supplier.tenant = tenant
-        supplier.branch = getattr(request, 'branch', None)
+        if branch is not None:
+            supplier.branch = branch
         supplier.created_by = request.user
         supplier.updated_by = request.user
         supplier.save()
@@ -254,6 +256,7 @@ def supplier_detail_api(request, pk):
             'email': supplier.email,
             'city': supplier.city,
             'address': supplier.address,
+            'branch': supplier.branch_id,
             'opening_balance': str(opening),
             'current_balance': str(current_balance_val),
             'hc_balance': hc_balance_val,
@@ -830,7 +833,7 @@ def supplier_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
-    form = SupplierForm(request.POST, instance=supplier)
+    form = SupplierForm(request.POST, instance=supplier, tenant=tenant, branch=getattr(request, 'branch', None))
 
     if form.is_valid():
         supplier = form.save(commit=False)

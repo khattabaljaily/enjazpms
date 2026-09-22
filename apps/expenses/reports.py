@@ -58,16 +58,14 @@ class ExpensesReportGenerator:
         categories = ExpenseCategory.objects.filter(tenant=self.tenant).order_by('name')
         data = []
         for cat in categories:
-            agg = Expense.objects.filter(
-                tenant=self.tenant,
+            agg = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
                 category=cat,
                 status='confirmed',
                 expense_date__gte=self.start_date,
                 expense_date__lte=self.end_date,
             ).aggregate(total=Sum('amount'), count=Sum('id'))
 
-            count = Expense.objects.filter(
-                tenant=self.tenant,
+            count = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
                 category=cat,
                 status='confirmed',
                 expense_date__gte=self.start_date,
@@ -84,8 +82,7 @@ class ExpensesReportGenerator:
                 })
 
         # Uncategorized
-        uncat = Expense.objects.filter(
-            tenant=self.tenant,
+        uncat = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
             category=None,
             status='confirmed',
             expense_date__gte=self.start_date,
@@ -111,8 +108,7 @@ class ExpensesReportGenerator:
 
     def get_by_date_report(self, group_by='day'):
         """المصروفات حسب التاريخ"""
-        expenses = Expense.objects.filter(
-            tenant=self.tenant,
+        expenses = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
             status='confirmed',
             expense_date__gte=self.start_date,
             expense_date__lte=self.end_date,
@@ -152,8 +148,7 @@ class ExpensesReportGenerator:
 
     def get_details_report(self, category_id=None):
         """قائمة تفصيلية بالمصروفات"""
-        expenses = Expense.objects.filter(
-            tenant=self.tenant,
+        expenses = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
             status='confirmed',
             expense_date__gte=self.start_date,
             expense_date__lte=self.end_date,

@@ -157,7 +157,7 @@
                                 <label class="cx-label" for="id_stock_type">{{ form.stock_type.label }}</label>
                                 {{ form.stock_type }}
                             </div>
-                            {% if current_tenant.version_type == 'multi_branch' %}
+                            {% if current_tenant.version_type == 'multi_branch' and form.branch %}
                             <div class="col-md-6">
                                 <label class="cx-label" for="id_branch">{{ form.branch.label }}</label>
                                 {{ form.branch }}

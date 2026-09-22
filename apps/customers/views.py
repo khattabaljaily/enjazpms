@@ -47,7 +47,7 @@ def customer_list(request):
     inactive = total - active
 
     context = {
-        'form': CustomerForm(),
+        'form': CustomerForm(tenant=tenant, branch=getattr(request, 'branch', None)),
         'stats': {
             'total': total,
             'active': active,
@@ -170,11 +170,13 @@ def customer_create_api(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    form = CustomerForm(request.POST)
+    branch = getattr(request, 'branch', None)
+    form = CustomerForm(request.POST, tenant=tenant, branch=branch)
     if form.is_valid():
         customer = form.save(commit=False)
         customer.tenant = tenant
-        customer.branch = getattr(request, 'branch', None)
+        if branch is not None:
+            customer.branch = branch
         customer.created_by = request.user
         customer.updated_by = request.user
         customer.save()
@@ -240,6 +242,7 @@ def customer_detail_api(request, pk):
             'email': customer.email,
             'city': customer.city,
             'address': customer.address,
+            'branch': customer.branch_id,
             'opening_balance': str(customer.opening_balance),
             'current_balance': str(current_balance),
             'credit_limit': str(customer.credit_limit),
@@ -659,7 +662,7 @@ def customer_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
-    form = CustomerForm(request.POST, instance=customer)
+    form = CustomerForm(request.POST, instance=customer, tenant=tenant, branch=getattr(request, 'branch', None))
 
     if form.is_valid():
         customer = form.save(commit=False)

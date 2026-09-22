@@ -171,7 +171,10 @@ def create_tenant_defaults(sender, instance, created, **kwargs):
     from apps.stocks.models import Stock
     from apps.treasury.models import Treasury
 
-    # Default stock (non-deletable system stock)
+    # Default stock (non-deletable system stock) — العدد الإضافي المسموح به
+    # حسب الباقة (max_stocks) هو سقف أقصى فقط، وليس عدداً يُنشأ تلقائياً؛
+    # المشترك يضيف مخازنه بنفسه ويُمنع عند تجاوز الحد (راجع
+    # apps/stocks/views.py::stock_create_api / Stock.can_add_stock).
     Stock.objects.get_or_create(
         tenant=instance,
         is_system_default=True,
@@ -183,19 +186,6 @@ def create_tenant_defaults(sender, instance, created, **kwargs):
             'is_active': True,
         },
     )
-
-    # Create additional stocks if max_stocks > 1
-    if instance.max_stocks > 1:
-        for i in range(2, instance.max_stocks + 1):
-            Stock.objects.get_or_create(
-                tenant=instance,
-                code=f'WH-{i:03d}',
-                defaults={
-                    'name': f'مخزن {i}',
-                    'stock_type': 'main',
-                    'is_active': True,
-                },
-            )
 
     # Ensure at least one default stock flag exists
     if not Stock.objects.for_tenant(instance).filter(is_default=True).exists():

@@ -128,6 +128,12 @@
                                 <label class="cx-label" for="id_city">{{ form.city.label }}</label>
                                 {{ form.city }}
                             </div>
+                            {% if form.branch %}
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_branch">{{ form.branch.label }}</label>
+                                {{ form.branch }}
+                            </div>
+                            {% endif %}
                             <div class="col-12">
                                 <label class="cx-label" for="id_address">{{ form.address.label }}</label>
                                 {{ form.address }}
@@ -742,6 +748,7 @@
             $('#id_email').val(d.email || '');
             $('#id_city').val(d.city || '');
             $('#id_address').val(d.address || '');
+            if (d.branch) { $('#id_branch').val(d.branch); }
             $('#id_commission_type').val(d.commission_type || 'none');
             $('#id_commission_basis').val(d.commission_basis || 'invoice');
             $('#id_commission_rate').val(parseFloat(d.commission_rate) || '');

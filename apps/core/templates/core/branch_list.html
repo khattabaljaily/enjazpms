@@ -56,6 +56,7 @@
                     <th>الكود</th>
                     <th>الهاتف</th>
                     <th>عدد المخازن</th>
+                    <th>المشرف</th>
                     <th>الحالة</th>
                     <th></th>
                 </tr>
@@ -220,6 +221,10 @@
                         <span class="cx-supplier-card-meta-label">عدد المخازن</span>
                         <strong class="cx-supplier-card-meta-value">${r.stocks_count}</strong>
                     </div>
+                    <div>
+                        <span class="cx-supplier-card-meta-label">المشرف</span>
+                        <strong class="cx-supplier-card-meta-value">${r.supervisor_name || 'بدون مشرف'}</strong>
+                    </div>
                 </div>
                 <div class="cx-supplier-card-actions">
                     <button class="cxr-act js-edit-branch" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>
@@ -252,6 +257,10 @@
             { data: 'code', render: c => `<code class="cxr-code">${c}</code>` },
             { data: 'phone', render: p => p && p !== '-' ? p : '<span class="cxr-empty">—</span>' },
             { data: 'stocks_count' },
+            {
+                data: 'supervisor_name',
+                render: s => s ? s : '<span class="cxr-empty text-danger">بدون مشرف</span>'
+            },
             {
                 data: 'is_active',
                 render: a => a

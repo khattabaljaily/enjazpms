@@ -55,8 +55,8 @@
 
             <div class="navbar-sep"></div>
 
-            <!-- Tenant Info -->
-            {% if current_tenant %}
+            <!-- Tenant Info (مخفي بالكامل عن مستخدمي الفروع — كل عناصره من صلاحيات مدير النشاط) -->
+            {% if current_tenant and not request.branch %}
             <div class="dropdown">
                 <a class="navbar-menu-link dropdown-toggle" href="#" data-bs-toggle="dropdown" data-bs-display="static">
                     <i class="fas fa-store" style="font-size:0.8rem;color:var(--primary)"></i>

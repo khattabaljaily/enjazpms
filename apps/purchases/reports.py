@@ -83,6 +83,7 @@ class PurchasesReportGenerator:
 
     def get_by_supplier_report(self, supplier_id=None):
         """تقرير المشتريات حسب المورد"""
+        from apps.core.utils import filter_by_branch_via
         from apps.suppliers.models import Supplier
         # If a specific supplier is requested, return invoices detail for that supplier
         if supplier_id:
@@ -91,11 +92,11 @@ class PurchasesReportGenerator:
             except Supplier.DoesNotExist:
                 return {'period': {'start': self.start_date, 'end': self.end_date}, 'data': []}
 
-            invoices = supplier.purchase_invoices.filter(
+            invoices = filter_by_branch_via(supplier.purchase_invoices.filter(
                 status='confirmed',
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
-            ).prefetch_related('lines')
+            ), self.branch).prefetch_related('lines')
 
             detail_rows = []
             for invoice in invoices:
@@ -131,14 +132,16 @@ class PurchasesReportGenerator:
             purchase_invoices__invoice_date__gte=self.start_date,
             purchase_invoices__invoice_date__lte=self.end_date
         ).distinct().prefetch_related('purchase_invoices')
+        if self.branch is not None:
+            suppliers = suppliers.filter(Q(branch=self.branch) | Q(branch__isnull=True))
 
         data = []
         for supplier in suppliers:
-            invoices = supplier.purchase_invoices.filter(
+            invoices = filter_by_branch_via(supplier.purchase_invoices.filter(
                 status='confirmed',
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
-            )
+            ), self.branch)
 
             total_amount = Decimal('0')
             total_quantity = Decimal('0')
@@ -165,6 +168,7 @@ class PurchasesReportGenerator:
 
     def get_by_item_report(self, item_id=None):
         """تقرير المشتريات حسب المنتج"""
+        from apps.core.utils import filter_by_branch_via
         from apps.items.models import Item
 
         if item_id:
@@ -173,11 +177,11 @@ class PurchasesReportGenerator:
             except Item.DoesNotExist:
                 return {'period': {'start': self.start_date, 'end': self.end_date}, 'item': None, 'data': []}
 
-            lines = item.purchase_lines.filter(
+            lines = filter_by_branch_via(item.purchase_lines.filter(
                 invoice__status='confirmed',
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date,
-            ).select_related('invoice', 'invoice__supplier').order_by('-invoice__invoice_date')
+            ), self.branch, field='invoice__stock__branch').select_related('invoice', 'invoice__supplier').order_by('-invoice__invoice_date')
 
             data = []
             total_quantity = Decimal('0')
@@ -216,11 +220,11 @@ class PurchasesReportGenerator:
 
         data = []
         for item in items:
-            lines = item.purchase_lines.filter(
+            lines = filter_by_branch_via(item.purchase_lines.filter(
                 invoice__status='confirmed',
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date
-            )
+            ), self.branch, field='invoice__stock__branch')
 
             total_quantity = Decimal('0')
             total_amount = Decimal('0')
@@ -248,12 +252,13 @@ class PurchasesReportGenerator:
 
     def get_by_date_report(self, group_by='day'):
         """تقرير المشتريات حسب التاريخ (يومي/أسبوعي/شهري)"""
-        invoices = PurchaseInvoice.objects.filter(
+        from apps.core.utils import filter_by_branch_via
+        invoices = filter_by_branch_via(PurchaseInvoice.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date
-        ).order_by('invoice_date').prefetch_related('lines')
+        ), self.branch).order_by('invoice_date').prefetch_related('lines')
 
         data = {}
 
@@ -413,7 +418,7 @@ class PurchasesReportGenerator:
         hc_mode = getattr(self.tenant, 'hard_currency_mode', False)
         hc_rate = Decimal(str(self.tenant.exchange_rate or 1)) if hc_mode and self.tenant.exchange_rate else None
 
-        suppliers = Supplier.objects.filter(tenant=self.tenant).order_by('name')
+        suppliers = Supplier.objects.for_tenant(self.tenant).for_branch(self.branch).order_by('name')
         data = []
         for s in suppliers:
             supplier_currency = (s.currency or '').strip()
@@ -462,12 +467,13 @@ class PurchasesReportGenerator:
 
     def get_payments_report(self, supplier_id=None):
         """تقرير مدفوعات الموردين — من SupplierLedger (يشمل المدفوعات المستقلة والمرتبطة بفواتير)"""
-        qs = SupplierLedger.objects.filter(
+        from apps.core.utils import filter_by_branch_via
+        qs = filter_by_branch_via(SupplierLedger.objects.filter(
             tenant=self.tenant,
             entry_type='payment',
             entry_date__gte=self.start_date,
             entry_date__lte=self.end_date,
-        ).select_related('supplier').order_by('-entry_date', '-id')
+        ), self.branch, field='supplier__branch').select_related('supplier').order_by('-entry_date', '-id')
 
         if supplier_id:
             qs = qs.filter(supplier_id=supplier_id)
@@ -570,13 +576,14 @@ class PurchasesReportGenerator:
 
     def get_returns_report(self):
         """تقرير مرتجعات المشتريات بالفترة — سطر لكل صنف مرتجع"""
+        from apps.core.utils import filter_by_branch_via
         from .models import PurchaseReturnLine
-        lines = PurchaseReturnLine.objects.filter(
+        lines = filter_by_branch_via(PurchaseReturnLine.objects.filter(
             tenant=self.tenant,
             purchase_return__status='confirmed',
             purchase_return__return_date__gte=self.start_date,
             purchase_return__return_date__lte=self.end_date,
-        ).select_related(
+        ), self.branch, field='purchase_return__original_invoice__stock__branch').select_related(
             'purchase_return',
             'purchase_return__original_invoice',
             'purchase_return__original_invoice__supplier',
@@ -613,14 +620,15 @@ class PurchasesReportGenerator:
     def get_by_user_report(self, user_id=None):
         """تقرير المشتريات حسب المستخدم"""
         from django.contrib.auth import get_user_model
+        from apps.core.utils import filter_by_branch_via
         User = get_user_model()
 
-        base_qs = PurchaseInvoice.objects.filter(
+        base_qs = filter_by_branch_via(PurchaseInvoice.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date,
-        )
+        ), self.branch)
 
         if user_id:
             try:
@@ -674,15 +682,16 @@ class PurchasesReportGenerator:
 
     def get_price_history_report(self, item_id=None):
         """تقرير تاريخ أسعار الشراء لكل منتج"""
+        from apps.core.utils import filter_by_branch_via
         from apps.items.models import Item
         from collections import defaultdict
 
-        base_lines = PurchaseInvoiceLine.objects.filter(
+        base_lines = filter_by_branch_via(PurchaseInvoiceLine.objects.filter(
             invoice__tenant=self.tenant,
             invoice__status='confirmed',
             invoice__invoice_date__gte=self.start_date,
             invoice__invoice_date__lte=self.end_date,
-        ).select_related('invoice', 'invoice__supplier', 'item', 'item__unit').order_by('invoice__invoice_date')
+        ), self.branch, field='invoice__stock__branch').select_related('invoice', 'invoice__supplier', 'item', 'item__unit').order_by('invoice__invoice_date')
 
         if item_id:
             try:

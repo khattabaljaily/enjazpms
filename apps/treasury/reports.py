@@ -126,11 +126,12 @@ class TreasuryReportGenerator:
 
     def get_movements_summary(self, treasury_id=None):
         """حركات خزينة محددة بالفترة مرتبة من الأقدم للأحدث"""
-        movements = TreasuryMovement.objects.filter(
+        from apps.core.utils import filter_by_branch_via
+        movements = filter_by_branch_via(TreasuryMovement.objects.filter(
             tenant=self.tenant,
             movement_date__gte=self.start_date,
             movement_date__lte=self.end_date,
-        ).select_related('treasury').order_by('movement_date', 'id')
+        ), self.branch, field='treasury__branch').select_related('treasury').order_by('movement_date', 'id')
 
         if treasury_id:
             movements = movements.filter(treasury_id=treasury_id)
@@ -156,7 +157,7 @@ class TreasuryReportGenerator:
                 'running_balance': format_number(float(m.running_balance), 2),
             })
 
-        treasuries = Treasury.objects.filter(tenant=self.tenant, is_active=True).order_by('name')
+        treasuries = Treasury.objects.filter(tenant=self.tenant, is_active=True).for_branch(self.branch).order_by('name')
 
         return {
             'period': {'start': self.start_date, 'end': self.end_date},

@@ -30,7 +30,7 @@ class AgentForm(forms.ModelForm):
     class Meta:
         model = Agent
         fields = [
-            'name', 'phone', 'email', 'city', 'address',
+            'name', 'phone', 'email', 'city', 'address', 'branch',
             'commission_type', 'commission_basis',
             'commission_rate', 'commission_rate_collection',
             'opening_balance', 'notes', 'is_active',
@@ -41,11 +41,20 @@ class AgentForm(forms.ModelForm):
             'email':             forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'البريد الإلكتروني'}),
             'city':              forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'المدينة'}),
             'address':           forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'branch':            forms.Select(attrs={'class': 'form-control'}),
             'commission_type':   forms.Select(attrs={'class': 'form-control'}),
             'commission_basis':  forms.Select(attrs={'class': 'form-control'}),
             'notes':             forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'is_active':         forms.CheckboxInput(attrs={'class': 'cx-toggle-input'}),
         }
+        labels = {
+            'branch': 'الفرع',
+        }
+
+    def __init__(self, *args, tenant=None, branch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.core.utils import setup_branch_field
+        setup_branch_field(self, tenant, branch)
 
     def clean_opening_balance(self):
         value = self.cleaned_data.get('opening_balance')

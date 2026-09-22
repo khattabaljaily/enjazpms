@@ -25,6 +25,7 @@ class SupplierForm(forms.ModelForm):
             'email',
             'city',
             'address',
+            'branch',
             'currency',
             'opening_balance',
             'credit_limit',
@@ -38,9 +39,18 @@ class SupplierForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'example@email.com'}),
             'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'الخرطوم'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'branch': forms.Select(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+        labels = {
+            'branch': 'الفرع',
+        }
+
+    def __init__(self, *args, tenant=None, branch=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.core.utils import setup_branch_field
+        setup_branch_field(self, tenant, branch)
 
     def clean_opening_balance(self):
         value = self.cleaned_data.get('opening_balance')

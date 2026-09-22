@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator
-from apps.accounts.decorators import require_permission
+from apps.accounts.decorators import require_permission, deny_branch_scoped
 from apps.accounts.activity_service import log_activity
 from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
 from django.views.decorators.http import require_POST
@@ -59,7 +59,7 @@ def dashboard(request):
 
         # Users
         from apps.accounts.models import User
-        stats['total_users'] = User.objects.filter(tenant=tenant).count()
+        stats['total_users'] = User.objects.filter(tenant=tenant).for_branch(branch).count()
 
         # Customers
         from apps.customers.models import Customer
@@ -1529,6 +1529,7 @@ def pending_approval(request):
 
 
 @login_required
+@deny_branch_scoped
 @require_permission('view_tenant_settings')
 def tenant_settings(request):
     """إعدادات النشاط التجاري"""
@@ -1549,6 +1550,7 @@ def tenant_settings(request):
 
 
 @login_required
+@deny_branch_scoped
 @require_permission('change_tenant_settings')
 @require_POST
 def tenant_settings_update_api(request):
@@ -1625,6 +1627,7 @@ def tenant_settings_update_api(request):
 
 
 @login_required
+@deny_branch_scoped
 @require_permission('change_tenant_settings')
 @require_POST
 def exchange_rate_update_api(request):
@@ -1676,6 +1679,7 @@ def exchange_rate_update_api(request):
 
 
 @login_required
+@deny_branch_scoped
 @require_permission('change_tenant_settings')
 def exchange_rate_page(request):
     """صفحة سعر الصرف المستقلة — فورم + سجل + مخطط."""
@@ -1693,6 +1697,7 @@ def exchange_rate_page(request):
 
 
 @login_required
+@deny_branch_scoped
 @require_permission('change_tenant_settings')
 def exchange_rate_history_api(request):
     """JSON: آخر 90 يوم من سجل سعر الصرف للمخطط."""
@@ -1751,6 +1756,7 @@ def tenant_logo_upload_api(request):
 
 
 @login_required
+@deny_branch_scoped
 def subscription_info(request):
     """معلومات الاشتراك"""
     from .models import Tenant
@@ -2612,17 +2618,22 @@ def analytics(request):
     from apps.customers.models import Customer
     from apps.suppliers.models import Supplier
 
+    branch = getattr(request, 'branch', None)
+
     def sales_total(qs_filter):
-        return float(SaleInvoice.objects.filter(tenant=tenant, status='confirmed', **qs_filter)
-                     .aggregate(t=Sum('grand_total'))['t'] or 0)
+        return float(filter_by_branch_via(SaleInvoice.objects.filter(
+            tenant=tenant, status='confirmed', **qs_filter
+        ), branch).aggregate(t=Sum('grand_total'))['t'] or 0)
 
     def purchase_total(qs_filter):
-        return float(PurchaseInvoice.objects.filter(tenant=tenant, status='confirmed', **qs_filter)
-                     .aggregate(t=Sum('grand_total'))['t'] or 0)
+        return float(filter_by_branch_via(PurchaseInvoice.objects.filter(
+            tenant=tenant, status='confirmed', **qs_filter
+        ), branch).aggregate(t=Sum('grand_total'))['t'] or 0)
 
     def expense_total(qs_filter):
-        return float(Expense.objects.filter(tenant=tenant, status='confirmed', **qs_filter)
-                     .aggregate(t=Sum('amount'))['t'] or 0)
+        return float(Expense.objects.for_tenant(tenant).for_branch(branch).filter(
+            status='confirmed', **qs_filter
+        ).aggregate(t=Sum('amount'))['t'] or 0)
 
     # ── Period comparison KPIs ──────────────────────────────────────
     this_sales    = sales_total({'invoice_date__gte': first_this_month, 'invoice_date__lte': today})
@@ -2675,13 +2686,11 @@ def analytics(request):
         monthly_profit.append(round(s - p - e, 2))
 
     # ── Top 10 customers by revenue (this month) ────────────────────
-    top_customers = (
+    top_customers = filter_by_branch_via(
         SaleInvoiceLine.objects
-        .filter(tenant=tenant, invoice__status='confirmed', invoice__invoice_date__gte=first_this_month)
-        .values('invoice__customer__name')
-        .annotate(total=Sum('line_total'))
-        .order_by('-total')[:10]
-    )
+        .filter(tenant=tenant, invoice__status='confirmed', invoice__invoice_date__gte=first_this_month),
+        branch, field='invoice__stock__branch'
+    ).values('invoice__customer__name').annotate(total=Sum('line_total')).order_by('-total')[:10]
     top_customers_list = [
         {'name': r['invoice__customer__name'] or 'عميل نقدي', 'total': float(r['total'])}
         for r in top_customers
@@ -2690,8 +2699,8 @@ def analytics(request):
 
     # ── Treasury balances ───────────────────────────────────────────
     from apps.treasury.models import Treasury
-    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).values('name', 'current_balance')
-    treasury_total = float(Treasury.objects.filter(tenant=tenant, is_active=True)
+    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch).values('name', 'current_balance')
+    treasury_total = float(Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch)
                            .aggregate(t=Sum('current_balance'))['t'] or 0)
 
     # ── Outstanding balances ────────────────────────────────────────
@@ -2699,11 +2708,11 @@ def analytics(request):
     from apps.sales.models import SaleInvoice
     from django.db.models import F
     customer_debt = float(
-        SaleInvoice.objects.filter(
+        filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=tenant,
             status__in=('confirmed', 'partially_returned'),
             payment_method__in=('credit', 'mixed'),
-        ).aggregate(t=Sum(F('grand_total') - F('paid_amount')))['t'] or 0
+        ), branch).aggregate(t=Sum(F('grand_total') - F('paid_amount')))['t'] or 0
     )
     # supplier debt — calculated per-supplier to handle HC vs local correctly
     from apps.purchases.models import SupplierLedger
@@ -2712,7 +2721,7 @@ def analytics(request):
     _hc_rate = Decimal(str(tenant.exchange_rate or 1)) if _hc_mode and tenant.exchange_rate else Decimal('1')
     _tenant_currency = (getattr(tenant, 'currency', '') or '').strip()
     supplier_debt = Decimal('0')
-    for _sup in SupplierModel.objects.filter(tenant=tenant):
+    for _sup in SupplierModel.objects.for_tenant(tenant).for_branch(branch):
         _sup_cur = (_sup.currency or '').strip()
         _is_hc_sup = _hc_mode and bool(_sup_cur) and _sup_cur != _tenant_currency
         if _is_hc_sup:
@@ -3011,11 +3020,17 @@ def branch_table_api(request):
         qs = qs.filter(Q(name__icontains=search) | Q(code__icontains=search))
     qs = qs.order_by('-is_default', 'name')
 
+    from apps.accounts.models import User
+    supervisors = {
+        u.branch_id: u.get_full_name()
+        for u in User.objects.filter(tenant=tenant, is_branch_supervisor=True, branch__in=qs)
+    }
     data = [
         {
             'id': b.id, 'name': b.name, 'code': b.code,
             'phone': b.phone or '-', 'is_active': b.is_active, 'is_default': b.is_default,
             'stocks_count': b.stocks.count(),
+            'supervisor_name': supervisors.get(b.id, ''),
         }
         for b in qs
     ]

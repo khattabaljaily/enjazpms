@@ -112,6 +112,27 @@ def require_capability(capability_name):
     return decorator
 
 
+def deny_branch_scoped(view_func):
+    """
+    يمنع أي مستخدم مرتبط بفرع (request.branch) من الوصول لهذا الـ view مهما
+    كانت صلاحياته الممنوحة عبر مجموعات الصلاحيات — لصفحات على مستوى النشاط
+    بالكامل (الاشتراك، سعر الصرف، إعدادات النشاط) لا ينبغي أن يصل إليها إلا
+    مدير النشاط أو السوبريوزر، حتى لو أُخفيت من القائمة الجانبية/الناف بار فقط.
+    نفس فلسفة BRANCH_BLOCKED_KEYS في apps/accounts/permissions.py لكن على
+    مستوى الـ view بدل مفتاح صلاحية.
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+        if request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+        if getattr(request, 'branch', None):
+            return _deny(request)
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 def require_plan_feature(feature_name):
     """مثل require_capability لكن للتحقق من ميزة باقة الاشتراك (Tenant.plan_allows)."""
     def decorator(view_func):

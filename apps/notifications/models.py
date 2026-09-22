@@ -40,6 +40,13 @@ class Notification(TenantMixin):
         related_name='notifications',
         verbose_name='المستخدم',
     )
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='notifications',
+        verbose_name='الفرع',
+    )
 
     class Meta:
         db_table = 'notifications'

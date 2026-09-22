@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from decimal import Decimal
 from apps.accounts.decorators import require_permission
+from apps.core.utils import filter_by_branch_via
 from .forms import CategoryForm, ItemForm, UnitForm
 from .models import Category, Item, Unit, BOMRecipe, BOMLine, ItemBatch
 from apps.catalog.models import MasterDrug, MasterDrugAlias
@@ -722,16 +723,19 @@ def item_transactions_api(request, pk):
         current_qty = 0
         movements = []
     else:
+        branch = getattr(request, 'branch', None)
         current_qty = (
-            StockQuantity.objects.for_tenant(tenant)
-            .filter(item=item)
+            filter_by_branch_via(
+                StockQuantity.objects.for_tenant(tenant).filter(item=item), branch, field='stock__branch',
+            )
             .aggregate(total=Sum('quantity'))['total']
             or 0
         )
 
         movements = (
-            StockMovement.objects.for_tenant(tenant)
-            .filter(item=item)
+            filter_by_branch_via(
+                StockMovement.objects.for_tenant(tenant).filter(item=item), branch, field='stock__branch',
+            )
             .select_related('stock')
             .order_by('-id')[:200]
         )

@@ -67,7 +67,7 @@ def agent_list(request):
     total = qs.count()
     active = qs.filter(is_active=True).count()
     context = {
-        'form': AgentForm(),
+        'form': AgentForm(tenant=tenant, branch=getattr(request, 'branch', None)),
         'stats': {'total': total, 'active': active, 'inactive': total - active},
     }
     return render(request, 'agents/agent_list.html', context)
@@ -163,11 +163,13 @@ def agent_create_api(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    form = AgentForm(request.POST)
+    branch = getattr(request, 'branch', None)
+    form = AgentForm(request.POST, tenant=tenant, branch=branch)
     if form.is_valid():
         agent = form.save(commit=False)
         agent.tenant = tenant
-        agent.branch = getattr(request, 'branch', None)
+        if branch is not None:
+            agent.branch = branch
         agent.created_by = request.user
         agent.updated_by = request.user
         agent.save()
@@ -201,6 +203,7 @@ def agent_detail_api(request, pk):
         'email':           agent.email,
         'city':            agent.city,
         'address':         agent.address,
+        'branch':          agent.branch_id,
         'commission_type': agent.commission_type,
         'commission_basis': agent.commission_basis,
         'commission_rate': str(agent.commission_rate),
@@ -278,7 +281,7 @@ def agent_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     agent = get_object_or_404(Agent.objects.for_tenant(tenant), pk=pk)
-    form = AgentForm(request.POST, instance=agent)
+    form = AgentForm(request.POST, instance=agent, tenant=tenant, branch=getattr(request, 'branch', None))
     if form.is_valid():
         agent = form.save(commit=False)
         agent.updated_by = request.user

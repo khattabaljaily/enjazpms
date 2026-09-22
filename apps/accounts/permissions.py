@@ -40,6 +40,47 @@ def get_all_permissions():
     return get_permission_keys()
 
 
+# تصنيفات حصرية لمدير النشاط (مالك الاشتراك) — لا تُمنح تلقائياً لمشرف الفرع
+# لأنها إما تخص المنشأة ككل (إعدادات، سعر الصرف) أو قد تُستخدم للتصعيد
+# الصلاحيات (مستخدمين، مجموعات صلاحيات) أو إدارة الفروع نفسها، أو مورد
+# واحد مشترك بين كل الفروع (المتجر الإلكتروني — راجع BRANCH_SCOPING.md §9).
+BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES = {
+    'إعدادات النشاط التجاري',
+    'المستخدمين',
+    'المجموعات والصلاحيات',
+    'الفروع',
+    'المتجر الإلكتروني',
+}
+
+
+def get_branch_supervisor_permission_keys():
+    """
+    كل مفاتيح الصلاحيات المتاحة لمشرف الفرع تلقائياً: كل الصلاحيات ما عدا
+    التصنيفات الحصرية لمدير النشاط (BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES).
+    """
+    schema = load_permission_schema()
+    keys = []
+    for section, perms in schema.items():
+        if section in BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES:
+            continue
+        keys.extend(perms.keys())
+    return keys
+
+
+# مفاتيح محظورة على أي مستخدم مربوط بفرع (request.branch/user.branch) بصرف
+# النظر عن دوره أو مجموعة الصلاحيات المسندة له — قيد مطلق (hard rule) وليس
+# افتراضاً قابلاً للتعديل عبر PermissionGroup: المنتج/الصنف كتالوج مركزي
+# واحد يشترك فيه كل الفروع (السعر والوصف والتصنيف... إلخ)، فلا يجوز لأي فرع
+# إضافته أو تعديله أو حذفه — فقط عرض تفاصيله وكشف حركته (راجع
+# User.has_perm_key/get_permission_keys في apps/accounts/models.py).
+BRANCH_BLOCKED_KEYS = {
+    'add_items',
+    'change_items',
+    'delete_items',
+    'import_items',
+}
+
+
 def get_permission_choices():
     schema = load_permission_schema()
     flatten = []

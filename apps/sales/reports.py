@@ -83,6 +83,7 @@ class SalesReportGenerator:
     
     def get_by_customer_report(self, customer_id=None):
         """تقرير المبيعات حسب العميل"""
+        from apps.core.utils import filter_by_branch_via
         from apps.customers.models import Customer
         # If a specific customer is requested, return invoice-level details
         if customer_id:
@@ -91,11 +92,11 @@ class SalesReportGenerator:
             except Customer.DoesNotExist:
                 return {'period': {'start': self.start_date, 'end': self.end_date}, 'data': []}
 
-            invoices = customer.sale_invoices.filter(
+            invoices = filter_by_branch_via(customer.sale_invoices.filter(
                 status='confirmed',
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
-            ).prefetch_related('lines')
+            ), self.branch).prefetch_related('lines')
 
             detail_rows = []
             for invoice in invoices:
@@ -132,14 +133,16 @@ class SalesReportGenerator:
             sale_invoices__invoice_date__gte=self.start_date,
             sale_invoices__invoice_date__lte=self.end_date
         ).distinct().prefetch_related('sale_invoices')
+        if self.branch is not None:
+            customers = customers.filter(Q(branch=self.branch) | Q(branch__isnull=True))
 
         data = []
         for customer in customers:
-            invoices = customer.sale_invoices.filter(
+            invoices = filter_by_branch_via(customer.sale_invoices.filter(
                 status='confirmed',
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
-            )
+            ), self.branch)
 
             total_amount = Decimal('0')
             total_quantity = Decimal('0')
@@ -166,6 +169,7 @@ class SalesReportGenerator:
     
     def get_by_item_report(self, item_id=None):
         """تقرير المبيعات حسب المنتج — يدعم التفصيل لمنتج واحد"""
+        from apps.core.utils import filter_by_branch_via
         from apps.items.models import Item
 
         if item_id:
@@ -174,11 +178,11 @@ class SalesReportGenerator:
             except Item.DoesNotExist:
                 return {'period': {'start': self.start_date, 'end': self.end_date}, 'item': None, 'data': [], 'summary': {}}
 
-            lines = item.sale_lines.filter(
+            lines = filter_by_branch_via(item.sale_lines.filter(
                 invoice__status='confirmed',
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date
-            ).select_related('invoice', 'invoice__customer').order_by('-invoice__invoice_date')
+            ), self.branch, field='invoice__stock__branch').select_related('invoice', 'invoice__customer').order_by('-invoice__invoice_date')
 
             data = []
             total_qty = Decimal('0')
@@ -217,11 +221,11 @@ class SalesReportGenerator:
 
         data = []
         for item in items:
-            lines = item.sale_lines.filter(
+            lines = filter_by_branch_via(item.sale_lines.filter(
                 invoice__status='confirmed',
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date
-            )
+            ), self.branch, field='invoice__stock__branch')
             total_quantity = Decimal('0')
             total_amount = Decimal('0')
             for line in lines:
@@ -246,12 +250,13 @@ class SalesReportGenerator:
     
     def get_by_date_report(self, group_by='day'):
         """تقرير المبيعات حسب التاريخ (يومي/أسبوعي/شهري)"""
-        invoices = SaleInvoice.objects.filter(
+        from apps.core.utils import filter_by_branch_via
+        invoices = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date
-        ).order_by('invoice_date').prefetch_related('lines')
+        ), self.branch).order_by('invoice_date').prefetch_related('lines')
         
         data = {}
         
@@ -376,7 +381,7 @@ class SalesReportGenerator:
         from apps.customers.models import Customer
         from django.db.models import Max
 
-        customers = Customer.objects.filter(tenant=self.tenant).order_by('name')
+        customers = Customer.objects.for_tenant(self.tenant).for_branch(self.branch).order_by('name')
         data = []
         for c in customers:
             last_entry = (
@@ -408,19 +413,20 @@ class SalesReportGenerator:
 
     def get_payments_report(self, customer_id=None):
         """تقرير مدفوعات العملاء (CustomerLedger entry_type=payment) بالفترة"""
+        from apps.core.utils import filter_by_branch_via
         METHOD_LABELS = {
             'customer_payment_cash': ('نقداً', 'cash'),
             'customer_payment_bank': ('بنكي', 'bank'),
             'sale_payment':          ('دفعة فاتورة', 'invoice'),
         }
 
-        qs = CustomerLedger.objects.filter(
+        qs = filter_by_branch_via(CustomerLedger.objects.filter(
             tenant=self.tenant,
             entry_type='payment',
             entry_date__gte=self.start_date,
             entry_date__lte=self.end_date,
             is_reversal=False,
-        ).select_related('customer').order_by('-entry_date', '-id')
+        ), self.branch, field='customer__branch').select_related('customer').order_by('-entry_date', '-id')
 
         if customer_id:
             qs = qs.filter(customer_id=customer_id)
@@ -456,12 +462,13 @@ class SalesReportGenerator:
 
     def get_returns_report(self):
         """تقرير مرتجعات المبيعات — صف لكل منتج مُرتجَع"""
-        returns = SaleReturn.objects.filter(
+        from apps.core.utils import filter_by_branch_via
+        returns = filter_by_branch_via(SaleReturn.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             return_date__gte=self.start_date,
             return_date__lte=self.end_date,
-        ).select_related('original_invoice', 'original_invoice__customer').prefetch_related('lines__item').order_by('-return_date')
+        ), self.branch, field='original_invoice__stock__branch').select_related('original_invoice', 'original_invoice__customer').prefetch_related('lines__item').order_by('-return_date')
 
         data = []
         total_returned = Decimal('0')
@@ -492,13 +499,14 @@ class SalesReportGenerator:
     def get_by_user_report(self, user_id=None):
         """تقرير المبيعات حسب المستخدم/البائع"""
         from collections import defaultdict
+        from apps.core.utils import filter_by_branch_via
 
-        base_qs = SaleInvoice.objects.filter(
+        base_qs = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date,
-        ).select_related('customer', 'created_by').order_by('-invoice_date')
+        ), self.branch).select_related('customer', 'created_by').order_by('-invoice_date')
 
         if user_id:
             invoices = base_qs.filter(created_by_id=user_id)
@@ -547,14 +555,15 @@ class SalesReportGenerator:
 
     def get_profit_margin_report(self, item_id=None):
         """تقرير هامش الربح لكل منتج — الإيراد مقابل التكلفة"""
+        from apps.core.utils import filter_by_branch_via
         from apps.items.models import Item
 
-        base_lines = SaleInvoiceLine.objects.filter(
+        base_lines = filter_by_branch_via(SaleInvoiceLine.objects.filter(
             invoice__tenant=self.tenant,
             invoice__status='confirmed',
             invoice__invoice_date__gte=self.start_date,
             invoice__invoice_date__lte=self.end_date,
-        ).select_related('invoice', 'invoice__customer', 'item')
+        ), self.branch, field='invoice__stock__branch').select_related('invoice', 'invoice__customer', 'item')
 
         if item_id:
             try:
@@ -653,13 +662,14 @@ class SalesReportGenerator:
     def get_by_payment_method_report(self):
         """تقرير المبيعات حسب طريقة الدفع"""
         from collections import defaultdict
+        from apps.core.utils import filter_by_branch_via
 
-        payments = SalePayment.objects.filter(
+        payments = filter_by_branch_via(SalePayment.objects.filter(
             tenant=self.tenant,
             payment_date__gte=self.start_date,
             payment_date__lte=self.end_date,
             is_reversed=False,
-        ).select_related('invoice')
+        ), self.branch, field='invoice__stock__branch').select_related('invoice')
 
         method_agg = defaultdict(lambda: {'label': '', 'count': 0, 'total': Decimal('0')})
         for p in payments:
@@ -680,12 +690,12 @@ class SalesReportGenerator:
                 'total_raw': float(v['total']),
             })
 
-        invoices = SaleInvoice.objects.filter(
+        invoices = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date,
-        )
+        ), self.branch)
         total_invoiced = sum(float(inv.grand_total or 0) for inv in invoices)
         total_paid = float(grand_total)
         outstanding = total_invoiced - total_paid
@@ -706,40 +716,41 @@ class SalesReportGenerator:
 class IncomeStatementGenerator:
     """قائمة الدخل (الإيرادات مقابل المصروفات)"""
 
-    def __init__(self, tenant, start_date=None, end_date=None):
+    def __init__(self, tenant, start_date=None, end_date=None, branch=None):
         from datetime import timedelta
         self.tenant = tenant
+        self.branch = branch
         self.start_date = start_date or (timezone.localdate() - timedelta(days=30))
         self.end_date = end_date or timezone.localdate()
 
     def get_report(self):
         from decimal import Decimal
+        from apps.core.utils import filter_by_branch_via
         from apps.expenses.models import Expense
 
         # Revenue: confirmed sale invoices
-        invoices = SaleInvoice.objects.filter(
+        invoices = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date,
-        )
+        ), self.branch)
         total_revenue = sum(float(inv.grand_total or 0) for inv in invoices)
         total_tax = sum(float(inv.tax_amount or 0) for inv in invoices)
         invoice_count = invoices.count()
 
         # Returns deducted from revenue
-        returns = SaleReturn.objects.filter(
+        returns = filter_by_branch_via(SaleReturn.objects.filter(
             tenant=self.tenant,
             status='confirmed',
             return_date__gte=self.start_date,
             return_date__lte=self.end_date,
-        )
+        ), self.branch, field='original_invoice__stock__branch')
         total_returns = sum(float(r.total_returned or 0) for r in returns)
         net_revenue = total_revenue - total_returns
 
         # Expenses: confirmed expenses
-        expenses = Expense.objects.filter(
-            tenant=self.tenant,
+        expenses = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
             status='confirmed',
             expense_date__gte=self.start_date,
             expense_date__lte=self.end_date,
@@ -749,12 +760,12 @@ class IncomeStatementGenerator:
         # COGS: actual cost of goods sold (cost_price_snapshot × qty from confirmed sale lines)
         from django.db.models import Sum, F, ExpressionWrapper, DecimalField
         from .models import SaleInvoiceLine
-        cogs_qs = SaleInvoiceLine.objects.filter(
+        cogs_qs = filter_by_branch_via(SaleInvoiceLine.objects.filter(
             tenant=self.tenant,
             invoice__status='confirmed',
             invoice__invoice_date__gte=self.start_date,
             invoice__invoice_date__lte=self.end_date,
-        ).aggregate(
+        ), self.branch, field='invoice__stock__branch').aggregate(
             total=Sum(
                 ExpressionWrapper(F('quantity') * F('cost_price_snapshot'), output_field=DecimalField())
             )

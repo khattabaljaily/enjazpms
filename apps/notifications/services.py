@@ -51,6 +51,7 @@ def generate_low_stock_notifications(tenant):
 
         Notification.objects.create(
             tenant=tenant,
+            branch=sq.stock.branch,
             notification_type='low_stock',
             priority='high',
             title=f'مخزون منخفض: {sq.item.name}',
@@ -85,6 +86,7 @@ def generate_overdue_invoice_notifications(tenant):
 
         Notification.objects.create(
             tenant=tenant,
+            branch=inv.stock.branch if inv.stock_id else None,
             notification_type='overdue_invoice',
             priority='high',
             title=f'فاتورة متأخرة: {inv.invoice_number}',
@@ -112,7 +114,7 @@ def generate_expiry_notifications(tenant, warn_days=30):
         quantity_remaining__gt=0,
         expiry_date__isnull=False,
         expiry_date__lte=soon,
-    ).select_related('item')
+    ).select_related('item', 'stock')
 
     count = 0
     for batch in expiring:
@@ -124,6 +126,7 @@ def generate_expiry_notifications(tenant, warn_days=30):
         status = 'منتهية الصلاحية' if batch.is_expired else f'تنتهي خلال {days_left} يوم'
         Notification.objects.create(
             tenant=tenant,
+            branch=batch.stock.branch,
             notification_type='expiry_soon',
             priority='high' if (days_left is not None and days_left <= 7) else 'medium',
             title=f'قرب انتهاء صلاحية: {batch.item.name}',
@@ -152,7 +155,7 @@ def generate_rfq_expiry_notifications(tenant):
         status__in=('draft', 'sent', 'received'),
         expiry_date__lte=soon,
         expiry_date__gte=today,
-    )
+    ).select_related('stock')
 
     count = 0
     for rfq in expiring:
@@ -162,6 +165,7 @@ def generate_rfq_expiry_notifications(tenant):
         days_left = (rfq.expiry_date - today).days
         Notification.objects.create(
             tenant=tenant,
+            branch=rfq.stock.branch if rfq.stock_id else None,
             notification_type='rfq_expiry',
             priority='medium',
             title=f'طلب سعر قارب على الانتهاء: {rfq.rfq_number}',

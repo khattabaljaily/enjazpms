@@ -183,7 +183,10 @@ document.addEventListener('DOMContentLoaded', function () {
             $('#id_last_name').val(user.last_name);
             $('#id_email').val(user.email);
             $('#id_phone').val(user.phone);
-            $('#id_is_tenant_admin').prop('checked', user.is_tenant_admin);
+            $('#id_is_branch_supervisor').prop('checked', user.is_branch_supervisor);
+            if (user.branch) {
+                $('#id_branch').val(user.branch);
+            }
             $('#id_is_active').prop('checked', user.is_active);
             $('#id_password').val('');
             $('#id_password_confirm').val('');
@@ -192,16 +195,16 @@ document.addEventListener('DOMContentLoaded', function () {
             /* ── Agent-linked user restrictions ── */
             if (user.is_agent_user) {
                 $('#id_username').prop('readonly', true).attr('title', 'لا يمكن تغيير اسم مستخدم مندوب');
-                $('#id_is_tenant_admin').closest('.col-md-4').hide();
+                $('#id_is_branch_supervisor').closest('.col-md-4').hide();
                 $('#permissionGroupsCheckboxes').closest('.col-md-6').hide();
                 $('#agentUserNote').remove();
                 userForm.find('.cx-modal-body').prepend(
                     '<div id="agentUserNote" class="alert alert-warning py-2 px-3 mb-3" style="font-size:.85rem;">' +
-                    '<i class="fas fa-user-tie me-1"></i> هذا المستخدم مرتبط بمندوب — لا يمكن تغيير اسم المستخدم أو تعيينه مديراً.</div>'
+                    '<i class="fas fa-user-tie me-1"></i> هذا المستخدم مرتبط بمندوب — لا يمكن تغيير اسم المستخدم.</div>'
                 );
             } else {
                 $('#id_username').prop('readonly', false).removeAttr('title');
-                $('#id_is_tenant_admin').closest('.col-md-4').show();
+                $('#id_is_branch_supervisor').closest('.col-md-4').show();
                 $('#permissionGroupsCheckboxes').closest('.col-md-6').show();
                 $('#agentUserNote').remove();
             }
