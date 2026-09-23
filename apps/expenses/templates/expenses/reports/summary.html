@@ -21,7 +21,7 @@
             </div>
             <div class="rpt-hero-actions">
                 <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
-                <a href="{% url 'expenses:reports:summary_report_export' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
+                <a href="{% url 'expenses:reports:summary_report_export' %}?start_date={{ start_date }}&end_date={{ end_date }}{% if selected_branch %}&branch={{ selected_branch.id }}{% endif %}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير</a>
                 <a href="{% url 'expenses:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
             </div>
         </div>
@@ -37,6 +37,7 @@
                 <label class="form-label">إلى تاريخ</label>
                 <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
             </div>
+            {% include 'components/report_branch_filter.html' %}
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="rpt-filter-btn rpt-filter-btn--expenses"><i class="fas fa-search me-1"></i>بحث</button>
             </div>

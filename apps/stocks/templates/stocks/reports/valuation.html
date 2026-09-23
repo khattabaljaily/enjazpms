@@ -22,13 +22,26 @@
             </div>
             <div class="rpt-hero-actions">
                 <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
-                <a href="{% url 'stocks:reports:valuation_report_export' %}" class="rpt-hero-btn">
+                <a href="{% url 'stocks:reports:valuation_report_export' %}{% if selected_branch %}?branch={{ selected_branch.id }}{% endif %}" class="rpt-hero-btn">
                     <i class="fas fa-download"></i> تصدير CSV
                 </a>
                 <a href="{% url 'stocks:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
             </div>
         </div>
     </div>
+
+    {% if is_central_admin %}
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            {% include 'components/report_branch_filter.html' %}
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--stocks">
+                    <i class="fas fa-search me-1"></i>بحث
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
 
     <!-- KPIs -->
     <div class="rpt-kpi-grid" style="grid-template-columns:repeat(4,1fr);">

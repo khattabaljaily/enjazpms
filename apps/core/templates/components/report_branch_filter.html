@@ -1,0 +1,11 @@
+{% if is_central_admin %}
+<div class="col-md-3">
+    <label for="branch" class="form-label">الفرع</label>
+    <select id="branch" name="branch" class="form-select">
+        <option value=""{% if not selected_branch %} selected{% endif %}>كل الفروع (إجمالي المؤسسة)</option>
+        {% for b in branches_for_filter %}
+        <option value="{{ b.id }}"{% if selected_branch.id == b.id %} selected{% endif %}>{{ b.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
