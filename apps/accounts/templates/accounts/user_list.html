@@ -145,6 +145,13 @@
                                 <label class="cx-label" for="id_branch">{{ form.branch.label }}</label>
                                 {{ form.branch }}
                             </div>
+                            {% elif current_tenant.version_type == 'multi_branch' %}
+                            <div class="col-md-4">
+                                <div class="alert alert-warning py-2 px-3 mb-0" style="font-size:.82rem;">
+                                    <i class="fas fa-code-branch me-1"></i>
+                                    لا يوجد فروع بعد — <a href="{% url 'core:branch_list' %}">أنشئ فرعاً أولاً</a> لتتمكن من ربط المستخدمين بفروعهم.
+                                </div>
+                            </div>
                             {% endif %}
                             <div class="col-md-6">
                                 <label class="cx-label" for="permissionGroupsCheckboxes">{{ form.permission_groups.label }}</label>

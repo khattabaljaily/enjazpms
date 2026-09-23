@@ -24,7 +24,7 @@ def _ensure_tenant(request):
 @require_any_permission('import_items', 'import_customers', 'import_suppliers')
 def hub(request):
     user = request.user
-    can_all = user.is_superuser or user.is_tenant_admin
+    can_all = user.is_superuser
     return render(request, 'data_import/hub.html', {
         'can_import_items': can_all or user.has_perm_key('import_items'),
         'can_import_customers': can_all or user.has_perm_key('import_customers'),

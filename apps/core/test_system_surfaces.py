@@ -44,6 +44,13 @@ class SystemSurfaceTests(TestCase):
             tenant=self.tenant, defaults={'has_insurance_billing': True}
         )
         Category.objects.create(tenant=self.tenant, name='تصنيف اختبار')
+        # نسخة المؤسسات (multi_branch) لم يعد لها مخزن افتراضي يُنشأ تلقائياً
+        # عند التسجيل (راجع apps/core/signals.py::create_tenant_defaults) —
+        # ننشئه هنا صراحة قبل المنتج حتى يُنشئ signal المنتج سجل StockQuantity
+        # المقابل له.
+        self.stock = Stock.objects.create(
+            tenant=self.tenant, name='مخزن اختبار', code='SUR-STK', is_active=True, is_default=True,
+        )
         self.item = Item.objects.create(
             tenant=self.tenant, name='منتج استيراد', sku='SURFACE-001',
             cost_price='10', selling_price='20', tax_rate='0',
@@ -56,7 +63,11 @@ class SystemSurfaceTests(TestCase):
         return self.client.post(path, data=data or {}, HTTP_HOST='127.0.0.1', **kwargs)
 
     def test_main_pages_render_shared_help_and_training_panels(self):
-        for route_name in ('core:dashboard', 'data_import:product_page', 'insurance:company_list'):
+        # ملاحظة: insurance:company_list استُبدل بـ stocks:list — مدير النشاط
+        # في نسخة المؤسسات (fixture هذا الاختبار) لم يعد له وصول للتأمين، وهو
+        # عمداً ضمن عمليات الفرع المستبعدة (راجع
+        # ENTERPRISE_OWNER_EXCLUDED_CATEGORIES في apps/accounts/permissions.py).
+        for route_name in ('core:dashboard', 'data_import:product_page', 'stocks:list'):
             response = self.get(reverse(route_name), follow=True)
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, 'training-fab')

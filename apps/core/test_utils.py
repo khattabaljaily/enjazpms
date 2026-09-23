@@ -7,13 +7,18 @@
   - دوال مصنع خفيفة (بدون مكتبات خارجية) للنماذج الأساسية المستخدمة في أغلب
     الاختبارات: صنف، مخزن، عميل، مورد، خزينة، حساب بنكي، مندوب، موظف.
 
-ملاحظة مهمة: عند إنشاء Tenant تُنشأ تلقائياً عبر signals (انظر
-apps/core/signals.py):
+ملاحظة مهمة: عند إنشاء Tenant من نسخة single_store/multi_stock (غير
+Enterprise) تُنشأ تلقائياً عبر signals (انظر apps/core/signals.py):
   - مخزن افتراضي واحد (is_system_default=True)
   - خزينة افتراضية واحدة (is_system_default=True)
   - سجلات StockQuantity (كمية=0) لكل صنف × مخزن قائم بالفعل
 لذلك دوال المصنع هنا لا تُنشئ مخزناً/خزينة افتراضيين من جديد إلا إذا طُلب
 صراحة (multiple=True) لتفادي انتهاك unique_together على (tenant, code).
+
+نسخة المؤسسات (version_type='multi_branch') استثناء: لا مخزن ولا خزينة
+افتراضيين تلقائياً — self.default_stock/self.default_treasury تُرجع None،
+واختبارات هذه النسخة يجب أن تُنشئ مخزنها/خزينتها صراحة (make_stock/
+make_treasury) قبل استخدام set_quantity أو أي عملية تحتاج مخزناً.
 """
 from decimal import Decimal
 

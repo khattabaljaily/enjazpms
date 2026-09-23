@@ -163,9 +163,13 @@ class UserManagementForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         apply_arabic_error_messages(self)
         if self.tenant is not None:
+            # مجموعة "مدير النشاط" التلقائية (is_owner_group) تحمل كل صلاحيات
+            # مالك الاشتراك — تُستبعد هنا عمداً حتى لا تُمنح لموظف عادي عبر
+            # خانة تبدو كأي مجموعة أخرى (راجع PermissionGroup.is_owner_group).
             self.fields['permission_groups'].queryset = PermissionGroup.objects.filter(
                 tenant=self.tenant,
-                is_active=True
+                is_active=True,
+                is_owner_group=False,
             ).order_by('name')
             self.fields['branch'].queryset = Branch.objects.filter(
                 tenant=self.tenant,

@@ -29,11 +29,15 @@ class TenantTestCaseHarnessTests(TenantTestCase):
         response = self.client.get('/')
         self.assertNotEqual(response.status_code, 302, 'يجب أن يكون المستخدم مسجل دخول فعلاً')
 
-    def test_default_stock_and_treasury_were_auto_created_by_signal(self):
-        self.assertIsNotNone(self.default_stock)
-        self.assertIsNotNone(self.default_treasury)
-        self.assertTrue(self.default_stock.is_system_default)
-        self.assertTrue(self.default_treasury.is_system_default)
+    def test_no_default_stock_or_treasury_for_enterprise_tenant(self):
+        """
+        نسخة المؤسسات (multi_branch) لا تحصل على مخزن/خزينة افتراضيين عند
+        التسجيل (راجع apps/core/signals.py::create_tenant_defaults) — خلافاً
+        لباقي النسخ single_store/multi_stock (راجع TenantTestCaseDefaultsTests
+        أدناه لسلوكها).
+        """
+        self.assertIsNone(self.default_stock)
+        self.assertIsNone(self.default_treasury)
 
     def test_plan_and_version_type_overrides_applied(self):
         self.assertEqual(self.tenant.subscription_plan, 'enterprise')
@@ -41,8 +45,11 @@ class TenantTestCaseHarnessTests(TenantTestCase):
         self.assertTrue(self.tenant.plan_allows_version_type('multi_branch'))
 
     def test_set_quantity_updates_the_auto_created_stock_quantity_row(self):
+        # لا مخزن افتراضياً هنا (tenant من نسخة المؤسسات) — ننشئ واحداً صراحة
+        # فيُنشئ signal الصنف/المخزن سجل StockQuantity المقابل تلقائياً.
+        stock = make_stock(self.tenant, code='WH-HARNESS')
         item = make_item(self.tenant, name='صنف الأساس')
-        sq = self.set_quantity(item, self.default_stock, '10')
+        sq = self.set_quantity(item, stock, '10')
         self.assertEqual(sq.quantity, Decimal('10.0000'))
         self.assertEqual(sq.opening_quantity, Decimal('10.0000'))
 

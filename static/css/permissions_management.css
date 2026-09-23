@@ -193,6 +193,13 @@
 
 .pm-group-body { flex: 1; min-width: 0; }
 
+.pm-group-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
 .pm-group-name {
     font-size: 0.86rem;
     font-weight: 700;
@@ -201,9 +208,21 @@
     overflow: hidden;
     text-overflow: ellipsis;
     margin: 0;
+    min-width: 0;
 }
 
 .pm-group-item.is-inactive .pm-group-name { color: var(--text-tertiary); }
+
+.pm-group-scope-badge {
+    flex-shrink: 0;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.08rem 0.45rem;
+    border-radius: 999px;
+    line-height: 1.5;
+}
+.pm-group-scope-badge--branch { background: rgba(37,99,235,0.12); color: #2563eb; }
+.pm-group-scope-badge--admin  { background: rgba(201,132,15,0.14); color: #c9840f; }
 
 .pm-group-meta {
     font-size: 0.71rem;
