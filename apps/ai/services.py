@@ -66,7 +66,21 @@ def _decimal_to_float(value):
     return float(value) if isinstance(value, Decimal) else value
 
 
-def collect_business_context(tenant) -> dict:
+def _is_enterprise_owner(tenant, user) -> bool:
+    """
+    مدير النشاط (is_tenant_admin) في نسخة المؤسسات مقيّد الآن بصلاحيات إدارية
+    فقط — لا وصول مباشر للمبيعات/المشتريات/العملاء/الموردين/المصروفات/
+    الخزائن/رواتب الموظفين (راجع ENTERPRISE_OWNER_EXCLUDED_CATEGORIES في
+    apps/accounts/permissions.py). محتوى الذكاء الاصطناعي يجب أن يعكس هذا:
+    راجع _ENTERPRISE_OWNER_PERSONA أدناه.
+    """
+    return bool(
+        tenant and tenant.is_enterprise()
+        and user is not None and getattr(user, 'is_tenant_admin', False)
+    )
+
+
+def collect_business_context(tenant, user=None) -> dict:
     """
     Gather key business metrics for the last 30 days for the given tenant.
     Returns a serializable dict suitable for embedding in the AI prompt.
@@ -164,25 +178,29 @@ def collect_business_context(tenant) -> dict:
     monthly_purchases = _decimal_to_float(recent_purchases)
 
     # ── Employee payroll (last 30 days) ───────────────────────
+    # رواتب/سلف الموظفين فئة مستبعدة بالكامل عن مدير النشاط في نسخة
+    # المؤسسات (لا شاشة ولا تقرير مقابل لها) — لا تُدرَج في سياقه، خلافاً
+    # لعدد الموظفين النشطين الذي يبقى ضمن فئة "الموظفين" المتاحة له.
     employee_data = {}
+    is_enterprise_owner = _is_enterprise_owner(tenant, user)
     try:
-        from apps.employees.models import Employee, SalaryPayment, EmployeeAdvance
+        from apps.employees.models import Employee, EmployeeSalaryPayment, EmployeeAdvance
         employee_count = Employee.objects.filter(tenant=tenant, is_active=True).count()
-        monthly_salaries = _decimal_to_float(
-            SalaryPayment.objects
-            .filter(tenant=tenant, status='paid', period_start__gte=month_ago)
-            .aggregate(t=Sum('net_salary'))['t'] or 0
-        )
-        pending_advances = _decimal_to_float(
-            EmployeeAdvance.objects
-            .filter(tenant=tenant, status='active')
-            .aggregate(t=Sum('amount'))['t'] or 0
-        )
-        employee_data = {
-            'active_employees': employee_count,
-            'monthly_salaries': monthly_salaries,
-            'pending_advances': pending_advances,
-        }
+        employee_data = {'active_employees': employee_count}
+        if not is_enterprise_owner:
+            monthly_salaries = _decimal_to_float(
+                EmployeeSalaryPayment.objects
+                .filter(tenant=tenant, status='paid', period_start__gte=month_ago)
+                .annotate(net=F('base_salary') + F('bonus') - F('advances_deducted') - F('deductions'))
+                .aggregate(t=Sum('net'))['t'] or 0
+            )
+            pending_advances = _decimal_to_float(
+                EmployeeAdvance.objects
+                .filter(tenant=tenant, status='pending')
+                .aggregate(t=Sum('amount'))['t'] or 0
+            )
+            employee_data['monthly_salaries'] = monthly_salaries
+            employee_data['pending_advances'] = pending_advances
     except Exception:
         pass
 
@@ -239,6 +257,20 @@ _BUSINESS_TYPES = {
     },
 }
 
+_ENTERPRISE_OWNER_PERSONA = (
+    'ملاحظة مهمة عن المستخدم الحالي: هو مدير النشاط (مالك الاشتراك) في نسخة المؤسسات متعددة الفروع، '
+    'وصلاحياته الآن إدارية واستراتيجية فقط — إدارة الفروع والمخازن، المستخدمين ومجموعات الصلاحيات، '
+    'تعريف المنتجات، إعدادات النشاط، ومتابعة كل التقارير. ليست لديه صلاحية الدخول المباشر لشاشات '
+    'المبيعات أو المشتريات أو العملاء أو الموردين أو المصروفات أو الخزائن أو رواتب/سلف الموظفين — '
+    'هذه عمليات يومية يتولاها موظفو ومديرو الفروع.\n'
+    'لذلك عند تقديم توصيات له: لا تقترح أبداً إجراءً تنفيذياً مباشراً يفترض دخوله لتلك الشاشات '
+    '(مثل "أنشئ فاتورة"، "سجّل مصروفاً"، "تابع تحصيل عميل بنفسك"، "اصرف راتباً"، "أعد طلب شراء"). '
+    'وجّه توصياتك دائماً نحو دوره الفعلي: مراجعة التقرير ذي الصلة، تكليف مدير الفرع المعني بالمتابعة، '
+    'أو قرار إداري (فتح فرع جديد، إعادة توزيع الموظفين، ضبط صلاحيات مستخدم أو مجموعة، مراجعة ربط '
+    'المخازن بالفروع، مقارنة أداء الفروع ببعضها عبر التقارير).'
+)
+
+
 _CAPABILITY_LABELS_AR = {
     'has_expiry_dates': 'تواريخ انتهاء الصلاحية',
     'has_batch_numbers': 'أرقام الدفعات',
@@ -286,6 +318,22 @@ _SYSTEM_KNOWLEDGE = (
     "- إضافة مندوب مبيعات: وحدة مناديب المبيعات ← مندوب جديد ← حدد نسبة العمولة.\n"
     "- صرف راتب: وحدة الموظفين ← دفعة راتب ← اختر الموظف والمبلغ والشهر.\n"
     "- إنشاء خزينة: وحدة الخزينة ← خزينة جديدة ← نقدية أو بنكية ← حدد الرصيد الافتتاحي.\n"
+    "- تغيير سعر الصرف: من شريط التنقل العلوي ← قائمة اسم النشاط (أيقونة المتجر) أعلى يمين الشاشة ← "
+    "\"سعر الصرف\" — يظهر هذا الخيار فقط إذا كان وضع العملة الصعبة مفعّلاً في إعدادات النشاط. "
+    "سعر الصرف ليس جزءاً من وحدة الخزينة إطلاقاً ولا يُعدَّل منها.\n\n"
+    "حقائق دقيقة عن وضع العملة الصعبة وسعر الصرف (لا تخرج عنها عند الشرح):\n"
+    "- تغيير سعر الصرف ليس له أثر رجعي: المعاملات المسجَّلة سابقاً تبقى بسعر الصرف الذي كان سارياً "
+    "وقت تسجيلها، والسعر الجديد يُطبَّق فقط على المعاملات الجديدة بعد التغيير.\n"
+    "- الموردون: لكل مورد عملة خاصة به (محلية أو عملة صعبة محددة في بياناته). سعر الصرف يؤثر فقط على "
+    "مديونية الموردين المسجَّلين بعملة صعبة (معاملاتهم الجديدة تُحوَّل بالسعر الجديد) — مديونية أي "
+    "مورد بالعملة المحلية لا تتأثر بتغيير سعر الصرف إطلاقاً.\n"
+    "- العملاء: حسابات العملاء في النظام كلها بالعملة المحلية فقط حالياً — لا يوجد عميل \"عملة صعبة\"، "
+    "فتغيير سعر الصرف لا يؤثر على أي رصيد أو مديونية عميل بتاتاً.\n"
+    "- الأصناف: أي صنف له سعر بالعملة الصعبة (بيع أو تكلفة) يُعاد تسعيره تلقائياً وفوراً عند تغيير سعر "
+    "الصرف.\n"
+    "- خزائن العملة الصعبة تعرض رصيدها بالعملة الصعبة نفسها (لا يُحوَّل تلقائياً)؛ تحويلات الخزينة "
+    "والحسابات البنكية بين عملتين لها سعر صرف خاص بها يُدخَل يدوياً لكل تحويل، وليس مرتبطاً بسعر صرف "
+    "النشاط العام.\n"
 )
 
 _RESPONSE_RULES = """قواعد الرد الصارمة:
@@ -321,7 +369,7 @@ def _capabilities_summary(tenant) -> str:
     return '، '.join(enabled) if enabled else ''
 
 
-def _build_tenant_profile(tenant) -> str:
+def _build_tenant_profile(tenant, user=None) -> str:
     """نص عربي يصف المشترك (النشاط، الباقة، العملة، الميزات المفعّلة)."""
     bt = getattr(tenant, 'business_type', None)
     slug = getattr(bt, 'slug', '') or 'pharmacy'
@@ -357,12 +405,15 @@ def _build_tenant_profile(tenant) -> str:
     if caps:
         lines.append(f'  • الميزات المفعّلة: {caps}')
 
-    return '\n'.join(lines)
+    profile = '\n'.join(lines)
+    if _is_enterprise_owner(tenant, user):
+        profile = f"{profile}\n\n{_ENTERPRISE_OWNER_PERSONA}"
+    return profile
 
 
-def _build_system_prompt(tenant) -> str:
-    """يبني system prompt واعٍ بنوع نشاط المشترك."""
-    profile = _build_tenant_profile(tenant)
+def _build_system_prompt(tenant, user=None) -> str:
+    """يبني system prompt واعٍ بنوع نشاط المشترك ودور المستخدم الحالي."""
+    profile = _build_tenant_profile(tenant, user)
     return f"{_SYSTEM_KNOWLEDGE}\n\n{profile}\n\n{_RESPONSE_RULES}"
 
 
@@ -419,17 +470,17 @@ def _build_context_message(context: dict) -> str:
 # Public API — Chat
 # ──────────────────────────────────────────────────────────────
 
-def chat(user_message: str, history: list, tenant) -> str:
+def chat(user_message: str, history: list, tenant, user=None) -> str:
     """
     Handle a user chat message.
     history: list of {"role": "user"|"assistant", "content": str}
     Returns the assistant reply string.
     """
-    context = collect_business_context(tenant)
+    context = collect_business_context(tenant, user)
     context_text = _build_context_message(context)
 
     messages = [
-        {"role": "system", "content": _build_system_prompt(tenant)},
+        {"role": "system", "content": _build_system_prompt(tenant, user)},
         {"role": "user", "content": context_text},
         {"role": "assistant", "content": "حسناً، لديّ البيانات. كيف يمكنني مساعدتك؟"},
     ]
@@ -447,23 +498,29 @@ def chat(user_message: str, history: list, tenant) -> str:
 # Public API — Daily Insights
 # ──────────────────────────────────────────────────────────────
 
-def generate_daily_insights(tenant) -> str:
+def generate_daily_insights(tenant, user=None) -> str:
     """
     Generate a concise Arabic business health summary for the dashboard widget.
     """
-    context = collect_business_context(tenant)
+    context = collect_business_context(tenant, user)
     context_text = _build_context_message(context)
 
+    if _is_enterprise_owner(tenant, user):
+        instruction = (
+            "بناءً على هذه البيانات، اكتب تقرير صحة أعمال يومي موجز (5 نقاط كحد أقصى) "
+            "من منظور إداري/إشرافي (وليس تنفيذياً يومياً — راجع ملاحظة دور المستخدم أعلاه) "
+            "يشمل: أبرز إنجاز، أبرز تحذير يستحق متابعة إدارية أو تكليف مدير فرع به، "
+            "وتوصية واحدة قرار إداري أو إشرافي فوري."
+        )
+    else:
+        instruction = (
+            "بناءً على هذه البيانات، اكتب تقرير صحة أعمال يومي موجز (5 نقاط كحد أقصى) "
+            "يشمل: أبرز إنجاز، أبرز تحذير، وتوصية واحدة عملية فورية."
+        )
+
     messages = [
-        {"role": "system", "content": _build_system_prompt(tenant)},
-        {
-            "role": "user",
-            "content": (
-                f"{context_text}\n\n"
-                "بناءً على هذه البيانات، اكتب تقرير صحة أعمال يومي موجز (5 نقاط كحد أقصى) "
-                "يشمل: أبرز إنجاز، أبرز تحذير، وتوصية واحدة عملية فورية."
-            ),
-        },
+        {"role": "system", "content": _build_system_prompt(tenant, user)},
+        {"role": "user", "content": f"{context_text}\n\n{instruction}"},
     ]
 
     return _call_deepseek(messages, max_tokens=400)
@@ -582,12 +639,12 @@ def smart_map_headers(actual_headers: list, field_schema: list) -> dict:
     return {}
 
 
-def enrich_notification(notification_type: str, raw_message: str, tenant) -> str:
+def enrich_notification(notification_type: str, raw_message: str, tenant, user=None) -> str:
     """
     Given a raw notification message (e.g., "المخزون منخفض لمنتج X"),
     return an AI-enriched version with context and actionable advice.
     """
-    context = collect_business_context(tenant)
+    context = collect_business_context(tenant, user)
     context_text = _build_context_message(context)
 
     prompt = (
@@ -598,7 +655,7 @@ def enrich_notification(notification_type: str, raw_message: str, tenant) -> str
     )
 
     messages = [
-        {"role": "system", "content": _build_system_prompt(tenant)},
+        {"role": "system", "content": _build_system_prompt(tenant, user)},
         {"role": "user", "content": prompt},
     ]
 
