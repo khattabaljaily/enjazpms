@@ -12,8 +12,8 @@ from decimal import Decimal
 import csv
 import json
 
-from apps.accounts.decorators import require_permission, require_capability, require_plan_feature
-from apps.core.utils import filter_by_branch_via
+from apps.accounts.decorators import require_permission, require_capability, require_plan_feature, branch_scope_exempt
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership
 from .forms import AgentForm
 from .models import Agent, AgentLedger
 from .services import _apply_agent_ledger, agent_ledger_display_label
@@ -193,6 +193,7 @@ def agent_detail_api(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     agent = get_object_or_404(Agent.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, agent)
     balance = _agent_balance(tenant, agent)
 
     return _json_ok(data={
@@ -230,6 +231,7 @@ def agent_transactions_api(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     agent = get_object_or_404(Agent.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, agent)
     opening = agent.opening_balance or Decimal('0')
 
     data = []
@@ -281,6 +283,7 @@ def agent_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     agent = get_object_or_404(Agent.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, agent)
     form = AgentForm(request.POST, instance=agent, tenant=tenant, branch=getattr(request, 'branch', None))
     if form.is_valid():
         agent = form.save(commit=False)
@@ -307,6 +310,7 @@ def agent_delete_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     agent = get_object_or_404(Agent.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, agent)
     name = agent.name
     try:
         agent.delete()
@@ -462,6 +466,7 @@ def agent_payment_detail_api(request, pk):
         AgentLedger.objects.for_tenant(tenant).select_related('agent'),
         entry_type='payment', pk=pk,
     )
+    enforce_branch_ownership(request, payment, field='agent__branch')
     cancellation = AgentLedger.objects.for_tenant(tenant).filter(
         reference_type='agent_payment_cancel', reference_id=payment.id,
     ).first()
@@ -519,6 +524,7 @@ def agent_payment_create_api(request):
         return _json_error('المبلغ يجب أن يكون أكبر من الصفر')
 
     agent = get_object_or_404(Agent.objects.for_tenant(tenant), pk=agent_id)
+    enforce_branch_ownership(request, agent)
     reference_type = 'agent_payment_bank' if method == 'bank' else 'agent_payment_cash'
     note_text = notes
     if reference:
@@ -546,6 +552,7 @@ def agent_payment_create_api(request):
                     Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False),
                     pk=int(treasury_id),
                 )
+                enforce_branch_ownership(request, treasury)
                 movement = post_treasury_disbursement(
                     tenant=tenant,
                     amount=amount,
@@ -584,6 +591,7 @@ def agent_payment_cancel_api(request, pk):
     payment = get_object_or_404(
         AgentLedger.objects.for_tenant(tenant).filter(entry_type='payment'), pk=pk,
     )
+    enforce_branch_ownership(request, payment, field='agent__branch')
     reverse_notes = f"إلغاء دفعة مندوب — {payment.notes or ''}".strip()
 
     with transaction.atomic():
@@ -635,7 +643,7 @@ def agent_export_api(request):
     response.write('﻿')
     writer = csv.writer(response)
     writer.writerow(['الاسم', 'الكود', 'الهاتف', 'البريد', 'المدينة', 'نوع العمولة', 'أساس العمولة', 'معدل العمولة', 'معدل عمولة التحصيل', 'الملاحظات', 'نشط'])
-    for agent in Agent.objects.for_tenant(tenant).order_by('name'):
+    for agent in Agent.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).order_by('name'):
         writer.writerow([
             agent.name, agent.code, agent.phone or '', agent.email or '',
             agent.city or '', agent.get_commission_type_display(),
@@ -663,6 +671,7 @@ _AGENT_FIELD_SCHEMA = [
 @require_capability('has_agents_module')
 @require_plan_feature('agents')
 @require_permission('import_agents')
+@branch_scope_exempt('استيراد يُنشئ سجلات جديدة فقط (لا يقرأ بيانات فروع أخرى) ويُختم كل سجل بفرع المستخدم الحالي إن وُجد — نفس منطق agent_create_api')
 def agent_import_api(request):
     from apps.core.io_utils import parse_uploaded_file, smart_get, safe_decimal, clean_phone, clean_email
     from apps.ai.services import smart_map_headers
@@ -674,6 +683,8 @@ def agent_import_api(request):
         return HttpResponseNotAllowed(['POST'])
     if 'file' not in request.FILES:
         return _json_error('لم يتم رفع أي ملف')
+
+    branch = getattr(request, 'branch', None)
 
     rows, err = parse_uploaded_file(request.FILES['file'])
     if err:
@@ -696,6 +707,7 @@ def agent_import_api(request):
                 continue
             Agent.objects.create(
                 tenant=tenant,
+                branch=branch,
                 name=name,
                 phone=clean_phone(smart_get(row, 'phone', mapping, 'الهاتف', 'الجوال', 'phone')) or '',
                 email=clean_email(smart_get(row, 'email', mapping, 'البريد', 'email')) or '',
@@ -749,12 +761,13 @@ def agent_statement(request):
     start_date = request.GET.get('start_date') or (timezone.localdate() - timedelta(days=30)).isoformat()
     end_date = request.GET.get('end_date') or timezone.localdate().isoformat()
 
-    agents = Agent.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    agents = Agent.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name')
     report = None
 
     if agent_id:
         try:
             agent = Agent.objects.get(pk=agent_id, tenant=tenant)
+            enforce_branch_ownership(request, agent)
         except Agent.DoesNotExist:
             agent = None
 
@@ -818,7 +831,7 @@ def agent_balances(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    agents = Agent.objects.filter(tenant=tenant).order_by('name')
+    agents = Agent.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
     rows = []
     total_dues = Decimal('0')
     for agent in agents:
@@ -848,6 +861,7 @@ def agent_create_user_api(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     agent = get_object_or_404(Agent, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, agent)
 
     if agent.user_id:
         return _json_error('المندوب مرتبط بمستخدم بالفعل')
@@ -899,6 +913,7 @@ def agent_reset_password_api(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     agent = get_object_or_404(Agent, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, agent)
     if not agent.user_id:
         return _json_error('لا يوجد حساب مرتبط بهذا المندوب')
 
@@ -936,6 +951,7 @@ def _portal_required(view_fn):
     return wrapper
 
 
+@branch_scope_exempt('بوابة مناديب منفصلة: تسجيل الدخول هنا (agent_portal_login) لا يستدعي django.contrib.auth.login إطلاقاً — يكتفي بتخزين agent.pk في الجلسة (_SESS_AGENT) — فـ request.user يبقى AnonymousUser وrequest.branch يبقى None دائماً (TenantMiddleware لا يضبطه إلا لمستخدم موثّق). الهوية الفعلية هنا هي المندوب المخزَّن في الجلسة نفسها (aid)، لا معرّف من الطلب، فلا مجال لـ IDOR عبر فرع')
 def _get_portal_ctx(request):
     """Return (agent, tenant) from portal session, or (None, None)."""
     from apps.core.models import Tenant
@@ -980,6 +996,7 @@ def agent_portal_logout(request):
 #   AGENT PORTAL — الصفحات
 # ═════════════════════════════════════════════════════
 
+@branch_scope_exempt('بوابة مناديب: request.branch دائماً None هنا (لا django.contrib.auth.login — راجع _get_portal_ctx)، والفواتير مفلترة أصلاً بـ agent=agent المُشتق من جلسة البوابة لا من مُعامل الطلب')
 @_portal_required
 def agent_portal_dashboard(request):
     agent, tenant = _get_portal_ctx(request)
@@ -1005,6 +1022,7 @@ def agent_portal_dashboard(request):
     })
 
 
+@branch_scope_exempt('بوابة مناديب: request.branch دائماً None هنا (لا django.contrib.auth.login — راجع _get_portal_ctx)، والفواتير مفلترة أصلاً بـ agent=agent المُشتق من جلسة البوابة لا من مُعامل الطلب')
 @_portal_required
 def agent_portal_invoices(request):
     agent, tenant = _get_portal_ctx(request)
@@ -1204,15 +1222,19 @@ def agent_requests_list(request):
         return redirect('core:no_tenant')
 
     from .models import AgentInvoiceRequest
+    branch = getattr(request, 'branch', None)
     status_filter = request.GET.get('status', 'pending')
-    qs = AgentInvoiceRequest.objects.filter(tenant=tenant).select_related('agent', 'sale_invoice')
+    qs = filter_by_branch_via(
+        AgentInvoiceRequest.objects.filter(tenant=tenant).select_related('agent', 'sale_invoice'),
+        branch, field='agent__branch',
+    )
     if status_filter:
         qs = qs.filter(status=status_filter)
     qs = qs.order_by('-created_at')
 
-    pending_count  = AgentInvoiceRequest.objects.filter(tenant=tenant, status='pending').count()
-    approved_count = AgentInvoiceRequest.objects.filter(tenant=tenant, status='approved').count()
-    rejected_count = AgentInvoiceRequest.objects.filter(tenant=tenant, status='rejected').count()
+    pending_count  = filter_by_branch_via(AgentInvoiceRequest.objects.filter(tenant=tenant, status='pending'), branch, field='agent__branch').count()
+    approved_count = filter_by_branch_via(AgentInvoiceRequest.objects.filter(tenant=tenant, status='approved'), branch, field='agent__branch').count()
+    rejected_count = filter_by_branch_via(AgentInvoiceRequest.objects.filter(tenant=tenant, status='rejected'), branch, field='agent__branch').count()
 
     return render(request, 'agents/manage_requests.html', {
         'requests': qs,
@@ -1235,8 +1257,9 @@ def agent_request_detail(request, pk):
     from .models import AgentInvoiceRequest
     from apps.stocks.models import Stock
     req   = get_object_or_404(AgentInvoiceRequest, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, req, field='agent__branch')
     lines = req.lines.select_related('item').all()
-    stocks = Stock.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    stocks = Stock.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name')
 
     return render(request, 'agents/manage_request_detail.html', {
         'req': req, 'lines': lines, 'stocks': stocks,
@@ -1254,19 +1277,22 @@ def agent_request_approve(request, pk):
         return redirect('core:no_tenant')
 
     from .models import AgentInvoiceRequest
+    from apps.stocks.models import Stock
     req = get_object_or_404(AgentInvoiceRequest, pk=pk, tenant=tenant, status='pending')
+    enforce_branch_ownership(request, req, field='agent__branch')
+
+    stock_id = request.POST.get('stock_id')
+    if stock_id:
+        stock = get_object_or_404(Stock, pk=stock_id, tenant=tenant)
+        enforce_branch_ownership(request, stock)
+    else:
+        stock = Stock.objects.filter(tenant=tenant, is_default=True).for_branch(getattr(request, 'branch', None)).first() \
+            or Stock.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).first()
 
     try:
         with transaction.atomic():
             from apps.sales.models import SaleInvoice, SaleInvoiceLine
-            from apps.stocks.models import Stock
 
-            stock_id = request.POST.get('stock_id')
-            if stock_id:
-                stock = get_object_or_404(Stock, pk=stock_id, tenant=tenant)
-            else:
-                stock = Stock.objects.filter(tenant=tenant, is_default=True).first() \
-                    or Stock.objects.filter(tenant=tenant).first()
             if not stock:
                 raise ValueError('لا يوجد مخزن مُعرَّف في النظام')
 
@@ -1277,6 +1303,7 @@ def agent_request_approve(request, pk):
                 customer=customer,
                 agent=req.agent,
                 stock=stock,
+                branch=stock.branch,
                 invoice_date=timezone.localdate(),
                 payment_method='credit',
                 status='draft',
@@ -1325,6 +1352,7 @@ def agent_request_reject(request, pk):
 
     from .models import AgentInvoiceRequest
     req = get_object_or_404(AgentInvoiceRequest, pk=pk, tenant=tenant, status='pending')
+    enforce_branch_ownership(request, req, field='agent__branch')
 
     comment = request.POST.get('comment', '').strip()
     req.status        = 'rejected'

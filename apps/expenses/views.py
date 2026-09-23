@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
-from apps.accounts.decorators import require_permission
+from apps.accounts.decorators import require_permission, branch_scope_exempt
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import JsonResponse
@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.core.utils import convert_arabic_numerals
+from apps.core.utils import convert_arabic_numerals, enforce_branch_ownership
 from apps.treasury.models import Treasury
 from apps.bank_accounts.models import BankAccount
 
@@ -222,6 +222,7 @@ def expense_edit(request, pk):
         return _err('لا يوجد نشاط تجاري')
 
     expense = get_object_or_404(Expense, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, expense)
     if expense.status not in ('draft',):
         return _err('لا يمكن تعديل مصروف غير مسودة')
 
@@ -267,6 +268,7 @@ def _process_expense_post(request, tenant, expense):
         if treasury_id:
             try:
                 treasury = Treasury.objects.get(pk=int(treasury_id), tenant=tenant, is_active=True, is_hard_currency=False)
+                enforce_branch_ownership(request, treasury)
             except (Treasury.DoesNotExist, ValueError):
                 return _err('الخزينة غير صالحة')
     elif payment_method == 'bank':
@@ -275,6 +277,7 @@ def _process_expense_post(request, tenant, expense):
             return _err('يجب اختيار الحساب البنكي')
         try:
             bank_account = BankAccount.objects.get(pk=int(bank_account_id), tenant=tenant, is_active=True)
+            enforce_branch_ownership(request, bank_account)
         except (BankAccount.DoesNotExist, ValueError):
             return _err('الحساب البنكي غير صالح')
 
@@ -325,6 +328,7 @@ def expense_detail_api(request, pk):
         return _err('لا يوجد نشاط تجاري')
 
     expense = get_object_or_404(Expense.objects.select_related('category', 'treasury', 'bank_account'), pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, expense)
     return JsonResponse({'success': True, 'data': {
         'id': expense.pk,
         'code': expense.code,
@@ -354,6 +358,7 @@ def expense_confirm_ajax(request, pk):
         return _err('لا يوجد نشاط تجاري')
 
     expense = get_object_or_404(Expense, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, expense)
     try:
         confirm_expense(expense, user=request.user)
     except ValueError as e:
@@ -371,6 +376,7 @@ def expense_cancel_ajax(request, pk):
         return _err('لا يوجد نشاط تجاري')
 
     expense = get_object_or_404(Expense, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, expense)
     try:
         cancel_expense(expense, user=request.user)
     except ValueError as e:

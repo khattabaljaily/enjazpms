@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission, require_any_permission
-from apps.core.utils import filter_by_branch_via
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership
 from .forms import CustomerForm
 from .models import Customer
 from apps.sales.models import CustomerLedger, SalePayment
@@ -204,6 +204,7 @@ def generate_portal_token(request, pk):
     if not tenant:
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, customer)
     customer.refresh_portal_token()
     from django.urls import reverse
     portal_url = request.build_absolute_uri(
@@ -224,6 +225,7 @@ def customer_detail_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, customer)
     ledger_total = (
         CustomerLedger.objects
         .for_tenant(tenant)
@@ -260,6 +262,7 @@ def customer_transactions_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, customer)
     opening = customer.opening_balance or Decimal('0')
 
     type_labels = {
@@ -489,6 +492,7 @@ def customer_payment_detail_api(request, pk):
         entry_type='payment',
         pk=pk,
     )
+    enforce_branch_ownership(request, payment, field='customer__branch')
 
     # لو القيد مرتبط بفاتورة حقيقية (SalePayment)، الأصل عن حالة الإلغاء وحركة
     # الخزينة موجود عند تلك الدفعة نفسها (مُعرَّفة برقمها هي، لا بمعرّف قيد العميل).
@@ -580,6 +584,7 @@ def customer_payment_create_api(request):
         return _json_error('المبلغ يجب أن يكون أكبر من الصفر')
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=customer_id)
+    enforce_branch_ownership(request, customer)
     note_text = notes
     if reference:
         note_text = f"{note_text} | مرجع: {reference}" if note_text else f"مرجع: {reference}"
@@ -590,10 +595,12 @@ def customer_payment_create_api(request):
         if not treasury_id:
             return _json_error('يجب اختيار الخزينة عند دفع نقداً')
         treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False), pk=int(treasury_id))
+        enforce_branch_ownership(request, treasury)
     elif method == 'bank':
         if not bank_account_id:
             return _json_error('يجب اختيار الحساب البنكي عند الدفع بنكياً')
         bank_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=int(bank_account_id))
+        enforce_branch_ownership(request, bank_account)
 
     try:
         allocation = record_customer_payment_allocated(
@@ -641,6 +648,7 @@ def customer_payment_cancel_api(request, pk):
         CustomerLedger.objects.for_tenant(tenant).filter(entry_type='payment'),
         pk=pk,
     )
+    enforce_branch_ownership(request, payment, field='customer__branch')
     try:
         with transaction.atomic():
             reverse_customer_payment_by_ledger_entry(tenant, payment, user=request.user)
@@ -662,6 +670,7 @@ def customer_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, customer)
     form = CustomerForm(request.POST, instance=customer, tenant=tenant, branch=getattr(request, 'branch', None))
 
     if form.is_valid():
@@ -692,6 +701,7 @@ def customer_delete_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, customer)
     cus_name = customer.name
     customer.delete()
     log_activity(request, 'حذف عميل', cus_name, 'delete')
@@ -730,7 +740,7 @@ def customer_export_api(request):
     ])
     
     # Write data
-    customers = Customer.objects.for_tenant(tenant).order_by('name')
+    customers = Customer.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
     for customer in customers:
         writer.writerow([
             customer.name,

@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, post_delete
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
 
-from apps.core.models import Tenant, TenantCapabilities
+from apps.core.models import Tenant, TenantCapabilities, Branch
 
 
 from apps.core.utils import CURRENCY_NAMES_AR as _HC_CURRENCY_NAMES
@@ -29,6 +29,64 @@ def _ensure_hc_treasury(tenant):
         treasury.code = f'TR-{hc}'
         treasury.currency = hc
         treasury.save(update_fields=['name', 'code', 'currency', 'updated_at'])
+
+
+def _ensure_branch_treasuries(branch):
+    """
+    ينشئ خزينة محلية وخزينة عملة صعبة (إن كانت مفعّلة) لفرع جديد في نسخة
+    Enterprise — نفس نمط create_tenant_defaults أدناه، لكن على مستوى كل فرع
+    بدل مرة واحدة لكل tenant (خطة التنفيذ، القسم 6.2).
+
+    لا نضع is_default=True هنا عمداً: هذا الحقل تنافسي على مستوى الـ tenant
+    كله (خزينة افتراضية واحدة فقط لكل tenant، يفرضها treasury/views.py عند
+    التعديل) وليس على مستوى الفرع — ربط "الخزينة الافتراضية لكل فرع" بشكل
+    صحيح هو عمل الإنفاذ المركزي في مرحلة لاحقة (القسم 3)، لا شيء يُحسم هنا.
+    """
+    from apps.treasury.models import Treasury
+    tenant = branch.tenant
+
+    Treasury.objects.get_or_create(
+        tenant=tenant,
+        branch=branch,
+        is_hard_currency=False,
+        defaults={
+            'name': f'خزينة {branch.name}',
+            'code': f'TR-{branch.code}',
+            'is_active': True,
+            'current_balance': 0,
+            'currency': tenant.currency or '',
+        },
+    )
+
+    if tenant.hard_currency_mode and tenant.hard_currency:
+        hc = (tenant.hard_currency or 'USD').upper()
+        hc_name = _HC_CURRENCY_NAMES.get(hc, hc)
+        Treasury.objects.get_or_create(
+            tenant=tenant,
+            branch=branch,
+            is_hard_currency=True,
+            defaults={
+                'name': f'خزينة {hc_name} - {branch.name}',
+                'code': f'TR-{hc}-{branch.code}',
+                'currency': hc,
+                'is_active': True,
+                'current_balance': 0,
+            },
+        )
+
+
+@receiver(post_save, sender=Branch)
+def on_branch_created(sender, instance, created, **kwargs):
+    """
+    عند إنشاء فرع جديد: يُنشئ خزنتيه (محلية + عملة صعبة) تلقائياً — Enterprise
+    فقط، مغلّف بـ tenant.is_enterprise() لضمان صفر تأثير على
+    single_store/multi_stock (خطة التنفيذ، القسم 1 و9/Phase 1).
+    """
+    if not created:
+        return
+    if not instance.tenant.is_enterprise():
+        return
+    _ensure_branch_treasuries(instance)
 
 
 # ── Admin Notification helpers ─────────────────────────────────────────────

@@ -133,6 +133,30 @@ def deny_branch_scoped(view_func):
     return wrapper
 
 
+def branch_scope_exempt(reason):
+    """
+    علامة توثيقية صريحة (لا سلوك جديد) على view يلمس موديلاً حساساً للفرع
+    (فاتورة، مخزون، خزينة...) لكنه *متعمَّد* أن يبقى بلا فلترة for_branch/
+    filter_by_branch_via — مثال: شاشة تُنشئ سجلاً جديداً من الصفر ولا تقرأ
+    بيانات فروع أخرى أصلاً، أو شاشة محمية أصلاً بـ deny_branch_scoped فلا
+    يصلها مستخدم بفرع من الأساس.
+
+    الهدف الوحيد: أداة التدقيق check_branch_scoping (خطة تنفيذ Enterprise،
+    القسم 3.4) تتعرّف على هذا الديكوريتر كاستثناء موثَّق بدل أن تُبلِّغ عنه
+    كنسيان صامت. لا تُستخدم هذه الدالة لأي غرض آخر.
+
+    الاستخدام: @branch_scope_exempt('سبب الاستثناء بالعربي')
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            return view_func(request, *args, **kwargs)
+        wrapper._branch_scope_exempt = True
+        wrapper._branch_scope_exempt_reason = reason
+        return wrapper
+    return decorator
+
+
 def require_plan_feature(feature_name):
     """مثل require_capability لكن للتحقق من ميزة باقة الاشتراك (Tenant.plan_allows)."""
     def decorator(view_func):

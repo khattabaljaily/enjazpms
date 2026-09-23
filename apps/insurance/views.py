@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from apps.accounts.activity_service import log_activity
 from apps.accounts.decorators import require_permission, require_capability
+from apps.core.utils import enforce_branch_ownership
 from apps.sales.models import SaleInvoice
 
 from .forms import InsuranceCompanyForm
@@ -336,6 +337,7 @@ def invoice_eligible_lines_api(request, invoice_id):
         invoice = SaleInvoice.objects.get(tenant=tenant, pk=invoice_id)
     except SaleInvoice.DoesNotExist:
         return _json_error('الفاتورة غير موجودة', status=404)
+    enforce_branch_ownership(request, invoice)
 
     if hasattr(invoice, 'insurance_claim'):
         return _json_error('يوجد بالفعل مطالبة تأمين لهذه الفاتورة.')
@@ -376,6 +378,7 @@ def claim_create_api(request):
         invoice = SaleInvoice.objects.get(tenant=tenant, pk=invoice_id)
     except SaleInvoice.DoesNotExist:
         return _json_error('الفاتورة غير موجودة')
+    enforce_branch_ownership(request, invoice)
 
     try:
         result = services.lookup_insurance_card(tenant, card_number)

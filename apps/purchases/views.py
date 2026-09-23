@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 from apps.accounts.activity_service import log_activity
 
 from django.contrib.auth.decorators import login_required
-from apps.accounts.decorators import require_permission
+from apps.accounts.decorators import require_permission, branch_scope_exempt
 from django.db import transaction
 from django.db.models import Q, Sum, Subquery, OuterRef
 from django.db.models.functions import Coalesce
@@ -21,7 +21,7 @@ from apps.purchases.models import PurchaseInvoice, PurchaseReturn, PurchaseRetur
 from apps.purchases.services import build_purchase_from_post, cancel_purchase_invoice, cancel_purchase_return, confirm_purchase_invoice, confirm_purchase_return, edit_confirmed_purchase_invoice
 from apps.stocks.models import Stock
 from apps.suppliers.models import Supplier
-from apps.core.utils import filter_by_branch_via
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership
 
 from .reports import PurchasesReportGenerator
 
@@ -219,6 +219,7 @@ def order_edit(request, pk):
         return redirect('core:no_tenant')
 
     invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
     if invoice.status not in ('draft', 'confirmed'):
         return redirect('purchases:order_detail', pk=pk)
 
@@ -312,6 +313,7 @@ def _process_order_post(request, tenant, invoice):
         stock = Stock.objects.get(id=header.get('stock_id'), tenant=tenant)
     except Stock.DoesNotExist:
         return _json_error('المخزن المحدد غير موجود')
+    enforce_branch_ownership(request, stock)
 
     try:
         if invoice is None:
@@ -336,19 +338,27 @@ def _process_order_post(request, tenant, invoice):
                 }
                 if bank_account_id:
                     from apps.bank_accounts.models import BankAccount
-                    confirmed_header['bank_account'] = BankAccount.objects.get(id=bank_account_id, tenant=tenant, is_active=True)
+                    bank_account_obj = BankAccount.objects.get(id=bank_account_id, tenant=tenant, is_active=True)
+                    # مصدر السداد الفعلي (يُصرَف منه للمورد) — نفس منطق مصروفات
+                    # apps/expenses/views.py._process_expense_post، يجب التحقق من ملكيته
+                    enforce_branch_ownership(request, bank_account_obj)
+                    confirmed_header['bank_account'] = bank_account_obj
                 else:
                     confirmed_header['bank_account'] = None
 
                 supplier_raw = header.get('supplier_id')
                 if supplier_raw:
-                    confirmed_header['supplier'] = Supplier.objects.get(id=supplier_raw, tenant=tenant)
+                    supplier_obj = Supplier.objects.get(id=supplier_raw, tenant=tenant)
+                    enforce_branch_ownership(request, supplier_obj)
+                    confirmed_header['supplier'] = supplier_obj
                 else:
                     confirmed_header['supplier'] = None
 
                 stock_raw = header.get('stock_id')
                 if stock_raw:
-                    confirmed_header['stock'] = Stock.objects.get(id=stock_raw, tenant=tenant)
+                    stock_obj = Stock.objects.get(id=stock_raw, tenant=tenant)
+                    enforce_branch_ownership(request, stock_obj)
+                    confirmed_header['stock'] = stock_obj
 
                 inv = edit_confirmed_purchase_invoice(invoice, confirmed_header, lines_data, request.user)
                 return JsonResponse({'success': True, 'redirect': f'/purchases/{inv.id}/'})
@@ -368,14 +378,25 @@ def _process_order_post(request, tenant, invoice):
                 line.save()
 
             supplier_raw = header.get('supplier_id')
-            invoice.supplier_id = int(supplier_raw) if supplier_raw else None
+            if supplier_raw:
+                supplier_obj = Supplier.objects.get(id=int(supplier_raw), tenant=tenant)
+                enforce_branch_ownership(request, supplier_obj)
+                invoice.supplier = supplier_obj
+            else:
+                invoice.supplier = None
             invoice.stock = stock
             invoice.invoice_date = header.get('invoice_date') or invoice.invoice_date
             invoice.payment_method = payment_method or invoice.payment_method
             invoice.cash_amount = cash_amount
             invoice.bank_amount = bank_amount
             invoice.bank_reference = bank_reference
-            invoice.bank_account_id = int(bank_account_id) if bank_account_id else None
+            if bank_account_id:
+                from apps.bank_accounts.models import BankAccount
+                bank_account_obj = BankAccount.objects.get(id=int(bank_account_id), tenant=tenant, is_active=True)
+                enforce_branch_ownership(request, bank_account_obj)
+                invoice.bank_account = bank_account_obj
+            else:
+                invoice.bank_account = None
             invoice.notes = header.get('notes', '')
             invoice.recalculate_totals()
             invoice.save()
@@ -409,6 +430,7 @@ def order_detail(request, pk):
         pk=pk,
         tenant=tenant,
     )
+    enforce_branch_ownership(request, invoice)
     lines = list(invoice.lines.select_related('item').prefetch_related('item__item_units').all())
     for ln in lines:
         iu_list = list(ln.item.item_units.order_by('factor'))
@@ -448,7 +470,8 @@ def order_print(request, pk):
     if not tenant:
         return redirect('core:no_tenant')
 
-    get_object_or_404(PurchaseInvoice.objects.only('id', 'tenant_id'), pk=pk, tenant=tenant)
+    invoice = get_object_or_404(PurchaseInvoice.objects.only('id', 'tenant_id', 'branch_id'), pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
     return redirect(f"{reverse('purchases:order_detail', kwargs={'pk': pk})}?print=1")
 
 
@@ -461,6 +484,7 @@ def order_confirm_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
     try:
         confirm_purchase_invoice(invoice, request.user)
         log_activity(request, 'تأكيد أمر شراء', f'{invoice.invoice_number} — {invoice.supplier.name}', 'create')
@@ -478,6 +502,7 @@ def order_cancel_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
     try:
         body = json.loads(request.body or '{}')
     except json.JSONDecodeError:
@@ -579,6 +604,7 @@ def return_lines_api(request, return_pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     purchase_return = get_object_or_404(PurchaseReturn, pk=return_pk, tenant=tenant)
+    enforce_branch_ownership(request, purchase_return)
     lines = purchase_return.lines.select_related('item').all()
 
     data = []
@@ -604,6 +630,7 @@ def return_create(request, invoice_pk):
         PurchaseInvoice, pk=invoice_pk, tenant=tenant,
         status__in=['confirmed', 'partially_returned']
     )
+    enforce_branch_ownership(request, invoice)
     lines = invoice.lines.select_related('item').all()
     returnable_lines = [l for l in lines if l.returnable_quantity > 0]
 
@@ -619,6 +646,7 @@ def return_create(request, invoice_pk):
     })
 
 
+@branch_scope_exempt('invoice تحقّقت ملكيته بالفعل في return_create() المستدعية قبل استدعاء هذه الدالة؛ بنود invoice.lines هنا مفلترة عبر invoice المُتحقَّق منه')
 def _process_return_post(request, tenant, invoice):
     try:
         body = json.loads(request.body)
@@ -696,6 +724,7 @@ def return_detail(request, pk):
         PurchaseReturn.objects.select_related('original_invoice', 'original_invoice__supplier'),
         pk=pk, tenant=tenant,
     )
+    enforce_branch_ownership(request, purchase_return)
     lines = purchase_return.lines.select_related('item', 'invoice_line')
     return render(request, 'purchases/return_detail.html', {
         'purchase_return': purchase_return,
@@ -714,6 +743,7 @@ def return_confirm_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     purchase_return = get_object_or_404(PurchaseReturn, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, purchase_return)
     try:
         confirm_purchase_return(purchase_return, request.user)
         log_activity(request, 'تأكيد مرتجع مشتريات', f'{purchase_return.return_number}', 'create')
@@ -731,6 +761,7 @@ def return_cancel_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     purchase_return = get_object_or_404(PurchaseReturn, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, purchase_return)
     try:
         cancel_purchase_return(purchase_return, request.user)
         log_activity(request, 'إلغاء مرتجع مشتريات', f'{purchase_return.return_number}', 'delete')
@@ -852,12 +883,13 @@ def purchases_by_supplier_report(request):
 
     # suppliers list for filter dropdown
     from apps.suppliers.models import Supplier
-    suppliers = Supplier.objects.filter(tenant=tenant).order_by('name')
+    suppliers = Supplier.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
 
     selected_supplier = None
     if supplier_id:
         try:
             selected_supplier = Supplier.objects.get(tenant=tenant, id=supplier_id)
+            enforce_branch_ownership(request, selected_supplier)
         except Supplier.DoesNotExist:
             selected_supplier = None
 
@@ -918,7 +950,8 @@ def purchases_by_supplier_report_export(request):
         try:
             from apps.suppliers.models import Supplier
             sup = Supplier.objects.get(tenant=tenant, id=supplier_id)
-        except Exception:
+            enforce_branch_ownership(request, sup)
+        except Supplier.DoesNotExist:
             sup = None
 
         if sup:
@@ -1121,7 +1154,7 @@ def purchases_supplier_statement(request):
 
     generator = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_supplier_statement(supplier_id) if supplier_id else None
-    suppliers = Supplier.objects.filter(tenant=tenant).order_by('name')
+    suppliers = Supplier.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
 
     return render(request, 'purchases/reports/supplier_statement.html', {
         'report': report,
@@ -1208,7 +1241,7 @@ def purchases_payments_report(request):
     supplier_id = request.GET.get('supplier_id') or None
 
     report = PurchasesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_payments_report(supplier_id=supplier_id or None)
-    suppliers = Supplier.objects.filter(tenant=tenant).order_by('name')
+    suppliers = Supplier.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
 
     return render(request, 'purchases/reports/payments.html', {
         'report': report,
@@ -1305,7 +1338,10 @@ def purchases_by_user_report(request):
     report = generator.get_by_user_report(user_id=user_id)
 
     from django.contrib.auth import get_user_model
-    user_ids = PurchaseInvoice.objects.filter(tenant=tenant, status='confirmed').values_list('created_by', flat=True).distinct()
+    user_ids = filter_by_branch_via(
+        PurchaseInvoice.objects.filter(tenant=tenant, status='confirmed'),
+        getattr(request, 'branch', None),
+    ).values_list('created_by', flat=True).distinct()
     users = get_user_model().objects.filter(pk__in=user_ids).order_by('first_name', 'last_name')
 
     return render(request, 'purchases/reports/by_user.html', {
@@ -1436,7 +1472,7 @@ def rfq_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = PurchaseRFQ.objects.filter(tenant=tenant)
+    qs = filter_by_branch_via(PurchaseRFQ.objects.filter(tenant=tenant), getattr(request, 'branch', None), field='stock__branch')
     STATUS_LABELS = dict(PurchaseRFQ.STATUS_CHOICES)
     stats = {
         'total':     qs.count(),
@@ -1445,7 +1481,7 @@ def rfq_list(request):
         'received':  qs.filter(status='received').count(),
         'converted': qs.filter(status='converted').count(),
     }
-    suppliers = Supplier.objects.for_tenant(tenant).filter(is_active=True)
+    suppliers = Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
     return render(request, 'purchases/rfq_list.html', {
         'stats': stats, 'suppliers': suppliers, 'STATUS_LABELS': STATUS_LABELS,
     })
@@ -1464,7 +1500,7 @@ def rfq_table_api(request):
     search    = request.GET.get('search[value]', '').strip()
     status_f  = request.GET.get('status', '').strip()
 
-    qs = PurchaseRFQ.objects.filter(tenant=tenant).select_related('supplier', 'stock')
+    qs = filter_by_branch_via(PurchaseRFQ.objects.filter(tenant=tenant), getattr(request, 'branch', None), field='stock__branch').select_related('supplier', 'stock')
     total = qs.count()
 
     if status_f:
@@ -1544,11 +1580,13 @@ def rfq_create(request):
             stock = Stock.objects.for_tenant(tenant).get(pk=stock_id)
         except Stock.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=400, json_dumps_params={'ensure_ascii': False})
+        enforce_branch_ownership(request, stock)
 
         supplier = None
         if supplier_id:
             try:
                 supplier = Supplier.objects.for_tenant(tenant).get(pk=supplier_id)
+                enforce_branch_ownership(request, supplier)
             except Supplier.DoesNotExist:
                 pass
 
@@ -1598,6 +1636,7 @@ def rfq_detail(request, pk):
         .prefetch_related('lines__item__unit'),
         tenant=tenant, pk=pk
     )
+    enforce_branch_ownership(request, rfq, field='stock__branch')
     return render(request, 'purchases/rfq_detail.html', {'rfq': rfq})
 
 
@@ -1608,6 +1647,7 @@ def rfq_send_ajax(request, pk):
     tenant = _ensure_tenant(request)
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        enforce_branch_ownership(request, rfq, field='stock__branch')
         if rfq.status != 'draft':
             return JsonResponse({'success': False, 'message': 'يمكن إرسال المسودات فقط'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'sent'
@@ -1628,6 +1668,7 @@ def rfq_receive_ajax(request, pk):
     tenant = _ensure_tenant(request)
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        enforce_branch_ownership(request, rfq, field='stock__branch')
         if rfq.status not in ('sent', 'draft'):
             return JsonResponse({'success': False, 'message': 'الحالة الحالية لا تسمح بهذا الإجراء'}, status=400, json_dumps_params={'ensure_ascii': False})
 
@@ -1663,6 +1704,7 @@ def rfq_accept_ajax(request, pk):
     tenant = _ensure_tenant(request)
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        enforce_branch_ownership(request, rfq, field='stock__branch')
         if rfq.status not in ('received', 'sent', 'draft'):
             return JsonResponse({'success': False, 'message': 'الحالة لا تسمح بالقبول'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'accepted'
@@ -1680,6 +1722,7 @@ def rfq_reject_ajax(request, pk):
     tenant = _ensure_tenant(request)
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        enforce_branch_ownership(request, rfq, field='stock__branch')
         if rfq.status in ('converted', 'cancelled'):
             return JsonResponse({'success': False, 'message': 'لا يمكن رفض هذا الطلب'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'rejected'
@@ -1697,6 +1740,7 @@ def rfq_cancel_ajax(request, pk):
     tenant = _ensure_tenant(request)
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        enforce_branch_ownership(request, rfq, field='stock__branch')
         if rfq.status == 'converted':
             return JsonResponse({'success': False, 'message': 'لا يمكن إلغاء طلب محوَّل'}, status=400, json_dumps_params={'ensure_ascii': False})
         rfq.status = 'cancelled'
@@ -1715,6 +1759,7 @@ def rfq_convert_ajax(request, pk):
     tenant = _ensure_tenant(request)
     try:
         rfq = PurchaseRFQ.objects.get(tenant=tenant, pk=pk)
+        enforce_branch_ownership(request, rfq, field='stock__branch')
         if rfq.status not in ('accepted', 'received'):
             return JsonResponse({'success': False, 'message': 'يجب قبول عرض الأسعار أولاً'}, status=400, json_dumps_params={'ensure_ascii': False})
 

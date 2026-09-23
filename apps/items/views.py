@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404, redirect, render
 
 from decimal import Decimal
-from apps.accounts.decorators import require_permission
+from apps.accounts.decorators import require_permission, branch_scope_exempt
 from apps.core.utils import filter_by_branch_via
 from .forms import CategoryForm, ItemForm, UnitForm
 from .models import Category, Item, Unit, BOMRecipe, BOMLine, ItemBatch
@@ -71,7 +71,7 @@ def item_list(request):
     local_cur = tenant.currency or 'SDG'
     context = {
         'item_form': ItemForm(tenant=tenant, capabilities=caps),
-        'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
+        'suppliers': Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('name'),
         'hc_mode': tenant.hard_currency_mode,
         'hc_currency': hc_cur,
         'hc_currency_symbol': currency_symbol(hc_cur),
@@ -252,7 +252,7 @@ def catalog_picker(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
-    stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name')
+    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name')
     return render(request, 'items/catalog_picker.html', {'stocks': stocks})
 
 
@@ -358,6 +358,7 @@ def _resolve_tenant_category(tenant, name: str, user):
 
 @login_required
 @require_permission('add_items')
+@branch_scope_exempt('add_items ضمن BRANCH_BLOCKED_KEYS — مستخدم بفرع لا يملك هذه الصلاحية إطلاقاً، فلا يصل الشاشة أصلاً (راجع apps/accounts/permissions.py)')
 def item_create_from_catalog(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -493,6 +494,7 @@ def safe_decimal_or_zero(val):
 @login_required
 @require_permission('add_items')
 @require_POST
+@branch_scope_exempt('add_items ضمن BRANCH_BLOCKED_KEYS — مستخدم بفرع لا يملك هذه الصلاحية إطلاقاً، فلا يصل الشاشة أصلاً (راجع apps/accounts/permissions.py)')
 def bulk_create_from_catalog(request):
     """Accepts a JSON body: {stock_id, items: [{master_drug_id, alias_id, cost_price, selling_price, opening_quantity}]}"""
     import json as _json

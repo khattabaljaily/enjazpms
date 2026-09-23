@@ -309,6 +309,12 @@ class PurchasesReportGenerator:
             supplier = Supplier.objects.get(pk=supplier_id, tenant=self.tenant)
         except Supplier.DoesNotExist:
             return None
+        # self.branch يُمرَّر للمُنشئ لكن لم يكن يُستخدم هنا فعلياً — نفس ثغرة
+        # IDOR عبر الفرع في get_customer_statement (apps/sales/reports.py) وفي
+        # TreasuryReportGenerator/BankAccountReportGenerator.get_statement_report:
+        # مستخدم بفرع يقدر يمرر supplier_id لمورد فرع آخر ويحصل على كشف حسابه كاملاً.
+        if self.branch is not None and supplier.branch is not None and supplier.branch != self.branch:
+            return None
 
         hc_mode = getattr(self.tenant, 'hard_currency_mode', False)
         supplier_currency = (supplier.currency or '').strip()

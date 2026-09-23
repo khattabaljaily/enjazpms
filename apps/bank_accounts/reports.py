@@ -68,6 +68,8 @@ class BankAccountReportGenerator:
             account = BankAccount.objects.get(pk=bank_account_id, tenant=self.tenant)
         except BankAccount.DoesNotExist:
             return None
+        if self.branch is not None and account.branch is not None and account.branch != self.branch:
+            return None
 
         movements = BankAccountMovement.objects.filter(
             tenant=self.tenant,

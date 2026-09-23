@@ -4,7 +4,7 @@ Multi-Tenant System
 """
 from contextvars import ContextVar
 
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.utils.text import slugify
 from django.utils import timezone
@@ -365,6 +365,14 @@ class Branch(models.Model):
     phone = models.CharField('الهاتف', max_length=20, blank=True)
     is_active = models.BooleanField('نشط', default=True)
     is_default = models.BooleanField('الفرع الافتراضي', default=False)
+    manager = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        verbose_name='مدير الفرع',
+        related_name='managed_branches',
+        null=True,
+        blank=True,
+    )
 
     created_at = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True)
     updated_at = models.DateTimeField('تاريخ التحديث', auto_now=True)
@@ -402,6 +410,35 @@ class Branch(models.Model):
             self.is_default = True
 
         super().save(*args, **kwargs)
+
+    @staticmethod
+    @transaction.atomic
+    def assign_manager(branch, user):
+        """
+        يعيّن مستخدماً مديراً لفرع (خطة تنفيذ Enterprise، القسم 7.1)، ويزامن
+        ذلك مع الآلية الفعلية للأدوار في الكود الحالي: "مدير الفرع" في هذا
+        النظام هو User.is_branch_supervisor=True مربوط بـ User.branch — لا
+        يوجد حقل branch_role منفصل. Branch.manager (هذا الحقل) هو مرآة
+        مساعدة فقط للعرض/الإدارة السريعة (القسم 2.3)، وهذه الدالة هي نقطة
+        الدخول الوحيدة التي يجب أن تُحدِّث الاثنين معاً حتى لا يختلفا.
+
+        - user=None: يزيل مدير الفرع الحالي (يُخفَّض إلى موظف عادي) بلا تعيين بديل.
+        - المدير السابق لنفس الفرع (إن وُجد ومختلف عن user الجديد) يُخفَّض
+          تلقائياً إلى is_branch_supervisor=False — قاعدة "مدير واحد نشط لكل
+          فرع"، مُنفَّذة هنا على مستوى الخدمة لا كقيد DB صارم.
+        """
+        old_manager = branch.manager
+        if old_manager and old_manager != user:
+            old_manager.is_branch_supervisor = False
+            old_manager.save(update_fields=['is_branch_supervisor'])
+
+        branch.manager = user
+        branch.save(update_fields=['manager', 'updated_at'])
+
+        if user is not None:
+            user.branch = branch
+            user.is_branch_supervisor = True
+            user.save(update_fields=['branch', 'is_branch_supervisor'])
 
     @staticmethod
     def can_add_branch(tenant):

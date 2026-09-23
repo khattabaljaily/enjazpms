@@ -13,7 +13,7 @@ from django.contrib import messages
 from django.db.models import Q
 
 from .models import OnlineOrder, StoreSettings
-from apps.accounts.decorators import require_permission
+from apps.accounts.decorators import require_permission, branch_scope_exempt
 from .services import (
     approve_order, cart_add, cart_clear, cart_remove,
     cart_update, get_cart, get_cart_items, place_order, reject_order,
@@ -157,6 +157,7 @@ def _get_products(store: StoreSettings):
 # PUBLIC — Storefront
 # ══════════════════════════════════════════════════════════════
 
+@branch_scope_exempt('متجر إلكتروني عام لعملاء مجهولين (بلا تسجيل دخول) — يعرض كامل كتالوج المشترك؛ لا مفهوم مستخدم بفرع هنا (request.branch دائماً None لزائر غير مسجّل)')
 def storefront(request, slug):
     store = _get_store(slug)
     if getattr(store, '_disabled', False):

@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator
-from apps.accounts.decorators import require_permission, deny_branch_scoped
+from apps.accounts.decorators import require_permission, deny_branch_scoped, branch_scope_exempt
 from apps.accounts.activity_service import log_activity
 from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
 from django.views.decorators.http import require_POST
@@ -25,7 +25,7 @@ from .forms import TenantForm, BranchForm
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country, CURRENCY_CHOICES
 from apps.treasury.models import TreasuryMovement
 from apps.expenses.models import Expense
-from .utils import filter_by_branch_via
+from .utils import filter_by_branch_via, resolve_report_scope
 
 
 def about(request):
@@ -54,8 +54,11 @@ def dashboard(request):
         'expired_items': 0,
     }
     
+    is_central_admin = False
+    branches_for_filter = Branch.objects.none()
+
     if tenant:
-        branch = getattr(request, 'branch', None)
+        branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
         # Users
         from apps.accounts.models import User
@@ -338,6 +341,9 @@ def dashboard(request):
         'stats': stats,
         'tenant': tenant,
         'store': store,
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch if tenant else None,
     }
 
     return render(request, 'core/dashboard.html', context)
@@ -885,6 +891,7 @@ def admin_report_subscriptions(request):
 
 
 @login_required
+@branch_scope_exempt('لوحة إدارة المنصة (platform admin) — تقرير إيرادات عبر كل المشتركين، لا مفهوم فرع هنا أصلاً')
 def admin_report_revenue(request):
     if not request.user.has_platform_perm('view_reports'):
         return redirect('core:no_permission')
@@ -2618,7 +2625,7 @@ def analytics(request):
     from apps.customers.models import Customer
     from apps.suppliers.models import Supplier
 
-    branch = getattr(request, 'branch', None)
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     def sales_total(qs_filter):
         return float(filter_by_branch_via(SaleInvoice.objects.filter(
@@ -2756,6 +2763,9 @@ def analytics(request):
         'treasury_total': treasury_total,
         'customer_debt': customer_debt,
         'supplier_debt': supplier_debt,
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     }
     return render(request, 'core/analytics.html', context)
 
@@ -3121,3 +3131,38 @@ def branch_delete_api(request, pk):
     b.delete()
     log_activity(request, 'حذف فرع', name, 'delete')
     return _branch_json_ok(msg=f'تم حذف "{name}" بنجاح')
+
+
+@login_required
+@require_permission('change_branches')
+def branch_assign_manager_api(request, pk):
+    """
+    تعيين/تغيير/إزالة مدير فرع (خطة تنفيذ Enterprise، القسم 7.1) — يزامن
+    Branch.manager مع User.branch/is_branch_supervisor عبر Branch.assign_manager.
+    POST بدون user_id (أو user_id فارغ) يزيل المدير الحالي للفرع بلا تعيين بديل.
+    """
+    tenant = request.tenant
+    if not tenant:
+        return _branch_json_error('لا يوجد نشاط تجاري')
+    if request.method != 'POST':
+        return _branch_json_error('طريقة غير مسموحة', status=405)
+    try:
+        b = Branch.objects.get(tenant=tenant, pk=pk)
+    except Branch.DoesNotExist:
+        return _branch_json_error('الفرع غير موجود', status=404)
+
+    from apps.accounts.models import User
+    user_id = request.POST.get('user_id') or ''
+    user = None
+    if user_id:
+        try:
+            user = User.objects.get(tenant=tenant, pk=user_id, is_superuser=False, is_tenant_admin=False)
+        except User.DoesNotExist:
+            return _branch_json_error('المستخدم غير موجود')
+
+    Branch.assign_manager(b, user)
+    if user:
+        log_activity(request, 'تعيين مدير فرع', f'{b.name} ← {user.get_full_name() or user.username}', 'update')
+        return _branch_json_ok(msg=f'تم تعيين {user.get_full_name() or user.username} مديراً لفرع {b.name}')
+    log_activity(request, 'إزالة مدير فرع', b.name, 'update')
+    return _branch_json_ok(msg=f'تم إزالة مدير فرع {b.name}')

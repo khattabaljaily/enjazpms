@@ -10,6 +10,22 @@ from django.db.models import F, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from apps.accounts.decorators import branch_scope_exempt
+
+_PORTAL_BRANCH_EXEMPT_REASON = (
+    'بوابة عملاء عامة منفصلة تماماً عن مصادقة الموظفين: تسجيل الدخول هنا '
+    '(login_via_token) لا يستدعي django.contrib.auth.login إطلاقاً — يكتفي '
+    'بتخزين customer.pk/tenant.pk في الجلسة (portal_customer_id/portal_tenant_id) '
+    'بعد التحقق من صلاحية portal_token السري. لذا request.user يبقى '
+    'AnonymousUser وTenantMiddleware لا يضبط request.branch إلا لمستخدم موثّق '
+    '(request.user.is_authenticated)، فيبقى request.branch=None دائماً في كل '
+    'شاشات هذه البوابة — لا صلة لها بفروع المستخدم الموظف أصلاً. ضابط '
+    'الوصول الحقيقي هنا هو هوية العميل نفسه (customer المُشتق من الجلسة عبر '
+    '_get_portal_ctx، لا من مُعامل الطلب)، وكل الاستعلامات هنا مفلترة فعلاً '
+    'بـ customer=customer (أو عبر customer_obj/تحقق portal_token المباشر في '
+    'login_via_token) — راجع portal_dashboard/portal_invoices/portal_invoice_detail.'
+)
+
 # Session keys
 _SESS_CUSTOMER = 'portal_customer_id'
 _SESS_TENANT   = 'portal_tenant_id'
@@ -24,6 +40,7 @@ def _portal_required(view_fn):
     return _inner
 
 
+@branch_scope_exempt(_PORTAL_BRANCH_EXEMPT_REASON)
 def _get_portal_ctx(request):
     """Return (customer, tenant) from session, or (None, None)."""
     from apps.customers.models import Customer
@@ -42,6 +59,7 @@ def _get_portal_ctx(request):
 
 # ── Login / Logout ────────────────────────────────────────────────
 
+@branch_scope_exempt(_PORTAL_BRANCH_EXEMPT_REASON)
 def login_via_token(request, token):
     from apps.customers.models import Customer
     try:
@@ -88,6 +106,7 @@ def portal_login_error(request):
 
 # ── Dashboard ─────────────────────────────────────────────────────
 
+@branch_scope_exempt(_PORTAL_BRANCH_EXEMPT_REASON)
 @_portal_required
 def portal_dashboard(request):
     customer, tenant = _get_portal_ctx(request)
@@ -122,6 +141,7 @@ def portal_dashboard(request):
 
 # ── Invoices List ─────────────────────────────────────────────────
 
+@branch_scope_exempt(_PORTAL_BRANCH_EXEMPT_REASON)
 @_portal_required
 def portal_invoices(request):
     customer, tenant = _get_portal_ctx(request)
@@ -145,6 +165,7 @@ def portal_invoices(request):
 
 # ── Invoice Detail ────────────────────────────────────────────────
 
+@branch_scope_exempt(_PORTAL_BRANCH_EXEMPT_REASON)
 @_portal_required
 def portal_invoice_detail(request, pk):
     customer, tenant = _get_portal_ctx(request)

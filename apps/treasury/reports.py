@@ -83,6 +83,11 @@ class TreasuryReportGenerator:
             treasury = Treasury.objects.get(pk=treasury_id, tenant=self.tenant)
         except Treasury.DoesNotExist:
             return None
+        # self.branch كان يُمرَّر للمُنشئ لكن لم يُستخدم هنا فعلياً — ثغرة
+        # IDOR عبر الفرع اكتشفتها أداة التدقيق check_branch_scoping: مستخدم
+        # بفرع يقدر يمرر treasury_id لفرع آخر ويحصل على كشف حسابه كاملاً.
+        if self.branch is not None and treasury.branch is not None and treasury.branch != self.branch:
+            return None
 
         movements = TreasuryMovement.objects.filter(
             tenant=self.tenant,

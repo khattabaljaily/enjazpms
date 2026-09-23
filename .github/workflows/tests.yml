@@ -67,3 +67,6 @@ jobs:
 
       - name: Run test suite
         run: bash scripts/test.sh
+
+      - name: Check branch-scoping coverage (Enterprise multi-branch isolation)
+        run: python manage.py check_branch_scoping --strict

@@ -28,7 +28,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta, date
 
 from django.contrib.auth.decorators import login_required
-from apps.accounts.decorators import require_permission
+from apps.accounts.decorators import require_permission, branch_scope_exempt
 from django.db import transaction
 from django.db.models import Q, Sum, Count, DecimalField, OuterRef, Subquery
 from django.db.models.functions import Coalesce
@@ -41,7 +41,7 @@ from apps.customers.models import Customer
 from apps.items.models import Item
 from apps.items.alternatives import get_all_alternatives
 from apps.stocks.models import Stock, StockQuantity
-from apps.core.utils import filter_by_branch_via
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership
 
 from .models import (
     CustomerLedger,
@@ -373,6 +373,7 @@ def invoice_edit(request, pk):
         return redirect('core:no_tenant')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
 
     if invoice.status not in ('draft', 'confirmed'):
         return redirect('sales:invoice_detail', pk=pk)
@@ -500,6 +501,7 @@ def _process_invoice_post(request, tenant, invoice):
         stock = Stock.objects.get(id=header.get('stock_id'), tenant=tenant)
     except Stock.DoesNotExist:
         return _json_error('المخزن المحدد غير موجود')
+    enforce_branch_ownership(request, stock)
 
     try:
         with transaction.atomic():
@@ -525,13 +527,17 @@ def _process_invoice_post(request, tenant, invoice):
                     bank_account_raw = header.get('bank_account_id')
                     if bank_account_raw:
                         from apps.bank_accounts.models import BankAccount
-                        confirmed_header['bank_account'] = BankAccount.objects.get(id=bank_account_raw, tenant=tenant, is_active=True)
+                        bank_account_obj = BankAccount.objects.get(id=bank_account_raw, tenant=tenant, is_active=True)
+                        enforce_branch_ownership(request, bank_account_obj)
+                        confirmed_header['bank_account'] = bank_account_obj
                     else:
                         confirmed_header['bank_account'] = None
 
                     customer_raw = header.get('customer_id')
                     if customer_raw:
-                        confirmed_header['customer'] = Customer.objects.get(id=customer_raw, tenant=tenant)
+                        customer_obj = Customer.objects.get(id=customer_raw, tenant=tenant)
+                        enforce_branch_ownership(request, customer_obj)
+                        confirmed_header['customer'] = customer_obj
                     else:
                         confirmed_header['customer'] = None
 
@@ -546,7 +552,9 @@ def _process_invoice_post(request, tenant, invoice):
 
                     stock_raw = header.get('stock_id')
                     if stock_raw:
-                        confirmed_header['stock'] = Stock.objects.get(id=stock_raw, tenant=tenant)
+                        stock_obj = Stock.objects.get(id=stock_raw, tenant=tenant)
+                        enforce_branch_ownership(request, stock_obj)
+                        confirmed_header['stock'] = stock_obj
 
                     agent_raw = header.get('agent_id')
                     if agent_raw:
@@ -580,7 +588,12 @@ def _process_invoice_post(request, tenant, invoice):
                     # تحديث هيدر (تعيين صريح لتجنب أخطاء FK مثل customer)
                     if 'customer_id' in header:
                         customer_raw = header.get('customer_id')
-                        invoice.customer_id = int(customer_raw) if customer_raw else None
+                        if customer_raw:
+                            customer_obj = Customer.objects.get(id=int(customer_raw), tenant=tenant)
+                            enforce_branch_ownership(request, customer_obj)
+                            invoice.customer_id = customer_obj.id
+                        else:
+                            invoice.customer_id = None
 
                     if 'insurance_member_id' in header:
                         member_raw = header.get('insurance_member_id')
@@ -614,9 +627,11 @@ def _process_invoice_post(request, tenant, invoice):
                     # المخزن يظل مطلوباً في التعديل
                     if 'stock_id' in header and header.get('stock_id'):
                         try:
-                            invoice.stock = Stock.objects.get(id=header.get('stock_id'), tenant=tenant)
+                            new_stock = Stock.objects.get(id=header.get('stock_id'), tenant=tenant)
                         except Stock.DoesNotExist:
                             return _json_error('المخزن المحدد غير موجود')
+                        enforce_branch_ownership(request, new_stock)
+                        invoice.stock = new_stock
 
                     # المندوب
                     if 'agent_id' in header:
@@ -666,6 +681,7 @@ def invoice_detail(request, pk):
         SaleInvoice.objects.select_related('customer', 'stock', 'agent', 'confirmed_by', 'cancelled_by', 'bank_account'),
         pk=pk, tenant=tenant,
     )
+    enforce_branch_ownership(request, invoice)
     lines = list(invoice.lines.select_related('item').prefetch_related('item__item_units').all())
     for ln in lines:
         iu_list = list(ln.item.item_units.order_by('factor'))
@@ -717,6 +733,7 @@ def invoice_delete_draft_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
 
     if invoice.status != 'draft':
         return _json_error('يمكن حذف الفاتورة إذا كانت مسودة فقط')
@@ -744,6 +761,7 @@ def invoice_confirm_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
     try:
         confirm_sale_invoice(invoice, request.user)
         cust = invoice.customer.name if invoice.customer else 'زبون عابر'
@@ -764,6 +782,7 @@ def invoice_cancel_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
     try:
         body = json.loads(request.body or '{}')
     except json.JSONDecodeError:
@@ -787,6 +806,7 @@ def invoice_deliver_ajax(request, pk):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
     try:
         deliver_sale_invoice(invoice, request.user)
         cust = invoice.customer.name if invoice.customer else 'زبون عابر'
@@ -805,6 +825,7 @@ def record_payment_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
     try:
         body = json.loads(request.body)
         amount = Decimal(str(body['amount']))
@@ -939,6 +960,7 @@ def return_lines_api(request, return_pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     sale_return = get_object_or_404(SaleReturn, pk=return_pk, tenant=tenant)
+    enforce_branch_ownership(request, sale_return)
     lines = sale_return.lines.select_related('item').all()
 
     data = []
@@ -965,6 +987,7 @@ def return_create(request, invoice_pk):
         SaleInvoice, pk=invoice_pk, tenant=tenant,
         status__in=['confirmed', 'partially_returned']
     )
+    enforce_branch_ownership(request, invoice)
     lines = invoice.lines.select_related('item').all()
     returnable_lines = [l for l in lines if l.returnable_quantity > 0]
 
@@ -987,6 +1010,7 @@ def return_create(request, invoice_pk):
     return render(request, 'sales/return_form.html', context)
 
 
+@branch_scope_exempt('invoice تحقّقت ملكيته بالفعل في return_create() المستدعية قبل استدعاء هذه الدالة؛ SaleInvoiceLine هنا مفلترة بـ invoice=invoice المُتحقَّق منه')
 def _process_return_post(request, tenant, invoice):
     try:
         body = json.loads(request.body)
@@ -1060,6 +1084,7 @@ def return_detail(request, pk):
         SaleReturn.objects.select_related('original_invoice', 'original_invoice__customer'),
         pk=pk, tenant=tenant
     )
+    enforce_branch_ownership(request, sale_return)
     return_lines = sale_return.lines.select_related('item', 'invoice_line')
 
     context = {
@@ -1079,6 +1104,7 @@ def return_confirm_ajax(request, pk):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     sale_return = get_object_or_404(SaleReturn, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, sale_return)
     try:
         confirm_sale_return(sale_return, request.user)
         log_activity(request, 'تأكيد مرتجع مبيعات', f'{sale_return.return_number}', 'create')
@@ -1095,6 +1121,7 @@ def return_cancel_ajax(request, pk):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     sale_return = get_object_or_404(SaleReturn, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, sale_return)
     try:
         cancel_sale_return(sale_return, request.user)
         log_activity(request, 'إلغاء مرتجع مبيعات', f'{sale_return.return_number}', 'delete')
@@ -1132,11 +1159,11 @@ def item_info_api(request):
     is_service = item.item_type == 'service'
     available_qty = None if is_service else 0
     if stock_id and not is_service:
-        try:
-            sq = StockQuantity.objects.get(tenant=tenant, stock_id=stock_id, item=item)
-            available_qty = float(sq.available_quantity)
-        except StockQuantity.DoesNotExist:
-            available_qty = 0
+        sq = filter_by_branch_via(
+            StockQuantity.objects.filter(tenant=tenant, stock_id=stock_id, item=item),
+            getattr(request, 'branch', None), field='stock__branch',
+        ).first()
+        available_qty = float(sq.available_quantity) if sq else 0
 
     iu_qs = list(item.item_units.order_by('factor'))
     units = [{'id': u.id, 'name': u.name, 'factor': str(u.factor)} for u in iu_qs]
@@ -1184,6 +1211,7 @@ def customer_info_api(request):
         customer = Customer.objects.get(id=customer_id, tenant=tenant)
     except Customer.DoesNotExist:
         return _json_error('العميل غير موجود', status=404)
+    enforce_branch_ownership(request, customer)
 
     # حساب الرصيد الجاري من CustomerLedger
     total = (
@@ -1245,9 +1273,9 @@ def stock_items_api(request):
 
     sq_map = {
         sq.item_id: sq.available_quantity
-        for sq in StockQuantity.objects.filter(
-            tenant=tenant, stock_id=stock_id,
-            item_id__in=item_ids
+        for sq in filter_by_branch_via(
+            StockQuantity.objects.filter(tenant=tenant, stock_id=stock_id, item_id__in=item_ids),
+            getattr(request, 'branch', None), field='stock__branch',
         )
     }
 
@@ -1426,6 +1454,7 @@ def quote_edit(request, pk):
         return redirect('core:no_tenant')
 
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, quote, field='stock__branch')
     if quote.status not in ('draft', 'sent', 'accepted'):
         return redirect('sales:quote_detail', pk=pk)
 
@@ -1494,6 +1523,7 @@ def quote_detail(request, pk):
         SaleQuote.objects.select_related('customer', 'stock', 'converted_invoice', 'converted_by'),
         pk=pk, tenant=tenant
     )
+    enforce_branch_ownership(request, quote, field='stock__branch')
     lines = list(quote.quote_lines.select_related('item').prefetch_related('item__item_units').all())
     for ln in lines:
         iu_list = list(ln.item.item_units.order_by('factor'))
@@ -1525,6 +1555,7 @@ def quote_detail(request, pk):
 def quote_send_ajax(request, pk):
     tenant = _ensure_tenant(request)
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, quote, field='stock__branch')
     try:
         mark_quote_sent(quote, request.user)
         qcust = quote.customer.name if quote.customer else 'بدون عميل'
@@ -1540,6 +1571,7 @@ def quote_send_ajax(request, pk):
 def quote_accept_ajax(request, pk):
     tenant = _ensure_tenant(request)
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, quote, field='stock__branch')
     try:
         mark_quote_accepted(quote, request.user)
         qcust = quote.customer.name if quote.customer else 'بدون عميل'
@@ -1555,6 +1587,7 @@ def quote_accept_ajax(request, pk):
 def quote_reject_ajax(request, pk):
     tenant = _ensure_tenant(request)
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, quote, field='stock__branch')
     try:
         mark_quote_rejected(quote, request.user)
         qcust = quote.customer.name if quote.customer else 'بدون عميل'
@@ -1570,6 +1603,7 @@ def quote_reject_ajax(request, pk):
 def quote_cancel_ajax(request, pk):
     tenant = _ensure_tenant(request)
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, quote, field='stock__branch')
     try:
         cancel_sale_quote(quote, request.user)
         qcust = quote.customer.name if quote.customer else 'بدون عميل'
@@ -1585,6 +1619,7 @@ def quote_cancel_ajax(request, pk):
 def quote_delete_draft_ajax(request, pk):
     tenant = _ensure_tenant(request)
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, quote, field='stock__branch')
     if quote.status != 'draft':
         return _json_error('لا يمكن حذف إلا المسودات')
     q_num = quote.quote_number
@@ -1599,6 +1634,7 @@ def quote_delete_draft_ajax(request, pk):
 def quote_convert_ajax(request, pk):
     tenant = _ensure_tenant(request)
     quote = get_object_or_404(SaleQuote, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, quote, field='stock__branch')
     try:
         body = json.loads(request.body) if request.body else {}
     except Exception:
@@ -1744,11 +1780,12 @@ def sales_by_customer_report(request):
 
     # customers list for filter
     from apps.customers.models import Customer
-    customers = Customer.objects.filter(tenant=tenant).order_by('name')
+    customers = Customer.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
     selected_customer = None
     if customer_id:
         try:
             selected_customer = Customer.objects.get(tenant=tenant, id=customer_id)
+            enforce_branch_ownership(request, selected_customer)
         except Customer.DoesNotExist:
             selected_customer = None
 
@@ -1797,6 +1834,7 @@ def sales_by_customer_report_export(request):
         from apps.customers.models import Customer
         try:
             selected_customer = Customer.objects.get(tenant=tenant, id=customer_id)
+            enforce_branch_ownership(request, selected_customer)
         except Customer.DoesNotExist:
             selected_customer = None
 
@@ -2013,7 +2051,7 @@ def sales_customer_statement(request):
 
     generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_customer_statement(customer_id) if customer_id else None
-    customers = Customer.objects.filter(tenant=tenant).order_by('name')
+    customers = Customer.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
 
     return render(request, 'sales/reports/customer_statement.html', {
         'report': report,
@@ -2106,7 +2144,7 @@ def sales_payments_report(request):
 
     generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
     report = generator.get_payments_report(customer_id=customer_id)
-    customers = Customer.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    customers = Customer.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name')
 
     return render(request, 'sales/reports/payments.html', {
         'report': report,
@@ -2205,7 +2243,10 @@ def sales_by_user_report(request):
 
     from django.contrib.auth import get_user_model
     from .models import SaleInvoice
-    user_ids = SaleInvoice.objects.filter(tenant=tenant, status='confirmed').values_list('created_by', flat=True).distinct()
+    user_ids = filter_by_branch_via(
+        SaleInvoice.objects.filter(tenant=tenant, status='confirmed'),
+        getattr(request, 'branch', None),
+    ).values_list('created_by', flat=True).distinct()
     users = get_user_model().objects.filter(pk__in=user_ids).order_by('first_name', 'last_name')
 
     return render(request, 'sales/reports/by_user.html', {
@@ -2445,12 +2486,12 @@ def pos_view(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    stocks = Stock.objects.filter(tenant=tenant, is_active=True).select_related('branch').order_by('-is_default', 'name')
+    stocks = Stock.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).select_related('branch').order_by('-is_default', 'name')
     default_stock = stocks.filter(is_default=True).first() or stocks.first()
 
     from apps.items.models import Category
     categories = Category.objects.filter(tenant=tenant, parent=None).order_by('display_order', 'name')
-    customers = Customer.objects.filter(tenant=tenant, is_active=True).order_by('name').values('id', 'name')
+    customers = Customer.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name').values('id', 'name')
     from apps.bank_accounts.models import BankAccount
     bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name', 'current_balance')
 
@@ -2505,8 +2546,9 @@ def pos_items_api(request):
 
     stock_qty_map = {}
     if stock_id and item_ids:
-        sqqs = StockQuantity.objects.filter(
-            tenant=tenant, stock_id=stock_id, item_id__in=item_ids
+        sqqs = filter_by_branch_via(
+            StockQuantity.objects.filter(tenant=tenant, stock_id=stock_id, item_id__in=item_ids),
+            getattr(request, 'branch', None), field='stock__branch',
         ).values('item_id', 'quantity', 'reserved_quantity')
         for sq in sqqs:
             available = float((sq['quantity'] or 0) - (sq['reserved_quantity'] or 0))
@@ -2565,7 +2607,10 @@ def item_alternatives_api(request):
 
     qty_map = {}
     if stock_id and alt_ids:
-        sqqs = StockQuantity.objects.filter(tenant=tenant, stock_id=stock_id, item_id__in=alt_ids)
+        sqqs = filter_by_branch_via(
+            StockQuantity.objects.filter(tenant=tenant, stock_id=stock_id, item_id__in=alt_ids),
+            getattr(request, 'branch', None), field='stock__branch',
+        )
         for sq in sqqs:
             qty_map[sq.item_id] = float(sq.available_quantity)
 
@@ -2585,6 +2630,7 @@ def item_alternatives_api(request):
 
 @login_required
 @require_permission('view_items')
+@branch_scope_exempt('ميزة نقطة البيع مقصودة: تعرض توفر الصنف في كل مخازن الفروع الأخرى عمداً لمساعدة الموظف على تحويل العميل لفرع آخر عند نفاد الصنف — رقم كمية فقط، لا بيانات مالية أو عميل حسّاسة')
 def item_other_stocks_api(request):
     """يُعيد الكمية المتاحة لصنف معيّن في كل مخازن الـ tenant الأخرى (باستثناء المخزن الحالي)."""
     tenant = _ensure_tenant(request)
@@ -2642,6 +2688,7 @@ def pos_checkout_api(request):
         stock = Stock.objects.get(id=stock_id, tenant=tenant)
     except Stock.DoesNotExist:
         return _json_error('المخزن غير موجود')
+    enforce_branch_ownership(request, stock)
 
     payment_method = body.get('payment_method', 'cash')
     cash_amount = Decimal(str(body.get('cash_amount', 0) or 0))
@@ -2744,6 +2791,7 @@ def invoice_send_email_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice)
 
     if invoice.status not in ('confirmed', 'partially_returned', 'returned'):
         return _json_error('يمكن إرسال الفاتورة المؤكدة فقط')

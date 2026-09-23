@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
-from apps.accounts.decorators import require_permission
+from apps.accounts.decorators import require_permission, branch_scope_exempt
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,7 +19,7 @@ def _ensure_tenant(request):
     return getattr(request, 'tenant', None)
 
 
-from apps.core.utils import CURRENCY_SYMBOLS as _CURRENCY_SYMBOLS, currency_symbol as _currency_symbol
+from apps.core.utils import CURRENCY_SYMBOLS as _CURRENCY_SYMBOLS, currency_symbol as _currency_symbol, enforce_branch_ownership
 
 
 def _serialize_form_errors(form):
@@ -148,6 +148,7 @@ def treasury_table_api(request):
 
 @login_required
 @require_permission('add_treasuries')
+@branch_scope_exempt('ينشئ خزينة جديدة تُختم بفرع المنشئ تلقائياً (treasury.branch = request.branch) — لا قراءة لبيانات فرع آخر')
 def treasury_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -160,12 +161,16 @@ def treasury_create_api(request):
     if form.is_valid():
         treasury = form.save(commit=False)
         treasury.tenant = tenant
-        treasury.branch = getattr(request, 'branch', None)
+        branch = getattr(request, 'branch', None)
+        treasury.branch = branch
         treasury.created_by = request.user
         treasury.updated_by = request.user
 
         if treasury.is_default:
-            Treasury.objects.for_tenant(tenant).filter(is_default=True).update(is_default=False)
+            # مقفول على فرع المنشئ (أو تنانت بأكمله لمستخدم مركزي) — لا يُسقِط
+            # علم "افتراضية" عن خزينة فرع آخر عند إنشاء خزينة افتراضية جديدة
+            # لفرع مختلف (خطة تنفيذ Enterprise، أُلحقت أثناء تدقيق check_branch_scoping).
+            Treasury.objects.for_tenant(tenant).for_branch(branch).filter(is_default=True).update(is_default=False)
 
         treasury.save()
 
@@ -213,6 +218,7 @@ def treasury_detail_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
 
     treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, treasury)
 
     ob_mv = TreasuryMovement.objects.filter(
         treasury=treasury, reference_type='opening_balance'
@@ -243,6 +249,7 @@ def treasury_transactions_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
 
     treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, treasury)
     qs = (
         TreasuryMovement.objects.for_tenant(tenant)
         .filter(treasury=treasury)
@@ -277,6 +284,7 @@ def treasury_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, treasury)
     form = TreasuryForm(request.POST, instance=treasury)
 
     if form.is_valid():
@@ -288,7 +296,7 @@ def treasury_update_api(request, pk):
             treasury.is_active = True
 
         if treasury.is_default:
-            Treasury.objects.for_tenant(tenant).exclude(pk=treasury.pk).filter(is_default=True).update(is_default=False)
+            Treasury.objects.for_tenant(tenant).exclude(pk=treasury.pk).for_branch(treasury.branch).filter(is_default=True).update(is_default=False)
 
         treasury.save()
 
@@ -333,6 +341,7 @@ def treasury_delete_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, treasury)
 
     if treasury.is_system_default:
         return JsonResponse({'success': False, 'message': 'لا يمكن حذف الخزينة الافتراضية النظامية.'}, status=400)
@@ -389,6 +398,10 @@ def treasury_transfer_api(request):
 
     from_treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=from_id)
     to_treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=to_id)
+    # لا يُشترط أن to_treasury يخص فرع المستخدم — إرسال أموال لفرع آخر عملية
+    # مشروعة (كالتحويل المخزني بين الفروع)؛ لكن لا يمكنه السحب من خزينة لا
+    # يملكها (from_treasury تحديداً).
+    enforce_branch_ownership(request, from_treasury)
 
     # ── قيد: التحويل يجب أن يشمل خزينة العملة الصعبة عندها ──
     hc_treasuries = {from_treasury.is_hard_currency, to_treasury.is_hard_currency}
@@ -438,6 +451,7 @@ def _parse_date(value):
 
 @login_required
 @require_permission('view_treasury_balances_report')
+@branch_scope_exempt('الفلترة حسب الفرع تتم داخل TreasuryReportGenerator عبر self.branch (راجع apps/treasury/reports.py)')
 def treasury_balances_report(request):
     from .reports import TreasuryReportGenerator
     tenant = _ensure_tenant(request)
@@ -454,6 +468,7 @@ def treasury_balances_report(request):
 
 @login_required
 @require_permission('view_treasury_balances_report')
+@branch_scope_exempt('الفلترة حسب الفرع تتم داخل TreasuryReportGenerator عبر self.branch (راجع apps/treasury/reports.py)')
 def treasury_balances_report_export(request):
     import csv
     from django.http import HttpResponse
@@ -487,9 +502,10 @@ def treasury_statement_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    gen = TreasuryReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    branch = getattr(request, 'branch', None)
+    gen = TreasuryReportGenerator(tenant, start_date, end_date, branch=branch)
     report = gen.get_statement_report(treasury_id) if treasury_id else None
-    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
 
     return render(request, 'treasury/reports/statement.html', {
         'report': report,
@@ -503,6 +519,7 @@ def treasury_statement_report(request):
 
 @login_required
 @require_permission('view_treasury_statement_report')
+@branch_scope_exempt('الفلترة حسب الفرع تتم داخل TreasuryReportGenerator.get_statement_report عبر self.branch')
 def treasury_statement_report_export(request):
     import csv
     from datetime import timedelta
@@ -546,8 +563,9 @@ def treasury_movements_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     treasury_id = request.GET.get('treasury_id') or None
 
-    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
-    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    branch = getattr(request, 'branch', None)
+    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=branch).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
+    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
 
     return render(request, 'treasury/reports/movements.html', {
         'report': report,
@@ -561,6 +579,7 @@ def treasury_movements_report(request):
 
 @login_required
 @require_permission('view_treasury_movements_report')
+@branch_scope_exempt('الفلترة حسب الفرع تتم داخل TreasuryReportGenerator.get_movements_summary عبر filter_by_branch_via')
 def treasury_movements_report_export(request):
     import csv
     from datetime import timedelta

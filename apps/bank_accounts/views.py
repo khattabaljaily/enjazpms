@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
-from apps.accounts.decorators import require_permission
+from apps.accounts.decorators import require_permission, branch_scope_exempt
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -21,7 +21,7 @@ def _ensure_tenant(request):
     return getattr(request, 'tenant', None)
 
 
-from apps.core.utils import CURRENCY_SYMBOLS as _CURRENCY_SYMBOLS, currency_symbol as _currency_symbol
+from apps.core.utils import CURRENCY_SYMBOLS as _CURRENCY_SYMBOLS, currency_symbol as _currency_symbol, enforce_branch_ownership
 
 
 def _serialize_form_errors(form):
@@ -139,6 +139,7 @@ def bank_account_table_api(request):
 
 @login_required
 @require_permission('add_bank_accounts')
+@branch_scope_exempt('ينشئ حساباً بنكياً جديداً يُختم بفرع المنشئ تلقائياً — لا قراءة لبيانات فرع آخر')
 def bank_account_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -151,12 +152,13 @@ def bank_account_create_api(request):
     if form.is_valid():
         account = form.save(commit=False)
         account.tenant = tenant
-        account.branch = getattr(request, 'branch', None)
+        branch = getattr(request, 'branch', None)
+        account.branch = branch
         account.created_by = request.user
         account.updated_by = request.user
 
         if account.is_default:
-            BankAccount.objects.for_tenant(tenant).filter(is_default=True).update(is_default=False)
+            BankAccount.objects.for_tenant(tenant).for_branch(branch).filter(is_default=True).update(is_default=False)
 
         account.save()
 
@@ -203,6 +205,7 @@ def bank_account_detail_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
 
     account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, account)
 
     ob_mv = BankAccountMovement.objects.filter(
         bank_account=account, reference_type='opening_balance'
@@ -234,6 +237,7 @@ def bank_account_transactions_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
 
     account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, account)
     qs = (
         BankAccountMovement.objects.for_tenant(tenant)
         .filter(bank_account=account)
@@ -268,6 +272,7 @@ def bank_account_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, account)
     form = BankAccountForm(request.POST, instance=account)
 
     if form.is_valid():
@@ -275,7 +280,7 @@ def bank_account_update_api(request, pk):
         account.updated_by = request.user
 
         if account.is_default:
-            BankAccount.objects.for_tenant(tenant).exclude(pk=account.pk).filter(is_default=True).update(is_default=False)
+            BankAccount.objects.for_tenant(tenant).exclude(pk=account.pk).for_branch(account.branch).filter(is_default=True).update(is_default=False)
 
         account.save()
 
@@ -319,6 +324,7 @@ def bank_account_delete_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, account)
 
     if account.is_default:
         return JsonResponse({'success': False, 'message': 'لا يمكن حذف الحساب الافتراضي. عيّن حساباً آخر كافتراضي أولاً.'}, status=400)
@@ -364,6 +370,7 @@ def bank_account_transfer_api(request):
 
     from_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=from_id)
     to_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=to_id)
+    enforce_branch_ownership(request, from_account)
 
     try:
         transfer = post_bank_account_transfer(
@@ -425,6 +432,8 @@ def treasury_bank_transfer_api(request):
 
     treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=treasury_id)
     bank_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=bank_account_id)
+    # يتحقق من ملكية طرف "المصدر" فقط حسب الاتجاه — نفس منطق تحويل الخزائن/الحسابات
+    enforce_branch_ownership(request, treasury if direction == 'treasury_to_bank' else bank_account)
 
     try:
         if direction == 'treasury_to_bank':
@@ -462,6 +471,7 @@ def _parse_date(value):
 
 @login_required
 @require_permission('view_bank_account_balances_report')
+@branch_scope_exempt('الفلترة حسب الفرع تتم داخل BankAccountReportGenerator عبر self.branch')
 def bank_account_balances_report(request):
     from .reports import BankAccountReportGenerator
     tenant = _ensure_tenant(request)
@@ -478,6 +488,7 @@ def bank_account_balances_report(request):
 
 @login_required
 @require_permission('view_bank_account_balances_report')
+@branch_scope_exempt('الفلترة حسب الفرع تتم داخل BankAccountReportGenerator عبر self.branch')
 def bank_account_balances_report_export(request):
     import csv
     from django.http import HttpResponse
@@ -511,9 +522,10 @@ def bank_account_statement_report(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    gen = BankAccountReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    branch = getattr(request, 'branch', None)
+    gen = BankAccountReportGenerator(tenant, start_date, end_date, branch=branch)
     report = gen.get_statement_report(bank_account_id) if bank_account_id else None
-    accounts = BankAccount.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    accounts = BankAccount.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
 
     return render(request, 'bank_accounts/reports/statement.html', {
         'report': report,
@@ -527,6 +539,7 @@ def bank_account_statement_report(request):
 
 @login_required
 @require_permission('view_bank_account_statement_report')
+@branch_scope_exempt('الفلترة حسب الفرع تتم داخل BankAccountReportGenerator.get_statement_report عبر self.branch')
 def bank_account_statement_report_export(request):
     import csv
     from datetime import timedelta
@@ -570,8 +583,9 @@ def bank_account_movements_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     bank_account_id = request.GET.get('bank_account_id') or None
 
-    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_movements_summary(bank_account_id=bank_account_id) if bank_account_id else None
-    accounts = BankAccount.objects.filter(tenant=tenant, is_active=True).order_by('name')
+    branch = getattr(request, 'branch', None)
+    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=branch).get_movements_summary(bank_account_id=bank_account_id) if bank_account_id else None
+    accounts = BankAccount.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
 
     return render(request, 'bank_accounts/reports/movements.html', {
         'report': report,
@@ -585,6 +599,7 @@ def bank_account_movements_report(request):
 
 @login_required
 @require_permission('view_bank_account_movements_report')
+@branch_scope_exempt('الفلترة حسب الفرع تتم داخل BankAccountReportGenerator.get_movements_summary عبر filter_by_branch_via')
 def bank_account_movements_report_export(request):
     import csv
     from datetime import timedelta

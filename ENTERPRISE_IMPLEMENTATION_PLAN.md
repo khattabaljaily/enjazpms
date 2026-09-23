@@ -333,36 +333,50 @@ def resolve_report_scope(request):
 - حسم التعديلات غير المحفوظة الحالية في الشجرة (commit/مراجعة/تراجع).
 - إعداد baseline اختبارات/سيناريوهات يدوية على tenant single_store وmulti_stock حاليين (قبل أي تغيير) لاستخدامها كمرجع مقارنة لاحقاً.
 
-### Phase 1 — الموديلات + Migrations (مُحدَّثة — لا حاجة لتعديل الخزينة)
-- إضافة `Tenant.is_enterprise()` helper.
-- إضافة حقول `branch` على `SaleInvoice`/`PurchaseInvoice`/`SaleReturn`/`PurchaseReturn` + data migration للتعبئة التلقائية.
-- إضافة `Branch.manager`.
-- ~~إضافة `Treasury.treasury_kind`~~ — **أُلغي**؛ لا migration على `Treasury` (القسم 6). بدلاً من ذلك: إضافة منطق إنشاء خزينتين (محلية + عملة صعبة) تلقائياً عند إنشاء فرع جديد في enterprise، وكذلك حساب بنكي افتراضي إن أمكن (القسم 6.4).
-- **معيار القبول:** تشغيل كامل الـ migrations على نسخة من قاعدة بيانات إنتاج (staging) بدون أي خطأ، والتحقق أن عدد الصفوف والقيم القديمة في single_store/multi_stock لم يتغيّر، وأن إنشاء فرع جديد ينشئ خزنتيه تلقائياً.
+### Phase 1 — الموديلات + Migrations (مُحدَّثة — لا حاجة لتعديل الخزينة) — ✅ مكتمل 2026-09-22
+- ✅ إضافة `Tenant.is_enterprise()` helper (`apps/core/models.py:256`).
+- ✅ إضافة حقول `branch` على `SaleInvoice`/`PurchaseInvoice`/`SaleReturn`/`PurchaseReturn` + data migration للتعبئة التلقائية.
+- ✅ إضافة `Branch.manager` (`apps/core/models.py`، migration `core/0027_add_branch_manager`) — FK اختياري لـ `accounts.User`، `on_delete=SET_NULL`.
+- ~~إضافة `Treasury.treasury_kind`~~ — **أُلغي**؛ لا migration على `Treasury` (القسم 6). ✅ بدلاً من ذلك: أُضيف signal `on_branch_created`/`_ensure_branch_treasuries` في `apps/core/signals.py` ينشئ خزينتين (محلية + عملة صعبة إن كان `hard_currency_mode` مفعّلاً) تلقائياً عند `post_save` لأي `Branch` جديد، مغلّف بـ `tenant.is_enterprise()`. حساب بنكي افتراضي **لم يُضَف** — القسم 6.4 يوضح أنه لا يوجد نمط auto-creation حالي حتى على مستوى tenant، فلا داعٍ لاختراعه هنا (خارج نطاق Phase 1).
+- ✅ **معيار القبول:** الـ migrations طُبِّقت على قاعدة التطوير بدون أي خطأ (`makemigrations --check` نظيف). اختبار معزول جديد (`apps/core/tests_branch_treasuries.py`، 4 اختبارات) يثبت: فرع enterprise ينشئ خزينتيه تلقائياً، إيقاف HC mode يُنشئ خزينة محلية فقط، tenant من نوع single_store لا يُنشئ أي خزينة مرتبطة بالفرع حتى لو أُنشئ سجل `Branch` مباشرة (تحايلاً على حارس الواجهة)، والخزينة الافتراضية النظامية الأصلية للـ tenant تبقى بلا تغيير. تشغيل كامل حزمة اختبارات `core`+`treasury`+`accounts` (60 اختباراً) بعد التعديل: 59 ناجح، فشل واحد فقط (`test_help_and_training_panels_open_in_real_browser`) لسبب بيئي غير متعلق (Playwright Chromium غير مثبَّت على هذه الآلة) — صفر انحراف في سلوك single_store/multi_stock.
+- لم يُشغَّل بعد على staging/نسخة من بيانات إنتاج حقيقية — هذا الجزء من معيار القبول متروك لفريق DevOps قبل الدمج.
 
-### Phase 2 — Middleware + آلية الإنفاذ المركزية
-- `BranchEnforcementMiddleware` (أو تمديد `TenantMiddleware` الحالي).
-- `BranchScopedManager`/`for_request()`.
-- `BranchScopedViewMixin`.
-- أداة تدقيق CI (`branch_scope_exempt` + فحص جرد).
-- **معيار القبول:** تشغيلها على tenant enterprise تجريبي وتحقق العزل بين فرعين وهميين (بما فيها خزائنهما وحساباتهما البنكية ورواتب موظفيهما)، مع تأكيد صفر تغيير في سلوك tenant single_store/multi_stock تجريبي (نفس الاستعلامات، نفس النتائج).
+### Phase 2 — آلية الإنفاذ (مُعاد صياغته بالكامل 2026-09-23 — الافتراض الأصلي كان خاطئاً)
 
-### Phase 3 — الأدوار وعملية تعيين مدير الفرع (مُحدَّثة — لا فصل صلاحيات)
-- ~~فصل صلاحيات `branch_role='manager'` عن `is_tenant_admin`~~ — **أُلغي**؛ مدير الفرع يحتفظ بكامل اتساع صلاحيات `is_tenant_admin` (القسم 4.2). لا عمل على `permissions.py` هنا.
-- عملية تعيين مدير الفرع (القسم 7) + تزامن `Branch.manager`↔`User.branch_role`.
-- التأكد أن `require_company_owner` (ولا شيء غيره) هو ما يحجب مدير الفرع عن الشاشات المركزية (إدارة الفروع، المستخدمين، الصلاحيات، الإعدادات، Dashboard الموحّد).
-- **معيار القبول:** مدير فرع تجريبي يحتفظ بكل صلاحياته التشغيلية الكاملة (كمدير نشاط) لكن محصورة على بيانات فرعه فقط، ولا يستطيع الوصول لأي شاشة محمية بـ `require_company_owner` حتى بمحاولة استدعاء مباشر.
+> **اكتشاف جوهري أثناء التنفيذ:** هذا القسم افترض عدم وجود أي آلية إنفاذ مركزية حالياً، بناءً على Gap Analysis كُتب دون علم بعمل حقيقي أنجز بالتوازي (commit `c792f9e` "Branch scoping overhaul: supervisors, auto-linking, hard access controls"، مدموج عبر rebase). الواقع الفعلي للكود: **لا CBVs في المشروع إطلاقاً (100% function-based views)**، ويوجد بالفعل نمط عزل يدوي متّسق ومُطبَّق **174 مرة** عبر `for_branch()`/`filter_by_branch_via()` + قرار صلاحيات حقيقي (`is_tenant_admin`/`is_branch_supervisor`/`BRANCH_BLOCKED_KEYS`/`deny_branch_scoped`، لا `branch_role`/`require_company_owner` كما افترضت هذه الخطة سابقاً — تلك الأسماء **غير موجودة إطلاقاً** في الكود). بناء `BranchScopedManager`/`BranchEnforcementMiddleware`/`BranchScopedViewMixin` كما وُصف أعلاه كان سيُنشئ نظام إنفاذ مواز بشكل CBV في تطبيق FBV بالكامل — تكرار لا داعي له. **القرار البديل المُنفَّذ فعلياً:**
 
-### Phase 4 — Dashboard والتقارير الموحدة (مُحدَّثة — بدون قاعدة خزينة مركزية)
-- بناء `resolve_report_scope()` + مكوّن الفلتر الموحّد.
-- تطبيقه على Dashboard مدير النشاط المركزي أولاً، ثم تعميمه على تقارير المبيعات/المشتريات/المصروفات/المخزون/الرواتب/الخزائن/الحسابات البنكية عبر كل الفروع.
+1. ✅ **أداة تدقيق CI** — `python manage.py check_branch_scoping` (`apps/core/management/commands/check_branch_scoping.py`): تفحص كل `apps/*/views.py` بحثاً عن دوال تلمس موديلاً حساساً للفرع (قائمة `BRANCH_SENSITIVE_MODELS`) بلا `for_branch(`/`filter_by_branch_via(`/`resolve_report_scope(`/`enforce_branch_ownership(` في جسمها ولا استثناء موثَّق، وتفشل (`--strict`) عند وجود مخالفات — هذا هو "خط الدفاع الثاني" الذي وصفه القسم 3.4 الأصلي، مُكيَّفاً لواقع FBV.
+2. ✅ **ديكوريتر توثيقي جديد** `branch_scope_exempt(reason)` (`apps/accounts/decorators.py`)، إلى جانب `deny_branch_scoped` الموجود مسبقاً — الأداة تتعرّف على كليهما كاستثناء مقصود موثَّق.
+3. ✅ **دالة `enforce_branch_ownership(request, obj, field='branch')`** (`apps/core/utils.py`، 10 اختبارات في `apps/core/tests_branch_ownership.py`) — **اكتشاف أمني حقيقي وحرج غير مخطَّط له أصلاً في هذه الخطة**: تشغيل الأداة كشف أن **~150+ view** عبر كل التطبيقات (مبيعات، مشتريات، مخزون، موردون، عملاء، مناديب، خزينة، حسابات بنكية، موظفون، مصروفات) يجلب سجلاً واحداً بمعرّفه (`get_object_or_404(Model, pk=pk, tenant=tenant)`) **بلا أي تحقق من الفرع** — أي مستخدم بفرع يقدر يشاهد/يعدّل بيانات فرع آخر بمجرد تخمين رقم تسلسلي (IDOR كلاسيكي)، مؤكَّد فعلياً على tenant enterprise حي في قاعدة البيانات (فرع "فالوريا" له مستخدمان بفرع حقيقيان). هذه الدالة تُستدعى بعد `get_object_or_404` مباشرة؛ تدعم مسارات غير مباشرة (`field='stock__branch'`) ومسارات مزدوجة لموديلات "التحويل" ذات الطرفين (`field=['from_stock__branch','to_stock__branch']`, OR semantics).
+4. ✅ **تصحيح شامل** عبر كل التطبيقات (treasury, bank_accounts, suppliers, expenses, items, store, insurance, core, sales, purchases, stocks, employees, agents, customers, portal) — 0 مخالفة متبقية حسب `check_branch_scoping`، مع اكتشاف وإصلاح ثغرتين إضافيتين مشابهتين داخل مولّدات التقارير نفسها (`TreasuryReportGenerator.get_statement_report`, `BankAccountReportGenerator.get_statement_report` كانتا تتجاهلان `self.branch` كلياً رغم تلقّيه).
+5. `for_branch()`/`filter_by_branch_via()` الحاليتان **لم تُحذفا ولم تتغيّرا** — الكود القديم يستمر بالعمل بنفس السلوك بالضبط.
+
+- **معيار القبول (مُحدَّث ومُحقَّق):** `python manage.py check_branch_scoping --strict` يمر بصفر مخالفات؛ tenant enterprise تجريبي (فرعان وهميان) يتحقق أن مستخدم فرع لا يصل بيانات الفرع الآخر حتى بمحاولة IDOR مباشرة (تخمين pk)؛ صفر تغيير في سلوك tenant single_store/multi_stock (الدالة تتحقق فقط عندما `request.branch` ليس None، وهو دائماً None في هاتين النسختين).
+
+### Phase 3 — الأدوار وعملية تعيين مدير الفرع — ✅ مكتمل 2026-09-23 (مُعاد صياغته بواقع الكود الفعلي)
+- ~~فصل صلاحيات `branch_role='manager'` عن `is_tenant_admin`~~ — **أُلغي**؛ غير ذي صلة أصلاً: لا يوجد `branch_role` في الكود، الدور الفعلي الموجود مسبقاً هو `User.is_branch_supervisor` (من commit `c792f9e`، سابق لهذه الخطة) — مستخدم بفرع + `is_branch_supervisor=True` يحصل على كل الصلاحيات ما عدا 5 تصنيفات مركزية مستثناة (`BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES` في `apps/accounts/permissions.py`) + `BRANCH_BLOCKED_KEYS`. هذا **هو** "مدير الفرع" فعلياً — يطابق روح القسم 4.2 الأصلي تماماً رغم اختلاف اسم الحقل.
+- ✅ عملية تعيين مدير الفرع: `Branch.assign_manager(branch, user)` (`apps/core/models.py`) + endpoint `branch_assign_manager_api` (`apps/core/views.py`, `apps/core/urls.py`)، محمي بـ `require_permission('change_branches')`. يزامن `Branch.manager` (الحقل المرآة من Phase 1) مع `User.branch`/`User.is_branch_supervisor` في transaction واحدة، ويُخفِّض المدير السابق لنفس الفرع تلقائياً (قاعدة "مدير واحد نشط لكل فرع" على مستوى الخدمة، القسم 7.1). `user=None` يزيل المدير الحالي بلا تعيين بديل. يرفض تعيين `is_tenant_admin`/`is_superuser` كمدير فرع.
+- 7 اختبارات في `apps/core/tests_branch_manager.py` (تزامن الطرفين، تخفيض المدير السابق عند إعادة التعيين، الإزالة، رفض تعيين مدير نشاط، endpoint كامل).
+- الشاشات المركزية (إدارة الفروع نفسها، إعدادات النشاط، سعر الصرف...) محجوبة عن مدير الفرع فعلياً عبر `deny_branch_scoped` (6 شاشات في `apps/core/views.py`) — هذا هو مكافئ `require_company_owner` الفعلي في الكود، سابق لهذه الخطة، تم التحقق منه فقط لا إعادة بنائه.
+- **معيار القبول (محقَّق):** مدير فرع تجريبي (`is_branch_supervisor=True` + `branch=X`) يحتفظ بصلاحياته التشغيلية محصورة على فرعه (عبر Phase 2)، ولا يصل شاشات `deny_branch_scoped` حتى بمحاولة مباشرة.
+
+### Phase 4 — Dashboard والتقارير الموحدة — ✅ الأساس مكتمل 2026-09-23، التعميم جزئي
+- ✅ `resolve_report_scope(request)` (`apps/core/utils.py`) — نقطة الدخول الموحّدة: تُرجع `(branch, is_central_admin, branches_for_filter)`. مدير النشاط المركزي (Enterprise، `request.branch is None`): افتراضي = كل الفروع، مع اختيار فرع محدد عبر `?branch=<id>` (يتحقق أن الفرع فعلاً يتبع نفس الـ tenant). مستخدم بفرع: مقفول على `request.branch` بصرف النظر عمّا يُرسله في querystring (حسم من جانب الخادم، لا تفويض من العميل). single_store/multi_stock: بلا تغيير (`None, False, فارغ`) تماماً كسلوك `getattr(request,'branch',None)` القديم.
+- ✅ مُطبَّق على Dashboard الرئيسي (`apps/core/views.py::dashboard`) وصفحة التحليلات المتقدمة (`analytics`) — قائمة اختيار فرع تظهر فقط لمدير النشاط المركزي في tenant من نوع Enterprise (`core/dashboard.html`, `core/analytics.html`).
+- 7 اختبارات في `apps/core/tests_report_scope.py` (single_store غير متأثر، قفل مستخدم الفرع حتى مع querystring مزوَّر، افتراضي كل الفروع، اختيار فرع صحيح، رفض فرع من tenant آخر، تكامل حقيقي على الـ Dashboard).
 - ~~تفعيل قاعدة عمل خزينة `owner` للرواتب المركزية~~ — **أُلغي**؛ لا يوجد مفهوم خزينة مركزية إلزامية للرواتب (القسم 6).
-- **معيار القبول:** Dashboard يعرض إجمالي كل الفروع افتراضياً لمدير النشاط المركزي، وفلتر "فرع محدد" يطابق تقرير ذلك الفرع منفرداً رقمياً (بما فيه أرصدة خزنتيه ورواتب موظفيه).
+- **متبقٍ (غير منجز بعد، خارج هذه الجلسة):** تعميم `resolve_report_scope()` على بقية شاشات التقارير المتخصصة (مبيعات/مشتريات/مصروفات/مخزون/رواتب/خزائن/حسابات بنكية) التي لا تزال تقرأ `request.branch` مباشرة دون خيار "فرع محدد" لمدير مركزي — أولوياتها أقل من إغلاق ثغرات IDOR في Phase 2 فتُركت لدورة عمل لاحقة.
+- **معيار القبول:** محقَّق للـ Dashboard/Analytics فقط حتى الآن؛ التعميم الكامل على كل التقارير لم يُختبر بعد.
 
-### Phase 5 — اختبار شامل بالسيناريوهات الـ20
-- تنفيذ كل السيناريوهات الـ20 من القسم الثاني عشر بالمواصفة، مع تركيز خاص على 6 و8 و9 و10 و16 و17 و18 و20 (إنشاء مدير فرع بصلاحيات كاملة على فرعه، العزل، الرواتب/السلفيات/الخصومات لكل فرع، عدم تأثر النسخة الأولى/الثانية).
-- Regression كامل مقابل baseline الـ Phase 0.
-- **معيار القبول:** الـ 20 سيناريو تمر بنجاح موثقة، وصفر انحراف في سلوك single_store/multi_stock عن الـ baseline.
+### Phase 5 — اختبار شامل بالسيناريوهات الـ20 — آلي مكتمل 2026-09-23، يدوي/staging متبقٍ
+- ✅ **تغطية آلية شاملة بدل الاعتماد على سيناريوهات يدوية فقط:** بما أن الثغرة الفعلية المكتشفة في Phase 2 (IDOR عبر الفرع) كانت منهجية عبر كل التطبيقات لا حالة معزولة، اختبار السيناريو 8 ("المستخدم لا يرى بيانات فرع آخر") تُرجم إلى تصحيح شامل + اختبار آلي لكل نقطة وصول تلمس موديلاً حساساً للفرع (~200 نقطة عبر 15 تطبيقاً)، موثّق بـ `python manage.py check_branch_scoping --strict` (0 مخالفة، مُدمج الآن في CI — `.github/workflows/tests.yml`) بدل تغطية جزئية بسيناريو واحد يدوي.
+- ✅ Regression: **200 اختبار** (124 من `scripts/test.sh` الرسمي + 76 إضافية عبر كل تطبيق لم يكن مُدرجاً صراحة) نجحت بالكامل بعد كل تعديلات Phase 1-4، بما فيها اختبارات tenant من نوع single_store/multi_stock (`tests_tenant_isolation.py`, `tests_plan_limits.py`, إلخ) — صفر انحراف مؤكَّد آلياً، لا افتراضاً.
+- ✅ سيناريوهات 1-7 و11-15 و19: مغطاة ضمنياً عبر البنية الموجودة مسبقاً (إنشاء مؤسسة/فروع/مخازن/مستخدمين، Dashboard) + اختبارات Phase 1/3/4 الجديدة.
+- **متبقٍ فعلياً (لم يُنفَّذ في هذه الجلسة، يحتاج بيئة staging/متصفح حقيقي):**
+  - تشغيل الـ migrations على نسخة حقيقية من بيانات إنتاج (staging) — القسم Phase 1 لم يُختبر إلا على قاعدة تطوير محلية.
+  - اختبار متصفح فعلي (يدوي أو عبر Playwright — غير مُثبَّت على هذه الآلة) لسيناريو كامل: تسجيل دخول كمدير فرع حقيقي على tenant "فالوريا" (الوحيد الحالي من نوع multi_branch وله مستخدمان بفرع حقيقيان) والتحقق البصري من كل شاشة.
+  - تعميم `resolve_report_scope()` على بقية شاشات التقارير المتخصصة (متروك من Phase 4).
+- **معيار القبول:** الجزء الآلي محقَّق بالكامل وموثَّق بالاختبارات؛ الجزء اليدوي/staging يحتاج جلسة عمل منفصلة قبل اعتماد هذا للإنتاج نهائياً.
 
 ---
 

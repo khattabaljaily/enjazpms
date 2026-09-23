@@ -32,6 +32,7 @@ urlpatterns = [
     path('branches/api/<int:pk>/detail/', views.branch_detail_api, name='branch_detail_api'),
     path('branches/api/<int:pk>/update/', views.branch_update_api, name='branch_update_api'),
     path('branches/api/<int:pk>/delete/', views.branch_delete_api, name='branch_delete_api'),
+    path('branches/api/<int:pk>/assign-manager/', views.branch_assign_manager_api, name='branch_assign_manager_api'),
 
     # Tenant management (superuser)
     path('tenants/', views.tenant_list, name='tenant_list'),

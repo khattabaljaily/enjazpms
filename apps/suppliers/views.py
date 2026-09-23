@@ -13,8 +13,8 @@ import csv
 import io
 import json
 
-from apps.accounts.decorators import require_permission
-from apps.core.utils import CURRENCY_NAMES_AR, filter_by_branch_via
+from apps.accounts.decorators import require_permission, branch_scope_exempt
+from apps.core.utils import CURRENCY_NAMES_AR, filter_by_branch_via, enforce_branch_ownership
 from .forms import SupplierForm
 from .models import Supplier
 from apps.purchases.models import SupplierLedger
@@ -230,6 +230,7 @@ def supplier_detail_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, supplier)
 
     hc_mode = getattr(tenant, 'hard_currency_mode', False)
     sup_currency = (supplier.currency or '').strip()
@@ -276,6 +277,7 @@ def supplier_transactions_api(request, pk):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, supplier)
     opening = supplier.opening_balance or Decimal('0')
 
     hc_mode = getattr(tenant, 'hard_currency_mode', False)
@@ -545,6 +547,7 @@ def supplier_payment_detail_api(request, pk):
         entry_type='payment',
         pk=pk,
     )
+    enforce_branch_ownership(request, payment, field='supplier__branch')
 
     cancellation = SupplierLedger.objects.for_tenant(tenant).filter(
         reference_type='supplier_payment_cancel',
@@ -619,6 +622,7 @@ def supplier_payment_create_api(request):
         return _json_error('المبلغ يجب أن يكون أكبر من الصفر')
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=supplier_id)
+    enforce_branch_ownership(request, supplier)
     note_text = notes
     if reference:
         note_text = f"{note_text} | مرجع: {reference}" if note_text else f"مرجع: {reference}"
@@ -702,6 +706,7 @@ def supplier_payment_create_api(request):
                 else:
                     treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False), pk=int(treasury_id))
                     disburse_amount = local_amount
+                enforce_branch_ownership(request, treasury)
                 movement = post_treasury_disbursement(
                     tenant=tenant,
                     amount=disburse_amount,
@@ -718,6 +723,7 @@ def supplier_payment_create_api(request):
                 if not bank_account_id:
                     raise ValueError('يجب اختيار الحساب البنكي عند الدفع بنكياً')
                 bank_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=int(bank_account_id))
+                enforce_branch_ownership(request, bank_account)
                 movement = post_bank_account_disbursement(
                     tenant=tenant,
                     amount=local_amount,
@@ -768,6 +774,7 @@ def supplier_payment_cancel_api(request, pk):
         SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment'),
         pk=pk,
     )
+    enforce_branch_ownership(request, payment, field='supplier__branch')
     reverse_notes = f"إلغاء دفعة مورد — {payment.notes or ''}".strip()
     with transaction.atomic():
         cash_ref_types = ('supplier_payment_cash', 'supplier_payment_hc_cash')
@@ -833,6 +840,7 @@ def supplier_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, supplier)
     form = SupplierForm(request.POST, instance=supplier, tenant=tenant, branch=getattr(request, 'branch', None))
 
     if form.is_valid():
@@ -863,6 +871,7 @@ def supplier_delete_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
+    enforce_branch_ownership(request, supplier)
     sup_name = supplier.name
     try:
         supplier.delete()
@@ -909,7 +918,7 @@ def supplier_export_api(request):
     ])
     
     # Write data
-    suppliers = Supplier.objects.for_tenant(tenant).order_by('name')
+    suppliers = Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
     for supplier in suppliers:
         writer.writerow([
             supplier.name,

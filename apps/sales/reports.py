@@ -308,6 +308,12 @@ class SalesReportGenerator:
             customer = Customer.objects.get(pk=customer_id, tenant=self.tenant)
         except Customer.DoesNotExist:
             return None
+        # self.branch يُمرَّر للمُنشئ لكن لم يكن يُستخدم هنا فعلياً — نفس ثغرة
+        # IDOR عبر الفرع المكتشفة في TreasuryReportGenerator.get_statement_report/
+        # BankAccountReportGenerator.get_statement_report: مستخدم بفرع يقدر يمرر
+        # customer_id لعميل فرع آخر ويحصل على كشف حسابه كاملاً.
+        if self.branch is not None and customer.branch is not None and customer.branch != self.branch:
+            return None
 
         # Opening balance = last entry before start_date, or customer.opening_balance
         pre_entry = CustomerLedger.objects.filter(

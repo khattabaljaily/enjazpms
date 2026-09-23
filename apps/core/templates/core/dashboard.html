@@ -13,6 +13,20 @@
 
 {% block content %}
 
+{% if is_central_admin %}
+<!-- ══ BRANCH FILTER (Enterprise, central admin only) ═══════════════ -->
+<div class="db-branch-filter" style="margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+    <label for="dbBranchFilter" style="font-weight:600;">عرض بيانات:</label>
+    <select id="dbBranchFilter" class="form-select" style="max-width:260px;"
+            onchange="if(this.value){window.location.search='?branch='+this.value;}else{window.location.search='';}">
+        <option value=""{% if not selected_branch %} selected{% endif %}>كل الفروع (إجمالي المؤسسة)</option>
+        {% for b in branches_for_filter %}
+        <option value="{{ b.id }}"{% if selected_branch.id == b.id %} selected{% endif %}>{{ b.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
+
 <!-- ══ GREETING ══════════════════════════════════════════════════ -->
 <div class="db-greeting">
     <div class="db-greeting-text">
