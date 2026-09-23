@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission
 from apps.accounts.activity_service import log_activity
 
-from .services import chat, generate_daily_insights
+from .services import chat, generate_daily_insights, _is_enterprise_owner
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def chat_api(request):
         history = []
 
     try:
-        reply = chat(user_message, history, tenant)
+        reply = chat(user_message, history, tenant, request.user)
     except Exception as exc:
         import traceback
         logger.error("AI chat error: %s\n%s", exc, traceback.format_exc())
@@ -60,7 +60,7 @@ def insights_api(request):
     if not _plan_allows_ai(tenant):
         return JsonResponse({"error": "الرؤى الذكية متاحة للباقة الاحترافية فما فوق"}, status=403)
 
-    insights = generate_daily_insights(tenant)
+    insights = generate_daily_insights(tenant, request.user)
     log_activity(request, 'عرض الرؤى الذكية اليومية', '', 'other')
     return JsonResponse({"insights": insights})
 
@@ -74,7 +74,7 @@ def advices_api(request):
         return JsonResponse({"error": "النصائح الذكية متاحة للباقة الاحترافية فما فوق"}, status=403)
 
     try:
-        raw = generate_daily_insights(tenant)
+        raw = generate_daily_insights(tenant, request.user)
         parts = [p.strip() for p in raw.splitlines() if p.strip()]
         if len(parts) <= 1:
             for sep in ['•', '-', '•']:
@@ -93,11 +93,18 @@ def advices_api(request):
                 cleaned.append(p2)
 
         if not cleaned:
-            cleaned = [
-                'راجع الأصناف ذات المخزون المنخفض وأعد طلب المخزون الضروري.',
-                'تابع أعلى 5 عملاء غير المسددين وحاول تحصيل المبالغ المستحقة.',
-                'راجع أفضل المنتجات هذا الشهر وفكر في ترويج للمنتجات الأبطأ مبيعاً.',
-            ]
+            if _is_enterprise_owner(tenant, request.user):
+                cleaned = [
+                    'راجع تقرير مقارنة أداء الفروع وحدد الفرع الذي يحتاج متابعة عن قرب.',
+                    'راجع تقرير المخزون المنخفض وكلّف مدير الفرع المعني بترتيب إعادة الطلب.',
+                    'تأكد أن كل فرع مرتبط بمخازنه ومستخدميه وصلاحياتهم بشكل صحيح.',
+                ]
+            else:
+                cleaned = [
+                    'راجع الأصناف ذات المخزون المنخفض وأعد طلب المخزون الضروري.',
+                    'تابع أعلى 5 عملاء غير المسددين وحاول تحصيل المبالغ المستحقة.',
+                    'راجع أفضل المنتجات هذا الشهر وفكر في ترويج للمنتجات الأبطأ مبيعاً.',
+                ]
 
         log_activity(request, 'عرض النصائح الذكية', '', 'other')
         return JsonResponse({"advices": cleaned})

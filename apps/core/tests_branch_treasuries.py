@@ -32,10 +32,11 @@ class BranchTreasuryAutoCreationTests(TestCase):
         self.assertEqual(len(hc), 1)
         self.assertEqual(hc[0].currency, 'USD')
 
-        # الخزينة الافتراضية النظامية الأصلية للـ tenant (create_tenant_defaults)
-        # تبقى كما هي تماماً (branch=None) — لا تعديل عليها.
-        tenant_default = Treasury.objects.get(tenant=tenant, is_system_default=True)
-        self.assertIsNone(tenant_default.branch)
+        # نسخة المؤسسات لم يعد لها خزينة نظامية افتراضية على مستوى الـ tenant
+        # (branch=None) — راجع apps/core/signals.py::create_tenant_defaults
+        # وخطة "تقييد صلاحيات مدير النشاط في نسخة المؤسسات": الخزائن تُنشأ
+        # فقط مع كل فرع.
+        self.assertFalse(Treasury.objects.filter(tenant=tenant, is_system_default=True).exists())
 
     def test_enterprise_branch_without_hc_mode_creates_only_local_treasury(self):
         tenant = Tenant.objects.create(

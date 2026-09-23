@@ -41,7 +41,7 @@ from apps.customers.models import Customer
 from apps.items.models import Item
 from apps.items.alternatives import get_all_alternatives
 from apps.stocks.models import Stock, StockQuantity
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope
 
 from .models import (
     CustomerLedger,
@@ -1677,6 +1677,7 @@ def sales_summary_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
     
     # Get date range from request
     start_date = _parse_date(request.GET.get('start_date'))
@@ -1688,7 +1689,7 @@ def sales_summary_report(request):
         end_date = timezone.localdate()
     
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report_data = generator.get_summary_report()
 
     # Chart data: daily trend for the selected period
@@ -1705,6 +1706,9 @@ def sales_summary_report(request):
         'report_type': 'summary',
         'chart_labels': chart_labels,
         'chart_amounts': chart_amounts,
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -1718,6 +1722,7 @@ def sales_summary_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
     
     # Get date range
     start_date = _parse_date(request.GET.get('start_date'))
@@ -1729,7 +1734,7 @@ def sales_summary_report_export(request):
         end_date = timezone.localdate()
     
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report_data = generator.get_summary_report()
     
     # Create CSV
@@ -1760,6 +1765,7 @@ def sales_by_customer_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
     
     # Get date range
     start_date = _parse_date(request.GET.get('start_date'))
@@ -1775,12 +1781,12 @@ def sales_by_customer_report(request):
     customer_id = request.GET.get('customer_id')
 
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report_data = generator.get_by_customer_report(customer_id=customer_id)
 
     # customers list for filter
     from apps.customers.models import Customer
-    customers = Customer.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
+    customers = Customer.objects.filter(tenant=tenant).for_branch(branch).order_by('name')
     selected_customer = None
     if customer_id:
         try:
@@ -1798,6 +1804,9 @@ def sales_by_customer_report(request):
         'selected_customer': selected_customer,
         'section': 'sales_reports',
         'report_type': 'by_customer',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -1811,6 +1820,7 @@ def sales_by_customer_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
     
     # Get date range
     start_date = _parse_date(request.GET.get('start_date'))
@@ -1826,7 +1836,7 @@ def sales_by_customer_report_export(request):
     customer_id = request.GET.get('customer_id')
 
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report_data = generator.get_by_customer_report(customer_id=customer_id)
     # fetch selected customer for header if available
     selected_customer = None
@@ -1890,12 +1900,13 @@ def sales_by_item_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report_data = generator.get_by_item_report(item_id=item_id)
 
     items = Item.objects.filter(
@@ -1911,6 +1922,9 @@ def sales_by_item_report(request):
         'selected_item_id': item_id,
         'section': 'sales_reports',
         'report_type': 'by_item',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -1924,12 +1938,13 @@ def sales_by_item_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report_data = generator.get_by_item_report(item_id=item_id)
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -1960,6 +1975,7 @@ def sales_by_date_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
     
     # Get date range
     start_date = _parse_date(request.GET.get('start_date'))
@@ -1972,7 +1988,7 @@ def sales_by_date_report(request):
         end_date = timezone.localdate()
     
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report_data = generator.get_by_date_report(group_by)
     
     return render(request, 'sales/reports/by_date.html', {
@@ -1982,6 +1998,9 @@ def sales_by_date_report(request):
         'group_by': group_by,
         'section': 'sales_reports',
         'report_type': 'by_date',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -1995,6 +2014,7 @@ def sales_by_date_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
     
     # Get date range
     start_date = _parse_date(request.GET.get('start_date'))
@@ -2007,7 +2027,7 @@ def sales_by_date_report_export(request):
         end_date = timezone.localdate()
     
     # Generate report
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report_data = generator.get_by_date_report(group_by)
     
     # Create CSV
@@ -2044,14 +2064,15 @@ def sales_customer_statement(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     customer_id = request.GET.get('customer_id')
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report = generator.get_customer_statement(customer_id) if customer_id else None
-    customers = Customer.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
+    customers = Customer.objects.filter(tenant=tenant).for_branch(branch).order_by('name')
 
     return render(request, 'sales/reports/customer_statement.html', {
         'report': report,
@@ -2060,6 +2081,9 @@ def sales_customer_statement(request):
         'start_date': start_date,
         'end_date': end_date,
         'section': 'sales_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -2071,12 +2095,13 @@ def sales_customer_statement_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     customer_id = request.GET.get('customer_id')
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report = generator.get_customer_statement(customer_id) if customer_id else None
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -2100,13 +2125,17 @@ def sales_customer_balances(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    generator = SalesReportGenerator(tenant, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, branch=branch)
     report = generator.get_customer_balances()
 
     return render(request, 'sales/reports/customer_balances.html', {
         'report': report,
         'section': 'sales_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -2118,8 +2147,9 @@ def sales_customer_balances_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    report = SalesReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_customer_balances()
+    report = SalesReportGenerator(tenant, branch=branch).get_customer_balances()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="customer_balances.csv"'
     response.write('﻿')
@@ -2137,14 +2167,15 @@ def sales_payments_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     customer_id = request.GET.get('customer_id') or None
 
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report = generator.get_payments_report(customer_id=customer_id)
-    customers = Customer.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name')
+    customers = Customer.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
 
     return render(request, 'sales/reports/payments.html', {
         'report': report,
@@ -2153,6 +2184,9 @@ def sales_payments_report(request):
         'customers': customers,
         'selected_customer_id': customer_id or '',
         'section': 'sales_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -2164,11 +2198,12 @@ def sales_payments_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_payments_report()
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=branch).get_payments_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="sales_payments_{end_date}.csv"'
     response.write('﻿')
@@ -2185,11 +2220,12 @@ def sales_returns_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report = generator.get_returns_report()
 
     return render(request, 'sales/reports/returns.html', {
@@ -2197,6 +2233,9 @@ def sales_returns_report(request):
         'start_date': start_date,
         'end_date': end_date,
         'section': 'sales_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -2208,11 +2247,12 @@ def sales_returns_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_returns_report()
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=branch).get_returns_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="sales_returns_{end_date}.csv"'
     response.write('﻿')
@@ -2233,19 +2273,20 @@ def sales_by_user_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     user_id = request.GET.get('user_id') or None
 
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report = generator.get_by_user_report(user_id=user_id)
 
     from django.contrib.auth import get_user_model
     from .models import SaleInvoice
     user_ids = filter_by_branch_via(
         SaleInvoice.objects.filter(tenant=tenant, status='confirmed'),
-        getattr(request, 'branch', None),
+        branch,
     ).values_list('created_by', flat=True).distinct()
     users = get_user_model().objects.filter(pk__in=user_ids).order_by('first_name', 'last_name')
 
@@ -2256,6 +2297,9 @@ def sales_by_user_report(request):
         'users': users,
         'selected_user_id': user_id,
         'section': 'sales_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -2267,12 +2311,13 @@ def sales_by_user_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     user_id = request.GET.get('user_id') or None
 
-    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_user_report(user_id=user_id)
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=branch).get_by_user_report(user_id=user_id)
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="sales_by_user_{end_date}.csv"'
     response.write('\ufeff')
@@ -2305,17 +2350,21 @@ def income_statement_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = IncomeStatementGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_report()
+    report = IncomeStatementGenerator(tenant, start_date, end_date, branch=branch).get_report()
 
     return render(request, 'sales/reports/income_statement.html', {
         'report': report,
         'start_date': start_date,
         'end_date': end_date,
         'section': 'sales_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -2328,11 +2377,12 @@ def income_statement_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = IncomeStatementGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_report()
+    report = IncomeStatementGenerator(tenant, start_date, end_date, branch=branch).get_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="income_statement_{end_date}.csv"'
     response.write('﻿')
@@ -2361,12 +2411,13 @@ def sales_profit_margin_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    generator = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = SalesReportGenerator(tenant, start_date, end_date, branch=branch)
     report = generator.get_profit_margin_report(item_id=item_id)
 
     items = Item.objects.filter(
@@ -2381,6 +2432,9 @@ def sales_profit_margin_report(request):
         'items': items,
         'selected_item_id': item_id,
         'section': 'sales_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -2392,12 +2446,13 @@ def sales_profit_margin_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     item_id = request.GET.get('item_id') or None
 
-    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_profit_margin_report(item_id=item_id)
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=branch).get_profit_margin_report(item_id=item_id)
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="profit_margin_{end_date}.csv"'
     response.write('﻿')
@@ -2431,17 +2486,21 @@ def sales_by_payment_method_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_payment_method_report()
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=branch).get_by_payment_method_report()
 
     return render(request, 'sales/reports/by_payment_method.html', {
         'report': report,
         'start_date': start_date,
         'end_date': end_date,
         'section': 'sales_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -2453,11 +2512,12 @@ def sales_by_payment_method_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = SalesReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_by_payment_method_report()
+    report = SalesReportGenerator(tenant, start_date, end_date, branch=branch).get_by_payment_method_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="sales_by_payment_{end_date}.csv"'
     response.write('﻿')

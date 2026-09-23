@@ -1,4 +1,4 @@
-{% load static capabilities_tags %}
+{% load static capabilities_tags permission_tags %}
 
 <!-- Help Floating Button -->
 <button id="help-fab" class="help-fab" title="المساعدة" aria-label="فتح لوحة المساعدة">
@@ -31,62 +31,103 @@
         <div class="help-section">
             <div class="help-section__title"><i class="fa-solid fa-bolt me-1"></i> روابط سريعة</div>
             <div class="help-quick-links">
+                {% if user|has_perm_key:'view_sales' %}
                 <a href="{% url 'sales:invoice_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-file-invoice"></i><span>فواتير المبيعات</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_customers' %}
                 <a href="{% url 'customers:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-users"></i><span>العملاء</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_items' %}
                 <a href="{% url 'items:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-box"></i><span>الأصناف</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_stocks' %}
                 <a href="{% url 'stocks:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-warehouse"></i><span>المخزن</span>
                 </a>
+                {% endif %}
+                {% if current_tenant.version_type == 'multi_branch' and user|has_perm_key:'view_branches' %}
+                <a href="{% url 'core:branch_list' %}" class="help-quick-link">
+                    <i class="fa-solid fa-code-branch"></i><span>الفروع</span>
+                </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_purchases' %}
                 <a href="{% url 'purchases:order_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-cart-shopping"></i><span>المشتريات</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_expenses' %}
                 <a href="{% url 'expenses:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-receipt"></i><span>المصاريف</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_employees' %}
                 <a href="{% url 'employees:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-user-tie"></i><span>الموظفون</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_employee_salaries' %}
                 <a href="{% url 'employees:salary_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-file-invoice-dollar"></i><span>الرواتب</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_stocks' %}
                 <a href="{% url 'stocks:opening_balance_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-scale-balanced"></i><span>الأرصدة الافتتاحية</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'adjust_stocks' %}
                 <a href="{% url 'stocks:stocktake_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-clipboard-check"></i><span>جرد المخزون</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'transfer_stocks' %}
                 <a href="{% url 'stocks:transfer_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-right-left"></i><span>تحويلات المخزون</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_treasuries' %}
                 <a href="{% url 'treasury:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-vault"></i><span>الخزائن</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_bank_accounts' %}
                 <a href="{% url 'bank_accounts:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-building-columns"></i><span>الحسابات البنكية</span>
                 </a>
+                {% endif %}
                 {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
+                {% if user|has_perm_key:'view_insurance_companies' %}
                 <a href="{% url 'insurance:company_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-shield-heart"></i><span>شركات التأمين</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_insurance_claims' %}
                 <a href="{% url 'insurance:claim_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-file-circle-check"></i><span>مطالبات التأمين</span>
                 </a>
                 {% endif %}
+                {% endif %}
+                {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'view_agents' %}
                 <a href="{% url 'agents:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-person-chalkboard"></i><span>المندوبون</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'view_notifications' %}
                 <a href="{% url 'notifications:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-bell"></i><span>الإشعارات</span>
                 </a>
+                {% endif %}
+                {% if user|has_perm_key:'import_items' or user|has_perm_key:'import_customers' or user|has_perm_key:'import_suppliers' %}
                 <a href="{% url 'data_import:hub' %}" class="help-quick-link">
                     <i class="fa-solid fa-file-import"></i><span>استيراد البيانات</span>
                 </a>
+                {% endif %}
             </div>
         </div>
 
@@ -94,6 +135,7 @@
         <div class="help-section">
             <div class="help-section__title"><i class="fa-solid fa-lightbulb me-1"></i> نصائح سريعة</div>
 
+            {% if user|has_perm_key:'view_sales' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-invoices">
                     <i class="fa-solid fa-file-invoice-dollar"></i> إنشاء فاتورة مبيعات
@@ -108,7 +150,9 @@
                     </ol>
                 </div>
             </div>
+            {% endif %}
 
+            {% if user|has_perm_key:'view_stocks' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-stock">
                     <i class="fa-solid fa-warehouse"></i> متابعة المخزون
@@ -123,7 +167,27 @@
                     </ol>
                 </div>
             </div>
+            {% endif %}
 
+            {% if current_tenant.version_type == 'multi_branch' and user|has_perm_key:'view_branches' %}
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-branches">
+                    <i class="fa-solid fa-code-branch"></i> إدارة الفروع
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-branches">
+                    <ol>
+                        <li>أنشئ الفرع من <strong>الفروع ← فرع جديد</strong>، وحدد اسمه وعنوانه</li>
+                        <li>أنشئ مخزن الفرع من <strong>المخازن</strong> واربطه بالفرع</li>
+                        <li>عيّن مدير الفرع وأضف مستخدمي الفرع من <strong>المستخدمين</strong>، واربط كل مستخدم بفرعه</li>
+                        <li>خزينة الفرع تُنشأ تلقائياً مع الفرع — لا حاجة لإنشائها يدوياً</li>
+                        <li>قارن أداء الفروع عبر فلتر الفرع في أي تقرير</li>
+                    </ol>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if user|has_perm_key:'view_purchases' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-purchases">
                     <i class="fa-solid fa-cart-shopping"></i> إضافة مشتريات
@@ -138,7 +202,9 @@
                     </ol>
                 </div>
             </div>
+            {% endif %}
 
+            {% if user|has_perm_key:'view_sales_summary_report' or user|has_perm_key:'view_stocks_summary_report' or user|has_perm_key:'view_purchases_summary_report' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-reports">
                     <i class="fa-solid fa-chart-bar"></i> التقارير
@@ -146,14 +212,15 @@
                 </button>
                 <div class="help-tip__body" id="tip-reports">
                     <ul>
-                        <li><strong>المبيعات ← التقارير</strong>: تقارير الإيرادات والأداء</li>
-                        <li><strong>المخزن ← التقارير</strong>: الأرصدة والحركات</li>
-                        <li><strong>العملاء ← التقارير</strong>: المديونيات والأعمار</li>
-                        <li>كل التقارير قابلة للتصدير إلى PDF وExcel</li>
+                        <li>كل التقارير مجمّعة في قائمة <strong>التقارير</strong> بالشريط الجانبي، مقسّمة حسب الفئة (مبيعات، مشتريات، مخزن، حسابات)</li>
+                        <li>في نسخة الفروع المتعددة، فلتر الفرع أعلى كل تقرير يتيح عرض فرع واحد أو كل الفروع مجمّعة</li>
+                        <li>كل التقارير قابلة للتصدير إلى Excel/CSV</li>
                     </ul>
                 </div>
             </div>
+            {% endif %}
 
+            {% if user|has_perm_key:'view_users' or user|has_perm_key:'view_permissiongroups' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-users">
                     <i class="fa-solid fa-users-gear"></i> المستخدمين والصلاحيات
@@ -167,22 +234,40 @@
                     </ul>
                 </div>
             </div>
+            {% endif %}
 
+            {% if user|has_perm_key:'view_employees' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-employees">
-                    <i class="fa-solid fa-user-tie"></i> الموظفون والرواتب
+                    <i class="fa-solid fa-user-tie"></i> الموظفون
                     <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
                 </button>
                 <div class="help-tip__body" id="tip-employees">
                     <ul>
-                        <li><strong>الموظفون:</strong> أضف بيانات كل موظف مع الراتب الأساسي</li>
+                        <li>أضف بيانات كل موظف من <strong>الموظفون</strong> مع الراتب الأساسي</li>
+                        <li>اربط كل موظف بفرعه إن كانت النسخة متعددة الفروع</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if user|has_perm_key:'view_employee_salaries' %}
+            <div class="help-tip">
+                <button class="help-tip__toggle" data-target="tip-payroll">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> الرواتب والسلف والحوافز
+                    <i class="fa-solid fa-chevron-down help-tip__arrow ms-auto"></i>
+                </button>
+                <div class="help-tip__body" id="tip-payroll">
+                    <ul>
                         <li><strong>كشف الراتب:</strong> اختر موظفاً، حدد الفترة، أضف بنود الراتب، ثم ادفع</li>
                         <li><strong>سلفة فورية:</strong> سجّل السلفة من <em>سلف الموظفين</em> وتُخصم من الخزينة مباشرة</li>
                         <li><strong>الحوافز والخصومات:</strong> حافز فوري يُصرف نقداً، أو خصم يُضاف لكشف الراتب</li>
                     </ul>
                 </div>
             </div>
+            {% endif %}
 
+            {% if user|has_perm_key:'view_treasuries' or user|has_perm_key:'view_bank_accounts' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-finance">
                     <i class="fa-solid fa-coins"></i> الخزائن والحسابات البنكية
@@ -196,8 +281,10 @@
                     </ul>
                 </div>
             </div>
+            {% endif %}
 
             {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
+            {% if user|has_perm_key:'view_insurance_companies' or user|has_perm_key:'view_insurance_claims' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-insurance">
                     <i class="fa-solid fa-shield-heart"></i> التأمين والمطالبات
@@ -213,7 +300,9 @@
                 </div>
             </div>
             {% endif %}
+            {% endif %}
 
+            {% if user|has_perm_key:'import_items' or user|has_perm_key:'import_customers' or user|has_perm_key:'import_suppliers' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-import">
                     <i class="fa-solid fa-file-import"></i> استيراد البيانات
@@ -228,7 +317,9 @@
                     </ol>
                 </div>
             </div>
+            {% endif %}
 
+            {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'view_agents' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-agents">
                     <i class="fa-solid fa-person-chalkboard"></i> المندوبون والعمولات
@@ -242,6 +333,7 @@
                     </ul>
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <!-- Support link -->

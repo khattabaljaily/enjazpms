@@ -31,18 +31,9 @@ class Stock(TenantMixin):
     - في multi_branch: كل مخزن مرتبط بفرع (branch) معين.
     """
 
-    TYPE_CHOICES = (
-        ('main', 'مخزن رئيسي'),
-        ('branch', 'مخزن فرع'),
-    )
-
     # ------ معلومات أساسية ------
     name = models.CharField('اسم المخزن', max_length=200)
     code = models.CharField('الرمز', max_length=20, blank=True)
-    stock_type = models.CharField(
-        'نوع المخزن', max_length=20,
-        choices=TYPE_CHOICES, default='main'
-    )
 
     # ------ الفرع المرتبط (للنسخة multi_branch فقط) ------
     branch = models.ForeignKey(
@@ -82,7 +73,7 @@ class Stock(TenantMixin):
         ]
 
     def __str__(self):
-        return f"{self.name} ({self.get_stock_type_display()})"
+        return self.name
 
     def save(self, *args, **kwargs):
         # توليد رمز تلقائي إذا لم يُحدَّد

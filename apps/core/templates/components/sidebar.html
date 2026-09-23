@@ -199,12 +199,11 @@
                 {% if user|has_perm_key:'view_tenant_settings' %}
                 <li><a href="{% url 'core:tenant_settings' %}" class="nav-sublink{% if request.resolver_match.url_name == 'tenant_settings' %} active{% endif %}"><i class="fas fa-building me-2"></i>إعدادات المنشأة</a></li>
                 {% endif %}
-                {% if plan_allows_store and user|has_perm_key:'view_store_settings' %}
-                <li><a href="{% url 'store:manage_settings' %}" class="nav-sublink{% if 'store' in request.path %} active{% endif %}"><i class="fas fa-store me-2"></i>إعدادات المتجر
-                    {% if store_pending_count %}
-                    <span style="margin-right:auto;background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:.6rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;">{{ store_pending_count }}</span>
-                    {% endif %}
-                </a></li>
+                {% if user|has_perm_key:'view_stocks' %}
+                <li><a href="{% url 'stocks:list' %}" class="nav-sublink{% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'stocks' %} active{% endif %}"><i class="fas fa-warehouse me-2"></i>المخازن</a></li>
+                {% endif %}
+                {% if current_tenant.version_type == 'multi_branch' and user|has_perm_key:'view_branches' %}
+                <li><a href="{% url 'core:branch_list' %}" class="nav-sublink{% if request.resolver_match.url_name == 'branch_list' %} active{% endif %}"><i class="fas fa-code-branch me-2"></i>الفروع</a></li>
                 {% endif %}
                 <li class="nav-item has-submenu">
                     <a class="nav-sublink nav-link-toggle" href="#">
@@ -223,20 +222,6 @@
                 </li>
                 {% if user|has_perm_key:'view_categories' %}
                 <li><a href="{% url 'items:category_list' %}" class="nav-sublink"><i class="fas fa-tags me-2"></i>تصنيفات المنتجات</a></li>
-                {% endif %}
-                {% if user|has_perm_key:'view_stocks' %}
-                <li class="nav-item has-submenu">
-                    <a class="nav-sublink nav-link-toggle" href="#">
-                        <i class="fas fa-warehouse me-2"></i>إدارة المخازن
-                        <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
-                    </a>
-                    <ul class="nav-submenu">
-                        <li><a href="{% url 'stocks:list' %}" class="nav-sublink"><i class="fas fa-warehouse me-2"></i>قائمة المخازن</a></li>
-                        {% if current_tenant.version_type == 'multi_branch' and user|has_perm_key:'view_branches' %}
-                        <li><a href="{% url 'core:branch_list' %}" class="nav-sublink"><i class="fas fa-code-branch me-2"></i>الفروع</a></li>
-                        {% endif %}
-                    </ul>
-                </li>
                 {% endif %}
                 {% if user|has_perm_key:'import_items' or user|has_perm_key:'import_customers' or user|has_perm_key:'import_suppliers' %}
                 <li class="nav-item has-submenu">
@@ -257,12 +242,20 @@
                     </ul>
                 </li>
                 {% endif %}
+                {% if plan_allows_store and user|has_perm_key:'view_store_settings' %}
+                <li><a href="{% url 'store:manage_settings' %}" class="nav-sublink{% if 'store' in request.path %} active{% endif %}"><i class="fas fa-store me-2"></i>إعدادات المتجر
+                    {% if store_pending_count %}
+                    <span style="margin-right:auto;background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:.6rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;">{{ store_pending_count }}</span>
+                    {% endif %}
+                </a></li>
+                {% endif %}
             </ul>
         </li>
     </ul>
     {% endif %}
 
     {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
+    {% if user|has_perm_key:'view_insurance_companies' or user|has_perm_key:'view_insurance_claims' %}
     <!-- ── Insurance ── -->
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
@@ -273,16 +266,23 @@
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
+                {% if user|has_perm_key:'view_insurance_companies' %}
                 <li><a href="{% url 'insurance:company_list' %}" class="nav-sublink"><i class="fas fa-briefcase-medical me-2"></i>شركات التأمين</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'view_insurance_claims' %}
                 <li><a href="{% url 'insurance:claim_list' %}" class="nav-sublink"><i class="fas fa-file-medical me-2"></i>مطالبات التأمين</a></li>
+                {% endif %}
             </ul>
         </li>
     </ul>
     {% endif %}
+    {% endif %}
 
     <!-- ── Transactions ── -->
+    {% if user|has_perm_key:'view_sales' or user|has_perm_key:'view_purchases' %}
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
+        {% if user|has_perm_key:'view_sales' %}
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
                 <span class="nav-icon nav-icon--sales"><i class="fas fa-receipt"></i></span>
@@ -293,14 +293,20 @@
                 {% if tenant_capabilities|has_capability:"has_pos" %}
                 <li><a href="{% url 'sales:pos' %}" class="nav-sublink"><i class="fas fa-cash-register me-2"></i>نقطة البيع (POS)</a></li>
                 {% endif %}
+                {% if user|has_perm_key:'view_quotes' %}
                 <li><a href="{% url 'sales:quote_list' %}" class="nav-sublink"><i class="fas fa-file-contract me-2"></i>عروض الأسعار</a></li>
+                {% endif %}
                 {% if tenant_capabilities|has_capability:"has_sales_invoice" %}
                 <li><a href="{% url 'sales:invoice_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>فاتورة مبيعات</a></li>
                 {% endif %}
                 <li><a href="{% url 'sales:invoice_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الفواتير</a></li>
+                {% if user|has_perm_key:'view_sales_returns' %}
                 <li><a href="{% url 'sales:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
+                {% endif %}
             </ul>
         </li>
+        {% endif %}
+        {% if user|has_perm_key:'view_purchases' %}
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
                 <span class="nav-icon nav-icon--buy"><i class="fas fa-cart-arrow-down"></i></span>
@@ -311,21 +317,27 @@
                 <li><a href="{% url 'purchases:rfq_list' %}" class="nav-sublink"><i class="fas fa-file-invoice me-2"></i>طلبات عروض الأسعار</a></li>
                 <li><a href="{% url 'purchases:order_create' %}" class="nav-sublink"><i class="fas fa-plus-circle me-2"></i>أمر شراء جديد</a></li>
                 <li><a href="{% url 'purchases:order_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة أوامر الشراء</a></li>
+                {% if user|has_perm_key:'view_purchase_returns' %}
                 <li><a href="{% url 'purchases:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
+                {% endif %}
             </ul>
         </li>
+        {% endif %}
     </ul>
+    {% endif %}
 
     <!-- ── Inventory ── -->
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
+        {% if user|has_perm_key:'view_items' %}
         <li class="nav-item">
             <a class="nav-link" href="{% url 'items:list' %}">
                 <span class="nav-icon nav-icon--stock"><i class="fas fa-box-open"></i></span>
                 المنتجات
             </a>
         </li>
-        {% if tenant_capabilities|has_capability:"has_manufacturing" %}
+        {% endif %}
+        {% if tenant_capabilities|has_capability:"has_manufacturing" and user|has_perm_key:'view_items' %}
         <li class="nav-item">
             <a class="nav-link" href="{% url 'items:bom_list' %}">
                 <span class="nav-icon nav-icon--stock"><i class="fas fa-flask"></i></span>
@@ -333,6 +345,7 @@
             </a>
         </li>
         {% endif %}
+        {% if user|has_perm_key:'view_stocks' %}
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
                 <span class="nav-icon nav-icon--stock"><i class="fas fa-warehouse"></i></span>
@@ -341,9 +354,13 @@
             </a>
             <ul class="nav-submenu">
                 <li><a href="{% url 'stocks:quantities_list' %}" class="nav-sublink"><i class="fas fa-cubes me-2"></i>أرصدة المخزون</a></li>
+                {% if user|has_perm_key:'transfer_stocks' %}
                 <li><a href="{% url 'stocks:transfer_list' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>تحويلات المخزون</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'adjust_stocks' %}
                 <li><a href="{% url 'stocks:stocktake_list' %}" class="nav-sublink"><i class="fas fa-clipboard-list me-2"></i>جرد المخزون</a></li>
-                {% if tenant_capabilities|has_capability:"has_expiry_alerts" %}
+                {% endif %}
+                {% if tenant_capabilities|has_capability:"has_expiry_alerts" and user|has_perm_key:'view_stock_destructions' %}
                 <li><a href="{% url 'stocks:destruction_list' %}" class="nav-sublink"><i class="fas fa-fire-burner me-2"></i>سجلات الإتلاف</a></li>
                 {% endif %}
                 {% if tenant_capabilities|has_capability:"has_manufacturing" %}
@@ -351,6 +368,7 @@
                 {% endif %}
             </ul>
         </li>
+        {% endif %}
         {% if tenant_capabilities|has_capability:"has_work_orders" %}
         <li class="nav-item">
             <a class="nav-link sidebar-link-muted" href="#">
@@ -363,21 +381,26 @@
     </ul>
 
     <!-- ── Contacts ── -->
+    {% if user|has_perm_key:'view_customers' or user|has_perm_key:'view_suppliers' or user|has_perm_key:'view_agents' %}
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
+        {% if user|has_perm_key:'view_customers' %}
         <li class="nav-item">
             <a class="nav-link" href="{% url 'customers:list' %}">
                 <span class="nav-icon nav-icon--sales"><i class="fas fa-users"></i></span>
                 العملاء
             </a>
         </li>
+        {% endif %}
+        {% if user|has_perm_key:'view_suppliers' %}
         <li class="nav-item">
             <a class="nav-link" href="{% url 'suppliers:list' %}">
                 <span class="nav-icon nav-icon--buy"><i class="fas fa-truck"></i></span>
                 الموردين
             </a>
         </li>
-        {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" %}
+        {% endif %}
+        {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'view_agents' %}
         <li class="nav-item">
             <a class="nav-link" href="{% url 'agents:list' %}">
                 <span class="nav-icon" style="background:rgba(246,168,33,.12);color:#c9840f;"><i class="fas fa-id-badge"></i></span>
@@ -392,16 +415,21 @@
         </li>
         {% endif %}
     </ul>
+    {% endif %}
 
     <!-- ── Accounting ── -->
+    {% if user|has_perm_key:'view_employees' or user|has_perm_key:'view_customer_payments' or user|has_perm_key:'view_supplier_payments' or user|has_perm_key:'view_agent_payments' or user|has_perm_key:'view_insurance_statement' or user|has_perm_key:'view_insurance_claims_aging' or user|has_perm_key:'view_expenses' or user|has_perm_key:'view_treasuries' or user|has_perm_key:'view_bank_accounts' or user|has_perm_key:'view_employee_advances' or user|has_perm_key:'view_employee_incentives' or user|has_perm_key:'view_employee_salaries' %}
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
+        {% if user|has_perm_key:'view_employees' %}
         <li class="nav-item">
             <a class="nav-link{% if request.resolver_match.app_name == 'employees' and request.resolver_match.url_name == 'list' %} active{% endif %}" href="{% url 'employees:list' %}">
                 <span class="nav-icon nav-icon--emp"><i class="fas fa-users-gear"></i></span>
                 الموظفين
             </a>
         </li>
+        {% endif %}
+        {% if user|has_perm_key:'view_customer_payments' or user|has_perm_key:'view_supplier_payments' or user|has_perm_key:'view_agent_payments' or user|has_perm_key:'view_insurance_statement' or user|has_perm_key:'view_insurance_claims_aging' or user|has_perm_key:'view_expenses' or user|has_perm_key:'view_treasuries' or user|has_perm_key:'view_bank_accounts' or user|has_perm_key:'view_employee_advances' or user|has_perm_key:'view_employee_incentives' or user|has_perm_key:'view_employee_salaries' %}
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
                 <span class="nav-icon nav-icon--acct"><i class="fas fa-calculator"></i></span>
@@ -409,22 +437,25 @@
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
-                <li><a href="{% url 'customers:payments' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>مدفوعات العملاء</a></li>
-                <li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين</a></li>
-                {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" %}<li><a href="{% url 'agents:payments' %}" class="nav-sublink"><i class="fas fa-id-badge me-2"></i>دفعات المناديب</a></li>{% endif %}
-                {% if tenant_capabilities|has_capability:"has_insurance_billing" %}<li><a href="{% url 'insurance:statement' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب تأمين</a></li>{% endif %}
-                {% if tenant_capabilities|has_capability:"has_insurance_billing" %}<li><a href="{% url 'insurance:claims_aging' %}" class="nav-sublink"><i class="fas fa-hourglass-half me-2"></i>متأخرات التأمين</a></li>{% endif %}
-                <li><a href="{% url 'expenses:list' %}" class="nav-sublink"><i class="fas fa-receipt me-2"></i>المصروفات</a></li>
-                <li><a href="{% url 'treasury:list' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>الخزائن</a></li>
-                <li><a href="{% url 'bank_accounts:list' %}" class="nav-sublink"><i class="fas fa-building-columns me-2"></i>الحسابات البنكية</a></li>
-                <li><a href="{% url 'employees:advance_list' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>سلف الموظفين</a></li>
-                <li><a href="{% url 'employees:incentive_list' %}" class="nav-sublink"><i class="fas fa-star me-2"></i>الحوافز والخصومات</a></li>
-                <li><a href="{% url 'employees:salary_list' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشوف الرواتب</a></li>
+                {% if user|has_perm_key:'view_customer_payments' %}<li><a href="{% url 'customers:payments' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>مدفوعات العملاء</a></li>{% endif %}
+                {% if user|has_perm_key:'view_supplier_payments' %}<li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين</a></li>{% endif %}
+                {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'view_agent_payments' %}<li><a href="{% url 'agents:payments' %}" class="nav-sublink"><i class="fas fa-id-badge me-2"></i>دفعات المناديب</a></li>{% endif %}
+                {% if tenant_capabilities|has_capability:"has_insurance_billing" and user|has_perm_key:'view_insurance_statement' %}<li><a href="{% url 'insurance:statement' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب تأمين</a></li>{% endif %}
+                {% if tenant_capabilities|has_capability:"has_insurance_billing" and user|has_perm_key:'view_insurance_claims_aging' %}<li><a href="{% url 'insurance:claims_aging' %}" class="nav-sublink"><i class="fas fa-hourglass-half me-2"></i>متأخرات التأمين</a></li>{% endif %}
+                {% if user|has_perm_key:'view_expenses' %}<li><a href="{% url 'expenses:list' %}" class="nav-sublink"><i class="fas fa-receipt me-2"></i>المصروفات</a></li>{% endif %}
+                {% if user|has_perm_key:'view_treasuries' %}<li><a href="{% url 'treasury:list' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>الخزائن</a></li>{% endif %}
+                {% if user|has_perm_key:'view_bank_accounts' %}<li><a href="{% url 'bank_accounts:list' %}" class="nav-sublink"><i class="fas fa-building-columns me-2"></i>الحسابات البنكية</a></li>{% endif %}
+                {% if user|has_perm_key:'view_employee_advances' %}<li><a href="{% url 'employees:advance_list' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>سلف الموظفين</a></li>{% endif %}
+                {% if user|has_perm_key:'view_employee_incentives' %}<li><a href="{% url 'employees:incentive_list' %}" class="nav-sublink"><i class="fas fa-star me-2"></i>الحوافز والخصومات</a></li>{% endif %}
+                {% if user|has_perm_key:'view_employee_salaries' %}<li><a href="{% url 'employees:salary_list' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشوف الرواتب</a></li>{% endif %}
             </ul>
         </li>
+        {% endif %}
     </ul>
+    {% endif %}
 
     <!-- ── Reports ── -->
+    {% if user|has_perm_key:'view_sales_summary_report' or user|has_perm_key:'view_purchases_summary_report' or user|has_perm_key:'view_stocks_summary_report' or user|has_perm_key:'view_sales_customer_statement_report' or user|has_perm_key:'view_purchases_supplier_statement_report' or user|has_perm_key:'view_agent_statement_report' or user|has_perm_key:'view_expenses_summary_report' or user|has_perm_key:'view_treasury_balances_report' or user|has_perm_key:'view_bank_account_balances_report' or user|has_perm_key:'view_income_statement_report' %}
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item has-submenu">
@@ -436,6 +467,7 @@
             <ul class="nav-submenu">
 
                 <!-- تقارير المبيعات -->
+                {% if user|has_perm_key:'view_sales_summary_report' %}
                 <li class="nav-item has-submenu">
                     <a class="nav-sublink nav-link-toggle" href="#">
                         <i class="fas fa-receipt me-2"></i>تقارير المبيعات
@@ -451,8 +483,10 @@
                         <li><a href="{% url 'reports:by_user_report' %}" class="nav-sublink"><i class="fas fa-user me-2"></i>حسب المستخدم</a></li>
                     </ul>
                 </li>
+                {% endif %}
 
                 <!-- تقارير المشتريات -->
+                {% if user|has_perm_key:'view_purchases_summary_report' %}
                 <li class="nav-item has-submenu">
                     <a class="nav-sublink nav-link-toggle" href="#">
                         <i class="fas fa-cart-arrow-down me-2"></i>تقارير المشتريات
@@ -467,8 +501,10 @@
                         <li><a href="{% url 'purchases:reports:by_user_report' %}" class="nav-sublink"><i class="fas fa-user me-2"></i>حسب المستخدم</a></li>
                     </ul>
                 </li>
+                {% endif %}
 
                 <!-- تقارير المخزن -->
+                {% if user|has_perm_key:'view_stocks_summary_report' %}
                 <li class="nav-item has-submenu">
                     <a class="nav-sublink nav-link-toggle" href="#">
                         <i class="fas fa-warehouse me-2"></i>تقارير المخزن
@@ -488,49 +524,65 @@
                         {% endif %}
                     </ul>
                 </li>
+                {% endif %}
 
                 <!-- تقارير الحسابات -->
+                {% if user|has_perm_key:'view_sales_customer_statement_report' or user|has_perm_key:'view_purchases_supplier_statement_report' or user|has_perm_key:'view_agent_statement_report' or user|has_perm_key:'view_expenses_summary_report' or user|has_perm_key:'view_treasury_balances_report' or user|has_perm_key:'view_bank_account_balances_report' or user|has_perm_key:'view_income_statement_report' %}
                 <li class="nav-item has-submenu">
                     <a class="nav-sublink nav-link-toggle" href="#">
                         <i class="fas fa-calculator me-2"></i>تقارير الحسابات
                         <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
                     </a>
                     <ul class="nav-submenu">
+                        {% if user|has_perm_key:'view_sales_customer_statement_report' %}
                         <li class="nav-submenu-label">العملاء</li>
                         <li><a href="{% url 'reports:customer_statement' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب عميل</a></li>
                         <li><a href="{% url 'reports:customer_balances' %}" class="nav-sublink"><i class="fas fa-users me-2"></i>مديونيات العملاء</a></li>
                         <li><a href="{% url 'reports:payments_report' %}" class="nav-sublink"><i class="fas fa-money-bill-wave me-2"></i>مدفوعات العملاء</a></li>
                         <li><a href="{% url 'reports:returns_report' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات المبيعات</a></li>
+                        {% endif %}
+                        {% if user|has_perm_key:'view_purchases_supplier_statement_report' %}
                         <li class="nav-submenu-label">الموردين</li>
                         <li><a href="{% url 'purchases:reports:supplier_statement' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب مورد</a></li>
                         <li><a href="{% url 'purchases:reports:supplier_balances' %}" class="nav-sublink"><i class="fas fa-truck me-2"></i>مديونيات الموردين</a></li>
                         <li><a href="{% url 'purchases:reports:payments_report' %}" class="nav-sublink"><i class="fas fa-money-bill-transfer me-2"></i>مدفوعات الموردين</a></li>
                         <li><a href="{% url 'purchases:reports:returns_report' %}" class="nav-sublink"><i class="fas fa-rotate-right me-2"></i>مرتجعات المشتريات</a></li>
-                        {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" %}
+                        {% endif %}
+                        {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'view_agent_statement_report' %}
                         <li class="nav-submenu-label">المناديب</li>
                         <li><a href="{% url 'agents:statement' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب مندوب</a></li>
                         <li><a href="{% url 'agents:balances' %}" class="nav-sublink"><i class="fas fa-id-badge me-2"></i>مستحقات المناديب</a></li>
                         {% endif %}
+                        {% if user|has_perm_key:'view_expenses_summary_report' %}
                         <li class="nav-submenu-label">المصروفات</li>
                         <li><a href="{% url 'expenses:reports:summary_report' %}" class="nav-sublink"><i class="fas fa-chart-pie me-2"></i>ملخص المصروفات</a></li>
                         <li><a href="{% url 'expenses:reports:details_report' %}" class="nav-sublink"><i class="fas fa-list-check me-2"></i>تفاصيل المصروفات</a></li>
                         <li><a href="{% url 'expenses:reports:by_category_report' %}" class="nav-sublink"><i class="fas fa-tags me-2"></i>حسب الفئة</a></li>
                         <li><a href="{% url 'expenses:reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>حسب التاريخ</a></li>
+                        {% endif %}
+                        {% if user|has_perm_key:'view_treasury_balances_report' %}
                         <li class="nav-submenu-label">الخزائن</li>
                         <li><a href="{% url 'treasury:reports:balances_report' %}" class="nav-sublink"><i class="fas fa-vault me-2"></i>أرصدة الخزائن</a></li>
                         <li><a href="{% url 'treasury:reports:movements_report' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>حركة الخزائن</a></li>
+                        {% endif %}
+                        {% if user|has_perm_key:'view_bank_account_balances_report' %}
                         <li class="nav-submenu-label">الحسابات البنكية</li>
                         <li><a href="{% url 'bank_accounts:reports:balances_report' %}" class="nav-sublink"><i class="fas fa-building-columns me-2"></i>أرصدة الحسابات البنكية</a></li>
                         <li><a href="{% url 'bank_accounts:reports:statement_report' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب بنكي</a></li>
                         <li><a href="{% url 'bank_accounts:reports:movements_report' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>حركة الحسابات البنكية</a></li>
+                        {% endif %}
+                        {% if user|has_perm_key:'view_income_statement_report' %}
                         <li class="nav-submenu-label">المالية</li>
                         <li><a href="{% url 'reports:income_statement' %}" class="nav-sublink"><i class="fas fa-chart-line me-2"></i>قائمة الدخل (ربح/خسارة)</a></li>
+                        {% endif %}
                     </ul>
                 </li>
+                {% endif %}
 
             </ul>
         </li>
     </ul>
+    {% endif %}
 
     {% if not request.branch %}
     <!-- ── Subscription ── -->

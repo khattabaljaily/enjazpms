@@ -9,7 +9,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from apps.core.models import Tenant, TenantQuerySet
 from .permissions import (
     get_permission_keys, get_branch_supervisor_permission_keys, BRANCH_BLOCKED_KEYS,
-    load_permission_schema,
+    get_enterprise_owner_permission_keys, load_permission_schema,
 )
 
 
@@ -136,7 +136,11 @@ class User(AbstractUser):
         return False
 
     def get_permission_keys(self):
-        if self.is_superuser or self.is_tenant_admin:
+        if self.is_superuser:
+            return set(get_permission_keys())
+        if self.is_tenant_admin:
+            if self.tenant_id and self.tenant.is_enterprise():
+                return set(get_enterprise_owner_permission_keys())
             return set(get_permission_keys())
         if self.is_branch_supervisor and self.branch_id:
             keys = set(get_branch_supervisor_permission_keys())
@@ -151,7 +155,11 @@ class User(AbstractUser):
     def has_perm_key(self, permission_key):
         if not permission_key:
             return False
-        if self.is_superuser or self.is_tenant_admin:
+        if self.is_superuser:
+            return True
+        if self.is_tenant_admin:
+            if self.tenant_id and self.tenant.is_enterprise():
+                return permission_key in get_enterprise_owner_permission_keys()
             return True
         # قيد مطلق: أي مستخدم مربوط بفرع لا يقدر أبداً على صلاحيات كتالوج
         # المنتجات الحصرية (إضافة/تعديل/حذف/استيراد) — بصرف النظر عن مجموعة
@@ -170,17 +178,38 @@ class PermissionGroup(models.Model):
     """
     مجموعات الصلاحيات - لكل tenant صلاحياته الخاصة
     """
-    
+
+    # نطاق المجموعة — يُستخدم فقط لنسخة المؤسسات (multi_branch) لتقليص
+    # شجرة الفئات المعروضة/القابلة للحفظ عند بناء المجموعة: "فروع" تستبعد
+    # نفس فئات BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES (permissions.py)، و
+    # "إدارة النشاط" تستبعد نفس فئات ENTERPRISE_OWNER_EXCLUDED_CATEGORIES —
+    # مطابقة تماماً لما هو مُنفَّذ فعلاً تلقائياً على مشرف الفرع ومدير
+    # النشاط. فارغ ('') = غير محدد، تُعرض كل الفئات (سلوك ما قبل هذه الميزة،
+    # لتوافق رجعي كامل مع المجموعات القديمة وكل النسخ غير Enterprise).
+    SCOPE_CHOICES = [
+        ('branch', 'فروع'),
+        ('admin', 'إدارة النشاط'),
+    ]
+
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
         verbose_name='المشترك',
         related_name='permission_groups'
     )
-    
+
     name = models.CharField('اسم المجموعة', max_length=100)
     description = models.TextField('الوصف', blank=True)
-    
+    scope = models.CharField('نطاق المجموعة', max_length=10, choices=SCOPE_CHOICES, blank=True, default='')
+
+    # مجموعة "مدير النشاط" التلقائية (create_owner_group) تمثّل ملف صلاحيات
+    # صاحب الاشتراك نفسه — لا تُعرض في قائمة "مجموعة الصلاحيات" عند إضافة/
+    # تعديل مستخدم عادي (apps/accounts/forms.py::UserManagementForm) حتى لا
+    # يُمنح موظف عادي صلاحيات إدارية كاملة بالخطأ عبر خانة تبدو عادية. لو
+    # المدير يريد فعلاً مشاركة صلاحيات إدارية مع موظف آخر، ينشئ مجموعة
+    # scope='admin' منفصلة باسم واضح غير هذه.
+    is_owner_group = models.BooleanField('مجموعة مالك الاشتراك', default=False)
+
     # Permissions (JSON Format for flexibility)
     permissions = models.JSONField('الصلاحيات', default=dict)
     
@@ -223,10 +252,16 @@ class PermissionGroup(models.Model):
 
     @classmethod
     def create_owner_group(cls, tenant, name='مدير النشاط'):
-        default_keys = get_permission_keys()
+        is_enterprise = tenant.is_enterprise()
+        if is_enterprise:
+            default_keys = get_enterprise_owner_permission_keys()
+        else:
+            default_keys = get_permission_keys()
         group = cls.objects.create(
             tenant=tenant,
             name=name,
+            scope='admin' if is_enterprise else '',
+            is_owner_group=True,
             permissions={ key: True for key in default_keys },
             is_active=True,
         )

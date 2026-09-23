@@ -26,6 +26,19 @@
         </div>
     </div>
 
+    {% if is_central_admin %}
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            {% include 'components/report_branch_filter.html' %}
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn" style="background:linear-gradient(135deg,#c9840f,#f6a821);color:#fff;border:none;border-radius:8px;padding:.5rem 1.2rem;font-weight:600;width:100%;cursor:pointer;">
+                    <i class="fas fa-search me-1"></i>بحث
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
     <div class="rpt-kpi-grid" style="grid-template-columns: repeat(2, 1fr);">
         <div class="rpt-kpi-card rpt-kpi--blue">
             <div class="rpt-kpi-icon"><i class="fas fa-users"></i></div>

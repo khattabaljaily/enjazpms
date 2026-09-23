@@ -254,12 +254,12 @@ class Command(BaseCommand):
             cursor.execute('SET FOREIGN_KEY_CHECKS = 1')
         s1 = Stock.objects.create(
             tenant=tenant, name='المخزن الرئيسي', code='STK-01',
-            stock_type='main', is_default=True, is_active=True,
+            is_default=True, is_active=True,
             created_by=user,
         )
         s2 = Stock.objects.create(
             tenant=tenant, name='مخزن الطابق الثاني', code='STK-02',
-            stock_type='main', is_default=False, is_active=True,
+            is_default=False, is_active=True,
             created_by=user,
         )
         self.stdout.write('  ✓ مخازن: 2')

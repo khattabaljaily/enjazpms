@@ -211,31 +211,37 @@
 .anl-balance-item--pay  .anl-balance-icon { background: rgba(239,68,68,.15);  color: var(--danger);  }
 .anl-balance-lbl { font-size: 0.74rem; color: var(--text-tertiary); font-weight: 500; }
 .anl-balance-val { font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+
+.anl-header-actions { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.anl-branch-select {
+    height: 34px;
+    padding: 0 1.9rem 0 .8rem;
+    font-size: .8rem;
+    font-weight: 700;
+}
 </style>
 {% endblock %}
 
 {% block content %}
 
-{% if is_central_admin %}
-<div class="anl-branch-filter" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-    <label for="anlBranchFilter" style="font-weight:600;">عرض بيانات:</label>
-    <select id="anlBranchFilter" class="form-select" style="max-width:260px;"
-            onchange="if(this.value){window.location.search='?branch='+this.value;}else{window.location.search='';}">
-        <option value=""{% if not selected_branch %} selected{% endif %}>كل الفروع (إجمالي المؤسسة)</option>
-        {% for b in branches_for_filter %}
-        <option value="{{ b.id }}"{% if selected_branch.id == b.id %} selected{% endif %}>{{ b.name }}</option>
-        {% endfor %}
-    </select>
-</div>
-{% endif %}
-
 <!-- Header -->
 <div class="anl-header">
     <p class="anl-header-sub">مقارنة الأداء، الاتجاهات السنوية، والمؤشرات المالية</p>
-    <span class="anl-period-badge">
-        <i class="fas fa-calendar-alt"></i>
-        {{ this_month_label }}
-    </span>
+    <div class="anl-header-actions">
+        {% if is_central_admin %}
+        <select id="anlBranchFilter" class="cx-select-filter anl-branch-select"
+                onchange="if(this.value){window.location.search='?branch='+this.value;}else{window.location.search='';}">
+            <option value=""{% if not selected_branch %} selected{% endif %}>كل الفروع (إجمالي المؤسسة)</option>
+            {% for b in branches_for_filter %}
+            <option value="{{ b.id }}"{% if selected_branch.id == b.id %} selected{% endif %}>{{ b.name }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <span class="anl-period-badge">
+            <i class="fas fa-calendar-alt"></i>
+            {{ this_month_label }}
+        </span>
+    </div>
 </div>
 
 <!-- KPI Comparison Row -->

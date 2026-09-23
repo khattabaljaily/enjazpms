@@ -29,7 +29,11 @@ from .activity_service import log_activity
 from apps.core.constants import COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country
 from .models import PermissionGroup, User
 from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, RegistrationRequestForm, LoginForm, UserManagementForm, PasswordResetForm, SetPasswordForm
-from .permissions import get_permission_keys, get_permission_schema, filter_schema_for_tenant
+from .permissions import (
+    get_permission_keys, get_permission_schema, filter_schema_for_tenant,
+    get_branch_supervisor_permission_keys, get_enterprise_owner_permission_keys,
+    BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES, ENTERPRISE_OWNER_EXCLUDED_CATEGORIES,
+)
 
 
 def _wants_json(request):
@@ -90,9 +94,11 @@ def user_list(request):
     active = qs.filter(is_active=True).count()
     inactive = total - active
 
+    # is_owner_group مستبعدة عمداً — راجع apps/accounts/models.py::PermissionGroup.is_owner_group
     groups = PermissionGroup.objects.filter(
         tenant=tenant,
-        is_active=True
+        is_active=True,
+        is_owner_group=False,
     ).values('id', 'name')
 
     context = {
@@ -296,12 +302,17 @@ def permission_group_list(request):
 
     # تمرير المستخدمين والمجموعات إلى الـ template
     users = User.objects.for_tenant(tenant).filter(is_active=True).values('id', 'username', 'first_name', 'last_name')
-    
+
     schema = filter_schema_for_tenant(get_permission_schema(), tenant)
 
     return render(request, 'accounts/permission_group_list.html', {
         'permission_schema': json.dumps(schema, ensure_ascii=False),
         'users': json.dumps(list(users), ensure_ascii=False),
+        'is_enterprise_tenant': tenant.is_enterprise(),
+        'group_scope_excluded': json.dumps({
+            'branch': sorted(BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES),
+            'admin': sorted(ENTERPRISE_OWNER_EXCLUDED_CATEGORIES),
+        }, ensure_ascii=False),
     })
 
 
@@ -334,6 +345,7 @@ def permission_group_table_api(request):
             'member_count': group.users.count(),
             'permission_count': len(group.get_permission_keys()),
             'is_active': group.is_active,
+            'scope': group.scope,
         }
         for group in groups
     ]
@@ -370,7 +382,22 @@ def permission_group_detail_api(request, pk):
         'is_active': group.is_active,
         'permissions': group.permissions,
         'users': [user.id for user in group.users.filter(is_active=True)],
+        'scope': group.scope,
     })
+
+
+def _valid_keys_for_scope(tenant, scope):
+    """
+    مفاتيح الصلاحيات المسموح حفظها في مجموعة صلاحيات، حسب نطاقها. نطاق
+    'branch'/'admin' لا يُنفَّذ إلا لنسخة المؤسسات — يعكس تماماً نفس
+    الفلترة المطبّقة تلقائياً على مشرف الفرع/مدير النشاط (راجع
+    apps/accounts/permissions.py) بدل الثقة بما يُرسله العميل فقط.
+    """
+    if tenant.is_enterprise() and scope == 'branch':
+        return set(get_branch_supervisor_permission_keys())
+    if tenant.is_enterprise() and scope == 'admin':
+        return set(get_enterprise_owner_permission_keys())
+    return set(get_permission_keys())
 
 
 @login_required
@@ -386,16 +413,21 @@ def permission_group_create_api(request):
     description = request.POST.get('description', '').strip()
     permissions_json = request.POST.get('permissions', '{}')
     user_ids = request.POST.getlist('users[]')
+    scope = request.POST.get('scope', '').strip()
+    if scope not in dict(PermissionGroup.SCOPE_CHOICES):
+        scope = ''
 
     if not name:
         return _json_error('يرجى إدخال اسم المجموعة')
+    if tenant.is_enterprise() and not scope:
+        return _json_error('يرجى تحديد نطاق المجموعة (فروع أو إدارة النشاط)')
 
     try:
         permissions = json.loads(permissions_json)
     except ValueError:
         permissions = {}
 
-    valid_keys = set(get_permission_keys())
+    valid_keys = _valid_keys_for_scope(tenant, scope)
     # Build complete permissions dict with all valid keys (default to False)
     sanitized_permissions = {
         key: bool(permissions.get(key, False))
@@ -406,6 +438,7 @@ def permission_group_create_api(request):
         tenant=tenant,
         name=name,
         description=description,
+        scope=scope if tenant.is_enterprise() else '',
         permissions=sanitized_permissions,
         is_active=request.POST.get('is_active') == 'on',
     )
@@ -438,6 +471,9 @@ def permission_group_update_api(request, pk):
     description = request.POST.get('description', '').strip()
     permissions_json = request.POST.get('permissions', '{}')
     user_ids = request.POST.getlist('users[]')
+    scope = request.POST.get('scope', group.scope).strip()
+    if scope not in dict(PermissionGroup.SCOPE_CHOICES):
+        scope = ''
 
     if not name:
         return _json_error('يرجى إدخال اسم المجموعة')
@@ -447,7 +483,7 @@ def permission_group_update_api(request, pk):
     except ValueError:
         permissions = {}
 
-    valid_keys = set(get_permission_keys())
+    valid_keys = _valid_keys_for_scope(tenant, scope)
     # Build complete permissions dict with all valid keys (default to False)
     sanitized_permissions = {
         key: bool(permissions.get(key, False))
@@ -456,6 +492,7 @@ def permission_group_update_api(request, pk):
 
     group.name = name
     group.description = description
+    group.scope = scope if tenant.is_enterprise() else ''
     group.permissions = sanitized_permissions
     group.is_active = request.POST.get('is_active') == 'on'
     group.save()

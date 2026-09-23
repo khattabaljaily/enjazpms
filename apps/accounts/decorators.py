@@ -29,7 +29,7 @@ def require_permission(permission_key):
         def wrapper(request, *args, **kwargs):
             if not request.user.is_authenticated:
                 return redirect('accounts:login')
-            if request.user.is_superuser or request.user.is_tenant_admin:
+            if request.user.is_superuser:
                 return view_func(request, *args, **kwargs)
             if request.user.has_perm_key(permission_key):
                 return view_func(request, *args, **kwargs)
@@ -56,7 +56,7 @@ def require_any_permission(*permission_keys):
         def wrapper(request, *args, **kwargs):
             if not request.user.is_authenticated:
                 return redirect('accounts:login')
-            if request.user.is_superuser or request.user.is_tenant_admin:
+            if request.user.is_superuser:
                 return view_func(request, *args, **kwargs)
             for perm_key in permission_keys:
                 if request.user.has_perm_key(perm_key):
@@ -74,7 +74,7 @@ def require_all_permissions(*permission_keys):
         def wrapper(request, *args, **kwargs):
             if not request.user.is_authenticated:
                 return redirect('accounts:login')
-            if request.user.is_superuser or request.user.is_tenant_admin:
+            if request.user.is_superuser:
                 return view_func(request, *args, **kwargs)
             for perm_key in permission_keys:
                 if not request.user.has_perm_key(perm_key):

@@ -96,6 +96,12 @@
               <div class="pm-editor-title-block">
                 <div class="pm-editor-name-row">
                   <input type="text" id="editorNameInput" class="pm-name-input" placeholder="اسم المجموعة" autocomplete="off">
+                  {% if is_enterprise_tenant %}
+                  <div class="cx-filter-tabs" id="editorScopeTabs" role="group" aria-label="نطاق المجموعة">
+                    <button type="button" class="cx-filter-tab" data-scope="branch">فروع</button>
+                    <button type="button" class="cx-filter-tab" data-scope="admin">إدارة النشاط</button>
+                  </div>
+                  {% endif %}
                   <label class="cx-toggle-card pm-active-toggle" for="editorIsActive" title="تفعيل / تعطيل المجموعة">
                     <div class="cx-toggle-info">
                       <span class="cx-toggle-title pm-toggle-title" id="editorIsActiveLabel">نشط</span>
@@ -233,6 +239,16 @@
               <label class="cx-label" for="newGroupDesc">الوصف (اختياري)</label>
               <textarea id="newGroupDesc" class="form-control" rows="2" placeholder="اكتب وصفاً مختصراً لدور هذه المجموعة"></textarea>
             </div>
+            {% if is_enterprise_tenant %}
+            <div class="mb-3">
+              <label class="cx-label">نطاق المجموعة <sup class="cx-required">*</sup></label>
+              <div class="cx-filter-tabs" id="newGroupScopeTabs" role="group" aria-label="نطاق المجموعة" style="width:100%;">
+                <button type="button" class="cx-filter-tab" data-scope="branch" style="flex:1;">فروع</button>
+                <button type="button" class="cx-filter-tab" data-scope="admin" style="flex:1;">إدارة النشاط</button>
+              </div>
+              <div class="form-text">"فروع" لموظفي/مدراء الفروع (مبيعات، عملاء، مخزون...). "إدارة النشاط" للمهام الإدارية (مستخدمين، فروع، إعدادات...).</div>
+            </div>
+            {% endif %}
             <label class="cx-toggle-card" for="newGroupActive">
               <div class="cx-toggle-info">
                 <span class="cx-toggle-title">تفعيل المجموعة فور الإنشاء</span>
@@ -260,6 +276,8 @@
 <script>
   window.PERMISSION_SCHEMA = {{ permission_schema|safe }};
   window.USERS_LIST = {{ users|safe }};
+  window.IS_ENTERPRISE_TENANT = {{ is_enterprise_tenant|yesno:"true,false" }};
+  window.GROUP_SCOPE_EXCLUDED = {{ group_scope_excluded|default:"{}"|safe }};
 </script>
 <script src="{% static 'js/permission_groups.js' %}?v=3.0"></script>
 {% endblock %}

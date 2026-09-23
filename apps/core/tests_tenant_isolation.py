@@ -63,8 +63,13 @@ class TenantIsolationTests(TestCase):
         self.employee_b = make_employee(self.tenant_b, name='موظف ب')
         self.agent_b = Agent.objects.create(tenant=self.tenant_b, name='مندوب ب')
 
+        # نسخة المؤسسات (multi_branch) لم يعد لها مخزن افتراضي يُنشأ تلقائياً
+        # عند التسجيل (راجع apps/core/signals.py::create_tenant_defaults) —
+        # ننشئ مخزناً صريحاً هنا بدل الاعتماد على is_system_default.
         from apps.stocks.models import Stock
-        stock_b = Stock.objects.filter(tenant=self.tenant_b, is_system_default=True).first()
+        stock_b = Stock.objects.create(
+            tenant=self.tenant_b, name='مخزن ب', code='STK-B', is_active=True,
+        )
         self.sale_invoice_b = SaleInvoice.objects.create(
             tenant=self.tenant_b, stock=stock_b, invoice_date=date(2026, 9, 13),
             status='draft', payment_method='cash',

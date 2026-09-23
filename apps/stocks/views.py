@@ -17,7 +17,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from apps.sales.models import StockMovement
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope
 
 from .forms import StockForm
 from .models import Stock, StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine, ManufacturingOrder, StockDestruction, StockDestructionLine
@@ -106,7 +106,7 @@ def stock_table_api(request):
     order_col = request.GET.get('order[0][column]', '0')
     order_dir = request.GET.get('order[0][dir]', 'asc')
     col_name = request.GET.get(f'columns[{order_col}][data]', 'name')
-    allowed = {'code': 'code', 'name': 'name', 'stock_type': 'stock_type',
+    allowed = {'code': 'code', 'name': 'name',
                'is_active': 'is_active', 'created_at': 'created_at'}
     order_field = allowed.get(col_name, 'name')
     if order_dir == 'desc':
@@ -119,8 +119,6 @@ def stock_table_api(request):
             'id': s.id,
             'code': s.code,
             'name': s.name,
-            'stock_type': s.get_stock_type_display(),
-            'stock_type_raw': s.stock_type,
             'address': s.address or '-',
             'is_default': s.is_default,
             'is_active': s.is_active,
@@ -212,7 +210,6 @@ def stock_detail_api(request, pk):
             'id': stock.id,
             'name': stock.name,
             'code': stock.code,
-            'stock_type': stock.stock_type,
             'branch': stock.branch_id,
             'address': stock.address,
             'notes': stock.notes,
@@ -695,14 +692,18 @@ def stocks_summary_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
+    generator = StocksReportGenerator(tenant, branch=branch)
     report_data = generator.get_summary_report()
 
     return render(request, 'stocks/reports/summary.html', {
         'report': report_data,
         'section': 'stocks_reports',
         'report_type': 'summary',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -713,8 +714,9 @@ def stocks_summary_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
+    generator = StocksReportGenerator(tenant, branch=branch)
     report_data = generator.get_summary_report()
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -737,14 +739,18 @@ def stocks_by_item_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
+    generator = StocksReportGenerator(tenant, branch=branch)
     report_data = generator.get_by_item_report()
 
     return render(request, 'stocks/reports/by_item.html', {
         'report': report_data,
         'section': 'stocks_reports',
         'report_type': 'by_item',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -755,8 +761,9 @@ def stocks_by_item_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
+    generator = StocksReportGenerator(tenant, branch=branch)
     report_data = generator.get_by_item_report()
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -786,14 +793,18 @@ def stocks_by_category_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
+    generator = StocksReportGenerator(tenant, branch=branch)
     report_data = generator.get_by_category_report()
 
     return render(request, 'stocks/reports/by_category.html', {
         'report': report_data,
         'section': 'stocks_reports',
         'report_type': 'by_category',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -804,8 +815,9 @@ def stocks_by_category_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
+    generator = StocksReportGenerator(tenant, branch=branch)
     report_data = generator.get_by_category_report()
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -835,15 +847,16 @@ def stocks_by_stock_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     # Optional stock filter
     stock_id = request.GET.get('stock_id')
 
-    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
+    generator = StocksReportGenerator(tenant, branch=branch)
     report_data = generator.get_by_stock_report(stock_id=stock_id)
 
     # stocks list for dropdown
-    stocks_list = Stock.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name')
+    stocks_list = Stock.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
 
     return render(request, 'stocks/reports/by_stock.html', {
         'report': report_data,
@@ -851,6 +864,9 @@ def stocks_by_stock_report(request):
         'report_type': 'by_stock',
         'stocks': stocks_list,
         'selected_stock_id': stock_id,
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -861,10 +877,11 @@ def stocks_by_stock_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     stock_id = request.GET.get('stock_id')
 
-    generator = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None))
+    generator = StocksReportGenerator(tenant, branch=branch)
     report_data = generator.get_by_stock_report(stock_id=stock_id)
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -872,12 +889,11 @@ def stocks_by_stock_report_export(request):
     response.write('\ufeff')
 
     writer = csv.writer(response)
-    writer.writerow(['المخزن', 'النوع', 'عدد المنتجات', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'])
+    writer.writerow(['المخزن', 'عدد المنتجات', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'])
 
     for stock in report_data['data']:
         writer.writerow([
             stock['stock_name'],
-            stock['stock_type'],
             stock['item_count'],
             stock['total_available'],
             stock['total_reserved'],
@@ -909,13 +925,14 @@ def stocks_item_movement_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     item_id = request.GET.get('item_id') or None
     stock_id = request.GET.get('stock_id') or None
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    generator = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None))
+    generator = StocksReportGenerator(tenant, start_date, end_date, branch=branch)
     report = generator.get_item_movement_report(item_id=item_id, stock_id=stock_id)
 
     selected_item_name = ''
@@ -932,6 +949,9 @@ def stocks_item_movement_report(request):
         'selected_item_name': selected_item_name,
         'selected_stock_id': stock_id,
         'section': 'stocks_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -944,13 +964,14 @@ def stocks_item_movement_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     item_id = request.GET.get('item_id') or None
     stock_id = request.GET.get('stock_id') or None
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_item_movement_report(item_id=item_id, stock_id=stock_id)
+    report = StocksReportGenerator(tenant, start_date, end_date, branch=branch).get_item_movement_report(item_id=item_id, stock_id=stock_id)
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="item_movement_{end_date}.csv"'
@@ -968,12 +989,16 @@ def stocks_low_stock_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    report = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_low_stock_report()
+    report = StocksReportGenerator(tenant, branch=branch).get_low_stock_report()
 
     return render(request, 'stocks/reports/low_stock.html', {
         'report': report,
         'section': 'stocks_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -986,8 +1011,9 @@ def stocks_low_stock_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    report = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_low_stock_report()
+    report = StocksReportGenerator(tenant, branch=branch).get_low_stock_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="low_stock_alert.csv"'
     response.write('﻿')
@@ -1008,17 +1034,21 @@ def stocks_controlled_substances_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_controlled_substances_report()
+    report = StocksReportGenerator(tenant, start_date, end_date, branch=branch).get_controlled_substances_report()
 
     return render(request, 'stocks/reports/controlled_substances.html', {
         'report': report,
         'start_date': start_date,
         'end_date': end_date,
         'section': 'stocks_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -1028,11 +1058,12 @@ def stocks_controlled_substances_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_controlled_substances_report()
+    report = StocksReportGenerator(tenant, start_date, end_date, branch=branch).get_controlled_substances_report()
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="controlled_substances_{end_date}.csv"'
@@ -1054,12 +1085,16 @@ def stocks_valuation_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    report = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_valuation_report()
+    report = StocksReportGenerator(tenant, branch=branch).get_valuation_report()
 
     return render(request, 'stocks/reports/valuation.html', {
         'report': report,
         'section': 'stocks_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -1069,8 +1104,9 @@ def stocks_valuation_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    report = StocksReportGenerator(tenant, branch=getattr(request, 'branch', None)).get_valuation_report()
+    report = StocksReportGenerator(tenant, branch=branch).get_valuation_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="inventory_valuation.csv"'
     response.write('﻿')
@@ -1096,6 +1132,7 @@ def stocks_non_moving_report(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
@@ -1116,13 +1153,16 @@ def stocks_non_moving_report(request):
     start_date = start_date or (timezone.localdate() - timedelta(days=30))
     end_date = end_date or timezone.localdate()
 
-    report = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_non_moving_report()
+    report = StocksReportGenerator(tenant, start_date, end_date, branch=branch).get_non_moving_report()
 
     return render(request, 'stocks/reports/non_moving.html', {
         'report': report,
         'start_date': start_date,
         'end_date': end_date,
         'section': 'stocks_reports',
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -1133,6 +1173,7 @@ def stocks_non_moving_report_export(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
@@ -1145,7 +1186,7 @@ def stocks_non_moving_report_export(request):
     start_date = start_date or (timezone.localdate() - timedelta(days=30))
     end_date = end_date or timezone.localdate()
 
-    report = StocksReportGenerator(tenant, start_date, end_date, branch=getattr(request, 'branch', None)).get_non_moving_report()
+    report = StocksReportGenerator(tenant, start_date, end_date, branch=branch).get_non_moving_report()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="non_moving_items.csv"'
     response.write('﻿')

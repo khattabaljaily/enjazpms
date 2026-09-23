@@ -229,48 +229,52 @@ def create_tenant_defaults(sender, instance, created, **kwargs):
     from apps.stocks.models import Stock
     from apps.treasury.models import Treasury
 
-    # Default stock (non-deletable system stock) — العدد الإضافي المسموح به
-    # حسب الباقة (max_stocks) هو سقف أقصى فقط، وليس عدداً يُنشأ تلقائياً؛
-    # المشترك يضيف مخازنه بنفسه ويُمنع عند تجاوز الحد (راجع
-    # apps/stocks/views.py::stock_create_api / Stock.can_add_stock).
-    Stock.objects.get_or_create(
-        tenant=instance,
-        is_system_default=True,
-        defaults={
-            'name': 'المخزن الرئيسي',
-            'code': 'WH-MAIN',
-            'stock_type': 'main',
-            'is_default': True,
-            'is_active': True,
-        },
-    )
+    # نسخة المؤسسات (multi_branch) لا تحصل على مخزن/خزينة افتراضيين عند
+    # التسجيل — الخزائن تُنشأ تلقائياً مع كل فرع (راجع _ensure_branch_treasuries
+    # أدناه)، والمخازن يضيفها مدير النشاط يدوياً ويربطها بالفروع لاحقاً (راجع
+    # خطة "تقييد صلاحيات مدير النشاط في نسخة المؤسسات").
+    if not instance.is_enterprise():
+        # Default stock (non-deletable system stock) — العدد الإضافي المسموح به
+        # حسب الباقة (max_stocks) هو سقف أقصى فقط، وليس عدداً يُنشأ تلقائياً؛
+        # المشترك يضيف مخازنه بنفسه ويُمنع عند تجاوز الحد (راجع
+        # apps/stocks/views.py::stock_create_api / Stock.can_add_stock).
+        Stock.objects.get_or_create(
+            tenant=instance,
+            is_system_default=True,
+            defaults={
+                'name': 'المخزن الرئيسي',
+                'code': 'WH-MAIN',
+                'is_default': True,
+                'is_active': True,
+            },
+        )
 
-    # Ensure at least one default stock flag exists
-    if not Stock.objects.for_tenant(instance).filter(is_default=True).exists():
-        fallback_stock = Stock.objects.for_tenant(instance).order_by('id').first()
-        if fallback_stock:
-            fallback_stock.is_default = True
-            fallback_stock.save(update_fields=['is_default', 'updated_at'])
+        # Ensure at least one default stock flag exists
+        if not Stock.objects.for_tenant(instance).filter(is_default=True).exists():
+            fallback_stock = Stock.objects.for_tenant(instance).order_by('id').first()
+            if fallback_stock:
+                fallback_stock.is_default = True
+                fallback_stock.save(update_fields=['is_default', 'updated_at'])
 
-    # Default treasury (non-deletable system treasury)
-    Treasury.objects.get_or_create(
-        tenant=instance,
-        is_system_default=True,
-        defaults={
-            'name': 'الخزينة الرئيسية',
-            'code': 'TR-MAIN',
-            'is_default': True,
-            'is_active': True,
-            'current_balance': 0,
-            'currency': instance.currency or '',
-        },
-    )
+        # Default treasury (non-deletable system treasury)
+        Treasury.objects.get_or_create(
+            tenant=instance,
+            is_system_default=True,
+            defaults={
+                'name': 'الخزينة الرئيسية',
+                'code': 'TR-MAIN',
+                'is_default': True,
+                'is_active': True,
+                'current_balance': 0,
+                'currency': instance.currency or '',
+            },
+        )
 
-    if not Treasury.objects.for_tenant(instance).filter(is_default=True).exists():
-        fallback_treasury = Treasury.objects.for_tenant(instance).order_by('id').first()
-        if fallback_treasury:
-            fallback_treasury.is_default = True
-            fallback_treasury.save(update_fields=['is_default', 'updated_at'])
+        if not Treasury.objects.for_tenant(instance).filter(is_default=True).exists():
+            fallback_treasury = Treasury.objects.for_tenant(instance).order_by('id').first()
+            if fallback_treasury:
+                fallback_treasury.is_default = True
+                fallback_treasury.save(update_fields=['is_default', 'updated_at'])
 
     # Hard currency treasury — created only when HC mode is enabled
     if instance.hard_currency_mode and instance.hard_currency:

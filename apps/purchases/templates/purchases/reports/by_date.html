@@ -27,7 +27,7 @@
                 <button onclick="window.print()" class="rpt-hero-btn">
                     <i class="fas fa-print"></i> طباعة
                 </button>
-                <a href="{% url 'purchases:reports:by_date_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}&group_by={{ group_by }}" class="rpt-hero-btn">
+                <a href="{% url 'purchases:reports:by_date_report_export' %}?start_date={{ start_date|date:"Y-m-d" }}&end_date={{ end_date|date:"Y-m-d" }}&group_by={{ group_by }}{% if selected_branch %}&branch={{ selected_branch.id }}{% endif %}" class="rpt-hero-btn">
                     <i class="fas fa-download"></i> تصدير CSV
                 </a>
                 <a href="{% url 'purchases:order_list' %}" class="rpt-hero-btn">
@@ -58,6 +58,7 @@
                     <option value="month" {% if group_by == 'month' %}selected{% endif %}>شهري</option>
                 </select>
             </div>
+            {% include 'components/report_branch_filter.html' %}
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="rpt-filter-btn rpt-filter-btn--purchases">
                     <i class="fas fa-search me-1"></i>بحث

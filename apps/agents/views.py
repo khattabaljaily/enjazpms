@@ -13,7 +13,7 @@ import csv
 import json
 
 from apps.accounts.decorators import require_permission, require_capability, require_plan_feature, branch_scope_exempt
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope
 from .forms import AgentForm
 from .models import Agent, AgentLedger
 from .services import _apply_agent_ledger, agent_ledger_display_label
@@ -755,13 +755,14 @@ def agent_statement(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     from datetime import timedelta
     agent_id = request.GET.get('agent_id', '')
     start_date = request.GET.get('start_date') or (timezone.localdate() - timedelta(days=30)).isoformat()
     end_date = request.GET.get('end_date') or timezone.localdate().isoformat()
 
-    agents = Agent.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name')
+    agents = Agent.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
     report = None
 
     if agent_id:
@@ -815,6 +816,9 @@ def agent_statement(request):
         'start_date': start_date,
         'end_date': end_date,
         'report': report,
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 
@@ -830,8 +834,9 @@ def agent_balances(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
+    branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
-    agents = Agent.objects.filter(tenant=tenant).for_branch(getattr(request, 'branch', None)).order_by('name')
+    agents = Agent.objects.filter(tenant=tenant).for_branch(branch).order_by('name')
     rows = []
     total_dues = Decimal('0')
     for agent in agents:
@@ -843,6 +848,9 @@ def agent_balances(request):
     return render(request, 'agents/balances.html', {
         'rows': rows,
         'total_dues': total_dues,
+        'is_central_admin': is_central_admin,
+        'branches_for_filter': branches_for_filter,
+        'selected_branch': branch,
     })
 
 

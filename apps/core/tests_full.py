@@ -319,7 +319,11 @@ class FullBusinessFlowTests(TestCase):
         invoice.refresh_from_db()
         self.assertEqual(claim.status, 'paid')
         self.assertEqual(claim.paid_amount, Decimal('60.00'))
-        self.assertEqual(self.treasury.current_balance, Decimal('1060.00'))
+        # 1000 (رصيد افتتاحي) + 40 (الجزء النقدي من الفاتورة المختلطة، يذهب
+        # لهذه الخزينة عبر get_or_create_default_treasury لأنها is_default=True
+        # الوحيدة للـ tenant الآن بعد إلغاء الخزينة النظامية الافتراضية
+        # التلقائية لنسخة المؤسسات) + 60 (تسوية مطالبة التأمين، خزينة صريحة).
+        self.assertEqual(self.treasury.current_balance, Decimal('1100.00'))
         self.assertEqual(invoice.paid_amount, Decimal('100.00'))
         self.assertEqual(
             claim.settlement_entries.aggregate(total=Sum('amount'))['total'], Decimal('0.00')
@@ -348,7 +352,7 @@ class ProfessionalEditionTests(TestCase):
         # يُنشأ تلقائياً). نضيف مخزناً ثانياً يدوياً لاختبارات التحويل.
         self.stock_one = Stock.objects.filter(tenant=self.tenant, is_active=True).order_by('id').first()
         self.stock_two = Stock.objects.create(
-            tenant=self.tenant, name='مخزن ثانٍ', code='WH-002', stock_type='main', is_active=True,
+            tenant=self.tenant, name='مخزن ثانٍ', code='WH-002', is_active=True,
         )
         self.item = Item.objects.create(
             tenant=self.tenant, name='منتج الاحترافية', sku='PRO-001',
@@ -370,7 +374,7 @@ class ProfessionalEditionTests(TestCase):
         for i in range(3, self.tenant.max_stocks + 1):
             Stock.objects.create(
                 tenant=self.tenant, name=f'مخزن {i}', code=f'WH-{i:03d}',
-                stock_type='main', is_active=True,
+                is_active=True,
             )
         self.assertEqual(
             Stock.objects.filter(tenant=self.tenant, is_active=True).count(),

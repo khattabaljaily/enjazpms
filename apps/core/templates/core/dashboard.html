@@ -9,23 +9,43 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=2.0">
 <link rel="stylesheet" href="{% static 'css/ai_advices.css' %}">
+<style>
+.db-branch-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    margin-top: .65rem;
+    padding: .35rem .55rem .35rem .9rem;
+    background: rgba(255,255,255,.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 999px;
+    color: #fff;
+}
+.db-branch-pill i { font-size: .72rem; opacity: .85; }
+.db-branch-pill select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-family: 'Cairo', sans-serif;
+    font-size: .78rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding-left: 1.15rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 10 10'%3E%3Cpath fill='%23ffffff' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+.db-branch-pill select:focus { outline: none; }
+.db-branch-pill select option { color: #1a1a1a; }
+</style>
 {% endblock %}
 
 {% block content %}
-
-{% if is_central_admin %}
-<!-- ══ BRANCH FILTER (Enterprise, central admin only) ═══════════════ -->
-<div class="db-branch-filter" style="margin-bottom:16px;display:flex;align-items:center;gap:8px;">
-    <label for="dbBranchFilter" style="font-weight:600;">عرض بيانات:</label>
-    <select id="dbBranchFilter" class="form-select" style="max-width:260px;"
-            onchange="if(this.value){window.location.search='?branch='+this.value;}else{window.location.search='';}">
-        <option value=""{% if not selected_branch %} selected{% endif %}>كل الفروع (إجمالي المؤسسة)</option>
-        {% for b in branches_for_filter %}
-        <option value="{{ b.id }}"{% if selected_branch.id == b.id %} selected{% endif %}>{{ b.name }}</option>
-        {% endfor %}
-    </select>
-</div>
-{% endif %}
 
 <!-- ══ GREETING ══════════════════════════════════════════════════ -->
 <div class="db-greeting">
@@ -37,6 +57,18 @@
             <span class="db-datetime-sep"></span>
             <span class="db-datetime-time"><i class="fas fa-clock"></i> <span id="dbTime"></span></span>
         </div>
+        {% if is_central_admin %}
+        <div class="db-branch-pill">
+            <i class="fas fa-code-branch"></i>
+            <select id="dbBranchFilter"
+                    onchange="if(this.value){window.location.search='?branch='+this.value;}else{window.location.search='';}">
+                <option value=""{% if not selected_branch %} selected{% endif %}>كل الفروع (إجمالي المؤسسة)</option>
+                {% for b in branches_for_filter %}
+                <option value="{{ b.id }}"{% if selected_branch.id == b.id %} selected{% endif %}>{{ b.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
     </div>
     <div class="db-greeting-badges" {% if not request.user|has_perm_key:"view_dashboard" %}style="pointer-events:none;user-select:none;"{% endif %}>
         <div class="db-badge">

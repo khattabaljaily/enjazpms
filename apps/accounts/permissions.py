@@ -67,6 +67,43 @@ def get_branch_supervisor_permission_keys():
     return keys
 
 
+# تصنيفات عمليات الفرع اليومية التي تُخفى عن مدير النشاط في نسخة المؤسسات
+# تحديداً (Tenant.is_enterprise()) — هو يبقى إدارياً (فروع، مخازن، مستخدمين،
+# مجموعات صلاحيات، منتجات، موظفين، إعدادات، تقارير) بينما هذه العمليات
+# التشغيلية اليومية تبقى حصراً لمشرف/موظفي كل فرع. باقي الباقات
+# (single_store/multi_stock) غير متأثرة إطلاقاً — راجع خطة "تقييد صلاحيات
+# مدير النشاط في نسخة المؤسسات".
+ENTERPRISE_OWNER_EXCLUDED_CATEGORIES = {
+    'العملاء',
+    'الموردين',
+    'إتلاف المخزون',
+    'المبيعات',
+    'المشتريات',
+    'المصروفات',
+    'الخزائن',
+    'الحسابات البنكية',
+    'المناديب',
+    'التأمين',
+    'رواتب الموظفين',
+    'سلف الموظفين',
+    'حوافز الموظفين',
+}
+
+
+def get_enterprise_owner_permission_keys():
+    """
+    كل مفاتيح الصلاحيات المتاحة لمدير النشاط في نسخة المؤسسات: كل الصلاحيات
+    ما عدا عمليات الفرع اليومية (ENTERPRISE_OWNER_EXCLUDED_CATEGORIES).
+    """
+    schema = load_permission_schema()
+    keys = []
+    for section, perms in schema.items():
+        if section in ENTERPRISE_OWNER_EXCLUDED_CATEGORIES:
+            continue
+        keys.extend(perms.keys())
+    return keys
+
+
 # مفاتيح محظورة على أي مستخدم مربوط بفرع (request.branch/user.branch) بصرف
 # النظر عن دوره أو مجموعة الصلاحيات المسندة له — قيد مطلق (hard rule) وليس
 # افتراضاً قابلاً للتعديل عبر PermissionGroup: المنتج/الصنف كتالوج مركزي

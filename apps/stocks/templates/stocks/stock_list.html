@@ -106,7 +106,6 @@
                 <tr>
                     <th>المخزن</th>
                     <th>الرمز</th>
-                    <th>النوع</th>
                     <th>الموقع</th>
                     <th>الحالة</th>
                     <th></th>
@@ -149,13 +148,9 @@
                                 <label class="cx-label" for="id_name">{{ form.name.label }} <sup class="cx-required">*</sup></label>
                                 {{ form.name }}
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-6">
                                 <label class="cx-label" for="id_code">{{ form.code.label }}</label>
                                 {{ form.code }}
-                            </div>
-                            <div class="col-md-3">
-                                <label class="cx-label" for="id_stock_type">{{ form.stock_type.label }}</label>
-                                {{ form.stock_type }}
                             </div>
                             {% if current_tenant.version_type == 'multi_branch' and form.branch %}
                             <div class="col-md-6">
@@ -242,13 +237,6 @@
                             <div class="cx-info-card-content">
                                 <span class="cx-info-card-label">الرمز</span>
                                 <span class="cx-info-card-value" id="viewStockCodeVal"></span>
-                            </div>
-                        </div>
-                        <div class="cx-info-card">
-                            <div class="cx-info-card-icon cx-info-icon--city"><i class="fas fa-layer-group"></i></div>
-                            <div class="cx-info-card-content">
-                                <span class="cx-info-card-label">نوع المخزن</span>
-                                <span class="cx-info-card-value" id="viewStockType"></span>
                             </div>
                         </div>
                         <div class="cx-info-card">
@@ -348,11 +336,7 @@
         }
 
         const cardsHtml = rows.map(function (r) {
-            const icons = {
-                'main':'fa-warehouse','branch':'fa-store','cold':'fa-snowflake',
-                'hazardous':'fa-triangle-exclamation','transit':'fa-truck-fast'
-            };
-            const icon = icons[r.stock_type_raw] || 'fa-warehouse';
+            const icon = 'fa-warehouse';
             const address = r.address || '—';
             const status = r.is_active
                 ? '<span class="cx-status cx-status--on"><span class="cx-status-dot"></span>نشط</span>'
@@ -369,10 +353,6 @@
                     ${status}
                 </div>
                 <div class="cx-stock-card-meta">
-                    <div>
-                        <span class="cx-stock-card-meta-label">النوع</span>
-                        <strong class="cx-stock-card-meta-value">${r.stock_type || '—'}</strong>
-                    </div>
                     <div>
                         <span class="cx-stock-card-meta-label">الموقع</span>
                         <strong class="cx-stock-card-meta-value">${address}</strong>
@@ -423,17 +403,6 @@
             {
                 data: 'code',
                 render: c => `<code class="cxr-code">${c}</code>`
-            },
-            {
-                data: 'stock_type',
-                render: function(_, __, r) {
-                    const icons = {
-                        'main':'fa-warehouse','branch':'fa-store','cold':'fa-snowflake',
-                        'hazardous':'fa-triangle-exclamation','transit':'fa-truck-fast'
-                    };
-                    const icon = icons[r.stock_type_raw] || 'fa-warehouse';
-                    return `<span><i class="fas ${icon} me-1 text-muted"></i>${r.stock_type}</span>`;
-                }
             },
             {
                 data: 'address',
@@ -505,7 +474,6 @@
                 $idInput.val(d.id);
                 $('#id_name').val(d.name || '');
                 $('#id_code').val(d.code || '');
-                $('#id_stock_type').val(d.stock_type || '');
                 $('#id_branch').val(d.branch || '');
                 $('#id_address').val(d.address || '');
                 $('#id_notes').val(d.notes || '');
@@ -579,7 +547,6 @@
                 $('#viewStockCode').html(`<code class="cxr-code">${d.code}</code>`);
                 $('#viewStockNameVal').text(d.name || '—');
                 $('#viewStockCodeVal').html(`<code class="cxr-code">${d.code}</code>`);
-                $('#viewStockType').text(d.stock_type || '—');
                 $('#viewStockAddress').text(d.address || '—');
                 $('#viewStockNotes').text(d.notes || '—');
                 const statusHtml = d.is_active
