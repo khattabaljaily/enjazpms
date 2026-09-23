@@ -258,6 +258,7 @@ const Enjaz = {
 
     clearFormErrors: function(form) {
         form.find('.is-invalid').removeClass('is-invalid');
+        form.find('.biz-type-grid--invalid').removeClass('biz-type-grid--invalid');
         form.find('.js-field-errors').remove();
         form.find('.js-form-errors').addClass('d-none').empty();
     },
@@ -302,6 +303,15 @@ const Enjaz = {
             if (existingError.length) {
                 existingError.html(messages.join('<br>'));
             } else {
+                // A radio-card group (e.g. business_type's .biz-type-grid) has no
+                // single visible input to mark: highlight the whole grid instead of
+                // burying the error inside one card between its <input> and icon.
+                const cardGrid = field.last().closest('.biz-type-grid');
+                if (cardGrid.length) {
+                    cardGrid.addClass('biz-type-grid--invalid');
+                    cardGrid.after(`<div class="text-danger small mt-1 js-field-errors" data-field="${fieldName}">${messages.join('<br>')}</div>`);
+                    return;
+                }
                 // If the field is wrapped in a Bootstrap .input-group (e.g. the
                 // num-stepper +/- wrapper), insert after the whole group instead of
                 // right after the <input> — otherwise the error div becomes an extra

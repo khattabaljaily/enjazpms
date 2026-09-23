@@ -651,7 +651,14 @@ def register_step2(request):
             }, status=400, json_dumps_params={'ensure_ascii': False})
         timezone_preview = get_timezone_for_country(request.POST.get('country', DEFAULT_COUNTRY))
     else:
-        initial = request.session.get('reg_step2', {})
+        initial = dict(request.session.get('reg_step2', {}))
+        # المفتاح المحفوظ في الجلسة هو business_type_id (يُستخدم لاحقاً في
+        # register_step3 لجلب BusinessType)، بينما حقل الفورم اسمه
+        # business_type — بدون هذا التحويل، BoundField.value() لا يجد القيمة
+        # فيعود دائماً للنوع الافتراضي (Step2BusinessForm.__init__)، فيُفقد
+        # اختيار المستخدم بصمت عند العودة للخطوة 2 (رجوع المتصفح أو "السابق").
+        if 'business_type_id' in initial:
+            initial['business_type'] = initial.pop('business_type_id')
         form = Step2BusinessForm(initial=initial)
         timezone_preview = get_timezone_for_country(initial.get('country', DEFAULT_COUNTRY))
 

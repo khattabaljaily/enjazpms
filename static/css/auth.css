@@ -1340,6 +1340,16 @@
     box-shadow: 0 0 0 3px rgba(246,168,33,.12);
     transform: scale(1.02);
 }
+
+/* لا يوجد إدخال واحد قابل للتمييز في مجموعة radio-card ليأخذ .is-invalid
+   القياسية من Bootstrap؛ الخطأ يُميَّز على المجموعة كلها بدل ذلك (راجع
+   renderFieldErrors في static/js/main.js). */
+.biz-type-grid--invalid .biz-type-card {
+    border-color: #dc3545;
+}
+.biz-type-grid--invalid .biz-type-card:not(.biz-type-card--active) {
+    background: rgba(220,53,69,.05);
+}
 .biz-type-card--active .biz-type-icon {
     background: var(--primary);
     color: #fff;
