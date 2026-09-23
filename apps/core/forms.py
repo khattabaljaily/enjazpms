@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from .models import BusinessType, Tenant, Branch
@@ -67,6 +68,32 @@ class TenantForm(forms.ModelForm):
         cleaned_data = super().clean()
         plan = cleaned_data.get('subscription_plan')
         limits = Tenant.PLAN_LIMITS.get(plan, Tenant.PLAN_LIMITS['basic'])
+
+        # تخفيض باقة مشترك موجود بالفعل: لازم يكون استخدامه الحالي (فروع/
+        # مخازن/مستخدمين) ضمن حدود الباقة الجديدة قبل قبول الحفظة، وإلا
+        # تبقى بيانات فروع/مستخدمين "مؤسسات" حية بينما النظام صار يعاملها
+        # كنسخة أبسط — لا حذف تلقائي ولا تخمين دمج، الحسم يدوي بيد المدير
+        # (يقفل/يدمج الزائد بنفسه أولاً). راجع نفس فلسفة Branch.can_add_branch
+        # (apps/core/models.py) وStock.can_add_stock (apps/stocks/models.py)
+        # وفحص user_create_api (apps/accounts/views.py) — نفس القيود، لكن هنا
+        # مطبَّقة عكسياً وقت *تخفيض* الباقة بدل *إضافة* سجل جديد.
+        if self.instance.pk:
+            from apps.accounts.models import User
+            from apps.stocks.models import Stock
+
+            usage_checks = (
+                (Branch.objects.filter(tenant=self.instance, is_active=True).count(), limits['max_branches'], 'الفروع'),
+                (Stock.objects.filter(tenant=self.instance, is_active=True).count(), limits['max_stocks'], 'المخازن'),
+                (User.objects.filter(tenant=self.instance).count(), limits['max_users'], 'المستخدمين'),
+            )
+            for current_count, allowed, label in usage_checks:
+                if current_count > allowed:
+                    plan_name = dict(Tenant.SUBSCRIPTION_PLANS).get(plan, plan)
+                    raise ValidationError(
+                        f'لا يمكن تخفيض الباقة إلى "{plan_name}" — عدد {label} الحالي '
+                        f'({current_count}) يتجاوز الحد المسموح به لهذه الباقة ({allowed}). '
+                        f'يرجى تقليل العدد أولاً ثم إعادة المحاولة.'
+                    )
 
         # نوع النسخة والحدود الرقمية كلها إجبارية ومشتقة من الباقة مباشرة —
         # الحقل معطّل بالواجهة، وهنا يُفرض بغض النظر عمّا وصل في الطلب.

@@ -223,6 +223,9 @@
                             <label class="cx-label" for="id_tax_value">نسبة الضريبة %</label>
                             <input type="number" id="id_tax_value" name="tax_value" class="form-control" min="0" max="100" step="0.01" placeholder="0">
                         </div>
+                        <div class="col-12">
+                            <div class="alert alert-warning d-none" id="planDowngradeWarning" style="font-size:.85rem;"></div>
+                        </div>
                     </div>
 
                     <!-- ④ حالة -->
@@ -669,12 +672,28 @@
     // نوع النسخة والحدود الرقمية كلها مشتقة إجبارياً من الباقة المختارة —
     // الحقول معطّلة بالواجهة (للعرض فقط)، والتحقق الحقيقي مفروض أيضاً من
     // السيرفر في TenantForm.clean() بغض النظر عمّا يُرسَل.
+    let currentUsage = { branch_count: 0, stock_count: 0, user_count: 0 };
+
     function applyPlanLimitsToForm() {
         const limits = PLAN_LIMITS[$('#id_subscription_plan').val()] || PLAN_LIMITS['basic'];
         $('#id_max_stocks').val(limits.max_stocks);
         $('#id_max_branches').val(limits.max_branches);
         $('#id_max_users').val(limits.max_users);
         $('#id_version_type').val(limits.allowed_version_types[limits.allowed_version_types.length - 1]);
+
+        // تحذير مبكر (غير مانع) لو الاستخدام الحالي يتجاوز حدود الباقة
+        // المختارة — التحقق الفعلي المانع يبقى دائماً من السيرفر (clean())،
+        // هذا فقط يوفر على مدير المنصة محاولة حفظ ستُرفَض.
+        const $warn = $('#planDowngradeWarning');
+        const overflows = [];
+        if (currentUsage.branch_count > limits.max_branches) overflows.push(`الفروع (${currentUsage.branch_count} > ${limits.max_branches})`);
+        if (currentUsage.stock_count > limits.max_stocks) overflows.push(`المخازن (${currentUsage.stock_count} > ${limits.max_stocks})`);
+        if (currentUsage.user_count > limits.max_users) overflows.push(`المستخدمين (${currentUsage.user_count} > ${limits.max_users})`);
+        if (overflows.length) {
+            $warn.text('تعذّر حفظ هذه الباقة لاحقاً بسبب تجاوز الاستخدام الحالي للحد المسموح: ' + overflows.join('، ') + ' — يرجى تقليل العدد أولاً.').removeClass('d-none');
+        } else {
+            $warn.addClass('d-none').text('');
+        }
     }
     $('#id_subscription_plan').on('change', applyPlanLimitsToForm);
 
@@ -899,6 +918,7 @@
         $('#admin_full_name, #admin_username, #admin_email, #admin_password, #admin_password2').val('');
         $('#admin_username').prop('readonly', false);
         $('#adminUserSectionNote').text('سيُنشأ حساب مدير تلقائياً');
+        $('#planDowngradeWarning').addClass('d-none').text('');
         Enjaz.clearFormErrors($form);
     }
 
@@ -915,6 +935,7 @@
         $('.js-pass-required').show();
         // ضبط timezone وcurrency بناءً على البلد الافتراضي المختار
         $('#id_country').trigger('change');
+        currentUsage = { branch_count: 0, stock_count: 0, user_count: 0 };
         applyPlanLimitsToForm();
         tenantModal.show();
     }
@@ -943,6 +964,11 @@
                 $('#id_subscription_start').val(d.subscription_start || '');
                 $('#id_subscription_expires').val(d.subscription_expires || '');
                 $('#id_version_type').val(d.version_type || 'single_store');
+                currentUsage = {
+                    branch_count: d.branch_count || 0,
+                    stock_count: d.stock_count || 0,
+                    user_count: d.user_count || 0,
+                };
                 applyPlanLimitsToForm();
                 $('#id_timezone').val(d.timezone || '');
                 if (window._setCurrencyDisplay) window._setCurrencyDisplay(d.currency || '');

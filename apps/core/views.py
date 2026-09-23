@@ -2074,6 +2074,7 @@ def tenant_create_api(request):
 
 
 @login_required
+@branch_scope_exempt('لوحة إدارة المنصة (platform admin) — عدّاد فروع/مخازن المشترك إجمالاً عبر كل فروعه، لا مفهوم فرع طالب هنا أصلاً')
 def tenant_detail_api(request, pk):
     """API: تفاصيل مشترك"""
     err = _superuser_required(request, 'manage_tenants')
@@ -2085,8 +2086,11 @@ def tenant_detail_api(request, pk):
     is_valid = tenant.is_subscription_valid()
 
     from apps.accounts.models import User
+    from apps.stocks.models import Stock
     admin_user = User.objects.filter(tenant=tenant, is_tenant_admin=True).order_by('id').first()
     user_count = User.objects.filter(tenant=tenant).count()
+    branch_count = Branch.objects.filter(tenant=tenant, is_active=True).count()
+    stock_count = Stock.objects.filter(tenant=tenant, is_active=True).count()
 
     settings_obj = tenant.settings if hasattr(tenant, 'settings') else None
     try:
@@ -2124,6 +2128,8 @@ def tenant_detail_api(request, pk):
             'days_until_expiry': days,
             'is_subscription_valid': is_valid,
             'user_count': user_count,
+            'branch_count': branch_count,
+            'stock_count': stock_count,
             'created_at': tenant.created_at.strftime('%Y-%m-%d'),
             'admin_username': admin_user.username if admin_user else '',
             'admin_email': admin_user.email if admin_user else '',
