@@ -6,7 +6,7 @@ class StockForm(forms.ModelForm):
     class Meta:
         model = Stock
         fields = [
-            'name', 'code', 'stock_type', 'branch', 'address', 'notes', 'is_active', 'is_default',
+            'name', 'code', 'branch', 'address', 'notes', 'is_active', 'is_default',
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -17,7 +17,6 @@ class StockForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'يُولَّد تلقائياً إن تُرك فارغاً',
             }),
-            'stock_type': forms.Select(attrs={'class': 'form-select'}),
             'branch': forms.Select(attrs={'class': 'form-select'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
@@ -27,7 +26,6 @@ class StockForm(forms.ModelForm):
         labels = {
             'name': 'اسم المخزن',
             'code': 'الرمز',
-            'stock_type': 'نوع المخزن',
             'branch': 'الفرع',
             'address': 'العنوان / الموقع',
             'notes': 'ملاحظات',

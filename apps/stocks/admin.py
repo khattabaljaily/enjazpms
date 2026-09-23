@@ -4,8 +4,8 @@ from .models import Stock, StockQuantity
 
 @admin.register(Stock)
 class StockAdmin(admin.ModelAdmin):
-    list_display = ['name', 'code', 'stock_type', 'tenant', 'is_default', 'is_active']
-    list_filter = ['tenant', 'stock_type', 'is_active', 'is_default']
+    list_display = ['name', 'code', 'tenant', 'is_default', 'is_active']
+    list_filter = ['tenant', 'is_active', 'is_default']
     search_fields = ['name', 'code']
     readonly_fields = ['created_at', 'updated_at']
 

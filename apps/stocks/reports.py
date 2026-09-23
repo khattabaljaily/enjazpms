@@ -205,7 +205,6 @@ class StocksReportGenerator:
             data.append({
                 'stock_id': stock.id,
                 'stock_name': stock.name,
-                'stock_type': stock.get_stock_type_display(),
                 'item_count': item_count,
                 'total_quantity': float(total_qty),
                 'total_reserved': float(total_reserved),
