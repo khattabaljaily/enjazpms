@@ -2263,7 +2263,9 @@ def _delete_tenant_data(tenant):
             PurchasePayment, SupplierLedger,
         )
         from apps.expenses.models import Expense
-        from apps.treasury.models import TreasuryMovement
+        from apps.treasury.models import TreasuryMovement, TreasuryTransfer
+        from apps.bank_accounts.models import BankAccountMovement, BankAccountTransfer
+        from apps.bank_accounts.models import TreasuryBankTransfer
         from apps.stocks.models import (
             StocktakeLine, Stocktake,
             StockTransferLine, StockTransfer,
@@ -2278,6 +2280,13 @@ def _delete_tenant_data(tenant):
             InsuranceClaimLine, InsuranceClaimSettlement, InsuranceClaim, InsuranceMember,
         )
 
+        # --- treasury/bank transfers (TreasuryTransfer.from_treasury/to_treasury,
+        #     BankAccountTransfer.from_bank_account/to_bank_account,
+        #     TreasuryBankTransfer.treasury/bank_account — all PROTECT) must be
+        #     deleted before Treasury/BankAccount rows cascade from tenant.delete() ---
+        TreasuryBankTransfer.objects.filter(**t).delete()
+        TreasuryTransfer.objects.filter(**t).delete()
+        BankAccountTransfer.objects.filter(**t).delete()
         # --- agent sub-documents (AgentLedger.agent / AgentInvoiceRequest.agent PROTECT Agent,
         #     AgentInvoiceRequestLine.item PROTECT Item) ---
         AgentInvoiceRequestLine.objects.filter(**t).delete()
@@ -2324,6 +2333,7 @@ def _delete_tenant_data(tenant):
         SupplierLedger.objects.filter(**t).delete()
         Expense.objects.filter(**t).delete()
         TreasuryMovement.objects.filter(**t).delete()
+        BankAccountMovement.objects.filter(**t).delete()
         # After the above, tenant.delete() cascades safely through remaining relations.
     finally:
         tenant_deletion_in_progress.reset(token)
