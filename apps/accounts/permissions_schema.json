@@ -1,240 +1,398 @@
 {
-    "لوحة التحكم": {
-        "view_dashboard": "عرض لوحة التحكم الرئيسية",
-        "view_analytics": "عرض التحليلات المتقدمة"
-    },
-    "إعدادات النشاط التجاري": {
-        "view_tenant_settings": "عرض إعدادات النشاط التجاري",
-        "change_tenant_settings": "تعديل إعدادات النشاط التجاري"
-    },
-    "المستخدمين": {
-        "add_users": "إضافة مستخدم جديد",
-        "change_users": "تعديل بيانات المستخدم",
-        "delete_users": "حذف مستخدم",
-        "view_users": "عرض قائمة المستخدمين"
-    },
-    "المجموعات والصلاحيات": {
-        "add_permissiongroups": "إضافة مجموعة صلاحيات جديدة",
-        "change_permissiongroups": "تعديل بيانات المجموعة والصلاحيات",
-        "delete_permissiongroups": "حذف مجموعة صلاحيات",
-        "view_permissiongroups": "عرض مجموعات الصلاحيات"
-    },
-    "العملاء": {
-        "add_customers": "إضافة عميل جديد",
-        "change_customers": "تعديل بيانات العميل",
-        "delete_customers": "حذف عميل",
-        "view_customers": "عرض قائمة العملاء",
-        "import_customers": "استيراد عملاء من ملف",
-        "export_customers": "تصدير بيانات العملاء",
-        "view_customer_payments": "عرض مدفوعات العملاء",
-        "add_customer_payments": "تسجيل دفعية عميل",
-        "cancel_customer_payments": "إلغاء دفعية عميل",
-        "view_customer_transactions": "عرض حركات حساب العميل"
-    },
-    "الموردين": {
-        "add_suppliers": "إضافة مورد جديد",
-        "change_suppliers": "تعديل بيانات المورد",
-        "delete_suppliers": "حذف مورد",
-        "view_suppliers": "عرض قائمة الموردين",
-        "import_suppliers": "استيراد موردين من ملف",
-        "export_suppliers": "تصدير بيانات الموردين",
-        "view_supplier_payments": "عرض مدفوعات الموردين",
-        "add_supplier_payments": "تسجيل دفعية مورد",
-        "cancel_supplier_payments": "إلغاء دفعية مورد",
-        "view_supplier_transactions": "عرض حركات حساب المورد"
-    },
-    "المنتجات والخدمات": {
-        "add_items": "إضافة منتج أو خدمة جديدة",
-        "change_items": "تعديل بيانات المنتج أو الخدمة",
-        "delete_items": "حذف منتج أو خدمة",
-        "view_items": "عرض قائمة المنتجات والخدمات",
-        "import_items": "استيراد منتجات من ملف",
-        "export_items": "تصدير بيانات المنتجات"
-    },
-    "التصنيفات": {
-        "add_categories": "إضافة تصنيف جديد",
-        "change_categories": "تعديل بيانات التصنيف",
-        "delete_categories": "حذف تصنيف",
-        "view_categories": "عرض قائمة التصنيفات"
-    },
-    "المخازن": {
-        "add_stocks": "إضافة مخزن جديد",
-        "change_stocks": "تعديل بيانات المخزن",
-        "delete_stocks": "حذف مخزن",
-        "view_stocks": "عرض قائمة المخازن وأرصدة المخزون",
-        "view_stock_quantities": "عرض الكميات التفصيلية في المخازن",
-        "transfer_stocks": "إنشاء وإدارة تحويلات المخزون بين المخازن",
-        "adjust_stocks": "إنشاء وإدارة عمليات جرد المخزون"
-    },
-    "الفروع": {
-        "view_branches": "عرض قائمة الفروع",
-        "add_branches": "إضافة فرع جديد",
-        "change_branches": "تعديل بيانات الفرع",
-        "delete_branches": "حذف فرع"
-    },
-    "إتلاف المخزون": {
-        "view_stock_destructions": "عرض سجلات الإتلاف",
-        "add_stock_destructions": "إنشاء سجل إتلاف وإضافة بنود",
-        "confirm_stock_destructions": "تأكيد سجل إتلاف وتطبيقه على المخزون",
-        "cancel_stock_destructions": "إلغاء سجل إتلاف"
-    },
-    "المبيعات": {
-        "add_sales": "إنشاء فاتورة مبيعات جديدة",
-        "change_sales": "تعديل وتأكيد فاتورة مبيعات",
-        "delete_sales": "إلغاء فاتورة مبيعات",
-        "view_sales": "عرض وطباعة فواتير المبيعات",
-        "add_sales_returns": "تسجيل مرتجع مبيعات",
-        "view_sales_returns": "عرض مرتجعات المبيعات",
-        "add_quotes": "إنشاء عرض سعر جديد",
-        "change_quotes": "تعديل وإرسال وتحويل عرض السعر إلى فاتورة",
-        "delete_quotes": "حذف عرض السعر",
-        "view_quotes": "عرض عروض الأسعار",
-        "send_invoice_email": "إرسال فاتورة المبيعات بالبريد الإلكتروني"
-    },
-    "المشتريات": {
-        "add_purchases": "إنشاء فاتورة شراء أو طلب عرض سعر جديد",
-        "change_purchases": "تعديل وتأكيد فاتورة مشتريات",
-        "delete_purchases": "إلغاء فاتورة مشتريات",
-        "view_purchases": "عرض وطباعة فواتير المشتريات وطلبات عروض الأسعار",
-        "add_purchase_returns": "تسجيل مرتجع مشتريات",
-        "view_purchase_returns": "عرض مرتجعات المشتريات"
-    },
-    "المصروفات": {
-        "add_expenses": "تسجيل مصروف جديد",
-        "change_expenses": "تعديل مصروف",
-        "delete_expenses": "حذف مصروف",
-        "view_expenses": "عرض قائمة المصروفات",
-        "add_expense_categories": "إضافة تصنيف مصروفات",
-        "view_expense_categories": "عرض تصنيفات المصروفات"
-    },
-    "الخزائن": {
-        "add_treasuries": "إضافة خزينة جديدة",
-        "change_treasuries": "تعديل بيانات الخزينة",
-        "delete_treasuries": "حذف خزينة",
-        "view_treasuries": "عرض الخزائن وأرصدتها",
-        "view_treasury_transactions": "عرض حركات وسجل معاملات الخزينة",
-        "transfer_treasuries": "تحويل الأموال بين الخزائن (بما فيها خزينة العملة الصعبة)"
-    },
-    "الحسابات البنكية": {
-        "add_bank_accounts": "إضافة حساب بنكي جديد",
-        "change_bank_accounts": "تعديل بيانات الحساب البنكي",
-        "delete_bank_accounts": "حذف حساب بنكي",
-        "view_bank_accounts": "عرض الحسابات البنكية وأرصدتها",
-        "view_bank_account_transactions": "عرض حركات وسجل معاملات الحساب البنكي",
-        "transfer_bank_accounts": "تحويل الأموال بين الحسابات البنكية والخزينة"
-    },
-    "المناديب": {
-        "add_agents": "إضافة مندوب جديد",
-        "change_agents": "تعديل بيانات المندوب",
-        "delete_agents": "حذف مندوب",
-        "view_agents": "عرض قائمة المناديب",
-        "import_agents": "استيراد مناديب من ملف",
-        "export_agents": "تصدير بيانات المناديب",
-        "view_agent_payments": "عرض دفعات المناديب",
-        "add_agent_payments": "تسجيل دفعة مندوب",
-        "cancel_agent_payments": "إلغاء دفعة مندوب",
-        "view_agent_transactions": "عرض حركات حساب المندوب"
-    },
-    "التأمين": {
-        "view_insurance_companies": "عرض شركات التأمين",
-        "add_insurance_companies": "إضافة شركة تأمين / بوليصة",
-        "change_insurance_companies": "تعديل شركة تأمين / بوليصة",
-        "view_insurance_claims": "عرض مطالبات التأمين",
-        "add_insurance_claims": "إنشاء مطالبة تأمين",
-        "submit_insurance_claims": "تقديم مطالبة تأمين",
-        "respond_insurance_claims": "تسجيل رد شركة التأمين",
-        "settle_insurance_claims": "تسجيل تسوية مطالبة تأمين",
-        "cancel_insurance_claims": "إلغاء مطالبة تأمين",
-        "view_insurance_statement": "عرض كشف حساب شركة تأمين",
-        "view_insurance_claims_aging": "عرض متأخرات التأمين"
-    },
-    "الموظفين": {
-        "view_employees": "عرض قائمة الموظفين",
-        "add_employees": "إضافة موظف جديد",
-        "edit_employees": "تعديل بيانات موظف",
-        "delete_employees": "حذف موظف"
-    },
-    "رواتب الموظفين": {
-        "view_employee_salaries": "عرض كشوف الرواتب",
-        "add_employee_salaries": "إنشاء كشف راتب",
-        "pay_employee_salaries": "دفع الراتب",
-        "cancel_employee_salaries": "إلغاء كشف الراتب"
-    },
-    "سلف الموظفين": {
-        "view_employee_advances": "عرض سلف الموظفين",
-        "add_employee_advances": "إضافة سلفة موظف",
-        "cancel_employee_advances": "إلغاء سلفة موظف"
-    },
-    "حوافز الموظفين": {
-        "view_employee_incentives": "عرض الحوافز والخصومات",
-        "add_employee_incentives": "تسجيل حافز أو خصم",
-        "pay_employee_incentives": "صرف حافز أو خصم",
-        "cancel_employee_incentives": "إلغاء حافز أو خصم"
-    },
-    "الذكاء الاصطناعي": {
-        "use_ai_chat": "استخدام المساعد الذكي (الدردشة)",
-        "view_ai_insights": "عرض التحليلات والتوصيات الذكية"
-    },
-    "المتجر الإلكتروني": {
-        "view_store_settings": "عرض وتعديل إعدادات المتجر الإلكتروني",
-        "view_store_orders": "عرض طلبات المتجر الإلكتروني",
-        "manage_store_orders": "قبول ورفض طلبات المتجر الإلكتروني"
-    },
-    "الإشعارات": {
-        "view_notifications": "عرض الإشعارات",
-        "generate_notifications": "توليد الإشعارات يدوياً"
-    },
-    "تقارير المبيعات": {
-        "view_sales_summary_report": "تقرير ملخص المبيعات",
-        "view_sales_by_customer_report": "تقرير المبيعات حسب العميل",
-        "view_sales_by_item_report": "تقرير المبيعات حسب المنتج",
-        "view_sales_by_date_report": "تقرير المبيعات حسب التاريخ",
-        "view_sales_profit_margin_report": "تقرير هامش الربح (حساس)",
-        "view_sales_by_payment_method_report": "تقرير المبيعات حسب طريقة الدفع",
-        "view_sales_by_user_report": "تقرير المبيعات حسب المستخدم"
-    },
-    "تقارير المشتريات": {
-        "view_purchases_summary_report": "تقرير ملخص المشتريات",
-        "view_purchases_by_supplier_report": "تقرير المشتريات حسب المورد",
-        "view_purchases_by_item_report": "تقرير المشتريات حسب المنتج",
-        "view_purchases_by_date_report": "تقرير المشتريات حسب التاريخ",
-        "view_purchases_price_history_report": "تقرير تاريخ أسعار الشراء",
-        "view_purchases_by_user_report": "تقرير المشتريات حسب المستخدم"
-    },
-    "تقارير المخزن": {
-        "view_stocks_summary_report": "تقرير ملخص المخزن",
-        "view_stocks_by_item_report": "تقرير المخزن حسب المنتج",
-        "view_stocks_by_category_report": "تقرير المخزن حسب الفئة",
-        "view_stocks_by_location_report": "تقرير المخزن حسب الموقع",
-        "view_stocks_item_movement_report": "تقرير حركة الأصناف",
-        "view_stocks_low_stock_report": "تقرير المخزن المنخفض",
-        "view_stocks_valuation_report": "تقرير تقييم المخزن (حساس)",
-        "view_stocks_non_moving_report": "تقرير الأصناف غير المتحركة",
-        "view_stocks_controlled_substances_report": "سجل الأصناف الخاضعة للرقابة (صيدليات)"
-    },
-    "تقارير الحسابات": {
-        "view_sales_customer_statement_report": "كشف حساب العميل",
-        "view_sales_customer_balances_report": "تقرير مديونيات العملاء",
-        "view_sales_payments_report": "تقرير مدفوعات العملاء",
-        "view_sales_returns_report": "تقرير مرتجعات المبيعات",
-        "view_purchases_supplier_statement_report": "كشف حساب المورد",
-        "view_purchases_supplier_balances_report": "تقرير مديونيات الموردين",
-        "view_purchases_payments_report": "تقرير مدفوعات الموردين",
-        "view_purchases_returns_report": "تقرير مرتجعات المشتريات",
-        "view_expenses_summary_report": "تقرير ملخص المصروفات",
-        "view_expenses_details_report": "تقرير تفاصيل المصروفات",
-        "view_expenses_by_category_report": "تقرير المصروفات حسب التصنيف",
-        "view_expenses_by_date_report": "تقرير المصروفات حسب التاريخ",
-        "view_treasury_balances_report": "تقرير أرصدة الخزائن",
-        "view_treasury_movements_report": "تقرير حركة الخزائن",
-        "view_treasury_statement_report": "كشف حساب خزينة",
-        "view_bank_account_balances_report": "تقرير أرصدة الحسابات البنكية",
-        "view_bank_account_movements_report": "تقرير حركة الحسابات البنكية",
-        "view_bank_account_statement_report": "كشف حساب بنكي",
-        "view_income_statement_report": "قائمة الدخل (الأرباح والخسائر)"
-    },
-    "تقارير المناديب": {
-        "view_agent_statement_report": "كشف حساب مندوب",
-        "view_agent_balances_report": "تقرير مستحقات المناديب"
-    }
+    "schema_version": 1,
+    "sections": [
+        {
+            "key": "dashboard",
+            "name": {"ar": "لوحة التحكم", "en": "Dashboard"},
+            "permissions": [
+                {"key": "view_dashboard", "label": {"ar": "عرض لوحة التحكم الرئيسية", "en": "View main dashboard"}},
+                {"key": "view_analytics", "label": {"ar": "عرض التحليلات المتقدمة", "en": "View advanced analytics"}}
+            ]
+        },
+        {
+            "key": "ai",
+            "name": {"ar": "الذكاء الاصطناعي", "en": "AI Assistant"},
+            "requires_plan_feature": "ai_assistant",
+            "permissions": [
+                {"key": "use_ai_chat", "label": {"ar": "استخدام المساعد الذكي (الدردشة)", "en": "Use the AI assistant (chat)"}},
+                {"key": "view_ai_insights", "label": {"ar": "عرض التحليلات والتوصيات الذكية", "en": "View AI insights and recommendations"}}
+            ]
+        },
+        {
+            "key": "tenant_settings",
+            "name": {"ar": "إعدادات النشاط التجاري", "en": "Business Settings"},
+            "role_scope": "admin_only",
+            "permissions": [
+                {"key": "view_tenant_settings", "label": {"ar": "عرض إعدادات النشاط التجاري", "en": "View business settings"}},
+                {"key": "change_tenant_settings", "label": {"ar": "تعديل إعدادات النشاط التجاري", "en": "Edit business settings"}}
+            ]
+        },
+        {
+            "key": "branches",
+            "name": {"ar": "الفروع", "en": "Branches"},
+            "role_scope": "admin_only",
+            "versions": ["multi_branch"],
+            "permissions": [
+                {"key": "view_branches", "label": {"ar": "عرض قائمة الفروع", "en": "View branch list"}},
+                {"key": "add_branches", "label": {"ar": "إضافة فرع جديد", "en": "Add new branch"}},
+                {"key": "change_branches", "label": {"ar": "تعديل بيانات الفرع", "en": "Edit branch"}},
+                {"key": "delete_branches", "label": {"ar": "حذف فرع", "en": "Delete branch"}}
+            ]
+        },
+        {
+            "key": "store",
+            "name": {"ar": "المتجر الإلكتروني", "en": "Online Store"},
+            "role_scope": "admin_only",
+            "requires_plan_feature": "store",
+            "permissions": [
+                {"key": "view_store_settings", "label": {"ar": "عرض وتعديل إعدادات المتجر الإلكتروني", "en": "View and edit online store settings"}},
+                {"key": "view_store_orders", "label": {"ar": "عرض طلبات المتجر الإلكتروني", "en": "View online store orders"}},
+                {"key": "manage_store_orders", "label": {"ar": "قبول ورفض طلبات المتجر الإلكتروني", "en": "Accept or reject online store orders"}}
+            ]
+        },
+        {
+            "key": "permission_groups",
+            "name": {"ar": "المجموعات والصلاحيات", "en": "Permission Groups"},
+            "role_scope": "admin_only",
+            "permissions": [
+                {"key": "add_permissiongroups", "label": {"ar": "إضافة مجموعة صلاحيات جديدة", "en": "Add new permission group"}},
+                {"key": "change_permissiongroups", "label": {"ar": "تعديل بيانات المجموعة والصلاحيات", "en": "Edit permission group"}},
+                {"key": "delete_permissiongroups", "label": {"ar": "حذف مجموعة صلاحيات", "en": "Delete permission group"}},
+                {"key": "view_permissiongroups", "label": {"ar": "عرض مجموعات الصلاحيات", "en": "View permission groups"}}
+            ]
+        },
+        {
+            "key": "users",
+            "name": {"ar": "المستخدمين", "en": "Users"},
+            "role_scope": "admin_only",
+            "permissions": [
+                {"key": "add_users", "label": {"ar": "إضافة مستخدم جديد", "en": "Add new user"}},
+                {"key": "change_users", "label": {"ar": "تعديل بيانات المستخدم", "en": "Edit user"}},
+                {"key": "delete_users", "label": {"ar": "حذف مستخدم", "en": "Delete user"}},
+                {"key": "view_users", "label": {"ar": "عرض قائمة المستخدمين", "en": "View user list"}}
+            ]
+        },
+        {
+            "key": "insurance",
+            "name": {"ar": "التأمين", "en": "Insurance"},
+            "role_scope": "branch_ops",
+            "requires_capability": "has_insurance_billing",
+            "permissions": [
+                {"key": "view_insurance_companies", "label": {"ar": "عرض شركات التأمين", "en": "View insurance companies"}},
+                {"key": "add_insurance_companies", "label": {"ar": "إضافة شركة تأمين / بوليصة", "en": "Add insurance company / policy"}},
+                {"key": "change_insurance_companies", "label": {"ar": "تعديل شركة تأمين / بوليصة", "en": "Edit insurance company / policy"}},
+                {"key": "view_insurance_claims", "label": {"ar": "عرض مطالبات التأمين", "en": "View insurance claims"}},
+                {"key": "add_insurance_claims", "label": {"ar": "إنشاء مطالبة تأمين", "en": "Create insurance claim"}},
+                {"key": "submit_insurance_claims", "label": {"ar": "تقديم مطالبة تأمين", "en": "Submit insurance claim"}},
+                {"key": "respond_insurance_claims", "label": {"ar": "تسجيل رد شركة التأمين", "en": "Record insurer response"}},
+                {"key": "settle_insurance_claims", "label": {"ar": "تسجيل تسوية مطالبة تأمين", "en": "Record claim settlement"}},
+                {"key": "cancel_insurance_claims", "label": {"ar": "إلغاء مطالبة تأمين", "en": "Cancel insurance claim"}},
+                {"key": "view_insurance_statement", "label": {"ar": "عرض كشف حساب شركة تأمين", "en": "View insurance company statement"}},
+                {"key": "view_insurance_claims_aging", "label": {"ar": "عرض متأخرات التأمين", "en": "View insurance claims aging"}}
+            ]
+        },
+        {
+            "key": "sales",
+            "name": {"ar": "المبيعات", "en": "Sales"},
+            "role_scope": "branch_ops",
+            "permissions": [
+                {"key": "add_sales", "label": {"ar": "إنشاء فاتورة مبيعات جديدة", "en": "Create new sales invoice"}},
+                {"key": "change_sales", "label": {"ar": "تعديل وتأكيد فاتورة مبيعات", "en": "Edit and confirm sales invoice"}},
+                {"key": "delete_sales", "label": {"ar": "إلغاء فاتورة مبيعات", "en": "Cancel sales invoice"}},
+                {"key": "view_sales", "label": {"ar": "عرض وطباعة فواتير المبيعات", "en": "View and print sales invoices"}},
+                {"key": "add_sales_returns", "label": {"ar": "تسجيل مرتجع مبيعات", "en": "Record sales return"}},
+                {"key": "view_sales_returns", "label": {"ar": "عرض مرتجعات المبيعات", "en": "View sales returns"}},
+                {"key": "add_quotes", "label": {"ar": "إنشاء عرض سعر جديد", "en": "Create new quote"}},
+                {"key": "change_quotes", "label": {"ar": "تعديل وإرسال وتحويل عرض السعر إلى فاتورة", "en": "Edit, send and convert quote to invoice"}},
+                {"key": "delete_quotes", "label": {"ar": "حذف عرض السعر", "en": "Delete quote"}},
+                {"key": "view_quotes", "label": {"ar": "عرض عروض الأسعار", "en": "View quotes"}},
+                {"key": "send_invoice_email", "label": {"ar": "إرسال فاتورة المبيعات بالبريد الإلكتروني", "en": "Send sales invoice by email"}}
+            ]
+        },
+        {
+            "key": "purchases",
+            "name": {"ar": "المشتريات", "en": "Purchases"},
+            "role_scope": "branch_ops",
+            "permissions": [
+                {"key": "add_purchases", "label": {"ar": "إنشاء فاتورة شراء أو طلب عرض سعر جديد", "en": "Create new purchase order or RFQ"}},
+                {"key": "change_purchases", "label": {"ar": "تعديل وتأكيد فاتورة مشتريات", "en": "Edit and confirm purchase invoice"}},
+                {"key": "delete_purchases", "label": {"ar": "إلغاء فاتورة مشتريات", "en": "Cancel purchase invoice"}},
+                {"key": "view_purchases", "label": {"ar": "عرض وطباعة فواتير المشتريات وطلبات عروض الأسعار", "en": "View and print purchase invoices and RFQs"}},
+                {"key": "add_purchase_returns", "label": {"ar": "تسجيل مرتجع مشتريات", "en": "Record purchase return"}},
+                {"key": "view_purchase_returns", "label": {"ar": "عرض مرتجعات المشتريات", "en": "View purchase returns"}}
+            ]
+        },
+        {
+            "key": "categories",
+            "name": {"ar": "التصنيفات", "en": "Categories"},
+            "permissions": [
+                {"key": "add_categories", "label": {"ar": "إضافة تصنيف جديد", "en": "Add new category"}},
+                {"key": "change_categories", "label": {"ar": "تعديل بيانات التصنيف", "en": "Edit category"}},
+                {"key": "delete_categories", "label": {"ar": "حذف تصنيف", "en": "Delete category"}},
+                {"key": "view_categories", "label": {"ar": "عرض قائمة التصنيفات", "en": "View category list"}}
+            ]
+        },
+        {
+            "key": "items",
+            "name": {"ar": "المنتجات والخدمات", "en": "Products & Services"},
+            "permissions": [
+                {"key": "add_items", "label": {"ar": "إضافة منتج أو خدمة جديدة", "en": "Add new product or service"}},
+                {"key": "change_items", "label": {"ar": "تعديل بيانات المنتج أو الخدمة", "en": "Edit product or service"}},
+                {"key": "delete_items", "label": {"ar": "حذف منتج أو خدمة", "en": "Delete product or service"}},
+                {"key": "view_items", "label": {"ar": "عرض قائمة المنتجات والخدمات", "en": "View products and services list"}},
+                {"key": "import_items", "label": {"ar": "استيراد منتجات من ملف", "en": "Import products from file"}},
+                {"key": "export_items", "label": {"ar": "تصدير بيانات المنتجات", "en": "Export product data"}}
+            ]
+        },
+        {
+            "key": "stocks",
+            "name": {"ar": "المخازن", "en": "Warehouses"},
+            "permissions": [
+                {"key": "add_stocks", "label": {"ar": "إضافة مخزن جديد", "en": "Add new warehouse"}},
+                {"key": "change_stocks", "label": {"ar": "تعديل بيانات المخزن", "en": "Edit warehouse"}},
+                {"key": "delete_stocks", "label": {"ar": "حذف مخزن", "en": "Delete warehouse"}},
+                {"key": "view_stocks", "label": {"ar": "عرض قائمة المخازن وأرصدة المخزون", "en": "View warehouse list and stock balances"}},
+                {"key": "view_stock_quantities", "label": {"ar": "عرض الكميات التفصيلية في المخازن", "en": "View detailed warehouse quantities"}},
+                {"key": "transfer_stocks", "label": {"ar": "إنشاء وإدارة تحويلات المخزون بين المخازن", "en": "Create and manage stock transfers between warehouses"}},
+                {"key": "adjust_stocks", "label": {"ar": "إنشاء وإدارة عمليات جرد المخزون", "en": "Create and manage stocktake/adjustments"}}
+            ]
+        },
+        {
+            "key": "stock_destructions",
+            "name": {"ar": "إتلاف المخزون", "en": "Stock Write-offs"},
+            "role_scope": "branch_ops",
+            "requires_capability": "has_expiry_alerts",
+            "permissions": [
+                {"key": "view_stock_destructions", "label": {"ar": "عرض سجلات الإتلاف", "en": "View write-off records"}},
+                {"key": "add_stock_destructions", "label": {"ar": "إنشاء سجل إتلاف وإضافة بنود", "en": "Create write-off record and add lines"}},
+                {"key": "confirm_stock_destructions", "label": {"ar": "تأكيد سجل إتلاف وتطبيقه على المخزون", "en": "Confirm write-off record and apply to stock"}},
+                {"key": "cancel_stock_destructions", "label": {"ar": "إلغاء سجل إتلاف", "en": "Cancel write-off record"}}
+            ]
+        },
+        {
+            "key": "customers",
+            "name": {"ar": "العملاء", "en": "Customers"},
+            "role_scope": "branch_ops",
+            "permissions": [
+                {"key": "add_customers", "label": {"ar": "إضافة عميل جديد", "en": "Add new customer"}},
+                {"key": "change_customers", "label": {"ar": "تعديل بيانات العميل", "en": "Edit customer"}},
+                {"key": "delete_customers", "label": {"ar": "حذف عميل", "en": "Delete customer"}},
+                {"key": "view_customers", "label": {"ar": "عرض قائمة العملاء", "en": "View customer list"}},
+                {"key": "import_customers", "label": {"ar": "استيراد عملاء من ملف", "en": "Import customers from file"}},
+                {"key": "export_customers", "label": {"ar": "تصدير بيانات العملاء", "en": "Export customer data"}},
+                {"key": "view_customer_payments", "label": {"ar": "عرض مدفوعات العملاء", "en": "View customer payments"}},
+                {"key": "add_customer_payments", "label": {"ar": "تسجيل دفعية عميل", "en": "Record customer payment"}},
+                {"key": "cancel_customer_payments", "label": {"ar": "إلغاء دفعية عميل", "en": "Cancel customer payment"}},
+                {"key": "view_customer_transactions", "label": {"ar": "عرض حركات حساب العميل", "en": "View customer account transactions"}}
+            ]
+        },
+        {
+            "key": "suppliers",
+            "name": {"ar": "الموردين", "en": "Suppliers"},
+            "role_scope": "branch_ops",
+            "permissions": [
+                {"key": "add_suppliers", "label": {"ar": "إضافة مورد جديد", "en": "Add new supplier"}},
+                {"key": "change_suppliers", "label": {"ar": "تعديل بيانات المورد", "en": "Edit supplier"}},
+                {"key": "delete_suppliers", "label": {"ar": "حذف مورد", "en": "Delete supplier"}},
+                {"key": "view_suppliers", "label": {"ar": "عرض قائمة الموردين", "en": "View supplier list"}},
+                {"key": "import_suppliers", "label": {"ar": "استيراد موردين من ملف", "en": "Import suppliers from file"}},
+                {"key": "export_suppliers", "label": {"ar": "تصدير بيانات الموردين", "en": "Export supplier data"}},
+                {"key": "view_supplier_payments", "label": {"ar": "عرض مدفوعات الموردين", "en": "View supplier payments"}},
+                {"key": "add_supplier_payments", "label": {"ar": "تسجيل دفعية مورد", "en": "Record supplier payment"}},
+                {"key": "cancel_supplier_payments", "label": {"ar": "إلغاء دفعية مورد", "en": "Cancel supplier payment"}},
+                {"key": "view_supplier_transactions", "label": {"ar": "عرض حركات حساب المورد", "en": "View supplier account transactions"}}
+            ]
+        },
+        {
+            "key": "agents",
+            "name": {"ar": "المناديب", "en": "Sales Agents"},
+            "role_scope": "branch_ops",
+            "requires_capability": "has_agents_module",
+            "requires_plan_feature": "agents",
+            "permissions": [
+                {"key": "add_agents", "label": {"ar": "إضافة مندوب جديد", "en": "Add new sales agent"}},
+                {"key": "change_agents", "label": {"ar": "تعديل بيانات المندوب", "en": "Edit sales agent"}},
+                {"key": "delete_agents", "label": {"ar": "حذف مندوب", "en": "Delete sales agent"}},
+                {"key": "view_agents", "label": {"ar": "عرض قائمة المناديب", "en": "View sales agent list"}},
+                {"key": "import_agents", "label": {"ar": "استيراد مناديب من ملف", "en": "Import sales agents from file"}},
+                {"key": "export_agents", "label": {"ar": "تصدير بيانات المناديب", "en": "Export sales agent data"}},
+                {"key": "view_agent_payments", "label": {"ar": "عرض دفعات المناديب", "en": "View agent payments"}},
+                {"key": "add_agent_payments", "label": {"ar": "تسجيل دفعة مندوب", "en": "Record agent payment"}},
+                {"key": "cancel_agent_payments", "label": {"ar": "إلغاء دفعة مندوب", "en": "Cancel agent payment"}},
+                {"key": "view_agent_transactions", "label": {"ar": "عرض حركات حساب المندوب", "en": "View agent account transactions"}}
+            ]
+        },
+        {
+            "key": "employees",
+            "name": {"ar": "الموظفين", "en": "Employees"},
+            "permissions": [
+                {"key": "view_employees", "label": {"ar": "عرض قائمة الموظفين", "en": "View employee list"}},
+                {"key": "add_employees", "label": {"ar": "إضافة موظف جديد", "en": "Add new employee"}},
+                {"key": "edit_employees", "label": {"ar": "تعديل بيانات موظف", "en": "Edit employee"}},
+                {"key": "delete_employees", "label": {"ar": "حذف موظف", "en": "Delete employee"}}
+            ]
+        },
+        {
+            "key": "expenses",
+            "name": {"ar": "المصروفات", "en": "Expenses"},
+            "role_scope": "branch_ops",
+            "permissions": [
+                {"key": "add_expenses", "label": {"ar": "تسجيل مصروف جديد", "en": "Record new expense"}},
+                {"key": "change_expenses", "label": {"ar": "تعديل مصروف", "en": "Edit expense"}},
+                {"key": "delete_expenses", "label": {"ar": "حذف مصروف", "en": "Delete expense"}},
+                {"key": "view_expenses", "label": {"ar": "عرض قائمة المصروفات", "en": "View expense list"}},
+                {"key": "add_expense_categories", "label": {"ar": "إضافة تصنيف مصروفات", "en": "Add expense category"}},
+                {"key": "view_expense_categories", "label": {"ar": "عرض تصنيفات المصروفات", "en": "View expense categories"}}
+            ]
+        },
+        {
+            "key": "treasuries",
+            "name": {"ar": "الخزائن", "en": "Treasuries"},
+            "role_scope": "branch_ops",
+            "permissions": [
+                {"key": "add_treasuries", "label": {"ar": "إضافة خزينة جديدة", "en": "Add new treasury"}},
+                {"key": "change_treasuries", "label": {"ar": "تعديل بيانات الخزينة", "en": "Edit treasury"}},
+                {"key": "delete_treasuries", "label": {"ar": "حذف خزينة", "en": "Delete treasury"}},
+                {"key": "view_treasuries", "label": {"ar": "عرض الخزائن وأرصدتها", "en": "View treasuries and balances"}},
+                {"key": "view_treasury_transactions", "label": {"ar": "عرض حركات وسجل معاملات الخزينة", "en": "View treasury transaction history"}},
+                {
+                    "key": "transfer_treasuries",
+                    "label": {"ar": "تحويل الأموال بين الخزائن (بما فيها خزينة العملة الصعبة)", "en": "Transfer funds between treasuries (incl. hard-currency treasury)"},
+                    "requires_flag": "hard_currency_mode"
+                }
+            ]
+        },
+        {
+            "key": "bank_accounts",
+            "name": {"ar": "الحسابات البنكية", "en": "Bank Accounts"},
+            "role_scope": "branch_ops",
+            "permissions": [
+                {"key": "add_bank_accounts", "label": {"ar": "إضافة حساب بنكي جديد", "en": "Add new bank account"}},
+                {"key": "change_bank_accounts", "label": {"ar": "تعديل بيانات الحساب البنكي", "en": "Edit bank account"}},
+                {"key": "delete_bank_accounts", "label": {"ar": "حذف حساب بنكي", "en": "Delete bank account"}},
+                {"key": "view_bank_accounts", "label": {"ar": "عرض الحسابات البنكية وأرصدتها", "en": "View bank accounts and balances"}},
+                {"key": "view_bank_account_transactions", "label": {"ar": "عرض حركات وسجل معاملات الحساب البنكي", "en": "View bank account transaction history"}},
+                {"key": "transfer_bank_accounts", "label": {"ar": "تحويل الأموال بين الحسابات البنكية والخزينة", "en": "Transfer funds between bank accounts and treasury"}}
+            ]
+        },
+        {
+            "key": "employee_advances",
+            "name": {"ar": "سلف الموظفين", "en": "Employee Advances"},
+            "role_scope": "branch_ops",
+            "permissions": [
+                {"key": "view_employee_advances", "label": {"ar": "عرض سلف الموظفين", "en": "View employee advances"}},
+                {"key": "add_employee_advances", "label": {"ar": "إضافة سلفة موظف", "en": "Add employee advance"}},
+                {"key": "cancel_employee_advances", "label": {"ar": "إلغاء سلفة موظف", "en": "Cancel employee advance"}}
+            ]
+        },
+        {
+            "key": "employee_incentives",
+            "name": {"ar": "حوافز الموظفين", "en": "Employee Incentives"},
+            "role_scope": "branch_ops",
+            "permissions": [
+                {"key": "view_employee_incentives", "label": {"ar": "عرض الحوافز والخصومات", "en": "View incentives and deductions"}},
+                {"key": "add_employee_incentives", "label": {"ar": "تسجيل حافز أو خصم", "en": "Record incentive or deduction"}},
+                {"key": "pay_employee_incentives", "label": {"ar": "صرف حافز أو خصم", "en": "Pay out incentive or deduction"}},
+                {"key": "cancel_employee_incentives", "label": {"ar": "إلغاء حافز أو خصم", "en": "Cancel incentive or deduction"}}
+            ]
+        },
+        {
+            "key": "employee_salaries",
+            "name": {"ar": "رواتب الموظفين", "en": "Employee Salaries"},
+            "role_scope": "branch_ops",
+            "permissions": [
+                {"key": "view_employee_salaries", "label": {"ar": "عرض كشوف الرواتب", "en": "View payroll"}},
+                {"key": "add_employee_salaries", "label": {"ar": "إنشاء كشف راتب", "en": "Create payslip"}},
+                {"key": "pay_employee_salaries", "label": {"ar": "دفع الراتب", "en": "Pay salary"}},
+                {"key": "cancel_employee_salaries", "label": {"ar": "إلغاء كشف الراتب", "en": "Cancel payslip"}}
+            ]
+        },
+        {
+            "key": "sales_reports",
+            "name": {"ar": "تقارير المبيعات", "en": "Sales Reports"},
+            "permissions": [
+                {"key": "view_sales_summary_report", "label": {"ar": "تقرير ملخص المبيعات", "en": "Sales summary report"}},
+                {"key": "view_sales_by_customer_report", "label": {"ar": "تقرير المبيعات حسب العميل", "en": "Sales by customer report"}},
+                {"key": "view_sales_by_item_report", "label": {"ar": "تقرير المبيعات حسب المنتج", "en": "Sales by product report"}},
+                {"key": "view_sales_by_date_report", "label": {"ar": "تقرير المبيعات حسب التاريخ", "en": "Sales by date report"}},
+                {"key": "view_sales_profit_margin_report", "label": {"ar": "تقرير هامش الربح (حساس)", "en": "Profit margin report (Sensitive)"}},
+                {"key": "view_sales_by_payment_method_report", "label": {"ar": "تقرير المبيعات حسب طريقة الدفع", "en": "Sales by payment method report"}},
+                {"key": "view_sales_by_user_report", "label": {"ar": "تقرير المبيعات حسب المستخدم", "en": "Sales by user report"}}
+            ]
+        },
+        {
+            "key": "purchases_reports",
+            "name": {"ar": "تقارير المشتريات", "en": "Purchases Reports"},
+            "permissions": [
+                {"key": "view_purchases_summary_report", "label": {"ar": "تقرير ملخص المشتريات", "en": "Purchases summary report"}},
+                {"key": "view_purchases_by_supplier_report", "label": {"ar": "تقرير المشتريات حسب المورد", "en": "Purchases by supplier report"}},
+                {"key": "view_purchases_by_item_report", "label": {"ar": "تقرير المشتريات حسب المنتج", "en": "Purchases by product report"}},
+                {"key": "view_purchases_by_date_report", "label": {"ar": "تقرير المشتريات حسب التاريخ", "en": "Purchases by date report"}},
+                {"key": "view_purchases_price_history_report", "label": {"ar": "تقرير تاريخ أسعار الشراء", "en": "Purchase price history report"}},
+                {"key": "view_purchases_by_user_report", "label": {"ar": "تقرير المشتريات حسب المستخدم", "en": "Purchases by user report"}}
+            ]
+        },
+        {
+            "key": "stocks_reports",
+            "name": {"ar": "تقارير المخزن", "en": "Warehouse Reports"},
+            "permissions": [
+                {"key": "view_stocks_summary_report", "label": {"ar": "تقرير ملخص المخزن", "en": "Warehouse summary report"}},
+                {"key": "view_stocks_by_item_report", "label": {"ar": "تقرير المخزن حسب المنتج", "en": "Warehouse by product report"}},
+                {"key": "view_stocks_by_category_report", "label": {"ar": "تقرير المخزن حسب الفئة", "en": "Warehouse by category report"}},
+                {"key": "view_stocks_by_location_report", "label": {"ar": "تقرير المخزن حسب الموقع", "en": "Warehouse by location report"}},
+                {"key": "view_stocks_item_movement_report", "label": {"ar": "تقرير حركة الأصناف", "en": "Item movement report"}},
+                {"key": "view_stocks_low_stock_report", "label": {"ar": "تقرير المخزن المنخفض", "en": "Low stock report"}},
+                {"key": "view_stocks_valuation_report", "label": {"ar": "تقرير تقييم المخزن (حساس)", "en": "Stock valuation report (Sensitive)"}},
+                {"key": "view_stocks_non_moving_report", "label": {"ar": "تقرير الأصناف غير المتحركة", "en": "Non-moving items report"}},
+                {
+                    "key": "view_stocks_controlled_substances_report",
+                    "label": {"ar": "سجل الأصناف الخاضعة للرقابة (صيدليات)", "en": "Controlled substances log (pharmacies)"},
+                    "requires_capability": "has_drug_classification"
+                }
+            ]
+        },
+        {
+            "key": "accounts_reports",
+            "name": {"ar": "تقارير الحسابات", "en": "Financial Reports"},
+            "permissions": [
+                {"key": "view_sales_customer_statement_report", "label": {"ar": "كشف حساب العميل", "en": "Customer statement"}},
+                {"key": "view_sales_customer_balances_report", "label": {"ar": "تقرير مديونيات العملاء", "en": "Customer balances report"}},
+                {"key": "view_sales_payments_report", "label": {"ar": "تقرير مدفوعات العملاء", "en": "Customer payments report"}},
+                {"key": "view_sales_returns_report", "label": {"ar": "تقرير مرتجعات المبيعات", "en": "Sales returns report"}},
+                {"key": "view_purchases_supplier_statement_report", "label": {"ar": "كشف حساب المورد", "en": "Supplier statement"}},
+                {"key": "view_purchases_supplier_balances_report", "label": {"ar": "تقرير مديونيات الموردين", "en": "Supplier balances report"}},
+                {"key": "view_purchases_payments_report", "label": {"ar": "تقرير مدفوعات الموردين", "en": "Supplier payments report"}},
+                {"key": "view_purchases_returns_report", "label": {"ar": "تقرير مرتجعات المشتريات", "en": "Purchase returns report"}},
+                {"key": "view_expenses_summary_report", "label": {"ar": "تقرير ملخص المصروفات", "en": "Expenses summary report"}},
+                {"key": "view_expenses_details_report", "label": {"ar": "تقرير تفاصيل المصروفات", "en": "Expense details report"}},
+                {"key": "view_expenses_by_category_report", "label": {"ar": "تقرير المصروفات حسب التصنيف", "en": "Expenses by category report"}},
+                {"key": "view_expenses_by_date_report", "label": {"ar": "تقرير المصروفات حسب التاريخ", "en": "Expenses by date report"}},
+                {"key": "view_treasury_balances_report", "label": {"ar": "تقرير أرصدة الخزائن", "en": "Treasury balances report"}},
+                {"key": "view_treasury_movements_report", "label": {"ar": "تقرير حركة الخزائن", "en": "Treasury movements report"}},
+                {"key": "view_treasury_statement_report", "label": {"ar": "كشف حساب خزينة", "en": "Treasury statement"}},
+                {"key": "view_bank_account_balances_report", "label": {"ar": "تقرير أرصدة الحسابات البنكية", "en": "Bank account balances report"}},
+                {"key": "view_bank_account_movements_report", "label": {"ar": "تقرير حركة الحسابات البنكية", "en": "Bank account movements report"}},
+                {"key": "view_bank_account_statement_report", "label": {"ar": "كشف حساب بنكي", "en": "Bank account statement"}},
+                {"key": "view_income_statement_report", "label": {"ar": "قائمة الدخل (الأرباح والخسائر)", "en": "Income statement (profit/loss)"}}
+            ]
+        },
+        {
+            "key": "agents_reports",
+            "name": {"ar": "تقارير المناديب", "en": "Sales Agent Reports"},
+            "requires_capability": "has_agents_module",
+            "requires_plan_feature": "agents",
+            "permissions": [
+                {"key": "view_agent_statement_report", "label": {"ar": "كشف حساب مندوب", "en": "Agent statement"}},
+                {"key": "view_agent_balances_report", "label": {"ar": "تقرير مستحقات المناديب", "en": "Agent dues report"}}
+            ]
+        },
+        {
+            "key": "notifications",
+            "name": {"ar": "الإشعارات", "en": "Notifications"},
+            "permissions": [
+                {"key": "view_notifications", "label": {"ar": "عرض الإشعارات", "en": "View notifications"}},
+                {"key": "generate_notifications", "label": {"ar": "توليد الإشعارات يدوياً", "en": "Generate notifications manually"}}
+            ]
+        }
+    ]
 }

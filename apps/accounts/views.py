@@ -30,7 +30,7 @@ from apps.core.constants import COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIME
 from .models import PermissionGroup, User
 from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, RegistrationRequestForm, LoginForm, UserManagementForm, PasswordResetForm, SetPasswordForm
 from .permissions import (
-    get_permission_keys, get_permission_schema, filter_schema_for_tenant,
+    get_permission_keys, filter_schema_for_tenant,
     get_branch_supervisor_permission_keys, get_enterprise_owner_permission_keys,
     BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES, ENTERPRISE_OWNER_EXCLUDED_CATEGORIES,
 )
@@ -303,7 +303,7 @@ def permission_group_list(request):
     # تمرير المستخدمين والمجموعات إلى الـ template
     users = User.objects.for_tenant(tenant).filter(is_active=True).values('id', 'username', 'first_name', 'last_name')
 
-    schema = filter_schema_for_tenant(get_permission_schema(), tenant)
+    schema = filter_schema_for_tenant(tenant)
 
     return render(request, 'accounts/permission_group_list.html', {
         'permission_schema': json.dumps(schema, ensure_ascii=False),
@@ -364,7 +364,7 @@ def permission_group_schema_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
-    return _json_ok(filter_schema_for_tenant(get_permission_schema(), tenant))
+    return _json_ok(filter_schema_for_tenant(tenant))
 
 
 @login_required
@@ -392,12 +392,22 @@ def _valid_keys_for_scope(tenant, scope):
     'branch'/'admin' لا يُنفَّذ إلا لنسخة المؤسسات — يعكس تماماً نفس
     الفلترة المطبّقة تلقائياً على مشرف الفرع/مدير النشاط (راجع
     apps/accounts/permissions.py) بدل الثقة بما يُرسله العميل فقط.
+
+    بالإضافة لذلك، نتقاطع دائماً مع filter_schema_for_tenant (نفس الفلترة
+    المطبّقة وقت العرض) — بدونها كان بإمكان tenant غير Enterprise حفظ مفتاح
+    صلاحية لميزة لا تدعمها باقته/قدراته أصلاً (لا يظهر أصلاً كـ checkbox في
+    الواجهة) لو أُرسل يدوياً في الطلب.
     """
     if tenant.is_enterprise() and scope == 'branch':
-        return set(get_branch_supervisor_permission_keys())
-    if tenant.is_enterprise() and scope == 'admin':
-        return set(get_enterprise_owner_permission_keys())
-    return set(get_permission_keys())
+        base_keys = set(get_branch_supervisor_permission_keys())
+    elif tenant.is_enterprise() and scope == 'admin':
+        base_keys = set(get_enterprise_owner_permission_keys())
+    else:
+        base_keys = set(get_permission_keys())
+
+    tenant_schema = filter_schema_for_tenant(tenant)
+    tenant_visible_keys = {key for perms in tenant_schema.values() for key in perms}
+    return base_keys & tenant_visible_keys
 
 
 @login_required
