@@ -40,6 +40,21 @@
             ]
         },
         {
+            "key": "head_office_finance",
+            "name": {"ar": "الخزينة والحسابات المركزية", "en": "Head Office Treasury & Bank"},
+            "role_scope": "admin_only",
+            "versions": ["multi_branch"],
+            "permissions": [
+                {"key": "view_head_office_treasury", "label": {"ar": "عرض خزينة الإدارة المركزية", "en": "View head office treasury"}},
+                {"key": "transfer_head_office_treasury", "label": {"ar": "تحويل الأموال بين خزينة الإدارة والفروع", "en": "Transfer funds between head office treasury and branches"}},
+                {"key": "view_head_office_bank_accounts", "label": {"ar": "عرض الحسابات البنكية للإدارة المركزية", "en": "View head office bank accounts"}},
+                {"key": "add_head_office_bank_accounts", "label": {"ar": "إضافة حساب بنكي للإدارة المركزية", "en": "Add head office bank account"}},
+                {"key": "change_head_office_bank_accounts", "label": {"ar": "تعديل حساب بنكي للإدارة المركزية", "en": "Edit head office bank account"}},
+                {"key": "delete_head_office_bank_accounts", "label": {"ar": "حذف حساب بنكي للإدارة المركزية", "en": "Delete head office bank account"}},
+                {"key": "transfer_head_office_bank_accounts", "label": {"ar": "تحويل الأموال بين حسابات الإدارة والفروع", "en": "Transfer funds between head office bank accounts and branches"}}
+            ]
+        },
+        {
             "key": "store",
             "name": {"ar": "المتجر الإلكتروني", "en": "Online Store"},
             "role_scope": "admin_only",

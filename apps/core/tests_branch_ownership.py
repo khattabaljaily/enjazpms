@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from django.http import Http404
 from django.test import SimpleTestCase
 
-from apps.core.utils import enforce_branch_ownership
+from apps.core.utils import enforce_branch_ownership, enforce_transfer_branch_ownership
 
 
 class FakeRequest:
@@ -82,3 +82,41 @@ class EnforceBranchOwnershipTests(SimpleTestCase):
             to_stock=SimpleNamespace(branch=object()),
         )
         enforce_branch_ownership(req, obj, field=['from_stock__branch', 'to_stock__branch'])
+
+
+class EnforceTransferBranchOwnershipTests(SimpleTestCase):
+    """
+    enforce_transfer_branch_ownership (apps/core/utils.py) — مخصَّص لتحويلات
+    فرع↔إدارة مركزية، حيث طرف "الإدارة" NULL دائماً بالتصميم لا بالمصادفة.
+    خلافاً لـ enforce_branch_ownership متعدد المسارات (أعلاه، test_dual_field_
+    one_side_null_passes)، NULL على أحد الطرفين هنا لا يُسقط الفحص إطلاقاً —
+    وإلا لقدر أي مستخدم فرع إلغاء أي تحويل يخص الإدارة المركزية بصرف النظر
+    عن فرعه، لأن طرف الإدارة NULL في كل تحويل من هذا النوع.
+    """
+
+    def test_central_admin_bypasses_check(self):
+        req = FakeRequest(branch=None)
+        enforce_transfer_branch_ownership(req, from_branch_id=1, to_branch_id=None)
+
+    def test_branch_user_allowed_as_source(self):
+        branch = SimpleNamespace(id=1)
+        req = FakeRequest(branch=branch)
+        enforce_transfer_branch_ownership(req, from_branch_id=1, to_branch_id=None)
+
+    def test_branch_user_allowed_as_destination(self):
+        branch = SimpleNamespace(id=1)
+        req = FakeRequest(branch=branch)
+        enforce_transfer_branch_ownership(req, from_branch_id=None, to_branch_id=1)
+
+    def test_outsider_branch_denied_even_when_other_side_is_head_office(self):
+        """الفرق الجوهري عن enforce_branch_ownership: NULL على طرف الإدارة لا يُمرِّر فرعاً غريباً."""
+        branch = SimpleNamespace(id=2)
+        req = FakeRequest(branch=branch)
+        with self.assertRaises(Http404):
+            enforce_transfer_branch_ownership(req, from_branch_id=1, to_branch_id=None)
+
+    def test_outsider_branch_denied_between_two_other_branches(self):
+        branch = SimpleNamespace(id=3)
+        req = FakeRequest(branch=branch)
+        with self.assertRaises(Http404):
+            enforce_transfer_branch_ownership(req, from_branch_id=1, to_branch_id=2)

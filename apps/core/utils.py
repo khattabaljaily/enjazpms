@@ -122,6 +122,29 @@ def enforce_branch_ownership(request, obj, field='branch'):
         raise Http404
 
 
+def enforce_transfer_branch_ownership(request, from_branch_id, to_branch_id):
+    """
+    فحص ملكية مخصَّص لإلغاء تحويل بين خزينة/حساب فرع وخزينة/حساب الإدارة
+    المركزية — لا يصلح استخدام enforce_branch_ownership متعدد المسارات هنا:
+    ذلك يتجاوز الفحص بالكامل لو تحدَّد فرع NULL على **أي** طرف (فلسفته أن
+    NULL يعني بيانات قديمة اختيارية)، بينما هنا الطرف NULL (الإدارة
+    المركزية) *دائماً* بلا فرع بالتصميم — لو استخدمناها لهذه الحالة، أي
+    مستخدم فرع كان سيقدر يلغي أي تحويل يخص الإدارة المركزية بصرف النظر عن
+    فرعه، لأن NULL يظهر في كل تحويل من هذا النوع.
+
+    القاعدة الصحيحة هنا: مستخدم مركزي (request.branch=None، مدير النشاط)
+    بلا قيد كالمعتاد؛ مستخدم فرع مسموح فقط لو فرعه هو أحد طرفي التحويل
+    فعلياً (لا يكفي أن يكون الطرف الآخر NULL).
+    """
+    from django.http import Http404
+
+    branch = getattr(request, 'branch', None)
+    if branch is None:
+        return
+    if branch.id not in (from_branch_id, to_branch_id):
+        raise Http404
+
+
 def setup_branch_field(form, tenant, branch, field_name='branch'):
     """
     يهيئ حقل branch في فورم عميل/مورد/مندوب (أو أي نموذج مشابه له حقل branch

@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/<int:pk>/update/', views.treasury_update_api, name='update_api'),
     path('api/<int:pk>/delete/', views.treasury_delete_api, name='delete_api'),
     path('api/transfer/', views.treasury_transfer_api, name='transfer_api'),
+    path('api/transfer/<int:pk>/cancel/', views.treasury_transfer_cancel_api, name='transfer_cancel_api'),
     # Reports
     path('reports/', include('apps.treasury.reports_urls', namespace='reports')),
 ]

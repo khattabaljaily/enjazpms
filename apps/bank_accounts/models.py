@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from apps.core.models import TenantMixin
@@ -18,6 +19,10 @@ class BankAccount(TenantMixin):
     account_number = models.CharField('رقم الحساب', max_length=100, blank=True)
     iban = models.CharField('الآيبان', max_length=50, blank=True)
     is_default = models.BooleanField('افتراضي', default=False)
+    # الحساب البنكي للإدارة المركزية لنسخة المؤسسات (multi_branch) —
+    # branch=فارغ دائماً، يُنشئه مدير النشاط يدوياً (لا إنشاء تلقائي، مطابقاً
+    # لسلوك BankAccount الحالي). راجع apps/treasury/models.py::Treasury.is_head_office.
+    is_head_office = models.BooleanField('حساب الإدارة المركزية', default=False)
     is_active = models.BooleanField('نشط', default=True)
     currency = models.CharField('العملة', max_length=3, blank=True, default='')
     current_balance = models.DecimalField('الرصيد الحالي', max_digits=14, decimal_places=2, default=0)
@@ -98,6 +103,16 @@ class BankAccountTransfer(TenantMixin):
     to_movement = models.OneToOneField(
         BankAccountMovement, on_delete=models.CASCADE,
         related_name='transfer_as_dest', null=True, blank=True,
+    )
+
+    # إلغاء موثّق — نفس نمط TreasuryTransfer.is_cancelled (راجع
+    # apps/treasury/models.py). السجل الأصلي يبقى للأبد، والإلغاء حركتان
+    # عكسيتان جديدتان.
+    is_cancelled = models.BooleanField('ملغى', default=False)
+    cancelled_at = models.DateTimeField('تاريخ الإلغاء', null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+', verbose_name='أُلغي بواسطة',
     )
 
     class Meta:

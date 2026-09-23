@@ -214,7 +214,7 @@
                                     <span class="cx-field__icon"><i class="fas fa-building-columns"></i></span>
                                     <select id="transferFromBankAccount" class="form-select cx-input">
                                         {% for b in transfer_bank_accounts %}
-                                        <option value="{{ b.id }}">{{ b.name }}</option>
+                                        <option value="{{ b.id }}" data-currency="{{ b.currency }}">{% if b.is_head_office %}🏢 {% endif %}{{ b.name }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
@@ -225,7 +225,7 @@
                                     <span class="cx-field__icon"><i class="fas fa-building-columns"></i></span>
                                     <select id="transferToBankAccount" class="form-select cx-input">
                                         {% for b in transfer_bank_accounts %}
-                                        <option value="{{ b.id }}">{{ b.name }}</option>
+                                        <option value="{{ b.id }}" data-currency="{{ b.currency }}">{% if b.is_head_office %}🏢 {% endif %}{{ b.name }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
@@ -351,10 +351,11 @@
                                 <th>المرجع / الوصف</th>
                                 <th>المبلغ</th>
                                 <th>الرصيد</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody id="bankAccountLedgerBody">
-                            <tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted">لا توجد حركات</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -495,21 +496,60 @@
                     const refHtml = row.reference_type
                         ? `<span style="color:#c9840f;font-weight:600;">${row.reference_type}</span>${row.description ? ' — <span style="color:#6b7280;">' + row.description + '</span>' : ''}`
                         : (row.description ? `<span style="color:#6b7280;">${row.description}</span>` : '—');
+                    const cancelHtml = row.transfer_id
+                        ? `<button type="button" class="cx-btn-ghost js-cancel-bank-transfer" data-transfer-id="${row.transfer_id}" style="font-size:.72rem;padding:.25rem .6rem;color:#dc2626;"><i class="fas fa-rotate-left me-1"></i>إلغاء</button>`
+                        : '';
                     return `<tr style="background:${rowBg};">
                         <td style="font-size:.8rem;color:#6b7280;">${row.movement_date || '—'}</td>
                         <td><span class="badge" style="${badgeStyle}font-size:.72rem;border-radius:6px;padding:.25rem .55rem;font-weight:700;">${row.movement_type || '—'}</span></td>
                         <td style="font-size:.8rem;">${refHtml}</td>
                         <td style="font-weight:700;color:${amtColor};">${Enjaz.formatMoney(row.amount || 0)}</td>
                         <td style="font-weight:700;color:#c9840f;">${Enjaz.formatMoney(row.running_balance || 0)}</td>
+                        <td>${cancelHtml}</td>
                     </tr>`;
                 }).join('');
             })
             .catch(() => {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-warning py-4"><i class="fas fa-lock me-2"></i>ليس لديك صلاحية لعرض الحركات</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-warning py-4"><i class="fas fa-lock me-2"></i>ليس لديك صلاحية لعرض الحركات</td></tr>';
             });
     }
 
+    // إلغاء تحويل من داخل سجل الحركات (تفويض الحدث)
+    document.getElementById('bankAccountLedgerBody')?.addEventListener('click', function (e) {
+        const btn = e.target.closest('.js-cancel-bank-transfer');
+        if (!btn) return;
+        const transferId = btn.dataset.transferId;
+        if (!confirm('هل أنت متأكد من إلغاء هذا التحويل؟ سيُسجَّل كحركتين عكسيتين جديدتين.')) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        fetch(`/bank-accounts/api/transfer/${transferId}/cancel/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then(r => r.json().catch(() => ({ success: false, message: `خطأ من الخادم (${r.status})` })))
+            .then(resp => {
+                if (resp.success) {
+                    Enjaz.toast('تم إلغاء التحويل بنجاح', 'success');
+                    if (currentLedgerBankAccountId) loadBankAccountTransactions(currentLedgerBankAccountId);
+                    bankAccountTable.ajax.reload(null, false);
+                } else {
+                    Enjaz.toast(resp.message || 'تعذر إلغاء التحويل', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-rotate-left me-1"></i>إلغاء';
+                }
+            })
+            .catch(() => {
+                Enjaz.toast('تعذر الاتصال بالخادم', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-rotate-left me-1"></i>إلغاء';
+            });
+    });
+
+    let currentLedgerBankAccountId = null;
+
     function openBankAccountLedger(id) {
+        currentLedgerBankAccountId = id;
         fetch(`${BANK_ACCOUNT_DETAIL_API_BASE}${id}/detail/`)
             .then(r => r.json())
             .then(resp => {

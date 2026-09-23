@@ -44,7 +44,7 @@ BRANCH_SENSITIVE_MODELS = [
     'Expense',
 ]
 
-BRANCH_FILTER_MARKERS = ('for_branch(', 'filter_by_branch_via(', 'resolve_report_scope(', 'enforce_branch_ownership(')
+BRANCH_FILTER_MARKERS = ('for_branch(', 'filter_by_branch_via(', 'resolve_report_scope(', 'enforce_branch_ownership(', 'enforce_transfer_branch_ownership(')
 EXEMPT_DECORATOR_NAMES = ('deny_branch_scoped', 'branch_scope_exempt')
 
 # ملفات/أنماط تُستثنى من المسح كلياً (لا تتعامل مع طلبات HTTP مباشرة)

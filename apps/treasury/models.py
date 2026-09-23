@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from apps.core.models import TenantMixin
@@ -17,6 +18,10 @@ class Treasury(TenantMixin):
     is_default = models.BooleanField('افتراضية', default=False)
     is_system_default = models.BooleanField('افتراضية نظامية', default=False)
     is_hard_currency = models.BooleanField('خزينة العملة الصعبة', default=False)
+    # خزينة الإدارة المركزية لنسخة المؤسسات (multi_branch) — branch=فارغ دائماً،
+    # مملوكة لمدير النشاط وحده، منفصلة عن أي خزينة فرع. راجع
+    # apps/core/signals.py::_ensure_head_office_treasuries.
+    is_head_office = models.BooleanField('خزينة الإدارة المركزية', default=False)
     is_active = models.BooleanField('نشطة', default=True)
     currency = models.CharField('العملة', max_length=3, blank=True, default='')
     current_balance = models.DecimalField('الرصيد الحالي', max_digits=14, decimal_places=2, default=0)
@@ -98,6 +103,16 @@ class TreasuryTransfer(TenantMixin):
     to_movement = models.OneToOneField(
         TreasuryMovement, on_delete=models.CASCADE,
         related_name='transfer_as_dest', null=True, blank=True,
+    )
+
+    # إلغاء موثّق: السجل الأصلي يبقى للأبد (أرشيف/تدقيق)، والإلغاء يُسجَّل
+    # كحركتين عكسيتين جديدتين بدل حذف/تعديل الحركتين الأصليتين — نفس نمط
+    # cancel_expense/cancel_sale_invoice. راجع apps/treasury/services.py.
+    is_cancelled = models.BooleanField('ملغى', default=False)
+    cancelled_at = models.DateTimeField('تاريخ الإلغاء', null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+', verbose_name='أُلغي بواسطة',
     )
 
     class Meta:

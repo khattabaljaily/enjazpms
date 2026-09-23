@@ -44,6 +44,9 @@ REFERENCE_TYPE_AR = {
     'opening_balance':           'رصيد افتتاحي',
     'stocktake':                 'جرد مخزون',
     'stock_transfer':            'تحويل مخزون',
+    'transfer':                  'تحويل بين خزائن',
+    'transfer_cancel':           'إلغاء تحويل',
+    'treasury_bank_transfer':    'تحويل مع حساب بنكي',
 }
 
 

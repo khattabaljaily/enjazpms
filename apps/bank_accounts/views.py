@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
-from apps.accounts.decorators import require_permission, branch_scope_exempt
+from apps.accounts.decorators import require_permission, require_any_permission, branch_scope_exempt
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 from apps.treasury.models import Treasury
 
 from .forms import BankAccountForm
-from .models import BankAccount, BankAccountMovement
+from .models import BankAccount, BankAccountMovement, BankAccountTransfer
 from .reports import REFERENCE_TYPE_AR
 
 
@@ -21,34 +21,52 @@ def _ensure_tenant(request):
     return getattr(request, 'tenant', None)
 
 
-from apps.core.utils import CURRENCY_SYMBOLS as _CURRENCY_SYMBOLS, currency_symbol as _currency_symbol, enforce_branch_ownership, resolve_report_scope
+from apps.core.utils import CURRENCY_SYMBOLS as _CURRENCY_SYMBOLS, currency_symbol as _currency_symbol, enforce_branch_ownership, enforce_transfer_branch_ownership, resolve_report_scope
 
 
 def _serialize_form_errors(form):
     return {field: [str(error) for error in errors] for field, errors in form.errors.items()}
 
 
+def _visible_bank_accounts_qs(request, tenant):
+    """نفس منطق _visible_treasuries_qs (apps/treasury/views.py) لكن للحسابات البنكية."""
+    can_view_branch = request.user.has_perm_key('view_bank_accounts')
+    can_view_head_office = request.user.has_perm_key('view_head_office_bank_accounts')
+
+    qs = BankAccount.objects.for_tenant(tenant)
+    if can_view_branch:
+        qs = qs.for_branch(getattr(request, 'branch', None))
+        if not can_view_head_office:
+            qs = qs.exclude(is_head_office=True)
+        return qs
+    return qs.filter(is_head_office=True)
+
+
 @login_required
-@require_permission('view_bank_accounts')
+@require_any_permission('view_bank_accounts', 'view_head_office_bank_accounts')
 def bank_account_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = BankAccount.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
+    qs = _visible_bank_accounts_qs(request, tenant)
     total = qs.count()
     active = qs.filter(is_active=True).count()
     default = qs.filter(is_default=True).count()
 
     local_cur = tenant.currency or 'SDG'
     treasuries = Treasury.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
+    # وجهات التحويل (منفصلة عن qs الجدول الرئيسي): تشمل حساب الإدارة المركزية
+    # دائماً كوجهة، حتى لو استُبعد من جدول "حساباتي" — نفس منطق other_treasuries
+    # في apps/treasury/views.py.
+    transfer_accounts_qs = BankAccount.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
 
     context = {
         'form': BankAccountForm(),
         'today': dj_tz.localdate().isoformat(),
         'local_currency': local_cur,
         'local_currency_symbol': _currency_symbol(local_cur),
-        'transfer_bank_accounts': list(qs.filter(is_active=True).values('id', 'name', 'currency')),
+        'transfer_bank_accounts': list(transfer_accounts_qs.values('id', 'name', 'currency', 'is_head_office')),
         'transfer_treasuries': list(treasuries.values('id', 'name', 'currency')),
         'currency_symbols_json': {k: v for k, v in _CURRENCY_SYMBOLS.items()},
         'stats': {
@@ -62,7 +80,7 @@ def bank_account_list(request):
 
 
 @login_required
-@require_permission('view_bank_accounts')
+@require_any_permission('view_bank_accounts', 'view_head_office_bank_accounts')
 def bank_account_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -74,7 +92,7 @@ def bank_account_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status = request.GET.get('status', '').strip()
 
-    queryset = BankAccount.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
+    queryset = _visible_bank_accounts_qs(request, tenant)
     records_total = queryset.count()
 
     if status == 'active':
@@ -138,7 +156,7 @@ def bank_account_table_api(request):
 
 
 @login_required
-@require_permission('add_bank_accounts')
+@require_any_permission('add_bank_accounts', 'add_head_office_bank_accounts')
 @branch_scope_exempt('ينشئ حساباً بنكياً جديداً يُختم بفرع المنشئ تلقائياً — لا قراءة لبيانات فرع آخر')
 def bank_account_create_api(request):
     tenant = _ensure_tenant(request)
@@ -154,6 +172,10 @@ def bank_account_create_api(request):
         account.tenant = tenant
         branch = getattr(request, 'branch', None)
         account.branch = branch
+        # مستخدم بلا صلاحية إدارة حسابات الفروع (فقط صلاحية الحسابات
+        # المركزية — مدير النشاط) ينشئ دائماً حساب إدارة مركزية.
+        if not request.user.has_perm_key('add_bank_accounts'):
+            account.is_head_office = True
         account.created_by = request.user
         account.updated_by = request.user
 
@@ -244,8 +266,18 @@ def bank_account_transactions_api(request, pk):
         .order_by('-id')[:200]
     )
 
-    data = [
-        {
+    can_cancel = request.user.has_perm_key('transfer_bank_accounts') or request.user.has_perm_key('transfer_head_office_bank_accounts')
+
+    def _transfer_info(movement):
+        transfer = getattr(movement, 'transfer_as_source', None) or getattr(movement, 'transfer_as_dest', None)
+        if not transfer:
+            return None, False
+        return transfer.id, transfer.is_cancelled
+
+    data = []
+    for m in qs:
+        transfer_id, is_cancelled = _transfer_info(m) if m.reference_type in ('transfer', 'transfer_cancel') else (None, False)
+        data.append({
             'id': m.id,
             'movement_date': m.movement_date.isoformat(),
             'movement_type': m.get_movement_type_display(),
@@ -254,15 +286,14 @@ def bank_account_transactions_api(request, pk):
             'running_balance': str(m.running_balance),
             'reference_type': REFERENCE_TYPE_AR.get(m.reference_type, m.reference_type) if m.reference_type else '',
             'description': m.description or '',
-        }
-        for m in qs
-    ]
+            'transfer_id': transfer_id if (transfer_id and can_cancel and m.reference_type == 'transfer' and not is_cancelled) else None,
+        })
 
     return JsonResponse({'success': True, 'data': data})
 
 
 @login_required
-@require_permission('change_bank_accounts')
+@require_any_permission('change_bank_accounts', 'change_head_office_bank_accounts')
 def bank_account_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -272,6 +303,10 @@ def bank_account_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=pk)
+    if account.is_head_office and not request.user.has_perm_key('change_head_office_bank_accounts'):
+        return JsonResponse({'success': False, 'message': 'لا يمكنك تعديل حساب الإدارة المركزية.'}, status=403)
+    if not account.is_head_office and not request.user.has_perm_key('change_bank_accounts'):
+        return JsonResponse({'success': False, 'message': 'ليس لديك صلاحية تعديل حسابات الفروع.'}, status=403)
     enforce_branch_ownership(request, account)
     form = BankAccountForm(request.POST, instance=account)
 
@@ -314,7 +349,7 @@ def bank_account_update_api(request, pk):
 
 
 @login_required
-@require_permission('delete_bank_accounts')
+@require_any_permission('delete_bank_accounts', 'delete_head_office_bank_accounts')
 def bank_account_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -324,6 +359,10 @@ def bank_account_delete_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=pk)
+    if account.is_head_office and not request.user.has_perm_key('delete_head_office_bank_accounts'):
+        return JsonResponse({'success': False, 'message': 'لا يمكنك حذف حساب الإدارة المركزية.'}, status=403)
+    if not account.is_head_office and not request.user.has_perm_key('delete_bank_accounts'):
+        return JsonResponse({'success': False, 'message': 'ليس لديك صلاحية حذف حسابات الفروع.'}, status=403)
     enforce_branch_ownership(request, account)
 
     if account.is_default:
@@ -337,7 +376,7 @@ def bank_account_delete_api(request, pk):
 
 
 @login_required
-@require_permission('transfer_bank_accounts')
+@require_any_permission('transfer_bank_accounts', 'transfer_head_office_bank_accounts')
 @require_POST
 def bank_account_transfer_api(request):
     """تحويل بين حسابين بنكيين مع سعر صرف — يُنشئ خصماً وإيداعاً تلقائياً."""
@@ -372,6 +411,23 @@ def bank_account_transfer_api(request):
     to_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=to_id)
     enforce_branch_ownership(request, from_account)
 
+    if not request.user.has_perm_key('transfer_bank_accounts') and not from_account.is_head_office:
+        return JsonResponse({'success': False, 'message': 'لا يمكنك التحويل إلا من حساب الإدارة المركزية.'}, status=403)
+
+    if from_account.branch_id and to_account.branch_id and from_account.branch_id != to_account.branch_id:
+        return JsonResponse({'success': False, 'message': 'التحويل المباشر بين الفروع غير مسموح — حوّل عبر حساب الإدارة المركزية.'}, status=400)
+
+    # طرف واحد فقط للإدارة المركزية — القيد الصارم لا يطبَّق لو كان الحسابان
+    # معاً للإدارة المركزية (تحويل داخلي بين حسابين بنكيين لمدير النشاط).
+    involves_head_office = from_account.is_head_office != to_account.is_head_office
+    if involves_head_office:
+        from_currency = from_account.currency or tenant.currency
+        to_currency = to_account.currency or tenant.currency
+        if from_currency != to_currency:
+            return JsonResponse({'success': False, 'message': 'يجب أن تكون عملة الحسابين متطابقة عند التحويل مع حساب الإدارة المركزية.'}, status=400)
+        exchange_rate = Decimal('1')
+        to_amount = from_amount
+
     try:
         transfer = post_bank_account_transfer(
             tenant=tenant,
@@ -397,6 +453,35 @@ def bank_account_transfer_api(request):
         'message': f'تم التحويل بنجاح — {from_account.name} ← {to_account.name}',
         'transfer_id': transfer.id,
     })
+
+
+@login_required
+@require_any_permission('transfer_bank_accounts', 'transfer_head_office_bank_accounts')
+@require_POST
+def bank_account_transfer_cancel_api(request, pk):
+    """إلغاء موثّق لتحويل قائم بين حسابين بنكيين — يسجّل حركتين عكسيتين جديدتين."""
+    from .services import cancel_bank_account_transfer
+
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+
+    transfer = get_object_or_404(BankAccountTransfer.objects.for_tenant(tenant), pk=pk)
+    # فحص مخصَّص — راجع تعليق enforce_transfer_branch_ownership (apps/core/utils.py)
+    # لسبب عدم استخدام enforce_branch_ownership متعدد المسارات هنا.
+    enforce_transfer_branch_ownership(request, transfer.from_bank_account.branch_id, transfer.to_bank_account.branch_id)
+
+    try:
+        cancel_bank_account_transfer(transfer, user=request.user)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+
+    log_activity(
+        request, 'إلغاء تحويل بين حسابات بنكية',
+        f'من: {transfer.from_bank_account.name} ({transfer.from_amount}) → إلى: {transfer.to_bank_account.name} ({transfer.to_amount})',
+        'cancel',
+    )
+    return JsonResponse({'success': True, 'message': 'تم إلغاء التحويل بنجاح'})
 
 
 @login_required

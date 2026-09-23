@@ -9,12 +9,24 @@ from apps.core.utils import CURRENCY_NAMES_AR as _HC_CURRENCY_NAMES
 
 
 def _ensure_hc_treasury(tenant):
-    """ينشئ أو يحدّث خزينة العملة الصعبة للـ tenant."""
+    """
+    ينشئ أو يحدّث خزينة العملة الصعبة على مستوى الـ tenant نفسه (branch=None).
+
+    لا تُستخدم لنسخة المؤسسات (multi_branch): كل فرع يحصل على خزينة عملة
+    صعبة خاصة به عبر _ensure_branch_treasuries أدناه (نفس الاستثناء المطبّق
+    على المخزن/الخزينة الافتراضيين في create_tenant_defaults). بدون هذا
+    الاستثناء، lookup أدناه (tenant + is_hard_currency فقط، بلا فرع) يطابق
+    كل خزائن العملة الصعبة الخاصة بكل الفروع دفعة واحدة فيفشل get_or_create
+    بـ MultipleObjectsReturned فور وجود أكثر من فرع.
+    """
+    if tenant.is_enterprise():
+        return
     from apps.treasury.models import Treasury
     hc = (tenant.hard_currency or 'USD').upper()
     hc_name = _HC_CURRENCY_NAMES.get(hc, hc)
     treasury, created = Treasury.objects.get_or_create(
         tenant=tenant,
+        branch=None,
         is_hard_currency=True,
         defaults={
             'name': f'خزينة {hc_name}',
@@ -29,6 +41,49 @@ def _ensure_hc_treasury(tenant):
         treasury.code = f'TR-{hc}'
         treasury.currency = hc
         treasury.save(update_fields=['name', 'code', 'currency', 'updated_at'])
+
+
+def _ensure_head_office_treasuries(tenant):
+    """
+    ينشئ خزينة الإدارة المركزية لنسخة المؤسسات (multi_branch) — محلية دائماً،
+    وعملة صعبة إضافية إن كان hard_currency_mode مفعّلاً. branch=فارغ دائماً،
+    ومملوكة حصراً لمدير النشاط (is_head_office=True يميّزها عن أي خزينة
+    فرع بلا فرع محدد قد تنشأ بالخطأ — راجع الحادثة اللي بدأت منها هذه الميزة).
+
+    مقابل _ensure_branch_treasuries لكل فرع، لكن مرة واحدة فقط لكل tenant.
+    """
+    if not tenant.is_enterprise():
+        return
+    from apps.treasury.models import Treasury
+
+    Treasury.objects.get_or_create(
+        tenant=tenant,
+        is_head_office=True,
+        is_hard_currency=False,
+        defaults={
+            'name': 'خزينة الإدارة الرئيسية',
+            'code': 'TR-HQ',
+            'currency': tenant.currency or '',
+            'is_active': True,
+            'current_balance': 0,
+        },
+    )
+
+    if tenant.hard_currency_mode and tenant.hard_currency:
+        hc = (tenant.hard_currency or 'USD').upper()
+        hc_name = _HC_CURRENCY_NAMES.get(hc, hc)
+        Treasury.objects.get_or_create(
+            tenant=tenant,
+            is_head_office=True,
+            is_hard_currency=True,
+            defaults={
+                'name': f'خزينة الإدارة - {hc_name}',
+                'code': f'TR-HQ-{hc}',
+                'currency': hc,
+                'is_active': True,
+                'current_balance': 0,
+            },
+        )
 
 
 def _ensure_branch_treasuries(branch):
@@ -105,9 +160,17 @@ def _admin_notify(notification_type, title, message, link='', priority='medium',
 
 @receiver(post_save, sender=Tenant)
 def on_tenant_hc_mode_changed(sender, instance, created, **kwargs):
-    """ينشئ أو يُعطّل خزينة العملة الصعبة عند تغيير HC mode."""
+    """
+    ينشئ أو يُعطّل خزينة العملة الصعبة عند تغيير HC mode، ويضمن خزينة
+    الإدارة المركزية لأي تينانت Enterprise بصرف النظر عن HC mode تحديداً —
+    وإلا فمشترك رُقّي إلى باقة المؤسسات (subscription_plan) عبر شاشة إدارة
+    المشتركين، بدون لمس HC mode في نفس الحفظة، كان لن يحصل على خزينة إدارة
+    مركزية أبداً حتى يُشغَّل أمر backfill_head_office_treasuries يدوياً.
+    """
     if created:
         return
+    if instance.is_enterprise():
+        _ensure_head_office_treasuries(instance)
     from apps.treasury.models import Treasury
     if instance.hard_currency_mode and instance.hard_currency:
         _ensure_hc_treasury(instance)
@@ -275,6 +338,10 @@ def create_tenant_defaults(sender, instance, created, **kwargs):
             if fallback_treasury:
                 fallback_treasury.is_default = True
                 fallback_treasury.save(update_fields=['is_default', 'updated_at'])
+    else:
+        # نسخة المؤسسات: خزينة الإدارة المركزية بدل الخزينة الافتراضية العادية
+        # (محلية دائماً + عملة صعبة إن كانت مفعّلة من التسجيل).
+        _ensure_head_office_treasuries(instance)
 
     # Hard currency treasury — created only when HC mode is enabled
     if instance.hard_currency_mode and instance.hard_currency:

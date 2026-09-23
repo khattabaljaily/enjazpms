@@ -81,6 +81,13 @@
                     <i class="fas fa-exchange-alt"></i><span>تحويل {{ hc_currency_symbol }} ⇄ {{ local_currency_symbol }}</span>
                 </button>
                 {% endif %}
+                {% if current_tenant.version_type == 'multi_branch' %}
+                {% if user|has_perm_key:'transfer_treasuries' or user|has_perm_key:'transfer_head_office_treasury' %}
+                <button type="button" class="cx-btn-secondary" id="btnOpenHqTransfer" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border:none;">
+                    <i class="fas fa-building"></i><span>تحويل مع الإدارة المركزية</span>
+                </button>
+                {% endif %}
+                {% endif %}
                 <button type="button" class="cx-btn-add" id="btnOpenCreateTreasury" data-require-perm="add_treasuries">
                     <i class="fas fa-plus"></i><span>إضافة خزينة</span>
                 </button>
@@ -353,6 +360,82 @@
 </div>
 {% endif %}
 
+{% if current_tenant.version_type == 'multi_branch' %}
+<div class="modal fade" id="hqTransferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered cx-modal-dialog">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-main">
+                <div class="cx-modal-header">
+                    <div>
+                        <h5 class="cx-modal-title">
+                            <i class="fas fa-building me-2" style="color:#0284c7;"></i>
+                            تحويل مع الإدارة المركزية
+                        </h5>
+                    </div>
+                    <button type="button" class="cx-modal-close" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="cx-modal-body">
+                    <div class="alert alert-danger d-none js-hq-transfer-errors mb-3"></div>
+                    <p class="text-muted small mb-3">التحويل هنا مباشر بلا سعر صرف — يجب أن تتطابق عملة الخزينتين تماماً.</p>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="cx-label">من خزينة</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-vault"></i></span>
+                                <select id="hqFromTreasury" class="form-select cx-input">
+                                    {% for t in transfer_treasuries %}
+                                    <option value="{{ t.id }}" data-currency="{{ t.currency }}">{% if t.is_head_office %}🏢 {% endif %}{{ t.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">إلى خزينة</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-vault"></i></span>
+                                <select id="hqToTreasury" class="form-select cx-input">
+                                    {% for t in transfer_treasuries %}
+                                    <option value="{{ t.id }}" data-currency="{{ t.currency }}">{% if t.is_head_office %}🏢 {% endif %}{{ t.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">المبلغ</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-money-bill"></i></span>
+                                <input type="number" id="hqTransferAmount" class="form-control cx-input" step="0.01" min="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">تاريخ التحويل</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-calendar"></i></span>
+                                <input type="date" id="hqTransferDate" class="form-control cx-input">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="cx-label">ملاحظات (اختياري)</label>
+                            <div class="cx-field">
+                                <span class="cx-field__icon"><i class="fas fa-align-left"></i></span>
+                                <input type="text" id="hqTransferNotes" class="form-control cx-input" placeholder="مثال: تحويل إيراد اليوم للإدارة">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="cx-modal-footer">
+                    <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="cx-btn-primary" id="confirmHqTransferBtn">
+                        <i class="fas fa-exchange-alt me-1"></i> تنفيذ التحويل
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="modal fade" id="treasuryLedgerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered cx-view-dialog cx-ledger-dialog">
         <div class="modal-content cx-view-modal">
@@ -377,10 +460,11 @@
                                 <th>المرجع / الوصف</th>
                                 <th>المبلغ</th>
                                 <th>الرصيد</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody id="treasuryLedgerBody">
-                            <tr><td colspan="5" class="text-center text-muted">لا توجد حركات</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted">لا توجد حركات</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -528,13 +612,16 @@
                     const refHtml = row.reference_type
                         ? `<span style="color:#c9840f;font-weight:600;">${row.reference_type}</span>${row.description ? ' — <span style="color:#6b7280;">' + row.description + '</span>' : ''}`
                         : (row.description ? `<span style="color:#6b7280;">${row.description}</span>` : '—');
+                    const cancelHtml = row.transfer_id
+                        ? `<button type="button" class="cx-btn-ghost js-cancel-transfer" data-transfer-id="${row.transfer_id}" style="font-size:.72rem;padding:.25rem .6rem;color:#dc2626;"><i class="fas fa-rotate-left me-1"></i>إلغاء</button>`
+                        : '';
                     return `<tr style="background:${rowBg};">
                         <td style="font-size:.8rem;color:#6b7280;">${row.movement_date || '—'}</td>
                         <td><span class="badge" style="${badgeStyle}font-size:.72rem;border-radius:6px;padding:.25rem .55rem;font-weight:700;">${row.movement_type || '—'}</span></td>
                         <td style="font-size:.8rem;">${refHtml}</td>
                         <td style="font-weight:700;color:${amtColor};">${Enjaz.formatMoney(row.amount || 0)}</td>
                         <td style="font-weight:700;color:#c9840f;">${Enjaz.formatMoney(row.running_balance || 0)}</td>
-                        <td style="font-size:.8rem;color:#6b7280;display:none;">${row.description || ''}</td>
+                        <td>${cancelHtml}</td>
                     </tr>`;
                 }).join('');
             })
@@ -543,7 +630,10 @@
             });
     }
 
+    let currentLedgerTreasuryId = null;
+
     function openTreasuryLedger(id) {
+        currentLedgerTreasuryId = id;
         fetch(`${TREASURY_DETAIL_API_BASE}${id}/detail/`)
             .then(r => r.json())
             .then(resp => {
@@ -558,6 +648,38 @@
             })
             .catch(() => Enjaz.toast('تعذر تحميل البيانات', 'error'));
     }
+
+    // إلغاء تحويل من داخل سجل الحركات (تفويض الحدث — الصفوف تُبنى ديناميكياً)
+    document.getElementById('treasuryLedgerBody')?.addEventListener('click', function (e) {
+        const btn = e.target.closest('.js-cancel-transfer');
+        if (!btn) return;
+        const transferId = btn.dataset.transferId;
+        if (!confirm('هل أنت متأكد من إلغاء هذا التحويل؟ سيُسجَّل كحركتين عكسيتين جديدتين.')) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        fetch(`/treasury/api/transfer/${transferId}/cancel/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then(r => r.json().catch(() => ({ success: false, message: `خطأ من الخادم (${r.status})` })))
+            .then(resp => {
+                if (resp.success) {
+                    Enjaz.toast('تم إلغاء التحويل بنجاح', 'success');
+                    if (currentLedgerTreasuryId) loadTreasuryTransactions(currentLedgerTreasuryId);
+                    treasuryTable.ajax.reload(null, false);
+                } else {
+                    Enjaz.toast(resp.message || 'تعذر إلغاء التحويل', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-rotate-left me-1"></i>إلغاء';
+                }
+            })
+            .catch(() => {
+                Enjaz.toast('تعذر الاتصال بالخادم', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-rotate-left me-1"></i>إلغاء';
+            });
+    });
 
     /* ── Mobile card renderer ───────────────────────────────── */
     function renderMobileTreasuryCards(rows) {
@@ -944,6 +1066,84 @@
             btn.innerHTML = '<i class="fas fa-exchange-alt me-1"></i> تنفيذ التحويل';
             showErr('تعذر الاتصال بالخادم — تحقق من الاتصال وأعد المحاولة');
             console.error('Transfer error:', err);
+        });
+    });
+    {% endif %}
+
+    {% if current_tenant.version_type == 'multi_branch' %}
+    /* ── Head Office Transfer Modal ─────────────────────────────── */
+    const HQ_TRANSFER_API = "{% url 'treasury:transfer_api' %}";
+    const hqTransferModalEl = document.getElementById('hqTransferModal');
+    const hqTransferModal = hqTransferModalEl ? new bootstrap.Modal(hqTransferModalEl) : null;
+
+    function openHqTransferModal() {
+        const dateEl = document.getElementById('hqTransferDate');
+        if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+        document.getElementById('hqTransferAmount').value = '';
+        document.getElementById('hqTransferNotes').value = '';
+        document.querySelector('.js-hq-transfer-errors')?.classList.add('d-none');
+        hqTransferModal?.show();
+    }
+    document.getElementById('btnOpenHqTransfer')?.addEventListener('click', openHqTransferModal);
+
+    document.getElementById('confirmHqTransferBtn')?.addEventListener('click', function () {
+        const fromSel = document.getElementById('hqFromTreasury');
+        const toSel = document.getElementById('hqToTreasury');
+        const fromId = fromSel.value;
+        const toId = toSel.value;
+        const amount = parseFloat(document.getElementById('hqTransferAmount').value) || 0;
+        const transferDate = document.getElementById('hqTransferDate').value;
+        const notes = document.getElementById('hqTransferNotes').value.trim();
+        const errEl = document.querySelector('.js-hq-transfer-errors');
+
+        function showErr(msg) { if (errEl) { errEl.textContent = msg; errEl.classList.remove('d-none'); } }
+        if (!fromId || !toId) { showErr('يرجى اختيار الخزينتين'); return; }
+        if (fromId === toId) { showErr('لا يمكن التحويل من الخزينة إلى نفسها'); return; }
+        if (!amount) { showErr('يرجى إدخال المبلغ'); return; }
+        if (!transferDate) { showErr('يرجى تحديد تاريخ التحويل'); return; }
+
+        const fromCur = fromSel.selectedOptions[0]?.dataset.currency || '';
+        const toCur = toSel.selectedOptions[0]?.dataset.currency || '';
+        if (fromCur && toCur && fromCur !== toCur) {
+            showErr('يجب أن تكون عملة الخزينتين متطابقة');
+            return;
+        }
+        errEl?.classList.add('d-none');
+
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري التحويل...';
+
+        fetch(HQ_TRANSFER_API, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+                from_treasury: fromId, to_treasury: toId,
+                from_amount: amount, to_amount: amount,
+                exchange_rate: 1, transfer_date: transferDate, notes: notes,
+            }),
+        })
+        .then(r => r.json().catch(() => ({ success: false, message: `خطأ من الخادم (${r.status})` })))
+        .then(resp => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-exchange-alt me-1"></i> تنفيذ التحويل';
+            if (resp.success) {
+                hqTransferModal?.hide();
+                Enjaz.toast('تم التحويل بنجاح', 'success');
+                treasuryTable.ajax.reload(null, false);
+            } else {
+                showErr(resp.message || 'تعذر التحويل');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-exchange-alt me-1"></i> تنفيذ التحويل';
+            showErr('تعذر الاتصال بالخادم — تحقق من الاتصال وأعد المحاولة');
+            console.error('HQ transfer error:', err);
         });
     });
     {% endif %}

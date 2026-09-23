@@ -224,3 +224,39 @@ def post_treasury_transfer(
         updated_by=user,
     )
     return transfer
+
+
+@transaction.atomic
+def cancel_treasury_transfer(transfer, user=None):
+    """
+    إلغاء موثّق لتحويل قائم — نفس نمط cancel_expense/cancel_sale_invoice:
+    لا حذف ولا تعديل للحركتين الأصليتين (تبقيان للأرشيف/التدقيق)، بدلاً من
+    ذلك تُسجَّل حركتان عكسيتان جديدتان بمرجع مميّز 'transfer_cancel'.
+    الإيداع العكسي في from_treasury لا سقف له، لكن الصرف العكسي من
+    to_treasury يمر عبر post_treasury_movement فيرث حمايتها من السحب على
+    المكشوف تلقائياً — لو صُرف المبلغ فعلاً في مكان آخر، الإلغاء يُرفض
+    بنفس رسالة الخطأ الحالية بدل عطل غير متوقع.
+    """
+    if transfer.is_cancelled:
+        raise ValueError('هذا التحويل ملغى بالفعل.')
+
+    today = dj_tz.localdate()
+    post_treasury_movement(
+        tenant=transfer.tenant, movement_type='receipt', amount=transfer.from_amount,
+        date=today, reference_type='transfer_cancel', reference_id=transfer.id,
+        description=f'إلغاء تحويل رقم {transfer.id} — إلى {transfer.from_treasury.name}',
+        user=user, treasury=transfer.from_treasury,
+    )
+    post_treasury_movement(
+        tenant=transfer.tenant, movement_type='disbursement', amount=transfer.to_amount,
+        date=today, reference_type='transfer_cancel', reference_id=transfer.id,
+        description=f'إلغاء تحويل رقم {transfer.id} — من {transfer.to_treasury.name}',
+        user=user, treasury=transfer.to_treasury,
+    )
+
+    transfer.is_cancelled = True
+    transfer.cancelled_at = dj_tz.now()
+    transfer.cancelled_by = user
+    transfer.updated_by = user
+    transfer.save(update_fields=['is_cancelled', 'cancelled_at', 'cancelled_by', 'updated_by', 'updated_at'])
+    return transfer

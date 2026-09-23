@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils import timezone as dj_tz
 
 from .models import BankAccount, BankAccountMovement
 
@@ -197,6 +198,34 @@ def post_bank_account_transfer(
         created_by=user,
         updated_by=user,
     )
+    return transfer
+
+
+@transaction.atomic
+def cancel_bank_account_transfer(transfer, user=None):
+    """إلغاء موثّق — نفس نمط cancel_treasury_transfer (راجع apps/treasury/services.py)."""
+    if transfer.is_cancelled:
+        raise ValueError('هذا التحويل ملغى بالفعل.')
+
+    today = dj_tz.localdate()
+    post_bank_account_movement(
+        tenant=transfer.tenant, movement_type='receipt', amount=transfer.from_amount,
+        date=today, reference_type='transfer_cancel', reference_id=transfer.id,
+        description=f'إلغاء تحويل رقم {transfer.id} — إلى {transfer.from_bank_account.name}',
+        user=user, bank_account=transfer.from_bank_account,
+    )
+    post_bank_account_movement(
+        tenant=transfer.tenant, movement_type='disbursement', amount=transfer.to_amount,
+        date=today, reference_type='transfer_cancel', reference_id=transfer.id,
+        description=f'إلغاء تحويل رقم {transfer.id} — من {transfer.to_bank_account.name}',
+        user=user, bank_account=transfer.to_bank_account,
+    )
+
+    transfer.is_cancelled = True
+    transfer.cancelled_at = dj_tz.now()
+    transfer.cancelled_by = user
+    transfer.updated_by = user
+    transfer.save(update_fields=['is_cancelled', 'cancelled_at', 'cancelled_by', 'updated_by', 'updated_at'])
     return transfer
 
 

@@ -212,6 +212,19 @@ class UserManagementForm(forms.ModelForm):
 
         is_branch_supervisor = cleaned_data.get('is_branch_supervisor')
         branch = cleaned_data.get('branch')
+
+        # هذا الفورم لا يُستخدم أبداً لتعديل مدير النشاط نفسه (is_tenant_admin
+        # غير مدرج فيه أصلاً — راجع تعليق Meta.fields أعلاه)، فأي مستخدم يُنشأ/
+        # يُعدَّل هنا في نسخة المؤسسات هو بالضرورة موظف فرع، ويجب أن يتبع فرعاً
+        # محدداً — وإلا ورث request.branch = None فتصبح كل سجلاته (مصروفات،
+        # فواتير...) يتيمة بلا فرع، ظاهرة خطأً لكل الفروع (نفس فئة الخلل التي
+        # سبّبت خزينة عملة صعبة يتيمة — راجع apps/core/signals.py).
+        if (
+            self.tenant and self.tenant.is_enterprise() and not branch
+            and not getattr(self.instance, 'is_tenant_admin', False)
+        ):
+            raise ValidationError('يجب اختيار الفرع لهذا المستخدم — كل مستخدم في نسخة المؤسسات يجب أن يتبع فرعاً محدداً.')
+
         if is_branch_supervisor:
             if not branch:
                 raise ValidationError('يجب اختيار الفرع أولاً لتعيين المستخدم كمشرف عليه')
