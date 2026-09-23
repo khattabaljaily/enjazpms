@@ -260,11 +260,11 @@ class Step2BusinessForm(forms.Form):
     )
 
     business_name = forms.CharField(
-        label='اسم الصيدلية',
+        label='اسم النشاط التجاري',
         max_length=200,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'مثال: صيدلية النور'
+            'placeholder': 'مثال: صيدلية النور أو شركة الأمل للتوزيع'
         })
     )
 
@@ -457,11 +457,11 @@ class RegistrationRequestForm(forms.Form):
     )
 
     business_name = forms.CharField(
-        label='اسم الصيدلية',
+        label='اسم النشاط التجاري',
         max_length=200,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'مثال: صيدلية النور'
+            'placeholder': 'مثال: صيدلية النور أو شركة الأمل للتوزيع'
         })
     )
 
