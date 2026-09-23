@@ -241,7 +241,7 @@ def treasury_create_api(request):
 
 
 @login_required
-@require_permission('view_treasuries')
+@require_any_permission('view_treasuries', 'view_head_office_treasury')
 def treasury_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -272,7 +272,7 @@ def treasury_detail_api(request, pk):
 
 
 @login_required
-@require_permission('view_treasury_transactions')
+@require_any_permission('view_treasury_transactions', 'view_head_office_treasury')
 def treasury_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:

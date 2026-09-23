@@ -220,7 +220,7 @@ def bank_account_create_api(request):
 
 
 @login_required
-@require_permission('view_bank_accounts')
+@require_any_permission('view_bank_accounts', 'view_head_office_bank_accounts')
 def bank_account_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -252,7 +252,7 @@ def bank_account_detail_api(request, pk):
 
 
 @login_required
-@require_permission('view_bank_account_transactions')
+@require_any_permission('view_bank_account_transactions', 'view_head_office_bank_accounts')
 def bank_account_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:

@@ -219,7 +219,7 @@ def order_edit(request, pk):
         return redirect('core:no_tenant')
 
     invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     if invoice.status not in ('draft', 'confirmed'):
         return redirect('purchases:order_detail', pk=pk)
 
@@ -430,7 +430,7 @@ def order_detail(request, pk):
         pk=pk,
         tenant=tenant,
     )
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     lines = list(invoice.lines.select_related('item').prefetch_related('item__item_units').all())
     for ln in lines:
         iu_list = list(ln.item.item_units.order_by('factor'))
@@ -470,8 +470,8 @@ def order_print(request, pk):
     if not tenant:
         return redirect('core:no_tenant')
 
-    invoice = get_object_or_404(PurchaseInvoice.objects.only('id', 'tenant_id', 'branch_id'), pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    invoice = get_object_or_404(PurchaseInvoice.objects.select_related('stock').only('id', 'tenant_id', 'branch_id', 'stock_id', 'stock__branch_id'), pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     return redirect(f"{reverse('purchases:order_detail', kwargs={'pk': pk})}?print=1")
 
 
@@ -484,7 +484,7 @@ def order_confirm_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     try:
         confirm_purchase_invoice(invoice, request.user)
         log_activity(request, 'تأكيد أمر شراء', f'{invoice.invoice_number} — {invoice.supplier.name}', 'create')
@@ -502,7 +502,7 @@ def order_cancel_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     try:
         body = json.loads(request.body or '{}')
     except json.JSONDecodeError:
@@ -630,7 +630,7 @@ def return_create(request, invoice_pk):
         PurchaseInvoice, pk=invoice_pk, tenant=tenant,
         status__in=['confirmed', 'partially_returned']
     )
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     lines = invoice.lines.select_related('item').all()
     returnable_lines = [l for l in lines if l.returnable_quantity > 0]
 

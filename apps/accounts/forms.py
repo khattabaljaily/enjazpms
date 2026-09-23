@@ -193,7 +193,11 @@ class UserManagementForm(forms.ModelForm):
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
+        if not email:
+            return email
         qs = User.objects.filter(email=email)
+        if self.tenant is not None:
+            qs = qs.filter(tenant=self.tenant)
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():

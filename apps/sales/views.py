@@ -373,7 +373,7 @@ def invoice_edit(request, pk):
         return redirect('core:no_tenant')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
 
     if invoice.status not in ('draft', 'confirmed'):
         return redirect('sales:invoice_detail', pk=pk)
@@ -681,7 +681,7 @@ def invoice_detail(request, pk):
         SaleInvoice.objects.select_related('customer', 'stock', 'agent', 'confirmed_by', 'cancelled_by', 'bank_account'),
         pk=pk, tenant=tenant,
     )
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     lines = list(invoice.lines.select_related('item').prefetch_related('item__item_units').all())
     for ln in lines:
         iu_list = list(ln.item.item_units.order_by('factor'))
@@ -733,7 +733,7 @@ def invoice_delete_draft_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
 
     if invoice.status != 'draft':
         return _json_error('يمكن حذف الفاتورة إذا كانت مسودة فقط')
@@ -761,7 +761,7 @@ def invoice_confirm_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     try:
         confirm_sale_invoice(invoice, request.user)
         cust = invoice.customer.name if invoice.customer else 'زبون عابر'
@@ -782,7 +782,7 @@ def invoice_cancel_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     try:
         body = json.loads(request.body or '{}')
     except json.JSONDecodeError:
@@ -806,7 +806,7 @@ def invoice_deliver_ajax(request, pk):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     try:
         deliver_sale_invoice(invoice, request.user)
         cust = invoice.customer.name if invoice.customer else 'زبون عابر'
@@ -825,7 +825,7 @@ def record_payment_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     try:
         body = json.loads(request.body)
         amount = Decimal(str(body['amount']))
@@ -987,7 +987,7 @@ def return_create(request, invoice_pk):
         SaleInvoice, pk=invoice_pk, tenant=tenant,
         status__in=['confirmed', 'partially_returned']
     )
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
     lines = invoice.lines.select_related('item').all()
     returnable_lines = [l for l in lines if l.returnable_quantity > 0]
 
@@ -2851,7 +2851,7 @@ def invoice_send_email_ajax(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
-    enforce_branch_ownership(request, invoice)
+    enforce_branch_ownership(request, invoice, field='stock__branch')
 
     if invoice.status not in ('confirmed', 'partially_returned', 'returned'):
         return _json_error('يمكن إرسال الفاتورة المؤكدة فقط')
