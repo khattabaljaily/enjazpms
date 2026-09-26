@@ -1,5 +1,5 @@
 /* ENJAZ Service Worker — app-shell only, no data caching */
-const CACHE = 'enjazpms-shell-v4';
+const CACHE = 'enjazpms-shell-v5';
 const SHELL = [
   '/static/css/main.css',
   '/static/css/layout.css',
@@ -50,8 +50,8 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  /* HTML pages — network first, fall back to cache */
-  e.respondWith(
-    fetch(request).catch(() => caches.match(request))
-  );
+  /* Everything else (pages, APIs, downloads) is left to the browser.
+     Pages are never cached, so intercepting them only turned any brief
+     network drop into ERR_FAILED instead of the browser's own retry/offline
+     handling. */
 });
