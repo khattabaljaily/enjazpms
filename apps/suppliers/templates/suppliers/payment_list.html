@@ -7,6 +7,9 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/expenses.css' %}?v=1.0">
+<style>
+#paymentSupplierDrop > div:hover { background: var(--surface-alt, #f3f4f6); }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -104,7 +107,7 @@
                                             <div style="position:relative;">
                                                 <input type="text" id="paymentSupplierSearch" class="cx-input" placeholder="— ابحث عن مورد —" autocomplete="off" spellcheck="false">
                                                 <input type="hidden" id="paymentModalSupplier" value="">
-                                                <div id="paymentSupplierDrop" style="display:none;position:absolute;top:100%;right:0;left:0;z-index:1060;background:#fff;border:1px solid #dee2e6;border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+                                                <div id="paymentSupplierDrop" style="display:none;position:absolute;top:100%;right:0;left:0;z-index:1060;background:var(--surface,#fff);color:var(--text-primary,#111827);border:1px solid var(--border-light,#dee2e6);border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
