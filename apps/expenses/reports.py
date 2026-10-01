@@ -138,6 +138,7 @@ class ExpensesReportGenerator:
                 'label': b['label'],
                 'expense_count': format_number(b['count'], 0),
                 'total_amount': format_number(float(b['total']), 2),
+                'total_amount_raw': float(b['total']),
             })
 
         return {

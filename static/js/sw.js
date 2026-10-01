@@ -1,12 +1,11 @@
 /* ENJAZ Service Worker — app-shell only, no data caching */
-const CACHE = 'enjazpms-shell-v5';
+const CACHE = 'enjazpms-shell-v6';
 const SHELL = [
   '/static/css/main.css',
   '/static/css/layout.css',
   '/static/css/components.css',
   '/static/css/auth.css',
   '/static/js/main.js',
-  '/static/img/icons/icon-192x192.png',
   '/static/fonts/cairo/Cairo-Regular.ttf',
   '/static/fonts/cairo/Cairo-Bold.ttf',
 ];

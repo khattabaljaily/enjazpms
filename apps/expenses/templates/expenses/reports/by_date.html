@@ -106,7 +106,7 @@
 <script>
 (function() {
     const labels = [{% for row in report.data %}"{{ row.label }}",{% endfor %}];
-    const values = [{% for row in report.data %}{{ row.total_amount|default:"0" }},{% endfor %}];
+    const values = [{% for row in report.data %}{{ row.total_amount_raw|default:"0"|stringformat:".2f" }},{% endfor %}];
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     const textColor = isDark ? '#94a3b8' : '#6b7280';
