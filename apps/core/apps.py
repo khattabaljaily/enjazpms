@@ -18,4 +18,6 @@ class CoreConfig(AppConfig):
                 return
             sync_business_types(verbose=False)
 
-        post_migrate.connect(seed_business_types, dispatch_uid='apps.core.seed_business_types')
+        # weak=False: الدالة معرّفة داخل ready()، فبالمرجع الضعيف الافتراضي قد
+        # يجمعها garbage collector قبل تشغيل migrate فلا تُنشأ أنواع النشاط أبداً.
+        post_migrate.connect(seed_business_types, dispatch_uid='apps.core.seed_business_types', weak=False)
