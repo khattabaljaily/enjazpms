@@ -604,7 +604,7 @@ function submitOrder(action) {
 {% if hc_mode and hc_rate %}
 <script>
 (function () {
-    var HC_RATE_V = {{ hc_rate }};
+    var HC_RATE_V = {{ hc_rate|stringformat:"s" }};
     var HC_CUR_MAP = {};
     {% for s in suppliers %}{% if s.currency %}HC_CUR_MAP['{{ s.id }}'] = '{{ s.currency|escapejs }}';{% endif %}{% endfor %}
     var TENANT_CUR = '{{ tenant_currency|escapejs }}';
