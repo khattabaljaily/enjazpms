@@ -153,21 +153,22 @@ def approve_order(order: OnlineOrder) -> 'SaleInvoice':
 
     tenant = order.tenant
 
-    # ── Customer ─────────────────────────────────────────────
-    customer, _ = Customer.objects.get_or_create(
-        tenant=tenant,
-        phone=order.customer_phone,
-        defaults={'name': order.customer_name},
-    )
-    if customer.name != order.customer_name and not customer.name:
-        customer.name = order.customer_name
-        customer.save(update_fields=['name'])
-
     # ── Default stock ─────────────────────────────────────────
     stock = (
         Stock.objects.filter(tenant=tenant, is_default=True, is_active=True).first()
         or Stock.objects.filter(tenant=tenant, is_active=True).first()
     )
+
+    # ── Customer ─────────────────────────────────────────────
+    # في نسخة المؤسسات يتبع زبون المتجر فرعَ المخزن الذي يخدم الطلب.
+    customer, _ = Customer.objects.get_or_create(
+        tenant=tenant,
+        phone=order.customer_phone,
+        defaults={'name': order.customer_name, 'branch_id': stock.branch_id if stock else None},
+    )
+    if customer.name != order.customer_name and not customer.name:
+        customer.name = order.customer_name
+        customer.save(update_fields=['name'])
 
     # ── Invoice ───────────────────────────────────────────────
     invoice = SaleInvoice.objects.create(

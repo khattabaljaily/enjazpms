@@ -234,6 +234,9 @@ class SaleInvoice(TenantMixin):
         return f"{self.invoice_number} — {self.customer or 'زبون عابر'}"
 
     def save(self, *args, **kwargs):
+        # الفرع يُشتق من المخزن (نسخة المؤسسات) حتى لا تبقى فواتير بلا فرع
+        if self.branch_id is None and self.stock_id:
+            self.branch_id = type(self).stock.field.related_model.objects.filter(pk=self.stock_id).values_list('branch_id', flat=True).first()
         if not self.invoice_number:
             self.invoice_number = self._generate_number()
         super().save(*args, **kwargs)
@@ -520,6 +523,9 @@ class SaleReturn(TenantMixin):
         return f"{self.return_number} ← {self.original_invoice.invoice_number}"
 
     def save(self, *args, **kwargs):
+        # الفرع يُشتق من الفاتورة الأصلية (نسخة المؤسسات)
+        if self.branch_id is None and self.original_invoice_id:
+            self.branch_id = type(self).original_invoice.field.related_model.objects.filter(pk=self.original_invoice_id).values_list('branch_id', flat=True).first()
         if not self.return_number:
             self.return_number = self._generate_number()
         super().save(*args, **kwargs)

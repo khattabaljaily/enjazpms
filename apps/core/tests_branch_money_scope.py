@@ -17,7 +17,7 @@ from apps.treasury.models import Treasury
 from apps.treasury.services import get_or_create_default_treasury, post_treasury_receipt
 
 
-class BranchMoneyScopeTests(TestCase):
+class _EnterpriseSetup:
     def setUp(self):
         bt = BusinessType.objects.create(name='bt-money', name_ar='نوع', slug='bt-money')
         terms = dict(terms_version=settings.TERMS_VERSION, terms_accepted_at=timezone.now())
@@ -35,6 +35,8 @@ class BranchMoneyScopeTests(TestCase):
         Branch.assign_manager(self.branch_a, self.mgr_a)
         self.mgr_a.refresh_from_db()
 
+
+class BranchMoneyScopeTests(_EnterpriseSetup, TestCase):
     def test_default_treasury_for_branch_user_is_branch_treasury(self):
         self.assertEqual(get_or_create_default_treasury(self.tenant, user=self.mgr_a), self.ta)
 
@@ -70,3 +72,20 @@ class BranchMoneyScopeTests(TestCase):
         self.client.force_login(self.mgr_a)
         resp = self.client.get('/customers/payments/')
         self.assertEqual(list(resp.context['treasuries']), [self.ta])
+
+
+class InvoiceBranchDerivationTests(_EnterpriseSetup, TestCase):
+    """فواتير البيع والشراء تأخذ فرعها من المخزن تلقائياً (لا سجلات بلا فرع)."""
+
+    def test_invoices_inherit_branch_from_stock(self):
+        from apps.purchases.models import PurchaseInvoice
+        from apps.sales.models import SaleInvoice
+        from apps.stocks.models import Stock
+        from apps.suppliers.models import Supplier
+        stock = Stock.objects.create(tenant=self.tenant, name='مخزن أ', branch=self.branch_a)
+        sale = SaleInvoice.objects.create(tenant=self.tenant, stock=stock, invoice_date=timezone.localdate())
+        self.assertEqual(sale.branch_id, self.branch_a.id)
+        supplier = Supplier.objects.create(tenant=self.tenant, name='مورد', branch=self.branch_a)
+        purchase = PurchaseInvoice.objects.create(tenant=self.tenant, stock=stock, supplier=supplier,
+                                                  invoice_date=timezone.localdate())
+        self.assertEqual(purchase.branch_id, self.branch_a.id)
