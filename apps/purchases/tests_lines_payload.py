@@ -44,3 +44,23 @@ class PurchaseLinePayloadTests(TenantTestCase):
         self.assertEqual(batch.batch_number, 'B-2026-07')
         self.assertEqual(batch.expiry_date, datetime.date(2028, 3, 31))
         self.assertEqual(batch.quantity_remaining, Decimal('40'))
+
+    def test_line_unit_matches_selected_item_unit(self):
+        from apps.items.models import ItemUnit, Unit
+        Unit.objects.create(tenant=self.tenant, name='علبة')  # وحدة أخرى قد يطابق معرّفها معرّف وحدة المنتج
+        carton = Unit.objects.create(tenant=self.tenant, name='كرتونة')
+        item = make_item(self.tenant, name='شاحن اختبار', cost_price='100', selling_price='150')
+        iu = ItemUnit.objects.create(tenant=self.tenant, item=item, name='كرتونة', factor=Decimal('20'))
+        supplier = make_supplier(self.tenant)
+        payload = {
+            'action': 'confirm',
+            'header': {'supplier_id': supplier.id, 'stock_id': self.default_stock.id, 'payment_method': 'credit',
+                       'invoice_date': '2026-10-01'},
+            'lines': [{'item_id': item.id, 'quantity': '1', 'unit_cost': '2000', 'tax_rate': '0',
+                       'unit_id': iu.id, 'unit_factor': '20'}],
+        }
+        resp = self.client.post('/purchases/create/', data=json.dumps(payload),
+                                content_type='application/json', HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertTrue(resp.json().get('success'), resp.json())
+        line = PurchaseInvoice.objects.get(tenant=self.tenant).lines.get()
+        self.assertEqual(line.unit, carton)

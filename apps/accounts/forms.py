@@ -319,10 +319,11 @@ class Step2BusinessForm(forms.Form):
         })
     )
 
+    # لا دولة مختارة مسبقاً — يختار المشترك دولته بنفسه.
     country = forms.ChoiceField(
         label='البلد',
-        choices=COUNTRY_CHOICES,
-        initial=DEFAULT_COUNTRY,
+        choices=[('', 'اختر الدولة')] + sorted(COUNTRY_CHOICES, key=lambda c: c[1]),
+        initial='',
         widget=forms.Select(attrs={
             'class': 'form-select'
         })

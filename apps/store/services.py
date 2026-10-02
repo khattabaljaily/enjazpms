@@ -161,11 +161,15 @@ def approve_order(order: OnlineOrder) -> 'SaleInvoice':
 
     # ── Customer ─────────────────────────────────────────────
     # في نسخة المؤسسات يتبع زبون المتجر فرعَ المخزن الذي يخدم الطلب.
-    customer, _ = Customer.objects.get_or_create(
-        tenant=tenant,
-        phone=order.customer_phone,
-        defaults={'name': order.customer_name, 'branch_id': stock.branch_id if stock else None},
-    )
+    # البحث داخل فرع المخزن فقط (لا نربط الطلب بعميل فرع آخر)، والهاتف ليس
+    # فريداً، فنأخذ أقدم تطابق بدل get_or_create الذي يفشل عند التكرار.
+    branch_id = stock.branch_id if stock else None
+    customer = (Customer.objects.filter(tenant=tenant, phone=order.customer_phone, branch_id=branch_id)
+                .order_by('id').first())
+    if customer is None:
+        customer = Customer.objects.create(
+            tenant=tenant, phone=order.customer_phone, name=order.customer_name, branch_id=branch_id,
+        )
     if customer.name != order.customer_name and not customer.name:
         customer.name = order.customer_name
         customer.save(update_fields=['name'])

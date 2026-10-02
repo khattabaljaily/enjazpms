@@ -451,3 +451,18 @@ class ItemUnit(TenantMixin):
 
     def __str__(self):
         return self.name
+
+
+def unit_for_item_unit(tenant, item_unit_id):
+    """
+    بنود الفواتير ترتبط بجدول الوحدات العام (Unit)، بينما الواجهة ترسل معرّف
+    وحدة المنتج (ItemUnit). المعرّفان من جدولين مختلفين، فالبحث بالمعرّف مباشرة
+    كان يربط البند بوحدة أخرى لا علاقة لها. نطابق بالاسم، وإلا نترك الوحدة فارغة
+    (المعامل unit_factor هو ما يحدد الكمية فعلياً).
+    """
+    if not item_unit_id:
+        return None
+    name = ItemUnit.objects.filter(pk=item_unit_id, tenant=tenant).values_list('name', flat=True).first()
+    if not name:
+        return None
+    return Unit.objects.filter(tenant=tenant, name=name).first()

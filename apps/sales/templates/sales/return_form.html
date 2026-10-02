@@ -44,10 +44,11 @@
                 <div class="col-md-4">
                     <label class="cx-label">طريقة الاسترداد</label>
                     <select id="refundMethod" class="cx-input" onchange="toggleRefundBankHint()">
+                        {# الافتراضي يتبع طريقة دفع الفاتورة: الآجلة تُخصم من مديونية العميل #}
                         <option value="cash">نقداً</option>
-                        <option value="bank">تحويل بنكي</option>
+                        <option value="bank"{% if invoice.payment_method == 'bank' %} selected{% endif %}>تحويل بنكي</option>
                         {% if invoice.customer %}
-                        <option value="balance">مديونية العميل</option>
+                        <option value="balance"{% if invoice.payment_method == 'credit' %} selected{% endif %}>مديونية العميل</option>
                         {% endif %}
                     </select>
                     <small class="text-muted d-block mt-1 sales-field-hidden" id="refundBankHint">
@@ -152,6 +153,7 @@ function toggleRefundBankHint() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    toggleRefundBankHint();
     document.querySelectorAll('.ret-sold-qty, .ret-returned-qty, .ret-returnable-qty').forEach(el => {
         const raw = el.dataset.value ?? el.textContent;
         el.textContent = Enjaz.formatQuantity(raw);

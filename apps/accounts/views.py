@@ -185,6 +185,11 @@ def user_table_api(request):
     }, json_dumps_params={'ensure_ascii': False})
 
 
+def _active_users_count(tenant):
+    """عدد المستخدمين المحسوبين ضمن حد الباقة: النشطون فقط."""
+    return User.objects.filter(tenant=tenant, is_active=True).count()
+
+
 @login_required
 @require_permission('add_users')
 def user_create_api(request):
@@ -194,8 +199,10 @@ def user_create_api(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405, json_dumps_params={'ensure_ascii': False})
     
-    current_count = User.objects.filter(tenant=tenant).count()
-    if current_count >= tenant.max_users:
+    # المستخدمون المعطَّلون لا يُحسبون ضمن حد الباقة، فيمكن إنشاء حساب معطَّل
+    # حتى عند بلوغ الحد، ويُفحص الحد عند التفعيل.
+    wants_active = request.POST.get('is_active') == 'on'
+    if wants_active and _active_users_count(tenant) >= tenant.max_users:
         return JsonResponse(
             {
                 'success': False,
@@ -260,7 +267,13 @@ def user_update_api(request, pk):
         return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405, json_dumps_params={'ensure_ascii': False})
 
     user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
-    
+
+    if (not user.is_active and request.POST.get('is_active') == 'on'
+            and _active_users_count(tenant) >= tenant.max_users):
+        return _json_error(
+            f'لا يمكن تفعيل المستخدم: وصلت للحد الأقصى من المستخدمين النشطين ({tenant.max_users}). '
+            'عطّل مستخدماً آخر أو رقِّ الباقة.', status=403)
+
     form = UserManagementForm(request.POST, instance=user, tenant=tenant)
     if not form.is_valid():
         return JsonResponse({
@@ -667,7 +680,7 @@ def register_step2(request):
     
     country_timezone_map_json = json.dumps(COUNTRY_TIMEZONE_MAP, ensure_ascii=False)
     country_currency_map_json = json.dumps(COUNTRY_CURRENCY_MAP, ensure_ascii=False)
-    timezone_preview = get_timezone_for_country(DEFAULT_COUNTRY)
+    timezone_preview = '—'
 
     if request.method == 'POST':
         form = Step2BusinessForm(request.POST)
@@ -700,7 +713,8 @@ def register_step2(request):
                 'message': _first_error_message(errors),
                 'errors': errors,
             }, status=400, json_dumps_params={'ensure_ascii': False})
-        timezone_preview = get_timezone_for_country(request.POST.get('country', DEFAULT_COUNTRY))
+        country_posted = request.POST.get('country', '')
+        timezone_preview = get_timezone_for_country(country_posted) if country_posted else '—'
     else:
         initial = dict(request.session.get('reg_step2', {}))
         # المفتاح المحفوظ في الجلسة هو business_type_id (يُستخدم لاحقاً في
@@ -711,7 +725,7 @@ def register_step2(request):
         if 'business_type_id' in initial:
             initial['business_type'] = initial.pop('business_type_id')
         form = Step2BusinessForm(initial=initial)
-        timezone_preview = get_timezone_for_country(initial.get('country', DEFAULT_COUNTRY))
+        timezone_preview = get_timezone_for_country(initial['country']) if initial.get('country') else '—'
 
     return render(request, 'accounts/register_step2.html', {
         'form': form,

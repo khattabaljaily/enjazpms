@@ -47,6 +47,9 @@ def import_simple_entities(tenant, uploaded_file, user, model, schema, entity_la
                     continue
 
                 kwargs = {'tenant': tenant, 'created_by': user, 'updated_by': user, 'is_active': True}
+                # مستخدم الفرع يستورد إلى فرعه (وإلا ظهرت السجلات لكل الفروع بلا فرع)
+                if getattr(user, 'branch_id', None) and any(f.name == 'branch' for f in model._meta.fields):
+                    kwargs['branch_id'] = user.branch_id
                 for spec in schema:
                     field = spec['field']
                     if field == name_field:

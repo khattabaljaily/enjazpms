@@ -884,8 +884,8 @@ def edit_confirmed_invoice(invoice: SaleInvoice, header_data: dict,
         from apps.items.models import Item
         item = Item.objects.get(id=ld['item_id'], tenant=tenant)
 
-        from apps.items.models import Unit as ItemUnit
-        unit_obj = ItemUnit.objects.filter(pk=ld['unit_id'], tenant=tenant).first() if ld.get('unit_id') else None
+        from apps.items.models import unit_for_item_unit
+        unit_obj = unit_for_item_unit(tenant, ld['unit_id']) if ld.get('unit_id') else None
 
         line = SaleInvoiceLine(
             tenant=tenant,
@@ -1673,8 +1673,8 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
     for ld in lines_data:
         item = Item.objects.get(id=ld['item_id'], tenant=tenant)
 
-        from apps.items.models import Unit as ItemUnit
-        unit_obj = ItemUnit.objects.filter(pk=ld['unit_id'], tenant=tenant).first() if ld.get('unit_id') else None
+        from apps.items.models import unit_for_item_unit
+        unit_obj = unit_for_item_unit(tenant, ld['unit_id']) if ld.get('unit_id') else None
 
         line = SaleInvoiceLine(
             tenant=tenant,

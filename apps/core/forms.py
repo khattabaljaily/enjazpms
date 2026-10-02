@@ -84,7 +84,7 @@ class TenantForm(forms.ModelForm):
             usage_checks = (
                 (Branch.objects.filter(tenant=self.instance, is_active=True).count(), limits['max_branches'], 'الفروع'),
                 (Stock.objects.filter(tenant=self.instance, is_active=True).count(), limits['max_stocks'], 'المخازن'),
-                (User.objects.filter(tenant=self.instance).count(), limits['max_users'], 'المستخدمين'),
+                (User.objects.filter(tenant=self.instance, is_active=True).count(), limits['max_users'], 'المستخدمين'),
             )
             for current_count, allowed, label in usage_checks:
                 if current_count > allowed:

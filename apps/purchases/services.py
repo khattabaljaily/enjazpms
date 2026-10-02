@@ -880,12 +880,12 @@ def build_purchase_from_post(tenant, stock, data: dict, lines_data: list, user) 
         updated_by=user,
     )
 
-    from apps.items.models import Unit as ItemUnit
+    from apps.items.models import unit_for_item_unit
     for ld in lines_data:
         item = Item.objects.get(id=ld['item_id'], tenant=tenant)
         unit_obj = None
         if ld.get('unit_id'):
-            unit_obj = ItemUnit.objects.filter(pk=ld['unit_id'], tenant=tenant).first()
+            unit_obj = unit_for_item_unit(tenant, ld['unit_id'])
         line = PurchaseInvoiceLine(
             tenant=tenant,
             invoice=invoice,

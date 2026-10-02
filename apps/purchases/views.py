@@ -310,6 +310,7 @@ def _process_order_post(request, tenant, invoice):
                 'batch_number': str(ld.get('batch_number') or '').strip(),
                 'serial_number': str(ld.get('serial_number') or '').strip(),
                 'expiry_date': parse_date(str(ld['expiry_date'])) if ld.get('expiry_date') else None,
+                'unit_id': int(ld['unit_id']) if ld.get('unit_id') else None,
             })
         except (KeyError, InvalidOperation, ValueError):
             return _json_error('بيانات البنود غير صالحة')

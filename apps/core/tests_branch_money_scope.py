@@ -105,3 +105,42 @@ class BranchTransferSourceTests(_EnterpriseSetup, TestCase):
         self.hq.refresh_from_db(); self.ta.refresh_from_db()
         self.assertEqual(self.hq.current_balance, Decimal('1000'))
         self.assertEqual(self.ta.current_balance, Decimal('0'))
+
+
+class StoreOrderCustomerTests(_EnterpriseSetup, TestCase):
+    """اعتماد طلب المتجر يربط الطلب بعميل من فرع المخزن، ولا يفشل عند تكرار رقم الهاتف."""
+
+    def test_approve_order_picks_branch_customer_and_survives_duplicate_phones(self):
+        from apps.store.models import OnlineOrder, StoreSettings
+        from apps.store.services import approve_order
+        from apps.stocks.models import Stock
+        Stock.objects.create(tenant=self.tenant, name='مخزن أ', branch=self.branch_a, is_default=True)
+        Customer.objects.create(tenant=self.tenant, name='عميل الفرع ب', phone='0911', branch=self.branch_b)
+        own = Customer.objects.create(tenant=self.tenant, name='عميل أ', phone='0911', branch=self.branch_a)
+        Customer.objects.create(tenant=self.tenant, name='عميل أ مكرر', phone='0911', branch=self.branch_a)
+        store = StoreSettings.objects.create(tenant=self.tenant)
+        order = OnlineOrder.objects.create(tenant=self.tenant, store=store, customer_name='زبون', customer_phone='0911',
+                                           payment_method=OnlineOrder.PAYMENT_CHOICES[0][0])
+        invoice = approve_order(order)
+        self.assertEqual(invoice.customer, own)
+        self.assertEqual(invoice.branch_id, self.branch_a.id)
+
+
+class BranchImportTests(_EnterpriseSetup, TestCase):
+    """العملاء المستوردون بحساب مدير الفرع يُسجَّلون على فرعه."""
+
+    def test_branch_manager_import_assigns_branch(self):
+        import io
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from openpyxl import Workbook
+        from apps.data_import.schemas import get_customer_schema
+        from apps.data_import.simple_importer import import_simple_entities
+        schema = get_customer_schema(self.tenant)
+        wb = Workbook(); ws = wb.active
+        ws.append([s['header_ar'] for s in schema])
+        ws.append(['عميل مستورد'] + [''] * (len(schema) - 1))
+        buf = io.BytesIO(); wb.save(buf)
+        result = import_simple_entities(self.tenant, SimpleUploadedFile('c.xlsx', buf.getvalue()), self.mgr_a,
+                                        Customer, schema, 'عميل')
+        self.assertEqual(result['created'], 1, result)
+        self.assertEqual(Customer.objects.get(tenant=self.tenant, name='عميل مستورد').branch_id, self.branch_a.id)
