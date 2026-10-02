@@ -198,6 +198,12 @@ def import_products(tenant, uploaded_file, user):
                     existing.updated_by = user
                     update_fields.append('updated_by')
                     if tenant.hard_currency_mode:
+                        # أسعار العملة الصعبة هي المصدر في هذا الوضع: نأخذ القيم الواردة
+                        # في الملف قبل اشتقاق الأسعار المحلية، وإلا طغت الأسعار القديمة.
+                        for field in ('cost_price_hc', 'selling_price_hc', 'min_selling_price_hc'):
+                            if kwargs.get(field):
+                                setattr(existing, field, kwargs[field])
+                                update_fields.append(field)
                         _apply_hc_prices(existing, tenant)
                         update_fields += ['cost_price', 'selling_price', 'min_selling_price']
                     existing.save(update_fields=list(set(update_fields)))
