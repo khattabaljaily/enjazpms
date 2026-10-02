@@ -1023,7 +1023,7 @@ def purchases_by_item_report(request):
 
     items = Item.objects.filter(
         tenant=tenant,
-        purchase_lines__invoice__status='confirmed',
+        purchase_lines__invoice__status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
     ).distinct().order_by('name')
 
     return render(request, 'purchases/reports/by_item.html', {
@@ -1389,7 +1389,7 @@ def purchases_by_user_report(request):
 
     from django.contrib.auth import get_user_model
     user_ids = filter_by_branch_via(
-        PurchaseInvoice.objects.filter(tenant=tenant, status='confirmed'),
+        PurchaseInvoice.objects.filter(tenant=tenant, status__in=PurchaseInvoice.EFFECTIVE_STATUSES),
         branch,
     ).values_list('created_by', flat=True).distinct()
     users = get_user_model().objects.filter(pk__in=user_ids).order_by('first_name', 'last_name')
@@ -1464,7 +1464,7 @@ def purchases_price_history_report(request):
 
     items = Item.objects.filter(
         tenant=tenant,
-        purchase_lines__invoice__status='confirmed',
+        purchase_lines__invoice__status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
     ).distinct().order_by('name')
 
     return render(request, 'purchases/reports/price_history.html', {

@@ -1911,7 +1911,7 @@ def sales_by_item_report(request):
 
     items = Item.objects.filter(
         tenant=tenant,
-        sale_lines__invoice__status='confirmed',
+        sale_lines__invoice__status__in=SaleInvoice.REVENUE_STATUSES,
     ).distinct().order_by('name')
 
     return render(request, 'sales/reports/by_item.html', {
@@ -2285,7 +2285,7 @@ def sales_by_user_report(request):
     from django.contrib.auth import get_user_model
     from .models import SaleInvoice
     user_ids = filter_by_branch_via(
-        SaleInvoice.objects.filter(tenant=tenant, status='confirmed'),
+        SaleInvoice.objects.filter(tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES),
         branch,
     ).values_list('created_by', flat=True).distinct()
     users = get_user_model().objects.filter(pk__in=user_ids).order_by('first_name', 'last_name')
@@ -2422,7 +2422,7 @@ def sales_profit_margin_report(request):
 
     items = Item.objects.filter(
         tenant=tenant,
-        sale_lines__invoice__status='confirmed',
+        sale_lines__invoice__status__in=SaleInvoice.REVENUE_STATUSES,
     ).distinct().order_by('name')
 
     return render(request, 'sales/reports/profit_margin.html', {
