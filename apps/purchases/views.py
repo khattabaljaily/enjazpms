@@ -14,6 +14,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
 from apps.items.models import Item
@@ -305,6 +306,10 @@ def _process_order_post(request, tenant, invoice):
                 'quantity': Decimal(str(ld['quantity'])),
                 'unit_cost': Decimal(str(ld['unit_cost'] or '0')),
                 'tax_rate': Decimal(str(ld.get('tax_rate') or '0')),
+                'unit_factor': Decimal(str(ld.get('unit_factor') or 1)),
+                'batch_number': str(ld.get('batch_number') or '').strip(),
+                'serial_number': str(ld.get('serial_number') or '').strip(),
+                'expiry_date': parse_date(str(ld['expiry_date'])) if ld.get('expiry_date') else None,
             })
         except (KeyError, InvalidOperation, ValueError):
             return _json_error('بيانات البنود غير صالحة')
@@ -373,6 +378,10 @@ def _process_order_post(request, tenant, invoice):
                     quantity=ld['quantity'],
                     unit_cost=ld['unit_cost'],
                     tax_rate=ld['tax_rate'],
+                    unit_factor=ld['unit_factor'],
+                    batch_number=ld['batch_number'],
+                    serial_number=ld['serial_number'],
+                    expiry_date=ld['expiry_date'],
                 )
                 line.calculate()
                 line.save()

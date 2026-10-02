@@ -120,7 +120,7 @@
                 {% for line in lines %}
                 <tr>
                     <td class="col-sn">{{ forloop.counter }}</td>
-                    <td class="col-product">{{ line.item.name }}</td>
+                    <td class="col-product">{{ line.item.name }}{% if line.serial_number %}<div style="font-size:.75em;color:#555;">S/N: <bdi>{{ line.serial_number }}</bdi></div>{% endif %}</td>
                     <td class="col-qty">{{ line.quantity|floatformat:"-3u" }}</td>
                     <td class="col-price">{{ line.unit_price|money}}</td>
                     <td class="col-discount">{{ line.discount_percent|money}}%</td>

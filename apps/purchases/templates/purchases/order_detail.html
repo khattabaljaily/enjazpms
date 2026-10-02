@@ -151,6 +151,7 @@
                         <td style="color:var(--text-tertiary);font-size:.75rem;font-weight:600">{{ forloop.counter }}</td>
                         <td>
                             <div class="doc-line-name">{{ line.item.name }}</div>
+                            {% if line.batch_number or line.expiry_date or line.serial_number %}<div class="doc-line-serial" style="font-size:.78rem;color:var(--text-tertiary);">{% if line.batch_number %}<span><i class="fas fa-layer-group"></i> دفعة: <bdi>{{ line.batch_number }}</bdi></span> {% endif %}{% if line.expiry_date %}<span><i class="fas fa-hourglass-half"></i> صلاحية: {{ line.expiry_date|date:"Y-m-d" }}</span> {% endif %}{% if line.serial_number %}<span><i class="fas fa-barcode"></i> <bdi>{{ line.serial_number }}</bdi></span>{% endif %}</div>{% endif %}
                             {% if line.item.sku %}<div class="doc-line-sku">{{ line.item.sku }}</div>{% endif %}
                         </td>
                         <td class="text-center fw-bold">{{ line.quantity|floatformat:"-2" }}</td>

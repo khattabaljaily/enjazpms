@@ -194,6 +194,7 @@
                         <td style="color:var(--text-tertiary);font-size:.75rem;font-weight:600">{{ forloop.counter }}</td>
                         <td>
                             <div class="doc-line-name">{{ line.item.name }}</div>
+                            {% if line.serial_number %}<div class="doc-line-serial" style="font-size:.78rem;color:var(--text-tertiary);"><i class="fas fa-barcode"></i> <bdi>{{ line.serial_number }}</bdi></div>{% endif %}
                             {% if line.variant %}<div class="doc-line-sku">{{ line.variant }}</div>{% endif %}
                             <div class="doc-line-sku">{{ line.item.sku }}</div>
                         </td>

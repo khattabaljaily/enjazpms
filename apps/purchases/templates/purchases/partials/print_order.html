@@ -78,7 +78,7 @@
                 {% for line in lines %}
                 <tr>
                     <td class="col-sn">{{ forloop.counter }}</td>
-                    <td class="col-product">{{ line.item.name }}</td>
+                    <td class="col-product">{{ line.item.name }}{% if line.batch_number or line.expiry_date or line.serial_number %}<div style="font-size:.75em;color:#555;">{% if line.batch_number %}دفعة: <bdi>{{ line.batch_number }}</bdi> {% endif %}{% if line.expiry_date %}صلاحية: {{ line.expiry_date|date:"Y-m-d" }} {% endif %}{% if line.serial_number %}S/N: <bdi>{{ line.serial_number }}</bdi>{% endif %}</div>{% endif %}</td>
                     <td class="col-qty">{{ line.quantity|floatformat:"-3u" }}</td>
                     <td class="col-price">{{ line.unit_cost|money}}</td>
                     <td class="col-tax">{{ line.tax_amount|money}}</td>
