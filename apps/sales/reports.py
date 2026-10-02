@@ -42,7 +42,7 @@ class SalesReportGenerator:
         from apps.core.utils import filter_by_branch_via
         invoices = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=self.tenant,
-            status='confirmed',
+            status__in=SaleInvoice.REVENUE_STATUSES,
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date
         ), self.branch).select_related('customer').prefetch_related('lines').order_by('-invoice_date')
@@ -93,7 +93,7 @@ class SalesReportGenerator:
                 return {'period': {'start': self.start_date, 'end': self.end_date}, 'data': []}
 
             invoices = filter_by_branch_via(customer.sale_invoices.filter(
-                status='confirmed',
+                status__in=SaleInvoice.REVENUE_STATUSES,
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
             ), self.branch).prefetch_related('lines')
@@ -129,7 +129,7 @@ class SalesReportGenerator:
         # Default: aggregated per-customer
         customers = Customer.objects.filter(
             tenant=self.tenant,
-            sale_invoices__status='confirmed',
+            sale_invoices__status__in=SaleInvoice.REVENUE_STATUSES,
             sale_invoices__invoice_date__gte=self.start_date,
             sale_invoices__invoice_date__lte=self.end_date
         ).distinct().prefetch_related('sale_invoices')
@@ -139,7 +139,7 @@ class SalesReportGenerator:
         data = []
         for customer in customers:
             invoices = filter_by_branch_via(customer.sale_invoices.filter(
-                status='confirmed',
+                status__in=SaleInvoice.REVENUE_STATUSES,
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
             ), self.branch)
@@ -179,7 +179,7 @@ class SalesReportGenerator:
                 return {'period': {'start': self.start_date, 'end': self.end_date}, 'item': None, 'data': [], 'summary': {}}
 
             lines = filter_by_branch_via(item.sale_lines.filter(
-                invoice__status='confirmed',
+                invoice__status__in=SaleInvoice.REVENUE_STATUSES,
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date
             ), self.branch, field='invoice__stock__branch').select_related('invoice', 'invoice__customer').order_by('-invoice__invoice_date')
@@ -214,7 +214,7 @@ class SalesReportGenerator:
 
         items = Item.objects.filter(
             tenant=self.tenant,
-            sale_lines__invoice__status='confirmed',
+            sale_lines__invoice__status__in=SaleInvoice.REVENUE_STATUSES,
             sale_lines__invoice__invoice_date__gte=self.start_date,
             sale_lines__invoice__invoice_date__lte=self.end_date
         ).distinct().prefetch_related('sale_lines')
@@ -222,7 +222,7 @@ class SalesReportGenerator:
         data = []
         for item in items:
             lines = filter_by_branch_via(item.sale_lines.filter(
-                invoice__status='confirmed',
+                invoice__status__in=SaleInvoice.REVENUE_STATUSES,
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date
             ), self.branch, field='invoice__stock__branch')
@@ -253,7 +253,7 @@ class SalesReportGenerator:
         from apps.core.utils import filter_by_branch_via
         invoices = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=self.tenant,
-            status='confirmed',
+            status__in=SaleInvoice.REVENUE_STATUSES,
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date
         ), self.branch).order_by('invoice_date').prefetch_related('lines')
@@ -509,7 +509,7 @@ class SalesReportGenerator:
 
         base_qs = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=self.tenant,
-            status='confirmed',
+            status__in=SaleInvoice.REVENUE_STATUSES,
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date,
         ), self.branch).select_related('customer', 'created_by').order_by('-invoice_date')
@@ -566,7 +566,7 @@ class SalesReportGenerator:
 
         base_lines = filter_by_branch_via(SaleInvoiceLine.objects.filter(
             invoice__tenant=self.tenant,
-            invoice__status='confirmed',
+            invoice__status__in=SaleInvoice.REVENUE_STATUSES,
             invoice__invoice_date__gte=self.start_date,
             invoice__invoice_date__lte=self.end_date,
         ), self.branch, field='invoice__stock__branch').select_related('invoice', 'invoice__customer', 'item')
@@ -583,7 +583,7 @@ class SalesReportGenerator:
             total_revenue = Decimal('0')
             total_cogs = Decimal('0')
             for line in lines:
-                qty = line.quantity or Decimal('0')
+                qty = (line.quantity or Decimal('0')) - (line.returned_quantity or Decimal('0'))
                 price = line.unit_price or Decimal('0')
                 cost = line.cost_price_snapshot if line.cost_price_snapshot else (line.item.cost_price or Decimal('0'))
                 revenue = qty * price
@@ -631,7 +631,7 @@ class SalesReportGenerator:
             iid = line.item_id
             agg[iid]['item_name'] = line.item.name
             agg[iid]['unit'] = line.item.base_unit_name
-            qty = line.quantity or Decimal('0')
+            qty = (line.quantity or Decimal('0')) - (line.returned_quantity or Decimal('0'))
             price = line.unit_price or Decimal('0')
             cost = line.cost_price_snapshot if line.cost_price_snapshot else (line.item.cost_price or Decimal('0'))
             agg[iid]['cost_price'] = cost
@@ -698,7 +698,7 @@ class SalesReportGenerator:
 
         invoices = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=self.tenant,
-            status='confirmed',
+            status__in=SaleInvoice.REVENUE_STATUSES,
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date,
         ), self.branch)
@@ -737,7 +737,7 @@ class IncomeStatementGenerator:
         # Revenue: confirmed sale invoices
         invoices = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=self.tenant,
-            status='confirmed',
+            status__in=SaleInvoice.REVENUE_STATUSES,
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date,
         ), self.branch)
@@ -768,12 +768,12 @@ class IncomeStatementGenerator:
         from .models import SaleInvoiceLine
         cogs_qs = filter_by_branch_via(SaleInvoiceLine.objects.filter(
             tenant=self.tenant,
-            invoice__status='confirmed',
+            invoice__status__in=SaleInvoice.REVENUE_STATUSES,
             invoice__invoice_date__gte=self.start_date,
             invoice__invoice_date__lte=self.end_date,
         ), self.branch, field='invoice__stock__branch').aggregate(
             total=Sum(
-                ExpressionWrapper(F('quantity') * F('cost_price_snapshot'), output_field=DecimalField())
+                ExpressionWrapper((F('quantity') - F('returned_quantity')) * F('cost_price_snapshot'), output_field=DecimalField())
             )
         )
         total_purchases = float(cogs_qs['total'] or 0)

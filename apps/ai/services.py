@@ -98,7 +98,7 @@ def collect_business_context(tenant, user=None) -> dict:
 
     # ── Sales ────────────────────────────────────────────────
     confirmed_sales = SaleInvoice.objects.filter(
-        tenant=tenant, status='confirmed'
+        tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES
     )
     monthly_sales = confirmed_sales.filter(invoice_date__gte=month_ago)
     weekly_sales  = confirmed_sales.filter(invoice_date__gte=week_ago)
@@ -114,7 +114,7 @@ def collect_business_context(tenant, user=None) -> dict:
     # ── Top selling items (by revenue) ───────────────────────
     top_items_qs = (
         SaleInvoiceLine.objects
-        .filter(invoice__tenant=tenant, invoice__status='confirmed',
+        .filter(invoice__tenant=tenant, invoice__status__in=SaleInvoice.REVENUE_STATUSES,
                 invoice__invoice_date__gte=month_ago)
         .values('item__name')
         .annotate(total_qty=Sum('quantity'), total_rev=Sum('line_total'))
@@ -172,7 +172,7 @@ def collect_business_context(tenant, user=None) -> dict:
     # ── Recent purchases ─────────────────────────────────────
     recent_purchases = (
         PurchaseInvoice.objects
-        .filter(tenant=tenant, status='confirmed', invoice_date__gte=month_ago)
+        .filter(tenant=tenant, status__in=PurchaseInvoice.EFFECTIVE_STATUSES, invoice_date__gte=month_ago)
         .aggregate(t=Sum('grand_total'))['t'] or 0
     )
     monthly_purchases = _decimal_to_float(recent_purchases)

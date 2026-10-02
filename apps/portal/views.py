@@ -123,7 +123,7 @@ def portal_dashboard(request):
     current_balance = (customer.opening_balance or 0) + ledger_total
 
     qs_confirmed = SaleInvoice.objects.filter(
-        tenant=tenant, customer=customer, status='confirmed'
+        tenant=tenant, customer=customer, status__in=SaleInvoice.REVENUE_STATUSES
     )
     total_invoices  = qs_confirmed.count()
     unpaid_invoices = qs_confirmed.filter(paid_amount__lt=F('grand_total')).count()
@@ -152,7 +152,7 @@ def portal_invoices(request):
 
     invoices = (
         SaleInvoice.objects
-        .filter(tenant=tenant, customer=customer, status='confirmed')
+        .filter(tenant=tenant, customer=customer, status__in=SaleInvoice.REVENUE_STATUSES)
         .order_by('-invoice_date')
     )
 
@@ -176,7 +176,7 @@ def portal_invoice_detail(request, pk):
 
     invoice = get_object_or_404(
         SaleInvoice,
-        pk=pk, tenant=tenant, customer=customer, status='confirmed',
+        pk=pk, tenant=tenant, customer=customer, status__in=SaleInvoice.REVENUE_STATUSES,
     )
     lines = invoice.lines.select_related('item', 'unit').all()
 

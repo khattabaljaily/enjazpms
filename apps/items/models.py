@@ -293,20 +293,22 @@ class Item(TenantMixin):
     def save(self, *args, **kwargs):
         # توليد SKU تلقائي إذا لم يُحدَّد
         if not self.sku:
-            last = (
-                Item.objects.filter(tenant=self.tenant)
-                .exclude(sku='')
-                .order_by('-id')
-                .first()
-            )
-            next_num = 1
-            if last and last.sku.startswith('ITM-'):
-                try:
-                    next_num = int(last.sku.split('-')[-1]) + 1
-                except ValueError:
-                    next_num = Item.objects.filter(tenant=self.tenant).count() + 1
-            self.sku = f"ITM-{next_num:05d}"
+            self.sku = self._next_auto_sku()
         super().save(*args, **kwargs)
+
+    def _next_auto_sku(self):
+        """
+        أكبر رقم ITM-xxxxx مستخدم لدى المشترك + 1، مع تخطّي أي رمز محجوز —
+        لا يعتمد على «آخر صنف أُنشئ» لأن رمزه قد يكون مخصصاً أو أُعيد توليده.
+        """
+        existing = set(
+            Item.objects.filter(tenant=self.tenant, sku__startswith='ITM-').values_list('sku', flat=True)
+        )
+        numbers = [int(s[4:]) for s in existing if s[4:].isdigit()]
+        next_num = (max(numbers) + 1) if numbers else 1
+        while f"ITM-{next_num:05d}" in existing:
+            next_num += 1
+        return f"ITM-{next_num:05d}"
 
 
 # ============================================

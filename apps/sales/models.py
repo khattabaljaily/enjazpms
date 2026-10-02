@@ -52,6 +52,10 @@ class SaleInvoice(TenantMixin):
         ('partially_returned',  'مرتجعة جزئياً'),
     )
 
+    # الفواتير التي تمثّل بيعاً فعلياً تُحتسب في التقارير: المرتجع جزئياً أو
+    # كلياً يبقى بيعاً، ومرتجعاته تُعرض وتُطرح عبر SaleReturn وليس بإسقاط الفاتورة.
+    REVENUE_STATUSES = ('confirmed', 'partially_returned', 'returned')
+
     DELIVERY_TYPE_CHOICES = (
         ('immediate', 'تسليم فوري'),
         ('deferred',  'تسليم لاحق'),

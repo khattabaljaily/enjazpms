@@ -93,7 +93,7 @@ def dashboard(request):
         today_sales = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=tenant,
             invoice_date=today,
-            status='confirmed'
+            status__in=SaleInvoice.REVENUE_STATUSES
         ), branch).aggregate(total=Sum('grand_total'))['total'] or 0
         stats['today_sales'] = float(today_sales)
 
@@ -102,7 +102,7 @@ def dashboard(request):
         month_sales = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=tenant,
             invoice_date__gte=first_day,
-            status='confirmed'
+            status__in=SaleInvoice.REVENUE_STATUSES
         ), branch).aggregate(total=Sum('grand_total'))['total'] or 0
         stats['this_month_sales'] = float(month_sales)
 
@@ -111,24 +111,24 @@ def dashboard(request):
         stats['today_invoices'] = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=tenant,
             invoice_date=today,
-            status='confirmed'
+            status__in=SaleInvoice.REVENUE_STATUSES
         ), branch).count()
 
         # Number of pending invoices (credit)
         stats['pending_invoices'] = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=tenant,
-            status='confirmed',
+            status__in=SaleInvoice.REVENUE_STATUSES,
             payment_method='credit'
         ), branch).exclude(paid_amount__gte=F('grand_total')).count()
 
         # Payment percentage
         total_invoices = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=tenant,
-            status='confirmed'
+            status__in=SaleInvoice.REVENUE_STATUSES
         ), branch).count()
         paid_invoices = filter_by_branch_via(SaleInvoice.objects.filter(
             tenant=tenant,
-            status='confirmed',
+            status__in=SaleInvoice.REVENUE_STATUSES,
             paid_amount__gte=F('grand_total')
         ), branch).count()
         stats['payment_percentage'] = int((paid_invoices / total_invoices) * 100) if total_invoices > 0 else 0
@@ -140,7 +140,7 @@ def dashboard(request):
         # Get ALL categories (not just top 4) to calculate total for percentage
         all_categories = filter_by_branch_via(SaleInvoiceLine.objects.filter(
             tenant=tenant,
-            invoice__status='confirmed',
+            invoice__status__in=SaleInvoice.REVENUE_STATUSES,
             invoice__invoice_date__gte=first_day,
             item__item_type='product'  # Only products, not services
         ), branch, field='invoice__stock__branch').annotate(
@@ -176,7 +176,7 @@ def dashboard(request):
             day_sales = filter_by_branch_via(SaleInvoice.objects.filter(
                 tenant=tenant,
                 invoice_date=day,
-                status='confirmed'
+                status__in=SaleInvoice.REVENUE_STATUSES
             ), branch).aggregate(total=Sum('grand_total'))['total'] or 0
 
             # Customer payments (receipts) for the day
@@ -236,7 +236,7 @@ def dashboard(request):
         # Top selling products
         top_products = filter_by_branch_via(SaleInvoiceLine.objects.filter(
             tenant=tenant,
-            invoice__status='confirmed',
+            invoice__status__in=SaleInvoice.REVENUE_STATUSES,
             invoice__invoice_date__gte=first_day
         ), branch, field='invoice__stock__branch').values('item__name').annotate(
             total_qty=Sum('quantity'),
@@ -912,10 +912,10 @@ def admin_report_revenue(request):
     tenants = Tenant.objects.filter(is_active=True).order_by('-created_at')
     tenant_stats = []
     for t in tenants:
-        sales_count = SaleInvoice.objects.filter(tenant=t, status='confirmed').count()
-        purchases_count = PurchaseInvoice.objects.filter(tenant=t, status='confirmed').count()
+        sales_count = SaleInvoice.objects.filter(tenant=t, status__in=SaleInvoice.REVENUE_STATUSES).count()
+        purchases_count = PurchaseInvoice.objects.filter(tenant=t, status__in=PurchaseInvoice.EFFECTIVE_STATUSES).count()
         sales_total = SaleInvoice.objects.filter(
-            tenant=t, status='confirmed'
+            tenant=t, status__in=SaleInvoice.REVENUE_STATUSES
         ).aggregate(s=Sum('grand_total'))['s'] or 0
 
         tenant_stats.append({
@@ -2645,12 +2645,12 @@ def analytics(request):
 
     def sales_total(qs_filter):
         return float(filter_by_branch_via(SaleInvoice.objects.filter(
-            tenant=tenant, status='confirmed', **qs_filter
+            tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES, **qs_filter
         ), branch).aggregate(t=Sum('grand_total'))['t'] or 0)
 
     def purchase_total(qs_filter):
         return float(filter_by_branch_via(PurchaseInvoice.objects.filter(
-            tenant=tenant, status='confirmed', **qs_filter
+            tenant=tenant, status__in=PurchaseInvoice.EFFECTIVE_STATUSES, **qs_filter
         ), branch).aggregate(t=Sum('grand_total'))['t'] or 0)
 
     def expense_total(qs_filter):
@@ -2711,7 +2711,7 @@ def analytics(request):
     # ── Top 10 customers by revenue (this month) ────────────────────
     top_customers = filter_by_branch_via(
         SaleInvoiceLine.objects
-        .filter(tenant=tenant, invoice__status='confirmed', invoice__invoice_date__gte=first_this_month),
+        .filter(tenant=tenant, invoice__status__in=SaleInvoice.REVENUE_STATUSES, invoice__invoice_date__gte=first_this_month),
         branch, field='invoice__stock__branch'
     ).values('invoice__customer__name').annotate(total=Sum('line_total')).order_by('-total')[:10]
     top_customers_list = [

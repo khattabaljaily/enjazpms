@@ -15,6 +15,10 @@ class PurchaseInvoice(TenantMixin):
         ('cancelled', 'ملغاة'),
     )
 
+    # فواتير الشراء التي تمثّل شراءً فعلياً في التقارير — المرتجعة جزئياً أو
+    # كلياً تبقى، ومرتجعاتها تُعرض عبر PurchaseReturn.
+    EFFECTIVE_STATUSES = ('confirmed', 'partially_returned', 'returned')
+
     PAYMENT_CHOICES = (
         ('cash', 'نقداً'),
         ('bank', 'تحويل بنكي'),

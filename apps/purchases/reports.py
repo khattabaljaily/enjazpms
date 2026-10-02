@@ -42,7 +42,7 @@ class PurchasesReportGenerator:
         from apps.core.utils import filter_by_branch_via
         invoices = filter_by_branch_via(PurchaseInvoice.objects.filter(
             tenant=self.tenant,
-            status='confirmed',
+            status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date
         ), self.branch).select_related('supplier').prefetch_related('lines').order_by('-invoice_date')
@@ -93,7 +93,7 @@ class PurchasesReportGenerator:
                 return {'period': {'start': self.start_date, 'end': self.end_date}, 'data': []}
 
             invoices = filter_by_branch_via(supplier.purchase_invoices.filter(
-                status='confirmed',
+                status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
             ), self.branch).prefetch_related('lines')
@@ -128,7 +128,7 @@ class PurchasesReportGenerator:
         # Default: aggregated per-supplier
         suppliers = Supplier.objects.filter(
             tenant=self.tenant,
-            purchase_invoices__status='confirmed',
+            purchase_invoices__status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
             purchase_invoices__invoice_date__gte=self.start_date,
             purchase_invoices__invoice_date__lte=self.end_date
         ).distinct().prefetch_related('purchase_invoices')
@@ -138,7 +138,7 @@ class PurchasesReportGenerator:
         data = []
         for supplier in suppliers:
             invoices = filter_by_branch_via(supplier.purchase_invoices.filter(
-                status='confirmed',
+                status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
             ), self.branch)
@@ -178,7 +178,7 @@ class PurchasesReportGenerator:
                 return {'period': {'start': self.start_date, 'end': self.end_date}, 'item': None, 'data': []}
 
             lines = filter_by_branch_via(item.purchase_lines.filter(
-                invoice__status='confirmed',
+                invoice__status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date,
             ), self.branch, field='invoice__stock__branch').select_related('invoice', 'invoice__supplier').order_by('-invoice__invoice_date')
@@ -213,7 +213,7 @@ class PurchasesReportGenerator:
 
         items = Item.objects.filter(
             tenant=self.tenant,
-            purchase_lines__invoice__status='confirmed',
+            purchase_lines__invoice__status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
             purchase_lines__invoice__invoice_date__gte=self.start_date,
             purchase_lines__invoice__invoice_date__lte=self.end_date
         ).distinct().prefetch_related('purchase_lines')
@@ -221,7 +221,7 @@ class PurchasesReportGenerator:
         data = []
         for item in items:
             lines = filter_by_branch_via(item.purchase_lines.filter(
-                invoice__status='confirmed',
+                invoice__status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date
             ), self.branch, field='invoice__stock__branch')
@@ -255,7 +255,7 @@ class PurchasesReportGenerator:
         from apps.core.utils import filter_by_branch_via
         invoices = filter_by_branch_via(PurchaseInvoice.objects.filter(
             tenant=self.tenant,
-            status='confirmed',
+            status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date
         ), self.branch).order_by('invoice_date').prefetch_related('lines')
@@ -631,7 +631,7 @@ class PurchasesReportGenerator:
 
         base_qs = filter_by_branch_via(PurchaseInvoice.objects.filter(
             tenant=self.tenant,
-            status='confirmed',
+            status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
             invoice_date__gte=self.start_date,
             invoice_date__lte=self.end_date,
         ), self.branch)
@@ -694,7 +694,7 @@ class PurchasesReportGenerator:
 
         base_lines = filter_by_branch_via(PurchaseInvoiceLine.objects.filter(
             invoice__tenant=self.tenant,
-            invoice__status='confirmed',
+            invoice__status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
             invoice__invoice_date__gte=self.start_date,
             invoice__invoice_date__lte=self.end_date,
         ), self.branch, field='invoice__stock__branch').select_related('invoice', 'invoice__supplier', 'item', 'item__unit').order_by('invoice__invoice_date')
