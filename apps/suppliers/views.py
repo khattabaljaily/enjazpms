@@ -14,7 +14,7 @@ import io
 import json
 
 from apps.accounts.decorators import require_permission, branch_scope_exempt
-from apps.core.utils import CURRENCY_NAMES_AR, filter_by_branch_via, enforce_branch_ownership
+from apps.core.utils import CURRENCY_NAMES_AR, filter_by_branch_via, enforce_branch_ownership, operational_money_accounts
 from .forms import SupplierForm
 from .models import Supplier
 from apps.purchases.models import SupplierLedger
@@ -386,9 +386,9 @@ def supplier_payments(request):
             output_field=DecimalField(max_digits=14, decimal_places=2),
         ),
     ).order_by('name')
-    treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False).order_by('name')
-    hc_treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=True).order_by('name') if hc_mode else []
-    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name')
+    treasuries = operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=False).order_by('name')
+    hc_treasuries = operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=True).order_by('name') if hc_mode else []
+    bank_accounts = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).order_by('name')
     branch = getattr(request, 'branch', None)
     stats = filter_by_branch_via(
         SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment'), branch, field='supplier__branch'
@@ -701,10 +701,10 @@ def supplier_payment_create_api(request):
                 if not treasury_id:
                     raise ValueError('يجب اختيار الخزينة عند دفع نقداً')
                 if is_hc_supplier and pay_in_hc:
-                    treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=True), pk=int(treasury_id))
+                    treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_hard_currency=True), pk=int(treasury_id))
                     disburse_amount = amount  # HC amount debited from HC treasury
                 else:
-                    treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False), pk=int(treasury_id))
+                    treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_hard_currency=False), pk=int(treasury_id))
                     disburse_amount = local_amount
                 enforce_branch_ownership(request, treasury)
                 movement = post_treasury_disbursement(
@@ -722,7 +722,7 @@ def supplier_payment_create_api(request):
             elif method == 'bank':
                 if not bank_account_id:
                     raise ValueError('يجب اختيار الحساب البنكي عند الدفع بنكياً')
-                bank_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=int(bank_account_id))
+                bank_account = get_object_or_404(operational_money_accounts(BankAccount.objects.for_tenant(tenant), request), pk=int(bank_account_id))
                 enforce_branch_ownership(request, bank_account)
                 movement = post_bank_account_disbursement(
                     tenant=tenant,

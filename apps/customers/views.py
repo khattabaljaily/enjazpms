@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission, require_any_permission
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, operational_money_accounts
 from .forms import CustomerForm
 from .models import Customer
 from apps.sales.models import CustomerLedger, SalePayment
@@ -328,8 +328,8 @@ def customer_payments(request):
             output_field=DecimalField(max_digits=14, decimal_places=2),
         )
     ).order_by('name')
-    treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False).order_by('name')
-    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name')
+    treasuries = operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=False).order_by('name')
+    bank_accounts = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).order_by('name')
     branch = getattr(request, 'branch', None)
     stats = filter_by_branch_via(
         CustomerLedger.objects.for_tenant(tenant).filter(entry_type='payment'), branch, field='customer__branch'
@@ -594,12 +594,12 @@ def customer_payment_create_api(request):
     if method == 'cash':
         if not treasury_id:
             return _json_error('يجب اختيار الخزينة عند دفع نقداً')
-        treasury = get_object_or_404(Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False), pk=int(treasury_id))
+        treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_hard_currency=False), pk=int(treasury_id))
         enforce_branch_ownership(request, treasury)
     elif method == 'bank':
         if not bank_account_id:
             return _json_error('يجب اختيار الحساب البنكي عند الدفع بنكياً')
-        bank_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=int(bank_account_id))
+        bank_account = get_object_or_404(operational_money_accounts(BankAccount.objects.for_tenant(tenant), request), pk=int(bank_account_id))
         enforce_branch_ownership(request, bank_account)
 
     try:

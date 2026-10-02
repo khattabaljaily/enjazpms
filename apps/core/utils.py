@@ -71,6 +71,24 @@ def resolve_report_scope(request):
     return None, True, branches_for_filter
 
 
+def operational_money_accounts(qs, request):
+    """
+    الخزائن/الحسابات البنكية التي يجوز للمستخدم الحالي استخدامها في عمليات
+    يومية (تحصيل، صرف، سداد، رواتب، مصروفات...).
+
+    - تستبعد دائماً حسابات الإدارة المركزية: هذه تُدار من شاشة الإدارة
+      المركزية فقط عبر التحويلات، ولا تُستعمل في عمليات الفروع.
+    - مستخدم مربوط بفرع: حسابات فرعه فقط — وإلا استطاع مدير فرع الصرف من
+      خزينة فرع آخر أو الإيداع فيها بمجرد تمرير معرّفها.
+    بلا فرع (single_store / multi_stock): لا تغيير، إذ لا توجد حسابات مركزية.
+    """
+    qs = qs.filter(is_head_office=False)
+    branch = getattr(request, 'branch', None)
+    if branch is not None:
+        qs = qs.filter(branch=branch)
+    return qs
+
+
 def enforce_branch_ownership(request, obj, field='branch'):
     """
     يتحقق أن كائناً مُحمَّلاً بالفعل (عادة عبر get_object_or_404(Model.objects

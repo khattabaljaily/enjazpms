@@ -519,6 +519,11 @@ def treasury_bank_transfer_api(request):
     bank_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=bank_account_id)
     # يتحقق من ملكية طرف "المصدر" فقط حسب الاتجاه — نفس منطق تحويل الخزائن/الحسابات
     enforce_branch_ownership(request, treasury if direction == 'treasury_to_bank' else bank_account)
+    # مستخدم الفرع يحوّل بين خزينة وحساب فرعه فقط — حسابات الإدارة المركزية بلا
+    # فرع (NULL) فلا يكفي فحص الملكية أعلاه لمنعه من السحب منها.
+    user_branch = getattr(request, 'branch', None)
+    if user_branch is not None and (treasury.branch_id != user_branch.id or bank_account.branch_id != user_branch.id):
+        return JsonResponse({'success': False, 'message': 'يمكنك التحويل بين خزائن وحسابات فرعك فقط.'}, status=403)
 
     try:
         if direction == 'treasury_to_bank':

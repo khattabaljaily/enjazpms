@@ -13,7 +13,7 @@ import csv
 import json
 
 from apps.accounts.decorators import require_permission, require_capability, require_plan_feature, branch_scope_exempt
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
 from .forms import AgentForm
 from .models import Agent, AgentLedger
 from .services import _apply_agent_ledger, agent_ledger_display_label
@@ -346,7 +346,7 @@ def agent_payments(request):
         ),
     ).order_by('name')
 
-    treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False).order_by('name')
+    treasuries = operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=False).order_by('name')
 
     stats_qs = filter_by_branch_via(
         AgentLedger.objects.for_tenant(tenant).filter(entry_type='payment'),
@@ -549,7 +549,7 @@ def agent_payment_create_api(request):
                 if not treasury_id:
                     raise ValueError('يجب اختيار الخزينة عند الدفع نقداً')
                 treasury = get_object_or_404(
-                    Treasury.objects.for_tenant(tenant).filter(is_hard_currency=False),
+                    operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_hard_currency=False),
                     pk=int(treasury_id),
                 )
                 enforce_branch_ownership(request, treasury)

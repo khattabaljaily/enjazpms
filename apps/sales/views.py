@@ -41,7 +41,7 @@ from apps.customers.models import Customer
 from apps.items.models import Item
 from apps.items.alternatives import get_all_alternatives
 from apps.stocks.models import Stock, StockQuantity
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
 
 from .models import (
     CustomerLedger,
@@ -183,7 +183,7 @@ def invoice_list(request):
     from apps.agents.models import Agent as _Agent
     agents_qs = _Agent.objects.filter(tenant=tenant, is_active=True).values('id', 'name') if tenant.plan_allows('agents') else []
     from apps.bank_accounts.models import BankAccount
-    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name', 'current_balance')
+    bank_accounts = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).values('id', 'name', 'current_balance')
 
     context = {
         'stats': {
@@ -333,7 +333,7 @@ def invoice_create(request):
     from apps.agents.models import Agent as _Agent
     agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name') if tenant.plan_allows('agents') else []
     from apps.bank_accounts.models import BankAccount
-    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True)
+    bank_accounts = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True)
 
     # default stock
     default_stock = stocks.filter(is_default=True).first() or stocks.first()
@@ -384,7 +384,7 @@ def invoice_edit(request, pk):
     from apps.agents.models import Agent as _Agent
     agents = _Agent.objects.filter(tenant=tenant, is_active=True).order_by('name') if tenant.plan_allows('agents') else []
     from apps.bank_accounts.models import BankAccount
-    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True)
+    bank_accounts = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True)
 
     if request.method == 'POST':
         result = _process_invoice_post(request, tenant, invoice=invoice)
@@ -527,7 +527,7 @@ def _process_invoice_post(request, tenant, invoice):
                     bank_account_raw = header.get('bank_account_id')
                     if bank_account_raw:
                         from apps.bank_accounts.models import BankAccount
-                        bank_account_obj = BankAccount.objects.get(id=bank_account_raw, tenant=tenant, is_active=True)
+                        bank_account_obj = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).get(id=bank_account_raw, is_active=True)
                         enforce_branch_ownership(request, bank_account_obj)
                         confirmed_header['bank_account'] = bank_account_obj
                     else:
@@ -714,7 +714,7 @@ def invoice_detail(request, pk):
     }
     from apps.bank_accounts.models import BankAccount
     context['bank_accounts'] = list(
-        BankAccount.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name', 'current_balance')
+        operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).values('id', 'name', 'current_balance')
     )
 
     return render(request, 'sales/invoice_detail.html', context)
@@ -842,7 +842,7 @@ def record_payment_ajax(request, pk):
         if not bank_account_id:
             return _json_error('يجب اختيار الحساب البنكي عند الدفع بنكياً')
         from apps.bank_accounts.models import BankAccount
-        bank_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=int(bank_account_id))
+        bank_account = get_object_or_404(operational_money_accounts(BankAccount.objects.for_tenant(tenant), request), pk=int(bank_account_id))
 
     try:
         record_customer_payment(invoice, amount, method, date, reference, notes, request.user, bank_account=bank_account)
@@ -1532,7 +1532,7 @@ def quote_detail(request, pk):
     from apps.core.models import Settings as TenantSettings
     settings_obj, _ = TenantSettings.objects.get_or_create(tenant=tenant)
     from apps.bank_accounts.models import BankAccount
-    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True)
+    bank_accounts = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True)
 
     return render(request, 'sales/quote_detail.html', {
         'quote': quote,
@@ -2553,7 +2553,7 @@ def pos_view(request):
     categories = Category.objects.filter(tenant=tenant, parent=None).order_by('display_order', 'name')
     customers = Customer.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name').values('id', 'name')
     from apps.bank_accounts.models import BankAccount
-    bank_accounts = BankAccount.objects.for_tenant(tenant).filter(is_active=True).values('id', 'name', 'current_balance')
+    bank_accounts = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).values('id', 'name', 'current_balance')
 
     return render(request, 'sales/pos.html', {
         'stocks': stocks,

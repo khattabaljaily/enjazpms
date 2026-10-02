@@ -8,13 +8,25 @@ from .models import Treasury, TreasuryMovement
 
 @transaction.atomic
 def get_or_create_default_treasury(tenant, user=None):
-    treasury = Treasury.objects.for_tenant(tenant).filter(is_default=True).first()
+    """
+    الخزينة التي تُسجَّل عليها الحركة النقدية حين لا تُحدَّد خزينة صراحة.
+    مستخدم مربوط بفرع: خزينة فرعه (الافتراضية ثم الأقدم) — لا الخزينة
+    الافتراضية للمشترك كله، وإلا ذهبت مبيعات/مشتريات الفرع النقدية إلى خزينة
+    فرع آخر أو إلى خزينة الإدارة المركزية. خزائن الإدارة المركزية لا تُختار
+    هنا أبداً.
+    """
+    branch = getattr(user, 'branch', None) if user is not None else None
+    qs = Treasury.objects.for_tenant(tenant).filter(is_head_office=False, is_hard_currency=False)
+    if branch is not None:
+        qs = qs.filter(branch=branch)
+
+    treasury = qs.filter(is_default=True).first()
     if treasury:
         return treasury
 
-    treasury = Treasury.objects.for_tenant(tenant).order_by('id').first()
+    treasury = qs.filter(is_active=True).order_by('id').first() or qs.order_by('id').first()
     if treasury:
-        if not treasury.is_default:
+        if not treasury.is_default and branch is None:
             treasury.is_default = True
             treasury.updated_by = user
             treasury.save(update_fields=['is_default', 'updated_by', 'updated_at'])
@@ -22,9 +34,10 @@ def get_or_create_default_treasury(tenant, user=None):
 
     return Treasury.objects.create(
         tenant=tenant,
-        name='الخزينة الرئيسية',
+        branch=branch,
+        name=f'خزينة {branch.name}' if branch is not None else 'الخزينة الرئيسية',
         code='MAIN',
-        is_default=True,
+        is_default=branch is None,
         is_active=True,
         created_by=user,
         updated_by=user,

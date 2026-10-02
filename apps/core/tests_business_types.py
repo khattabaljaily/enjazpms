@@ -15,3 +15,13 @@ class BusinessTypeSeedTests(TestCase):
         self.assertTrue(seed_slugs)
         present = set(BusinessType.objects.filter(slug__in=seed_slugs).values_list('slug', flat=True))
         self.assertEqual(present, seed_slugs)
+
+
+class CsrfFailurePageTests(TestCase):
+    """فشل التحقق من CSRF يعرض صفحة 403 مفهومة لا خطأ خادم 500."""
+
+    def test_csrf_failure_renders_403(self):
+        from django.test import Client
+        resp = Client(enforce_csrf_checks=True).post('/accounts/login/', {'username': 'x', 'password': 'y'})
+        self.assertEqual(resp.status_code, 403)
+        self.assertIn('انتهت صلاحية الصفحة', resp.content.decode())

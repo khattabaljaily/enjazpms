@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.activity_service import log_activity
 from apps.accounts.decorators import require_permission, branch_scope_exempt
-from apps.core.utils import convert_arabic_numerals, filter_by_branch_via, enforce_branch_ownership
+from apps.core.utils import convert_arabic_numerals, filter_by_branch_via, enforce_branch_ownership, operational_money_accounts
 from apps.treasury.models import Treasury
 from apps.bank_accounts.models import BankAccount
 
@@ -53,7 +53,7 @@ def employee_list(request):
             'active': qs.filter(is_active=True).count(),
             'inactive': qs.filter(is_active=False).count(),
         },
-        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
+        'treasuries': operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=False),
     }
     return render(request, 'employees/employee_list.html', context)
 
@@ -272,8 +272,8 @@ def advance_list(request):
             'cancelled': qs.filter(status='cancelled').count(),
         },
         'employees':  Employee.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name'),
-        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
-        'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True),
+        'treasuries': operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=False),
+        'bank_accounts': operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True),
     }
     return render(request, 'employees/advance_list.html', context)
 
@@ -361,7 +361,7 @@ def advance_create(request):
     if payment_method == 'cash':
         if not treasury_id:
             return _err('يجب اختيار الخزينة للدفع النقدي')
-        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+        treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request), pk=treasury_id, is_hard_currency=False)
         enforce_branch_ownership(request, treasury)
         current_balance = treasury.current_balance or Decimal('0')
         if current_balance < amount:
@@ -369,14 +369,14 @@ def advance_create(request):
     elif payment_method == 'bank':
         if not bank_account_id:
             return _err('يجب اختيار الحساب البنكي للتحويل البنكي')
-        bank_account = get_object_or_404(BankAccount, pk=bank_account_id, tenant=tenant, is_active=True)
+        bank_account = get_object_or_404(operational_money_accounts(BankAccount.objects.for_tenant(tenant), request), pk=bank_account_id, is_active=True)
         enforce_branch_ownership(request, bank_account)
         current_balance = bank_account.current_balance or Decimal('0')
         if current_balance < amount:
             return _err(f"رصيد الحساب البنكي غير كافٍ. الرصيد الحالي: {current_balance:.2f} والمطلوب صرفه: {amount:.2f}.")
     else:
         if treasury_id:
-            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+            treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request), pk=treasury_id, is_hard_currency=False)
             enforce_branch_ownership(request, treasury)
 
     from . import services as employee_services
@@ -431,8 +431,8 @@ def salary_list(request):
             'cancelled': qs.filter(status='cancelled').count(),
         },
         'employees':  Employee.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name'),
-        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
-        'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True),
+        'treasuries': operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=False),
+        'bank_accounts': operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True),
     }
     return render(request, 'employees/salary_list.html', context)
 
@@ -528,16 +528,16 @@ def salary_create(request):
     if payment_method == 'cash':
         if not treasury_id:
             return _err('يجب اختيار الخزينة للدفع النقدي')
-        treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+        treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request), pk=treasury_id, is_hard_currency=False)
         enforce_branch_ownership(request, treasury)
     elif payment_method == 'bank':
         if not bank_account_id:
             return _err('يجب اختيار الحساب البنكي للتحويل البنكي')
-        bank_account = get_object_or_404(BankAccount, pk=bank_account_id, tenant=tenant, is_active=True)
+        bank_account = get_object_or_404(operational_money_accounts(BankAccount.objects.for_tenant(tenant), request), pk=bank_account_id, is_active=True)
         enforce_branch_ownership(request, bank_account)
     else:
         if treasury_id:
-            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+            treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request), pk=treasury_id, is_hard_currency=False)
             enforce_branch_ownership(request, treasury)
 
     base_salary = _dec(data.get('base_salary', emp.base_salary))
@@ -657,8 +657,8 @@ def incentive_list(request):
             'cancelled':  qs.filter(status='cancelled').count(),
         },
         'employees':  Employee.objects.filter(tenant=tenant, is_active=True).for_branch(getattr(request, 'branch', None)).order_by('name'),
-        'treasuries': Treasury.objects.for_tenant(tenant).filter(is_active=True, is_hard_currency=False),
-        'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True),
+        'treasuries': operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=False),
+        'bank_accounts': operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True),
     }
     return render(request, 'employees/incentive_list.html', context)
 
@@ -769,7 +769,7 @@ def incentive_create(request):
         if payment_method == 'cash':
             if not treasury_id:
                 return _err('الحوافز الفورية النقدية تتطلب تحديد الخزينة')
-            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+            treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request), pk=treasury_id, is_hard_currency=False)
             enforce_branch_ownership(request, treasury)
             current_balance = treasury.current_balance or Decimal('0')
             if current_balance < amount:
@@ -777,20 +777,20 @@ def incentive_create(request):
         elif payment_method == 'bank':
             if not bank_account_id:
                 return _err('الحوافز الفورية البنكية تتطلب تحديد الحساب البنكي')
-            bank_account = get_object_or_404(BankAccount, pk=bank_account_id, tenant=tenant, is_active=True)
+            bank_account = get_object_or_404(operational_money_accounts(BankAccount.objects.for_tenant(tenant), request), pk=bank_account_id, is_active=True)
             enforce_branch_ownership(request, bank_account)
             current_balance = bank_account.current_balance or Decimal('0')
             if current_balance < amount:
                 return _err(f"رصيد الحساب البنكي غير كافٍ. الرصيد الحالي: {current_balance:.2f} والمطلوب صرفه: {amount:.2f}.")
         elif treasury_id:
-            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+            treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request), pk=treasury_id, is_hard_currency=False)
             enforce_branch_ownership(request, treasury)
     else:
         if treasury_id:
-            treasury = get_object_or_404(Treasury, pk=treasury_id, tenant=tenant, is_hard_currency=False)
+            treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request), pk=treasury_id, is_hard_currency=False)
             enforce_branch_ownership(request, treasury)
         elif bank_account_id:
-            bank_account = get_object_or_404(BankAccount, pk=bank_account_id, tenant=tenant, is_active=True)
+            bank_account = get_object_or_404(operational_money_accounts(BankAccount.objects.for_tenant(tenant), request), pk=bank_account_id, is_active=True)
             enforce_branch_ownership(request, bank_account)
 
     from . import services as employee_services

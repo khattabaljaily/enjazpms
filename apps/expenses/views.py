@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from apps.core.utils import convert_arabic_numerals, enforce_branch_ownership, resolve_report_scope
+from apps.core.utils import convert_arabic_numerals, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
 from apps.treasury.models import Treasury
 from apps.bank_accounts.models import BankAccount
 
@@ -105,7 +105,7 @@ def expense_list(request):
                 'name': t.name,
                 'current_balance': str(t.current_balance or Decimal('0'))
             }
-            for t in Treasury.objects.filter(tenant=tenant, is_active=True, is_hard_currency=False).only('id', 'name', 'current_balance')
+            for t in operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=False).only('id', 'name', 'current_balance')
         ]
         bank_accounts = [
             {
@@ -113,7 +113,7 @@ def expense_list(request):
                 'name': b.name,
                 'current_balance': str(b.current_balance or Decimal('0'))
             }
-            for b in BankAccount.objects.filter(tenant=tenant, is_active=True).only('id', 'name', 'current_balance')
+            for b in operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).only('id', 'name', 'current_balance')
         ]
 
         return render(request, 'expenses/expense_list.html', {
@@ -267,7 +267,7 @@ def _process_expense_post(request, tenant, expense):
         treasury_id = data.get('treasury_id')
         if treasury_id:
             try:
-                treasury = Treasury.objects.get(pk=int(treasury_id), tenant=tenant, is_active=True, is_hard_currency=False)
+                treasury = operational_money_accounts(Treasury.objects.for_tenant(tenant), request).get(pk=int(treasury_id), is_active=True, is_hard_currency=False)
                 enforce_branch_ownership(request, treasury)
             except (Treasury.DoesNotExist, ValueError):
                 return _err('الخزينة غير صالحة')
@@ -276,7 +276,7 @@ def _process_expense_post(request, tenant, expense):
         if not bank_account_id:
             return _err('يجب اختيار الحساب البنكي')
         try:
-            bank_account = BankAccount.objects.get(pk=int(bank_account_id), tenant=tenant, is_active=True)
+            bank_account = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).get(pk=int(bank_account_id), is_active=True)
             enforce_branch_ownership(request, bank_account)
         except (BankAccount.DoesNotExist, ValueError):
             return _err('الحساب البنكي غير صالح')

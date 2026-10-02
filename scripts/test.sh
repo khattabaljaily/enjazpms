@@ -19,7 +19,7 @@ fi
 TARGETS=(
   apps.core.tests apps.core.tests_full apps.core.tests_harness
   apps.core.tests_exchange_rate apps.core.test_system_surfaces apps.core.tests_business_types
-  apps.core.tests_tenant_isolation apps.core.tests_plan_limits
+  apps.core.tests_tenant_isolation apps.core.tests_plan_limits apps.core.tests_branch_money_scope
   apps.accounts apps.customers apps.suppliers apps.items
   apps.stocks apps.sales apps.purchases apps.treasury apps.bank_accounts
   apps.agents apps.insurance apps.expenses apps.employees apps.notifications

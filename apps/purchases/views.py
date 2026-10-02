@@ -22,7 +22,7 @@ from apps.purchases.models import PurchaseInvoice, PurchaseReturn, PurchaseRetur
 from apps.purchases.services import build_purchase_from_post, cancel_purchase_invoice, cancel_purchase_return, confirm_purchase_invoice, confirm_purchase_return, edit_confirmed_purchase_invoice
 from apps.stocks.models import Stock
 from apps.suppliers.models import Supplier
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope
+from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
 
 from .reports import PurchasesReportGenerator
 
@@ -200,7 +200,7 @@ def order_create(request):
     context = {
         'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'stocks': Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name'),
-        'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
+        'bank_accounts': operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).order_by('name'),
         'today': timezone.localdate().isoformat(),
         'action': 'create',
         'existing_lines': '[]',
@@ -258,7 +258,7 @@ def order_edit(request, pk):
         'invoice': invoice,
         'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
         'stocks': Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name'),
-        'bank_accounts': BankAccount.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
+        'bank_accounts': operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).order_by('name'),
         'today': timezone.localdate().isoformat(),
         'action': 'edit',
         'existing_lines': json.dumps(existing_lines, ensure_ascii=False),
@@ -316,8 +316,8 @@ def _process_order_post(request, tenant, invoice):
 
     try:
         stock = Stock.objects.get(id=header.get('stock_id'), tenant=tenant)
-    except Stock.DoesNotExist:
-        return _json_error('المخزن المحدد غير موجود')
+    except (Stock.DoesNotExist, ValueError, TypeError):
+        return _json_error('يرجى اختيار المخزن')
     enforce_branch_ownership(request, stock)
 
     try:
@@ -343,7 +343,7 @@ def _process_order_post(request, tenant, invoice):
                 }
                 if bank_account_id:
                     from apps.bank_accounts.models import BankAccount
-                    bank_account_obj = BankAccount.objects.get(id=bank_account_id, tenant=tenant, is_active=True)
+                    bank_account_obj = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).get(id=bank_account_id, is_active=True)
                     # مصدر السداد الفعلي (يُصرَف منه للمورد) — نفس منطق مصروفات
                     # apps/expenses/views.py._process_expense_post، يجب التحقق من ملكيته
                     enforce_branch_ownership(request, bank_account_obj)
@@ -401,7 +401,7 @@ def _process_order_post(request, tenant, invoice):
             invoice.bank_reference = bank_reference
             if bank_account_id:
                 from apps.bank_accounts.models import BankAccount
-                bank_account_obj = BankAccount.objects.get(id=int(bank_account_id), tenant=tenant, is_active=True)
+                bank_account_obj = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).get(id=int(bank_account_id), is_active=True)
                 enforce_branch_ownership(request, bank_account_obj)
                 invoice.bank_account = bank_account_obj
             else:
