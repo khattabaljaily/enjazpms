@@ -429,6 +429,8 @@ def permission_group_create_api(request):
 
     if not name:
         return _json_error('يرجى إدخال اسم المجموعة')
+    if PermissionGroup.objects.filter(tenant=tenant, name=name).exists():
+        return _json_error('توجد مجموعة صلاحيات بهذا الاسم بالفعل')
     if tenant.is_enterprise() and not scope:
         return _json_error('يرجى تحديد نطاق المجموعة (فروع أو إدارة النشاط)')
 
@@ -487,6 +489,8 @@ def permission_group_update_api(request, pk):
 
     if not name:
         return _json_error('يرجى إدخال اسم المجموعة')
+    if PermissionGroup.objects.filter(tenant=tenant, name=name).exclude(pk=group.pk).exists():
+        return _json_error('توجد مجموعة صلاحيات بهذا الاسم بالفعل')
 
     try:
         permissions = json.loads(permissions_json)
