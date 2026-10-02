@@ -445,6 +445,11 @@ def treasury_transfer_api(request):
     # مشروعة (كالتحويل المخزني بين الفروع)؛ لكن لا يمكنه السحب من خزينة لا
     # يملكها (from_treasury تحديداً).
     enforce_branch_ownership(request, from_treasury)
+    # خزينة الإدارة المركزية بلا فرع (NULL) فيتجاوزها فحص الملكية أعلاه —
+    # مستخدم الفرع لا يسحب إلا من خزائن فرعه هو.
+    user_branch = getattr(request, 'branch', None)
+    if user_branch is not None and from_treasury.branch_id != user_branch.id:
+        return JsonResponse({'success': False, 'message': 'يمكنك التحويل من خزائن فرعك فقط.'}, status=403)
 
     # مستخدم لا يملك صلاحية تحويل خزائن الفروع (فقط صلاحية خزينة الإدارة
     # المركزية — مدير النشاط عادةً) لا يبدأ التحويل إلا من خزينته المركزية

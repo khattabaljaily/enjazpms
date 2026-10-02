@@ -410,6 +410,11 @@ def bank_account_transfer_api(request):
     from_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=from_id)
     to_account = get_object_or_404(BankAccount.objects.for_tenant(tenant), pk=to_id)
     enforce_branch_ownership(request, from_account)
+    # حسابات الإدارة المركزية بلا فرع (NULL) فيتجاوزها فحص الملكية أعلاه —
+    # مستخدم الفرع لا يحوّل إلا من حساب فرعه هو.
+    user_branch = getattr(request, 'branch', None)
+    if user_branch is not None and from_account.branch_id != user_branch.id:
+        return JsonResponse({'success': False, 'message': 'يمكنك التحويل من حسابات فرعك فقط.'}, status=403)
 
     if not request.user.has_perm_key('transfer_bank_accounts') and not from_account.is_head_office:
         return JsonResponse({'success': False, 'message': 'لا يمكنك التحويل إلا من حساب الإدارة المركزية.'}, status=403)
