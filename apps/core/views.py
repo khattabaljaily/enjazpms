@@ -2485,7 +2485,8 @@ def tenant_renew_api(request, pk):
 
 def pricing(request):
     """صفحة خطط التسعير"""
-    trial_days = 30
+    from apps.core.models import PlatformSettings
+    trial_days = PlatformSettings.get().default_trial_days or 14
     plans = [
         {
             'key': 'basic',
