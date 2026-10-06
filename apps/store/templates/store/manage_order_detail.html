@@ -89,6 +89,12 @@
     <div class="cx-panel p-3">
       <div class="cx-panel-head"><i class="fas fa-user"></i> بيانات العميل</div>
       <div style="padding:1rem 1.1rem;">
+        {% if order.branch %}
+        <div class="st-detail-row">
+          <span class="st-detail-label">الفرع</span>
+          <span class="st-detail-value">{{ order.branch.name }}</span>
+        </div>
+        {% endif %}
         <div class="st-detail-row">
           <span class="st-detail-label">الاسم</span>
           <span class="st-detail-value">{{ order.customer_name }}</span>

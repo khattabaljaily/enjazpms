@@ -35,7 +35,7 @@ class ExpensesReportGenerator:
             status='confirmed',
             expense_date__gte=self.start_date,
             expense_date__lte=self.end_date,
-        ).for_branch(self.branch)
+        ).for_branch(self.branch, strict=True)
 
         total = expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
         total_cash = expenses.filter(payment_method='cash').aggregate(t=Sum('amount'))['t'] or Decimal('0')
@@ -58,14 +58,14 @@ class ExpensesReportGenerator:
         categories = ExpenseCategory.objects.filter(tenant=self.tenant).order_by('name')
         data = []
         for cat in categories:
-            agg = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
+            agg = Expense.objects.for_tenant(self.tenant).for_branch(self.branch, strict=True).filter(
                 category=cat,
                 status='confirmed',
                 expense_date__gte=self.start_date,
                 expense_date__lte=self.end_date,
             ).aggregate(total=Sum('amount'), count=Sum('id'))
 
-            count = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
+            count = Expense.objects.for_tenant(self.tenant).for_branch(self.branch, strict=True).filter(
                 category=cat,
                 status='confirmed',
                 expense_date__gte=self.start_date,
@@ -82,7 +82,7 @@ class ExpensesReportGenerator:
                 })
 
         # Uncategorized
-        uncat = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
+        uncat = Expense.objects.for_tenant(self.tenant).for_branch(self.branch, strict=True).filter(
             category=None,
             status='confirmed',
             expense_date__gte=self.start_date,
@@ -108,7 +108,7 @@ class ExpensesReportGenerator:
 
     def get_by_date_report(self, group_by='day'):
         """المصروفات حسب التاريخ"""
-        expenses = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
+        expenses = Expense.objects.for_tenant(self.tenant).for_branch(self.branch, strict=True).filter(
             status='confirmed',
             expense_date__gte=self.start_date,
             expense_date__lte=self.end_date,
@@ -149,7 +149,7 @@ class ExpensesReportGenerator:
 
     def get_details_report(self, category_id=None):
         """قائمة تفصيلية بالمصروفات"""
-        expenses = Expense.objects.for_tenant(self.tenant).for_branch(self.branch).filter(
+        expenses = Expense.objects.for_tenant(self.tenant).for_branch(self.branch, strict=True).filter(
             status='confirmed',
             expense_date__gte=self.start_date,
             expense_date__lte=self.end_date,

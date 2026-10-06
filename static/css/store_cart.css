@@ -171,6 +171,22 @@ body {
   color: var(--sc-t900);
 }
 
+.sc-qty__input {
+  width: 56px;
+  height: 30px;
+  text-align: center;
+  font-weight: 800;
+  font-size: .9rem;
+  color: var(--sc-t900);
+  border: 1.5px solid var(--sc-border);
+  border-radius: 8px;
+  background: var(--sc-surface);
+  -moz-appearance: textfield;
+}
+.sc-qty__input::-webkit-outer-spin-button,
+.sc-qty__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.sc-qty__input:focus { outline: none; border-color: var(--brand); }
+
 .sc-item__total {
   font-size: .95rem;
   font-weight: 800;

@@ -75,6 +75,10 @@ class StoreSettings(TenantMixin):
         'تفعيل قائمة الأسعار', default=False,
         help_text='صفحة عامة منفصلة تعرض كل المنتجات وأسعارها مع بحث وفلترة، بدون طلب أو سلة'
     )
+    price_list_columns   = models.JSONField(
+        'أعمدة قائمة الأسعار', default=list, blank=True,
+        help_text='الأعمدة التي تظهر في قائمة الأسعار العامة. القائمة الفارغة = كل الأعمدة'
+    )
     min_order_amount     = models.DecimalField(
         'الحد الأدنى للطلب', max_digits=12, decimal_places=2, default=0
     )
@@ -113,6 +117,27 @@ class StoreSettings(TenantMixin):
     class Meta:
         db_table      = 'store_settings'
         verbose_name  = 'إعدادات المتجر'
+
+    PRICE_LIST_COLUMNS = (
+        ('idx',       '#'),
+        ('name',      'الاسم التجاري (Trade Name)'),
+        ('generic',   'الاسم العلمي (Generic Name)'),
+        ('unit',      'الوحدة (Unit)'),
+        ('wholesale', 'سعر الجملة (W. Price)'),
+        ('retail',    'سعر التجزئة (R. Price)'),
+        ('pack',      'الكمية في العبوة (Q/Box)'),
+        ('expiry',    'تاريخ الانتهاء (Exp Date)'),
+        ('qty',       'عمود الكمية (Quantity)'),
+    )
+
+    def price_list_visible_columns(self):
+        """مجموعة مفاتيح الأعمدة الظاهرة؛ فارغ/غير مضبوط = الكل (السلوك السابق)."""
+        all_keys = [k for k, _ in self.PRICE_LIST_COLUMNS]
+        chosen = [k for k in (self.price_list_columns or []) if k in all_keys]
+        keys = set(chosen) if chosen else set(all_keys)
+        if not self.show_prices:
+            keys -= {'wholesale', 'retail'}
+        return keys
 
     def __str__(self):
         return f"متجر {self.display_name or self.tenant.name}"
@@ -256,6 +281,12 @@ class OnlineOrder(TenantMixin):
 
     payment_method = models.CharField('طريقة الدفع', max_length=10, choices=PAYMENT_CHOICES)
     status         = models.CharField('الحالة', max_length=15, choices=STATUS_CHOICES, default='pending')
+
+    # الفرع الذي اختاره الزائر (نسخة المؤسسات فقط؛ فارغ في النسخ الأخرى)
+    branch = models.ForeignKey(
+        'core.Branch', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='online_orders', verbose_name='الفرع'
+    )
 
     # Totals (denormalised for quick display)
     subtotal     = models.DecimalField('المجموع', max_digits=14, decimal_places=2, default=0)

@@ -54,6 +54,7 @@
       <thead>
         <tr>
           <th>رقم الطلب</th>
+          <th>الفرع</th>
           <th>العميل</th>
           <th>الهاتف</th>
           <th>المبلغ</th>
@@ -67,6 +68,7 @@
         {% for order in orders %}
         <tr id="order-row-{{ order.pk }}">
           <td><strong>{{ order.order_number }}</strong></td>
+          <td>{{ order.branch.name|default:"-" }}</td>
           <td>{{ order.customer_name }}</td>
           <td><a href="tel:{{ order.customer_phone }}" dir="ltr">{{ order.customer_phone }}</a></td>
           <td><strong dir="ltr">{{ order.total_amount|format_price }}</strong></td>
@@ -109,7 +111,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="8" style="text-align:center;padding:3rem 1rem;color:#94a3b8;">
+          <td colspan="9" style="text-align:center;padding:3rem 1rem;color:#94a3b8;">
             <i class="fas fa-inbox" style="font-size:2rem;display:block;margin-bottom:.75rem;opacity:.35;"></i>
             لا توجد طلبات
           </td>

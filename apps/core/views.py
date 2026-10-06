@@ -25,7 +25,7 @@ from .forms import TenantForm, BranchForm
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country, CURRENCY_CHOICES
 from apps.treasury.models import TreasuryMovement
 from apps.expenses.models import Expense
-from .utils import filter_by_branch_via, resolve_report_scope
+from .utils import filter_by_branch_via, filter_by_branch_strict, resolve_report_scope
 
 
 def about(request):
@@ -62,23 +62,29 @@ def dashboard(request):
 
         # Users
         from apps.accounts.models import User
-        stats['total_users'] = User.objects.filter(tenant=tenant).for_branch(branch).count()
+        stats['total_users'] = User.objects.filter(tenant=tenant).for_branch(branch, strict=True).count()
 
         # Customers
         from apps.customers.models import Customer
-        stats['total_customers'] = Customer.objects.for_tenant(tenant).for_branch(branch).count()
+        stats['total_customers'] = Customer.objects.for_tenant(tenant).for_branch(branch, strict=True).count()
 
         # Products
         from apps.items.models import Item
-        stats['total_products'] = Item.objects.filter(tenant=tenant).count()
+        if branch is None:
+            stats['total_products'] = Item.objects.filter(tenant=tenant).count()
+        else:
+            from apps.stocks.models import StockQuantity as _SQ
+            stats['total_products'] = _SQ.objects.filter(
+                tenant=tenant, stock__branch=branch, quantity__gt=0,
+            ).values('item').distinct().count()
 
         # Suppliers
         from apps.suppliers.models import Supplier
-        stats['total_suppliers'] = Supplier.objects.for_tenant(tenant).for_branch(branch).count()
+        stats['total_suppliers'] = Supplier.objects.for_tenant(tenant).for_branch(branch, strict=True).count()
 
         # Low stock items
         from apps.stocks.models import StockQuantity
-        low_stock_count = filter_by_branch_via(
+        low_stock_count = filter_by_branch_strict(
             StockQuantity.objects.filter(
                 tenant=tenant,
                 quantity__lte=F('item__min_quantity'),
@@ -90,7 +96,7 @@ def dashboard(request):
         # Sales today
         from apps.sales.models import SaleInvoice
         today = dj_timezone.localdate()
-        today_sales = filter_by_branch_via(SaleInvoice.objects.filter(
+        today_sales = filter_by_branch_strict(SaleInvoice.objects.filter(
             tenant=tenant,
             invoice_date=today,
             status__in=SaleInvoice.REVENUE_STATUSES
@@ -99,7 +105,7 @@ def dashboard(request):
 
         # Sales this month
         first_day = today.replace(day=1)
-        month_sales = filter_by_branch_via(SaleInvoice.objects.filter(
+        month_sales = filter_by_branch_strict(SaleInvoice.objects.filter(
             tenant=tenant,
             invoice_date__gte=first_day,
             status__in=SaleInvoice.REVENUE_STATUSES
@@ -108,25 +114,25 @@ def dashboard(request):
 
         # Additional stats
         # Number of invoices today
-        stats['today_invoices'] = filter_by_branch_via(SaleInvoice.objects.filter(
+        stats['today_invoices'] = filter_by_branch_strict(SaleInvoice.objects.filter(
             tenant=tenant,
             invoice_date=today,
             status__in=SaleInvoice.REVENUE_STATUSES
         ), branch).count()
 
         # Number of pending invoices (credit)
-        stats['pending_invoices'] = filter_by_branch_via(SaleInvoice.objects.filter(
+        stats['pending_invoices'] = filter_by_branch_strict(SaleInvoice.objects.filter(
             tenant=tenant,
             status__in=SaleInvoice.REVENUE_STATUSES,
             payment_method='credit'
         ), branch).exclude(paid_amount__gte=F('grand_total')).count()
 
         # Payment percentage
-        total_invoices = filter_by_branch_via(SaleInvoice.objects.filter(
+        total_invoices = filter_by_branch_strict(SaleInvoice.objects.filter(
             tenant=tenant,
             status__in=SaleInvoice.REVENUE_STATUSES
         ), branch).count()
-        paid_invoices = filter_by_branch_via(SaleInvoice.objects.filter(
+        paid_invoices = filter_by_branch_strict(SaleInvoice.objects.filter(
             tenant=tenant,
             status__in=SaleInvoice.REVENUE_STATUSES,
             paid_amount__gte=F('grand_total')
@@ -138,7 +144,7 @@ def dashboard(request):
         from apps.sales.models import SaleInvoiceLine
         
         # Get ALL categories (not just top 4) to calculate total for percentage
-        all_categories = filter_by_branch_via(SaleInvoiceLine.objects.filter(
+        all_categories = filter_by_branch_strict(SaleInvoiceLine.objects.filter(
             tenant=tenant,
             invoice__status__in=SaleInvoice.REVENUE_STATUSES,
             invoice__invoice_date__gte=first_day,
@@ -173,14 +179,14 @@ def dashboard(request):
             day = week_ago + timedelta(days=i)
             
             # Sales for the day
-            day_sales = filter_by_branch_via(SaleInvoice.objects.filter(
+            day_sales = filter_by_branch_strict(SaleInvoice.objects.filter(
                 tenant=tenant,
                 invoice_date=day,
                 status__in=SaleInvoice.REVENUE_STATUSES
             ), branch).aggregate(total=Sum('grand_total'))['total'] or 0
 
             # Customer payments (receipts) for the day
-            day_receipts = filter_by_branch_via(TreasuryMovement.objects.filter(
+            day_receipts = filter_by_branch_strict(TreasuryMovement.objects.filter(
                 tenant=tenant,
                 movement_date=day,
                 movement_type='receipt'
@@ -190,13 +196,13 @@ def dashboard(request):
             day_revenues = float(day_sales) + float(day_receipts)
 
             # Expenses for the day
-            day_expenses = Expense.objects.for_tenant(tenant).for_branch(branch).filter(
+            day_expenses = Expense.objects.for_tenant(tenant).for_branch(branch, strict=True).filter(
                 expense_date=day,
                 status='confirmed'
             ).aggregate(total=Sum('amount'))['total'] or 0
 
             # Supplier payments (disbursements) for the day
-            day_disbursements = filter_by_branch_via(TreasuryMovement.objects.filter(
+            day_disbursements = filter_by_branch_strict(TreasuryMovement.objects.filter(
                 tenant=tenant,
                 movement_date=day,
                 movement_type='disbursement'
@@ -234,7 +240,7 @@ def dashboard(request):
         stats['top_categories'] = top_categories_list
         
         # Top selling products
-        top_products = filter_by_branch_via(SaleInvoiceLine.objects.filter(
+        top_products = filter_by_branch_strict(SaleInvoiceLine.objects.filter(
             tenant=tenant,
             invoice__status__in=SaleInvoice.REVENUE_STATUSES,
             invoice__invoice_date__gte=first_day
@@ -254,7 +260,7 @@ def dashboard(request):
         
         # Low stock items (available but low quantity)
         from apps.stocks.models import StockQuantity
-        low_stock_items = filter_by_branch_via(StockQuantity.objects.filter(
+        low_stock_items = filter_by_branch_strict(StockQuantity.objects.filter(
             tenant=tenant,
             quantity__gt=0,  # Available items only
             item__item_type='product'  # Only products, not services
@@ -283,7 +289,7 @@ def dashboard(request):
         if capabilities and capabilities.has_expiry_alerts:
             from apps.items.models import ItemBatch
             warn_date = today + timedelta(days=30)
-            expiring_qs = filter_by_branch_via(ItemBatch.objects.filter(
+            expiring_qs = filter_by_branch_strict(ItemBatch.objects.filter(
                 tenant=tenant, quantity_remaining__gt=0,
                 expiry_date__isnull=False, expiry_date__lte=warn_date,
             ), branch, field='stock__branch').select_related('item').order_by('expiry_date')
@@ -303,7 +309,7 @@ def dashboard(request):
 
         # Stock status summary for pie chart
         # Get all available products (quantity > 0 and item_type='product')
-        available_items = filter_by_branch_via(StockQuantity.objects.filter(
+        available_items = filter_by_branch_strict(StockQuantity.objects.filter(
             tenant=tenant,
             quantity__gt=0,
             item__item_type='product'  # Only products, not services
@@ -2645,17 +2651,17 @@ def analytics(request):
     branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
     def sales_total(qs_filter):
-        return float(filter_by_branch_via(SaleInvoice.objects.filter(
+        return float(filter_by_branch_strict(SaleInvoice.objects.filter(
             tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES, **qs_filter
         ), branch).aggregate(t=Sum('grand_total'))['t'] or 0)
 
     def purchase_total(qs_filter):
-        return float(filter_by_branch_via(PurchaseInvoice.objects.filter(
+        return float(filter_by_branch_strict(PurchaseInvoice.objects.filter(
             tenant=tenant, status__in=PurchaseInvoice.EFFECTIVE_STATUSES, **qs_filter
         ), branch).aggregate(t=Sum('grand_total'))['t'] or 0)
 
     def expense_total(qs_filter):
-        return float(Expense.objects.for_tenant(tenant).for_branch(branch).filter(
+        return float(Expense.objects.for_tenant(tenant).for_branch(branch, strict=True).filter(
             status='confirmed', **qs_filter
         ).aggregate(t=Sum('amount'))['t'] or 0)
 
@@ -2710,7 +2716,7 @@ def analytics(request):
         monthly_profit.append(round(s - p - e, 2))
 
     # ── Top 10 customers by revenue (this month) ────────────────────
-    top_customers = filter_by_branch_via(
+    top_customers = filter_by_branch_strict(
         SaleInvoiceLine.objects
         .filter(tenant=tenant, invoice__status__in=SaleInvoice.REVENUE_STATUSES, invoice__invoice_date__gte=first_this_month),
         branch, field='invoice__stock__branch'
@@ -2723,8 +2729,8 @@ def analytics(request):
 
     # ── Treasury balances ───────────────────────────────────────────
     from apps.treasury.models import Treasury
-    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch).values('name', 'current_balance')
-    treasury_total = float(Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch)
+    treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch, strict=True).values('name', 'current_balance')
+    treasury_total = float(Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch, strict=True)
                            .aggregate(t=Sum('current_balance'))['t'] or 0)
 
     # ── Outstanding balances ────────────────────────────────────────
@@ -2732,7 +2738,7 @@ def analytics(request):
     from apps.sales.models import SaleInvoice
     from django.db.models import F
     customer_debt = float(
-        filter_by_branch_via(SaleInvoice.objects.filter(
+        filter_by_branch_strict(SaleInvoice.objects.filter(
             tenant=tenant,
             status__in=('confirmed', 'partially_returned'),
             payment_method__in=('credit', 'mixed'),
@@ -2745,7 +2751,7 @@ def analytics(request):
     _hc_rate = Decimal(str(tenant.exchange_rate or 1)) if _hc_mode and tenant.exchange_rate else Decimal('1')
     _tenant_currency = (getattr(tenant, 'currency', '') or '').strip()
     supplier_debt = Decimal('0')
-    for _sup in SupplierModel.objects.for_tenant(tenant).for_branch(branch):
+    for _sup in SupplierModel.objects.for_tenant(tenant).for_branch(branch, strict=True):
         _sup_cur = (_sup.currency or '').strip()
         _is_hc_sup = _hc_mode and bool(_sup_cur) and _sup_cur != _tenant_currency
         if _is_hc_sup:

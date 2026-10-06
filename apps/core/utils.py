@@ -35,6 +35,18 @@ def filter_by_branch_via(qs, branch, field='stock__branch'):
     return qs.filter(Q(**{field: branch}) | Q(**{f'{field}__isnull': True}))
 
 
+def filter_by_branch_strict(qs, branch, field='stock__branch'):
+    """
+    مثل filter_by_branch_via لكن صارم: عند اختيار فرع لا تظهر إلا سجلات ذلك
+    الفرع، ولا تُضاف سجلات المخازن/الحسابات التي بلا فرع. تُستعمل في
+    لوحة التحكم والتحليلات والتقارير حتى لا تبقى أرقام ثابتة عند تغيير الفرع.
+    branch=None (إجمالي المؤسسة) لا يفلتر شيئاً.
+    """
+    if branch is None:
+        return qs
+    return qs.filter(**{field: branch})
+
+
 def resolve_report_scope(request):
     """
     يحسم أي فرع يُستخدم لفلترة أي Dashboard/تقرير لهذا الطلب — نقطة الدخول

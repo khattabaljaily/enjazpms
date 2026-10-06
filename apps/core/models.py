@@ -27,14 +27,17 @@ class TenantQuerySet(models.QuerySet):
         """فلترة البيانات حسب tenant معين"""
         return self.filter(tenant=tenant)
 
-    def for_branch(self, branch):
+    def for_branch(self, branch, strict=False):
         """
         فلترة البيانات حسب فرع معين (للنسخة multi_branch فقط).
         branch=None لا يفلتر شيء (المستخدم المركزي/الأدمن أو tenant بدون فروع).
-        سجلات بدون فرع محدد (branch=NULL) تظل ظاهرة لتفادي إخفاء بيانات قديمة.
+        افتراضياً سجلات بدون فرع محدد (branch=NULL) تظل ظاهرة لتفادي إخفاء
+        بيانات قديمة؛ strict=True (لوحة التحكم/التقارير) يُبقي سجلات الفرع فقط.
         """
         if branch is None:
             return self
+        if strict:
+            return self.filter(branch=branch)
         return self.filter(models.Q(branch=branch) | models.Q(branch__isnull=True))
 
 
@@ -47,8 +50,8 @@ class TenantManager(models.Manager):
     def for_tenant(self, tenant):
         return self.get_queryset().for_tenant(tenant)
 
-    def for_branch(self, branch):
-        return self.get_queryset().for_branch(branch)
+    def for_branch(self, branch, strict=False):
+        return self.get_queryset().for_branch(branch, strict=strict)
 
 
 # ============================================

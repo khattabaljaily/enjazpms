@@ -26,6 +26,7 @@
 </header>
 
 <main class="sc-wrap">
+{% include 'store/partials/branch_bar.html' %}
   <h2 class="sc-page-title">
     <i class="fas fa-shopping-bag"></i> سلة التسوق
   </h2>
@@ -59,7 +60,13 @@
           <input type="hidden" name="qty" value="{{ row.qty|floatformat:0|add:'-1' }}">
           <button type="submit" class="sc-qty__btn" aria-label="تقليل">−</button>
         </form>
-        <span class="sc-qty__val">{{ row.qty|floatformat:0 }}</span>
+        <form method="post" action="{% url 'store:cart_update' slug=store.slug %}">
+          {% csrf_token %}
+          <input type="hidden" name="item_id" value="{{ row.item.id }}">
+          <input type="number" name="qty" class="sc-qty__input" value="{{ row.qty|floatformat:0 }}"
+                 min="0" step="1" inputmode="numeric" aria-label="الكمية"
+                 onchange="this.form.submit()">
+        </form>
         <form method="post" action="{% url 'store:cart_update' slug=store.slug %}">
           {% csrf_token %}
           <input type="hidden" name="item_id" value="{{ row.item.id }}">

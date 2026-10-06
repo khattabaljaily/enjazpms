@@ -437,6 +437,21 @@ body {
   opacity: .7;
 }
 
+.sf-qty-input {
+  width: 100%;
+  padding: .45rem;
+  margin-top: auto;
+  margin-bottom: .4rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: .85rem;
+  font-family: 'Cairo', sans-serif;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+}
+.sf-qty-input:focus { outline: none; border-color: var(--brand); }
+.sf-qty-input + .sf-add-btn { margin-top: 0; }
+
 .sf-add-btn {
   display: flex;
   align-items: center;

@@ -29,6 +29,7 @@
         <i class="fas fa-print"></i>
       </button>
     </div>
+    {% include 'store/partials/branch_bar.html' %}
     <div class="pl-hero__badge"><span id="plCount">{{ total_count }}</span> منتج متاح</div>
   </div>
 </div>
@@ -75,33 +76,29 @@
       <table class="pl-table">
         <thead>
           <tr>
-            <th class="pl-col-idx">#</th>
-            <th class="pl-col-name">Trade Name</th>
-            <th class="pl-col-desc">Generic Name</th>
-            <th class="pl-col-unit">Unit</th>
-            {% if store.show_prices %}
-            <th class="pl-col-price">W. Price</th>
-            <th class="pl-col-price">R. Price</th>
-            {% endif %}
-            <th class="pl-col-pack">Q/Box</th>
-            <th class="pl-col-exp">Exp Date</th>
-            <th class="pl-col-qty">Quantity</th>
+            {% if cols.idx %}<th class="pl-col-idx">#</th>{% endif %}
+            {% if cols.name %}<th class="pl-col-name">Trade Name</th>{% endif %}
+            {% if cols.generic %}<th class="pl-col-desc">Generic Name</th>{% endif %}
+            {% if cols.unit %}<th class="pl-col-unit">Unit</th>{% endif %}
+            {% if cols.wholesale %}<th class="pl-col-price">W. Price</th>{% endif %}
+            {% if cols.retail %}<th class="pl-col-price">R. Price</th>{% endif %}
+            {% if cols.pack %}<th class="pl-col-pack">Q/Box</th>{% endif %}
+            {% if cols.expiry %}<th class="pl-col-exp">Exp Date</th>{% endif %}
+            {% if cols.qty %}<th class="pl-col-qty">Quantity</th>{% endif %}
           </tr>
         </thead>
         <tbody>
           {% for item in group.items %}
           <tr class="pl-row" data-name="{{ item.name|lower }}" data-agent="{{ group.name|lower }}">
-            <td class="pl-col-idx">{{ forloop.counter }}</td>
-            <td class="pl-col-name">{{ item.name }}{% if item.sku %}<div class="pl-row__sku">{{ item.sku }}</div>{% endif %}</td>
-            <td class="pl-col-desc">{{ item.generic_name|default:'-' }}</td>
-            <td class="pl-col-unit">{{ item.unit.name|default:'-' }}</td>
-            {% if store.show_prices %}
-            <td class="pl-col-price">{{ item.cost_price|format_price }}</td>
-            <td class="pl-col-price">{{ item.selling_price|format_price }}</td>
-            {% endif %}
-            <td class="pl-col-pack">{{ item.pack_qty|default:'-' }}</td>
-            <td class="pl-col-exp">{{ item.expiry_date|date:"M Y"|default:'-' }}</td>
-            <td class="pl-col-qty"></td>
+            {% if cols.idx %}<td class="pl-col-idx">{{ forloop.counter }}</td>{% endif %}
+            {% if cols.name %}<td class="pl-col-name">{{ item.name }}{% if item.sku %}<div class="pl-row__sku">{{ item.sku }}</div>{% endif %}</td>{% endif %}
+            {% if cols.generic %}<td class="pl-col-desc">{{ item.generic_name|default:'-' }}</td>{% endif %}
+            {% if cols.unit %}<td class="pl-col-unit">{{ item.unit.name|default:'-' }}</td>{% endif %}
+            {% if cols.wholesale %}<td class="pl-col-price">{{ item.cost_price|format_price }}</td>{% endif %}
+            {% if cols.retail %}<td class="pl-col-price">{{ item.selling_price|format_price }}</td>{% endif %}
+            {% if cols.pack %}<td class="pl-col-pack">{{ item.pack_qty|default:'-' }}</td>{% endif %}
+            {% if cols.expiry %}<td class="pl-col-exp">{{ item.expiry_date|date:"M Y"|default:'-' }}</td>{% endif %}
+            {% if cols.qty %}<td class="pl-col-qty"></td>{% endif %}
           </tr>
           {% endfor %}
         </tbody>

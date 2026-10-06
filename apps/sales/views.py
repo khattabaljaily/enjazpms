@@ -41,7 +41,7 @@ from apps.customers.models import Customer
 from apps.items.models import Item
 from apps.items.alternatives import get_all_alternatives
 from apps.stocks.models import Stock, StockQuantity
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
+from apps.core.utils import filter_by_branch_via, filter_by_branch_strict, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
 
 from .models import (
     CustomerLedger,
@@ -2284,7 +2284,7 @@ def sales_by_user_report(request):
 
     from django.contrib.auth import get_user_model
     from .models import SaleInvoice
-    user_ids = filter_by_branch_via(
+    user_ids = filter_by_branch_strict(
         SaleInvoice.objects.filter(tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES),
         branch,
     ).values_list('created_by', flat=True).distinct()

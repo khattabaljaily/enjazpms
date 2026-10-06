@@ -856,7 +856,7 @@ def stocks_by_stock_report(request):
     report_data = generator.get_by_stock_report(stock_id=stock_id)
 
     # stocks list for dropdown
-    stocks_list = Stock.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
+    stocks_list = Stock.objects.filter(tenant=tenant, is_active=True).for_branch(branch, strict=True).order_by('name')
 
     return render(request, 'stocks/reports/by_stock.html', {
         'report': report_data,

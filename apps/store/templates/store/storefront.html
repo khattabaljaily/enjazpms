@@ -54,6 +54,7 @@
 </div>
 {% endif %}
 
+{% include 'store/partials/branch_bar.html' %}
 <!-- ── Search ─────────────────────────────────────────── -->
 <div class="sf-search-wrap">
   <form class="sf-search" method="get" role="search">
@@ -133,7 +134,8 @@
         <form method="post" action="{% url 'store:cart_add' slug=store.slug %}" class="add-to-cart-form">
           {% csrf_token %}
           <input type="hidden" name="item_id" value="{{ item.id }}">
-          <input type="hidden" name="qty" value="1">
+          <input type="number" name="qty" class="sf-qty-input" value="1" min="1" step="1"
+                 inputmode="numeric" aria-label="الكمية">
           <button type="submit" class="sf-add-btn">
             <i class="fas fa-cart-plus"></i> أضف للسلة
           </button>

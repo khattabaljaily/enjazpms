@@ -14,6 +14,7 @@ from django.db.models import Q
 
 from .models import OnlineOrder, StoreSettings
 from apps.accounts.decorators import require_permission, branch_scope_exempt
+from apps.core.utils import enforce_branch_ownership
 from .services import (
     approve_order, cart_add, cart_clear, cart_remove,
     cart_update, get_cart, get_cart_items, place_order, reject_order,
@@ -130,7 +131,30 @@ h2{{font-size:1.55rem;font-weight:900;margin-bottom:.6rem;letter-spacing:-.01em;
     return HttpResponse(html, status=503)
 
 
-def _get_products(store: StoreSettings):
+def _store_branches(store):
+    """فروع المتجر التي يختار منها الزائر (نسخة المؤسسات فقط)."""
+    from apps.core.models import Branch
+    if getattr(store.tenant, 'version_type', '') != 'multi_branch':
+        return Branch.objects.none()
+    return Branch.objects.filter(tenant=store.tenant, is_active=True).order_by('name')
+
+
+def _resolve_store_branch(request, store):
+    """
+    يحسم فرع الزائر: ?branch= ثم الجلسة ثم أول فرع. يُرجع (الفرع, قائمة الفروع)؛
+    (None, []) خارج نسخة المؤسسات فلا يتغير سلوك المتجر هناك.
+    """
+    branches = list(_store_branches(store))
+    if not branches:
+        return None, []
+    key = f'store_branch_{store.slug}'
+    chosen = request.GET.get('branch') or request.session.get(key)
+    branch = next((b for b in branches if str(b.id) == str(chosen)), None) or branches[0]
+    request.session[key] = branch.id
+    return branch, branches
+
+
+def _get_products(store: StoreSettings, branch=None):
     from apps.stocks.models import StockQuantity
     from apps.items.models import Item
 
@@ -143,11 +167,10 @@ def _get_products(store: StoreSettings):
 
     if not store.show_out_of_stock:
         # keep items with at least one positive StockQuantity
-        in_stock_ids = (
-            StockQuantity.objects
-            .filter(tenant=store.tenant, quantity__gt=0)
-            .values_list('item_id', flat=True)
-        )
+        in_stock = StockQuantity.objects.filter(tenant=store.tenant, quantity__gt=0)
+        if branch is not None:
+            in_stock = in_stock.filter(stock__branch=branch)
+        in_stock_ids = in_stock.values_list('item_id', flat=True)
         qs = qs.filter(id__in=in_stock_ids)
 
     return qs
@@ -165,7 +188,8 @@ def storefront(request, slug):
     status = store.get_status()
     if not status['is_open']:
         return _store_closed_response(store, status)
-    products = _get_products(store)
+    branch, store_branches = _resolve_store_branch(request, store)
+    products = _get_products(store, branch)
 
     search = request.GET.get('q', '').strip()
     if search:
@@ -193,6 +217,7 @@ def storefront(request, slug):
         qs = (
             StockQuantity.objects
             .filter(tenant=store.tenant, item__in=products)
+            .filter(**({'stock__branch': branch} if branch is not None else {}))
             .values('item_id')
             .annotate(total=Sum('quantity'))
         )
@@ -207,6 +232,8 @@ def storefront(request, slug):
         'category_id':   category_id,
         'status':        store.get_status(),
         'stock_qty_map': stock_qty_map,
+        'branch':        branch,
+        'store_branches': store_branches,
     })
 
 
@@ -219,8 +246,9 @@ def price_list(request, slug):
     if not store.show_price_list:
         return _price_list_disabled_response(store)
 
+    branch, store_branches = _resolve_store_branch(request, store)
     products = list(
-        _get_products(store)
+        _get_products(store, branch)
         .select_related('purchase_unit')
         .order_by('sudan_agent', 'name')
     )
@@ -234,7 +262,7 @@ def price_list(request, slug):
     ).order_by('display_order', 'name')
 
     cat_counts = dict(
-        _get_products(store).values_list('category_id').annotate(c=Count('id')).order_by()
+        _get_products(store, branch).values_list('category_id').annotate(c=Count('id')).order_by()
     )
     categories = [
         {'id': cat.id, 'name': cat.name, 'count': cat_counts.get(cat.id, 0)}
@@ -282,12 +310,26 @@ def price_list(request, slug):
         'total_count':   len(products),
         'categories':    categories,
         'print_date':    timezone.localdate(),
+        'cols':          {k: True for k in store.price_list_visible_columns()},
+        'branch':        branch,
+        'store_branches': store_branches,
     })
 
 
 # ══════════════════════════════════════════════════════════════
 # PUBLIC — Cart (AJAX + page)
 # ══════════════════════════════════════════════════════════════
+
+def _parse_qty(raw, default):
+    """يحوّل الكمية المُدخلة يدوياً إلى رقم؛ القيمة غير الصالحة ترجع default."""
+    try:
+        qty = float(str(raw).strip())
+    except (TypeError, ValueError):
+        return default
+    if qty != qty or qty in (float('inf'), float('-inf')):
+        return default
+    return qty
+
 
 @require_POST
 def cart_add_view(request, slug):
@@ -300,7 +342,9 @@ def cart_add_view(request, slug):
             return JsonResponse({'error': 'المتجر مغلق حالياً'}, status=403)
         return _store_closed_response(store, status)
     item_id = request.POST.get('item_id')
-    qty     = float(request.POST.get('qty', 1))
+    qty     = _parse_qty(request.POST.get('qty'), default=1)
+    if qty <= 0:
+        qty = 1
     cart_add(request, slug, int(item_id), qty)
     cart        = get_cart(request, slug)
     cart_count  = int(sum(cart.values()))
@@ -319,8 +363,9 @@ def cart_remove_view(request, slug):
 @require_POST
 def cart_update_view(request, slug):
     item_id = int(request.POST.get('item_id'))
-    qty     = float(request.POST.get('qty', 0))
-    cart_update(request, slug, item_id, qty)
+    qty     = _parse_qty(request.POST.get('qty'), default=None)
+    if qty is not None:
+        cart_update(request, slug, item_id, qty)
     return redirect('store:cart', slug=slug)
 
 
@@ -331,7 +376,10 @@ def cart_view(request, slug):
     cart       = get_cart(request, slug)
     cart_items = get_cart_items(slug, cart)
     subtotal   = sum(r['line_total'] for r in cart_items)
+    branch, store_branches = _resolve_store_branch(request, store)
     return render(request, 'store/cart.html', {
+        'branch':     branch,
+        'store_branches': store_branches,
         'store':      store,
         'cart_items': cart_items,
         'subtotal':   subtotal,
@@ -356,6 +404,8 @@ def checkout_view(request, slug):
         return redirect('store:storefront', slug=slug)
 
     subtotal = sum(r['line_total'] for r in cart_items)
+    branch, store_branches = _resolve_store_branch(request, store)
+    branch_ctx = {'branch': branch, 'store_branches': store_branches}
 
     if request.method == 'POST':
         name   = request.POST.get('name', '').strip()
@@ -385,6 +435,7 @@ def checkout_view(request, slug):
                     'notes':          notes,
                     'payment_method': pm,
                 },
+                branch=branch,
             )
             cart_clear(request, slug)
             return redirect('store:order_confirm', slug=slug, token=order.token)
@@ -395,12 +446,14 @@ def checkout_view(request, slug):
             'subtotal':   subtotal,
             'errors':     errors,
             'post':       request.POST,
+            **branch_ctx,
         })
 
     return render(request, 'store/checkout.html', {
         'store':      store,
         'cart_items': cart_items,
         'subtotal':   subtotal,
+        **branch_ctx,
     })
 
 
@@ -448,6 +501,8 @@ def manage_settings(request):
         store.show_prices         = request.POST.get('show_prices') == 'on'
         store.show_stock_quantity = request.POST.get('show_stock_quantity') == 'on'
         store.show_price_list     = request.POST.get('show_price_list') == 'on'
+        valid_cols = {k for k, _ in StoreSettings.PRICE_LIST_COLUMNS}
+        store.price_list_columns = [c for c in request.POST.getlist('price_list_columns') if c in valid_cols]
         store.min_order_amount    = request.POST.get('min_order_amount') or 0
         store.bank_details      = request.POST.get('bank_details', '').strip()
         store.delivery_message  = request.POST.get('delivery_message', '').strip()
@@ -489,6 +544,10 @@ def manage_settings(request):
         'status':        store.get_status(),
         'hours':         hours,
         'days':          [(d, DAYS_AR[d]) for d in DAYS_ORDER],
+        'price_list_columns': [
+            (k, label, k in store.price_list_visible_columns())
+            for k, label in StoreSettings.PRICE_LIST_COLUMNS
+        ],
     })
 
 
@@ -508,7 +567,9 @@ def manage_orders(request):
         return redirect('core:subscription')
 
     status_filter = request.GET.get('status', 'pending')
-    orders = OnlineOrder.objects.filter(tenant=tenant).select_related('store', 'sale_invoice')
+    orders = OnlineOrder.objects.filter(tenant=tenant).select_related('store', 'sale_invoice', 'branch')
+    if getattr(request, 'branch', None) is not None:
+        orders = orders.filter(Q(branch=request.branch) | Q(branch__isnull=True))
 
     if status_filter in ('pending', 'approved', 'rejected'):
         orders = orders.filter(status=status_filter)
@@ -535,6 +596,7 @@ def manage_orders(request):
 def manage_order_detail(request, pk):
     tenant = request.tenant
     order  = get_object_or_404(OnlineOrder, pk=pk, tenant=tenant)
+    enforce_branch_ownership(request, order)
     lines  = order.lines.select_related('item').all()
     return render(request, 'store/manage_order_detail.html', {
         'order': order,
@@ -552,6 +614,7 @@ def manage_order_detail(request, pk):
 def manage_order_approve(request, pk):
     tenant = request.tenant
     order  = get_object_or_404(OnlineOrder, pk=pk, tenant=tenant, status='pending')
+    enforce_branch_ownership(request, order)
     try:
         invoice = approve_order(order)
         return JsonResponse({
@@ -570,5 +633,6 @@ def manage_order_approve(request, pk):
 def manage_order_reject(request, pk):
     tenant = request.tenant
     order  = get_object_or_404(OnlineOrder, pk=pk, tenant=tenant, status='pending')
+    enforce_branch_ownership(request, order)
     reject_order(order)
     return JsonResponse({'success': True})

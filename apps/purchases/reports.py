@@ -39,8 +39,8 @@ class PurchasesReportGenerator:
 
     def get_summary_report(self):
         """تقرير ملخص المشتريات — مع قائمة الفواتير التفصيلية"""
-        from apps.core.utils import filter_by_branch_via
-        invoices = filter_by_branch_via(PurchaseInvoice.objects.filter(
+        from apps.core.utils import filter_by_branch_strict
+        invoices = filter_by_branch_strict(PurchaseInvoice.objects.filter(
             tenant=self.tenant,
             status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
             invoice_date__gte=self.start_date,
@@ -83,7 +83,7 @@ class PurchasesReportGenerator:
 
     def get_by_supplier_report(self, supplier_id=None):
         """تقرير المشتريات حسب المورد"""
-        from apps.core.utils import filter_by_branch_via
+        from apps.core.utils import filter_by_branch_strict
         from apps.suppliers.models import Supplier
         # If a specific supplier is requested, return invoices detail for that supplier
         if supplier_id:
@@ -92,7 +92,7 @@ class PurchasesReportGenerator:
             except Supplier.DoesNotExist:
                 return {'period': {'start': self.start_date, 'end': self.end_date}, 'data': []}
 
-            invoices = filter_by_branch_via(supplier.purchase_invoices.filter(
+            invoices = filter_by_branch_strict(supplier.purchase_invoices.filter(
                 status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
@@ -137,7 +137,7 @@ class PurchasesReportGenerator:
 
         data = []
         for supplier in suppliers:
-            invoices = filter_by_branch_via(supplier.purchase_invoices.filter(
+            invoices = filter_by_branch_strict(supplier.purchase_invoices.filter(
                 status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
                 invoice_date__gte=self.start_date,
                 invoice_date__lte=self.end_date
@@ -168,7 +168,7 @@ class PurchasesReportGenerator:
 
     def get_by_item_report(self, item_id=None):
         """تقرير المشتريات حسب المنتج"""
-        from apps.core.utils import filter_by_branch_via
+        from apps.core.utils import filter_by_branch_strict
         from apps.items.models import Item
 
         if item_id:
@@ -177,7 +177,7 @@ class PurchasesReportGenerator:
             except Item.DoesNotExist:
                 return {'period': {'start': self.start_date, 'end': self.end_date}, 'item': None, 'data': []}
 
-            lines = filter_by_branch_via(item.purchase_lines.filter(
+            lines = filter_by_branch_strict(item.purchase_lines.filter(
                 invoice__status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date,
@@ -220,7 +220,7 @@ class PurchasesReportGenerator:
 
         data = []
         for item in items:
-            lines = filter_by_branch_via(item.purchase_lines.filter(
+            lines = filter_by_branch_strict(item.purchase_lines.filter(
                 invoice__status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
                 invoice__invoice_date__gte=self.start_date,
                 invoice__invoice_date__lte=self.end_date
@@ -252,8 +252,8 @@ class PurchasesReportGenerator:
 
     def get_by_date_report(self, group_by='day'):
         """تقرير المشتريات حسب التاريخ (يومي/أسبوعي/شهري)"""
-        from apps.core.utils import filter_by_branch_via
-        invoices = filter_by_branch_via(PurchaseInvoice.objects.filter(
+        from apps.core.utils import filter_by_branch_strict
+        invoices = filter_by_branch_strict(PurchaseInvoice.objects.filter(
             tenant=self.tenant,
             status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
             invoice_date__gte=self.start_date,
@@ -424,7 +424,7 @@ class PurchasesReportGenerator:
         hc_mode = getattr(self.tenant, 'hard_currency_mode', False)
         hc_rate = Decimal(str(self.tenant.exchange_rate or 1)) if hc_mode and self.tenant.exchange_rate else None
 
-        suppliers = Supplier.objects.for_tenant(self.tenant).for_branch(self.branch).order_by('name')
+        suppliers = Supplier.objects.for_tenant(self.tenant).for_branch(self.branch, strict=True).order_by('name')
         data = []
         for s in suppliers:
             supplier_currency = (s.currency or '').strip()
@@ -473,8 +473,8 @@ class PurchasesReportGenerator:
 
     def get_payments_report(self, supplier_id=None):
         """تقرير مدفوعات الموردين — من SupplierLedger (يشمل المدفوعات المستقلة والمرتبطة بفواتير)"""
-        from apps.core.utils import filter_by_branch_via
-        qs = filter_by_branch_via(SupplierLedger.objects.filter(
+        from apps.core.utils import filter_by_branch_strict
+        qs = filter_by_branch_strict(SupplierLedger.objects.filter(
             tenant=self.tenant,
             entry_type='payment',
             entry_date__gte=self.start_date,
@@ -582,9 +582,9 @@ class PurchasesReportGenerator:
 
     def get_returns_report(self):
         """تقرير مرتجعات المشتريات بالفترة — سطر لكل صنف مرتجع"""
-        from apps.core.utils import filter_by_branch_via
+        from apps.core.utils import filter_by_branch_strict
         from .models import PurchaseReturnLine
-        lines = filter_by_branch_via(PurchaseReturnLine.objects.filter(
+        lines = filter_by_branch_strict(PurchaseReturnLine.objects.filter(
             tenant=self.tenant,
             purchase_return__status='confirmed',
             purchase_return__return_date__gte=self.start_date,
@@ -626,10 +626,10 @@ class PurchasesReportGenerator:
     def get_by_user_report(self, user_id=None):
         """تقرير المشتريات حسب المستخدم"""
         from django.contrib.auth import get_user_model
-        from apps.core.utils import filter_by_branch_via
+        from apps.core.utils import filter_by_branch_strict
         User = get_user_model()
 
-        base_qs = filter_by_branch_via(PurchaseInvoice.objects.filter(
+        base_qs = filter_by_branch_strict(PurchaseInvoice.objects.filter(
             tenant=self.tenant,
             status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
             invoice_date__gte=self.start_date,
@@ -688,11 +688,11 @@ class PurchasesReportGenerator:
 
     def get_price_history_report(self, item_id=None):
         """تقرير تاريخ أسعار الشراء لكل منتج"""
-        from apps.core.utils import filter_by_branch_via
+        from apps.core.utils import filter_by_branch_strict
         from apps.items.models import Item
         from collections import defaultdict
 
-        base_lines = filter_by_branch_via(PurchaseInvoiceLine.objects.filter(
+        base_lines = filter_by_branch_strict(PurchaseInvoiceLine.objects.filter(
             invoice__tenant=self.tenant,
             invoice__status__in=PurchaseInvoice.EFFECTIVE_STATUSES,
             invoice__invoice_date__gte=self.start_date,

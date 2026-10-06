@@ -85,7 +85,7 @@ def get_cart_items(slug: str, cart: dict) -> list:
 # ──────────────────────────────────────────────────────────────
 
 @transaction.atomic
-def place_order(store: StoreSettings, cart_items: list, customer_data: dict) -> OnlineOrder:
+def place_order(store: StoreSettings, cart_items: list, customer_data: dict, branch=None) -> OnlineOrder:
     """
     Create OnlineOrder + OnlineOrderLines.
     Sends a notification to the tenant.
@@ -96,6 +96,7 @@ def place_order(store: StoreSettings, cart_items: list, customer_data: dict) -> 
     order = OnlineOrder.objects.create(
         tenant          = store.tenant,
         store           = store,
+        branch          = branch,
         customer_name   = customer_data['name'],
         customer_phone  = customer_data['phone'],
         customer_address= customer_data.get('address', ''),
@@ -154,10 +155,13 @@ def approve_order(order: OnlineOrder) -> 'SaleInvoice':
     tenant = order.tenant
 
     # ── Default stock ─────────────────────────────────────────
-    stock = (
-        Stock.objects.filter(tenant=tenant, is_default=True, is_active=True).first()
-        or Stock.objects.filter(tenant=tenant, is_active=True).first()
-    )
+    # طلب فرع محدد يُخدَّم من مخزن ذلك الفرع فقط.
+    stocks = Stock.objects.filter(tenant=tenant, is_active=True)
+    if order.branch_id:
+        stocks = stocks.filter(branch_id=order.branch_id)
+    stock = stocks.filter(is_default=True).first() or stocks.first()
+    if order.branch_id and stock is None:
+        raise ValueError('لا يوجد مخزن فعّال لفرع الطلب')
 
     # ── Customer ─────────────────────────────────────────────
     # في نسخة المؤسسات يتبع زبون المتجر فرعَ المخزن الذي يخدم الطلب.

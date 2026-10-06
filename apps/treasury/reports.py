@@ -60,7 +60,7 @@ class TreasuryReportGenerator:
 
     def get_balances_report(self):
         """أرصدة جميع الخزائن لحظياً"""
-        treasuries = Treasury.objects.filter(tenant=self.tenant, is_active=True).for_branch(self.branch).order_by('name')
+        treasuries = Treasury.objects.filter(tenant=self.tenant, is_active=True).for_branch(self.branch, strict=True).order_by('name')
         data = []
         for t in treasuries:
             data.append({
@@ -134,8 +134,8 @@ class TreasuryReportGenerator:
 
     def get_movements_summary(self, treasury_id=None):
         """حركات خزينة محددة بالفترة مرتبة من الأقدم للأحدث"""
-        from apps.core.utils import filter_by_branch_via
-        movements = filter_by_branch_via(TreasuryMovement.objects.filter(
+        from apps.core.utils import filter_by_branch_strict
+        movements = filter_by_branch_strict(TreasuryMovement.objects.filter(
             tenant=self.tenant,
             movement_date__gte=self.start_date,
             movement_date__lte=self.end_date,
@@ -165,7 +165,7 @@ class TreasuryReportGenerator:
                 'running_balance': format_number(float(m.running_balance), 2),
             })
 
-        treasuries = Treasury.objects.filter(tenant=self.tenant, is_active=True).for_branch(self.branch).order_by('name')
+        treasuries = Treasury.objects.filter(tenant=self.tenant, is_active=True).for_branch(self.branch, strict=True).order_by('name')
 
         return {
             'period': {'start': self.start_date, 'end': self.end_date},

@@ -1,0 +1,17 @@
+{% if store_branches %}
+<div class="store-branch-bar" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:center;padding:.6rem 1rem;margin:.5rem auto;max-width:960px;font-family:'Cairo',sans-serif;">
+  <span><i class="fas fa-code-branch"></i> الفرع: <strong>{{ branch.name }}</strong></span>
+  {% if store_branches|length > 1 %}
+  <form method="get" style="display:inline-flex;gap:.4rem;align-items:center;margin:0;">
+    {% if search %}<input type="hidden" name="q" value="{{ search }}">{% endif %}
+    {% if category_id %}<input type="hidden" name="cat" value="{{ category_id }}">{% endif %}
+    <select name="branch" onchange="this.form.submit()" aria-label="اختيار الفرع"
+            style="padding:.3rem .6rem;border:1.5px solid #e5e7eb;border-radius:8px;font-family:inherit;">
+      {% for b in store_branches %}
+      <option value="{{ b.id }}"{% if b.id == branch.id %} selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  {% endif %}
+</div>
+{% endif %}

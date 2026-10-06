@@ -276,6 +276,7 @@ class Command(BaseCommand):
         self._create_support_tickets()
         self._create_exchange_rate_history()
         self._create_activity_log()
+        self._assign_records_to_branches()
         self._backdate_created_at()
 
     # ── helpers عامة ──────────────────────────────────────────────────────
@@ -594,6 +595,31 @@ class Command(BaseCommand):
                 stock.branch = branch
                 stock.save(update_fields=['branch'])
         self.stdout.write(f'  ✓ فروع: {len(branches)}')
+
+    def _assign_records_to_branches(self):
+        """
+        يوزّع السجلات التي بلا فرع (عملاء، موردون، مندوبون، مصروفات، خزائن وحسابات
+        بنكية غير مركزية) على الفرعين، حتى لا تبقى أرقام ثابتة تظهر في كل فرع
+        عند تبديل الفرع في لوحة التحكم والتقارير. السجلات المركزية تبقى بلا فرع.
+        """
+        from apps.core.models import Branch
+        from apps.customers.models import Customer
+        from apps.suppliers.models import Supplier
+        from apps.agents.models import Agent
+        from apps.expenses.models import Expense
+        from apps.treasury.models import Treasury
+        from apps.bank_accounts.models import BankAccount
+        branches = list(Branch.objects.filter(tenant=self.tenant, is_active=True).order_by('id')[:2])
+        if len(branches) < 2:
+            return
+        for model in (Customer, Supplier, Agent, Expense):
+            for i, obj in enumerate(model.objects.filter(tenant=self.tenant, branch__isnull=True).order_by('id')):
+                model.objects.filter(pk=obj.pk).update(branch=branches[i % 2])
+        for model in (Treasury, BankAccount):
+            qs = model.objects.filter(tenant=self.tenant, branch__isnull=True, is_head_office=False).order_by('id')
+            for i, obj in enumerate(qs):
+                model.objects.filter(pk=obj.pk).update(branch=branches[i % 2])
+        self.stdout.write('  ✓ توزيع السجلات على الفروع')
 
     # ── تصنيع (طقم إسعافات مجمَّع من أصناف قائمة) ─────────────────────────
     def _ensure_kit(self):

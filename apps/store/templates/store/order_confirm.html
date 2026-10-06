@@ -20,6 +20,12 @@
   <div class="confirm-num">{{ order.order_number }}</div>
 
   <div class="confirm-details">
+    {% if order.branch %}
+    <div class="confirm-row">
+      <span class="confirm-row-label">الفرع</span>
+      <span>{{ order.branch.name }}</span>
+    </div>
+    {% endif %}
     <div class="confirm-row">
       <span class="confirm-row-label">الاسم</span>
       <span>{{ order.customer_name }}</span>

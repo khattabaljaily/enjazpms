@@ -22,7 +22,7 @@ from apps.purchases.models import PurchaseInvoice, PurchaseReturn, PurchaseRetur
 from apps.purchases.services import build_purchase_from_post, cancel_purchase_invoice, cancel_purchase_return, confirm_purchase_invoice, confirm_purchase_return, edit_confirmed_purchase_invoice
 from apps.stocks.models import Stock
 from apps.suppliers.models import Supplier
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
+from apps.core.utils import filter_by_branch_via, filter_by_branch_strict, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
 
 from .reports import PurchasesReportGenerator
 
@@ -1389,7 +1389,7 @@ def purchases_by_user_report(request):
     report = generator.get_by_user_report(user_id=user_id)
 
     from django.contrib.auth import get_user_model
-    user_ids = filter_by_branch_via(
+    user_ids = filter_by_branch_strict(
         PurchaseInvoice.objects.filter(tenant=tenant, status__in=PurchaseInvoice.EFFECTIVE_STATUSES),
         branch,
     ).values_list('created_by', flat=True).distinct()
