@@ -34,10 +34,11 @@ class EnforceBranchOwnershipTests(SimpleTestCase):
         with self.assertRaises(Http404):
             enforce_branch_ownership(req, obj)
 
-    def test_null_branch_on_object_passes_through(self):
+    def test_null_branch_on_object_is_rejected_for_branch_user(self):
         req = FakeRequest(branch=object())
         obj = SimpleNamespace(branch=None)
-        enforce_branch_ownership(req, obj)
+        with self.assertRaises(Http404):
+            enforce_branch_ownership(req, obj)
 
     def test_indirect_path_matching(self):
         branch = object()

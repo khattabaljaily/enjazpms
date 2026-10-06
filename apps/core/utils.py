@@ -27,12 +27,11 @@ def convert_arabic_numerals(value):
 def filter_by_branch_via(qs, branch, field='stock__branch'):
     """
     فلترة queryset حسب الفرع عبر علاقة غير مباشرة (مثال: فاتورة → مخزن → فرع).
-    branch=None لا يفلتر شيء. السجلات المرتبطة بمخزن بدون فرع تظل ظاهرة.
+    branch=None لا يفلتر شيء. عند تحديد فرع لا تظهر إلا سجلات ذلك الفرع.
     """
     if branch is None:
         return qs
-    from django.db.models import Q
-    return qs.filter(Q(**{field: branch}) | Q(**{f'{field}__isnull': True}))
+    return qs.filter(**{field: branch})
 
 
 def filter_by_branch_strict(qs, branch, field='stock__branch'):
@@ -116,8 +115,8 @@ def enforce_branch_ownership(request, obj, field='branch'):
 
     - request.branch فارغ (مستخدم مركزي / نسخة single_store/multi_stock):
       لا تحقق — يرى كل شيء كالمعتاد، صفر تغيير في السلوك.
-    - obj بلا فرع محدد على طول المسار (NULL تاريخي): يبقى ظاهراً — نفس
-      فلسفة for_branch() تماماً (لا نُخفي بيانات قديمة بأثر رجعي).
+    - obj بلا فرع محدد على طول المسار: يُرفض لمستخدم الفرع (404) — كل شغل
+      الفرع مستقل ولا سجلات بلا فرع (للتحويلات ذات الطرفين استثناء، أدناه).
     - غير ذلك وفرع الكائن يخالف فرع الطلب: Http404 (لا نكشف حتى وجود
       السجل، بنفس أسلوب get_object_or_404 القياسي في Django).
 
@@ -145,7 +144,9 @@ def enforce_branch_ownership(request, obj, field='branch'):
                 break
         resolved.append(target)
 
-    if any(r is None for r in resolved):
+    # سجل بفرع واحد (مسار واحد) بلا فرع لا يخص أي فرع: يُرفض لمستخدم الفرع.
+    # أما المسارات غير المباشرة وسجلات التحويل ذات الطرفين فتبقى مرنة (طرف الإدارة المركزية بلا فرع بالتصميم).
+    if (len(fields) > 1 or '__' in fields[0]) and any(r is None for r in resolved):
         return
 
     if branch not in resolved:

@@ -39,6 +39,9 @@ class StockForm(forms.ModelForm):
         if tenant:
             from apps.core.models import Branch
             self.fields['branch'].queryset = Branch.objects.filter(tenant=tenant, is_active=True)
+            # نسخة المؤسسات: كل مخزن يتبع فرعاً — لا مخازن بلا فرع.
+            if tenant.is_enterprise():
+                self.fields['branch'].required = True
         else:
             from apps.core.models import Branch
             self.fields['branch'].queryset = Branch.objects.none()

@@ -95,3 +95,38 @@ class BranchIsolationTests(TenantTestCase):
         self.client.force_login(user)
         resp = self.client.get(reverse('customers:detail_api', args=[self.c2.pk]))
         self.assertEqual(resp.status_code, 404)
+
+
+class BranchWorkIsolationTests(TenantTestCase):
+    """المخازن والفواتير: كل مخزن يتبع فرعاً، ومستخدم الفرع لا يرى غير شغل فرعه."""
+    version_type = 'multi_branch'
+    subscription_plan = 'enterprise'
+
+    def setUp(self):
+        super().setUp()
+        from apps.core.test_utils import make_stock
+        self.b1 = Branch.objects.create(tenant=self.tenant, name='فرع 1')
+        self.b2 = Branch.objects.create(tenant=self.tenant, name='فرع 2')
+        self.s1 = make_stock(self.tenant, name='مخزن ف1', branch=self.b1)
+        self.s2 = make_stock(self.tenant, name='مخزن ف2', branch=self.b2)
+        self.mgr = User.objects.create_user(
+            username='m1', password='secret123', tenant=self.tenant,
+            branch=self.b1, is_branch_supervisor=True,
+        )
+
+    def test_for_branch_never_returns_other_or_unbranched_records(self):
+        from apps.core.test_utils import make_stock
+        from apps.stocks.models import Stock
+        make_stock(self.tenant, name='يتيم')
+        self.assertEqual(list(Stock.objects.for_tenant(self.tenant).for_branch(self.b1)), [self.s1])
+
+    def test_stock_form_requires_branch_for_central_user(self):
+        from apps.stocks.forms import StockForm
+        form = StockForm({'name': 'مخزن جديد', 'is_active': 'on'}, tenant=self.tenant)
+        self.assertFalse(form.is_valid())
+        self.assertIn('branch', form.errors)
+
+    def test_branch_user_stock_list_shows_only_own_stocks(self):
+        self.client.force_login(self.mgr)
+        resp = self.client.get('/sales/')
+        self.assertEqual([s['name'] for s in resp.context['stocks']], ['مخزن ف1'])

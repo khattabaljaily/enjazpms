@@ -101,7 +101,8 @@ class BranchTransferSourceTests(_EnterpriseSetup, TestCase):
             'from_treasury': self.hq.id, 'to_treasury': self.ta.id, 'from_amount': '100', 'to_amount': '100',
             'exchange_rate': '1', 'transfer_date': str(timezone.localdate()),
         }), content_type='application/json')
-        self.assertEqual(resp.status_code, 403)
+        # الخزينة المركزية مخفية عن مدير الفرع أصلاً (404) أو ممنوعة (403)
+        self.assertIn(resp.status_code, (403, 404))
         self.hq.refresh_from_db(); self.ta.refresh_from_db()
         self.assertEqual(self.hq.current_balance, Decimal('1000'))
         self.assertEqual(self.ta.current_balance, Decimal('0'))
