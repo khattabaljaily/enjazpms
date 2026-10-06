@@ -6,7 +6,7 @@
     {% if search %}<input type="hidden" name="q" value="{{ search }}">{% endif %}
     {% if category_id %}<input type="hidden" name="cat" value="{{ category_id }}">{% endif %}
     <select name="branch" onchange="this.form.submit()" aria-label="اختيار الفرع"
-            style="padding:.3rem .6rem;border:1.5px solid #e5e7eb;border-radius:8px;font-family:inherit;">
+            style="appearance:none;-webkit-appearance:none;-moz-appearance:none;min-width:150px;padding:.4rem .9rem .4rem 2.2rem;border:1.5px solid #e5e7eb;border-radius:8px;font-family:inherit;background:#fff url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 10 10%22><path fill=%22%2364748b%22 d=%22M5 7L0 2h10z%22/></svg>') no-repeat left .8rem center;cursor:pointer;">
       {% for b in store_branches %}
       <option value="{{ b.id }}"{% if b.id == branch.id %} selected{% endif %}>{{ b.name }}</option>
       {% endfor %}
