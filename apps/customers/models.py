@@ -3,10 +3,13 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
-from apps.core.models import TenantMixin
+from apps.core.models import TenantMixin, TenantManager, BranchScopedManager
 
 
 class Customer(TenantMixin):
+    # عزل تلقائي بفرع الطلب (BranchScopedManager)؛ unscoped للتعامل عبر كل الفروع
+    objects = BranchScopedManager()
+    unscoped = TenantManager()
     branch = models.ForeignKey(
         'core.Branch',
         on_delete=models.SET_NULL,
@@ -64,7 +67,7 @@ class Customer(TenantMixin):
     def save(self, *args, **kwargs):
         if not self.code:
             last_customer = (
-                Customer.objects.filter(tenant=self.tenant)
+                Customer.unscoped.filter(tenant=self.tenant)
                 .exclude(code='')
                 .order_by('-id')
                 .first()
@@ -74,7 +77,7 @@ class Customer(TenantMixin):
                 try:
                     next_number = int(last_customer.code.split('-')[-1]) + 1
                 except ValueError:
-                    next_number = Customer.objects.filter(tenant=self.tenant).count() + 1
+                    next_number = Customer.unscoped.filter(tenant=self.tenant).count() + 1
             self.code = f"CUS-{next_number:05d}"
 
         super().save(*args, **kwargs)

@@ -4,10 +4,14 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 
-from apps.core.models import TenantMixin
+from apps.core.models import TenantMixin, TenantManager, BranchScopedManager
 
 
 class Agent(TenantMixin):
+    # عزل تلقائي بفرع الطلب (BranchScopedManager)؛ unscoped للتعامل عبر كل الفروع
+    objects = BranchScopedManager()
+    unscoped = TenantManager()
+
     COMMISSION_TYPE_CHOICES = (
         ('none',       'بدون عمولة'),
         ('percentage', 'نسبة مئوية'),
@@ -91,7 +95,7 @@ class Agent(TenantMixin):
     def save(self, *args, **kwargs):
         if not self.code:
             last = (
-                Agent.objects.filter(tenant=self.tenant)
+                Agent.unscoped.filter(tenant=self.tenant)
                 .exclude(code='')
                 .order_by('-id')
                 .first()
@@ -101,7 +105,7 @@ class Agent(TenantMixin):
                 try:
                     next_num = int(last.code.split('-')[-1]) + 1
                 except ValueError:
-                    next_num = Agent.objects.filter(tenant=self.tenant).count() + 1
+                    next_num = Agent.unscoped.filter(tenant=self.tenant).count() + 1
             self.code = f'AGT-{next_num:05d}'
         super().save(*args, **kwargs)
 

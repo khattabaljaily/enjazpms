@@ -3023,6 +3023,43 @@ def _branch_serialize_errors(form):
     return {field: [str(e) for e in errors] for field, errors in form.errors.items()}
 
 
+_MANAGER_FIELDS = ('username', 'first_name', 'last_name', 'email', 'password', 'password_confirm')
+
+
+def _wants_branch_manager(request):
+    return bool((request.POST.get('manager_username') or '').strip())
+
+
+def _create_branch_manager(request, tenant, branch):
+    """
+    ينشئ مدير الفرع (مستخدم مشرف مربوط بالفرع) من نموذج الفرع نفسه. مدير النشاط
+    لا يدير مستخدمي الفروع بعد اليوم — كل مدير فرع يضيف موظفي فرعه بنفسه — لكنه
+    هو من يعيّن مدير كل فرع. يُرجع (user, error_response).
+    """
+    from apps.accounts.forms import UserManagementForm
+    from apps.accounts.models import User
+
+    if User.objects.filter(tenant=tenant, is_active=True).count() >= tenant.max_users:
+        return None, _branch_json_error(
+            f'لقد وصلت للحد الأقصى المسموح به من المستخدمين ({tenant.max_users}). يرجى ترقية الباقة لزيادة الحد.',
+            status=403,
+        )
+
+    data = {f: (request.POST.get(f'manager_{f}') or '').strip() for f in _MANAGER_FIELDS}
+    data.update({'is_active': 'on', 'is_branch_supervisor': 'on', 'branch': branch.pk})
+    form = UserManagementForm(data, tenant=tenant)
+    if not form.is_valid():
+        errors = {f'manager_{k}': v for k, v in _branch_serialize_errors(form).items()}
+        return None, JsonResponse(
+            {'success': False, 'message': 'يرجى التحقق من بيانات مدير الفرع', 'errors': errors},
+            status=400, json_dumps_params={'ensure_ascii': False},
+        )
+    user = form.save()
+    Branch.assign_manager(branch, user)
+    log_activity(request, 'إضافة مدير فرع', f'{branch.name} ← {user.get_full_name() or user.username}', 'create')
+    return user, None
+
+
 @login_required
 @require_permission('view_branches')
 def branch_list(request):
@@ -3089,9 +3126,16 @@ def branch_create_api(request):
 
     form = BranchForm(request.POST)
     if form.is_valid():
-        branch = form.save(commit=False)
-        branch.tenant = tenant
-        branch.save()
+        from django.db import transaction
+        with transaction.atomic():
+            branch = form.save(commit=False)
+            branch.tenant = tenant
+            branch.save()
+            if _wants_branch_manager(request):
+                _, error = _create_branch_manager(request, tenant, branch)
+                if error:
+                    transaction.set_rollback(True)
+                    return error
         log_activity(request, 'إضافة فرع', branch.name, 'create')
         return _branch_json_ok({'id': branch.id}, 'تم إضافة الفرع بنجاح')
     return JsonResponse({'success': False, 'message': 'يرجى التحقق من الحقول', 'errors': _branch_serialize_errors(form)},
@@ -3111,6 +3155,8 @@ def branch_detail_api(request, pk):
     return _branch_json_ok({
         'id': b.id, 'name': b.name, 'code': b.code, 'address': b.address,
         'phone': b.phone, 'is_active': b.is_active, 'is_default': b.is_default,
+        'manager_name': (b.manager.get_full_name() or b.manager.username) if b.manager else '',
+        'manager_username': b.manager.username if b.manager else '',
     })
 
 
@@ -3129,7 +3175,26 @@ def branch_update_api(request, pk):
 
     form = BranchForm(request.POST, instance=b)
     if form.is_valid():
-        updated = form.save()
+        from django.db import transaction
+        with transaction.atomic():
+            updated = form.save()
+            if b.manager_id is None and _wants_branch_manager(request):
+                _, error = _create_branch_manager(request, tenant, updated)
+                if error:
+                    transaction.set_rollback(True)
+                    return error
+            elif b.manager_id is not None:
+                new_password = request.POST.get('manager_password') or ''
+                if new_password:
+                    if new_password != (request.POST.get('manager_password_confirm') or ''):
+                        transaction.set_rollback(True)
+                        return JsonResponse(
+                            {'success': False, 'message': 'كلمتا مرور مدير الفرع غير متطابقتين',
+                             'errors': {'manager_password_confirm': ['كلمات المرور غير متطابقة']}},
+                            status=400, json_dumps_params={'ensure_ascii': False})
+                    b.manager.set_password(new_password)
+                    b.manager.save(update_fields=['password'])
+                    log_activity(request, 'إعادة تعيين كلمة مرور مدير فرع', updated.name, 'update')
         log_activity(request, 'تعديل فرع', updated.name, 'update')
         return _branch_json_ok(msg='تم تحديث الفرع بنجاح')
     return JsonResponse({'success': False, 'message': 'يرجى التحقق من الحقول', 'errors': _branch_serialize_errors(form)},

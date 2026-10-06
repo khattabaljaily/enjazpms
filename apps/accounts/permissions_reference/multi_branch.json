@@ -246,7 +246,7 @@
         "ar": "المستخدمين",
         "en": "Users"
       },
-      "role_scope": "admin_only",
+      "role_scope": "branch_ops",
       "permissions": [
         {
           "key": "add_users",

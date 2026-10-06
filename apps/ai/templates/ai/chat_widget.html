@@ -41,10 +41,17 @@
             </div>
         </div>
         <div class="ai-suggestions">
+            {% if request.user.is_tenant_admin and current_tenant.version_type == 'multi_branch' %}
+            <button class="ai-suggestion" data-q="قارن أداء الفروع هذا الشهر">مقارنة أداء الفروع</button>
+            <button class="ai-suggestion" data-q="أي الفروع مبيعاته أقل وتحتاج متابعة؟">فرع يحتاج متابعة</button>
+            <button class="ai-suggestion" data-q="أي الفروع لديه أصناف تحت الحد الأدنى؟">مخزون الفروع</button>
+            <button class="ai-suggestion" data-q="هل يوجد فرع بلا مدير؟">فروع بلا مدير</button>
+            {% else %}
             <button class="ai-suggestion" data-q="ما هي أكثر المنتجات مبيعاً هذا الشهر؟">أكثر المنتجات مبيعاً</button>
             <button class="ai-suggestion" data-q="هل هناك منتجات تحتاج إعادة طلب قريباً؟">منتجات تحتاج طلب</button>
             <button class="ai-suggestion" data-q="كيف حال المبيعات هذا الأسبوع؟">أداء هذا الأسبوع</button>
             <button class="ai-suggestion" data-q="من أكثر العملاء مديونية؟">أعلى مديونيات العملاء</button>
+            {% endif %}
         </div>
     </div>
 

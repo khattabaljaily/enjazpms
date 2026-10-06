@@ -6,7 +6,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.core.cache import cache
 from django.utils import timezone
-from apps.core.models import Tenant
+from apps.core.models import Tenant, current_branch_id
 
 
 class MaintenanceModeMiddleware:
@@ -125,8 +125,12 @@ class TenantMiddleware:
             request.tenant = None
             request.branch = None
 
-        response = self.get_response(request)
-        return response
+        # عزل سجلات الفرع تلقائياً (راجع BranchScopedManager) طوال هذا الطلب.
+        token = current_branch_id.set(getattr(request.branch, 'id', None))
+        try:
+            return self.get_response(request)
+        finally:
+            current_branch_id.reset(token)
 
 
 class ActiveTenantMiddleware:

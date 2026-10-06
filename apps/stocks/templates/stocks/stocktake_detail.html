@@ -9,7 +9,9 @@
 .diff-positive { color: var(--success); font-weight: 600; }
 .diff-negative { color: var(--danger); font-weight: 600; }
 .diff-zero     { color: var(--text-muted); }
-.qty-counted   { width: 110px; }
+.qty-counted   { width: 100%; min-width: 190px; max-width: 260px; text-align: end; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.qty-counted::-webkit-outer-spin-button,
+.qty-counted::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .count-row.has-diff td { background: rgba(var(--warning-rgb, 240,173,78), .08); }
 </style>
 {% endblock %}

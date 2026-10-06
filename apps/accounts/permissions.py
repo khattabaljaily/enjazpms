@@ -152,6 +152,14 @@ BRANCH_BLOCKED_KEYS = {
 }
 
 
+def branch_assignable_permission_keys():
+    """
+    أقصى ما يجوز لمستخدم مربوط بفرع أن يمنحه لموظفي فرعه عبر مجموعات الصلاحيات:
+    صلاحيات مشرف الفرع ما عدا المحظور مطلقاً على أي مستخدم فرع.
+    """
+    return set(get_branch_supervisor_permission_keys()) - BRANCH_BLOCKED_KEYS
+
+
 def _apply_tenant_filter(sections, *, version_type, has_capability, plan_allows, get_flag):
     """
     دالة نقية: تفلتر شجرة الصلاحيات حسب وسوم versions/requires_capability/

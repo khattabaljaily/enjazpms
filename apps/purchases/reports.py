@@ -133,7 +133,7 @@ class PurchasesReportGenerator:
             purchase_invoices__invoice_date__lte=self.end_date
         ).distinct().prefetch_related('purchase_invoices')
         if self.branch is not None:
-            suppliers = suppliers.filter(Q(branch=self.branch) | Q(branch__isnull=True))
+            suppliers = suppliers.filter(branch=self.branch)
 
         data = []
         for supplier in suppliers:
@@ -313,7 +313,7 @@ class PurchasesReportGenerator:
         # IDOR عبر الفرع في get_customer_statement (apps/sales/reports.py) وفي
         # TreasuryReportGenerator/BankAccountReportGenerator.get_statement_report:
         # مستخدم بفرع يقدر يمرر supplier_id لمورد فرع آخر ويحصل على كشف حسابه كاملاً.
-        if self.branch is not None and supplier.branch is not None and supplier.branch != self.branch:
+        if self.branch is not None and supplier.branch != self.branch:
             return None
 
         hc_mode = getattr(self.tenant, 'hard_currency_mode', False)

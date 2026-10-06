@@ -1,5 +1,5 @@
 from django.db import models
-from apps.core.models import TenantMixin
+from apps.core.models import TenantMixin, TenantManager, BranchScopedManager
 from apps.treasury.models import Treasury
 from apps.bank_accounts.models import BankAccount
 
@@ -20,6 +20,10 @@ class ExpenseCategory(TenantMixin):
 
 
 class Expense(TenantMixin):
+    # عزل تلقائي بفرع الطلب (BranchScopedManager)؛ unscoped للتعامل عبر كل الفروع
+    objects = BranchScopedManager()
+    unscoped = TenantManager()
+
     STATUS_DRAFT = 'draft'
     STATUS_CONFIRMED = 'confirmed'
     STATUS_CANCELLED = 'cancelled'
@@ -111,7 +115,7 @@ class Expense(TenantMixin):
     def save(self, *args, **kwargs):
         if not self.code:
             last = (
-                Expense.objects.filter(tenant=self.tenant)
+                Expense.unscoped.filter(tenant=self.tenant)
                 .exclude(code='')
                 .order_by('-id')
                 .first()
@@ -121,6 +125,6 @@ class Expense(TenantMixin):
                 try:
                     next_num = int(last.code.split('-')[-1]) + 1
                 except ValueError:
-                    next_num = Expense.objects.filter(tenant=self.tenant).count() + 1
+                    next_num = Expense.unscoped.filter(tenant=self.tenant).count() + 1
             self.code = f'EXP-{next_num:05d}'
         super().save(*args, **kwargs)

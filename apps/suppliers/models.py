@@ -1,9 +1,12 @@
 from django.db import models
 
-from apps.core.models import TenantMixin
+from apps.core.models import TenantMixin, TenantManager, BranchScopedManager
 
 
 class Supplier(TenantMixin):
+    # عزل تلقائي بفرع الطلب (BranchScopedManager)؛ unscoped للتعامل عبر كل الفروع
+    objects = BranchScopedManager()
+    unscoped = TenantManager()
     branch = models.ForeignKey(
         'core.Branch',
         on_delete=models.SET_NULL,
@@ -45,7 +48,7 @@ class Supplier(TenantMixin):
     def save(self, *args, **kwargs):
         if not self.code:
             last_supplier = (
-                Supplier.objects.filter(tenant=self.tenant)
+                Supplier.unscoped.filter(tenant=self.tenant)
                 .exclude(code='')
                 .order_by('-id')
                 .first()
@@ -55,6 +58,6 @@ class Supplier(TenantMixin):
                 try:
                     next_number = int(last_supplier.code.split('-')[-1]) + 1
                 except ValueError:
-                    next_number = Supplier.objects.filter(tenant=self.tenant).count() + 1
+                    next_number = Supplier.unscoped.filter(tenant=self.tenant).count() + 1
             self.code = f"SUP-{next_number:05d}"
         super().save(*args, **kwargs)

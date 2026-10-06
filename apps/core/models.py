@@ -54,6 +54,36 @@ class TenantManager(models.Manager):
         return self.get_queryset().for_branch(branch, strict=strict)
 
 
+# فرع الطلب الحالي لمستخدم مربوط بفرع (يضبطه TenantMiddleware). يقرؤه
+# BranchScopedManager ليعزل سجلات الفرع تلقائياً في أي استعلام، بدل الاعتماد
+# على أن يتذكر كل view استدعاء for_branch(). خارج دورة الطلب (أوامر الإدارة،
+# المهام الخلفية، الاختبارات المباشرة) يبقى None فلا فلترة.
+current_branch_id = ContextVar('current_branch_id', default=None)
+
+
+class BranchScopedQuerySet(TenantQuerySet):
+    def for_branch(self, branch, strict=True):
+        # سجلات هذه الموديلات تتبع فرعاً واحداً دائماً: لا يُعاد "بلا فرع" لفرع محدد.
+        return super().for_branch(branch, strict=True)
+
+
+class BranchScopedManager(TenantManager):
+    """
+    Manager للسجلات التي يملكها فرع واحد حصراً (العملاء، الموردون، المناديب):
+    عند وجود فرع للطلب الحالي لا تظهر إلا سجلات ذلك الفرع — لا سجلات الفروع
+    الأخرى ولا السجلات بلا فرع. المستخدم المركزي (بلا فرع) يرى الكل كالمعتاد.
+    استعمل `Model.unscoped` فقط حين يلزم فعلاً النظر عبر كل الفروع (مثل توليد
+    الأكواد المتسلسلة على مستوى المشترك).
+    """
+
+    def get_queryset(self):
+        qs = BranchScopedQuerySet(self.model, using=self._db)
+        branch_id = current_branch_id.get()
+        if branch_id is not None:
+            qs = qs.filter(branch_id=branch_id)
+        return qs
+
+
 # ============================================
 # BUSINESS TYPES
 # ============================================

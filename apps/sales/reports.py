@@ -134,7 +134,7 @@ class SalesReportGenerator:
             sale_invoices__invoice_date__lte=self.end_date
         ).distinct().prefetch_related('sale_invoices')
         if self.branch is not None:
-            customers = customers.filter(Q(branch=self.branch) | Q(branch__isnull=True))
+            customers = customers.filter(branch=self.branch)
 
         data = []
         for customer in customers:
@@ -312,7 +312,7 @@ class SalesReportGenerator:
         # IDOR عبر الفرع المكتشفة في TreasuryReportGenerator.get_statement_report/
         # BankAccountReportGenerator.get_statement_report: مستخدم بفرع يقدر يمرر
         # customer_id لعميل فرع آخر ويحصل على كشف حسابه كاملاً.
-        if self.branch is not None and customer.branch is not None and customer.branch != self.branch:
+        if self.branch is not None and customer.branch != self.branch:
             return None
 
         # Opening balance = last entry before start_date, or customer.opening_balance

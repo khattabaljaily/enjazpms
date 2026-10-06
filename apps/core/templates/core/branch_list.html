@@ -56,7 +56,7 @@
                     <th>الكود</th>
                     <th>الهاتف</th>
                     <th>عدد المخازن</th>
-                    <th>المشرف</th>
+                    <th>مدير الفرع</th>
                     <th>الحالة</th>
                     <th></th>
                 </tr>
@@ -126,6 +126,41 @@
                                     {{ form.is_active }}
                                     <div class="cx-toggle-switch"></div>
                                 </label>
+                            </div>
+                        </div>
+
+                        <div class="cx-form-group-label mt-4">
+                            <span class="cx-form-group-icon"><i class="fas fa-user-tie"></i></span> مدير الفرع
+                        </div>
+                        <p class="text-muted small mb-3">مدير الفرع هو من يضيف مستخدمي فرعه ويحدد صلاحياتهم، ولا يرى بيانات الفروع الأخرى.</p>
+                        <div id="branchManagerCurrent" class="alert alert-info py-2 px-3 d-none">
+                            المدير الحالي: <strong id="branchManagerCurrentName"></strong>
+                            <span class="text-muted">(<span id="branchManagerCurrentUser" dir="ltr"></span>) — اترك الحقلين التاليين فارغين للإبقاء على كلمة المرور الحالية.</span>
+                        </div>
+                        <div class="row g-3" id="branchManagerFields">
+                            <div class="col-md-6 js-manager-new">
+                                <label class="cx-label" for="id_manager_first_name">الاسم الأول</label>
+                                <input type="text" class="form-control" id="id_manager_first_name" name="manager_first_name" autocomplete="off">
+                            </div>
+                            <div class="col-md-6 js-manager-new">
+                                <label class="cx-label" for="id_manager_last_name">اسم العائلة</label>
+                                <input type="text" class="form-control" id="id_manager_last_name" name="manager_last_name" autocomplete="off">
+                            </div>
+                            <div class="col-md-6 js-manager-new">
+                                <label class="cx-label" for="id_manager_username">اسم المستخدم</label>
+                                <input type="text" class="form-control" id="id_manager_username" name="manager_username" autocomplete="off" dir="ltr">
+                            </div>
+                            <div class="col-md-6 js-manager-new">
+                                <label class="cx-label" for="id_manager_email">البريد الإلكتروني</label>
+                                <input type="email" class="form-control" id="id_manager_email" name="manager_email" autocomplete="off" dir="ltr">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_manager_password" id="managerPasswordLabel">كلمة المرور</label>
+                                <input type="password" class="form-control" id="id_manager_password" name="manager_password" autocomplete="new-password">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="cx-label" for="id_manager_password_confirm">تأكيد كلمة المرور</label>
+                                <input type="password" class="form-control" id="id_manager_password_confirm" name="manager_password_confirm" autocomplete="new-password">
                             </div>
                         </div>
                     </div>
@@ -222,8 +257,8 @@
                         <strong class="cx-supplier-card-meta-value">${r.stocks_count}</strong>
                     </div>
                     <div>
-                        <span class="cx-supplier-card-meta-label">المشرف</span>
-                        <strong class="cx-supplier-card-meta-value">${r.supervisor_name || 'بدون مشرف'}</strong>
+                        <span class="cx-supplier-card-meta-label">مدير الفرع</span>
+                        <strong class="cx-supplier-card-meta-value">${r.supervisor_name || 'بدون مدير'}</strong>
                     </div>
                 </div>
                 <div class="cx-supplier-card-actions">
@@ -259,7 +294,7 @@
             { data: 'stocks_count' },
             {
                 data: 'supervisor_name',
-                render: s => s ? s : '<span class="cxr-empty text-danger">بدون مشرف</span>'
+                render: s => s ? s : '<span class="cxr-empty text-danger">بدون مدير</span>'
             },
             {
                 data: 'is_active',
@@ -294,10 +329,20 @@
     });
 
     /* ── Form helpers ─────────────────────────────────────────── */
+    function showManagerSection(name, username) {
+        const has = !!username;
+        $('#branchManagerCurrent').toggleClass('d-none', !has);
+        $('#branchManagerCurrentName').text(name || '');
+        $('#branchManagerCurrentUser').text(username || '');
+        $('.js-manager-new').toggleClass('d-none', has);
+        $('#managerPasswordLabel').text(has ? 'كلمة مرور جديدة للمدير (اختياري)' : 'كلمة المرور');
+    }
+
     function resetForm() {
         $form[0].reset();
         $idInput.val('');
         $('#id_is_active').prop('checked', true);
+        showManagerSection('', '');
         Enjaz.clearFormErrors($form);
     }
 
@@ -321,6 +366,7 @@
                 $('#id_phone').val(d.phone || '');
                 $('#id_address').val(d.address || '');
                 $('#id_is_active').prop('checked', !!d.is_active);
+                showManagerSection(d.manager_name, d.manager_username);
                 $('#branchModalTitle').text('تعديل الفرع');
                 $submitBtn.html('<i class="fas fa-check me-1"></i> حفظ التعديلات');
                 branchModal.show();

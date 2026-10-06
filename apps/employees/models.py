@@ -6,12 +6,16 @@ from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 
-from apps.core.models import TenantMixin
+from apps.core.models import TenantMixin, TenantManager, BranchScopedManager
 from apps.treasury.models import Treasury
 from apps.bank_accounts.models import BankAccount
 
 
 class Employee(TenantMixin):
+    # عزل تلقائي بفرع الطلب (BranchScopedManager)؛ unscoped للتعامل عبر كل الفروع
+    objects = BranchScopedManager()
+    unscoped = TenantManager()
+
     SALARY_TYPE = [
         ('fixed',  'راتب ثابت'),
         ('hourly', 'بالساعة'),
@@ -56,7 +60,7 @@ class Employee(TenantMixin):
     def save(self, *args, **kwargs):
         if not self.employee_id:
             last = (
-                Employee.objects.filter(tenant=self.tenant)
+                Employee.unscoped.filter(tenant=self.tenant)
                 .exclude(employee_id='')
                 .order_by('-id')
                 .first()
@@ -66,7 +70,7 @@ class Employee(TenantMixin):
                 try:
                     next_num = int(last.employee_id.split('-')[-1]) + 1
                 except ValueError:
-                    next_num = Employee.objects.filter(tenant=self.tenant).count() + 1
+                    next_num = Employee.unscoped.filter(tenant=self.tenant).count() + 1
             self.employee_id = f'EMP-{next_num:04d}'
         super().save(*args, **kwargs)
 

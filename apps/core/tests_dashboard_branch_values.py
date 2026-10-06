@@ -8,7 +8,8 @@ from decimal import Decimal
 from django.utils import timezone
 
 from apps.core.models import Branch
-from apps.core.test_utils import TenantTestCase, make_item, make_stock, make_customer
+from apps.accounts.models import User
+from apps.core.test_utils import TenantTestCase, make_item, make_stock, make_customer, make_supplier
 from apps.sales.models import SaleInvoice, SaleInvoiceLine
 
 
@@ -83,3 +84,17 @@ class DashboardBranchValuesTests(TenantTestCase):
         self.assertEqual(self._stats('/')['stats']['total_products'], 2)
         self.assertEqual(self._stats('/', self.b1)['stats']['total_products'], 1)
         self.assertEqual(self._stats('/', self.b2)['stats']['total_products'], 1)
+
+    def test_partner_and_user_counts_follow_branch(self):
+        make_supplier(self.tenant, name='مورد 1', branch=self.b1)
+        make_supplier(self.tenant, name='مورد 2', branch=self.b2)
+        make_supplier(self.tenant, name='مورد 3', branch=self.b2)
+        make_supplier(self.tenant, name='مورد بلا فرع')
+        make_customer(self.tenant, name='عميل بلا فرع')
+        User.objects.create_user(username='u1', password='x12345678', tenant=self.tenant, branch=self.b1)
+        User.objects.create_user(username='u2', password='x12345678', tenant=self.tenant, branch=self.b2)
+        User.objects.create_user(username='u3', password='x12345678', tenant=self.tenant, branch=self.b2)
+        one, two = self._stats('/', self.b1)['stats'], self._stats('/', self.b2)['stats']
+        self.assertEqual((one['total_suppliers'], two['total_suppliers']), (1, 2))
+        self.assertEqual((one['total_customers'], two['total_customers']), (1, 1))
+        self.assertEqual((one['total_users'], two['total_users']), (1, 2))

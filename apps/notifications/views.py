@@ -35,6 +35,20 @@ def _tenant(request):
     return getattr(request, 'tenant', None)
 
 
+# إشعارات تحمل تفاصيل عملاء/موردين/مناديب — تخص مدير الفرع فقط ولا تُعرض
+# لمدير النشاط في نسخة المؤسسات (علاقته بالفروع تقارير وإحصائيات).
+_OWNER_HIDDEN_TYPES = ('overdue_invoice', 'rfq_expiry', 'online_order', 'agent_request')
+
+
+def _visible_notifications(request, tenant):
+    """إشعارات المستخدم الحالي: مستخدم الفرع يرى إشعارات فرعه فقط."""
+    branch = getattr(request, 'branch', None)
+    qs = Notification.objects.filter(tenant=tenant).for_branch(branch, strict=True)
+    if getattr(request.user, 'is_tenant_admin', False) and tenant.is_enterprise():
+        qs = qs.exclude(notification_type__in=_OWNER_HIDDEN_TYPES)
+    return qs
+
+
 @login_required
 @require_permission('view_notifications')
 def notification_list(request):
@@ -44,9 +58,9 @@ def notification_list(request):
 
     _maybe_generate(tenant)
 
-    branch = getattr(request, 'branch', None)
-    notifications = Notification.objects.filter(tenant=tenant).for_branch(branch).order_by('-created_at')[:100]
-    unread_count  = Notification.objects.filter(tenant=tenant, is_read=False).for_branch(branch).count()
+    visible = _visible_notifications(request, tenant)
+    notifications = visible.order_by('-created_at')[:100]
+    unread_count  = visible.filter(is_read=False).count()
 
     return render(request, 'notifications/notification_list.html', {
         'notifications': notifications,
@@ -67,9 +81,9 @@ def notification_api(request):
 
     _maybe_generate(tenant)
 
-    branch = getattr(request, 'branch', None)
-    unread = Notification.objects.filter(tenant=tenant, is_read=False).for_branch(branch).count()
-    recent = Notification.objects.filter(tenant=tenant).for_branch(branch).order_by('-created_at')[:8]
+    visible = _visible_notifications(request, tenant)
+    unread = visible.filter(is_read=False).count()
+    recent = visible.order_by('-created_at')[:8]
 
     ICONS = {
         'low_stock':       'fa-triangle-exclamation text-warning',
@@ -122,7 +136,7 @@ def notification_detail(request, pk):
 @require_POST
 def mark_read_ajax(request, pk):
     tenant = _tenant(request)
-    Notification.objects.filter(tenant=tenant, pk=pk).update(is_read=True)
+    _visible_notifications(request, tenant).filter(pk=pk).update(is_read=True)
     return JsonResponse({'success': True})
 
 
@@ -131,8 +145,7 @@ def mark_read_ajax(request, pk):
 @require_POST
 def mark_all_read_ajax(request):
     tenant = _tenant(request)
-    branch = getattr(request, 'branch', None)
-    Notification.objects.filter(tenant=tenant, is_read=False).for_branch(branch).update(is_read=True)
+    _visible_notifications(request, tenant).filter(is_read=False).update(is_read=True)
     return JsonResponse({'success': True})
 
 
@@ -173,16 +186,18 @@ def ai_analyze_notification(request, pk):
     if not tenant:
         return JsonResponse({'error': 'no tenant'}, status=403)
 
-    notif = Notification.objects.filter(tenant=tenant, pk=pk).first()
+    notif = _visible_notifications(request, tenant).filter(pk=pk).first()
     if not notif:
         return JsonResponse({'error': 'not found'}, status=404)
 
-    cache_key = f'ai_notif_{pk}'
+    # التحليل يعتمد على نطاق المستخدم (فرعه/مدير النشاط) فلا يُشارَك بين النطاقات.
+    scope = 'owner' if request.user.is_tenant_admin else (request.user.branch_id or 0)
+    cache_key = f'ai_notif_{pk}_{scope}'
     analysis = cache.get(cache_key)
     if not analysis:
         try:
             from apps.ai.services import enrich_notification
-            analysis = enrich_notification(notif.notification_type, notif.message, tenant)
+            analysis = enrich_notification(notif.notification_type, notif.message, tenant, request.user)
         except Exception:
             analysis = 'تعذّر إجراء التحليل الذكي في الوقت الحالي.'
         cache.set(cache_key, analysis, 3600)

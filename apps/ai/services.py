@@ -29,32 +29,46 @@ def _call_deepseek(messages: list, max_tokens: int = 600) -> str:
     if not api_key:
         return "مفتاح API غير مُعيَّن. يرجى إضافة DEEPSEEK_API_KEY في secrets.json."
 
-    try:
-        response = requests.post(
-            settings.DEEPSEEK_API_URL,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": settings.DEEPSEEK_MODEL,
-                "messages": messages,
-                "max_tokens": max_tokens,
-                "temperature": 0.7,
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"].strip()
-    except requests.Timeout:
-        logger.warning("DeepSeek API timeout")
+    payload = {
+        "model": settings.DEEPSEEK_MODEL,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+    }
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+    # محاولة ثانية واحدة عند تعثر مؤقت (مهلة/انقطاع/خطأ 5xx من المزوّد) بدل
+    # إظهار فشل للمستخدم من أول محاولة.
+    last_error = None
+    for attempt in range(2):
+        try:
+            response = requests.post(settings.DEEPSEEK_API_URL, headers=headers, json=payload, timeout=45)
+            if response.status_code >= 500 and attempt == 0:
+                logger.warning("DeepSeek API %s — retrying", response.status_code)
+                continue
+            response.raise_for_status()
+            content = response.json()["choices"][0]["message"]["content"]
+            reply = (content or "").strip()
+            if reply:
+                return reply
+            logger.warning("DeepSeek returned an empty reply")
+            last_error = 'empty'
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            logger.warning("DeepSeek API transient error: %s", exc)
+            last_error = exc
+            continue
+        except requests.RequestException as exc:
+            logger.error("DeepSeek API error: %s", exc)
+            return "تعذّر الاتصال بالمساعد الذكي في الوقت الحالي."
+        except (KeyError, IndexError, ValueError) as exc:
+            logger.error("DeepSeek response parse error: %s", exc)
+            return "حدث خطأ أثناء معالجة رد المساعد الذكي."
+
+    if isinstance(last_error, requests.Timeout):
         return "انتهت مهلة الاتصال بالمساعد الذكي. يرجى المحاولة مرة أخرى."
-    except requests.RequestException as exc:
-        logger.error("DeepSeek API error: %s", exc)
-        return "تعذّر الاتصال بالمساعد الذكي في الوقت الحالي."
-    except (KeyError, IndexError, ValueError) as exc:
-        logger.error("DeepSeek response parse error: %s", exc)
-        return "حدث خطأ أثناء معالجة رد المساعد الذكي."
+    if last_error == 'empty':
+        return "لم يصل رد من المساعد الذكي. أعد صياغة سؤالك أو حاول مرة أخرى."
+    return "تعذّر الاتصال بالمساعد الذكي في الوقت الحالي."
 
 
 # ──────────────────────────────────────────────────────────────
@@ -80,11 +94,96 @@ def _is_enterprise_owner(tenant, user) -> bool:
     )
 
 
+def _user_branch(user):
+    """فرع المستخدم (مدير فرع/موظف فرع) أو None للمستخدم المركزي/نسخ بلا فروع."""
+    return getattr(user, 'branch', None) if user is not None else None
+
+
+def _collect_owner_overview(tenant) -> dict:
+    """
+    ملخص إحصائي لكل فرع لمدير النشاط في نسخة المؤسسات — أرقام تجميعية فقط.
+    عمداً لا يتضمن أي أسماء عملاء/موردين/مناديب ولا أرصدتهم: هذه بيانات
+    تشغيلية يملكها مدير كل فرع، ومدير النشاط لا يصل إليها (علاقته بالفروع
+    تقارير وإحصائيات فقط).
+    """
+    from apps.core.models import Branch
+    from apps.accounts.models import User
+    from apps.core.utils import filter_by_branch_strict
+    from apps.sales.models import SaleInvoice, SaleInvoiceLine
+    from apps.purchases.models import PurchaseInvoice
+    from apps.expenses.models import Expense
+    from apps.stocks.models import StockQuantity
+    from apps.customers.models import Customer
+    from apps.suppliers.models import Supplier
+
+    now = timezone.localdate()
+    month_ago = now - timedelta(days=30)
+    week_ago = now - timedelta(days=7)
+
+    branches = []
+    for b in Branch.objects.filter(tenant=tenant, is_active=True).order_by('name'):
+        sales = filter_by_branch_strict(SaleInvoice.objects.filter(
+            tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES, invoice_date__gte=month_ago), b)
+        week_sales = sales.filter(invoice_date__gte=week_ago)
+        purchases = filter_by_branch_strict(PurchaseInvoice.objects.filter(
+            tenant=tenant, status__in=PurchaseInvoice.EFFECTIVE_STATUSES, invoice_date__gte=month_ago), b)
+        expenses = Expense.unscoped.filter(tenant=tenant, branch=b, expense_date__gte=month_ago)
+        low_stock = filter_by_branch_strict(StockQuantity.objects.filter(
+            tenant=tenant, item__is_active=True, item__min_quantity__gt=0,
+            quantity__lte=F('item__min_quantity')), b, field='stock__branch').values('item').distinct().count()
+        revenue = _decimal_to_float(sales.aggregate(t=Sum('grand_total'))['t'] or 0)
+        purchases_total = _decimal_to_float(purchases.aggregate(t=Sum('grand_total'))['t'] or 0)
+        branches.append({
+            'name': b.name,
+            'revenue': revenue,
+            'weekly_revenue': _decimal_to_float(week_sales.aggregate(t=Sum('grand_total'))['t'] or 0),
+            'invoices': sales.count(),
+            'purchases': purchases_total,
+            'expenses': _decimal_to_float(expenses.aggregate(t=Sum('amount'))['t'] or 0),
+            'low_stock_items': low_stock,
+            'active_users': User.objects.filter(tenant=tenant, branch=b, is_active=True).count(),
+            'customers': Customer.unscoped.filter(tenant=tenant, branch=b, is_active=True).count(),
+            'suppliers': Supplier.unscoped.filter(tenant=tenant, branch=b, is_active=True).count(),
+            'has_manager': b.manager_id is not None,
+        })
+
+    # الأصناف المركزية (كتالوج مشترك) — الأكثر مبيعاً على مستوى المؤسسة
+    top_items_qs = (
+        SaleInvoiceLine.objects
+        .filter(invoice__tenant=tenant, invoice__status__in=SaleInvoice.REVENUE_STATUSES,
+                invoice__invoice_date__gte=month_ago)
+        .values('item__name')
+        .annotate(total_qty=Sum('quantity'), total_rev=Sum('line_total'))
+        .order_by('-total_rev')[:5]
+    )
+    top_items = [
+        {'name': r['item__name'], 'qty': _decimal_to_float(r['total_qty']),
+         'revenue': _decimal_to_float(r['total_rev'])}
+        for r in top_items_qs
+    ]
+
+    return {
+        'mode': 'owner_overview',
+        'period': f"{month_ago} → {now}",
+        'currency': tenant.currency or 'SDG',
+        'branches': branches,
+        'top_selling_items': top_items,
+    }
+
+
 def collect_business_context(tenant, user=None) -> dict:
     """
     Gather key business metrics for the last 30 days for the given tenant.
     Returns a serializable dict suitable for embedding in the AI prompt.
+
+    - مدير النشاط في نسخة المؤسسات: ملخص إحصائي لكل فرع بلا تفاصيل عملاء/موردين.
+    - مدير/موظف فرع: بيانات فرعه وحده فقط.
+    - غير ذلك (نسخ بلا فروع): بيانات النشاط كاملة كالمعتاد.
     """
+    if _is_enterprise_owner(tenant, user):
+        return _collect_owner_overview(tenant)
+
+    from apps.core.utils import filter_by_branch_strict
     from apps.sales.models import SaleInvoice, SaleInvoiceLine
     from apps.items.models import Item
     from apps.stocks.models import StockQuantity
@@ -92,14 +191,15 @@ def collect_business_context(tenant, user=None) -> dict:
     from apps.purchases.models import PurchaseInvoice
     from apps.expenses.models import Expense
 
+    branch = _user_branch(user)
     now = timezone.localdate()
     month_ago = now - timedelta(days=30)
     week_ago = now - timedelta(days=7)
 
     # ── Sales ────────────────────────────────────────────────
-    confirmed_sales = SaleInvoice.objects.filter(
+    confirmed_sales = filter_by_branch_strict(SaleInvoice.objects.filter(
         tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES
-    )
+    ), branch)
     monthly_sales = confirmed_sales.filter(invoice_date__gte=month_ago)
     weekly_sales  = confirmed_sales.filter(invoice_date__gte=week_ago)
 
@@ -113,9 +213,11 @@ def collect_business_context(tenant, user=None) -> dict:
 
     # ── Top selling items (by revenue) ───────────────────────
     top_items_qs = (
-        SaleInvoiceLine.objects
-        .filter(invoice__tenant=tenant, invoice__status__in=SaleInvoice.REVENUE_STATUSES,
-                invoice__invoice_date__gte=month_ago)
+        filter_by_branch_strict(
+            SaleInvoiceLine.objects.filter(
+                invoice__tenant=tenant, invoice__status__in=SaleInvoice.REVENUE_STATUSES,
+                invoice__invoice_date__gte=month_ago),
+            branch, field='invoice__stock__branch')
         .values('item__name')
         .annotate(total_qty=Sum('quantity'), total_rev=Sum('line_total'))
         .order_by('-total_rev')[:5]
@@ -131,9 +233,11 @@ def collect_business_context(tenant, user=None) -> dict:
 
     # ── Low stock items ───────────────────────────────────────
     low_stock_qs = (
-        StockQuantity.objects
-        .filter(tenant=tenant, item__is_active=True, item__min_quantity__gt=0)
-        .filter(quantity__lte=F('item__min_quantity'))
+        filter_by_branch_strict(
+            StockQuantity.objects
+            .filter(tenant=tenant, item__is_active=True, item__min_quantity__gt=0)
+            .filter(quantity__lte=F('item__min_quantity')),
+            branch, field='stock__branch')
         .select_related('item', 'stock')
         .order_by('quantity')[:10]
     )
@@ -150,8 +254,7 @@ def collect_business_context(tenant, user=None) -> dict:
     # ── Top customer debtors ─────────────────────────────────
     from apps.sales.models import CustomerLedger
     debtor_qs = (
-        CustomerLedger.objects
-        .filter(tenant=tenant)
+        filter_by_branch_strict(CustomerLedger.objects.filter(tenant=tenant), branch, field='customer__branch')
         .values('customer__name')
         .annotate(balance=Sum('amount'))
         .filter(balance__gt=0)
@@ -166,47 +269,45 @@ def collect_business_context(tenant, user=None) -> dict:
     monthly_expenses = _decimal_to_float(
         Expense.objects
         .filter(tenant=tenant, expense_date__gte=month_ago)
+        .for_branch(branch, strict=True)
         .aggregate(t=Sum('amount'))['t'] or 0
     )
 
     # ── Recent purchases ─────────────────────────────────────
     recent_purchases = (
-        PurchaseInvoice.objects
-        .filter(tenant=tenant, status__in=PurchaseInvoice.EFFECTIVE_STATUSES, invoice_date__gte=month_ago)
+        filter_by_branch_strict(PurchaseInvoice.objects.filter(
+            tenant=tenant, status__in=PurchaseInvoice.EFFECTIVE_STATUSES, invoice_date__gte=month_ago
+        ), branch)
         .aggregate(t=Sum('grand_total'))['t'] or 0
     )
     monthly_purchases = _decimal_to_float(recent_purchases)
 
     # ── Employee payroll (last 30 days) ───────────────────────
-    # رواتب/سلف الموظفين فئة مستبعدة بالكامل عن مدير النشاط في نسخة
-    # المؤسسات (لا شاشة ولا تقرير مقابل لها) — لا تُدرَج في سياقه، خلافاً
-    # لعدد الموظفين النشطين الذي يبقى ضمن فئة "الموظفين" المتاحة له.
     employee_data = {}
-    is_enterprise_owner = _is_enterprise_owner(tenant, user)
     try:
         from apps.employees.models import Employee, EmployeeSalaryPayment, EmployeeAdvance
-        employee_count = Employee.objects.filter(tenant=tenant, is_active=True).count()
+        employee_count = Employee.objects.filter(tenant=tenant, is_active=True).for_branch(branch, strict=True).count()
         employee_data = {'active_employees': employee_count}
-        if not is_enterprise_owner:
-            monthly_salaries = _decimal_to_float(
-                EmployeeSalaryPayment.objects
-                .filter(tenant=tenant, status='paid', period_start__gte=month_ago)
-                .annotate(net=F('base_salary') + F('bonus') - F('advances_deducted') - F('deductions'))
-                .aggregate(t=Sum('net'))['t'] or 0
-            )
-            pending_advances = _decimal_to_float(
-                EmployeeAdvance.objects
-                .filter(tenant=tenant, status='pending')
-                .aggregate(t=Sum('amount'))['t'] or 0
-            )
-            employee_data['monthly_salaries'] = monthly_salaries
-            employee_data['pending_advances'] = pending_advances
+        monthly_salaries = _decimal_to_float(
+            filter_by_branch_strict(EmployeeSalaryPayment.objects
+                .filter(tenant=tenant, status='paid', period_start__gte=month_ago), branch, field='employee__branch')
+            .annotate(net=F('base_salary') + F('bonus') - F('advances_deducted') - F('deductions'))
+            .aggregate(t=Sum('net'))['t'] or 0
+        )
+        pending_advances = _decimal_to_float(
+            filter_by_branch_strict(EmployeeAdvance.objects
+                .filter(tenant=tenant, status='pending'), branch, field='employee__branch')
+            .aggregate(t=Sum('amount'))['t'] or 0
+        )
+        employee_data['monthly_salaries'] = monthly_salaries
+        employee_data['pending_advances'] = pending_advances
     except Exception:
         pass
 
     # ── Hard currency info ────────────────────────────────────
+    # خزينة العملة الصعبة مركزية — لا تُعرض لمستخدم مربوط بفرع.
     hc_info = {}
-    if getattr(tenant, 'hard_currency_mode', False):
+    if branch is None and getattr(tenant, 'hard_currency_mode', False):
         try:
             from apps.treasury.models import Treasury
             hc_treasury = Treasury.objects.filter(tenant=tenant, is_hard_currency=True).first()
@@ -220,6 +321,8 @@ def collect_business_context(tenant, user=None) -> dict:
             pass
 
     return {
+        'mode': 'branch' if branch is not None else 'tenant',
+        'branch_name': branch.name if branch is not None else '',
         'period': f"{month_ago} → {now}",
         'currency': tenant.currency or 'SDG',
         'monthly_revenue': monthly_revenue,
@@ -258,16 +361,17 @@ _BUSINESS_TYPES = {
 }
 
 _ENTERPRISE_OWNER_PERSONA = (
-    'ملاحظة مهمة عن المستخدم الحالي: هو مدير النشاط (مالك الاشتراك) في نسخة المؤسسات متعددة الفروع، '
-    'وصلاحياته الآن إدارية واستراتيجية فقط — إدارة الفروع والمخازن، المستخدمين ومجموعات الصلاحيات، '
-    'تعريف المنتجات، إعدادات النشاط، ومتابعة كل التقارير. ليست لديه صلاحية الدخول المباشر لشاشات '
-    'المبيعات أو المشتريات أو العملاء أو الموردين أو المصروفات أو الخزائن أو رواتب/سلف الموظفين — '
-    'هذه عمليات يومية يتولاها موظفو ومديرو الفروع.\n'
-    'لذلك عند تقديم توصيات له: لا تقترح أبداً إجراءً تنفيذياً مباشراً يفترض دخوله لتلك الشاشات '
-    '(مثل "أنشئ فاتورة"، "سجّل مصروفاً"، "تابع تحصيل عميل بنفسك"، "اصرف راتباً"، "أعد طلب شراء"). '
-    'وجّه توصياتك دائماً نحو دوره الفعلي: مراجعة التقرير ذي الصلة، تكليف مدير الفرع المعني بالمتابعة، '
-    'أو قرار إداري (فتح فرع جديد، إعادة توزيع الموظفين، ضبط صلاحيات مستخدم أو مجموعة، مراجعة ربط '
-    'المخازن بالفروع، مقارنة أداء الفروع ببعضها عبر التقارير).'
+    'ملاحظة مهمة عن المستخدم الحالي: هو مدير النشاط (مالك الاشتراك) في نسخة المؤسسات متعددة الفروع. '
+    'علاقته بالفروع إشرافية فقط: تقارير وإحصائيات وقرارات إدارية عامة (فتح فرع، تعيين مدير فرع، '
+    'مقارنة أداء الفروع، المخزون والكتالوج المركزي، إعدادات النشاط). كل فرع مستقل تماماً بعملائه وموردينه '
+    'ومناديبه وموظفيه وخزائنه، ويديره مدير الفرع. مدير النشاط لا يصل لهذه البيانات التفصيلية.\n'
+    'قواعد الرد معه:\n'
+    '- تحدّث دائماً بشكل عام وإحصائي عن الفروع (أرقام الفرع الإجمالية) دون ذكر أي تفاصيل.\n'
+    '- لا تذكر أبداً اسم عميل أو مورد أو مندوب أو موظف أو رصيد/مديونية فردية، ولا تفترض أنه يعرف '
+    'أي عميل أو مورد ولا أي فرع يتبع. لو سأل عن عميل أو مورد أو مندوب بعينه أو عن مديونياتهم فأجبه '
+    'بأن هذه التفاصيل تخص مدير الفرع المعني، واعرض عليه بدلاً منها أرقام الفروع الإجمالية.\n'
+    '- لا تقترح إجراءً تنفيذياً مباشراً (إنشاء فاتورة، تسجيل مصروف، تحصيل من عميل، صرف راتب، '
+    'إعادة طلب شراء). وجّه توصياتك لدوره: مراجعة تقرير الفروع، متابعة مدير الفرع المعني، أو قرار إداري.'
 )
 
 
@@ -417,13 +521,47 @@ def _build_system_prompt(tenant, user=None) -> str:
     return f"{_SYSTEM_KNOWLEDGE}\n\n{profile}\n\n{_RESPONSE_RULES}"
 
 
+def _build_owner_context_message(ctx: dict) -> str:
+    """سياق مدير النشاط: إحصائيات الفروع الإجمالية فقط (بلا أسماء عملاء/موردين)."""
+    cur = str(ctx.get('currency', '')).strip().upper()
+    cur_label = CURRENCY_AR.get(cur, cur)
+    branches = ctx.get('branches', [])
+    lines = [f"📊 إحصائيات الفروع ({ctx['period']}) — العملة: {cur_label}"]
+    if not branches:
+        lines.append("  • لا توجد فروع نشطة بعد.")
+    total_rev = sum(b['revenue'] for b in branches)
+    total_purchases = sum(b['purchases'] for b in branches)
+    total_expenses = sum(b['expenses'] for b in branches)
+    if branches:
+        lines.append(f"  • عدد الفروع النشطة: {len(branches)}")
+        lines.append(f"  • إجمالي إيرادات المؤسسة: {total_rev:,.0f} {cur_label}")
+        lines.append(f"  • إجمالي المشتريات: {total_purchases:,.0f} {cur_label}")
+        lines.append(f"  • إجمالي المصروفات: {total_expenses:,.0f} {cur_label}")
+    for b in branches:
+        lines.append(f"\n🏬 {b['name']}:")
+        lines.append(f"  • إيرادات الشهر: {b['revenue']:,.0f} {cur_label} (آخر 7 أيام: {b['weekly_revenue']:,.0f})")
+        lines.append(f"  • عدد الفواتير: {b['invoices']}")
+        lines.append(f"  • مشتريات: {b['purchases']:,.0f} — مصروفات: {b['expenses']:,.0f} {cur_label}")
+        lines.append(f"  • أصناف تحت الحد الأدنى: {b['low_stock_items']}")
+        lines.append(f"  • مستخدمون نشطون: {b['active_users']} — عملاء: {b['customers']} — موردون: {b['suppliers']}")
+        lines.append(f"  • مدير الفرع: {'معيّن' if b['has_manager'] else 'غير معيّن'}")
+    if ctx.get('top_selling_items'):
+        lines.append("\n🏆 أكثر المنتجات مبيعاً على مستوى المؤسسة:")
+        for i in ctx['top_selling_items']:
+            lines.append(f"  • {i['name']}: {i['qty']:.0f} وحدة / {i['revenue']:,.0f} {cur_label}")
+    return "\n".join(lines)
+
+
 def _build_context_message(context: dict) -> str:
     """Format business context as a readable Arabic text block."""
     ctx = context
+    if ctx.get('mode') == 'owner_overview':
+        return _build_owner_context_message(ctx)
     cur = str(ctx.get('currency', '')).strip().upper()
     cur_label = CURRENCY_AR.get(cur, cur)
+    scope = f" — فرع {ctx['branch_name']}" if ctx.get('branch_name') else ''
     lines = [
-        f"📊 بيانات الأعمال ({ctx['period']}) — العملة: {cur_label}",
+        f"📊 بيانات الأعمال ({ctx['period']}){scope} — العملة: {cur_label}",
         f"  • إيرادات الشهر: {ctx['monthly_revenue']:,.0f} {cur_label}",
         f"  • إيرادات الأسبوع: {ctx['weekly_revenue']:,.0f} {cur_label}",
         f"  • عدد الفواتير: {ctx['monthly_invoice_count']}",
@@ -487,7 +625,9 @@ def chat(user_message: str, history: list, tenant, user=None) -> str:
 
     # Append trimmed history (last 6 turns to stay within token budget)
     for turn in history[-6:]:
-        messages.append({"role": turn["role"], "content": turn["content"]})
+        if (isinstance(turn, dict) and turn.get("role") in ("user", "assistant")
+                and isinstance(turn.get("content"), str) and turn["content"].strip()):
+            messages.append({"role": turn["role"], "content": turn["content"]})
 
     messages.append({"role": "user", "content": user_message})
 
@@ -507,10 +647,11 @@ def generate_daily_insights(tenant, user=None) -> str:
 
     if _is_enterprise_owner(tenant, user):
         instruction = (
-            "بناءً على هذه البيانات، اكتب تقرير صحة أعمال يومي موجز (5 نقاط كحد أقصى) "
-            "من منظور إداري/إشرافي (وليس تنفيذياً يومياً — راجع ملاحظة دور المستخدم أعلاه) "
-            "يشمل: أبرز إنجاز، أبرز تحذير يستحق متابعة إدارية أو تكليف مدير فرع به، "
-            "وتوصية واحدة قرار إداري أو إشرافي فوري."
+            "بناءً على إحصائيات الفروع أعلاه، اكتب نصائح إدارية موجزة (5 نقاط كحد أقصى) "
+            "خاصة بالفروع وسير العمل فيها: قارن أداء الفروع ببعضها، نبّه لفرع يحتاج متابعة "
+            "(مبيعات ضعيفة، مخزون منخفض، فرع بلا مدير)، واقترح قراراً إدارياً عاماً. "
+            "تحدّث بشكل عام وإحصائي فقط، ولا تذكر أي عميل أو مورد أو مندوب أو موظف بالاسم "
+            "ولا أي تفاصيل تشغيلية، فهي من اختصاص مديري الفروع."
         )
     else:
         instruction = (

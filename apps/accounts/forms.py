@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from apps.core.constants import COUNTRY_CHOICES, DEFAULT_COUNTRY
 from apps.core.models import BusinessType, Tenant, Settings, Branch
 from .models import PermissionGroup, User
+from .permissions import branch_assignable_permission_keys
 
 
 def apply_arabic_error_messages(form_instance):
@@ -160,22 +161,36 @@ class UserManagementForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.tenant = kwargs.pop('tenant', None)
+        # فرع مفروض: مدير الفرع (أو أي مستخدم مربوط بفرع) يضيف مستخدمين لفرعه
+        # فقط — لا يختار فرعاً ولا يعيّن مشرفاً (للفرع مشرف واحد يعيّنه مدير النشاط).
+        self.forced_branch = kwargs.pop('forced_branch', None)
         super().__init__(*args, **kwargs)
         apply_arabic_error_messages(self)
         if self.tenant is not None:
             # مجموعة "مدير النشاط" التلقائية (is_owner_group) تحمل كل صلاحيات
             # مالك الاشتراك — تُستبعد هنا عمداً حتى لا تُمنح لموظف عادي عبر
             # خانة تبدو كأي مجموعة أخرى (راجع PermissionGroup.is_owner_group).
-            self.fields['permission_groups'].queryset = PermissionGroup.objects.filter(
+            groups = PermissionGroup.objects.filter(
                 tenant=self.tenant,
                 is_active=True,
                 is_owner_group=False,
             ).order_by('name')
+            if self.forced_branch is not None:
+                # لا يُمنح موظف الفرع مجموعة فيها صلاحيات إدارة النشاط (فروع،
+                # مستخدمو المنشأة، مجموعات الصلاحيات...) حتى لا يتصعّد.
+                allowed = branch_assignable_permission_keys()
+                groups = groups.filter(pk__in=[
+                    g.pk for g in groups if set(g.get_permission_keys()) <= allowed
+                ])
+            self.fields['permission_groups'].queryset = groups
             self.fields['branch'].queryset = Branch.objects.filter(
                 tenant=self.tenant,
                 is_active=True
             ).order_by('name')
         self.fields['branch'].required = False
+        if self.forced_branch is not None:
+            del self.fields['branch']
+            del self.fields['is_branch_supervisor']
         for field_name, field in self.fields.items():
             if field_name in ['password', 'password_confirm']:
                 field.widget.attrs['autocomplete'] = 'new-password'
@@ -215,7 +230,7 @@ class UserManagementForm(forms.ModelForm):
             raise ValidationError('كلمة المرور مطلوبة عند إنشاء مستخدم جديد')
 
         is_branch_supervisor = cleaned_data.get('is_branch_supervisor')
-        branch = cleaned_data.get('branch')
+        branch = self.forced_branch or cleaned_data.get('branch')
 
         # هذا الفورم لا يُستخدم أبداً لتعديل مدير النشاط نفسه (is_tenant_admin
         # غير مدرج فيه أصلاً — راجع تعليق Meta.fields أعلاه)، فأي مستخدم يُنشأ/
@@ -252,6 +267,8 @@ class UserManagementForm(forms.ModelForm):
             user.set_password(password)
         if self.tenant and not user.tenant:
             user.tenant = self.tenant
+        if self.forced_branch is not None:
+            user.branch = self.forced_branch
         if commit:
             user.save()
             # Manually handle M2M relationship since permission_groups is defined in form

@@ -82,6 +82,28 @@ def _json_ok(data=None, msg='تمت العملية بنجاح'):
     return JsonResponse(payload, json_dumps_params={'ensure_ascii': False})
 
 
+def _manageable_users(request, tenant):
+    """
+    المستخدمون الذين يجوز للمستخدم الحالي إدارتهم من شاشة المستخدمين.
+    مستخدم مربوط بفرع (مدير الفرع): موظفو فرعه فقط — لا مستخدمو الفروع الأخرى
+    ولا مدير النشاط. بلا فرع (نسخ غير المؤسسات): كل مستخدمي النشاط كالمعتاد.
+    """
+    qs = User.objects.for_tenant(tenant)
+    branch = getattr(request, 'branch', None)
+    if branch is not None:
+        qs = qs.filter(branch=branch, is_tenant_admin=False, is_superuser=False)
+    return qs
+
+
+def _branch_protected_user_error(request, target):
+    """مستخدم الفرع لا يعدّل/يحذف مشرف الفرع (ولا نفسه) من هذه الشاشة."""
+    if getattr(request, 'branch', None) is None:
+        return None
+    if target.is_branch_supervisor or target.pk == request.user.pk:
+        return _json_error('لا يمكنك تعديل مشرف الفرع أو حسابك من هذه الشاشة', status=403)
+    return None
+
+
 @login_required
 @require_permission('view_users')
 def user_list(request):
@@ -89,17 +111,14 @@ def user_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = User.objects.for_tenant(tenant)
+    qs = _manageable_users(request, tenant)
     total = qs.count()
     active = qs.filter(is_active=True).count()
     inactive = total - active
 
     # is_owner_group مستبعدة عمداً — راجع apps/accounts/models.py::PermissionGroup.is_owner_group
-    groups = PermissionGroup.objects.filter(
-        tenant=tenant,
-        is_active=True,
-        is_owner_group=False,
-    ).values('id', 'name')
+    form = UserManagementForm(tenant=tenant, forced_branch=getattr(request, 'branch', None))
+    groups = form.fields['permission_groups'].queryset.values('id', 'name')
 
     context = {
         'stats': {
@@ -107,8 +126,9 @@ def user_list(request):
             'active': active,
             'inactive': inactive,
         },
-        'form': UserManagementForm(tenant=tenant),
+        'form': form,
         'permission_groups': json.dumps(list(groups), ensure_ascii=False),
+        'branch_locked': getattr(request, 'branch', None) is not None,
     }
     return render(request, 'accounts/user_list.html', context)
 
@@ -126,7 +146,7 @@ def user_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status = request.GET.get('status', '').strip()
 
-    queryset = User.objects.for_tenant(tenant)
+    queryset = _manageable_users(request, tenant)
     records_total = queryset.count()
 
     if status == 'active':
@@ -215,7 +235,7 @@ def user_create_api(request):
             json_dumps_params={'ensure_ascii': False}
         )
 
-    form = UserManagementForm(request.POST, tenant=tenant)
+    form = UserManagementForm(request.POST, tenant=tenant, forced_branch=getattr(request, 'branch', None))
     if not form.is_valid():
         return JsonResponse({
             'success': False,
@@ -237,7 +257,7 @@ def user_detail_api(request, pk):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
-    user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
+    user = get_object_or_404(_manageable_users(request, tenant), pk=pk)
     
     active_groups = [group.id for group in user.permission_groups.filter(is_active=True)]
     
@@ -266,7 +286,10 @@ def user_update_api(request, pk):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'الطريقة غير مسموحة'}, status=405, json_dumps_params={'ensure_ascii': False})
 
-    user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
+    user = get_object_or_404(_manageable_users(request, tenant), pk=pk)
+    protected = _branch_protected_user_error(request, user)
+    if protected:
+        return protected
 
     if (not user.is_active and request.POST.get('is_active') == 'on'
             and _active_users_count(tenant) >= tenant.max_users):
@@ -274,7 +297,7 @@ def user_update_api(request, pk):
             f'لا يمكن تفعيل المستخدم: وصلت للحد الأقصى من المستخدمين النشطين ({tenant.max_users}). '
             'عطّل مستخدماً آخر أو رقِّ الباقة.', status=403)
 
-    form = UserManagementForm(request.POST, instance=user, tenant=tenant)
+    form = UserManagementForm(request.POST, instance=user, tenant=tenant, forced_branch=getattr(request, 'branch', None))
     if not form.is_valid():
         return JsonResponse({
             'success': False,
@@ -299,7 +322,10 @@ def user_delete_api(request, pk):
     if request.user.pk == pk:
         return _json_error('لا يمكن حذف المستخدم الحالي')
 
-    user = get_object_or_404(User.objects.for_tenant(tenant), pk=pk)
+    user = get_object_or_404(_manageable_users(request, tenant), pk=pk)
+    protected = _branch_protected_user_error(request, user)
+    if protected:
+        return protected
     if hasattr(user, 'agent_profile'):
         return _json_error('لا يمكن حذف هذا المستخدم لأنه مرتبط بمندوب. احذف المندوب أولاً أو افصل الحساب منه.')
     user.delete()
