@@ -23,18 +23,12 @@ logger = logging.getLogger(__name__)
 # DeepSeek API call
 # ──────────────────────────────────────────────────────────────
 
-def _call_deepseek(messages: list, max_tokens: int = 600) -> str:
-    """Send messages to DeepSeek and return the assistant reply."""
+def _post_deepseek(payload: dict):
+    """
+    يرسل payload إلى DeepSeek مع محاولة ثانية عند التعثر المؤقت.
+    يرجع (message_dict, None) عند النجاح أو (None, رسالة_خطأ_للمستخدم).
+    """
     api_key = settings.DEEPSEEK_API_KEY
-    if not api_key:
-        return "مفتاح API غير مُعيَّن. يرجى إضافة DEEPSEEK_API_KEY في secrets.json."
-
-    payload = {
-        "model": settings.DEEPSEEK_MODEL,
-        "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": 0.7,
-    }
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     # محاولة ثانية واحدة عند تعثر مؤقت (مهلة/انقطاع/خطأ 5xx من المزوّد) بدل
@@ -42,15 +36,14 @@ def _call_deepseek(messages: list, max_tokens: int = 600) -> str:
     last_error = None
     for attempt in range(2):
         try:
-            response = requests.post(settings.DEEPSEEK_API_URL, headers=headers, json=payload, timeout=45)
+            response = requests.post(settings.DEEPSEEK_API_URL, headers=headers, json=payload, timeout=60)
             if response.status_code >= 500 and attempt == 0:
                 logger.warning("DeepSeek API %s — retrying", response.status_code)
                 continue
             response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"]
-            reply = (content or "").strip()
-            if reply:
-                return reply
+            message = response.json()["choices"][0]["message"]
+            if (message.get("content") or "").strip() or message.get("tool_calls"):
+                return message, None
             logger.warning("DeepSeek returned an empty reply")
             last_error = 'empty'
         except (requests.Timeout, requests.ConnectionError) as exc:
@@ -59,16 +52,65 @@ def _call_deepseek(messages: list, max_tokens: int = 600) -> str:
             continue
         except requests.RequestException as exc:
             logger.error("DeepSeek API error: %s", exc)
-            return "تعذّر الاتصال بالمساعد الذكي في الوقت الحالي."
+            return None, "تعذّر الاتصال بالمساعد الذكي في الوقت الحالي."
         except (KeyError, IndexError, ValueError) as exc:
             logger.error("DeepSeek response parse error: %s", exc)
-            return "حدث خطأ أثناء معالجة رد المساعد الذكي."
+            return None, "حدث خطأ أثناء معالجة رد المساعد الذكي."
 
     if isinstance(last_error, requests.Timeout):
-        return "انتهت مهلة الاتصال بالمساعد الذكي. يرجى المحاولة مرة أخرى."
+        return None, "انتهت مهلة الاتصال بالمساعد الذكي. يرجى المحاولة مرة أخرى."
     if last_error == 'empty':
-        return "لم يصل رد من المساعد الذكي. أعد صياغة سؤالك أو حاول مرة أخرى."
-    return "تعذّر الاتصال بالمساعد الذكي في الوقت الحالي."
+        return None, "لم يصل رد من المساعد الذكي. أعد صياغة سؤالك أو حاول مرة أخرى."
+    return None, "تعذّر الاتصال بالمساعد الذكي في الوقت الحالي."
+
+
+MAX_TOOL_ROUNDS = 8
+
+
+def _call_deepseek(messages: list, max_tokens: int = 600, tools: list | None = None,
+                   tool_runner=None) -> str:
+    """
+    Send messages to DeepSeek and return the assistant reply.
+
+    مع tools/tool_runner: حلقة function calling — ينفّذ المساعد استعلامات على
+    بيانات النشاط (tool_runner(name, arguments_json) -> نص) ثم يكتب الجواب.
+    """
+    api_key = settings.DEEPSEEK_API_KEY
+    if not api_key:
+        return "مفتاح API غير مُعيَّن. يرجى إضافة DEEPSEEK_API_KEY في secrets.json."
+
+    payload = {
+        "model": settings.DEEPSEEK_MODEL,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": 0.3 if tools else 0.7,
+    }
+    if not tools:
+        message, error = _post_deepseek(payload)
+        return error if error else message["content"].strip()
+
+    payload["tools"] = tools
+    convo = list(messages)
+    for round_no in range(MAX_TOOL_ROUNDS + 1):
+        if round_no == MAX_TOOL_ROUNDS:
+            # آخر جولة: اطلب الجواب النهائي بما جُمع دون مزيد من الأدوات.
+            payload.pop("tools", None)
+            convo.append({"role": "user", "content":
+                          "اكتب الآن الجواب النهائي بالاعتماد على النتائج التي حصلت عليها."})
+        payload["messages"] = convo
+        message, error = _post_deepseek(payload)
+        if error:
+            return error
+        calls = message.get("tool_calls")
+        if not calls:
+            return (message.get("content") or "").strip()
+        convo.append({"role": "assistant", "content": message.get("content") or "", "tool_calls": calls})
+        for call in calls:
+            fn = call.get("function") or {}
+            result = tool_runner(fn.get("name", ""), fn.get("arguments", "")) if tool_runner else \
+                json.dumps({"error": "الأدوات غير متاحة"}, ensure_ascii=False)
+            convo.append({"role": "tool", "tool_call_id": call.get("id", ""), "content": result})
+    return "تعذّر إكمال الجواب. أعد صياغة سؤالك."
 
 
 # ──────────────────────────────────────────────────────────────
@@ -455,15 +497,18 @@ _BUSINESS_TYPES = {
 
 _ENTERPRISE_OWNER_PERSONA = (
     'ملاحظة مهمة عن المستخدم الحالي: هو مدير النشاط (مالك الاشتراك) في نسخة المؤسسات متعددة الفروع. '
-    'يشرف على كل الفروع، وكل فرع مستقل ببياناته (عملاؤه وموردوه ومناديبه وموظفوه وخزائنه ومخازنه) '
-    'ويديره مدير الفرع. لديك بيانات تفصيلية لكل فرع في السياق أعلاه، مفصولة فرعاً فرعاً.\n'
-    'قواعد الرد معه:\n'
-    '- أجب عن أي سؤال عن أي فرع أو عميل أو مورد أو مندوب أو موظف أو خزينة أو رصيد من البيانات المقدَّمة، '
-    'بالأسماء والأرقام كما هي، وانسب كل معلومة للفرع الذي تتبعه.\n'
-    '- لا تخلط بيانات فرع بفرع آخر؛ إن وُجد الاسم نفسه في أكثر من فرع فاذكر كل فرع على حدة.\n'
-    '- إن لم تجد المعلومة المطلوبة في البيانات (مثلاً عميل خارج القوائم المختصرة) فقل ذلك صراحة '
-    'وانصحه بمراجعة تقرير الفرع المعني ولا تخمّن.\n'
-    '- قارن بين الفروع عند الطلب، ونبّه للفروع المتعثرة (مبيعات متراجعة، مخزون منخفض، فرع بلا مدير).'
+    'يشرف على كل الفروع وله الحق في أي معلومة عن أي فرع: عملاؤه وموردوه ومناديبه وموظفوه وفواتيره '
+    'وأرصدته وخزائنه ومخازنه ومصروفاته. أجب عن أي سؤال عن أي فرع بالأسماء والأرقام الفعلية من الأدوات، '
+    'وانسب كل معلومة للفرع الذي تتبعه. للتصفية بين الفروع استعمل حقل الفرع (مثل stock__branch__name '
+    'أو branch__name أو customer__branch__name). لا تخلط بيانات فرع بفرع آخر؛ إن تكرر الاسم في أكثر '
+    'من فرع فاذكر كل فرع على حدة. قارن بين الفروع عند الطلب ونبّه للفروع المتعثرة.'
+)
+
+_BRANCH_USER_PERSONA = (
+    'ملاحظة مهمة عن المستخدم الحالي: هو من فريق فرع "{branch}" (مدير فرع أو موظف). له الحق في أي معلومة '
+    'عن فرعه: عملاؤه وموردوه ومناديبه وموظفوه وفواتيره وأرصدته وخزائنه ومخازنه ومصروفاته. أجب عن أي '
+    'سؤال عن فرعه بالأسماء والأرقام الفعلية من الأدوات. النظام يقصر النتائج على فرعه تلقائياً، فلا تقل '
+    'إن شيئاً "محجوب" أو "غير متاح" إلا إذا سأل عن فرع آخر، وحينها وضّح أن بياناته تقتصر على فرعه.'
 )
 
 
@@ -542,8 +587,8 @@ _RESPONSE_RULES = """قواعد الرد الصارمة:
 - استخدم الأرقام والنقاط والعناوين النصية العادية فقط.
 - استند إلى الأرقام المُقدَّمة واستنتج منها بشكل منطقي.
 - قدّم توصيات عملية قابلة للتنفيذ.
-- لا تتجاوز 300 كلمة ما لم يطلب المستخدم تفصيلاً أكثر.
-- لا تخترع أرقاماً أو معلومات غير موجودة في السياق."""
+- كن موجزاً، لكن اذكر كل التفاصيل والأسماء والأرقام التي طلبها المستخدم كاملة دون اختصارها.
+- لا تخترع أرقاماً أو معلومات: خذها من السياق أو من نتائج الأدوات فقط."""
 
 
 def _capabilities_summary(tenant) -> str:
@@ -604,13 +649,28 @@ def _build_tenant_profile(tenant, user=None) -> str:
     profile = '\n'.join(lines)
     if _is_enterprise_owner(tenant, user):
         profile = f"{profile}\n\n{_ENTERPRISE_OWNER_PERSONA}"
+    elif _user_branch(user) is not None:
+        profile = f"{profile}\n\n{_BRANCH_USER_PERSONA.format(branch=_user_branch(user).name)}"
     return profile
 
 
-def _build_system_prompt(tenant, user=None) -> str:
+_DATA_ACCESS_RULES = """الوصول إلى البيانات (مهم جداً):
+- لديك أدوات استعلام مباشر عن كل بيانات النشاط: list_entities (أنواع البيانات)، describe_entity (حقول نوع معيّن)، query_data (استعلام وتصفية وترتيب وإجماليات وتجميع).
+- ملخص البيانات في أول المحادثة مختصر عمداً. لأي سؤال عن بيانات (عميل، مورد، مندوب، موظف، فاتورة، رصيد، صنف، مخزون، خزينة، مصروف، فرع، مبيعات فترة...) استعمل الأدوات واجلب الإجابة الفعلية قبل أن تجيب.
+- ممنوع أن تقول "لا تتوفر لدي بيانات" أو "لا أعرف" أو "لا أستطيع الوصول" قبل أن تجرّب الاستعلام. إن لم يعطِ استعلامك نتيجة فعدّله وجرّب مرة أخرى (مثلاً ابحث بالاسم بـ contains، أو غيّر الحقل، أو استدعِ describe_entity). لا تقل إن المعلومة غير موجودة إلا إذا استعلمت فعلاً وكانت النتيجة فارغة، وقل حينها ما بحثت عنه.
+- أنت لا تحتاج إذناً: كل ما تصل إليه الأدوات مسموح للمستخدم الحالي. والنظام يقيّد النتائج تلقائياً بنطاقه.
+- الأرصدة: رصيد العميل = مجموع amount في customer_ledger لهذا العميل (الموجب = مستحق على العميل). رصيد المورد = مجموع amount في supplier_ledger (الموجب = مستحق للمورد). المبيعات الفعلية: فواتير sale_invoices بحالات confirmed و partially_returned و returned.
+- لا تعرض معرّفات داخلية (id) للمستخدم ما لم يطلبها. اعرض الأسماء والأرقام بوضوح، وقدّم تحليلاً وتوصيات عند الحاجة.
+"""
+
+
+def _build_system_prompt(tenant, user=None, with_tools=False) -> str:
     """يبني system prompt واعٍ بنوع نشاط المشترك ودور المستخدم الحالي."""
     profile = _build_tenant_profile(tenant, user)
-    return f"{_SYSTEM_KNOWLEDGE}\n\n{profile}\n\n{_RESPONSE_RULES}"
+    prompt = f"{_SYSTEM_KNOWLEDGE}\n\n{profile}\n\n{_RESPONSE_RULES}"
+    if with_tools:
+        prompt += f"\n\n{_DATA_ACCESS_RULES}"
+    return prompt
 
 
 def _build_owner_context_message(ctx: dict) -> str:
@@ -742,23 +802,28 @@ def chat(user_message: str, history: list, tenant, user=None) -> str:
     Returns the assistant reply string.
     """
     context = collect_business_context(tenant, user)
-    context_text = _build_context_message(context)
+    context_text = (_build_context_message(context)
+                    + "\n\n(هذا ملخص مختصر فقط. للتفاصيل الكاملة وأي سؤال آخر استعمل أدوات الاستعلام.)")
 
     messages = [
-        {"role": "system", "content": _build_system_prompt(tenant, user)},
+        {"role": "system", "content": _build_system_prompt(tenant, user, with_tools=True)},
         {"role": "user", "content": context_text},
-        {"role": "assistant", "content": "حسناً، لديّ البيانات. كيف يمكنني مساعدتك؟"},
+        {"role": "assistant", "content": "حسناً، لديّ ملخص البيانات وأدوات الاستعلام. كيف يمكنني مساعدتك؟"},
     ]
 
-    # Append trimmed history (last 6 turns to stay within token budget)
-    for turn in history[-6:]:
+    # Append trimmed history (last 10 turns to stay within token budget)
+    for turn in history[-10:]:
         if (isinstance(turn, dict) and turn.get("role") in ("user", "assistant")
                 and isinstance(turn.get("content"), str) and turn["content"].strip()):
             messages.append({"role": turn["role"], "content": turn["content"]})
 
     messages.append({"role": "user", "content": user_message})
 
-    return _call_deepseek(messages, max_tokens=600)
+    from apps.ai.data_tools import TOOL_SCHEMAS, run_tool
+    return _call_deepseek(
+        messages, max_tokens=1500, tools=TOOL_SCHEMAS,
+        tool_runner=lambda name, args: run_tool(name, args, tenant, user),
+    )
 
 
 # ──────────────────────────────────────────────────────────────
