@@ -101,53 +101,147 @@ def _user_branch(user):
 
 def _collect_owner_overview(tenant) -> dict:
     """
-    ملخص إحصائي لكل فرع لمدير النشاط في نسخة المؤسسات — أرقام تجميعية فقط.
-    عمداً لا يتضمن أي أسماء عملاء/موردين/مناديب ولا أرصدتهم: هذه بيانات
-    تشغيلية يملكها مدير كل فرع، ومدير النشاط لا يصل إليها (علاقته بالفروع
-    تقارير وإحصائيات فقط).
+    صورة شاملة لكل فرع لمدير النشاط في نسخة المؤسسات: بيانات الفرع، إدارته،
+    مبيعاته ومشترياته ومصروفاته، المخزون، الخزائن، وأسماء/أرصدة العملاء والموردين
+    والمناديب والموظفين. كل فرع يُجمَّع بمعزل عن غيره (فلترة صارمة بالفرع).
     """
     from apps.core.models import Branch
     from apps.accounts.models import User
     from apps.core.utils import filter_by_branch_strict
-    from apps.sales.models import SaleInvoice, SaleInvoiceLine
-    from apps.purchases.models import PurchaseInvoice
+    from apps.sales.models import SaleInvoice, SaleInvoiceLine, SaleReturn, CustomerLedger
+    from apps.purchases.models import PurchaseInvoice, SupplierLedger
     from apps.expenses.models import Expense
-    from apps.stocks.models import StockQuantity
+    from apps.stocks.models import Stock, StockQuantity
     from apps.customers.models import Customer
     from apps.suppliers.models import Supplier
+    from apps.agents.models import Agent
+    from apps.employees.models import Employee
+    from apps.treasury.models import Treasury
 
     now = timezone.localdate()
     month_ago = now - timedelta(days=30)
+    prev_month_ago = now - timedelta(days=60)
     week_ago = now - timedelta(days=7)
+    f = _decimal_to_float
 
     branches = []
-    for b in Branch.objects.filter(tenant=tenant, is_active=True).order_by('name'):
+    for b in Branch.objects.filter(tenant=tenant, is_active=True).select_related('manager').order_by('name'):
         sales = filter_by_branch_strict(SaleInvoice.objects.filter(
             tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES, invoice_date__gte=month_ago), b)
+        prev_sales = filter_by_branch_strict(SaleInvoice.objects.filter(
+            tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES,
+            invoice_date__gte=prev_month_ago, invoice_date__lt=month_ago), b)
         week_sales = sales.filter(invoice_date__gte=week_ago)
+        today_sales = sales.filter(invoice_date=now)
         purchases = filter_by_branch_strict(PurchaseInvoice.objects.filter(
             tenant=tenant, status__in=PurchaseInvoice.EFFECTIVE_STATUSES, invoice_date__gte=month_ago), b)
         expenses = Expense.unscoped.filter(tenant=tenant, branch=b, expense_date__gte=month_ago)
-        low_stock = filter_by_branch_strict(StockQuantity.objects.filter(
+        returns_total = SaleReturn.objects.filter(
+            tenant=tenant, branch=b, status='confirmed', return_date__gte=month_ago,
+        ).aggregate(t=Sum('total_returned'))['t'] or 0
+
+        low_qs = (filter_by_branch_strict(StockQuantity.objects.filter(
             tenant=tenant, item__is_active=True, item__min_quantity__gt=0,
-            quantity__lte=F('item__min_quantity')), b, field='stock__branch').values('item').distinct().count()
-        revenue = _decimal_to_float(sales.aggregate(t=Sum('grand_total'))['t'] or 0)
-        purchases_total = _decimal_to_float(purchases.aggregate(t=Sum('grand_total'))['t'] or 0)
+            quantity__lte=F('item__min_quantity')), b, field='stock__branch')
+            .select_related('item', 'stock').order_by('quantity'))
+        low_stock_items = [
+            {'item': sq.item.name, 'current': f(sq.quantity), 'min': f(sq.item.min_quantity), 'stock': sq.stock.name}
+            for sq in low_qs[:10]
+        ]
+        stock_value = filter_by_branch_strict(StockQuantity.objects.filter(
+            tenant=tenant, quantity__gt=0), b, field='stock__branch'
+        ).aggregate(v=Sum(F('quantity') * F('item__cost_price')))['v'] or 0
+
+        top_items = [
+            {'name': r['item__name'], 'qty': f(r['q']), 'revenue': f(r['r'])}
+            for r in filter_by_branch_strict(SaleInvoiceLine.objects.filter(
+                invoice__tenant=tenant, invoice__status__in=SaleInvoice.REVENUE_STATUSES,
+                invoice__invoice_date__gte=month_ago), b, field='invoice__stock__branch')
+            .values('item__name').annotate(q=Sum('quantity'), r=Sum('line_total')).order_by('-r')[:5]
+        ]
+
+        cust_ledger = CustomerLedger.objects.filter(tenant=tenant, customer__branch=b)
+        receivables = cust_ledger.aggregate(t=Sum('amount'))['t'] or 0
+        top_debtors = [
+            {'name': r['customer__name'], 'balance': f(r['bal'])}
+            for r in cust_ledger.values('customer__name').annotate(bal=Sum('amount'))
+            .filter(bal__gt=0).order_by('-bal')[:8]
+        ]
+        sup_ledger = SupplierLedger.objects.filter(tenant=tenant, supplier__branch=b)
+        payables = sup_ledger.aggregate(t=Sum('amount'))['t'] or 0
+        top_creditors = [
+            {'name': r['supplier__name'], 'balance': f(r['bal'])}
+            for r in sup_ledger.values('supplier__name').annotate(bal=Sum('amount'))
+            .filter(bal__gt=0).order_by('-bal')[:8]
+        ]
+        top_customers = [
+            {'name': r['customer__name'], 'revenue': f(r['r'])}
+            for r in sales.filter(customer__isnull=False).values('customer__name')
+            .annotate(r=Sum('grand_total')).order_by('-r')[:5]
+        ]
+
+        customers_qs = Customer.unscoped.filter(tenant=tenant, branch=b, is_active=True)
+        suppliers_qs = Supplier.unscoped.filter(tenant=tenant, branch=b, is_active=True)
+        agents = list(Agent.unscoped.filter(tenant=tenant, branch=b, is_active=True).values_list('name', flat=True)[:15])
+        employees_qs = Employee.unscoped.filter(tenant=tenant, branch=b, is_active=True)
+        employees = [
+            {'name': e.name, 'position': e.position, 'salary': f(e.base_salary)}
+            for e in employees_qs.order_by('name')[:20]
+        ]
+        users = [
+            {'name': u.get_full_name() or u.username,
+             'role': 'مدير الفرع' if (u.is_branch_supervisor or u.id == b.manager_id) else 'موظف'}
+            for u in User.objects.filter(tenant=tenant, branch=b, is_active=True).order_by('username')[:20]
+        ]
+        treasuries = [
+            {'name': t.name, 'balance': f(t.current_balance), 'currency': t.currency}
+            for t in Treasury.objects.filter(tenant=tenant, branch=b, is_active=True)
+        ]
+        expense_by_cat = [
+            {'category': r['category__name'], 'total': f(r['t'])}
+            for r in expenses.values('category__name').annotate(t=Sum('amount')).order_by('-t')[:5]
+        ]
+
+        revenue = f(sales.aggregate(t=Sum('grand_total'))['t'] or 0)
+        purchases_total = f(purchases.aggregate(t=Sum('grand_total'))['t'] or 0)
         branches.append({
             'name': b.name,
-            'revenue': revenue,
-            'weekly_revenue': _decimal_to_float(week_sales.aggregate(t=Sum('grand_total'))['t'] or 0),
-            'invoices': sales.count(),
-            'purchases': purchases_total,
-            'expenses': _decimal_to_float(expenses.aggregate(t=Sum('amount'))['t'] or 0),
-            'low_stock_items': low_stock,
-            'active_users': User.objects.filter(tenant=tenant, branch=b, is_active=True).count(),
-            'customers': Customer.unscoped.filter(tenant=tenant, branch=b, is_active=True).count(),
-            'suppliers': Supplier.unscoped.filter(tenant=tenant, branch=b, is_active=True).count(),
+            'code': b.code,
+            'address': b.address,
+            'phone': b.phone,
+            'is_default': b.is_default,
+            'manager': (b.manager.get_full_name() or b.manager.username) if b.manager_id else '',
             'has_manager': b.manager_id is not None,
+            'stocks': list(Stock.objects.filter(tenant=tenant, branch=b, is_active=True).values_list('name', flat=True)),
+            'revenue': revenue,
+            'prev_revenue': f(prev_sales.aggregate(t=Sum('grand_total'))['t'] or 0),
+            'weekly_revenue': f(week_sales.aggregate(t=Sum('grand_total'))['t'] or 0),
+            'today_revenue': f(today_sales.aggregate(t=Sum('grand_total'))['t'] or 0),
+            'invoices': sales.count(),
+            'returns': f(returns_total),
+            'purchases': purchases_total,
+            'expenses': f(expenses.aggregate(t=Sum('amount'))['t'] or 0),
+            'expense_by_category': expense_by_cat,
+            'receivables': f(receivables),
+            'payables': f(payables),
+            'stock_value': f(stock_value),
+            'low_stock_items': low_stock_items,
+            'low_stock_count': low_qs.values('item').distinct().count(),
+            'top_items': top_items,
+            'top_customers': top_customers,
+            'top_debtors': top_debtors,
+            'top_creditors': top_creditors,
+            'customers_count': customers_qs.count(),
+            'suppliers_count': suppliers_qs.count(),
+            'customer_names': list(customers_qs.order_by('name').values_list('name', flat=True)[:25]),
+            'supplier_names': list(suppliers_qs.order_by('name').values_list('name', flat=True)[:25]),
+            'agents': agents,
+            'employees': employees,
+            'users': users,
+            'active_users': len(users),
+            'treasuries': treasuries,
         })
 
-    # الأصناف المركزية (كتالوج مشترك) — الأكثر مبيعاً على مستوى المؤسسة
     top_items_qs = (
         SaleInvoiceLine.objects
         .filter(invoice__tenant=tenant, invoice__status__in=SaleInvoice.REVENUE_STATUSES,
@@ -157,8 +251,7 @@ def _collect_owner_overview(tenant) -> dict:
         .order_by('-total_rev')[:5]
     )
     top_items = [
-        {'name': r['item__name'], 'qty': _decimal_to_float(r['total_qty']),
-         'revenue': _decimal_to_float(r['total_rev'])}
+        {'name': r['item__name'], 'qty': f(r['total_qty']), 'revenue': f(r['total_rev'])}
         for r in top_items_qs
     ]
 
@@ -362,16 +455,15 @@ _BUSINESS_TYPES = {
 
 _ENTERPRISE_OWNER_PERSONA = (
     'ملاحظة مهمة عن المستخدم الحالي: هو مدير النشاط (مالك الاشتراك) في نسخة المؤسسات متعددة الفروع. '
-    'علاقته بالفروع إشرافية فقط: تقارير وإحصائيات وقرارات إدارية عامة (فتح فرع، تعيين مدير فرع، '
-    'مقارنة أداء الفروع، المخزون والكتالوج المركزي، إعدادات النشاط). كل فرع مستقل تماماً بعملائه وموردينه '
-    'ومناديبه وموظفيه وخزائنه، ويديره مدير الفرع. مدير النشاط لا يصل لهذه البيانات التفصيلية.\n'
+    'يشرف على كل الفروع، وكل فرع مستقل ببياناته (عملاؤه وموردوه ومناديبه وموظفوه وخزائنه ومخازنه) '
+    'ويديره مدير الفرع. لديك بيانات تفصيلية لكل فرع في السياق أعلاه، مفصولة فرعاً فرعاً.\n'
     'قواعد الرد معه:\n'
-    '- تحدّث دائماً بشكل عام وإحصائي عن الفروع (أرقام الفرع الإجمالية) دون ذكر أي تفاصيل.\n'
-    '- لا تذكر أبداً اسم عميل أو مورد أو مندوب أو موظف أو رصيد/مديونية فردية، ولا تفترض أنه يعرف '
-    'أي عميل أو مورد ولا أي فرع يتبع. لو سأل عن عميل أو مورد أو مندوب بعينه أو عن مديونياتهم فأجبه '
-    'بأن هذه التفاصيل تخص مدير الفرع المعني، واعرض عليه بدلاً منها أرقام الفروع الإجمالية.\n'
-    '- لا تقترح إجراءً تنفيذياً مباشراً (إنشاء فاتورة، تسجيل مصروف، تحصيل من عميل، صرف راتب، '
-    'إعادة طلب شراء). وجّه توصياتك لدوره: مراجعة تقرير الفروع، متابعة مدير الفرع المعني، أو قرار إداري.'
+    '- أجب عن أي سؤال عن أي فرع أو عميل أو مورد أو مندوب أو موظف أو خزينة أو رصيد من البيانات المقدَّمة، '
+    'بالأسماء والأرقام كما هي، وانسب كل معلومة للفرع الذي تتبعه.\n'
+    '- لا تخلط بيانات فرع بفرع آخر؛ إن وُجد الاسم نفسه في أكثر من فرع فاذكر كل فرع على حدة.\n'
+    '- إن لم تجد المعلومة المطلوبة في البيانات (مثلاً عميل خارج القوائم المختصرة) فقل ذلك صراحة '
+    'وانصحه بمراجعة تقرير الفرع المعني ولا تخمّن.\n'
+    '- قارن بين الفروع عند الطلب، ونبّه للفروع المتعثرة (مبيعات متراجعة، مخزون منخفض، فرع بلا مدير).'
 )
 
 
@@ -522,33 +614,68 @@ def _build_system_prompt(tenant, user=None) -> str:
 
 
 def _build_owner_context_message(ctx: dict) -> str:
-    """سياق مدير النشاط: إحصائيات الفروع الإجمالية فقط (بلا أسماء عملاء/موردين)."""
+    """سياق مدير النشاط: تفاصيل كل فرع على حدة (كل فرع في قسم مستقل)."""
     cur = str(ctx.get('currency', '')).strip().upper()
     cur_label = CURRENCY_AR.get(cur, cur)
     branches = ctx.get('branches', [])
-    lines = [f"📊 إحصائيات الفروع ({ctx['period']}) — العملة: {cur_label}"]
+    m = lambda v: f"{v:,.0f} {cur_label}"
+    lines = [f"📊 بيانات فروع المؤسسة ({ctx['period']}) — العملة: {cur_label}"]
     if not branches:
         lines.append("  • لا توجد فروع نشطة بعد.")
-    total_rev = sum(b['revenue'] for b in branches)
-    total_purchases = sum(b['purchases'] for b in branches)
-    total_expenses = sum(b['expenses'] for b in branches)
-    if branches:
+    else:
         lines.append(f"  • عدد الفروع النشطة: {len(branches)}")
-        lines.append(f"  • إجمالي إيرادات المؤسسة: {total_rev:,.0f} {cur_label}")
-        lines.append(f"  • إجمالي المشتريات: {total_purchases:,.0f} {cur_label}")
-        lines.append(f"  • إجمالي المصروفات: {total_expenses:,.0f} {cur_label}")
+        lines.append(f"  • إجمالي إيرادات المؤسسة: {m(sum(b['revenue'] for b in branches))}")
+        lines.append(f"  • إجمالي المشتريات: {m(sum(b['purchases'] for b in branches))}")
+        lines.append(f"  • إجمالي المصروفات: {m(sum(b['expenses'] for b in branches))}")
+        lines.append(f"  • إجمالي مديونية العملاء: {m(sum(b['receivables'] for b in branches))}")
+        lines.append(f"  • إجمالي مستحقات الموردين: {m(sum(b['payables'] for b in branches))}")
     for b in branches:
-        lines.append(f"\n🏬 {b['name']}:")
-        lines.append(f"  • إيرادات الشهر: {b['revenue']:,.0f} {cur_label} (آخر 7 أيام: {b['weekly_revenue']:,.0f})")
-        lines.append(f"  • عدد الفواتير: {b['invoices']}")
-        lines.append(f"  • مشتريات: {b['purchases']:,.0f} — مصروفات: {b['expenses']:,.0f} {cur_label}")
-        lines.append(f"  • أصناف تحت الحد الأدنى: {b['low_stock_items']}")
-        lines.append(f"  • مستخدمون نشطون: {b['active_users']} — عملاء: {b['customers']} — موردون: {b['suppliers']}")
-        lines.append(f"  • مدير الفرع: {'معيّن' if b['has_manager'] else 'غير معيّن'}")
+        lines.append(f"\n🏬 الفرع: {b['name']}" + (' (الفرع الافتراضي)' if b['is_default'] else '') + ':')
+        info = [x for x in (f"رمز {b['code']}" if b['code'] else '', b['address'], f"هاتف {b['phone']}" if b['phone'] else '') if x]
+        if info:
+            lines.append(f"  • بيانات الفرع: {' — '.join(info)}")
+        lines.append(f"  • مدير الفرع: {b['manager'] or 'غير معيّن'}")
+        if b['stocks']:
+            lines.append(f"  • المخازن: {'، '.join(b['stocks'])}")
+        lines.append(f"  • إيرادات آخر 30 يوماً: {m(b['revenue'])} (الشهر السابق: {m(b['prev_revenue'])}) — "
+                     f"آخر 7 أيام: {m(b['weekly_revenue'])} — اليوم: {m(b['today_revenue'])}")
+        lines.append(f"  • عدد الفواتير: {b['invoices']} — مرتجعات مبيعات مؤكدة: {m(b['returns'])}")
+        lines.append(f"  • مشتريات: {m(b['purchases'])} — مصروفات: {m(b['expenses'])}")
+        if b['expense_by_category']:
+            lines.append("  • أكبر بنود المصروفات: " + '، '.join(
+                f"{e['category']} {m(e['total'])}" for e in b['expense_by_category']))
+        lines.append(f"  • مديونية العملاء: {m(b['receivables'])} — مستحقات الموردين: {m(b['payables'])}")
+        lines.append(f"  • قيمة المخزون بسعر التكلفة: {m(b['stock_value'])}")
+        lines.append(f"  • أصناف تحت الحد الأدنى: {b['low_stock_count']}")
+        for i in b['low_stock_items']:
+            lines.append(f"      - {i['item']}: {i['current']:.0f} (الحد {i['min']:.0f}) — {i['stock']}")
+        if b['top_items']:
+            lines.append("  • أكثر الأصناف مبيعاً: " + '، '.join(
+                f"{i['name']} ({i['qty']:.0f} وحدة / {m(i['revenue'])})" for i in b['top_items']))
+        if b['top_customers']:
+            lines.append("  • أكبر العملاء شراءً: " + '، '.join(
+                f"{c['name']} ({m(c['revenue'])})" for c in b['top_customers']))
+        if b['top_debtors']:
+            lines.append("  • أعلى أرصدة العملاء: " + '، '.join(
+                f"{d['name']} ({m(d['balance'])})" for d in b['top_debtors']))
+        if b['top_creditors']:
+            lines.append("  • أعلى مستحقات الموردين: " + '، '.join(
+                f"{d['name']} ({m(d['balance'])})" for d in b['top_creditors']))
+        lines.append(f"  • العملاء ({b['customers_count']}): " + ('، '.join(b['customer_names']) or '—'))
+        lines.append(f"  • الموردون ({b['suppliers_count']}): " + ('، '.join(b['supplier_names']) or '—'))
+        lines.append("  • المناديب: " + ('، '.join(b['agents']) or '—'))
+        if b['employees']:
+            lines.append("  • الموظفون: " + '، '.join(
+                f"{e['name']}" + (f" ({e['position']})" if e['position'] else '') + f" راتب {m(e['salary'])}"
+                for e in b['employees']))
+        if b['users']:
+            lines.append("  • مستخدمو النظام: " + '، '.join(f"{u['name']} ({u['role']})" for u in b['users']))
+        if b['treasuries']:
+            lines.append("  • الخزائن: " + '، '.join(f"{t['name']} {t['balance']:,.2f}" for t in b['treasuries']))
     if ctx.get('top_selling_items'):
         lines.append("\n🏆 أكثر المنتجات مبيعاً على مستوى المؤسسة:")
         for i in ctx['top_selling_items']:
-            lines.append(f"  • {i['name']}: {i['qty']:.0f} وحدة / {i['revenue']:,.0f} {cur_label}")
+            lines.append(f"  • {i['name']}: {i['qty']:.0f} وحدة / {m(i['revenue'])}")
     return "\n".join(lines)
 
 
@@ -647,11 +774,9 @@ def generate_daily_insights(tenant, user=None) -> str:
 
     if _is_enterprise_owner(tenant, user):
         instruction = (
-            "بناءً على إحصائيات الفروع أعلاه، اكتب نصائح إدارية موجزة (5 نقاط كحد أقصى) "
-            "خاصة بالفروع وسير العمل فيها: قارن أداء الفروع ببعضها، نبّه لفرع يحتاج متابعة "
-            "(مبيعات ضعيفة، مخزون منخفض، فرع بلا مدير)، واقترح قراراً إدارياً عاماً. "
-            "تحدّث بشكل عام وإحصائي فقط، ولا تذكر أي عميل أو مورد أو مندوب أو موظف بالاسم "
-            "ولا أي تفاصيل تشغيلية، فهي من اختصاص مديري الفروع."
+            "بناءً على بيانات الفروع أعلاه، اكتب نصائح إدارية موجزة (5 نقاط كحد أقصى): "
+            "قارن أداء الفروع ببعضها، نبّه لفرع يحتاج متابعة (مبيعات متراجعة عن الشهر السابق، "
+            "مخزون منخفض، مديونيات مرتفعة، فرع بلا مدير)، واقترح قراراً إدارياً مناسباً."
         )
     else:
         instruction = (

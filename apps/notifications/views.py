@@ -35,9 +35,9 @@ def _tenant(request):
     return getattr(request, 'tenant', None)
 
 
-# إشعارات تحمل تفاصيل عملاء/موردين/مناديب — تخص مدير الفرع فقط ولا تُعرض
-# لمدير النشاط في نسخة المؤسسات (علاقته بالفروع تقارير وإحصائيات).
-_OWNER_HIDDEN_TYPES = ('overdue_invoice', 'rfq_expiry', 'online_order', 'agent_request')
+# أنواع إشعارات تُخفى عن مدير النشاط في نسخة المؤسسات. فارغة الآن: مدير النشاط
+# يرى إشعارات كل الفروع (مثل بقية بياناتها).
+_OWNER_HIDDEN_TYPES = ()
 
 
 def _visible_notifications(request, tenant):
@@ -117,7 +117,7 @@ def notification_detail(request, pk):
     if not tenant:
         return redirect('core:no_tenant')
 
-    notif = Notification.objects.filter(tenant=tenant, pk=pk).first()
+    notif = _visible_notifications(request, tenant).filter(pk=pk).first()
     if not notif:
         from django.http import Http404
         raise Http404

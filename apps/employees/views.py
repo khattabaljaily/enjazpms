@@ -2,6 +2,7 @@
 Employees Views — الموظفون
 """
 import json
+from django.db.models.deletion import ProtectedError
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
@@ -214,7 +215,10 @@ def employee_delete(request, pk):
     emp = get_object_or_404(Employee, pk=pk, tenant=tenant)
     enforce_branch_ownership(request, emp)
     name = emp.name
-    emp.delete()
+    try:
+        emp.delete()
+    except ProtectedError:
+        return JsonResponse({'success': False, 'message': 'لا يمكن حذف الموظف لوجود حركات مرتبطة به.'}, status=400)
     log_activity(request, 'delete', f'حذف موظف: {name}')
     return JsonResponse({'success': True})
 

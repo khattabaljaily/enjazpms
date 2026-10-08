@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+from django.db.models.deletion import ProtectedError
 from decimal import Decimal
 from apps.accounts.activity_service import log_activity
 
@@ -703,7 +704,13 @@ def customer_delete_api(request, pk):
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
     enforce_branch_ownership(request, customer)
     cus_name = customer.name
-    customer.delete()
+    try:
+        customer.delete()
+    except ProtectedError:
+        return JsonResponse({
+            'success': False,
+            'message': 'لا يمكن حذف العميل لوجود فواتير أو حركات مرتبطة به.',
+        }, status=400, json_dumps_params={'ensure_ascii': False})
     log_activity(request, 'حذف عميل', cus_name, 'delete')
     return JsonResponse({
         'success': True,

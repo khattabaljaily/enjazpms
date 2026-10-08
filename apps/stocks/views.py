@@ -4,6 +4,7 @@ Stocks Views - عمليات CRUD للمخازن
 """
 import json
 import csv
+from django.db.models.deletion import ProtectedError
 from datetime import timedelta
 from apps.accounts.activity_service import log_activity
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -298,7 +299,13 @@ def stock_delete_api(request, pk):
         }, status=400)
 
     stock_name = stock.name
-    stock.delete()
+    try:
+        stock.delete()
+    except ProtectedError:
+        return JsonResponse({
+            'success': False,
+            'message': 'لا يمكن حذف المخزن لوجود حركات أو فواتير مرتبطة به.',
+        }, status=400)
     return JsonResponse({'success': True, 'message': f'تم حذف المخزن "{stock_name}" بنجاح'})
 
 
