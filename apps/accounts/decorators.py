@@ -88,11 +88,11 @@ def require_all_permissions(*permission_keys):
 
 def require_capability(capability_name):
     """
-    يتحقق إن قدرة الـ tenant (TenantCapabilities.<capability_name>) مفعّلة قبل
-    تنفيذ الـ view — يمنع الوصول المباشر (برابط معروف) لميزة كانت مخفية بس من
+    يتحقق من أن قدرة الـ tenant (TenantCapabilities.<capability_name>) مفعّلة قبل
+    تنفيذ الـ view — يمنع الوصول المباشر (برابط معروف) لميزة كانت مخفية فقط من
     القائمة الجانبية لعدم توفرها في باقة/قدرات هذا الـ tenant. بخلاف
-    require_permission، ده تقييد على مستوى الاشتراك نفسه فلا يُستثنى منه حتى
-    مدير الحساب (tenant_admin) — بس السوبريوزر (فريق الدعم/المنصة) بيتجاوزه.
+    require_permission، هذا تقييد على مستوى الاشتراك نفسه فلا يُستثنى منه حتى
+    مدير الحساب (tenant_admin) — ويتجاوزه فقط السوبريوزر (فريق الدعم/المنصة).
     """
     def decorator(view_func):
         @wraps(view_func)

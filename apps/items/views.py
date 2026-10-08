@@ -405,7 +405,7 @@ def item_create_from_catalog(request):
         item_type = 'product'
 
     # كل حقل موجود في Item إما متاح من الكتالوج (يُملأ هنا تلقائياً) أو
-    # مُدخل من المشترك عبر النموذج — ما فيش حقل بيتجاهل بصمت.
+    # مُدخل من المشترك عبر النموذج — لا يُتجاهل أي حقل بصمت.
     item = Item(
         tenant=tenant, created_by=request.user, updated_by=request.user,
         name=name, name_en=request.POST.get('name_en', '').strip(),

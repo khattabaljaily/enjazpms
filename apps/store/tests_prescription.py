@@ -140,7 +140,7 @@ class PrescriptionStoreTests(TenantTestCase):
         order = OnlineOrder.objects.get()
         detail = self.client.get(reverse('store:manage_order_detail', args=[order.pk]))
         self.assertContains(detail, 'لم يُرفق الزبون وصفة طبية')
-        self.assertContains(detail, 'نظام إنجاز غير مسؤولة')
+        self.assertContains(detail, 'نظام إنجاز غير مسؤول')
 
 
 class PrescriptionBranchIsolationTests(TenantTestCase):

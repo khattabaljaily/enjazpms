@@ -1114,7 +1114,7 @@ def cancel_sale_return(sale_return: SaleReturn, user) -> SaleReturn:
         raise ValueError('لا يمكن إلغاء هذا المرتجع لأن الفاتورة مرتبطة بمطالبة تأمين نشطة — يجب إلغاء المطالبة أولاً.')
 
     # إلغاء المرتجع بيرجّع الفاتورة لمبلغها الأصلي (الأكبر) — أي مطالبة draft
-    # كانت اتعملت بمبلغ الفاتورة المخفَّض بعد المرتجع بقت غلط تاني، فتُحذف.
+    # كانت أُنشئت بمبلغ الفاتورة المخفَّض بعد المرتجع فأصبحت غير صحيحة، فتُحذف.
     from apps.insurance.services import discard_draft_claim
     discard_draft_claim(invoice)
 
@@ -1695,8 +1695,8 @@ def build_invoice_from_post(tenant, stock, data: dict, lines_data: list,
         line.calculate()
         line.save()
 
-    # المبلغ المتوقع من التأمين يُحسَب من السيرفر دائماً (مش من رقم الواجهة)
-    # لضمان تطابقه بالضبط مع المبلغ اللي هتُبنى عليه المطالبة لاحقاً.
+    # المبلغ المتوقع من التأمين يُحسَب من الخادم دائماً (لا من الرقم القادم من الواجهة)
+    # لضمان تطابقه تماماً مع المبلغ الذي ستُبنى عليه المطالبة لاحقاً.
     if insurance_member:
         from apps.insurance.services import build_line_selections
         _coverage_pct = Decimal(str(data['insurance_coverage_percent'])) if data.get('insurance_coverage_percent') else insurance_member.effective_coverage_percent

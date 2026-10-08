@@ -137,7 +137,7 @@ def create_claim_from_sale(invoice, tenant, insurance_coverage_percent, user):
     """
     ينشئ مطالبة تأمين تلقائياً بعد تأكيد فاتورة تحمل بيانات تأمين — نقطة
     استدعاء واحدة مشتركة بين POS والفاتورة اليدوية (إنشاء وتعديل). يتجاهل
-    الطلب بصمت لو مفيش عضو تأمين مرتبط بالفاتورة أصلاً.
+    الطلب بصمت إذا لم يوجد عضو تأمين مرتبط بالفاتورة أصلاً.
     """
     if not invoice.insurance_member_id:
         return None
@@ -158,7 +158,7 @@ def create_claim_from_sale(invoice, tenant, insurance_coverage_percent, user):
 
 def discard_draft_claim(invoice):
     """
-    يحذف مطالبة تأمين لسه مسودة (لم تُقدَّم لشركة التأمين) مرتبطة بالفاتورة،
+    يحذف مطالبة تأمين ما زالت مسودة (لم تُقدَّم لشركة التأمين) مرتبطة بالفاتورة،
     إن وُجدت — يُستدعى قبل أي تعديل/إلغاء/استرجاع يغيّر مبلغ الفاتورة، لضمان
     عدم بقاء مطالبة بأرقام قديمة/غير صحيحة. لا يلمس أي مطالبة تجاوزت draft.
     """
@@ -166,9 +166,9 @@ def discard_draft_claim(invoice):
         claim = invoice.insurance_claim
         InsuranceClaimLine.objects.filter(claim=claim).delete()
         claim.delete()
-        # لازم نمسح الكاش الداخلي لـ OneToOne العكسي على invoice نفسه، وإلا
-        # hasattr(invoice, 'insurance_claim') لاحقاً في نفس الطلب هيرجع True
-        # برغم إن الصف اتحذف فعلاً من القاعدة (كاش Django القياسي لعلاقات o2o).
+        # يجب مسح المخزن المؤقت الداخلي لـ OneToOne العكسي على invoice نفسه، وإلا
+        # سيعيد hasattr(invoice, 'insurance_claim') لاحقاً في الطلب نفسه True
+        # رغم أن الصف حُذف فعلاً من القاعدة (التخزين المؤقت القياسي في Django لعلاقات o2o).
         invoice._state.fields_cache.pop('insurance_claim', None)
         return True
     return False

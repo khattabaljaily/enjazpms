@@ -319,7 +319,7 @@ class TenantCapabilities(models.Model):
 
     # تتبع المنتجات
     has_expiry_dates = models.BooleanField('تواريخ انتهاء الصلاحية', default=False)
-    has_batch_numbers = models.BooleanField('أرقام الدُفعات / الباتش', default=False)
+    has_batch_numbers = models.BooleanField('أرقام الدُفعات', default=False)
     has_serial_numbers = models.BooleanField('أرقام تسلسلية', default=False)
 
     # الكميات

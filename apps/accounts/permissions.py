@@ -210,9 +210,9 @@ def _apply_tenant_filter(sections, *, version_type, has_capability, plan_allows,
 def filter_schema_for_tenant(tenant, lang='ar'):
     """
     يحذف من شجرة الصلاحيات أي تصنيف/مفتاح يخص ميزة غير متاحة لباقة أو قدرات
-    هذا الـ tenant، عشان شاشة إدارة المجموعات ما تعرضش صلاحيات لمزايا هو أصلاً
-    ما يقدرش يستخدمها. نفس الشروط المستخدمة لإخفاء روابط القائمة الجانبية
-    (apps/core/templates/components/sidebar.html) — لازم يفضلوا متطابقين.
+    هذا الـ tenant، حتى لا تعرض شاشة إدارة المجموعات صلاحيات لمزايا لا يستطيع
+    استخدامها أصلاً. نفس الشروط المستخدمة لإخفاء روابط القائمة الجانبية
+    (apps/core/templates/components/sidebar.html) — ويجب أن تبقى متطابقة.
     """
     caps = getattr(tenant, 'capabilities', None)
     sections = _apply_tenant_filter(

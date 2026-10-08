@@ -36,7 +36,7 @@ class InsuranceReportGenerator(BranchLabelMixin):
         )
 
         buckets = {
-            'not_due': {'label': 'لسه ما استحقتش', 'count': 0, 'amount': 0},
+            'not_due': {'label': 'لم يحن موعد استحقاقها', 'count': 0, 'amount': 0},
             'due_0_30': {'label': '0-30 يوم', 'count': 0, 'amount': 0},
             'due_31_60': {'label': '31-60 يوم', 'count': 0, 'amount': 0},
             'due_60_plus': {'label': 'أكثر من 60 يوم', 'count': 0, 'amount': 0},

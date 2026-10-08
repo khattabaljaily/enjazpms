@@ -213,7 +213,7 @@ class Item(TenantMixin):
         'تتبع تاريخ الانتهاء', default=False
     )
     track_batch = models.BooleanField(
-        'تتبع رقم الدفعة / الباتش', default=False
+        'تتبع رقم الدفعة', default=False
     )
     # الإلكترونيات، الأجهزة الطبية
     track_serial = models.BooleanField(

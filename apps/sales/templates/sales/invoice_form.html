@@ -1019,10 +1019,10 @@ function registerInsuranceCard() {
         .catch(() => _insuranceCardMsg('تعذر الاتصال بالخادم', false));
 }
 
-// عند فتح فاتورة مؤكدة فيها مطالبة تأمين للتعديل، لازم نعرض حالتها الحالية
-// (مفعّلة + بيانات البطاقة الصحيحة) بدل ما تظهر مقفولة — وإلا أي حفظ من غير
-// لمس صندوق التأمين هيمسح المطالبة الموجودة فعلياً (discard_draft_claim في
-// السيرفر) ويصفّر insurance_amount. تُطبَّق مرة واحدة فقط.
+// عند فتح فاتورة مؤكدة فيها مطالبة تأمين للتعديل، يجب عرض حالتها الحالية
+// (مفعّلة + بيانات البطاقة الصحيحة) بدل أن تظهر مقفولة — وإلا فإن أي حفظ دون
+// لمس صندوق التأمين سيحذف المطالبة الموجودة فعلياً (discard_draft_claim في
+// الخادم) ويصفّر insurance_amount. تُطبَّق مرة واحدة فقط.
 function applyExistingInsurance() {
     if (existingInsuranceApplied || !EXISTING_INSURANCE || !EXISTING_INSURANCE.member_id) return;
     existingInsuranceApplied = true;
