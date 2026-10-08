@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{% static 'css/store_storefront.css' %}?v=3.2">
 <style>:root { --brand: {{ store.accent_color }}; }</style>
+{% include 'store/partials/rx_styles.html' %}
 </head>
 <body>
 
@@ -114,6 +115,7 @@
       <div class="sf-card__body">
         {% if item.category %}<p class="sf-card__cat">{{ item.category.name }}</p>{% endif %}
         <h3 class="sf-card__name">{{ item.name }}</h3>
+        {% include 'store/partials/rx_badge.html' with rx=item.requires_prescription %}
 
         <div class="sf-card__meta">
           {% if store.show_prices %}

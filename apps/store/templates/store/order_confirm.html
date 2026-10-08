@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{% static 'css/store_order_confirm.css' %}?v=3.0">
 <style>:root { --brand: {{ store.accent_color }}; }</style>
+{% include 'store/partials/rx_styles.html' %}
 </head>
 <body>
 
@@ -40,7 +41,7 @@
     </div>
     {% for line in order.lines.all %}
     <div class="confirm-row">
-      <span class="confirm-row-label">{{ line.item_name }} <span class="confirm-row-qty">× {{ line.quantity|floatformat:0 }}</span></span>
+      <span class="confirm-row-label">{{ line.item_name }} <span class="confirm-row-qty">× {{ line.quantity|floatformat:0 }}</span>{% include 'store/partials/rx_badge.html' with rx=line.requires_prescription %}</span>
       <span dir="ltr">{{ line.line_total|format_price }}</span>
     </div>
     {% endfor %}
@@ -49,6 +50,9 @@
       <span dir="ltr">{{ order.total_amount|format_price }} {{ store.tenant.currency|currency_ar }}</span>
     </div>
   </div>
+
+  {% include 'store/partials/rx_notice.html' with upload=False %}
+  {% if order.prescription %}<div class="rx-notice" style="border-right-color:#17673a"><i class="fas fa-paperclip"></i> تم إرفاق الوصفة الطبية مع طلبك.</div>{% endif %}
 
   {% if store.bank_details and order.payment_method == 'bank' %}
   <div class="confirm-bank">

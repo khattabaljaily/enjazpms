@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{% static 'css/store_checkout.css' %}?v=3.0">
 <style>:root { --brand: {{ store.accent_color }}; }</style>
+{% include 'store/partials/rx_styles.html' %}
 </head>
 <body>
 
@@ -44,12 +45,14 @@
 </div>
 
 {% include 'store/partials/branch_bar.html' %}
-<form method="post" id="checkoutForm">
+<form method="post" id="checkoutForm" enctype="multipart/form-data">
 {% csrf_token %}
 <div class="sco-wrap">
 
   <!-- Left: info + payment -->
   <div class="sco-col">
+
+    {% include 'store/partials/rx_notice.html' with upload=True %}
 
     <!-- Customer info -->
     <div class="sco-panel">
@@ -135,7 +138,7 @@
       <div class="sco-lines">
         {% for row in cart_items %}
         <div class="sco-line">
-          <span class="sco-line__name">{{ row.item.name }} <span class="sco-line__qty">× {{ row.qty|floatformat:0 }}</span></span>
+          <span class="sco-line__name">{{ row.item.name }} <span class="sco-line__qty">× {{ row.qty|floatformat:0 }}</span>{% include 'store/partials/rx_badge.html' with rx=row.item.requires_prescription %}</span>
           <span class="sco-line__price">{{ row.line_total|format_price }}</span>
         </div>
         {% endfor %}

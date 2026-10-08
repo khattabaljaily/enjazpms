@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{% static 'css/store_cart.css' %}?v=3.1">
 <style>:root { --brand: {{ store.accent_color }}; }</style>
+{% include 'store/partials/rx_styles.html' %}
 </head>
 <body>
 
@@ -50,6 +51,7 @@
 
       <div class="sc-item__info">
         <div class="sc-item__name">{{ row.item.name }}</div>
+        {% include 'store/partials/rx_badge.html' with rx=row.item.requires_prescription %}
         <div class="sc-item__unit">{{ row.unit_price|format_price }} {{ store.tenant.currency|currency_ar }}</div>
       </div>
 
@@ -86,6 +88,8 @@
       </form>
     </div>
     {% endfor %}
+
+    {% include 'store/partials/rx_notice.html' with upload=False %}
 
     <div class="sc-summary">
       <div class="sc-summary__total">

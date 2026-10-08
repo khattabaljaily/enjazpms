@@ -5,6 +5,7 @@ StoreSettings  — per-tenant online storefront configuration
 OnlineOrder    — customer order placed via the public store
 OnlineOrderLine — individual line items for each order
 """
+import os
 import uuid
 import random
 from decimal import Decimal
@@ -41,6 +42,12 @@ _WEEKDAY_TO_NAME = {
     0: 'monday', 1: 'tuesday', 2: 'wednesday',
     3: 'thursday', 4: 'friday', 5: 'saturday', 6: 'sunday',
 }
+
+
+def prescription_upload_path(instance, filename):
+    """مسار عشوائي (UUID) لملف الوصفة الطبية حتى لا يمكن تخمين رابطه."""
+    ext = os.path.splitext(filename)[1].lower()
+    return f'store/prescriptions/{instance.tenant_id}/{uuid.uuid4().hex}{ext}'
 
 
 # ──────────────────────────────────────────────────────────────
@@ -129,6 +136,12 @@ class StoreSettings(TenantMixin):
         ('expiry',    'تاريخ الانتهاء (Exp Date)'),
         ('qty',       'عمود الكمية (Quantity)'),
     )
+
+    @property
+    def is_pharmacy(self):
+        """المتجر لصيدلية: تُعرض حالة الوصفة الطبية لكل منتج وحقل إرفاق الوصفة."""
+        bt = getattr(self.tenant, 'business_type', None)
+        return getattr(bt, 'slug', '') == 'pharmacy'
 
     def price_list_visible_columns(self):
         """مجموعة مفاتيح الأعمدة الظاهرة؛ فارغ/غير مضبوط = الكل (السلوك السابق)."""
@@ -292,6 +305,12 @@ class OnlineOrder(TenantMixin):
     subtotal     = models.DecimalField('المجموع', max_digits=14, decimal_places=2, default=0)
     total_amount = models.DecimalField('الإجمالي', max_digits=14, decimal_places=2, default=0)
 
+    # وصفة طبية يرفقها الزبون (اختياري) — لمتاجر الصيدليات فقط
+    prescription = models.FileField(
+        'الوصفة الطبية', upload_to=prescription_upload_path, blank=True, null=True,
+        help_text='اختياري: صورة أو ملف PDF للوصفة الطبية يرفقه الزبون'
+    )
+
     # Link to the created SaleInvoice after approval
     sale_invoice = models.OneToOneField(
         'sales.SaleInvoice',
@@ -313,6 +332,10 @@ class OnlineOrder(TenantMixin):
 
     def __str__(self):
         return f"{self.order_number} — {self.customer_name}"
+
+    @property
+    def has_prescription_items(self):
+        return self.lines.filter(requires_prescription=True).exists()
 
     def save(self, *args, **kwargs):
         if not self.order_number:
@@ -347,6 +370,8 @@ class OnlineOrderLine(TenantMixin):
     unit_price = models.DecimalField('سعر الوحدة', max_digits=14, decimal_places=2)
     quantity   = models.DecimalField('الكمية', max_digits=12, decimal_places=4)
     line_total = models.DecimalField('الإجمالي', max_digits=14, decimal_places=2)
+    # لقطة وقت الطلب: هل كان المنتج يُصرف بوصفة طبية (لا تتأثر بتعديل الصنف لاحقاً)
+    requires_prescription = models.BooleanField('يُصرف بوصفة طبية', default=False)
 
     class Meta:
         db_table     = 'store_online_order_lines'

@@ -5,6 +5,7 @@
 {% block page_header %}{% endblock %}
 
 {% block extra_css %}
+{% include 'store/partials/rx_styles.html' %}
 <link rel="stylesheet" href="{% static 'css/store_manage_orders.css' %}?v=2.0">
 {% endblock %}
 
@@ -60,7 +61,7 @@
         <tbody>
           {% for line in lines %}
           <tr>
-            <td><strong>{{ line.item_name }}</strong></td>
+            <td><strong>{{ line.item_name }}</strong>{% if line.requires_prescription %}<br><span class="rx-badge rx-badge--yes"><i class="fas fa-file-prescription"></i> يُصرف بوصفة طبية</span>{% endif %}</td>
             <td dir="ltr">{{ line.unit_price|format_price }}</td>
             <td>{{ line.quantity|floatformat:0 }}</td>
             <td dir="ltr"><strong>{{ line.line_total|format_price }}</strong></td>
@@ -119,6 +120,26 @@
         {% endif %}
       </div>
     </div>
+
+    {% if order.has_prescription_items or order.prescription %}
+    <div class="cx-panel p-3">
+      <div class="cx-panel-head"><i class="fas fa-file-prescription"></i> الوصفة الطبية</div>
+      <div style="padding:1rem 1.1rem;line-height:1.9;">
+        {% if order.prescription %}
+        <a href="{% url 'store:manage_order_prescription' order.pk %}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+          <i class="fas fa-paperclip"></i> عرض الوصفة المرفقة
+        </a>
+        {% else %}
+        <span class="text-muted">لم يُرفق الزبون وصفة طبية (الإرفاق اختياري).</span>
+        {% endif %}
+        {% if order.has_prescription_items %}
+        <p class="mt-2 mb-0" style="font-size:.8rem;color:#7a1f1f;">
+          الطلب يتضمن أدوية تُصرف بوصفة طبية. نظام إنجاز غير مسؤولة عن صرف الأدوية؛ المتجر هو المسؤول عن التحقق من الوصفة قبل الصرف، والبيع بتنسيق تام بين المتجر والزبون.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
 
     <!-- Order status -->
     <div class="cx-panel p-3">

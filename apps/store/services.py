@@ -81,6 +81,37 @@ def get_cart_items(slug: str, cart: dict) -> list:
 
 
 # ──────────────────────────────────────────────────────────────
+# Prescription (pharmacy stores)
+# ──────────────────────────────────────────────────────────────
+
+PRESCRIPTION_MAX_BYTES = 5 * 1024 * 1024
+# امتداد → بدايات المحتوى المقبولة (فحص توقيع الملف، لا نثق بالاسم ولا بالـ content-type)
+_PRESCRIPTION_SIGNATURES = {
+    '.jpg':  (b'\xff\xd8\xff',),
+    '.jpeg': (b'\xff\xd8\xff',),
+    '.png':  (b'\x89PNG\r\n\x1a\n',),
+    '.webp': (b'RIFF',),
+    '.pdf':  (b'%PDF',),
+}
+
+
+def validate_prescription_file(uploaded):
+    """يرجع رسالة خطأ بالعربية، أو None إن كان الملف صالحاً (الحقل اختياري أصلاً)."""
+    import os
+    ext = os.path.splitext(uploaded.name or '')[1].lower()
+    if ext not in _PRESCRIPTION_SIGNATURES:
+        return 'صيغة الملف غير مدعومة. المسموح: صورة (JPG/PNG/WEBP) أو PDF.'
+    if uploaded.size > PRESCRIPTION_MAX_BYTES:
+        return 'حجم الملف أكبر من 5 ميجابايت.'
+    head = uploaded.read(12)
+    uploaded.seek(0)
+    if not any(head.startswith(sig) for sig in _PRESCRIPTION_SIGNATURES[ext]) or \
+            (ext == '.webp' and head[8:12] != b'WEBP'):
+        return 'الملف تالف أو لا يطابق صيغته.'
+    return None
+
+
+# ──────────────────────────────────────────────────────────────
 # Place Order
 # ──────────────────────────────────────────────────────────────
 
@@ -102,6 +133,7 @@ def place_order(store: StoreSettings, cart_items: list, customer_data: dict, bra
         customer_address= customer_data.get('address', ''),
         customer_notes  = customer_data.get('notes', ''),
         payment_method  = customer_data['payment_method'],
+        prescription    = customer_data.get('prescription') or None,
         subtotal        = subtotal,
         total_amount    = subtotal,
     )
@@ -114,6 +146,7 @@ def place_order(store: StoreSettings, cart_items: list, customer_data: dict, bra
             item_name  = row['item'].name,
             unit_price = row['unit_price'],
             quantity   = row['qty'],
+            requires_prescription = bool(store.is_pharmacy and row['item'].requires_prescription),
         )
 
     _notify_new_order(order)

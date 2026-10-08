@@ -1,0 +1,8 @@
+{% comment %}شارة حالة الوصفة الطبية لمنتج (متاجر الصيدليات فقط). المتغيرات: store, rx (bool){% endcomment %}
+{% if store.is_pharmacy %}
+{% if rx %}
+<span class="rx-badge rx-badge--yes"><i class="fas fa-file-prescription"></i> يُصرف بوصفة طبية</span>
+{% else %}
+<span class="rx-badge rx-badge--no"><i class="fas fa-circle-check"></i> بدون وصفة طبية</span>
+{% endif %}
+{% endif %}

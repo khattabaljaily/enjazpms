@@ -18,6 +18,7 @@ from apps.core.utils import enforce_branch_ownership
 from .services import (
     approve_order, cart_add, cart_clear, cart_remove,
     cart_update, get_cart, get_cart_items, place_order, reject_order,
+    validate_prescription_file,
 )
 
 
@@ -152,6 +153,13 @@ def _resolve_store_branch(request, store):
     branch = next((b for b in branches if str(b.id) == str(chosen)), None) or branches[0]
     request.session[key] = branch.id
     return branch, branches
+
+
+def _rx_item_names(store, cart_items):
+    """أسماء منتجات السلة التي تُصرف بوصفة طبية (متاجر الصيدليات فقط)."""
+    if not store.is_pharmacy:
+        return []
+    return [r['item'].name for r in cart_items if r['item'].requires_prescription]
 
 
 def _get_products(store: StoreSettings, branch=None):
@@ -383,6 +391,7 @@ def cart_view(request, slug):
         'store':      store,
         'cart_items': cart_items,
         'subtotal':   subtotal,
+        'rx_items':   _rx_item_names(store, cart_items),
     })
 
 
@@ -405,7 +414,8 @@ def checkout_view(request, slug):
 
     subtotal = sum(r['line_total'] for r in cart_items)
     branch, store_branches = _resolve_store_branch(request, store)
-    branch_ctx = {'branch': branch, 'store_branches': store_branches}
+    branch_ctx = {'branch': branch, 'store_branches': store_branches,
+                  'rx_items': _rx_item_names(store, cart_items)}
 
     if request.method == 'POST':
         name   = request.POST.get('name', '').strip()
@@ -421,6 +431,12 @@ def checkout_view(request, slug):
             errors['phone'] = 'رقم الهاتف مطلوب'
         if pm not in ('bank', 'credit'):
             errors['payment_method'] = 'طريقة دفع غير صالحة'
+        # الوصفة الطبية اختيارية دائماً؛ إن أُرفقت يجب أن تكون ملفاً صالحاً (متاجر الصيدليات فقط)
+        prescription = request.FILES.get('prescription') if store.is_pharmacy else None
+        if prescription:
+            rx_error = validate_prescription_file(prescription)
+            if rx_error:
+                errors['prescription'] = rx_error
         if store.min_order_amount > 0 and subtotal < store.min_order_amount:
             errors['min_order'] = f'الحد الأدنى للطلب {store.min_order_amount:,.0f}'
 
@@ -434,6 +450,7 @@ def checkout_view(request, slug):
                     'address':        addr,
                     'notes':          notes,
                     'payment_method': pm,
+                    'prescription':   prescription,
                 },
                 branch=branch,
             )
@@ -467,6 +484,7 @@ def order_confirm_view(request, slug, token):
     return render(request, 'store/order_confirm.html', {
         'store': store,
         'order': order,
+        'rx_items': list(order.lines.filter(requires_prescription=True).values_list('item_name', flat=True)),
     })
 
 
@@ -602,6 +620,28 @@ def manage_order_detail(request, pk):
         'order': order,
         'lines': lines,
     })
+
+
+@login_required
+@require_permission('view_store_orders')
+def manage_order_prescription(request, pk):
+    """تنزيل/عرض الوصفة الطبية المرفقة — للمصرَّح لهم بطلبات المتجر وضمن فرع الطلب فقط."""
+    import mimetypes
+    from django.http import FileResponse, Http404
+    order = get_object_or_404(OnlineOrder, pk=pk, tenant=request.tenant)
+    enforce_branch_ownership(request, order)
+    if not order.prescription:
+        raise Http404
+    try:
+        handle = order.prescription.open('rb')
+    except (FileNotFoundError, OSError):
+        raise Http404
+    ctype = mimetypes.guess_type(order.prescription.name)[0] or 'application/octet-stream'
+    response = FileResponse(handle, content_type=ctype)
+    response['Content-Disposition'] = 'inline'
+    response['X-Content-Type-Options'] = 'nosniff'
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 # ══════════════════════════════════════════════════════════════

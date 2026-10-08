@@ -1,0 +1,22 @@
+{% comment %}
+تنبيه الوصفة الطبية. المتغيرات: rx_items (قائمة بأسماء المنتجات)، upload (bool: عرض حقل الإرفاق)، errors، store
+{% endcomment %}
+{% if store.is_pharmacy and rx_items %}
+<div class="rx-notice" id="rxNotice">
+  <h4><i class="fas fa-file-prescription"></i> أدوية تُصرف بوصفة طبية</h4>
+  <p style="margin:0">يتضمن طلبك منتجات تُصرف بوصفة طبية:</p>
+  <ul>{% for name in rx_items %}<li>{{ name }}</li>{% endfor %}</ul>
+  {% if upload %}
+  <div class="rx-upload">
+    <label for="prescriptionInput"><i class="fas fa-paperclip"></i> إرفاق الوصفة الطبية (اختياري)</label>
+    <input type="file" id="prescriptionInput" name="prescription" accept="image/jpeg,image/png,image/webp,application/pdf">
+    <small style="color:#7a6a3a">صورة (JPG / PNG / WEBP) أو ملف PDF، بحد أقصى 5 ميجابايت. الإرفاق غير إلزامي.</small>
+    {% if errors.prescription %}<div class="rx-error"><i class="fas fa-exclamation-circle"></i> {{ errors.prescription }}</div>{% endif %}
+  </div>
+  {% endif %}
+  <p class="rx-disclaimer" style="margin:.7rem 0 0">
+    إخلاء مسؤولية: نظام إنجاز وسيط تقني فقط، ولا تتحمل أي مسؤولية عن صرف الأدوية أو التحقق من الوصفات الطبية.
+    تتم عملية البيع بتنسيق تام بين المتجر والزبون، والمتجر هو المسؤول عن التحقق من الوصفة قبل الصرف.
+  </p>
+</div>
+{% endif %}

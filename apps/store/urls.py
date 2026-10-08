@@ -8,6 +8,7 @@ urlpatterns = [
     path('manage/',                         views.manage_settings,      name='manage_settings'),
     path('manage/orders/',                  views.manage_orders,         name='manage_orders'),
     path('manage/orders/<int:pk>/',         views.manage_order_detail,   name='manage_order_detail'),
+    path('manage/orders/<int:pk>/prescription/', views.manage_order_prescription, name='manage_order_prescription'),
     path('manage/orders/<int:pk>/approve/', views.manage_order_approve,  name='manage_order_approve'),
     path('manage/orders/<int:pk>/reject/',  views.manage_order_reject,   name='manage_order_reject'),
 
