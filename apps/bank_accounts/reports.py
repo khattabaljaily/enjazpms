@@ -3,6 +3,7 @@
 ==========================
 """
 
+from apps.core.utils import BranchLabelMixin
 from datetime import timedelta
 from decimal import Decimal
 from django.utils import timezone
@@ -32,7 +33,7 @@ REFERENCE_TYPE_AR = {
 }
 
 
-class BankAccountReportGenerator:
+class BankAccountReportGenerator(BranchLabelMixin):
 
     def __init__(self, tenant, start_date=None, end_date=None, branch=None):
         self.tenant = tenant
@@ -46,7 +47,7 @@ class BankAccountReportGenerator:
         data = []
         for a in accounts:
             data.append({
-                'name': a.name,
+                'name': self._party(a),
                 'bank_name': a.bank_name,
                 'current_balance': format_number(float(a.current_balance), 2),
                 'current_balance_raw': float(a.current_balance),
@@ -135,7 +136,7 @@ class BankAccountReportGenerator:
             total_disbursements += Decimal(str(d))
             data.append({
                 'movement_date': m.movement_date,
-                'bank_account_name': m.bank_account.name,
+                'bank_account_name': self._party(m.bank_account),
                 'movement_type': m.get_movement_type_display(),
                 'movement_type_key': m.movement_type,
                 'description': m.description,

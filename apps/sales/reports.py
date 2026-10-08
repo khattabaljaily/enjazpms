@@ -9,6 +9,7 @@
   - المبيعات حسب التاريخ (يومي / أسبوعي / شهري)
 """
 
+from apps.core.utils import BranchLabelMixin
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.db.models import Sum, Count, F, Q
@@ -28,7 +29,7 @@ def format_number(value, decimals=2):
         return str(value)
 
 
-class SalesReportGenerator:
+class SalesReportGenerator(BranchLabelMixin):
     """فئة شاملة لإنشاء تقارير المبيعات"""
     
     def __init__(self, tenant, start_date=None, end_date=None, branch=None):
@@ -64,7 +65,7 @@ class SalesReportGenerator:
             details.append({
                 'invoice_number': invoice.invoice_number,
                 'invoice_date': invoice.invoice_date,
-                'customer_name': invoice.customer.name if invoice.customer else '—',
+                'customer_name': self._party(invoice.customer, '—'),
                 'total_quantity': format_number(float(inv_qty), 2),
                 'grand_total': format_number(float(invoice.grand_total or 0), 2),
             })
@@ -122,7 +123,7 @@ class SalesReportGenerator:
 
             return {
                 'period': {'start': self.start_date, 'end': self.end_date},
-                'customer': {'id': customer.id, 'name': customer.name},
+                'customer': {'id': customer.id, 'name': self._party(customer)},
                 'data': detail_rows
             }
 
@@ -155,7 +156,7 @@ class SalesReportGenerator:
             if invoices.exists():
                 data.append({
                     'customer_id': customer.id,
-                    'customer_name': customer.name,
+                    'customer_name': self._party(customer),
                     'invoice_count': format_number(invoices.count(), 0),
                     'total_quantity': format_number(float(total_quantity), 2),
                     'total_amount': format_number(float(total_amount), 2),
@@ -196,7 +197,7 @@ class SalesReportGenerator:
                 data.append({
                     'invoice_number': line.invoice.invoice_number,
                     'invoice_date': line.invoice.invoice_date,
-                    'customer_name': line.invoice.customer.name if line.invoice.customer else '—',
+                    'customer_name': self._party(line.invoice.customer, '—'),
                     'quantity': format_number(float(qty), 2),
                     'unit_price': format_number(float(price), 2),
                     'line_total': format_number(float(subtotal), 2),
@@ -399,7 +400,7 @@ class SalesReportGenerator:
             balance = float(last_entry.running_balance) if last_entry else float(c.opening_balance)
             data.append({
                 'code': c.code,
-                'name': c.name,
+                'name': self._party(c),
                 'phone': c.phone,
                 'credit_limit': format_number(float(c.credit_limit), 2),
                 'balance': format_number(balance, 2),
@@ -448,7 +449,7 @@ class SalesReportGenerator:
                 total_bank += amt
             data.append({
                 'payment_date': e.entry_date,
-                'customer_name': e.customer.name if e.customer else '—',
+                'customer_name': self._party(e.customer, '—'),
                 'payment_method': method_label,
                 'payment_method_key': method_key,
                 'amount': format_number(amt, 2),
@@ -484,7 +485,7 @@ class SalesReportGenerator:
                     'return_date': r.return_date,
                     'return_number': r.return_number,
                     'invoice_number': r.original_invoice.invoice_number,
-                    'customer_name': r.original_invoice.customer.name if r.original_invoice.customer else '—',
+                    'customer_name': self._party(r.original_invoice.customer, '—'),
                     'item_name': line.item.name,
                     'returned_quantity': format_number(float(line.returned_quantity), 2),
                     'unit_price': format_number(float(line.unit_price), 2),
@@ -523,13 +524,13 @@ class SalesReportGenerator:
                 data.append({
                     'invoice_number': inv.invoice_number,
                     'invoice_date': inv.invoice_date,
-                    'customer_name': inv.customer.name if inv.customer else '—',
+                    'customer_name': self._party(inv.customer, '—'),
                     'grand_total': format_number(float(inv.grand_total or 0), 2),
                 })
                 total += inv.grand_total or 0
             return {
                 'period': {'start': self.start_date, 'end': self.end_date},
-                'user': {'id': user_id, 'name': str(user_obj) if user_obj else '—'},
+                'user': {'id': user_id, 'name': self._labeled(str(user_obj), user_obj) if user_obj else '—'},
                 'summary': {
                     'invoice_count': format_number(len(data), 0),
                     'total_amount': format_number(float(total), 2),
@@ -540,7 +541,7 @@ class SalesReportGenerator:
         agg = defaultdict(lambda: {'invoice_count': 0, 'total_amount': Decimal('0'), 'user_name': '—'})
         for inv in base_qs:
             uid = inv.created_by_id or 0
-            agg[uid]['user_name'] = str(inv.created_by) if inv.created_by else '—'
+            agg[uid]['user_name'] = self._labeled(str(inv.created_by), inv.created_by) if inv.created_by else '—'
             agg[uid]['invoice_count'] += 1
             agg[uid]['total_amount'] += inv.grand_total or 0
 
@@ -596,7 +597,7 @@ class SalesReportGenerator:
                 data.append({
                     'invoice_number': line.invoice.invoice_number,
                     'invoice_date': line.invoice.invoice_date,
-                    'customer_name': line.invoice.customer.name if line.invoice.customer else '—',
+                    'customer_name': self._party(line.invoice.customer, '—'),
                     'quantity': format_number(float(qty), 2),
                     'unit_price': format_number(float(price), 2),
                     'unit_cost': format_number(float(cost), 2),

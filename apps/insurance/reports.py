@@ -2,6 +2,7 @@
 تقارير التأمين
 ================
 """
+from apps.core.utils import BranchLabelMixin
 from django.utils import timezone
 
 from .models import InsuranceClaim
@@ -18,7 +19,7 @@ def format_number(value, decimals=2):
         return str(value)
 
 
-class InsuranceReportGenerator:
+class InsuranceReportGenerator(BranchLabelMixin):
     """فئة شاملة لإنشاء تقارير التأمين"""
 
     def __init__(self, tenant):
@@ -66,7 +67,7 @@ class InsuranceReportGenerator:
             data.append({
                 'claim_number': claim.claim_number,
                 'invoice_number': claim.invoice.invoice_number,
-                'customer_name': claim.customer.name if claim.customer else 'بدون عميل مسجَّل',
+                'customer_name': self._party(claim.customer, 'بدون عميل مسجَّل'),
                 'insurance_company_name': claim.insurance_company.name,
                 'status_display': claim.get_status_display(),
                 'due_date': claim.due_date,

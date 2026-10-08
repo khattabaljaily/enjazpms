@@ -3,6 +3,7 @@
 ================
 """
 
+from apps.core.utils import BranchLabelMixin
 from datetime import timedelta
 from decimal import Decimal
 from django.utils import timezone
@@ -50,7 +51,7 @@ REFERENCE_TYPE_AR = {
 }
 
 
-class TreasuryReportGenerator:
+class TreasuryReportGenerator(BranchLabelMixin):
 
     def __init__(self, tenant, start_date=None, end_date=None, branch=None):
         self.tenant = tenant
@@ -64,7 +65,7 @@ class TreasuryReportGenerator:
         data = []
         for t in treasuries:
             data.append({
-                'name': t.name,
+                'name': self._party(t),
                 'code': t.code,
                 'current_balance': format_number(float(t.current_balance), 2),
                 'current_balance_raw': float(t.current_balance),
@@ -156,7 +157,7 @@ class TreasuryReportGenerator:
             total_disbursements += Decimal(str(d))
             data.append({
                 'movement_date': m.movement_date,
-                'treasury_name': m.treasury.name,
+                'treasury_name': self._party(m.treasury),
                 'movement_type': m.get_movement_type_display(),
                 'movement_type_key': m.movement_type,
                 'description': m.description,

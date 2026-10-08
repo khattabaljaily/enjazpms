@@ -201,3 +201,41 @@ def setup_branch_field(form, tenant, branch, field_name='branch'):
         form.fields[field_name].empty_label = 'اختر الفرع'
     else:
         del form.fields[field_name]
+
+class BranchLabelMixin:
+    """
+    للتقارير: عند عرض مدير النشاط (مستخدم مركزي في نسخة المؤسسات) لتقرير إجمالي
+    كل الفروع، يُلحق اسم الفرع باسم العميل/المورد/المخزن/الخزينة... ليعرف أي فرع
+    يتبع كل اسم. تقرير فرع واحد أو نسخ بلا فروع: الاسم كما هو.
+    تتطلب self.tenant و self.branch في الكلاس.
+    """
+
+    @property
+    def show_branch(self):
+        tenant = getattr(self, 'tenant', None)
+        return getattr(self, 'branch', None) is None and bool(tenant and tenant.is_enterprise())
+
+    def _branch_name(self, branch_id):
+        names = getattr(self, '_branch_names_cache', None)
+        if names is None:
+            from apps.core.models import Branch
+            names = dict(Branch.objects.filter(tenant=self.tenant).values_list('id', 'name'))
+            self._branch_names_cache = names
+        return names.get(branch_id, '')
+
+    def _party(self, obj, fallback='—'):
+        """اسم الكيان (عميل/مورد/مخزن/خزينة/حساب...) مع فرعه عند الحاجة."""
+        if obj is None:
+            return fallback
+        return self._labeled(getattr(obj, 'name', None) or str(obj), obj)
+
+    def _labeled(self, text, obj):
+        if not self.show_branch or obj is None:
+            return text
+        bid = getattr(obj, 'branch_id', None)
+        if bid:
+            name = self._branch_name(bid)
+            return f'{text} ({name})' if name else text
+        if getattr(obj, 'is_head_office', False):
+            return f'{text} (الإدارة المركزية)'
+        return text

@@ -3,6 +3,7 @@
 ================
 """
 
+from apps.core.utils import BranchLabelMixin
 from datetime import timedelta
 from decimal import Decimal
 from django.db.models import Sum
@@ -20,7 +21,7 @@ def format_number(value, decimals=2):
         return str(value)
 
 
-class ExpensesReportGenerator:
+class ExpensesReportGenerator(BranchLabelMixin):
 
     def __init__(self, tenant, start_date=None, end_date=None, branch=None):
         self.tenant = tenant
@@ -166,7 +167,7 @@ class ExpensesReportGenerator:
                 'description': e.description,
                 'category_name': e.category.name if e.category else '—',
                 'payment_method': e.get_payment_method_display(),
-                'treasury_name': e.treasury.name if e.treasury else '—',
+                'treasury_name': self._party(e.treasury, '—'),
                 'amount': format_number(float(e.amount), 2),
                 'reference_number': e.reference_number,
             })

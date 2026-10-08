@@ -204,6 +204,7 @@
             <div class="ntf-body">
                 <div class="ntf-head">
                     <span class="ntf-title">{{ n.title }}</span>
+                    {% if n.branch and request.user.is_tenant_admin %}<span class="badge bg-secondary ms-2">{{ n.branch.name }}</span>{% endif %}
                     <span class="ntf-time"><i class="fas fa-clock" style="font-size:.65rem;margin-left:.25rem"></i>{{ n.created_at|naturaltime }}</span>
                 </div>
                 <p class="ntf-msg">{{ n.message }}</p>

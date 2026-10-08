@@ -69,7 +69,7 @@
     height: 100%;
     border-radius: 0 16px 16px 0;
 }
-.anl-kpi--sales    .anl-kpi-accent { background: var(--primary); }
+.anl-kpi--sales    .anl-kpi-accent { background: #2563eb; }
 .anl-kpi--purchase .anl-kpi-accent { background: var(--warning); }
 .anl-kpi--expense  .anl-kpi-accent { background: var(--danger); }
 .anl-kpi--profit   .anl-kpi-accent { background: var(--success); }
@@ -352,6 +352,42 @@
 <!-- Bottom Row: Top Customers + Cash Position -->
 <div class="row g-3 mb-3">
 
+    {% if is_central_admin %}
+    <!-- Top Branches (مدير النشاط) -->
+    <div class="col-lg-6">
+        <div class="anl-panel" style="height:100%;">
+            <div class="anl-panel-head">
+                <h3 class="anl-panel-title">
+                    <i class="fas fa-trophy" style="color:#f59e0b;"></i>
+                    أفضل الفروع إيراداً
+                </h3>
+                <span class="anl-panel-meta">{{ this_month_label }}</span>
+            </div>
+            <div class="anl-panel-body">
+                {% if top_branches %}
+                <div class="anl-cust-list">
+                    {% for b in top_branches %}
+                    <div class="anl-cust-row">
+                        <div class="anl-cust-meta">
+                            <span class="anl-cust-name">{{ forloop.counter }}. {{ b.name }}</span>
+                            <span class="anl-cust-val">{{ b.total|money }}</span>
+                        </div>
+                        <div class="anl-cust-track">
+                            <div class="anl-cust-fill" style="width:{% widthratio b.total max_branch_total 100 %}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4" style="color:var(--text-tertiary);">
+                    <i class="fas fa-building fa-2x mb-2" style="opacity:.35;"></i>
+                    <p class="mb-0 small">لا توجد فروع نشطة</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
     <!-- Top Customers -->
     <div class="col-lg-6">
         <div class="anl-panel" style="height:100%;">
@@ -386,6 +422,8 @@
             </div>
         </div>
     </div>
+
+    {% endif %}
 
     <!-- Cash Position + Outstanding -->
     <div class="col-lg-6">
@@ -494,8 +532,8 @@ new Chart(annualCtx, {
             {
                 label: 'المبيعات',
                 data: M_SALES,
-                borderColor: '#c9840f',
-                backgroundColor: 'rgba(246,168,33,0.08)',
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37,99,235,0.08)',
                 borderWidth: 2.5,
                 pointRadius: 4,
                 pointHoverRadius: 6,

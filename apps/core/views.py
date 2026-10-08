@@ -2727,6 +2727,23 @@ def analytics(request):
     ]
     max_customer_total = max((c['total'] for c in top_customers_list), default=1)
 
+    # ── مدير النشاط (مستخدم مركزي): أفضل الفروع إيراداً بدل أفضل العملاء ──
+    top_branches_list = []
+    if is_central_admin:
+        from apps.core.models import Branch
+        revenue_by_branch = {
+            r['stock__branch']: float(r['total'] or 0)
+            for r in SaleInvoice.objects.filter(
+                tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES,
+                invoice_date__gte=first_this_month, invoice_date__lte=today,
+            ).values('stock__branch').annotate(total=Sum('grand_total'))
+        }
+        top_branches_list = sorted(
+            ({'id': b.id, 'name': b.name, 'total': revenue_by_branch.get(b.id, 0.0)}
+             for b in Branch.objects.filter(tenant=tenant, is_active=True)),
+            key=lambda r: r['total'], reverse=True)[:10]
+    max_branch_total = max((b['total'] for b in top_branches_list), default=0) or 1
+
     # ── Treasury balances ───────────────────────────────────────────
     from apps.treasury.models import Treasury
     treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch, strict=True).values('name', 'current_balance')
@@ -2782,6 +2799,8 @@ def analytics(request):
         'monthly_profit_json': json.dumps(monthly_profit),
         'top_customers': top_customers_list,
         'max_customer_total': max_customer_total,
+        'top_branches': top_branches_list,
+        'max_branch_total': max_branch_total,
         'treasuries': list(treasuries),
         'treasury_total': treasury_total,
         'customer_debt': customer_debt,

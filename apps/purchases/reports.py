@@ -9,6 +9,7 @@
   - المشتريات حسب التاريخ (يومي / أسبوعي / شهري)
 """
 
+from apps.core.utils import BranchLabelMixin
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.db.models import Sum, Count, F, Q
@@ -28,7 +29,7 @@ def format_number(value, decimals=2):
         return str(value)
 
 
-class PurchasesReportGenerator:
+class PurchasesReportGenerator(BranchLabelMixin):
     """فئة شاملة لإنشاء تقارير المشتريات"""
 
     def __init__(self, tenant, start_date=None, end_date=None, branch=None):
@@ -64,7 +65,7 @@ class PurchasesReportGenerator:
             details.append({
                 'invoice_number': invoice.invoice_number,
                 'invoice_date': invoice.invoice_date,
-                'supplier_name': invoice.supplier.name if invoice.supplier else '—',
+                'supplier_name': self._party(invoice.supplier, '—'),
                 'total_quantity': format_number(float(inv_qty), 2),
                 'grand_total': format_number(float(invoice.grand_total or 0), 2),
             })
@@ -121,7 +122,7 @@ class PurchasesReportGenerator:
 
             return {
                 'period': {'start': self.start_date, 'end': self.end_date},
-                'supplier': {'id': supplier.id, 'name': supplier.name},
+                'supplier': {'id': supplier.id, 'name': self._party(supplier)},
                 'data': detail_rows
             }
 
@@ -154,7 +155,7 @@ class PurchasesReportGenerator:
             if invoices.exists():
                 data.append({
                     'supplier_id': supplier.id,
-                    'supplier_name': supplier.name,
+                    'supplier_name': self._party(supplier),
                     'invoice_count': format_number(invoices.count(), 0),
                     'total_quantity': format_number(float(total_quantity), 2),
                     'total_amount': format_number(float(total_amount), 2),
@@ -195,7 +196,7 @@ class PurchasesReportGenerator:
                 data.append({
                     'invoice_number': line.invoice.invoice_number,
                     'invoice_date': line.invoice.invoice_date,
-                    'supplier_name': line.invoice.supplier.name if line.invoice.supplier else '—',
+                    'supplier_name': self._party(line.invoice.supplier, '—'),
                     'quantity': format_number(float(qty), 2),
                     'unit_cost': format_number(float(cost), 2),
                     'line_total': format_number(float(lt), 2),
@@ -450,7 +451,7 @@ class PurchasesReportGenerator:
             if balance > 0:
                 data.append({
                     'code': s.code,
-                    'name': s.name,
+                    'name': self._party(s),
                     'phone': s.phone,
                     'credit_limit': format_number(float(s.credit_limit), 2),
                     'balance': format_number(balance, 2),
@@ -551,7 +552,7 @@ class PurchasesReportGenerator:
 
             data.append({
                 'payment_date': e.entry_date,
-                'supplier_name': e.supplier.name if e.supplier else '—',
+                'supplier_name': self._party(e.supplier, '—'),
                 'payment_method': method_label,
                 'payment_method_key': method_key,
                 'amount': display_amount,
@@ -606,7 +607,7 @@ class PurchasesReportGenerator:
                 'return_date': r.return_date,
                 'return_number': r.return_number,
                 'invoice_number': r.original_invoice.invoice_number,
-                'supplier_name': r.original_invoice.supplier.name if r.original_invoice.supplier else '—',
+                'supplier_name': self._party(r.original_invoice.supplier, '—'),
                 'item_name': line.item.name if line.item else '—',
                 'returned_quantity': format_number(float(line.returned_quantity or 0), 2),
                 'unit_cost': format_number(float(line.unit_cost or 0), 2),
@@ -651,14 +652,14 @@ class PurchasesReportGenerator:
                 data.append({
                     'invoice_number': invoice.invoice_number,
                     'invoice_date': invoice.invoice_date,
-                    'supplier_name': invoice.supplier.name if invoice.supplier else '—',
+                    'supplier_name': self._party(invoice.supplier, '—'),
                     'total_quantity': format_number(float(inv_qty), 2),
                     'grand_total': format_number(float(invoice.grand_total or 0), 2),
                 })
 
             return {
                 'period': {'start': self.start_date, 'end': self.end_date},
-                'user': {'id': user.id, 'name': user.get_full_name() or user.username},
+                'user': {'id': user.id, 'name': self._labeled(user.get_full_name() or user.username, user)},
                 'data': data,
             }
 
@@ -674,7 +675,7 @@ class PurchasesReportGenerator:
             count = invoices.count()
             data.append({
                 'user_id': user.id,
-                'user_name': user.get_full_name() or user.username,
+                'user_name': self._labeled(user.get_full_name() or user.username, user),
                 'invoice_count': format_number(count, 0),
                 'total_amount': format_number(float(total_amount), 2),
                 'avg_invoice_amount': format_number(float(total_amount / count) if count > 0 else 0, 2),
@@ -720,7 +721,7 @@ class PurchasesReportGenerator:
                 data.append({
                     'invoice_date': line.invoice.invoice_date,
                     'invoice_number': line.invoice.invoice_number,
-                    'supplier_name': line.invoice.supplier.name if line.invoice.supplier else '—',
+                    'supplier_name': self._party(line.invoice.supplier, '—'),
                     'quantity': format_number(float(qty), 2),
                     'unit_cost': format_number(float(cost), 2),
                     'unit_cost_raw': float(cost),
@@ -759,7 +760,7 @@ class PurchasesReportGenerator:
             if agg[iid]['last_date'] is None or line.invoice.invoice_date > agg[iid]['last_date']:
                 agg[iid]['last_date'] = line.invoice.invoice_date
                 agg[iid]['last_price'] = cost
-                agg[iid]['last_supplier'] = line.invoice.supplier.name if line.invoice.supplier else '—'
+                agg[iid]['last_supplier'] = self._party(line.invoice.supplier, '—')
 
         data = []
         for iid, v in agg.items():

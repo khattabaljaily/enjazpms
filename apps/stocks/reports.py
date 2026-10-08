@@ -9,6 +9,7 @@
   - المخزن حسب الموقع (المخزن)
 """
 
+from apps.core.utils import BranchLabelMixin
 from decimal import Decimal
 from django.db.models import Sum, Count, F, Q
 from django.utils import timezone
@@ -30,7 +31,7 @@ def format_number(value, decimals=2):
         return str(value)
 
 
-class StocksReportGenerator:
+class StocksReportGenerator(BranchLabelMixin):
     """فئة شاملة لإنشاء تقارير المخزن"""
 
     def __init__(self, tenant, start_date=None, end_date=None, branch=None):
@@ -204,7 +205,7 @@ class StocksReportGenerator:
 
             data.append({
                 'stock_id': stock.id,
-                'stock_name': stock.name,
+                'stock_name': self._party(stock),
                 'item_count': item_count,
                 'total_quantity': float(total_qty),
                 'total_reserved': float(total_reserved),
@@ -268,7 +269,7 @@ class StocksReportGenerator:
                 'movement_date': m.movement_date,
                 'item_name': m.item.name,
                 'item_unit': m.item.base_unit_name,
-                'stock_name': m.stock.name,
+                'stock_name': self._party(m.stock),
                 'movement_type': m.get_movement_type_display(),
                 'movement_type_key': m.movement_type,
                 'direction': m.direction,
@@ -313,7 +314,7 @@ class StocksReportGenerator:
                 data.append({
                     'item_name': sq.item.name,
                     'item_unit': sq.item.base_unit_name,
-                    'stock_name': sq.stock.name,
+                    'stock_name': self._party(sq.stock),
                     'quantity': format_number(float(sq.quantity), 2),
                     'available': format_number(float(sq.available_quantity), 2),
                     'reserved': format_number(float(sq.reserved_quantity), 2),
@@ -351,7 +352,7 @@ class StocksReportGenerator:
                 'item_name': m.item.name,
                 'generic_name': m.item.generic_name or '—',
                 'item_unit': m.item.base_unit_name,
-                'stock_name': m.stock.name,
+                'stock_name': self._party(m.stock),
                 'movement_type': m.get_movement_type_display(),
                 'direction': m.direction,
                 'quantity': format_number(float(m.quantity), 2),

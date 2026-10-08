@@ -63,7 +63,7 @@
                 {% else %}fa-bell{% endif %}"></i>
         </div>
 
-        <h2 class="ntf-detail-title">{{ notif.title }}</h2>
+        <h2 class="ntf-detail-title">{{ notif.title }}{% if notif.branch and request.user.is_tenant_admin %} <span class="badge bg-secondary">{{ notif.branch.name }}</span>{% endif %}</h2>
 
         <div class="ntf-detail-meta">
             <span><i class="fas fa-clock me-1"></i>{{ notif.created_at|naturaltime }}</span>

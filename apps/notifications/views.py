@@ -59,7 +59,7 @@ def notification_list(request):
     _maybe_generate(tenant)
 
     visible = _visible_notifications(request, tenant)
-    notifications = visible.order_by('-created_at')[:100]
+    notifications = visible.select_related('branch').order_by('-created_at')[:100]
     unread_count  = visible.filter(is_read=False).count()
 
     return render(request, 'notifications/notification_list.html', {
@@ -83,7 +83,8 @@ def notification_api(request):
 
     visible = _visible_notifications(request, tenant)
     unread = visible.filter(is_read=False).count()
-    recent = visible.order_by('-created_at')[:8]
+    recent = visible.select_related('branch').order_by('-created_at')[:8]
+    show_branch = getattr(request.user, 'is_tenant_admin', False) and tenant.is_enterprise()
 
     ICONS = {
         'low_stock':       'fa-triangle-exclamation text-warning',
@@ -99,7 +100,7 @@ def notification_api(request):
         items.append({
             'id': n.id,
             'title': n.title,
-            'message': n.message[:80],
+            'message': (f'[{n.branch.name}] ' if show_branch and n.branch_id else '') + n.message[:80],
             'is_read': n.is_read,
             'link': n.link,
             'priority': n.priority,
@@ -117,7 +118,7 @@ def notification_detail(request, pk):
     if not tenant:
         return redirect('core:no_tenant')
 
-    notif = _visible_notifications(request, tenant).filter(pk=pk).first()
+    notif = _visible_notifications(request, tenant).select_related('branch').filter(pk=pk).first()
     if not notif:
         from django.http import Http404
         raise Http404
