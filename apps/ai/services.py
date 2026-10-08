@@ -6,6 +6,7 @@ Arabic business insights, chat responses, and smart notification analysis.
 """
 
 import json
+import time
 import logging
 import requests
 from decimal import Decimal
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 # DeepSeek API call
 # ──────────────────────────────────────────────────────────────
 
-def _post_deepseek(payload: dict):
+def _post_deepseek(payload: dict, timeout: float = 60):
     """
     يرسل payload إلى DeepSeek مع محاولة ثانية عند التعثر المؤقت.
     يرجع (message_dict, None) عند النجاح أو (None, رسالة_خطأ_للمستخدم).
@@ -36,7 +37,8 @@ def _post_deepseek(payload: dict):
     last_error = None
     for attempt in range(2):
         try:
-            response = requests.post(settings.DEEPSEEK_API_URL, headers=headers, json=payload, timeout=60)
+            response = requests.post(settings.DEEPSEEK_API_URL, headers=headers, json=payload,
+                                     timeout=timeout)
             if response.status_code >= 500 and attempt == 0:
                 logger.warning("DeepSeek API %s — retrying", response.status_code)
                 continue
@@ -65,6 +67,8 @@ def _post_deepseek(payload: dict):
 
 
 MAX_TOOL_ROUNDS = 8
+# Gunicorn يقتل العامل بعد 30 ثانية افتراضياً: لا نبدأ جولة أدوات جديدة بعد هذه المدة.
+TOOL_TIME_BUDGET = 16
 
 
 def _call_deepseek(messages: list, max_tokens: int = 600, tools: list | None = None,
@@ -91,19 +95,24 @@ def _call_deepseek(messages: list, max_tokens: int = 600, tools: list | None = N
 
     payload["tools"] = tools
     convo = list(messages)
+    started = time.monotonic()
     for round_no in range(MAX_TOOL_ROUNDS + 1):
-        if round_no == MAX_TOOL_ROUNDS:
-            # آخر جولة: اطلب الجواب النهائي بما جُمع دون مزيد من الأدوات.
+        elapsed = time.monotonic() - started
+        if round_no == MAX_TOOL_ROUNDS or elapsed > TOOL_TIME_BUDGET:
+            # آخر جولة (عدد الجولات أو الوقت): اطلب الجواب النهائي بما جُمع دون مزيد من الأدوات.
             payload.pop("tools", None)
             convo.append({"role": "user", "content":
                           "اكتب الآن الجواب النهائي بالاعتماد على النتائج التي حصلت عليها."})
+            final = True
+        else:
+            final = False
         payload["messages"] = convo
-        message, error = _post_deepseek(payload)
+        message, error = _post_deepseek(payload, timeout=40 if final else 25)
         if error:
             return error
         calls = message.get("tool_calls")
-        if not calls:
-            return (message.get("content") or "").strip()
+        if not calls or final:
+            return (message.get("content") or "").strip() or "تعذّر إكمال الجواب. أعد صياغة سؤالك."
         convo.append({"role": "assistant", "content": message.get("content") or "", "tool_calls": calls})
         for call in calls:
             fn = call.get("function") or {}
