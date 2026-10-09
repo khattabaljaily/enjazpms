@@ -332,6 +332,15 @@ def user_delete_api(request, pk):
     return _json_ok(None, 'تم حذف المستخدم بنجاح')
 
 
+def _manageable_groups(tenant):
+    """
+    مجموعات الصلاحيات التي تُعرض وتُدار من شاشة "المجموعات والصلاحيات": تُستبعد
+    مجموعة "مدير النشاط" التلقائية (is_owner_group) — هي ملف صلاحيات صاحب
+    الاشتراك نفسه، فلا تُعرض ولا تُعدَّل ولا تُحذف ولا تُمنح لأحد من هنا.
+    """
+    return PermissionGroup.objects.filter(tenant=tenant, is_owner_group=False)
+
+
 @login_required
 @require_permission('view_permissiongroups')
 def permission_group_list(request):
@@ -367,7 +376,7 @@ def permission_group_table_api(request):
     length = int(request.GET.get('length', 25))
     search_value = request.GET.get('search[value]', '').strip()
 
-    queryset = PermissionGroup.objects.filter(tenant=tenant)
+    queryset = _manageable_groups(tenant)
     total = queryset.count()
 
     if search_value:
@@ -413,7 +422,7 @@ def permission_group_detail_api(request, pk):
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
-    group = get_object_or_404(PermissionGroup.objects.filter(tenant=tenant), pk=pk)
+    group = get_object_or_404(_manageable_groups(tenant), pk=pk)
     return _json_ok({
         'id': group.id,
         'name': group.name,
@@ -517,7 +526,7 @@ def permission_group_update_api(request, pk):
     if request.method != 'POST':
         return _json_error('الطريقة غير مسموحة', status=405)
 
-    group = get_object_or_404(PermissionGroup.objects.filter(tenant=tenant), pk=pk)
+    group = get_object_or_404(_manageable_groups(tenant), pk=pk)
     name = request.POST.get('name', '').strip()
     description = request.POST.get('description', '').strip()
     permissions_json = request.POST.get('permissions', '{}')
@@ -572,7 +581,7 @@ def permission_group_delete_api(request, pk):
     if request.method != 'POST':
         return _json_error('الطريقة غير مسموحة', status=405)
 
-    group = get_object_or_404(PermissionGroup.objects.filter(tenant=tenant), pk=pk)
+    group = get_object_or_404(_manageable_groups(tenant), pk=pk)
     group.delete()
     return _json_ok(None, 'تم حذف المجموعة بنجاح')
 
