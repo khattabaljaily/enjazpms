@@ -43,6 +43,16 @@
         {% endif %}
     </div>
 
+    <!-- نمط المشتريات: يظهر لباقة المؤسسات فقط، ويُحدَّد الآن مرة واحدة ولا يتغير بعد إنشاء الحساب -->
+    <div class="mb-3 field-span-2 js-purchasing-mode" style="display:none;">
+        {{ form.purchasing_mode.label_tag }}
+        {{ form.purchasing_mode }}
+        <small class="text-muted d-block mt-1">{{ form.purchasing_mode.help_text }}</small>
+        {% if form.purchasing_mode.errors %}
+        <div class="text-danger small js-field-errors" data-field="purchasing_mode">{{ form.purchasing_mode.errors }}</div>
+        {% endif %}
+    </div>
+
     <!-- نوع النسخة/المنطقة الزمنية/العملة مخفية عمداً — تُشتق تلقائياً من
          الباقة (خطوة 3) والبلد (خطوة 2)، لكن قيمها لا تزال تُرسَل مع النموذج -->
     <div class="mb-3 field-span-2" style="display:none;">
@@ -170,6 +180,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (limits.max_branches > 0) parts.push(`حتى ${limits.max_branches} فروع`);
         parts.push(`حتى ${limits.max_users} مستخدمين`);
         versionTypeHint.textContent = 'باقتك تشمل ' + parts.join(' و') + '.';
+
+        const modeWrap = document.querySelector('.js-purchasing-mode');
+        const isEnterprise = versionTypeField.value === 'multi_branch';
+        modeWrap.style.display = isEnterprise ? 'block' : 'none';
+        if (!isEnterprise) { modeWrap.querySelector('select').value = 'decentralized'; }
     }
 
     planField.addEventListener('change', applyPlanConstraints);

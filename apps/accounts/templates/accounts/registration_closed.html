@@ -63,6 +63,12 @@
             <div class="text-danger small mt-1 js-field-errors" data-field="version_type"></div>
         </div>
 
+        <div class="col-md-6 js-purchasing-mode" style="display:none;">
+            {{ form.purchasing_mode.label_tag }}
+            {{ form.purchasing_mode }}
+            <small class="text-muted d-block mt-1">يُحدَّد مرة واحدة ولا يتغير بعد إنشاء الحساب.</small>
+        </div>
+
         <div class="col-md-6">
             <label class="form-label d-block">وضع العملة الصعبة</label>
             <div class="reg-hc-check">
@@ -370,6 +376,23 @@ document.addEventListener('DOMContentLoaded', function () {
         return field.value.trim();
     }
 
+    function fieldValue(name) {
+        var field = form.querySelector('[name="' + name + '"]');
+        return field ? field.value : '';
+    }
+
+    // نمط المشتريات يظهر لنسخة الفروع المتعددة فقط
+    function syncPurchasingMode() {
+        var wrap = form.querySelector('.js-purchasing-mode');
+        if (!wrap) return;
+        var enterprise = fieldValue('version_type') === 'multi_branch';
+        wrap.style.display = enterprise ? '' : 'none';
+        if (!enterprise) { wrap.querySelector('select').value = 'decentralized'; }
+    }
+    var versionSelect = form.querySelector('[name="version_type"]');
+    if (versionSelect) { versionSelect.addEventListener('change', syncPurchasingMode); }
+    syncPurchasingMode();
+
     function buildWhatsAppUrl() {
         var lines = [
             'مرحباً، أرغب في إنشاء حساب جديد في {{ app_name }}.',
@@ -379,6 +402,7 @@ document.addEventListener('DOMContentLoaded', function () {
             'رقم الهاتف: ' + fieldText('phone'),
             'العنوان: ' + fieldText('address'),
             'نوع النسخة: ' + fieldText('version_type'),
+            ...(fieldValue('version_type') === 'multi_branch' ? ['نمط المشتريات: ' + fieldText('purchasing_mode')] : []),
             'وضع العملة الصعبة: ' + fieldText('hard_currency_mode')
         ];
         return 'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent(lines.join('\n'));

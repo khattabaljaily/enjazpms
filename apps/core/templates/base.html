@@ -96,7 +96,24 @@
     <script>
     (function(){
         var _p = new Set({% user_perm_keys_json %});
-        window.hasPerm = function(k){ return !k || _p.has(k); };
+        // نطاق الإدارة المركزية: أزرار المشتريات/الموردين تتبع صلاحيات المركزي لا صلاحيات الفروع.
+        var _central = {% if central_scope %}true{% else %}false{% endif %};
+        var _centralKeys = {
+            view_purchases: 'view_central_purchases', add_purchases: 'add_central_purchases',
+            change_purchases: 'change_central_purchases', delete_purchases: 'delete_central_purchases',
+            view_suppliers: 'view_central_suppliers', add_suppliers: 'add_central_suppliers',
+            change_suppliers: 'change_central_suppliers', delete_suppliers: 'delete_central_suppliers',
+            view_supplier_transactions: 'view_central_suppliers',
+            view_supplier_payments: 'view_central_supplier_payments',
+            add_supplier_payments: 'add_central_supplier_payments',
+            cancel_supplier_payments: 'cancel_central_supplier_payments',
+            view_purchase_returns: 'view_central_purchase_returns',
+            add_purchase_returns: 'add_central_purchase_returns'
+        };
+        window.hasPerm = function(k){
+            if (_central && _centralKeys[k]) k = _centralKeys[k];
+            return !k || _p.has(k);
+        };
         document.addEventListener('DOMContentLoaded', function(){
             document.querySelectorAll('[data-require-perm]').forEach(function(el){
                 if (window.hasPerm(el.dataset.requirePerm)) el.removeAttribute('data-require-perm');

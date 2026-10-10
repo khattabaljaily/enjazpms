@@ -389,6 +389,19 @@ class Step3SettingsForm(forms.Form):
         })
     )
 
+    # نمط المشتريات (نسخة المؤسسات فقط): يُحدَّد الآن مرة واحدة ولا يمكن تغييره لاحقاً.
+    purchasing_mode = forms.ChoiceField(
+        label='نمط المشتريات',
+        choices=(
+            ('decentralized', 'لامركزي — كل فرع يشتري من موردينه'),
+            ('hybrid', 'هجين — شراء مركزي من الإدارة وتوزيع على الفروع، مع شراء الفروع المحلي'),
+        ),
+        initial='decentralized',
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='يُحدَّد مرة واحدة الآن ولا يمكن تغييره بعد إنشاء الحساب.',
+    )
+
     timezone = forms.CharField(
         label='المنطقة الزمنية',
         widget=forms.TextInput(attrs={
@@ -467,6 +480,10 @@ class Step3SettingsForm(forms.Form):
         cleaned_data['max_stocks'] = plan_limits['max_stocks']
         cleaned_data['max_branches'] = plan_limits['max_branches']
         cleaned_data['max_users'] = plan_limits['max_users']
+        if cleaned_data['version_type'] != 'multi_branch':
+            cleaned_data['purchasing_mode'] = 'decentralized'
+        else:
+            cleaned_data['purchasing_mode'] = cleaned_data.get('purchasing_mode') or 'decentralized'
 
         if cleaned_data.get('hard_currency_mode'):
             if not cleaned_data.get('exchange_rate'):
@@ -479,6 +496,10 @@ class RegistrationRequestForm(forms.Form):
     """طلب تواصل لإنشاء حساب (أثناء إيقاف التسجيل الذاتي المؤقت)"""
 
     VERSION_CHOICES = Step3SettingsForm.VERSION_CHOICES
+    PURCHASING_CHOICES = (
+        ('decentralized', 'لامركزي — كل فرع يشتري من موردينه'),
+        ('hybrid', 'هجين — شراء مركزي من الإدارة وتوزيع على الفروع'),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -530,6 +551,17 @@ class RegistrationRequestForm(forms.Form):
         widget=forms.Select(attrs={
             'class': 'form-select'
         })
+    )
+
+    purchasing_mode = forms.ChoiceField(
+        label='نمط المشتريات (لنسخة الفروع المتعددة)',
+        choices=(
+            ('decentralized', 'لامركزي — كل فرع يشتري من موردينه'),
+            ('hybrid', 'هجين — شراء مركزي من الإدارة وتوزيع على الفروع'),
+        ),
+        initial='decentralized',
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
     )
 
     hard_currency_mode = forms.BooleanField(

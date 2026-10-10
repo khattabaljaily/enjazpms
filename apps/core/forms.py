@@ -26,7 +26,7 @@ class TenantForm(forms.ModelForm):
             'subscription_expires', 'version_type', 'max_users',
             'max_stocks', 'max_branches', 'timezone', 'currency',
             'is_active', 'is_demo',
-            'hard_currency_mode', 'hard_currency', 'exchange_rate',
+            'hard_currency_mode', 'hard_currency', 'exchange_rate', 'purchasing_mode',
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم النشاط التجاري'}),
@@ -54,6 +54,7 @@ class TenantForm(forms.ModelForm):
                 ('EGP', 'جنيه مصري (EGP)'),
             ]),
             'exchange_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0.0001', 'placeholder': 'مثال: 5500'}),
+            'purchasing_mode': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -61,6 +62,12 @@ class TenantForm(forms.ModelForm):
         self.fields['business_type'].queryset = BusinessType.objects.filter(is_active=True).order_by('display_order', 'name_ar')
         self.fields['business_type'].label = 'نوع النشاط'
         self.fields['version_type'].required = False
+        # نمط المشتريات: يُحدَّد مرة واحدة عند الإنشاء. بعد القفل يُعرض للقراءة فقط (حقل معطّل
+        # يتجاهل Django ما يصل بشأنه)؛ ومشترك ما قبل الميزة غير المقفول يحدده مدير المنصة مرة واحدة.
+        self.fields['purchasing_mode'].required = False
+        self._original_purchasing_mode = self.instance.purchasing_mode if self.instance.pk else None
+        if self.instance.pk and self.instance.purchasing_mode_locked:
+            self.fields['purchasing_mode'].disabled = True
         if not self.instance.pk:
             self.fields['subscription_start'].initial = timezone.localdate()
 
@@ -101,7 +108,25 @@ class TenantForm(forms.ModelForm):
         cleaned_data['max_stocks'] = limits['max_stocks']
         cleaned_data['max_branches'] = limits['max_branches']
         cleaned_data['max_users'] = limits['max_users']
+        # الشراء المركزي لنسخة المؤسسات (multi_branch) فقط.
+        mode = cleaned_data.get('purchasing_mode') or (
+            self.instance.purchasing_mode if self.instance.pk else 'decentralized')
+        if cleaned_data['version_type'] != 'multi_branch':
+            mode = 'decentralized'
+        cleaned_data['purchasing_mode'] = mode
         return cleaned_data
+
+    def save(self, commit=True):
+        tenant = super().save(commit=False)
+        # يُقفل النمط عند إنشاء المشترك، أو عند تحديده لأول مرة لمشترك قديم غير مقفول.
+        if not tenant.pk:
+            tenant.purchasing_mode_locked = True
+        elif not tenant.purchasing_mode_locked and tenant.purchasing_mode != self._original_purchasing_mode:
+            tenant.purchasing_mode_locked = True
+        if commit:
+            tenant.save()
+            self.save_m2m()
+        return tenant
 
 
 class BranchForm(forms.ModelForm):

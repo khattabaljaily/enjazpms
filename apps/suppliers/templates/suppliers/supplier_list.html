@@ -419,9 +419,9 @@
     const urlTransactions = "{% url 'suppliers:transactions_api' 0 %}";
     const urlUpdate = "{% url 'suppliers:update_api' 0 %}";
     const urlDelete = "{% url 'suppliers:delete_api' 0 %}";
-    const CAN_VIEW_TRANSACTIONS = {% if request.user|has_perm_key:"view_supplier_transactions" %}true{% else %}false{% endif %};
-    const CAN_CHANGE = {% if request.user|has_perm_key:"change_suppliers" %}true{% else %}false{% endif %};
-    const CAN_DELETE = {% if request.user|has_perm_key:"delete_suppliers" %}true{% else %}false{% endif %};
+    const CAN_VIEW_TRANSACTIONS = {% if central_scope %}{% if request.user|has_perm_key:"view_central_suppliers" %}true{% else %}false{% endif %}{% elif request.user|has_perm_key:"view_supplier_transactions" %}true{% else %}false{% endif %};
+    const CAN_CHANGE = {% if central_scope %}{% if request.user|has_perm_key:"change_central_suppliers" %}true{% else %}false{% endif %}{% elif request.user|has_perm_key:"change_suppliers" %}true{% else %}false{% endif %};
+    const CAN_DELETE = {% if central_scope %}{% if request.user|has_perm_key:"delete_central_suppliers" %}true{% else %}false{% endif %}{% elif request.user|has_perm_key:"delete_suppliers" %}true{% else %}false{% endif %};
     function apiUrl(tpl, id) { return tpl.replace('/0/', '/' + id + '/'); }
 
     const customerModalEl = document.getElementById('customerModal');

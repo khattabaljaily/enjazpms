@@ -200,6 +200,11 @@
                             <label class="cx-label" for="id_version_type">{{ form.version_type.label }}</label>
                             {{ form.version_type }}
                         </div>
+                        <div class="col-md-6" id="purchasingModeWrap" style="display:none;">
+                            <label class="cx-label" for="id_purchasing_mode">{{ form.purchasing_mode.label }}</label>
+                            {{ form.purchasing_mode }}
+                            <div class="form-text" id="purchasingModeHint">يُحدَّد مرة واحدة عند إنشاء المشترك ثم يُقفل نهائياً (لنسخة المؤسسات فقط).</div>
+                        </div>
                         <div class="col-md-2">
                             <label class="cx-label" for="id_max_users">{{ form.max_users.label }}</label>
                             {{ form.max_users }}
@@ -680,6 +685,10 @@
         $('#id_max_branches').val(limits.max_branches);
         $('#id_max_users').val(limits.max_users);
         $('#id_version_type').val(limits.allowed_version_types[limits.allowed_version_types.length - 1]);
+        // نمط المشتريات لنسخة المؤسسات فقط
+        const isEnterpriseVersion = $('#id_version_type').val() === 'multi_branch';
+        $('#purchasingModeWrap').toggle(isEnterpriseVersion);
+        if (!isEnterpriseVersion) { $('#id_purchasing_mode').val('decentralized'); }
 
         // تحذير مبكر (غير مانع) لو الاستخدام الحالي يتجاوز حدود الباقة
         // المختارة — التحقق الفعلي المانع يبقى دائماً من السيرفر (clean())،
@@ -918,6 +927,8 @@
         $('#admin_full_name, #admin_username, #admin_email, #admin_password, #admin_password2').val('');
         $('#admin_username').prop('readonly', false);
         $('#adminUserSectionNote').text('سيُنشأ حساب مدير تلقائياً');
+        $('#id_purchasing_mode').prop('disabled', false);
+        $('#purchasingModeHint').text('يُحدَّد مرة واحدة عند إنشاء المشترك ثم يُقفل نهائياً (لنسخة المؤسسات فقط).');
         $('#planDowngradeWarning').addClass('d-none').text('');
         Enjaz.clearFormErrors($form);
     }
@@ -964,6 +975,11 @@
                 $('#id_subscription_start').val(d.subscription_start || '');
                 $('#id_subscription_expires').val(d.subscription_expires || '');
                 $('#id_version_type').val(d.version_type || 'single_store');
+                $('#id_purchasing_mode').val(d.purchasing_mode || 'decentralized')
+                    .prop('disabled', !!d.purchasing_mode_locked);
+                $('#purchasingModeHint').text(d.purchasing_mode_locked
+                    ? 'مقفول: حُدِّد عند إنشاء المشترك ولا يمكن تغييره.'
+                    : 'مشترك أُنشئ قبل الشراء المركزي: يمكنك تحديد النمط له مرة واحدة فقط، ثم يُقفل.');
                 currentUsage = {
                     branch_count: d.branch_count || 0,
                     stock_count: d.stock_count || 0,
@@ -1046,7 +1062,7 @@
                 $('#viewCreatedAt').text(d.created_at || '—');
 
                 $('#viewPlan').html(`<span class="tnr-plan plan-${d.subscription_plan}">${d.subscription_plan_display}</span>`);
-                $('#viewVersion').text(d.version_type_display);
+                $('#viewVersion').text(d.version_type_display + (d.version_type === 'multi_branch' ? ' — ' + d.purchasing_mode_display : ''));
                 $('#viewSubStart').text(d.subscription_start || '—');
                 $('#viewSubExpires').text(d.subscription_expires || 'مفتوحة');
 

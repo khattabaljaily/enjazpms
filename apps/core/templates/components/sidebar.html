@@ -213,6 +213,18 @@
     </ul>
     {% endif %}
 
+    {% if current_tenant.version_type == 'multi_branch' and current_tenant.purchasing_mode != 'hybrid' and not current_tenant.purchasing_mode_locked and not request.branch and user|has_perm_key:'view_tenant_settings' %}
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'core:tenant_settings' %}#purchasingModeCard" title="الشراء المركزي لم يُفعَّل لهذا الحساب؛ يحدده مدير المنصة مرة واحدة">
+                <span class="nav-icon nav-icon--stock"><i class="fas fa-warehouse"></i></span>
+                المشتريات المركزية (غير مفعّلة)
+            </a>
+        </li>
+    </ul>
+    {% endif %}
+
     {% if current_tenant.version_type == 'multi_branch' and current_tenant.purchasing_mode == 'hybrid' and not request.branch %}
     {% if user|has_perm_key:'view_central_purchases' or user|has_perm_key:'view_central_suppliers' or user|has_perm_key:'view_central_supplier_payments' or user|has_perm_key:'view_central_shipments' or user|has_perm_key:'view_central_purchase_returns' or user|has_perm_key:'view_central_reports' %}
     <div class="sidebar-divider"></div>

@@ -70,26 +70,15 @@ class CentralPurchasingBase(TenantTestCase):
 
 
 class CentralSettingsAndStockTests(CentralPurchasingBase):
-    def test_owner_can_switch_modes_until_central_data_exists(self):
+    def test_owner_cannot_change_purchasing_mode_from_settings(self):
         self.client.force_login(self.user)
         url = reverse('core:tenant_settings_update_api')
-        resp = self.client.post(url, json.dumps({'section': 'purchasing', 'data': {'purchasing_mode': 'decentralized'}}),
-                                content_type='application/json')
-        self.assertEqual(resp.status_code, 400, 'يوجد مخزن ومورد مركزيان فلا رجوع')
-        Stock.objects.filter(is_central=True).delete()
-        Supplier.unscoped.filter(branch__isnull=True).delete()
-        resp = self.client.post(url, json.dumps({'section': 'purchasing', 'data': {'purchasing_mode': 'decentralized'}}),
-                                content_type='application/json')
-        self.assertEqual(resp.status_code, 200, resp.content)
+        for mode in ('decentralized', 'hybrid', 'x'):
+            resp = self.client.post(url, json.dumps({'section': 'purchasing', 'data': {'purchasing_mode': mode}}),
+                                    content_type='application/json')
+            self.assertEqual(resp.status_code, 400, mode)
         self.tenant.refresh_from_db()
-        self.assertEqual(self.tenant.purchasing_mode, 'decentralized')
-
-    def test_invalid_mode_and_non_enterprise_rejected(self):
-        self.client.force_login(self.user)
-        url = reverse('core:tenant_settings_update_api')
-        resp = self.client.post(url, json.dumps({'section': 'purchasing', 'data': {'purchasing_mode': 'x'}}),
-                                content_type='application/json')
-        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(self.tenant.purchasing_mode, 'hybrid')
 
     def test_owner_creates_single_central_stock_without_branch(self):
         Stock.objects.filter(is_central=True).delete()
@@ -326,3 +315,38 @@ class CentralStockIsDistributionOnlyTests(CentralPurchasingBase):
             tenant=self.tenant, stock=self.s1, invoice_date=timezone.localdate(),
             status='draft', payment_method='cash')
         self.assertEqual(inv.branch_id, self.b1.pk)
+
+
+class CentralPurchasingDiscoverabilityTests(CentralPurchasingBase):
+    """مدير النشاط يجد النمط الهجين وقائمته: التلميح قبل التفعيل، والقائمة بعده."""
+
+    def test_sidebar_hint_before_activation_and_menu_after(self):
+        import re
+        self.client.force_login(self.user)
+        self.tenant.purchasing_mode = 'decentralized'
+        self.tenant.save(update_fields=['purchasing_mode'])
+        html = self.client.get(reverse('core:dashboard')).content.decode()
+        self.assertIn('المشتريات المركزية (غير مفعّلة)', html)
+        self.assertNotIn('فواتير الشراء المركزية', html)
+        page = self.client.get(reverse('core:tenant_settings')).content.decode()
+        i = page.find('id="purchasingModeCard"')
+        panes = [(m.start(), m.group(1)) for m in re.finditer(r'id="tab-([a-z_-]+)"', page)]
+        self.assertEqual([p for p in panes if p[0] < i][-1][1], 'business')  # التبويب الافتراضي
+        self.tenant.purchasing_mode = 'hybrid'
+        self.tenant.save(update_fields=['purchasing_mode'])
+        html = self.client.get(reverse('core:dashboard')).content.decode()
+        self.assertIn('فواتير الشراء المركزية', html)
+        self.assertNotIn('المشتريات المركزية (غير مفعّلة)', html)
+
+    def test_central_pages_expose_central_scope_to_the_permission_helper(self):
+        """أزرار «جديد/تعديل/حذف» تُخفى بـ hasPerm؛ في نطاق المركزي يجب أن تُترجم لصلاحيات المركزي."""
+        self.client.force_login(self.user)
+        for name in ('purchases:order_list', 'suppliers:list', 'suppliers:payments'):
+            html = self.client.get(reverse(name)).content.decode()
+            self.assertIn('var _central = true;', html, name)
+            self.assertIn("add_purchases: 'add_central_purchases'", html, name)
+        html = self.client.get(reverse('purchases:order_list')).content.decode()
+        self.assertIn('add_central_purchases', html)  # ضمن مفاتيح مدير النشاط المحقونة
+        self.client.force_login(self.branch_user)
+        html = self.client.get(reverse('purchases:order_list')).content.decode()
+        self.assertIn('var _central = false;', html)

@@ -224,6 +224,9 @@ class Tenant(models.Model):
     purchasing_mode = models.CharField(
         'نمط المشتريات', max_length=15, choices=PURCHASING_MODE_CHOICES, default='decentralized'
     )
+    # يُحدَّد النمط مرة واحدة عند إنشاء المشترك (التسجيل أو إضافته من لوحة المنصة) ثم يُقفل:
+    # لا يغيّره أحد بعد ذلك. مشتركو ما قبل هذه الميزة غير مقفولين، فتحدد لهم إدارة المنصة النمط مرة واحدة.
+    purchasing_mode_locked = models.BooleanField('نمط المشتريات مقفول', default=False)
     hard_currency = models.CharField('العملة الصعبة', max_length=3, default='USD', blank=True)
     exchange_rate = models.DecimalField(
         'سعر الصرف',
@@ -263,6 +266,13 @@ class Tenant(models.Model):
                 slug = f"{base_slug}-{counter}"
                 counter += 1
             self.slug = slug
+        # نمط المشتريات المقفول لا يتغير أبداً (لا من الواجهة ولا من الكود).
+        if self.pk:
+            previous = Tenant.objects.filter(pk=self.pk).values('purchasing_mode', 'purchasing_mode_locked').first()
+            if previous and previous['purchasing_mode_locked']:
+                if self.purchasing_mode != previous['purchasing_mode']:
+                    raise ValueError('نمط المشتريات يُحدَّد مرة واحدة عند إنشاء المشترك ولا يمكن تغييره.')
+                self.purchasing_mode_locked = True
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -306,15 +316,6 @@ class Tenant(models.Model):
         يُغلَّف بهذا الشرط لضمان عدم تأثر single_store/multi_stock إطلاقاً.
         """
         return self.version_type == 'multi_branch'
-
-    def has_central_purchasing_data(self) -> bool:
-        """هل أُنشئت بيانات مركزية (مخزن أو موردون مركزيون)؟ عندها لا يُرجَع إلى النمط اللامركزي."""
-        from apps.stocks.models import Stock
-        from apps.suppliers.models import Supplier
-        return (
-            Stock.objects.filter(tenant=self, is_central=True).exists()
-            or Supplier.unscoped.filter(tenant=self, branch__isnull=True).exists()
-        )
 
     def is_hybrid_purchasing(self) -> bool:
         """الشراء المركزي مفعّل: نسخة المؤسسات + نمط المشتريات "هجين"."""

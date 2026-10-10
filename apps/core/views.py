@@ -1559,8 +1559,6 @@ def tenant_settings(request):
         'default_country': DEFAULT_COUNTRY,
         'currency_choices': CURRENCY_CHOICES,
         'backups': backups,
-        'purchasing_mode_choices': tenant.PURCHASING_MODE_CHOICES if tenant else (),
-        'purchasing_locked': bool(tenant and tenant.purchasing_mode == 'hybrid' and tenant.has_central_purchasing_data()),
     })
 
 
@@ -1581,23 +1579,8 @@ def tenant_settings_update_api(request):
 
     section = str(payload.get('section', '')).strip()
     data = payload.get('data') or {}
-    if section not in {'business', 'system', 'purchasing'}:
+    if section not in {'business', 'system'}:
         return JsonResponse({'success': False, 'message': 'نوع التحديث غير مدعوم'}, status=400)
-
-    if section == 'purchasing':
-        if not tenant.is_enterprise():
-            return JsonResponse({'success': False, 'message': 'نمط المشتريات متاح لنسخة المؤسسات فقط'}, status=400)
-        mode = str(data.get('purchasing_mode', '')).strip()
-        if mode not in dict(tenant.PURCHASING_MODE_CHOICES):
-            return JsonResponse({'success': False, 'message': 'نمط مشتريات غير صالح'}, status=400)
-        if mode == 'decentralized' and tenant.purchasing_mode == 'hybrid' and tenant.has_central_purchasing_data():
-            return JsonResponse({
-                'success': False,
-                'message': 'لا يمكن الرجوع إلى النمط اللامركزي بعد إنشاء مخزن أو موردين مركزيين.',
-            }, status=400)
-        tenant.purchasing_mode = mode
-        tenant.save(update_fields=['purchasing_mode', 'updated_at'])
-        return JsonResponse({'success': True, 'message': 'تم تحديث نمط المشتريات'})
 
     if section == 'business':
         tenant.name = str(data.get('name', tenant.name)).strip() or tenant.name
@@ -2141,6 +2124,9 @@ def tenant_detail_api(request, pk):
             'subscription_expires': tenant.subscription_expires.strftime('%Y-%m-%d') if tenant.subscription_expires else '',
             'version_type': tenant.version_type,
             'version_type_display': tenant.get_version_type_display(),
+            'purchasing_mode': tenant.purchasing_mode,
+            'purchasing_mode_display': tenant.get_purchasing_mode_display(),
+            'purchasing_mode_locked': tenant.purchasing_mode_locked,
             'max_users': tenant.max_users,
             'max_stocks': tenant.max_stocks,
             'max_branches': tenant.max_branches,

@@ -626,6 +626,9 @@ def registration_request_api(request):
         'phone': data['phone'],
         'address': data['address'],
         'version_type': version_label,
+        'purchasing_mode': (
+            dict(RegistrationRequestForm.PURCHASING_CHOICES).get(data.get('purchasing_mode') or 'decentralized', '')
+            if data['version_type'] == 'multi_branch' else '—'),
         'hard_currency_mode': 'مفعّل' if data['hard_currency_mode'] else 'غير مفعّل',
         'now': _tz.now(),
         'app_name': get_brand_name(),
@@ -818,6 +821,9 @@ def register_step3(request):
                         # الاعتماد إن كان يبقى تجريبياً أم يتحول لحساب حقيقي.
                         is_demo=True,
                         version_type=form.cleaned_data['version_type'],
+                        # نمط المشتريات يُحدَّد الآن مرة واحدة ويُقفل (لا يتغير بعد إنشاء الحساب).
+                        purchasing_mode=form.cleaned_data['purchasing_mode'],
+                        purchasing_mode_locked=True,
                         # المخازن والفروع وعدد المستخدمين تتحدد من الباقة مباشرة، مو من
                         # إدخال حر بالنموذج — نفس حدود صفحة الأسعار بالضبط.
                         max_stocks=plan_limits['max_stocks'],

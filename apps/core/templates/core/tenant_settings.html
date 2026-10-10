@@ -187,6 +187,34 @@
                 </form>
             </div>
         </div>
+
+        {% if current_tenant.version_type == 'multi_branch' %}
+        <!-- Purchasing mode (للعرض فقط: يُحدَّد عند إنشاء الحساب ولا يتغير) -->
+        <div class="ts-card mt-3" id="purchasingModeCard">
+            <div class="ts-card__header">
+                <div class="ts-card__icon ts-card__icon--green">
+                    <i class="fas fa-truck-ramp-box"></i>
+                </div>
+                <div>
+                    <div class="ts-card__title">نمط المشتريات</div>
+                    <div class="ts-card__subtitle">يُحدَّد مرة واحدة عند إنشاء الحساب ولا يمكن تغييره</div>
+                </div>
+            </div>
+            <div class="ts-card__body">
+                <p class="mb-2"><strong>{{ current_tenant.get_purchasing_mode_display }}</strong></p>
+                <div class="form-text">
+                    {% if current_tenant.purchasing_mode == 'hybrid' %}
+                    تعمل الإدارة بمخزن مركزي وموردين مركزيين وفواتير شراء مركزية، وتوزّع الكميات على الفروع بشحنات يؤكد الفرع استلامها، ويبقى شراء الفروع المحلي مسموحاً.
+                    {% else %}
+                    كل فرع يشتري من موردينه ويدير مخازنه.
+                    {% if not current_tenant.purchasing_mode_locked %}
+                    هذا الحساب أُنشئ قبل إتاحة الشراء المركزي؛ لتفعيل النمط الهجين تواصل مع إدارة المنصة لتحديده لك مرة واحدة.
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- ══════════ TAB: إعدادات النظام ══════════ -->
@@ -378,44 +406,6 @@
                 </div>
             </div>
         </div>
-
-        {% if current_tenant.version_type == 'multi_branch' %}
-        <!-- Purchasing mode -->
-        <div class="ts-card mt-3">
-            <div class="ts-card__header">
-                <div class="ts-card__icon ts-card__icon--green">
-                    <i class="fas fa-truck-ramp-box"></i>
-                </div>
-                <div>
-                    <div class="ts-card__title">نمط المشتريات</div>
-                    <div class="ts-card__subtitle">الشراء لكل فرع، أو شراء مركزي من الإدارة مع توزيع على الفروع</div>
-                </div>
-            </div>
-            <div class="ts-card__body">
-                <form id="tenantPurchasingForm" class="row g-3">
-                    <div class="col-md-8">
-                        <label class="ts-label">النمط</label>
-                        <select class="form-select" name="purchasing_mode" {% if purchasing_locked %}disabled{% endif %}>
-                            {% for value, label in purchasing_mode_choices %}
-                            <option value="{{ value }}"{% if value == current_tenant.purchasing_mode %} selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text">
-                            في النمط الهجين تستطيع الإدارة إنشاء مخزن مركزي وموردين مركزيين وفواتير شراء مركزية، وتوزيع الكميات على الفروع بشحنات يؤكد الفرع استلامها، ويبقى شراء الفروع المحلي مسموحاً.
-                            {% if purchasing_locked %}<br><strong>لا يمكن الرجوع إلى النمط اللامركزي بعد إنشاء بيانات مركزية.</strong>{% endif %}
-                        </div>
-                    </div>
-                    {% if not purchasing_locked %}
-                    <div class="col-12">
-                        <button type="button" class="btn btn-primary" onclick="saveTenantPurchasing()">
-                            <i class="fas fa-save me-1"></i> حفظ نمط المشتريات
-                        </button>
-                    </div>
-                    {% endif %}
-                </form>
-            </div>
-        </div>
-        {% endif %}
 
         <!-- Invoice Color -->
         <div class="ts-card ts-card--color mt-3">
@@ -668,10 +658,6 @@ function saveTenantBusiness() {
 }
 function saveTenantSystem() {
     saveSection('system', 'tenantSystemForm', document.querySelector('button[onclick="saveTenantSystem()"]'));
-}
-
-function saveTenantPurchasing() {
-    saveSection('purchasing', 'tenantPurchasingForm', document.querySelector('button[onclick="saveTenantPurchasing()"]'));
 }
 
 function saveTenantColor() {

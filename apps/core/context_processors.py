@@ -15,6 +15,8 @@ def tenant_context(request):
         'current_tenant': None,
         'tenant_settings': None,
         'tenant_capabilities': None,
+        # نطاق الإدارة المركزية (النمط الهجين): يضبطه require_scoped_permission على الطلب.
+        'central_scope': bool(getattr(request, 'central_scope', False)),
     }
 
     if hasattr(request, 'tenant') and request.tenant:
