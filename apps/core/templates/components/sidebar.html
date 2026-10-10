@@ -213,6 +213,41 @@
     </ul>
     {% endif %}
 
+    {% if current_tenant.version_type == 'multi_branch' and current_tenant.purchasing_mode == 'hybrid' and not request.branch %}
+    {% if user|has_perm_key:'view_central_purchases' or user|has_perm_key:'view_central_suppliers' or user|has_perm_key:'view_central_supplier_payments' or user|has_perm_key:'view_central_shipments' or user|has_perm_key:'view_central_purchase_returns' or user|has_perm_key:'view_central_reports' %}
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item has-submenu">
+            <a class="nav-link nav-link-toggle" href="#">
+                <span class="nav-icon nav-icon--stock"><i class="fas fa-warehouse"></i></span>
+                المشتريات المركزية
+                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+            </a>
+            <ul class="nav-submenu">
+                {% if user|has_perm_key:'view_central_purchases' %}
+                <li><a href="{% url 'purchases:order_list' %}" class="nav-sublink{% if request.resolver_match.app_name == 'purchases' %} active{% endif %}"><i class="fas fa-file-invoice me-2"></i>فواتير الشراء المركزية</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'view_central_suppliers' %}
+                <li><a href="{% url 'suppliers:list' %}" class="nav-sublink{% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'suppliers' %} active{% endif %}"><i class="fas fa-truck me-2"></i>الموردون المركزيون</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'view_central_supplier_payments' %}
+                <li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين المركزيين</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'view_central_shipments' %}
+                <li><a href="{% url 'stocks:shipment_list' %}" class="nav-sublink{% if 'shipments' in request.path %} active{% endif %}"><i class="fas fa-truck-ramp-box me-2"></i>شحنات الفروع ومرتجعاتها</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'view_central_purchase_returns' %}
+                <li><a href="{% url 'purchases:return_list' %}" class="nav-sublink{% if 'returns' in request.path %} active{% endif %}"><i class="fas fa-rotate-left me-2"></i>مرتجعات المشتريات المركزية</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'view_central_reports' %}
+                <li><a href="{% url 'stocks:central_reports' %}" class="nav-sublink{% if 'central-reports' in request.path %} active{% endif %}"><i class="fas fa-chart-pie me-2"></i>تقارير المخزن المركزي</a></li>
+                {% endif %}
+            </ul>
+        </li>
+    </ul>
+    {% endif %}
+    {% endif %}
+
     {% if user|has_perm_key:'view_permissiongroups' or user|has_perm_key:'view_users' %}
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
@@ -364,6 +399,9 @@
                 <li><a href="{% url 'stocks:quantities_list' %}" class="nav-sublink"><i class="fas fa-cubes me-2"></i>أرصدة المخزون</a></li>
                 {% if user|has_perm_key:'transfer_stocks' %}
                 <li><a href="{% url 'stocks:transfer_list' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>تحويلات المخزون</a></li>
+                {% endif %}
+                {% if current_tenant.purchasing_mode == 'hybrid' and user|has_perm_key:'view_incoming_shipments' %}
+                <li><a href="{% url 'stocks:shipment_list' %}" class="nav-sublink{% if 'shipments' in request.path %} active{% endif %}"><i class="fas fa-truck-ramp-box me-2"></i>الشحنات والمرتجعات مع الإدارة</a></li>
                 {% endif %}
                 {% if user|has_perm_key:'adjust_stocks' %}
                 <li><a href="{% url 'stocks:stocktake_list' %}" class="nav-sublink"><i class="fas fa-clipboard-list me-2"></i>جرد المخزون</a></li>

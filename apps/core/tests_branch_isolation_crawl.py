@@ -121,6 +121,26 @@ class BranchIsolationCrawlTests(TenantTestCase):
             tenant=tenant, branch=branch, title=f'{tag}إشعار', message=f'{tag}رسالة'))
         return ids
 
+    @classmethod
+    def _seed_central(cls, tenant, tag):
+        """مخزن ومورد وفاتورة شراء مركزية، تحمل العلامة tag؛ يرجع {موديل: [pks]}."""
+        from apps.purchases.models import PurchaseInvoice
+        from apps.stocks.models import Stock
+        from apps.suppliers.models import Supplier
+        ids = {}
+        stock = Stock.objects.create(tenant=tenant, name=f'{tag}مخزن مركزي', is_central=True)
+        supplier = Supplier.unscoped.create(tenant=tenant, name=f'{tag}مورد مركزي')
+        inv = PurchaseInvoice.objects.create(
+            tenant=tenant, stock=stock, supplier=supplier, invoice_date=timezone.localdate(),
+            status='draft', notes=f'{tag}شراء مركزي')
+        from apps.purchases.models import PurchaseReturn
+        pr = PurchaseReturn.objects.create(
+            tenant=tenant, original_invoice=inv, return_date=timezone.localdate(), status='draft',
+            reason=f'{tag}مرتجع للمورد')
+        for obj in (stock, supplier, inv, pr):
+            ids.setdefault(type(obj).__name__, []).append(obj.pk)
+        return ids
+
     def setUp(self):
         super().setUp()
         TenantCapabilities.objects.update_or_create(
@@ -141,6 +161,27 @@ class BranchIsolationCrawlTests(TenantTestCase):
             terms_version=settings.TERMS_VERSION, terms_accepted_at=timezone.now())
         other_branch = Branch.objects.create(tenant=self.other, name='ZZT_فرع')
         self.ids_t = self._seed(self.other, 'ZZT_', other_branch)
+
+        # النمط الهجين: بيانات مركزية (مخزن + مورد + فاتورة شراء) لا يراها أي مستخدم فرع.
+        self.tenant.purchasing_mode = 'hybrid'
+        self.tenant.save(update_fields=['purchasing_mode'])
+        self.ids_c = self._seed_central(self.tenant, 'ZZC_')
+        # شحنات من المخزن المركزي إلى كل فرع (واحدة في الطريق وأخرى مسودة)
+        from apps.stocks.models import Shipment, ShipmentLine, Stock
+        central_stock = Stock.objects.get(pk=self.ids_c['Stock'][0])
+        for ids, branch in ((self.ids_a, self.a), (self.ids_b, self.b)):
+            to_stock = Stock.objects.get(pk=ids['Stock'][0])
+            for status in ('in_transit', 'draft'):
+                sh = Shipment.objects.create(
+                    tenant=self.tenant, from_stock=central_stock, to_stock=to_stock, branch=branch,
+                    shipment_date=timezone.localdate(), status=status, notes=f'{branch.name}شحنة',
+                    sent_at=timezone.now() if status == 'in_transit' else None)
+                ids.setdefault('Shipment', []).append(sh.pk)
+            ret = Shipment.objects.create(  # مرتجع من الفرع إلى المركزي
+                tenant=self.tenant, direction='to_central', from_stock=to_stock, to_stock=central_stock,
+                branch=branch, shipment_date=timezone.localdate(), status='in_transit',
+                notes=f'{branch.name}مرتجع', sent_at=timezone.now())
+            ids.setdefault('Shipment', []).append(ret.pk)
 
         self.user_a = User.objects.create_user(
             username='zz-sup-a', password='x12345678', tenant=self.tenant,
@@ -191,18 +232,20 @@ class BranchIsolationCrawlTests(TenantTestCase):
                 path = '/' + _TOKEN_RE.sub(lambda m, it=iter(combo): str(next(it)), tpl)
                 for m in self._leaks(path, forbidden):
                     leaks.append((path, m))
-        return leaks
+        # اسم المخزن المركزي يظهر مشروعاً في شحنات/مرتجعات الفرع نفسه (طرف فيها)؛ ويبقى
+        # ممنوعاً في أي شاشة أخرى (قوائم المخازن والأرصدة...).
+        return [l for l in leaks if not (l[1].startswith('ZZC_') and l[0].startswith('/stocks/shipments/'))]
 
     def test_branch_a_user_never_sees_branch_b_or_other_tenant(self):
-        leaks = self._crawl(self.user_a, ['ZZB_', 'ZZT_'], [self.ids_b, self.ids_t])
+        leaks = self._crawl(self.user_a, ['ZZB_', 'ZZT_', 'ZZC_'], [self.ids_b, self.ids_t, self.ids_c])
         self.assertEqual(leaks, [], f'تسريب بيانات للفرع A:\n' + '\n'.join(map(str, leaks[:40])))
 
     def test_branch_b_user_never_sees_branch_a_or_other_tenant(self):
-        leaks = self._crawl(self.user_b, ['ZZA_', 'ZZT_'], [self.ids_a, self.ids_t])
+        leaks = self._crawl(self.user_b, ['ZZA_', 'ZZT_', 'ZZC_'], [self.ids_a, self.ids_t, self.ids_c])
         self.assertEqual(leaks, [], f'تسريب بيانات للفرع B:\n' + '\n'.join(map(str, leaks[:40])))
 
     def test_tenant_admin_never_sees_other_tenant(self):
-        leaks = self._crawl(self.user, ['ZZT_'], [self.ids_t])
+        leaks = self._crawl(self.user, ['ZZT_'], [self.ids_t, self.ids_c])
         self.assertEqual(leaks, [], f'تسريب بين المشتركين:\n' + '\n'.join(map(str, leaks[:40])))
 
     def test_crawl_is_meaningful(self):
@@ -240,12 +283,12 @@ class BranchWriteIsolationTests(BranchIsolationCrawlTests):
         from apps.notifications.models import Notification
         from apps.purchases.models import PurchaseInvoice
         from apps.sales.models import SaleInvoice
-        from apps.stocks.models import Stock
+        from apps.stocks.models import Shipment, Stock
         from apps.suppliers.models import Supplier
         from apps.treasury.models import Treasury
         snap = {}
         for model in (Customer, Supplier, Agent, Employee, Stock, Treasury, BankAccount,
-                      Expense, SaleInvoice, PurchaseInvoice, Notification):
+                      Expense, SaleInvoice, PurchaseInvoice, Notification, Shipment):
             mgr = getattr(model, 'unscoped', model.objects)
             snap[model.__name__] = sorted(
                 (r.pk, str(r), getattr(r, 'status', None), getattr(r, 'is_active', None),
@@ -263,7 +306,7 @@ class BranchWriteIsolationTests(BranchIsolationCrawlTests):
         # نتحقق فقط أن شيئاً خارج الفرع B لم يتغير.
         self.client.raise_request_exception = False
         before = self._snapshot()
-        pool = sorted({pk for ids in (self.ids_a, self.ids_t) for pks in ids.values() for pk in pks}
+        pool = sorted({pk for ids in (self.ids_a, self.ids_t, self.ids_c) for pks in ids.values() for pk in pks}
                       | {self.a.pk})
         sent = 0
         for tpl, params in self.routes_all:

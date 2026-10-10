@@ -234,6 +234,10 @@ class SaleInvoice(TenantMixin):
         return f"{self.invoice_number} — {self.customer or 'زبون عابر'}"
 
     def save(self, *args, **kwargs):
+        # المخزن المركزي للإدارة (النمط الهجين) مخزن توزيع فقط: لا فواتير بيع عليه.
+        if self._state.adding and self.stock_id:
+            if type(self).stock.field.related_model.objects.filter(pk=self.stock_id, is_central=True).exists():
+                raise ValueError('لا يمكن البيع من المخزن المركزي: هو مخزن للتوزيع على الفروع فقط.')
         # الفرع يُشتق من المخزن (نسخة المؤسسات) حتى لا تبقى فواتير بلا فرع
         if self.branch_id is None and self.stock_id:
             self.branch_id = type(self).stock.field.related_model.objects.filter(pk=self.stock_id).values_list('branch_id', flat=True).first()

@@ -5,12 +5,12 @@ from decimal import Decimal, InvalidOperation
 from apps.accounts.activity_service import log_activity
 
 from django.contrib.auth.decorators import login_required
-from apps.accounts.decorators import require_permission, branch_scope_exempt
+from apps.accounts.decorators import require_permission, require_scoped_permission, branch_scope_exempt
 from django.db import transaction
 from django.db.models import Q, Sum, Subquery, OuterRef
 from django.db.models.functions import Coalesce
 from django.db.models import DecimalField as DjDecimalField
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -22,7 +22,11 @@ from apps.purchases.models import PurchaseInvoice, PurchaseReturn, PurchaseRetur
 from apps.purchases.services import build_purchase_from_post, cancel_purchase_invoice, cancel_purchase_return, confirm_purchase_invoice, confirm_purchase_return, edit_confirmed_purchase_invoice
 from apps.stocks.models import Stock
 from apps.suppliers.models import Supplier
-from apps.core.utils import filter_by_branch_via, filter_by_branch_strict, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
+from apps.core.utils import (
+    filter_by_branch_via, filter_by_branch_strict, enforce_branch_ownership, resolve_report_scope,
+    operational_money_accounts, is_central_request, scope_by_central_stock,
+    scoped_suppliers, scoped_money_accounts,
+)
 
 from .reports import PurchasesReportGenerator
 
@@ -78,15 +82,52 @@ def _parse_date(value):
     raise ValueError(f"Unrecognized date format: {value}")
 
 
+# ──────────────────────────────────────────────────────────────
+# نطاق الإدارة المركزية (النمط الهجين): فواتير المخزن المركزي والموردون المركزيون
+# تراها الإدارة وحدها، ولا تظهر في شاشات الفروع. التفاصيل: require_scoped_permission.
+# ──────────────────────────────────────────────────────────────
+
+def _scope_stocks(request, tenant):
+    qs = Stock.objects.for_tenant(tenant)
+    if is_central_request(request):
+        return qs.filter(is_central=True)
+    return qs.for_branch(getattr(request, 'branch', None)).exclude(is_central=True)
+
+
+def _scope_suppliers(request, tenant):
+    return scoped_suppliers(request, tenant)
+
+
+def _scope_banks(request, tenant):
+    from apps.bank_accounts.models import BankAccount
+    return scoped_money_accounts(BankAccount.objects.for_tenant(tenant), request)
+
+
+def _return_scope_or_404(request, purchase_return):
+    """مرتجع فاتورة المخزن المركزي لا يُفتح إلا من نطاق الإدارة المركزية، والعكس."""
+    inv = purchase_return.original_invoice
+    if bool(inv.stock_id and inv.stock.is_central) != is_central_request(request):
+        raise Http404
+
+
+def _invoice_scope_or_404(request, invoice):
+    """فاتورة المخزن المركزي لا تُفتح إلا من نطاق الإدارة المركزية، والعكس."""
+    is_central_invoice = bool(invoice.stock_id and invoice.stock.is_central)
+    if is_central_invoice != is_central_request(request):
+        raise Http404
+
+
 @login_required
-@require_permission('view_purchases')
+@require_scoped_permission('view_purchases', 'view_central_purchases')
 def order_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = filter_by_branch_via(PurchaseInvoice.objects.filter(tenant=tenant), getattr(request, 'branch', None))
+    qs = scope_by_central_stock(
+        filter_by_branch_via(PurchaseInvoice.objects.filter(tenant=tenant), getattr(request, 'branch', None)), request)
     context = {
+        'central_scope': is_central_request(request),
         'stats': {
             'total': qs.count(),
             'confirmed': qs.filter(status='confirmed').count(),
@@ -99,7 +140,7 @@ def order_list(request):
 
 
 @login_required
-@require_permission('view_purchases')
+@require_scoped_permission('view_purchases', 'view_central_purchases')
 def order_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -119,7 +160,9 @@ def order_table_api(request):
             .values('t')
         )
 
-        qs = filter_by_branch_via(PurchaseInvoice.objects.filter(tenant=tenant), getattr(request, 'branch', None)).select_related('supplier', 'stock')
+        qs = scope_by_central_stock(
+            filter_by_branch_via(PurchaseInvoice.objects.filter(tenant=tenant), getattr(request, 'branch', None)), request,
+        ).select_related('supplier', 'stock')
         total = qs.count()
 
         if status_filter:
@@ -185,7 +228,7 @@ def order_table_api(request):
 
 
 @login_required
-@require_permission('add_purchases')
+@require_scoped_permission('add_purchases', 'add_central_purchases')
 def order_create(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -198,9 +241,10 @@ def order_create(request):
     _hc_rate = float(tenant.exchange_rate) if _hc_mode and getattr(tenant, 'exchange_rate', None) else 0
     from apps.bank_accounts.models import BankAccount
     context = {
-        'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
-        'stocks': Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name'),
-        'bank_accounts': operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).order_by('name'),
+        'central_scope': is_central_request(request),
+        'suppliers': _scope_suppliers(request, tenant).filter(is_active=True).order_by('name'),
+        'stocks': _scope_stocks(request, tenant).filter(is_active=True).order_by('-is_default', 'name'),
+        'bank_accounts': _scope_banks(request, tenant).filter(is_active=True).order_by('name'),
         'today': timezone.localdate().isoformat(),
         'action': 'create',
         'existing_lines': '[]',
@@ -213,14 +257,15 @@ def order_create(request):
 
 
 @login_required
-@require_permission('change_purchases')
+@require_scoped_permission('change_purchases', 'change_central_purchases')
 def order_edit(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
-    invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
+    invoice = get_object_or_404(PurchaseInvoice.objects.select_related('stock'), pk=pk, tenant=tenant)
     enforce_branch_ownership(request, invoice, field='stock__branch')
+    _invoice_scope_or_404(request, invoice)
     if invoice.status not in ('draft', 'confirmed'):
         return redirect('purchases:order_detail', pk=pk)
 
@@ -256,9 +301,10 @@ def order_edit(request, pk):
     from apps.bank_accounts.models import BankAccount
     context = {
         'invoice': invoice,
-        'suppliers': Supplier.objects.for_tenant(tenant).filter(is_active=True).order_by('name'),
-        'stocks': Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name'),
-        'bank_accounts': operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).order_by('name'),
+        'central_scope': is_central_request(request),
+        'suppliers': _scope_suppliers(request, tenant).filter(is_active=True).order_by('name'),
+        'stocks': _scope_stocks(request, tenant).filter(is_active=True).order_by('-is_default', 'name'),
+        'bank_accounts': _scope_banks(request, tenant).filter(is_active=True).order_by('name'),
         'today': timezone.localdate().isoformat(),
         'action': 'edit',
         'existing_lines': json.dumps(existing_lines, ensure_ascii=False),
@@ -320,6 +366,16 @@ def _process_order_post(request, tenant, invoice):
     except (Stock.DoesNotExist, ValueError, TypeError):
         return _json_error('يرجى اختيار المخزن')
     enforce_branch_ownership(request, stock)
+    if bool(stock.is_central) != is_central_request(request):
+        return _json_error('المخزن المختار غير متاح في هذا النطاق')
+    # المورد والحساب البنكي يجب أن يكونا ضمن نطاق المستخدم (مركزي للإدارة، أو فرعه).
+    try:
+        if header.get('supplier_id') and not _scope_suppliers(request, tenant).filter(id=int(header['supplier_id'])).exists():
+            return _json_error('المورد المختار غير متاح في هذا النطاق')
+        if bank_account_id and not _scope_banks(request, tenant).filter(id=int(bank_account_id), is_active=True).exists():
+            return _json_error('الحساب البنكي المختار غير متاح في هذا النطاق')
+    except (ValueError, TypeError):
+        return _json_error('بيانات غير صالحة')
 
     try:
         if invoice is None:
@@ -344,7 +400,7 @@ def _process_order_post(request, tenant, invoice):
                 }
                 if bank_account_id:
                     from apps.bank_accounts.models import BankAccount
-                    bank_account_obj = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).get(id=bank_account_id, is_active=True)
+                    bank_account_obj = _scope_banks(request, tenant).get(id=bank_account_id, is_active=True)
                     # مصدر السداد الفعلي (يُصرَف منه للمورد) — نفس منطق مصروفات
                     # apps/expenses/views.py._process_expense_post، يجب التحقق من ملكيته
                     enforce_branch_ownership(request, bank_account_obj)
@@ -402,7 +458,7 @@ def _process_order_post(request, tenant, invoice):
             invoice.bank_reference = bank_reference
             if bank_account_id:
                 from apps.bank_accounts.models import BankAccount
-                bank_account_obj = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).get(id=int(bank_account_id), is_active=True)
+                bank_account_obj = _scope_banks(request, tenant).get(id=int(bank_account_id), is_active=True)
                 enforce_branch_ownership(request, bank_account_obj)
                 invoice.bank_account = bank_account_obj
             else:
@@ -429,7 +485,7 @@ def _process_order_post(request, tenant, invoice):
 
 
 @login_required
-@require_permission('view_purchases')
+@require_scoped_permission('view_purchases', 'view_central_purchases')
 def order_detail(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -441,6 +497,7 @@ def order_detail(request, pk):
         tenant=tenant,
     )
     enforce_branch_ownership(request, invoice, field='stock__branch')
+    _invoice_scope_or_404(request, invoice)
     lines = list(invoice.lines.select_related('item').prefetch_related('item__item_units').all())
     for ln in lines:
         iu_list = list(ln.item.item_units.order_by('factor'))
@@ -467,34 +524,37 @@ def order_detail(request, pk):
         'can_confirm': invoice.status == 'draft',
         'can_cancel': invoice.status == 'confirmed',
         'can_edit': invoice.status in ('draft', 'confirmed'),
-        'can_return': can_return,
+        'can_return': can_return and (not is_central_request(request) or request.user.has_perm_key('add_central_purchase_returns')),
+        'central_scope': is_central_request(request),
         'settings_obj': settings_obj,
         'tenant': tenant,
     })
 
 
 @login_required
-@require_permission('view_purchases')
+@require_scoped_permission('view_purchases', 'view_central_purchases')
 def order_print(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
-    invoice = get_object_or_404(PurchaseInvoice.objects.select_related('stock').only('id', 'tenant_id', 'branch_id', 'stock_id', 'stock__branch_id'), pk=pk, tenant=tenant)
+    invoice = get_object_or_404(PurchaseInvoice.objects.select_related('stock').only('id', 'tenant_id', 'branch_id', 'stock_id', 'stock__branch_id', 'stock__is_central'), pk=pk, tenant=tenant)
     enforce_branch_ownership(request, invoice, field='stock__branch')
+    _invoice_scope_or_404(request, invoice)
     return redirect(f"{reverse('purchases:order_detail', kwargs={'pk': pk})}?print=1")
 
 
 @login_required
-@require_permission('change_purchases')
+@require_scoped_permission('change_purchases', 'change_central_purchases')
 @require_POST
 def order_confirm_ajax(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
-    invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
+    invoice = get_object_or_404(PurchaseInvoice.objects.select_related('stock'), pk=pk, tenant=tenant)
     enforce_branch_ownership(request, invoice, field='stock__branch')
+    _invoice_scope_or_404(request, invoice)
     try:
         confirm_purchase_invoice(invoice, request.user)
         log_activity(request, 'تأكيد أمر شراء', f'{invoice.invoice_number} — {invoice.supplier.name}', 'create')
@@ -504,15 +564,16 @@ def order_confirm_ajax(request, pk):
 
 
 @login_required
-@require_permission('delete_purchases')
+@require_scoped_permission('delete_purchases', 'delete_central_purchases')
 @require_POST
 def order_cancel_ajax(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
-    invoice = get_object_or_404(PurchaseInvoice, pk=pk, tenant=tenant)
+    invoice = get_object_or_404(PurchaseInvoice.objects.select_related('stock'), pk=pk, tenant=tenant)
     enforce_branch_ownership(request, invoice, field='stock__branch')
+    _invoice_scope_or_404(request, invoice)
     try:
         body = json.loads(request.body or '{}')
     except json.JSONDecodeError:
@@ -529,14 +590,17 @@ def order_cancel_ajax(request, pk):
 
 
 @login_required
-@require_permission('view_purchase_returns')
+@require_scoped_permission('view_purchase_returns', 'view_central_purchase_returns')
 def return_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None), field='original_invoice__stock__branch')
+    qs = scope_by_central_stock(
+        filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None), field='original_invoice__stock__branch'),
+        request, field='original_invoice__stock')
     context = {
+        'central_scope': is_central_request(request),
         'stats': {
             'total': qs.count(),
             'confirmed': qs.filter(status='confirmed').count(),
@@ -548,7 +612,7 @@ def return_list(request):
 
 
 @login_required
-@require_permission('view_purchase_returns')
+@require_scoped_permission('view_purchase_returns', 'view_central_purchase_returns')
 def return_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -560,7 +624,10 @@ def return_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status_filter = request.GET.get('status', '')
 
-    qs = filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None), field='original_invoice__stock__branch').select_related(
+    qs = scope_by_central_stock(
+        filter_by_branch_via(PurchaseReturn.objects.filter(tenant=tenant), getattr(request, 'branch', None), field='original_invoice__stock__branch'),
+        request, field='original_invoice__stock',
+    ).select_related(
         'original_invoice', 'original_invoice__supplier'
     )
     total = qs.count()
@@ -606,15 +673,17 @@ def return_table_api(request):
 
 
 @login_required
-@require_permission('view_purchase_returns')
+@require_scoped_permission('view_purchase_returns', 'view_central_purchase_returns')
 def return_lines_api(request, return_pk):
     """API: جلب بنود المرتجع (للمودال)"""
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
-    purchase_return = get_object_or_404(PurchaseReturn, pk=return_pk, tenant=tenant)
+    purchase_return = get_object_or_404(
+        PurchaseReturn.objects.select_related('original_invoice__stock'), pk=return_pk, tenant=tenant)
     enforce_branch_ownership(request, purchase_return)
+    _return_scope_or_404(request, purchase_return)
     lines = purchase_return.lines.select_related('item').all()
 
     data = []
@@ -630,17 +699,18 @@ def return_lines_api(request, return_pk):
 
 
 @login_required
-@require_permission('add_purchase_returns')
+@require_scoped_permission('add_purchase_returns', 'add_central_purchase_returns')
 def return_create(request, invoice_pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
     invoice = get_object_or_404(
-        PurchaseInvoice, pk=invoice_pk, tenant=tenant,
+        PurchaseInvoice.objects.select_related('stock'), pk=invoice_pk, tenant=tenant,
         status__in=['confirmed', 'partially_returned']
     )
     enforce_branch_ownership(request, invoice, field='stock__branch')
+    _invoice_scope_or_404(request, invoice)
     lines = invoice.lines.select_related('item').all()
     returnable_lines = [l for l in lines if l.returnable_quantity > 0]
 
@@ -652,6 +722,7 @@ def return_create(request, invoice_pk):
     return render(request, 'purchases/return_form.html', {
         'invoice': invoice,
         'returnable_lines': returnable_lines,
+        'central_scope': is_central_request(request),
         'today': timezone.localdate().isoformat(),
     })
 
@@ -724,17 +795,18 @@ def _process_return_post(request, tenant, invoice):
 
 
 @login_required
-@require_permission('view_purchase_returns')
+@require_scoped_permission('view_purchase_returns', 'view_central_purchase_returns')
 def return_detail(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
     purchase_return = get_object_or_404(
-        PurchaseReturn.objects.select_related('original_invoice', 'original_invoice__supplier'),
+        PurchaseReturn.objects.select_related('original_invoice', 'original_invoice__supplier', 'original_invoice__stock'),
         pk=pk, tenant=tenant,
     )
     enforce_branch_ownership(request, purchase_return)
+    _return_scope_or_404(request, purchase_return)
     lines = purchase_return.lines.select_related('item', 'invoice_line')
     return render(request, 'purchases/return_detail.html', {
         'purchase_return': purchase_return,
@@ -745,15 +817,17 @@ def return_detail(request, pk):
 
 
 @login_required
-@require_permission('add_purchase_returns')
+@require_scoped_permission('add_purchase_returns', 'add_central_purchase_returns')
 @require_POST
 def return_confirm_ajax(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
-    purchase_return = get_object_or_404(PurchaseReturn, pk=pk, tenant=tenant)
+    purchase_return = get_object_or_404(
+        PurchaseReturn.objects.select_related('original_invoice__stock'), pk=pk, tenant=tenant)
     enforce_branch_ownership(request, purchase_return)
+    _return_scope_or_404(request, purchase_return)
     try:
         confirm_purchase_return(purchase_return, request.user)
         log_activity(request, 'تأكيد مرتجع مشتريات', f'{purchase_return.return_number}', 'create')
@@ -763,15 +837,17 @@ def return_confirm_ajax(request, pk):
 
 
 @login_required
-@require_permission('add_purchase_returns')
+@require_scoped_permission('add_purchase_returns', 'add_central_purchase_returns')
 @require_POST
 def return_cancel_ajax(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
-    purchase_return = get_object_or_404(PurchaseReturn, pk=pk, tenant=tenant)
+    purchase_return = get_object_or_404(
+        PurchaseReturn.objects.select_related('original_invoice__stock'), pk=pk, tenant=tenant)
     enforce_branch_ownership(request, purchase_return)
+    _return_scope_or_404(request, purchase_return)
     try:
         cancel_purchase_return(purchase_return, request.user)
         log_activity(request, 'إلغاء مرتجع مشتريات', f'{purchase_return.return_number}', 'delete')
@@ -1610,8 +1686,8 @@ def rfq_create(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    suppliers = Supplier.objects.for_tenant(tenant).filter(is_active=True)
-    stocks    = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
+    suppliers = scoped_suppliers(request, tenant).filter(is_active=True)
+    stocks    = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).exclude(is_central=True).filter(is_active=True)
     items     = Item.objects.for_tenant(tenant).filter(is_active=True).exclude(item_type='service')
 
     if request.method == 'POST':
@@ -1637,7 +1713,7 @@ def rfq_create(request):
             return JsonResponse({'success': False, 'errors': errors}, status=400, json_dumps_params={'ensure_ascii': False})
 
         try:
-            stock = Stock.objects.for_tenant(tenant).get(pk=stock_id)
+            stock = Stock.objects.for_tenant(tenant).exclude(is_central=True).get(pk=stock_id)
         except Stock.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=400, json_dumps_params={'ensure_ascii': False})
         enforce_branch_ownership(request, stock)

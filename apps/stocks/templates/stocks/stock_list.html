@@ -153,9 +153,21 @@
                                 {{ form.code }}
                             </div>
                             {% if current_tenant.version_type == 'multi_branch' and form.branch %}
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="branchFieldWrap">
                                 <label class="cx-label" for="id_branch">{{ form.branch.label }}</label>
                                 {{ form.branch }}
+                            </div>
+                            {% endif %}
+                            {% if form.is_central %}
+                            <div class="col-12">
+                                <label class="cx-toggle-card" for="id_is_central">
+                                    <div class="cx-toggle-info">
+                                        <span class="cx-toggle-title">{{ form.is_central.label }}</span>
+                                        <span class="cx-toggle-desc">مخزن الإدارة المركزية: بلا فرع، للشراء المركزي والتوزيع على الفروع فقط (لا بيع منه). يمكن إنشاء مخزن مركزي واحد فقط.</span>
+                                    </div>
+                                    {{ form.is_central }}
+                                    <div class="cx-toggle-switch"></div>
+                                </label>
                             </div>
                             {% endif %}
                             <div class="col-12">
@@ -397,7 +409,9 @@
                 render: function(_, __, r) {
                     const defaultBadge = r.is_default
                         ? `<span class="badge bg-primary ms-1" style="font-size:0.65rem">افتراضي</span>` : '';
-                    return `<span class="cxr-name">${r.name}</span>${defaultBadge}`;
+                    const centralBadge = r.is_central
+                        ? `<span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem">مركزي</span>` : '';
+                    return `<span class="cxr-name">${r.name}</span>${defaultBadge}${centralBadge}`;
                 }
             },
             {
@@ -452,8 +466,16 @@
         $idInput.val('');
         $('#id_is_active').prop('checked', true);
         $('#id_is_default').prop('checked', false);
+        $('#id_is_central').prop('checked', false).trigger('change');
         Enjaz.clearFormErrors($form);
     }
+
+    /* المخزن المركزي بلا فرع: إخفاء حقل الفرع وإلغاء الافتراضي عند تفعيله */
+    $(document).on('change', '#id_is_central', function () {
+        const central = this.checked;
+        $('#branchFieldWrap').toggle(!central);
+        if (central) { $('#id_branch').val(''); $('#id_is_default').prop('checked', false); }
+    });
 
     /* ── Open create ───────────────────────────────────────── */
     $('#btnOpenCreateStock').on('click', function () {

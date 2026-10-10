@@ -25,9 +25,10 @@ from apps.accounts.management.commands.generate_permission_reference import (
 # تعديل مطابق فعلاً في apps/core/templates/components/sidebar.html (وليس
 # العكس: هذا الاختبار يحمي الترتيب من انزلاق غير مقصود، لا يفرضه).
 EXPECTED_SECTION_ORDER = [
-    'dashboard', 'ai', 'tenant_settings', 'branches', 'head_office_finance', 'store',
+    'dashboard', 'ai', 'tenant_settings', 'branches', 'head_office_finance',
+    'central_purchasing', 'store',
     'permission_groups', 'users', 'insurance', 'sales', 'purchases',
-    'categories', 'items', 'stocks', 'stock_destructions', 'customers',
+    'categories', 'items', 'stocks', 'stock_destructions', 'incoming_shipments', 'customers',
     'suppliers', 'agents', 'employees', 'expenses', 'treasuries',
     'bank_accounts', 'employee_advances', 'employee_incentives',
     'employee_salaries', 'sales_reports', 'purchases_reports',

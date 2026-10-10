@@ -13,8 +13,11 @@ import csv
 import io
 import json
 
-from apps.accounts.decorators import require_permission, branch_scope_exempt
-from apps.core.utils import CURRENCY_NAMES_AR, filter_by_branch_via, enforce_branch_ownership, operational_money_accounts
+from apps.accounts.decorators import require_permission, require_scoped_permission, branch_scope_exempt
+from apps.core.utils import (
+    CURRENCY_NAMES_AR, filter_by_branch_via, enforce_branch_ownership, operational_money_accounts,
+    is_central_request, scoped_suppliers, scoped_money_accounts,
+)
 from .forms import SupplierForm
 from .models import Supplier
 from apps.purchases.models import SupplierLedger
@@ -32,6 +35,17 @@ def _ensure_tenant(request):
     return tenant
 
 
+def _scope_payment_ledger(qs, request):
+    """دفتر الموردين ضمن نطاق الطلب (مركزي: موردو الإدارة؛ غيره: موردو الفرع دون المركزيين)."""
+    if is_central_request(request):
+        return qs.filter(supplier__branch__isnull=True)
+    qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='supplier__branch')
+    tenant = getattr(request, 'tenant', None)
+    if tenant is not None and tenant.is_hybrid_purchasing() and getattr(request, 'branch', None) is None:
+        qs = qs.exclude(supplier__branch__isnull=True)
+    return qs
+
+
 def _is_hc_supplier(tenant, supplier_currency):
     if not getattr(tenant, 'hard_currency_mode', False):
         return False
@@ -45,13 +59,13 @@ def _is_hc_supplier(tenant, supplier_currency):
 
 
 @login_required
-@require_permission('view_suppliers')
+@require_scoped_permission('view_suppliers', 'view_central_suppliers')
 def supplier_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
-    qs = Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
+    qs = scoped_suppliers(request, tenant)
     total = qs.count()
     active = qs.filter(is_active=True).count()
     inactive = total - active
@@ -59,7 +73,8 @@ def supplier_list(request):
     hc_mode = getattr(tenant, 'hard_currency_mode', False)
     hc_currency = tenant.hard_currency if hc_mode else ''
     context = {
-        'form': SupplierForm(tenant=tenant, branch=getattr(request, 'branch', None)),
+        'form': SupplierForm(tenant=tenant, branch=getattr(request, 'branch', None), central=is_central_request(request)),
+        'central_scope': is_central_request(request),
         'stats': {
             'total': total,
             'active': active,
@@ -89,7 +104,7 @@ def _json_ok(data=None, msg='تمت العملية بنجاح'):
 
 
 @login_required
-@require_permission('view_suppliers')
+@require_scoped_permission('view_suppliers', 'view_central_suppliers')
 def supplier_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -101,7 +116,7 @@ def supplier_table_api(request):
     search_value = request.GET.get('search[value]', '').strip()
     status = request.GET.get('status', '').strip()
 
-    queryset = Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
+    queryset = scoped_suppliers(request, tenant)
     records_total = queryset.count()
 
     if status == 'active':
@@ -188,7 +203,7 @@ def supplier_table_api(request):
 
 
 @login_required
-@require_permission('add_suppliers')
+@require_scoped_permission('add_suppliers', 'add_central_suppliers')
 def supplier_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -198,12 +213,14 @@ def supplier_create_api(request):
         return HttpResponseNotAllowed(['POST'])
 
     branch = getattr(request, 'branch', None)
-    form = SupplierForm(request.POST, tenant=tenant, branch=branch)
+    form = SupplierForm(request.POST, tenant=tenant, branch=branch, central=is_central_request(request))
     if form.is_valid():
         supplier = form.save(commit=False)
         supplier.tenant = tenant
         if branch is not None:
             supplier.branch = branch
+        if is_central_request(request):
+            supplier.branch = None  # مورد مركزي: تملكه الإدارة
         supplier.created_by = request.user
         supplier.updated_by = request.user
         supplier.save()
@@ -223,13 +240,13 @@ def supplier_create_api(request):
 
 
 @login_required
-@require_permission('view_suppliers')
+@require_scoped_permission('view_suppliers', 'view_central_suppliers')
 def supplier_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
-    supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
+    supplier = get_object_or_404(scoped_suppliers(request, tenant), pk=pk)
     enforce_branch_ownership(request, supplier)
 
     hc_mode = getattr(tenant, 'hard_currency_mode', False)
@@ -270,13 +287,13 @@ def supplier_detail_api(request, pk):
 
 
 @login_required
-@require_permission('view_supplier_transactions')
+@require_scoped_permission('view_supplier_transactions', 'view_central_suppliers')
 def supplier_transactions_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400, json_dumps_params={'ensure_ascii': False})
 
-    supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
+    supplier = get_object_or_404(scoped_suppliers(request, tenant), pk=pk)
     enforce_branch_ownership(request, supplier)
     opening = supplier.opening_balance or Decimal('0')
 
@@ -367,14 +384,14 @@ def supplier_transactions_api(request, pk):
 
 
 @login_required
-@require_permission('view_supplier_payments')
+@require_scoped_permission('view_supplier_payments', 'view_central_supplier_payments')
 def supplier_payments(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
     hc_mode = getattr(tenant, 'hard_currency_mode', False)
-    suppliers = Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).annotate(
+    suppliers = scoped_suppliers(request, tenant).filter(is_active=True).annotate(
         ledger_total=Coalesce(
             Sum('ledger_entries__amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
             Value(0, output_field=DecimalField(max_digits=14, decimal_places=2)),
@@ -386,12 +403,12 @@ def supplier_payments(request):
             output_field=DecimalField(max_digits=14, decimal_places=2),
         ),
     ).order_by('name')
-    treasuries = operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=False).order_by('name')
-    hc_treasuries = operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=True).order_by('name') if hc_mode else []
-    bank_accounts = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).order_by('name')
+    treasuries = scoped_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=False).order_by('name')
+    hc_treasuries = scoped_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_active=True, is_hard_currency=True).order_by('name') if hc_mode else []
+    bank_accounts = scoped_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True).order_by('name')
     branch = getattr(request, 'branch', None)
-    stats = filter_by_branch_via(
-        SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment'), branch, field='supplier__branch'
+    stats = _scope_payment_ledger(
+        SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment'), request
     ).aggregate(
         total=Coalesce(
             Sum('amount', output_field=DecimalField(max_digits=14, decimal_places=2)),
@@ -418,8 +435,8 @@ def supplier_payments(request):
         'treasuries': treasuries,
         'bank_accounts': bank_accounts,
         'stats': {
-            'total': filter_by_branch_via(
-                SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment'), branch, field='supplier__branch'
+            'total': _scope_payment_ledger(
+                SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment'), request
             ).count(),
             'total_amount': positive(stats['total']),
             'cash_amount': positive(stats['cash']),
@@ -435,7 +452,7 @@ def supplier_payments(request):
 
 
 @login_required
-@require_permission('view_supplier_payments')
+@require_scoped_permission('view_supplier_payments', 'view_central_supplier_payments')
 def supplier_payments_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -449,7 +466,7 @@ def supplier_payments_table_api(request):
     method_filter = request.GET.get('payment_method', '')
 
     qs = SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment')
-    qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='supplier__branch')
+    qs = _scope_payment_ledger(qs, request)
     total = qs.count()
 
     if supplier_filter:
@@ -536,14 +553,14 @@ def supplier_payments_table_api(request):
 
 
 @login_required
-@require_permission('view_supplier_payments')
+@require_scoped_permission('view_supplier_payments', 'view_central_supplier_payments')
 def supplier_payment_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return _json_error('لا يوجد نشاط تجاري')
 
     payment = get_object_or_404(
-        SupplierLedger.objects.for_tenant(tenant).select_related('supplier'),
+        _scope_payment_ledger(SupplierLedger.objects.for_tenant(tenant).select_related('supplier'), request),
         entry_type='payment',
         pk=pk,
     )
@@ -593,7 +610,7 @@ def supplier_payment_detail_api(request, pk):
 
 
 @login_required
-@require_permission('add_supplier_payments')
+@require_scoped_permission('add_supplier_payments', 'add_central_supplier_payments')
 @require_POST
 def supplier_payment_create_api(request):
     tenant = _ensure_tenant(request)
@@ -701,10 +718,10 @@ def supplier_payment_create_api(request):
                 if not treasury_id:
                     raise ValueError('يجب اختيار الخزينة عند دفع نقداً')
                 if is_hc_supplier and pay_in_hc:
-                    treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_hard_currency=True), pk=int(treasury_id))
+                    treasury = get_object_or_404(scoped_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_hard_currency=True), pk=int(treasury_id))
                     disburse_amount = amount  # HC amount debited from HC treasury
                 else:
-                    treasury = get_object_or_404(operational_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_hard_currency=False), pk=int(treasury_id))
+                    treasury = get_object_or_404(scoped_money_accounts(Treasury.objects.for_tenant(tenant), request).filter(is_hard_currency=False), pk=int(treasury_id))
                     disburse_amount = local_amount
                 enforce_branch_ownership(request, treasury)
                 movement = post_treasury_disbursement(
@@ -722,7 +739,7 @@ def supplier_payment_create_api(request):
             elif method == 'bank':
                 if not bank_account_id:
                     raise ValueError('يجب اختيار الحساب البنكي عند الدفع بنكياً')
-                bank_account = get_object_or_404(operational_money_accounts(BankAccount.objects.for_tenant(tenant), request), pk=int(bank_account_id))
+                bank_account = get_object_or_404(scoped_money_accounts(BankAccount.objects.for_tenant(tenant), request), pk=int(bank_account_id))
                 enforce_branch_ownership(request, bank_account)
                 movement = post_bank_account_disbursement(
                     tenant=tenant,
@@ -763,7 +780,7 @@ def supplier_payment_create_api(request):
 
 
 @login_required
-@require_permission('cancel_supplier_payments')
+@require_scoped_permission('cancel_supplier_payments', 'cancel_central_supplier_payments')
 @require_POST
 def supplier_payment_cancel_api(request, pk):
     tenant = _ensure_tenant(request)
@@ -771,7 +788,7 @@ def supplier_payment_cancel_api(request, pk):
         return _json_error('لا يوجد نشاط تجاري')
 
     payment = get_object_or_404(
-        SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment'),
+        _scope_payment_ledger(SupplierLedger.objects.for_tenant(tenant).filter(entry_type='payment'), request),
         pk=pk,
     )
     enforce_branch_ownership(request, payment, field='supplier__branch')
@@ -830,7 +847,7 @@ def supplier_payment_cancel_api(request, pk):
 
 
 @login_required
-@require_permission('change_suppliers')
+@require_scoped_permission('change_suppliers', 'change_central_suppliers')
 def supplier_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -839,9 +856,9 @@ def supplier_update_api(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
+    supplier = get_object_or_404(scoped_suppliers(request, tenant), pk=pk)
     enforce_branch_ownership(request, supplier)
-    form = SupplierForm(request.POST, instance=supplier, tenant=tenant, branch=getattr(request, 'branch', None))
+    form = SupplierForm(request.POST, instance=supplier, tenant=tenant, branch=getattr(request, 'branch', None), central=is_central_request(request))
 
     if form.is_valid():
         supplier = form.save(commit=False)
@@ -861,7 +878,7 @@ def supplier_update_api(request, pk):
 
 
 @login_required
-@require_permission('delete_suppliers')
+@require_scoped_permission('delete_suppliers', 'delete_central_suppliers')
 def supplier_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -870,7 +887,7 @@ def supplier_delete_api(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
 
-    supplier = get_object_or_404(Supplier.objects.for_tenant(tenant), pk=pk)
+    supplier = get_object_or_404(scoped_suppliers(request, tenant), pk=pk)
     enforce_branch_ownership(request, supplier)
     sup_name = supplier.name
     try:

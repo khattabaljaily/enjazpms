@@ -239,3 +239,44 @@ class BranchLabelMixin:
         if getattr(obj, 'is_head_office', False):
             return f'{text} (الإدارة المركزية)'
         return text
+
+
+def is_central_request(request):
+    """True إذا نفّذ require_scoped_permission نطاق الإدارة المركزية لهذا الطلب."""
+    return bool(getattr(request, 'central_scope', False))
+
+
+def scope_by_central_stock(qs, request, field='stock'):
+    """
+    يفصل بيانات المخزن المركزي عن مخازن الفروع في النمط الهجين:
+      - نطاق الإدارة المركزية: المخزن المركزي فقط.
+      - غيره: يُستبعد المخزن المركزي دائماً (حتى لمستخدم مركزي بصلاحيات فروع).
+    field هو مسار علاقة المخزن (مثال: 'stock' أو 'invoice__stock').
+    """
+    if is_central_request(request):
+        return qs.filter(**{f'{field}__is_central': True})
+    return qs.exclude(**{f'{field}__is_central': True})
+
+
+def scoped_suppliers(request, tenant):
+    """
+    الموردون ضمن نطاق الطلب: نطاق الإدارة المركزية = الموردون المركزيون (بلا فرع)؛
+    غيره = موردو الفرع/المعتاد، مع استبعاد المركزيين في النمط الهجين.
+    """
+    from apps.suppliers.models import Supplier
+    if is_central_request(request):
+        return Supplier.unscoped.filter(tenant=tenant, branch__isnull=True)
+    qs = Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
+    if tenant.is_hybrid_purchasing() and getattr(request, 'branch', None) is None:
+        qs = qs.exclude(branch__isnull=True)
+    return qs
+
+
+def scoped_money_accounts(qs, request):
+    """
+    الخزائن/الحسابات البنكية للعمليات اليومية ضمن نطاق الطلب: نطاق الإدارة المركزية
+    = حسابات الإدارة المركزية فقط؛ غيره = operational_money_accounts المعتادة.
+    """
+    if is_central_request(request):
+        return qs.filter(is_head_office=True)
+    return operational_money_accounts(qs, request)

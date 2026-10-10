@@ -176,6 +176,24 @@ def _reverse_stock_movements(tenant, invoice):
         )
 
 
+def _invoice_cash_treasury(tenant, invoice):
+    """
+    الخزينة النقدية لفاتورة الشراء: فاتورة المخزن المركزي تُسدَّد نقداً من خزينة
+    الإدارة المركزية (بالعملة المحلية). غير ذلك: None، فتُختار خزينة المستخدم
+    الافتراضية كالمعتاد (خزينة فرعه).
+    """
+    stock = getattr(invoice, 'stock', None)
+    if stock is None or not stock.is_central:
+        return None
+    from apps.treasury.models import Treasury
+    treasury = Treasury.objects.filter(
+        tenant=tenant, is_head_office=True, is_hard_currency=False, is_active=True,
+    ).order_by('id').first()
+    if treasury is None:
+        raise ValueError('لا توجد خزينة للإدارة المركزية لتسجيل الدفع النقدي.')
+    return treasury
+
+
 def _apply_payment(tenant, invoice, method, amount, date, reference='', notes='', bank_account=None):
     amount = Decimal(str(amount or 0))
     if amount <= 0:
@@ -200,6 +218,7 @@ def _apply_payment(tenant, invoice, method, amount, date, reference='', notes=''
             reference_id=payment.id,
             description=notes or f'دفعة أمر شراء {invoice.invoice_number}',
             user=getattr(invoice, 'updated_by', None) or getattr(invoice, 'created_by', None),
+            treasury=_invoice_cash_treasury(tenant, invoice),
         )
     elif method == 'bank':
         post_bank_account_disbursement(
@@ -220,6 +239,12 @@ def _reverse_payments(tenant, invoice):
     payments = list(invoice.payments.filter(is_reversed=False))
     for payment in payments:
         if payment.payment_method == 'cash' and payment.amount > 0:
+            # تُعاد النقدية إلى الخزينة التي دُفع منها فعلاً (الإدارة المركزية للفاتورة المركزية).
+            from apps.treasury.models import TreasuryMovement
+            original = TreasuryMovement.objects.filter(
+                tenant=tenant, reference_type='purchase_payment', reference_id=payment.id,
+                movement_type='disbursement',
+            ).select_related('treasury').order_by('id').first()
             post_treasury_receipt(
                 tenant=tenant,
                 amount=payment.amount,
@@ -227,6 +252,7 @@ def _reverse_payments(tenant, invoice):
                 reference_type='purchase_payment',
                 reference_id=payment.id,
                 description=f'عكس دفعة أمر شراء {invoice.invoice_number}',
+                treasury=original.treasury if original else None,
             )
         elif payment.payment_method == 'bank' and payment.amount > 0:
             original_movement = BankAccountMovement.objects.filter(
@@ -639,6 +665,7 @@ def confirm_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRe
             reference_id=purchase_return.id,
             description=f'استلام مرتجع شراء {purchase_return.return_number}',
             user=user,
+            treasury=_invoice_cash_treasury(tenant, invoice),
         )
     elif purchase_return.refund_method == 'bank':
         if not invoice.bank_account:
@@ -751,6 +778,11 @@ def cancel_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRet
         inv_line.save(update_fields=['returned_quantity', 'updated_at'])
 
     if purchase_return.refund_method == 'cash' and purchase_return.total_returned > 0:
+        from apps.treasury.models import TreasuryMovement
+        original = TreasuryMovement.objects.filter(
+            tenant=tenant, reference_type='purchase_return', reference_id=purchase_return.id,
+            movement_type='receipt',
+        ).select_related('treasury').order_by('id').first()
         post_treasury_disbursement(
             tenant=tenant,
             amount=purchase_return.total_returned,
@@ -759,6 +791,7 @@ def cancel_purchase_return(purchase_return: PurchaseReturn, user) -> PurchaseRet
             reference_id=purchase_return.id,
             description=f'عكس استلام مرتجع شراء {purchase_return.return_number}',
             user=user,
+            treasury=original.treasury if original else None,
         )
     elif purchase_return.refund_method == 'bank' and purchase_return.total_returned > 0:
         original_movement = BankAccountMovement.objects.filter(

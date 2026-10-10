@@ -1,5 +1,5 @@
 from django.urls import path, include
-from . import views
+from . import views, shipment_views, central_reports
 
 app_name = 'stocks'
 
@@ -32,6 +32,20 @@ urlpatterns = [
     path('transfers/<int:pk>/cancel/', views.transfer_cancel_ajax, name='transfer_cancel'),
     path('transfers/<int:pk>/delete/', views.transfer_delete_draft_ajax, name='transfer_delete'),
     path('transfers/api/items/', views.transfer_items_api, name='transfer_items_api'),
+
+    # شحنات المخزن المركزي (النمط الهجين)
+    path('shipments/', shipment_views.shipment_list, name='shipment_list'),
+    path('shipments/api/', shipment_views.shipment_table_api, name='shipment_api'),
+    path('shipments/create/', shipment_views.shipment_create, name='shipment_create'),
+    path('shipments/api/items/', shipment_views.shipment_items_api, name='shipment_items_api'),
+    path('shipments/return/', shipment_views.return_create, name='return_create'),
+    path('shipments/return/api/items/', shipment_views.return_items_api, name='return_items_api'),
+    path('shipments/<int:pk>/', shipment_views.shipment_detail, name='shipment_detail'),
+    path('shipments/<int:pk>/send/', shipment_views.shipment_send_ajax, name='shipment_send'),
+    path('shipments/<int:pk>/cancel/', shipment_views.shipment_cancel_ajax, name='shipment_cancel'),
+    path('shipments/<int:pk>/receive/', shipment_views.shipment_receive_ajax, name='shipment_receive'),
+
+    path('central-reports/', central_reports.central_reports, name='central_reports'),
 
     # Stocktake
     path('stocktakes/', views.stocktake_list, name='stocktake_list'),

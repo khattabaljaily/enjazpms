@@ -40,6 +40,13 @@ class Stock(TenantMixin):
         'core.Branch', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='stocks', verbose_name='الفرع'
     )
+    # المخزن المركزي للإدارة (نمط المشتريات "هجين" فقط): بلا فرع، تملكه الإدارة
+    # وتوزّع منه على مخازن الفروع بشحنات. مخزن توزيع فقط (لا بيع منه)، ويختفي عن
+    # مستخدمي الفروع لأنه بلا فرع. مخزن مركزي واحد فقط لكل مشترك.
+    is_central = models.BooleanField(
+        'مخزن مركزي', default=False,
+        help_text='مخزن الإدارة المركزية: بلا فرع، للشراء المركزي والتوزيع على الفروع فقط.'
+    )
     branch_name = models.CharField(
         'اسم الفرع (قديم)', max_length=200, blank=True,
         help_text='حقل قديم قبل إضافة موديل الفرع الحقيقي — يُستخدم كنسخة احتياطية فقط'
@@ -286,6 +293,122 @@ class StockTransferLine(TenantMixin):
 
     def __str__(self):
         return f"{self.item.name} × {self.quantity}"
+
+
+# ============================================
+# SHIPMENT (شحنة من المخزن المركزي إلى مخزن فرع) — النمط الهجين
+# ============================================
+
+class Shipment(TenantMixin):
+    """
+    شحنة توزيع من المخزن المركزي للإدارة إلى مخزن أحد الفروع.
+    تخرج الكمية من المركزي عند الإرسال وتبقى "في الطريق" (بلا مهلة) حتى يؤكد
+    مدير الفرع الكمية الفعلية المستلَمة؛ يدخل مخزن الفرع ما استُلم فعلاً، ويعود الفرق
+    تلقائياً للمخزن المركزي مع تعليم الشحنة (has_difference) لمراجعة الإدارة.
+    """
+    STATUS_CHOICES = (
+        ('draft',      'مسودة'),
+        ('in_transit', 'في الطريق'),
+        ('received',   'تم الاستلام'),
+        ('cancelled',  'ملغية'),
+    )
+
+    # to_branch: توزيع من المخزن المركزي إلى الفرع (ترسلها الإدارة ويؤكد الفرع استلامها).
+    # to_central: مرتجع من الفرع إلى المخزن المركزي (يرسله الفرع وتؤكد الإدارة استلامه)،
+    # ثم تعيده الإدارة للمورد بمرتجع شراء مركزي.
+    DIRECTION_CHOICES = (
+        ('to_branch', 'توزيع من المركزي إلى الفرع'),
+        ('to_central', 'مرتجع من الفرع إلى المركزي'),
+    )
+    direction = models.CharField('الاتجاه', max_length=10, choices=DIRECTION_CHOICES, default='to_branch')
+
+    shipment_number = models.CharField('رقم الشحنة', max_length=30, blank=True)
+    shipment_date = models.DateField('تاريخ الشحنة')
+    from_stock = models.ForeignKey(
+        Stock, on_delete=models.PROTECT, related_name='shipments_out', verbose_name='من المخزن')
+    to_stock = models.ForeignKey(
+        Stock, on_delete=models.PROTECT, related_name='shipments_in', verbose_name='إلى المخزن')
+    # الفرع المعني بالشحنة (مشتق من مخزن الفرع في أي اتجاه)؛ عليه يقوم عزل الشحنات بين الفروع.
+    branch = models.ForeignKey(
+        'core.Branch', on_delete=models.PROTECT, related_name='incoming_shipments', verbose_name='الفرع')
+    status = models.CharField('الحالة', max_length=12, choices=STATUS_CHOICES, default='draft')
+    notes = models.TextField('ملاحظات', blank=True)
+    has_difference = models.BooleanField('فيها فرق استلام', default=False)
+    sent_at = models.DateTimeField('وقت الإرسال', null=True, blank=True)
+    received_at = models.DateTimeField('وقت الاستلام', null=True, blank=True)
+    received_by = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='received_shipments', verbose_name='استلمها')
+
+    class Meta:
+        db_table = 'stock_shipments'
+        verbose_name = 'شحنة مخزن مركزي'
+        verbose_name_plural = 'شحنات المخزن المركزي'
+        ordering = ['-shipment_date', '-id']
+        indexes = [
+            models.Index(fields=['tenant', 'status']),
+            models.Index(fields=['tenant', 'branch', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.shipment_number} ({self.from_stock} → {self.to_stock})"
+
+    def save(self, *args, **kwargs):
+        if not self.shipment_number:
+            prefix = 'RET' if self.direction == 'to_central' else 'SHP'
+            last = (
+                Shipment.objects.filter(tenant=self.tenant, shipment_number__startswith=f'{prefix}-')
+                .order_by('-id').first()
+            )
+            next_num = 1
+            if last:
+                try:
+                    next_num = int(last.shipment_number.split('-')[-1]) + 1
+                except ValueError:
+                    pass
+            self.shipment_number = f"{prefix}-{next_num:05d}"
+        super().save(*args, **kwargs)
+
+
+class ShipmentLine(TenantMixin):
+    shipment = models.ForeignKey(Shipment, on_delete=models.CASCADE, related_name='lines', verbose_name='الشحنة')
+    item = models.ForeignKey('items.Item', on_delete=models.PROTECT, related_name='shipment_lines', verbose_name='المنتج')
+    quantity_sent = models.DecimalField('الكمية المرسلة', max_digits=12, decimal_places=4)
+    quantity_received = models.DecimalField('الكمية المستلَمة', max_digits=12, decimal_places=4, null=True, blank=True)
+    # تكلفة الصنف وقت الإرسال (تكلفة الشراء المركزي) — لقطة للتقارير.
+    unit_cost = models.DecimalField('تكلفة الوحدة', max_digits=14, decimal_places=4, default=0)
+
+    class Meta:
+        db_table = 'stock_shipment_lines'
+        verbose_name = 'بند شحنة'
+        verbose_name_plural = 'بنود الشحنات'
+
+    def __str__(self):
+        return f"{self.item.name} × {self.quantity_sent}"
+
+    @property
+    def difference(self):
+        if self.quantity_received is None:
+            return None
+        return self.quantity_sent - self.quantity_received
+
+
+class ShipmentLineBatch(TenantMixin):
+    """الدفعات (FEFO) التي خرجت من المخزن المركزي لبند شحنة، وما استُلم منها."""
+    line = models.ForeignKey(ShipmentLine, on_delete=models.CASCADE, related_name='batches', verbose_name='البند')
+    source_batch = models.ForeignKey(
+        'items.ItemBatch', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name='الدفعة المصدر')
+    batch_number = models.CharField('رقم الدفعة', max_length=100, blank=True)
+    expiry_date = models.DateField('تاريخ الانتهاء', null=True, blank=True)
+    quantity_sent = models.DecimalField('الكمية المرسلة', max_digits=12, decimal_places=4)
+    quantity_received = models.DecimalField('الكمية المستلَمة', max_digits=12, decimal_places=4, null=True, blank=True)
+
+    class Meta:
+        db_table = 'stock_shipment_line_batches'
+        verbose_name = 'دفعة بند شحنة'
+        verbose_name_plural = 'دفعات بنود الشحنات'
+        ordering = ['id']
 
 
 # ============================================

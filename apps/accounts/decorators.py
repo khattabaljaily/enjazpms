@@ -50,6 +50,38 @@ def require_permission(permission_key):
     return decorator
 
 
+def require_scoped_permission(branch_key, central_key):
+    """
+    صلاحية بنطاقين لشاشات المشتريات/الموردين في النمط الهجين:
+      - من يملك branch_key: نطاق الفرع/المعتاد (request.central_scope = False).
+      - من لا يملكه لكن يملك central_key، ونمط مشتريات المشترك "هجين"، وهو مستخدم
+        مركزي (بلا فرع): نطاق الإدارة المركزية (request.central_scope = True).
+      - غير ذلك: مرفوض. (بدون هذا الفحص كان مدير النشاط، الذي يملك المفتاح المركزي
+        في أي نمط، يعبر إلى نطاق "كل الفروع" المعتاد.)
+    تنفّذ الـ view نفسها نطاقها بقراءة request.central_scope.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect('accounts:login')
+            user = request.user
+            if user.is_superuser or user.has_perm_key(branch_key):
+                request.central_scope = False
+                return view_func(request, *args, **kwargs)
+            tenant = getattr(request, 'tenant', None)
+            if (tenant is not None and tenant.is_hybrid_purchasing()
+                    and getattr(request, 'branch', None) is None
+                    and user.has_perm_key(central_key)):
+                request.central_scope = True
+                return view_func(request, *args, **kwargs)
+            return _deny(request)
+        wrapper._required_permission_keys = (branch_key, central_key)
+        wrapper._permission_check_mode = 'any'
+        return wrapper
+    return decorator
+
+
 def require_any_permission(*permission_keys):
     def decorator(view_func):
         @wraps(view_func)

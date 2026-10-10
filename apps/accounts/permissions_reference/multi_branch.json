@@ -172,6 +172,142 @@
       ]
     },
     {
+      "key": "central_purchasing",
+      "name": {
+        "ar": "المشتريات والمخزن المركزي",
+        "en": "Central Purchasing & Warehouse"
+      },
+      "role_scope": "admin_only",
+      "permissions": [
+        {
+          "key": "view_central_purchases",
+          "label": {
+            "ar": "عرض فواتير الشراء المركزية",
+            "en": "View central purchase invoices"
+          }
+        },
+        {
+          "key": "add_central_purchases",
+          "label": {
+            "ar": "إضافة فاتورة شراء مركزية",
+            "en": "Add central purchase invoice"
+          }
+        },
+        {
+          "key": "change_central_purchases",
+          "label": {
+            "ar": "تعديل وتأكيد فاتورة شراء مركزية",
+            "en": "Edit and confirm central purchase invoice"
+          }
+        },
+        {
+          "key": "delete_central_purchases",
+          "label": {
+            "ar": "إلغاء فاتورة شراء مركزية",
+            "en": "Cancel central purchase invoice"
+          }
+        },
+        {
+          "key": "view_central_suppliers",
+          "label": {
+            "ar": "عرض الموردين المركزيين",
+            "en": "View central suppliers"
+          }
+        },
+        {
+          "key": "add_central_suppliers",
+          "label": {
+            "ar": "إضافة مورد مركزي",
+            "en": "Add central supplier"
+          }
+        },
+        {
+          "key": "change_central_suppliers",
+          "label": {
+            "ar": "تعديل مورد مركزي",
+            "en": "Edit central supplier"
+          }
+        },
+        {
+          "key": "delete_central_suppliers",
+          "label": {
+            "ar": "حذف مورد مركزي",
+            "en": "Delete central supplier"
+          }
+        },
+        {
+          "key": "view_central_supplier_payments",
+          "label": {
+            "ar": "عرض مدفوعات الموردين المركزيين",
+            "en": "View central supplier payments"
+          }
+        },
+        {
+          "key": "add_central_supplier_payments",
+          "label": {
+            "ar": "تسجيل سداد لمورد مركزي",
+            "en": "Record central supplier payment"
+          }
+        },
+        {
+          "key": "cancel_central_supplier_payments",
+          "label": {
+            "ar": "إلغاء سداد لمورد مركزي",
+            "en": "Cancel central supplier payment"
+          }
+        },
+        {
+          "key": "view_central_shipments",
+          "label": {
+            "ar": "عرض شحنات الفروع من المخزن المركزي",
+            "en": "View central warehouse shipments"
+          }
+        },
+        {
+          "key": "add_central_shipments",
+          "label": {
+            "ar": "إنشاء وإرسال شحنة إلى فرع",
+            "en": "Create and send a shipment to a branch"
+          }
+        },
+        {
+          "key": "cancel_central_shipments",
+          "label": {
+            "ar": "إلغاء شحنة (مسودة أو في الطريق)",
+            "en": "Cancel a shipment (draft or in transit)"
+          }
+        },
+        {
+          "key": "receive_central_returns",
+          "label": {
+            "ar": "تأكيد استلام مرتجعات الفروع في المخزن المركزي",
+            "en": "Confirm receipt of branch returns at the central warehouse"
+          }
+        },
+        {
+          "key": "view_central_purchase_returns",
+          "label": {
+            "ar": "عرض مرتجعات المشتريات المركزية",
+            "en": "View central purchase returns"
+          }
+        },
+        {
+          "key": "add_central_purchase_returns",
+          "label": {
+            "ar": "إنشاء وتأكيد وإلغاء مرتجع شراء مركزي",
+            "en": "Create, confirm and cancel central purchase returns"
+          }
+        },
+        {
+          "key": "view_central_reports",
+          "label": {
+            "ar": "عرض تقارير المخزن المركزي والشحنات",
+            "en": "View central warehouse and shipment reports"
+          }
+        }
+      ]
+    },
+    {
       "key": "store",
       "name": {
         "ar": "المتجر الإلكتروني",
@@ -687,6 +823,37 @@
           "label": {
             "ar": "إلغاء سجل إتلاف",
             "en": "Cancel write-off record"
+          }
+        }
+      ]
+    },
+    {
+      "key": "incoming_shipments",
+      "name": {
+        "ar": "الشحنات والمرتجعات مع الإدارة المركزية",
+        "en": "Shipments and Returns with Head Office"
+      },
+      "role_scope": "branch_ops",
+      "permissions": [
+        {
+          "key": "view_incoming_shipments",
+          "label": {
+            "ar": "عرض الشحنات الواردة من المخزن المركزي",
+            "en": "View incoming shipments"
+          }
+        },
+        {
+          "key": "receive_incoming_shipments",
+          "label": {
+            "ar": "تأكيد استلام الشحنات (الكمية الفعلية)",
+            "en": "Confirm receipt of shipments"
+          }
+        },
+        {
+          "key": "create_central_returns",
+          "label": {
+            "ar": "إرسال مرتجع إلى المخزن المركزي وإلغاؤه قبل استلامه",
+            "en": "Send a return to the central warehouse and cancel it before receipt"
           }
         }
       ]

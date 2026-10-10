@@ -59,6 +59,8 @@ ENTITIES = {
     'stock_transfers': ('stocks.StockTransfer', ['from_stock__branch', 'to_stock__branch']),
     'stock_transfer_lines': ('stocks.StockTransferLine',
                              ['transfer__from_stock__branch', 'transfer__to_stock__branch']),
+    'shipments': ('stocks.Shipment', ['branch']),
+    'shipment_lines': ('stocks.ShipmentLine', ['shipment__branch']),
     'stocktakes': ('stocks.Stocktake', ['stock__branch']),
     'stocktake_lines': ('stocks.StocktakeLine', ['stocktake__stock__branch']),
     'stock_destructions': ('stocks.StockDestruction', ['stock__branch']),

@@ -212,6 +212,18 @@ class Tenant(models.Model):
 
     # Hard Currency Mode
     hard_currency_mode = models.BooleanField('وضع العملة الصعبة', default=False)
+
+    # نمط المشتريات في نسخة المؤسسات: 'decentralized' (الافتراضي) كل فرع يشتري من
+    # موردينه ويدير مخازنه. 'hybrid' يضيف مخزناً ومشتريات وموردين مركزيين تديرها
+    # الإدارة وتوزّعها على الفروع بشحنات يؤكدها الفرع، ويبقى الشراء المحلي للفرع
+    # مسموحاً. لا يُفعَّل خارج multi_branch ولا يُعاد منه بعد وجود بيانات مركزية.
+    PURCHASING_MODE_CHOICES = (
+        ('decentralized', 'لامركزي (كل فرع يشتري لنفسه)'),
+        ('hybrid', 'هجين (شراء مركزي من الإدارة + شراء الفروع)'),
+    )
+    purchasing_mode = models.CharField(
+        'نمط المشتريات', max_length=15, choices=PURCHASING_MODE_CHOICES, default='decentralized'
+    )
     hard_currency = models.CharField('العملة الصعبة', max_length=3, default='USD', blank=True)
     exchange_rate = models.DecimalField(
         'سعر الصرف',
@@ -294,6 +306,24 @@ class Tenant(models.Model):
         يُغلَّف بهذا الشرط لضمان عدم تأثر single_store/multi_stock إطلاقاً.
         """
         return self.version_type == 'multi_branch'
+
+    def has_central_purchasing_data(self) -> bool:
+        """هل أُنشئت بيانات مركزية (مخزن أو موردون مركزيون)؟ عندها لا يُرجَع إلى النمط اللامركزي."""
+        from apps.stocks.models import Stock
+        from apps.suppliers.models import Supplier
+        return (
+            Stock.objects.filter(tenant=self, is_central=True).exists()
+            or Supplier.unscoped.filter(tenant=self, branch__isnull=True).exists()
+        )
+
+    def is_hybrid_purchasing(self) -> bool:
+        """الشراء المركزي مفعّل: نسخة المؤسسات + نمط المشتريات "هجين"."""
+        return self.is_enterprise() and self.purchasing_mode == 'hybrid'
+
+    @property
+    def hybrid_purchasing(self) -> bool:
+        """خاصية للاستعلام من شجرة الصلاحيات (requires_flag)."""
+        return self.is_hybrid_purchasing()
 
     def auto_backup_daily_count(self) -> int:
         """عدد النسخ الاحتياطية التلقائية يومياً حسب الباقة"""

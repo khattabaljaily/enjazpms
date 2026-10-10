@@ -122,6 +122,7 @@ def stock_table_api(request):
             'name': s.name,
             'address': s.address or '-',
             'is_default': s.is_default,
+            'is_central': s.is_central,
             'is_active': s.is_active,
         }
         for s in qs
@@ -167,6 +168,9 @@ def stock_create_api(request):
         stock.updated_by = request.user
         if branch is not None:
             stock.branch = branch
+        if stock.is_central:
+            stock.branch = None
+            stock.is_default = False
 
         # إذا تم تعيينه كافتراضي، احذف القديم
         # كلتا العمليتين في نفس الـ transaction
@@ -277,6 +281,12 @@ def stock_delete_api(request, pk):
     except Stock.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=404)
     enforce_branch_ownership(request, stock)
+
+    if stock.is_central:
+        return JsonResponse({
+            'success': False,
+            'message': 'لا يمكن حذف المخزن المركزي. يمكنك تعطيله إن لم تعد تحتاجه.',
+        }, status=400)
 
     if stock.is_system_default:
         return JsonResponse({
@@ -1301,7 +1311,7 @@ def transfer_create(request):
         return redirect('core:no_tenant')
 
     from apps.items.models import Item
-    stocks  = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
+    stocks  = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).exclude(is_central=True).filter(is_active=True)
     items   = Item.objects.for_tenant(tenant).filter(is_active=True, item_type__in=['product', 'material'])
 
     if request.method == 'POST':
@@ -1339,6 +1349,8 @@ def transfer_create(request):
         # مشروعة؛ لكن لا يمكنه السحب من مخزن لا يملكه (from_stock تحديداً)،
         # بنفس منطق treasury_transfer_api (راجع apps/treasury/views.py).
         enforce_branch_ownership(request, from_stock)
+        if from_stock.is_central or to_stock.is_central:
+            return JsonResponse({'success': False, 'message': 'التحويل من/إلى المخزن المركزي يتم عبر «الشحنات» فقط.'}, status=400)
 
         with transaction.atomic():
             transfer = StockTransfer.objects.create(

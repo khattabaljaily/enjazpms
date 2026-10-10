@@ -47,10 +47,14 @@ class SupplierForm(forms.ModelForm):
             'branch': 'الفرع',
         }
 
-    def __init__(self, *args, tenant=None, branch=None, **kwargs):
+    def __init__(self, *args, tenant=None, branch=None, central=False, **kwargs):
         super().__init__(*args, **kwargs)
         from apps.core.utils import setup_branch_field
-        setup_branch_field(self, tenant, branch)
+        if central:
+            # مورد مركزي (نمط المشتريات الهجين): تملكه الإدارة بلا فرع.
+            del self.fields['branch']
+        else:
+            setup_branch_field(self, tenant, branch)
 
     def clean_opening_balance(self):
         value = self.cleaned_data.get('opening_balance')
