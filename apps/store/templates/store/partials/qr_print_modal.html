@@ -30,7 +30,7 @@
         </div>
 
         <!-- QR code area -->
-        <div style="padding:1.4rem 1.4rem .8rem;text-align:center;">
+        <div style="padding:1.4rem 1.4rem .8rem;text-align:center;display:flex;flex-direction:column;align-items:center;">
 
           <!-- Scan badge -->
           <div style="display:inline-flex;align-items:center;gap:.45rem;background:linear-gradient(90deg,rgba(246,168,33,.1),rgba(255, 138, 61,.1));border:1.5px solid rgba(246,168,33,.2);border-radius:30px;padding:.3rem .9rem;font-size:.78rem;font-weight:700;color:#a8660c;margin-bottom:1rem;">
@@ -39,19 +39,19 @@
           </div>
 
           <!-- QR image -->
-          <div style="display:inline-block;background:#fff;border-radius:18px;padding:12px;box-shadow:0 6px 32px rgba(79,70,229,.18);border:2px solid rgba(246,168,33,.15);">
+          <div style="display:block;margin:0 auto;background:#fff;border-radius:18px;padding:12px;box-shadow:0 6px 32px rgba(79,70,229,.18);border:2px solid rgba(246,168,33,.15);">
             <img id="qrCodeImg" src="" alt="QR Code" style="width:200px;height:200px;display:block;">
           </div>
 
           <!-- Divider -->
-          <div style="display:flex;align-items:center;gap:.6rem;margin:1rem 1.5rem;">
+          <div style="display:flex;align-items:center;gap:.6rem;margin:1rem 1.5rem;width:calc(100% - 3rem);">
             <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,#e2e8f0);"></div>
             <i class="fas fa-link" style="color:#cbd5e1;font-size:.7rem;"></i>
             <div style="flex:1;height:1px;background:linear-gradient(90deg,#e2e8f0,transparent);"></div>
           </div>
 
           <!-- URL -->
-          <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:.6rem .9rem;max-width:100%;word-break:break-all;margin-bottom:.8rem;">
+          <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:.6rem .9rem;max-width:100%;word-break:break-all;margin-bottom:.8rem;width:100%;box-sizing:border-box;">
             <div style="font-size:.64rem;color:#94a3b8;margin-bottom:.2rem;text-align:right;">رابط المتجر</div>
             <div id="qrStoreUrl" style="font-size:.78rem;font-weight:700;color:#c9840f;direction:ltr;text-align:left;"></div>
           </div>
