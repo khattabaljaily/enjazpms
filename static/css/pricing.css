@@ -353,8 +353,10 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.25rem;
-    align-items: start;
+    align-items: stretch;
 }
+
+.pr-card > .pr-btn--full { margin-top: auto; }
 
 /* ── Plan Card ───────────────────────────────────────────── */
 .pr-card {
@@ -459,6 +461,132 @@
     font-size: 0.75rem;
     color: #94a3b8;
     margin-top: -0.5rem;
+}
+
+/* ── Enterprise per-branch calculator ───────────────────── */
+.pr-card__per-branch {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #c9840f;
+    margin-top: -0.5rem;
+}
+
+.pr-card__calc-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #c9840f;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.pr-card__calc-link:hover { text-decoration: underline; }
+
+.pr-calc-band {
+    margin-top: 2rem;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.75rem;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 1.5rem;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    scroll-margin-top: 90px;
+}
+
+.pr-calc-band__title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0.5rem 0 0.4rem;
+}
+
+.pr-calc-band__desc {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin: 0 0 0.75rem;
+}
+
+.pr-calc-band__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.25rem;
+    font-size: 0.85rem;
+    color: #334155;
+}
+
+.pr-calc-band__list i { color: #16a34a; margin-left: 0.35rem; }
+
+.pr-calc {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.25rem;
+    text-align: center;
+}
+
+.pr-calc__label {
+    display: block;
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 0.4rem;
+}
+
+.pr-calc__stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+}
+
+.pr-calc__btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.pr-calc__btn:hover { border-color: #c9840f; color: #c9840f; }
+
+.pr-calc .pr-calc__input {
+    width: 64px;
+    height: 32px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    text-align: center !important;
+    padding: 0 !important;
+    font-family: inherit;
+    font-weight: 700;
+    -moz-appearance: textfield;
+}
+
+.pr-calc__input::-webkit-outer-spin-button,
+.pr-calc__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.pr-calc__total {
+    font-size: 0.9rem;
+    color: #0f172a;
+}
+
+.pr-calc__total strong {
+    font-size: 1.25rem;
+    font-weight: 900;
+}
+
+.pr-calc__alt {
+    font-size: 0.75rem;
+    color: #94a3b8;
 }
 
 .pr-card__features {
@@ -672,6 +800,7 @@
 @media (max-width: 640px) {
     .pr-benefits { grid-template-columns: 1fr; }
     .pr-cards { grid-template-columns: 1fr; }
+    .pr-calc-band { grid-template-columns: 1fr; }
     .pr-hero__title { font-size: 1.6rem; }
     .pr-topbar { padding: 0.75rem 1rem; }
     .pr-footer__inner { flex-direction: column; text-align: center; }

@@ -399,11 +399,8 @@ def admin_dashboard(request):
         created_at__date__lte=today - timedelta(days=3)
     ).select_related('tenant').order_by('created_at')[:8]
 
-    PLAN_PRICES = {'trial': 0, 'basic': 50, 'pro': 120, 'enterprise': 300}
-    mrr = sum(
-        PLAN_PRICES.get(p, 0) * Tenant.objects.filter(is_active=True, subscription_plan=p).count()
-        for p in PLAN_PRICES
-    )
+    from apps.core.pricing import tenant_monthly_fee
+    mrr = sum(tenant_monthly_fee(t) for t in Tenant.objects.filter(is_active=True))
 
     stats = {
         'total_clients': total_clients,
@@ -912,12 +909,17 @@ def admin_report_revenue(request):
         d = today.replace(day=1) - timedelta(days=i * 30)
         months.append(d.replace(day=1))
 
-    PLAN_PRICES = {'trial': 0, 'basic': 50, 'pro': 120, 'enterprise': 300}
+    from apps.core.pricing import PLAN_MONTHLY, tenant_monthly_fee
 
     # Per-tenant usage stats
     tenants = Tenant.objects.filter(is_active=True).order_by('-created_at')
     tenant_stats = []
+    plan_revenue = {key: {'count': 0, 'monthly': 0, 'price': price} for key, price in PLAN_MONTHLY.items()}
     for t in tenants:
+        fee = tenant_monthly_fee(t)
+        if t.subscription_plan in plan_revenue:
+            plan_revenue[t.subscription_plan]['count'] += 1
+            plan_revenue[t.subscription_plan]['monthly'] += fee
         sales_count = SaleInvoice.objects.filter(tenant=t, status__in=SaleInvoice.REVENUE_STATUSES).count()
         purchases_count = PurchaseInvoice.objects.filter(tenant=t, status__in=PurchaseInvoice.EFFECTIVE_STATUSES).count()
         sales_total = SaleInvoice.objects.filter(
@@ -932,16 +934,10 @@ def admin_report_revenue(request):
             'sales_count': sales_count,
             'purchases_count': purchases_count,
             'sales_total': float(sales_total),
-            'monthly_fee': PLAN_PRICES.get(t.subscription_plan, 0),
+            'monthly_fee': fee,
         })
 
     tenant_stats.sort(key=lambda x: x['sales_count'], reverse=True)
-
-    # Subscription revenue estimate per plan
-    plan_revenue = {}
-    for plan_key, price in PLAN_PRICES.items():
-        count = Tenant.objects.filter(is_active=True, subscription_plan=plan_key).count()
-        plan_revenue[plan_key] = {'count': count, 'monthly': count * price, 'price': price}
 
     total_mrr = sum(v['monthly'] for v in plan_revenue.values())
 
@@ -962,7 +958,7 @@ def admin_report_revenue(request):
         'monthly_new': monthly_new,
         'monthly_new_json': json.dumps([m['count'] for m in monthly_new], ensure_ascii=False),
         'monthly_labels_json': json.dumps([m['month'] for m in monthly_new], ensure_ascii=False),
-        'PLAN_PRICES': PLAN_PRICES,
+        'PLAN_PRICES': PLAN_MONTHLY,
     })
 
 
@@ -2495,16 +2491,23 @@ def tenant_renew_api(request, pk):
 def pricing(request):
     """صفحة خطط التسعير"""
     from apps.core.models import PlatformSettings
+    from apps.core.pricing import (
+        ENTERPRISE_PER_BRANCH_MONTHLY, PLAN_MONTHLY, annual, perpetual, usd,
+    )
     trial_days = PlatformSettings.get().default_trial_days or 14
+
+    def prices(key):
+        m = PLAN_MONTHLY[key]
+        return {'monthly': usd(m), 'annual': usd(annual(m)), 'perpetual': usd(perpetual(m))}
+
+    per_branch = ENTERPRISE_PER_BRANCH_MONTHLY
     plans = [
         {
             'key': 'basic',
             'name': 'Basic',
             'title_ar': 'أساسي',
             'description': 'محل واحد مع مخزن واحد',
-            'monthly': '$35',
-            'annual': '$378',
-            'perpetual': '$3,400',
+            **prices('basic'),
             'highlight': False,
             'features': [
                 {'text': '1 مخزن',                          'ok': True},
@@ -2527,9 +2530,7 @@ def pricing(request):
             'name': 'Pro',
             'title_ar': 'احترافي',
             'description': 'محل واحد مع ما يصل إلى 5 مخازن',
-            'monthly': '$55',
-            'annual': '$594',
-            'perpetual': '$5,340',
+            **prices('pro'),
             'highlight': True,
             'features': [
                 {'text': 'حتى 5 مخازن',                      'ok': True},
@@ -2551,14 +2552,14 @@ def pricing(request):
             'key': 'enterprise',
             'name': 'Enterprise',
             'title_ar': 'مؤسسات',
-            'description': 'حتى 20 مخزن و10 فروع مع تحكم كامل',
-            'monthly': '$149',
-            'annual': '$1,610',
-            'perpetual': '$14,490',
+            'description': 'سلاسل الصيدليات وشركات التوزيع: إدارة مركزية وفروع متعددة',
+            **prices('enterprise'),
+            'per_branch': {'monthly': usd(per_branch), 'annual': usd(annual(per_branch)),
+                           'perpetual': usd(perpetual(per_branch))},
             'highlight': False,
             'features': [
                 {'text': 'حتى 20 مخزن',                      'ok': True},
-                {'text': 'حتى 10 فروع',                       'ok': True},
+                {'text': 'فروع متعددة حسب اشتراكك',             'ok': True},
                 {'text': 'حتى 40 مستخدمًا',                  'ok': True},
                 {'text': f'تجربة مجانية {trial_days} أيام', 'ok': True},
                 {'text': 'فواتير مبيعات وشراء',              'ok': True},
@@ -2582,6 +2583,10 @@ def pricing(request):
     return render(request, 'core/pricing.html', {
         'plans': plans,
         'trial_days': trial_days,
+        'enterprise_pricing': {
+            'base': int(PLAN_MONTHLY['enterprise']), 'per_branch': int(per_branch),
+            'annual_months': annual(1), 'perpetual_months': perpetual(1),
+        },
         'current_subscription_plan_display': tenant.get_subscription_plan_display() if tenant else None,
     })
 

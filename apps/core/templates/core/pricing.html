@@ -4,7 +4,7 @@
 {% block title %}خطط الأسعار | {{ app_name }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/pricing.css' %}?v=3.0">
+<link rel="stylesheet" href="{% static 'css/pricing.css' %}?v=3.2">
 {% endblock %}
 
 {% block body %}
@@ -110,9 +110,14 @@
                         <span class="pr-card__price-num">{{ plan.monthly }}</span>
                         <span class="pr-card__price-period">/شهر</span>
                     </div>
+                    {% if plan.per_branch %}
+                    <div class="pr-card__per-branch">+ <bdi>{{ plan.per_branch.monthly }}</bdi> شهرياً لكل فرع</div>
+                    <a href="#enterpriseCalc" class="pr-card__price-alt pr-card__calc-link">احسب اشتراك مؤسستك <i class="fas fa-arrow-down"></i></a>
+                    {% else %}
                     <div class="pr-card__price-alt">
-                        {{ plan.annual }} سنوياً &nbsp;·&nbsp; {{ plan.perpetual }} ترخيص دائم
+                        <bdi>{{ plan.annual }}</bdi> سنوياً (شهران مجاناً) &nbsp;·&nbsp; <bdi>{{ plan.perpetual }}</bdi> ترخيص دائم
                     </div>
+                    {% endif %}
 
                     <ul class="pr-card__features">
                         {% for f in plan.features %}
@@ -130,6 +135,35 @@
                 </div>
                 {% endfor %}
             </div>
+
+            {% if enterprise_pricing %}
+            <div class="pr-calc-band" id="enterpriseCalc">
+                <div class="pr-calc-band__info">
+                    <span class="pr-section-kicker">باقة المؤسسات</span>
+                    <h3 class="pr-calc-band__title">احسب اشتراك مؤسستك</h3>
+                    <p class="pr-calc-band__desc">
+                        رسوم أساسية <bdi>${{ enterprise_pricing.base }}</bdi> شهرياً للإدارة والمخزن المركزي،
+                        و<bdi>${{ enterprise_pricing.per_branch }}</bdi> شهرياً لكل فرع.
+                    </p>
+                    <ul class="pr-calc-band__list">
+                        <li><i class="fas fa-check"></i>مخزن مركزي ومشتريات مركزية</li>
+                        <li><i class="fas fa-check"></i>تحويلات بين الفروع باعتماد الاستلام</li>
+                        <li><i class="fas fa-check"></i>لوحة تحكم موحدة لكل الفروع</li>
+                    </ul>
+                </div>
+                <div class="pr-calc">
+                    <label class="pr-calc__label" for="branchCount">عدد الفروع</label>
+                    <div class="pr-calc__stepper">
+                        <button type="button" class="pr-calc__btn" data-step="-1" aria-label="فرع أقل">−</button>
+                        <input type="text" inputmode="numeric" id="branchCount" class="pr-calc__input" value="3" maxlength="3">
+                        <button type="button" class="pr-calc__btn" data-step="1" aria-label="فرع أكثر">+</button>
+                    </div>
+                    <div class="pr-calc__total"><strong><bdi id="calcMonthly"></bdi></strong> شهرياً</div>
+                    <div class="pr-calc__alt"><bdi id="calcAnnual"></bdi> سنوياً (شهران مجاناً)</div>
+                    <div class="pr-calc__alt"><bdi id="calcPerpetual"></bdi> ترخيص دائم</div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </section>
 
@@ -242,4 +276,28 @@
     </footer>
 
 </div>
+{{ enterprise_pricing|json_script:"enterprisePricing" }}
+<script>
+(function () {
+    const cfg = JSON.parse(document.getElementById('enterprisePricing').textContent);
+    const input = document.getElementById('branchCount');
+    if (!input) return;
+    const fmt = n => '$' + n.toLocaleString('en-US');
+    function update() {
+        let n = parseInt(input.value.replace(/[^0-9]/g, ''), 10);
+        if (!Number.isFinite(n) || n < 1) n = 1;
+        if (n > 999) n = 999;
+        const monthly = cfg.base + cfg.per_branch * n;
+        document.getElementById('calcMonthly').textContent = fmt(monthly);
+        document.getElementById('calcAnnual').textContent = fmt(monthly * cfg.annual_months);
+        document.getElementById('calcPerpetual').textContent = fmt(monthly * cfg.perpetual_months);
+    }
+    document.querySelectorAll('.pr-calc .pr-calc__btn').forEach(btn => btn.addEventListener('click', () => {
+        input.value = Math.max(1, (parseInt(input.value, 10) || 1) + parseInt(btn.dataset.step, 10));
+        update();
+    }));
+    input.addEventListener('input', update);
+    update();
+})();
+</script>
 {% endblock %}
