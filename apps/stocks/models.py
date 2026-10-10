@@ -221,10 +221,27 @@ class StockQuantity(TenantMixin):
 # ============================================
 
 class StockTransfer(TenantMixin):
+    """
+    تحويل مخزون بين مخزنين.
+    - داخل الفرع نفسه (أو نسخة بلا فروع): مسودة ← مؤكد، تنتقل الكمية فوراً.
+    - بين فرعين (is_inter_branch): مسودة ← (إرسال من الفرع المحوِّل) في الطريق ←
+      (اعتماد الفرع المستلِم للكمية الفعلية) تم الاستلام. الفرق يتحمّله الفرع المحوِّل:
+      الزائد يُخصم من مخزنه عند الاستلام، والناقص يبقى معلّقاً (shortage_status=pending)
+      حتى تسويته: إرجاع لمخزنه أو شطبه تالفاً بسجل إتلاف عليه.
+    في نسخة الفروع التحويلات شغل الفروع وحدها؛ مدير النشاط لا يدخلها.
+    """
     STATUS_CHOICES = (
-        ('draft',     'مسودة'),
-        ('confirmed', 'مؤكد'),
-        ('cancelled', 'ملغي'),
+        ('draft',      'مسودة'),
+        ('confirmed',  'مؤكد'),
+        ('in_transit', 'في الطريق'),
+        ('received',   'تم الاستلام'),
+        ('cancelled',  'ملغي'),
+    )
+    SHORTAGE_CHOICES = (
+        ('none',        'لا يوجد'),
+        ('pending',     'بانتظار التسوية'),
+        ('restocked',   'أُعيد لمخزن الفرع المحوِّل'),
+        ('written_off', 'شُطب تالفاً على الفرع المحوِّل'),
     )
 
     transfer_number = models.CharField('رقم التحويل', max_length=30, blank=True)
@@ -239,6 +256,26 @@ class StockTransfer(TenantMixin):
     )
     status          = models.CharField('الحالة', max_length=12, choices=STATUS_CHOICES, default='draft')
     notes           = models.TextField('ملاحظات', blank=True)
+
+    # ------ التحويل بين الفروع ------
+    is_inter_branch = models.BooleanField('بين فرعين', default=False)
+    sent_at         = models.DateTimeField('وقت الإرسال', null=True, blank=True)
+    received_at     = models.DateTimeField('وقت الاستلام', null=True, blank=True)
+    received_by     = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='received_stock_transfers', verbose_name='استلمه'
+    )
+    has_difference  = models.BooleanField('فيه فرق استلام', default=False)
+    shortage_status = models.CharField('حالة الناقص', max_length=12, choices=SHORTAGE_CHOICES, default='none')
+    settled_at      = models.DateTimeField('وقت تسوية الناقص', null=True, blank=True)
+    settled_by      = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='settled_stock_transfers', verbose_name='سوّى الناقص'
+    )
+    shortage_destruction = models.ForeignKey(
+        'StockDestruction', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='transfer_shortages', verbose_name='سجل إتلاف الناقص'
+    )
 
     class Meta:
         db_table = 'stock_transfers'
@@ -285,6 +322,9 @@ class StockTransferLine(TenantMixin):
     )
     quantity = models.DecimalField('الكمية', max_digits=12, decimal_places=4)
     notes    = models.TextField('ملاحظات', blank=True)
+    # للتحويل بين الفروع: الكمية الفعلية التي اعتمدها الفرع المستلِم، وتكلفة الوحدة وقت الإرسال.
+    quantity_received = models.DecimalField('الكمية المستلَمة', max_digits=12, decimal_places=4, null=True, blank=True)
+    unit_cost = models.DecimalField('تكلفة الوحدة', max_digits=14, decimal_places=2, default=0)
 
     class Meta:
         db_table = 'stock_transfer_lines'
@@ -293,6 +333,40 @@ class StockTransferLine(TenantMixin):
 
     def __str__(self):
         return f"{self.item.name} × {self.quantity}"
+
+    @property
+    def difference(self):
+        """المستلَم − المرسل: موجب = زائد، سالب = ناقص، None قبل الاستلام."""
+        if self.quantity_received is None:
+            return None
+        return self.quantity_received - self.quantity
+
+    @property
+    def shortage(self):
+        diff = self.difference
+        return -diff if diff is not None and diff < 0 else Decimal('0')
+
+
+class StockTransferLineBatch(TenantMixin):
+    """ما خرج من كل دفعة في تحويل بين فرعين، وما استُلم منها (FEFO عند الإرسال)."""
+    line = models.ForeignKey(StockTransferLine, on_delete=models.CASCADE, related_name='batches', verbose_name='البند')
+    source_batch = models.ForeignKey(
+        'items.ItemBatch', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name='الدفعة المصدر')
+    batch_number = models.CharField('رقم الدفعة', max_length=100, blank=True)
+    expiry_date = models.DateField('تاريخ الانتهاء', null=True, blank=True)
+    quantity_sent = models.DecimalField('المرسلة', max_digits=12, decimal_places=4)
+    quantity_received = models.DecimalField('المستلَمة', max_digits=12, decimal_places=4, default=0)
+
+    class Meta:
+        db_table = 'stock_transfer_line_batches'
+        verbose_name = 'دفعة بند تحويل'
+        verbose_name_plural = 'دفعات بنود التحويل'
+        ordering = ['id']
+
+    @property
+    def shortage(self):
+        return max(self.quantity_sent - self.quantity_received, Decimal('0'))
 
 
 # ============================================

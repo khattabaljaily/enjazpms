@@ -30,6 +30,8 @@ urlpatterns = [
     path('transfers/<int:pk>/', views.transfer_detail, name='transfer_detail'),
     path('transfers/<int:pk>/confirm/', views.transfer_confirm_ajax, name='transfer_confirm'),
     path('transfers/<int:pk>/cancel/', views.transfer_cancel_ajax, name='transfer_cancel'),
+    path('transfers/<int:pk>/receive/', views.transfer_receive_ajax, name='transfer_receive'),
+    path('transfers/<int:pk>/settle/', views.transfer_settle_ajax, name='transfer_settle'),
     path('transfers/<int:pk>/delete/', views.transfer_delete_draft_ajax, name='transfer_delete'),
     path('transfers/api/items/', views.transfer_items_api, name='transfer_items_api'),
 

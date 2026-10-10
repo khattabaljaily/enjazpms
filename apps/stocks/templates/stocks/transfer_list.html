@@ -19,7 +19,7 @@
             </div>
             <div>
                 <h1 class="cx-hero-title">تحويلات المخزون</h1>
-                <p class="cx-hero-desc">نقل المنتجات بين المخازن</p>
+                <p class="cx-hero-desc">{% if multi_branch %}نقل المنتجات بين مخازن الفرع، أو إلى فرع آخر باعتماد استلامه{% else %}نقل المنتجات بين المخازن{% endif %}</p>
             </div>
         </div>
         <div class="cx-hero-right">
@@ -43,8 +43,20 @@
         </span>
         <span class="cx-stat-badge cx-stat-badge--success">
             <i class="fas fa-check-circle"></i>
-            <strong>{{ stats.confirmed }}</strong><span>مؤكدة</span>
+            <strong>{{ stats.confirmed }}</strong><span>مؤكدة / مستلَمة</span>
         </span>
+        {% if multi_branch %}
+        <span class="cx-stat-badge cx-stat-badge--warning">
+            <i class="fas fa-truck"></i>
+            <strong>{{ stats.in_transit }}</strong><span>في الطريق</span>
+        </span>
+        {% if stats.pending_shortage %}
+        <span class="cx-stat-badge cx-stat-badge--danger">
+            <i class="fas fa-triangle-exclamation"></i>
+            <strong>{{ stats.pending_shortage }}</strong><span>ناقص بانتظار التسوية</span>
+        </span>
+        {% endif %}
+        {% endif %}
         <span class="cx-stat-badge cx-stat-badge--danger">
             <i class="fas fa-ban"></i>
             <strong>{{ stats.cancelled }}</strong><span>ملغاة</span>
@@ -63,6 +75,11 @@
                 <option value="">كل الحالات</option>
                 <option value="draft">مسودة</option>
                 <option value="confirmed">مؤكد</option>
+                {% if multi_branch %}
+                <option value="in_transit">في الطريق</option>
+                <option value="received">تم الاستلام</option>
+                <option value="pending_shortage">ناقص بانتظار التسوية</option>
+                {% endif %}
                 <option value="cancelled">ملغي</option>
             </select>
         </div>
@@ -88,6 +105,7 @@
                     <th>التاريخ</th>
                     <th>من مخزن</th>
                     <th>إلى مخزن</th>
+                    {% if multi_branch %}<th>النوع</th>{% endif %}
                     <th>البنود</th>
                     <th>الحالة</th>
                     <th></th>
@@ -123,6 +141,7 @@ $(document).ready(function () {
             { data: 'transfer_date' },
             { data: 'from_stock' },
             { data: 'to_stock' },
+            {% if multi_branch %}{ data: 'direction', orderable: false, render: d => d ? `<span class="badge bg-light text-dark border">${d}</span>` : 'داخلي' },{% endif %}
             { data: 'total_lines', render: n => `<span class="badge bg-secondary">${n}</span>` },
             { data: 'status_badge', orderable: false },
             {

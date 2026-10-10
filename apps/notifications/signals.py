@@ -9,6 +9,8 @@ def on_transfer_confirmed(sender, instance, **kwargs):
     from .models import Notification
     Notification.objects.get_or_create(
         tenant=instance.tenant,
+        # إشعار فرع المخزن المحوِّل (التحويلات شغل الفروع)؛ بلا فرع في النسخ بلا فروع.
+        branch_id=instance.from_stock.branch_id,
         notification_type='transfer_done',
         link=f'/stocks/transfers/{instance.id}/',
         is_read=False,

@@ -35,6 +35,8 @@ def confirm_stock_transfer(transfer):
         raise ValueError('يمكن تأكيد المسودات فقط')
     if transfer.from_stock.is_central or transfer.to_stock.is_central:
         raise ValueError('التحويل من/إلى المخزن المركزي يتم عبر «الشحنات» فقط.')
+    if transfer.is_inter_branch:
+        raise ValueError('التحويل بين الفروع يُرسَل ثم يعتمد الفرع المستلِم استلامه.')
 
     tenant = transfer.tenant
     lines = list(transfer.lines.select_related('item'))

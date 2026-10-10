@@ -86,7 +86,7 @@
                     <i class="fa-solid fa-clipboard-check"></i><span>جرد المخزون</span>
                 </a>
                 {% endif %}
-                {% if user|has_perm_key:'transfer_stocks' %}
+                {% if user|has_perm_key:'transfer_stocks' and current_tenant.version_type != 'multi_branch' or user|has_perm_key:'transfer_stocks' and request.branch %}
                 <a href="{% url 'stocks:transfer_list' %}" class="help-quick-link">
                     <i class="fa-solid fa-right-left"></i><span>تحويلات المخزون</span>
                 </a>

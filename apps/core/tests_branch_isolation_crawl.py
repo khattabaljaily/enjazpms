@@ -32,6 +32,13 @@ _TOKEN_RE = re.compile(r'<(?:(?P<type>[^:>]+):)?(?P<name>[^>]+)>')
 _SKIP_PREFIXES = ('admin/', 'static/', 'media/', '__debug__/')
 _SKIP_WORDS = ('logout', 'delete', 'remove', 'cancel', 'backup', 'download', 'export', 'restore', 'reset')
 _PAGINATION = {'draw': 1, 'start': 0, 'length': 100, 'q': 'ZZ', 'term': 'ZZ', 'search': 'ZZ'}
+# قوائم اختيار وجهة التحويل بين الفروع: الفرع المحوِّل يرى أسماء الفروع الأخرى ومخازنها
+# (بلا أرصدتها) ليختار المستلِم. يُستثنى هذا العنصر وحده من علامات الفروع (ZZA_/ZZB_) فقط؛
+# علامات المشترك الآخر والمخزن المركزي تبقى ممنوعة داخله، وباقي الصفحة يُفحص كاملاً.
+_BRANCH_MARKERS = ('ZZA_', 'ZZB_')
+_DESTINATION_PICKERS = {
+    '/stocks/transfers/create/': re.compile(r'<select id="toStock".*?</select>', re.S),
+}
 
 
 def _routes():
@@ -202,9 +209,12 @@ class BranchIsolationCrawlTests(TenantTestCase):
         resp = self._get(path)
         if resp.status_code >= 500:
             self.fail(f'GET {path} → {resp.status_code}')
-        body = _body(resp)
+        full_body = _body(resp)
+        picker = _DESTINATION_PICKERS.get(path)
+        branch_body = picker.sub('', full_body) if picker else full_body
         out = []
         for m in markers:
+            body = branch_body if m in _BRANCH_MARKERS else full_body
             if m in body:
                 i = body.index(m)
                 out.append(f'{m} [{resp.status_code} {resp.request["PATH_INFO"]}] …{body[max(0, i - 120):i + 60]!r}')

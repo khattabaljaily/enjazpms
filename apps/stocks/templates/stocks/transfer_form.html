@@ -49,15 +49,29 @@
                 <label class="cx-label">من مخزن <span class="text-danger">*</span></label>
                 <select id="fromStock" class="cx-input">
                     <option value="">— اختر —</option>
-                    {% for s in stocks %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                    {% for s in stocks %}<option value="{{ s.id }}" data-branch="{{ s.branch_id|default:'' }}">{{ s.name }}</option>{% endfor %}
                 </select>
             </div>
             <div class="mb-3">
                 <label class="cx-label">إلى مخزن <span class="text-danger">*</span></label>
                 <select id="toStock" class="cx-input">
                     <option value="">— اختر —</option>
-                    {% for s in stocks %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+                    {% if multi_branch %}
+                    {% regroup dest_stocks by branch as branch_groups %}
+                    {% for g in branch_groups %}
+                    <optgroup label="{% if g.grouper %}{{ g.grouper.name }}{% if g.grouper.id == own_branch_id %} (فرعك){% endif %}{% else %}بلا فرع{% endif %}">
+                        {% for s in g.list %}<option value="{{ s.id }}" data-branch="{{ s.branch_id|default:'' }}">{{ s.name }}</option>{% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                    {% else %}
+                    {% for s in dest_stocks %}<option value="{{ s.id }}" data-branch="">{{ s.name }}</option>{% endfor %}
+                    {% endif %}
                 </select>
+            </div>
+            <div id="interBranchHint" class="alert alert-info small d-none">
+                <i class="fas fa-circle-info me-1"></i>
+                تحويل إلى فرع آخر: تخرج الكمية من مخزنك عند الإرسال، ويعتمد الفرع المستلِم الكمية الفعلية.
+                أي فرق يتحمّله فرعك: الزائد يُخصم من مخزنك، والناقص يبقى معلّقاً حتى تسويته (إرجاع للمخزن أو شطب تالفاً).
             </div>
             <div class="mb-3">
                 <label class="cx-label">تاريخ التحويل</label>
@@ -114,7 +128,7 @@
                     <i class="fas fa-save me-1"></i> حفظ كمسودة
                 </button>
                 <button id="btnSaveConfirm" class="cx-btn-add" style="background:var(--success)">
-                    <i class="fas fa-check me-1"></i> حفظ وتأكيد
+                    <i class="fas fa-check me-1"></i> <span id="btnSaveConfirmLabel">حفظ وتأكيد</span>
                 </button>
             </div>
         </div>
@@ -308,6 +322,16 @@ async function saveTransfer(autoConfirm) {
     }
     window.location = data.redirect;
 }
+
+function updateInterBranchHint() {
+    const branchOf = id => document.querySelector(`#${id} option:checked`)?.dataset.branch || '';
+    const fromB = branchOf('fromStock'), toB = branchOf('toStock');
+    const inter = fromB && toB && fromB !== toB;
+    document.getElementById('interBranchHint').classList.toggle('d-none', !inter);
+    document.getElementById('btnSaveConfirmLabel').textContent = inter ? 'حفظ وإرسال' : 'حفظ وتأكيد';
+}
+document.getElementById('fromStock').addEventListener('change', updateInterBranchHint);
+document.getElementById('toStock').addEventListener('change', updateInterBranchHint);
 
 document.getElementById('btnSave').addEventListener('click', () => saveTransfer(false));
 document.getElementById('btnSaveConfirm').addEventListener('click', () => saveTransfer(true));

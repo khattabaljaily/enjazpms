@@ -242,9 +242,6 @@
                 {% if user|has_perm_key:'view_central_suppliers' %}
                 <li><a href="{% url 'suppliers:list' %}" class="nav-sublink{% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'suppliers' %} active{% endif %}"><i class="fas fa-truck me-2"></i>الموردون المركزيون</a></li>
                 {% endif %}
-                {% if user|has_perm_key:'view_central_supplier_payments' %}
-                <li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين المركزيين</a></li>
-                {% endif %}
                 {% if user|has_perm_key:'view_central_shipments' %}
                 <li><a href="{% url 'stocks:shipment_list' %}" class="nav-sublink{% if 'shipments' in request.path %} active{% endif %}"><i class="fas fa-truck-ramp-box me-2"></i>شحنات الفروع ومرتجعاتها</a></li>
                 {% endif %}
@@ -409,7 +406,7 @@
             <ul class="nav-submenu">
                 <li><a href="{% url 'stocks:list' %}" class="nav-sublink{% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'stocks' %} active{% endif %}"><i class="fas fa-warehouse me-2"></i>قائمة المخازن</a></li>
                 <li><a href="{% url 'stocks:quantities_list' %}" class="nav-sublink"><i class="fas fa-cubes me-2"></i>أرصدة المخزون</a></li>
-                {% if user|has_perm_key:'transfer_stocks' %}
+                {% if user|has_perm_key:'transfer_stocks' and current_tenant.version_type != 'multi_branch' or user|has_perm_key:'transfer_stocks' and request.branch %}
                 <li><a href="{% url 'stocks:transfer_list' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>تحويلات المخزون</a></li>
                 {% endif %}
                 {% if current_tenant.purchasing_mode == 'hybrid' and user|has_perm_key:'view_incoming_shipments' %}
@@ -476,7 +473,7 @@
     {% endif %}
 
     <!-- ── Accounting ── -->
-    {% if user|has_perm_key:'view_employees' or user|has_perm_key:'view_customer_payments' or user|has_perm_key:'view_supplier_payments' or user|has_perm_key:'view_agent_payments' or user|has_perm_key:'view_insurance_statement' or user|has_perm_key:'view_insurance_claims_aging' or user|has_perm_key:'view_expenses' or user|has_perm_key:'view_treasuries' or user|has_perm_key:'view_head_office_treasury' or user|has_perm_key:'view_bank_accounts' or user|has_perm_key:'view_head_office_bank_accounts' or user|has_perm_key:'view_employee_advances' or user|has_perm_key:'view_employee_incentives' or user|has_perm_key:'view_employee_salaries' %}
+    {% if user|has_perm_key:'view_employees' or user|has_perm_key:'view_customer_payments' or user|has_perm_key:'view_supplier_payments' or user|has_perm_key:'view_central_supplier_payments' or user|has_perm_key:'view_agent_payments' or user|has_perm_key:'view_insurance_statement' or user|has_perm_key:'view_insurance_claims_aging' or user|has_perm_key:'view_expenses' or user|has_perm_key:'view_treasuries' or user|has_perm_key:'view_head_office_treasury' or user|has_perm_key:'view_bank_accounts' or user|has_perm_key:'view_head_office_bank_accounts' or user|has_perm_key:'view_employee_advances' or user|has_perm_key:'view_employee_incentives' or user|has_perm_key:'view_employee_salaries' %}
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         {% if user|has_perm_key:'view_employees' %}
@@ -487,7 +484,7 @@
             </a>
         </li>
         {% endif %}
-        {% if user|has_perm_key:'view_customer_payments' or user|has_perm_key:'view_supplier_payments' or user|has_perm_key:'view_agent_payments' or user|has_perm_key:'view_insurance_statement' or user|has_perm_key:'view_insurance_claims_aging' or user|has_perm_key:'view_expenses' or user|has_perm_key:'view_treasuries' or user|has_perm_key:'view_head_office_treasury' or user|has_perm_key:'view_bank_accounts' or user|has_perm_key:'view_head_office_bank_accounts' or user|has_perm_key:'view_employee_advances' or user|has_perm_key:'view_employee_incentives' or user|has_perm_key:'view_employee_salaries' %}
+        {% if user|has_perm_key:'view_customer_payments' or user|has_perm_key:'view_supplier_payments' or user|has_perm_key:'view_central_supplier_payments' or user|has_perm_key:'view_agent_payments' or user|has_perm_key:'view_insurance_statement' or user|has_perm_key:'view_insurance_claims_aging' or user|has_perm_key:'view_expenses' or user|has_perm_key:'view_treasuries' or user|has_perm_key:'view_head_office_treasury' or user|has_perm_key:'view_bank_accounts' or user|has_perm_key:'view_head_office_bank_accounts' or user|has_perm_key:'view_employee_advances' or user|has_perm_key:'view_employee_incentives' or user|has_perm_key:'view_employee_salaries' %}
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle" href="#">
                 <span class="nav-icon nav-icon--acct"><i class="fas fa-calculator"></i></span>
@@ -497,6 +494,7 @@
             <ul class="nav-submenu">
                 {% if user|has_perm_key:'view_customer_payments' %}<li><a href="{% url 'customers:payments' %}" class="nav-sublink"><i class="fas fa-hand-holding-dollar me-2"></i>مدفوعات العملاء</a></li>{% endif %}
                 {% if user|has_perm_key:'view_supplier_payments' %}<li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين</a></li>{% endif %}
+                {% if current_tenant.version_type == 'multi_branch' and current_tenant.purchasing_mode == 'hybrid' and not request.branch and user|has_perm_key:'view_central_supplier_payments' %}<li><a href="{% url 'suppliers:payments' %}" class="nav-sublink"><i class="fas fa-truck-arrow-right me-2"></i>مدفوعات الموردين المركزيين</a></li>{% endif %}
                 {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'view_agent_payments' %}<li><a href="{% url 'agents:payments' %}" class="nav-sublink"><i class="fas fa-id-badge me-2"></i>دفعات المناديب</a></li>{% endif %}
                 {% if tenant_capabilities|has_capability:"has_insurance_billing" and user|has_perm_key:'view_insurance_statement' %}<li><a href="{% url 'insurance:statement' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب تأمين</a></li>{% endif %}
                 {% if tenant_capabilities|has_capability:"has_insurance_billing" and user|has_perm_key:'view_insurance_claims_aging' %}<li><a href="{% url 'insurance:claims_aging' %}" class="nav-sublink"><i class="fas fa-hourglass-half me-2"></i>متأخرات التأمين</a></li>{% endif %}

@@ -1222,30 +1222,112 @@ def stocks_non_moving_report_export(request):
 # تحويلات المخزون
 # ============================================================
 
+TRANSFER_STATUS_LABELS = {
+    'draft': 'مسودة', 'confirmed': 'مؤكد', 'in_transit': 'في الطريق',
+    'received': 'تم الاستلام', 'cancelled': 'ملغي',
+}
+TRANSFER_STATUS_COLORS = {
+    'draft': 'secondary', 'confirmed': 'success', 'in_transit': 'warning',
+    'received': 'success', 'cancelled': 'danger',
+}
+
+
+def _branch_side_only(view):
+    """
+    في نسخة الفروع التحويلات شغل الفروع وحدها: الفرع المحوِّل يرسل والمستلِم يعتمد.
+    مدير النشاط (بلا فرع) لا يدخلها؛ النسخ بلا فروع غير متأثرة.
+    """
+    from functools import wraps
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        from django.http import Http404
+        tenant = _ensure_tenant(request)
+        if tenant and tenant.version_type == 'multi_branch' and getattr(request, 'branch', None) is None:
+            raise Http404
+        return view(request, *args, **kwargs)
+    return wrapper
+
+
+def _transfers_qs(request, tenant):
+    """
+    تحويلات نطاق الطلب: بلا فرع (نسخة بلا فروع) كلها؛ الفرع ما أرسله (بمسوداته) وما وصله
+    من فروع أخرى بعد إرساله فقط — مسودة الفرع المحوِّل لا تظهر للفرع المستلِم.
+    """
+    qs = StockTransfer.objects.for_tenant(tenant)
+    branch = getattr(request, 'branch', None)
+    if branch is None:
+        return qs
+    outgoing = filter_by_branch_via(qs, branch, field='from_stock__branch')
+    incoming = filter_by_branch_via(qs, branch, field='to_stock__branch').exclude(status='draft')
+    return outgoing | incoming
+
+
+def _get_transfer(request, tenant, pk):
+    from django.http import Http404
+    transfer = (
+        _transfers_qs(request, tenant)
+        .select_related('from_stock__branch', 'to_stock__branch', 'received_by', 'settled_by', 'shortage_destruction')
+        .filter(pk=pk).first()
+    )
+    if transfer is None:
+        raise Http404
+    enforce_branch_ownership(request, transfer, field=['from_stock__branch', 'to_stock__branch'])
+    return transfer
+
+
+def _transfer_side(request, transfer):
+    """admin (نسخة بلا فروع) | sender (فرع المخزن المحوِّل) | receiver (فرع المخزن المستلِم)."""
+    branch = getattr(request, 'branch', None)
+    if branch is None:
+        return 'admin'
+    if transfer.from_stock.branch_id == branch.id:
+        return 'sender'
+    return 'receiver'
+
+
+def _stock_label(stock, with_branch):
+    return f'{stock.name} — {stock.branch.name}' if with_branch and stock.branch_id else stock.name
+
+
+def _notify_transfer(transfer, branch, title, message):
+    """إشعار لفرع أحد طرفي التحويل."""
+    from django.urls import reverse
+    from apps.notifications.models import Notification
+    Notification.objects.create(
+        tenant=transfer.tenant, branch=branch, notification_type='transfer_done',
+        title=title, message=message,
+        link=reverse('stocks:transfer_detail', args=[transfer.pk]), priority='medium')
+
+
 @login_required
 @require_permission('transfer_stocks')
+@_branch_side_only
 def transfer_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
     branch = getattr(request, 'branch', None)
-    qs = StockTransfer.objects.for_tenant(tenant)
-    # تحويل يخص فرعي لو كنت أحد طرفيه (مرسِل أو مستلِم) — نفس منطق OR الثنائي
-    # في enforce_branch_ownership (راجع apps/core/utils.py).
-    qs = filter_by_branch_via(qs, branch, field='from_stock__branch') | filter_by_branch_via(qs, branch, field='to_stock__branch')
+    qs = _transfers_qs(request, tenant)
     stats = {
-        'total':     qs.count(),
-        'draft':     qs.filter(status='draft').count(),
-        'confirmed': qs.filter(status='confirmed').count(),
-        'cancelled': qs.filter(status='cancelled').count(),
+        'total':      qs.count(),
+        'draft':      qs.filter(status='draft').count(),
+        'confirmed':  qs.filter(status__in=['confirmed', 'received']).count(),
+        'in_transit': qs.filter(status='in_transit').count(),
+        'pending_shortage': qs.filter(shortage_status='pending').count(),
+        'cancelled':  qs.filter(status='cancelled').count(),
     }
     stocks = Stock.objects.for_tenant(tenant).for_branch(branch).filter(is_active=True)
-    return render(request, 'stocks/transfer_list.html', {'stats': stats, 'stocks': stocks})
+    return render(request, 'stocks/transfer_list.html', {
+        'stats': stats, 'stocks': stocks,
+        'multi_branch': tenant.version_type == 'multi_branch',
+    })
 
 
 @login_required
 @require_permission('transfer_stocks')
+@_branch_side_only
 def transfer_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -1258,13 +1340,13 @@ def transfer_table_api(request):
     status_f = request.GET.get('status', '').strip()
     stock_f  = request.GET.get('stock_id', '').strip()
 
-    qs = StockTransfer.objects.for_tenant(tenant).select_related('from_stock', 'to_stock')
     branch = getattr(request, 'branch', None)
-    # تحويل يخص فرعي لو كنت أحد طرفيه (مرسِل أو مستلِم)
-    qs = filter_by_branch_via(qs, branch, field='from_stock__branch') | filter_by_branch_via(qs, branch, field='to_stock__branch')
+    qs = _transfers_qs(request, tenant).select_related('from_stock__branch', 'to_stock__branch')
     total = qs.count()
 
-    if status_f:
+    if status_f == 'pending_shortage':
+        qs = qs.filter(shortage_status='pending')
+    elif status_f:
         qs = qs.filter(status=status_f)
     if stock_f:
         qs = qs.filter(Q(from_stock_id=stock_f) | Q(to_stock_id=stock_f))
@@ -1279,21 +1361,29 @@ def transfer_table_api(request):
     filtered = qs.count()
     qs = qs[start:start + length]
 
-    STATUS_LABELS = {'draft': 'مسودة', 'confirmed': 'مؤكد', 'cancelled': 'ملغي'}
-    STATUS_COLORS = {'draft': 'secondary', 'confirmed': 'success', 'cancelled': 'danger'}
-
     rows = []
     for t in qs:
         badge = (
-            f'<span class="badge bg-{STATUS_COLORS.get(t.status,"secondary")}">'
-            f'{STATUS_LABELS.get(t.status, t.status)}</span>'
+            f'<span class="badge bg-{TRANSFER_STATUS_COLORS.get(t.status, "secondary")}">'
+            f'{TRANSFER_STATUS_LABELS.get(t.status, t.status)}</span>'
         )
+        if t.shortage_status == 'pending':
+            badge += ' <span class="badge bg-danger">ناقص بانتظار التسوية</span>'
+        elif t.has_difference:
+            badge += ' <span class="badge bg-light text-dark border">فيه فرق</span>'
+        direction = ''
+        if t.is_inter_branch:
+            if branch is None:
+                direction = 'بين فرعين'
+            else:
+                direction = 'صادر' if t.from_stock.branch_id == branch.id else 'وارد'
         rows.append({
             'DT_RowId': f'row_{t.id}',
             'transfer_number': t.transfer_number,
             'transfer_date': str(t.transfer_date),
-            'from_stock': t.from_stock.name,
-            'to_stock': t.to_stock.name,
+            'from_stock': _stock_label(t.from_stock, t.is_inter_branch),
+            'to_stock': _stock_label(t.to_stock, t.is_inter_branch),
+            'direction': direction,
             'status_badge': badge,
             'status': t.status,
             'total_lines': t.lines.count(),
@@ -1305,13 +1395,20 @@ def transfer_table_api(request):
 
 @login_required
 @require_permission('transfer_stocks')
+@_branch_side_only
 def transfer_create(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
     from apps.items.models import Item
-    stocks  = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).exclude(is_central=True).filter(is_active=True)
+    from .branch_transfer_services import is_inter_branch
+    branch = getattr(request, 'branch', None)
+    active = Stock.objects.for_tenant(tenant).exclude(is_central=True).filter(is_active=True)
+    stocks = active.for_branch(branch)
+    # الوجهة: مخازن الفرع نفسه، ومخازن الفروع الأخرى (أسماؤها فقط، بلا أرصدتها) للتحويل بين الفروع.
+    multi_branch = tenant.version_type == 'multi_branch'
+    dest_stocks = active.select_related('branch').order_by('branch__name', 'name') if multi_branch else stocks
     items   = Item.objects.for_tenant(tenant).filter(is_active=True, item_type__in=['product', 'material'])
 
     if request.method == 'POST':
@@ -1331,7 +1428,7 @@ def transfer_create(request):
             errors['from_stock'] = ['المخزن المرسِل مطلوب']
         if not to_id:
             errors['to_stock'] = ['المخزن المستلِم مطلوب']
-        if from_id and to_id and from_id == to_id:
+        if from_id and to_id and str(from_id) == str(to_id):
             errors['to_stock'] = ['يجب أن يكون المخزنان مختلفَين']
         if not lines_raw:
             errors['lines'] = ['أضف بنداً واحداً على الأقل']
@@ -1351,6 +1448,8 @@ def transfer_create(request):
         enforce_branch_ownership(request, from_stock)
         if from_stock.is_central or to_stock.is_central:
             return JsonResponse({'success': False, 'message': 'التحويل من/إلى المخزن المركزي يتم عبر «الشحنات» فقط.'}, status=400)
+        if not to_stock.is_active:
+            return JsonResponse({'success': False, 'message': 'المخزن المستلِم غير نشط.'}, status=400)
 
         with transaction.atomic():
             transfer = StockTransfer.objects.create(
@@ -1359,6 +1458,8 @@ def transfer_create(request):
                 to_stock=to_stock,
                 transfer_date=tdate,
                 notes=notes,
+                is_inter_branch=is_inter_branch(from_stock, to_stock),
+                created_by=request.user, updated_by=request.user,
             )
             for ln in lines_raw:
                 item_id = ln.get('item_id')
@@ -1376,48 +1477,71 @@ def transfer_create(request):
 
         log_activity(request, 'إنشاء تحويل مخزون',
                      f"التحويل: {transfer.transfer_number}\nمن: {from_stock.name}\nإلى: {to_stock.name}", 'create')
-        return JsonResponse({'success': True, 'id': transfer.id,
+        return JsonResponse({'success': True, 'id': transfer.id, 'is_inter_branch': transfer.is_inter_branch,
                              'redirect': f'/stocks/transfers/{transfer.id}/'})
 
-    context = {'stocks': stocks, 'items': items, 'today': str(timezone.localdate())}
+    context = {
+        'stocks': stocks, 'dest_stocks': dest_stocks, 'multi_branch': multi_branch,
+        'own_branch_id': branch.id if branch else None,
+        'items': items, 'today': str(timezone.localdate()),
+    }
     return render(request, 'stocks/transfer_form.html', context)
 
 
 @login_required
 @require_permission('transfer_stocks')
+@_branch_side_only
 def transfer_detail(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
 
-    try:
-        transfer = (
-            StockTransfer.objects.for_tenant(tenant)
-            .select_related('from_stock', 'to_stock')
-            .prefetch_related('lines__item')
-            .get(pk=pk)
-        )
-    except StockTransfer.DoesNotExist:
-        from django.http import Http404
-        raise Http404
-    enforce_branch_ownership(request, transfer, field=['from_stock__branch', 'to_stock__branch'])
-
-    return render(request, 'stocks/transfer_detail.html', {'transfer': transfer})
+    transfer = _get_transfer(request, tenant, pk)
+    side = _transfer_side(request, transfer)
+    inter = transfer.is_inter_branch
+    lines = list(transfer.lines.select_related('item').prefetch_related('batches'))
+    return render(request, 'stocks/transfer_detail.html', {
+        'transfer': transfer,
+        'lines': lines,
+        'side': side,
+        'from_label': _stock_label(transfer.from_stock, inter),
+        'to_label': _stock_label(transfer.to_stock, inter),
+        'can_send': transfer.status == 'draft' and side != 'receiver',
+        'can_receive': inter and transfer.status == 'in_transit' and side == 'receiver',
+        'can_cancel': side != 'receiver' and (
+            (inter and transfer.status == 'in_transit') or (not inter and transfer.status == 'confirmed')),
+        'can_settle': inter and transfer.shortage_status == 'pending' and side != 'receiver',
+        'can_write_off': request.user.has_perm_key('adjust_stocks'),
+    })
 
 
 @login_required
 @require_permission('transfer_stocks')
+@_branch_side_only
 def transfer_confirm_ajax(request, pk):
+    """تأكيد تحويل داخل الفرع، أو إرسال تحويل بين فرعين (يصبح «في الطريق»)."""
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
     tenant = _ensure_tenant(request)
+    from django.http import Http404
+    from .branch_transfer_services import send_branch_transfer
     try:
-        transfer = StockTransfer.objects.for_tenant(tenant).select_related('from_stock', 'to_stock').get(pk=pk)
-        enforce_branch_ownership(request, transfer, field=['from_stock__branch', 'to_stock__branch'])
+        transfer = _get_transfer(request, tenant, pk)
+        if _transfer_side(request, transfer) == 'receiver':
+            return JsonResponse({'success': False, 'message': 'إرسال التحويل من صلاحية الفرع المحوِّل.'}, status=403)
+        if transfer.is_inter_branch:
+            send_branch_transfer(transfer, request.user)
+            log_activity(request, 'إرسال تحويل بين الفروع', f'{transfer.transfer_number}', 'create')
+            _notify_transfer(transfer, transfer.to_stock.branch, 'تحويل وارد في الطريق',
+                             f'التحويل {transfer.transfer_number} من {transfer.from_stock.name} في الطريق إليكم — '
+                             f'اعتمد الكميات الفعلية عند الاستلام.')
+            return JsonResponse({'success': True, 'message': 'تم إرسال التحويل — بانتظار اعتماد الفرع المستلِم'})
         confirm_stock_transfer(transfer)
         log_activity(request, 'تأكيد تحويل مخزون', f'{transfer.transfer_number}', 'create')
         return JsonResponse({'success': True, 'message': 'تم تأكيد التحويل بنجاح'})
-    except (StockTransfer.DoesNotExist, StockQuantity.DoesNotExist):
+    except Http404:
+        return JsonResponse({'success': False, 'message': 'التحويل غير موجود'}, status=404)
+    except StockQuantity.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'التحويل أو الكمية غير موجودة'}, status=404)
     except ValueError as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
@@ -1425,17 +1549,106 @@ def transfer_confirm_ajax(request, pk):
 
 @login_required
 @require_permission('transfer_stocks')
+@_branch_side_only
+def transfer_receive_ajax(request, pk):
+    """اعتماد الفرع المستلِم للكميات الفعلية في تحويل بين فرعين."""
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    from django.http import Http404
+    from .branch_transfer_services import receive_branch_transfer
+    try:
+        transfer = _get_transfer(request, tenant, pk)
+    except Http404:
+        return JsonResponse({'success': False, 'message': 'التحويل غير موجود'}, status=404)
+    if _transfer_side(request, transfer) != 'receiver':
+        return JsonResponse({'success': False, 'message': 'اعتماد الاستلام من صلاحية الفرع المستلِم فقط.'}, status=403)
+    try:
+        data = json.loads(request.body or '{}')
+    except (json.JSONDecodeError, ValueError):
+        data = {}
+    received = {}
+    for line_id, qty in (data.get('lines') or {}).items():
+        try:
+            received[int(line_id)] = Decimal(str(qty))
+        except (ValueError, InvalidOperation):
+            return JsonResponse({'success': False, 'message': 'كمية غير صالحة.'}, status=400)
+    try:
+        transfer = receive_branch_transfer(transfer, received, request.user)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    log_activity(request, 'اعتماد استلام تحويل بين الفروع', f'{transfer.transfer_number}', 'update')
+    sender = transfer.from_stock.branch
+    if transfer.shortage_status == 'pending':
+        _notify_transfer(transfer, sender, 'ناقص في استلام تحويل',
+                         f'وصل التحويل {transfer.transfer_number} إلى {transfer.to_stock.name} بكمية أقل من المرسلة — الناقص بانتظار تسويتكم.')
+    elif transfer.has_difference:
+        _notify_transfer(transfer, sender, 'زيادة في استلام تحويل',
+                         f'وصل التحويل {transfer.transfer_number} إلى {transfer.to_stock.name} بكمية أكبر من المرسلة — خُصمت الزيادة من مخزنكم.')
+    else:
+        _notify_transfer(transfer, sender, 'تم استلام التحويل',
+                         f'اعتمد {transfer.to_stock.name} استلام التحويل {transfer.transfer_number} كاملاً.')
+    return JsonResponse({'success': True, 'message': 'تم اعتماد الاستلام'})
+
+
+@login_required
+@require_permission('transfer_stocks')
+@_branch_side_only
+def transfer_settle_ajax(request, pk):
+    """تسوية الناقص: restock (إرجاع لمخزن الفرع المحوِّل) أو write_off (تالف عليه)."""
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    tenant = _ensure_tenant(request)
+    from django.http import Http404
+    from .branch_transfer_services import settle_branch_transfer_shortage
+    try:
+        transfer = _get_transfer(request, tenant, pk)
+    except Http404:
+        return JsonResponse({'success': False, 'message': 'التحويل غير موجود'}, status=404)
+    if _transfer_side(request, transfer) == 'receiver':
+        return JsonResponse({'success': False, 'message': 'تسوية الناقص من صلاحية الفرع المحوِّل.'}, status=403)
+    try:
+        data = json.loads(request.body or '{}')
+    except (json.JSONDecodeError, ValueError):
+        data = {}
+    action = data.get('action')
+    if action == 'write_off' and not request.user.has_perm_key('adjust_stocks'):
+        return JsonResponse({'success': False, 'message': 'شطب الناقص تالفاً يحتاج صلاحية تسوية المخزون.'}, status=403)
+    try:
+        transfer = settle_branch_transfer_shortage(transfer, action, request.user)
+    except ValueError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    label = 'شطب الناقص تالفاً' if action == 'write_off' else 'إرجاع الناقص للمخزن'
+    log_activity(request, f'تسوية ناقص تحويل — {label}', f'{transfer.transfer_number}', 'update')
+    return JsonResponse({'success': True, 'message': f'تمت التسوية: {label}'})
+
+
+@login_required
+@require_permission('transfer_stocks')
+@_branch_side_only
 def transfer_cancel_ajax(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
     tenant = _ensure_tenant(request)
+    from django.http import Http404
+    from .branch_transfer_services import cancel_branch_transfer
     try:
-        transfer = StockTransfer.objects.for_tenant(tenant).select_related('from_stock', 'to_stock').get(pk=pk)
-        enforce_branch_ownership(request, transfer, field=['from_stock__branch', 'to_stock__branch'])
-        cancel_stock_transfer(transfer)
+        transfer = _get_transfer(request, tenant, pk)
+        if _transfer_side(request, transfer) == 'receiver':
+            return JsonResponse({'success': False, 'message': 'إلغاء التحويل من صلاحية الفرع المحوِّل.'}, status=403)
+        if transfer.is_inter_branch:
+            was_in_transit = transfer.status == 'in_transit'
+            cancel_branch_transfer(transfer, request.user)
+            if was_in_transit:
+                _notify_transfer(transfer, transfer.to_stock.branch, 'أُلغي تحويل وارد',
+                                 f'ألغى {transfer.from_stock.name} التحويل {transfer.transfer_number} الذي كان في الطريق إليكم.')
+        else:
+            cancel_stock_transfer(transfer)
         log_activity(request, 'إلغاء تحويل مخزون', f'{transfer.transfer_number}', 'delete')
         return JsonResponse({'success': True, 'message': 'تم إلغاء التحويل'})
-    except (StockTransfer.DoesNotExist, StockQuantity.DoesNotExist):
+    except Http404:
+        return JsonResponse({'success': False, 'message': 'التحويل غير موجود'}, status=404)
+    except StockQuantity.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'التحويل غير موجود'}, status=404)
     except ValueError as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
@@ -1443,21 +1656,24 @@ def transfer_cancel_ajax(request, pk):
 
 @login_required
 @require_permission('transfer_stocks')
+@_branch_side_only
 def transfer_delete_draft_ajax(request, pk):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
     tenant = _ensure_tenant(request)
-    try:
-        transfer = StockTransfer.objects.for_tenant(tenant).select_related('from_stock', 'to_stock').get(pk=pk, status='draft')
-        enforce_branch_ownership(request, transfer, field=['from_stock__branch', 'to_stock__branch'])
-        transfer.delete()
-        return JsonResponse({'success': True})
-    except StockTransfer.DoesNotExist:
+    transfer = _transfers_qs(request, tenant).select_related('from_stock', 'to_stock').filter(pk=pk, status='draft').first()
+    if transfer is None:
         return JsonResponse({'success': False, 'message': 'المسودة غير موجودة'}, status=404)
+    enforce_branch_ownership(request, transfer, field=['from_stock__branch', 'to_stock__branch'])
+    if _transfer_side(request, transfer) == 'receiver':
+        return JsonResponse({'success': False, 'message': 'المسودة غير موجودة'}, status=404)
+    transfer.delete()
+    return JsonResponse({'success': True})
 
 
 @login_required
 @require_permission('transfer_stocks')
+@_branch_side_only
 def transfer_items_api(request):
     """Returns available quantity for items in a given stock."""
     tenant = _ensure_tenant(request)

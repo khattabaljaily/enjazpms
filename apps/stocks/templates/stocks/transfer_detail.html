@@ -23,17 +23,27 @@
                 <div class="doc-hero-number">{{ transfer.transfer_number }}</div>
                 <div class="doc-hero-meta">
                     <span class="doc-hero-meta-item"><i class="fas fa-calendar-day"></i>{{ transfer.transfer_date }}</span>
-                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ transfer.from_stock.name }}</span>
+                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ from_label }}</span>
                     <span class="doc-hero-meta-item"><i class="fas fa-arrow-left"></i></span>
-                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ transfer.to_stock.name }}</span>
+                    <span class="doc-hero-meta-item"><i class="fas fa-warehouse"></i>{{ to_label }}</span>
                 </div>
                 <div class="doc-pills">
                     {% if transfer.status == 'draft' %}
                     <span class="doc-pill doc-pill--draft"><i class="fas fa-pencil"></i> مسودة</span>
                     {% elif transfer.status == 'confirmed' %}
                     <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> مؤكد</span>
+                    {% elif transfer.status == 'in_transit' %}
+                    <span class="doc-pill doc-pill--draft"><i class="fas fa-truck"></i> في الطريق</span>
+                    {% elif transfer.status == 'received' %}
+                    <span class="doc-pill doc-pill--success"><i class="fas fa-check-circle"></i> تم الاستلام</span>
                     {% elif transfer.status == 'cancelled' %}
                     <span class="doc-pill doc-pill--danger"><i class="fas fa-ban"></i> ملغي</span>
+                    {% endif %}
+                    {% if transfer.is_inter_branch %}
+                    <span class="doc-pill"><i class="fas fa-code-branch"></i> بين فرعين</span>
+                    {% endif %}
+                    {% if transfer.shortage_status == 'pending' %}
+                    <span class="doc-pill doc-pill--danger"><i class="fas fa-triangle-exclamation"></i> ناقص بانتظار التسوية</span>
                     {% endif %}
                 </div>
             </div>
@@ -42,14 +52,16 @@
             <a href="{% url 'stocks:transfer_list' %}" class="cx-btn-secondary">
                 <i class="fas fa-arrow-right"></i><span>العودة</span>
             </a>
-            {% if transfer.status == 'draft' %}
+            {% if can_send %}
             <button class="cx-btn-add" onclick="doConfirm()">
-                <i class="fas fa-check"></i><span>تأكيد التحويل</span>
+                {% if transfer.is_inter_branch %}<i class="fas fa-truck"></i><span>إرسال التحويل</span>
+                {% else %}<i class="fas fa-check"></i><span>تأكيد التحويل</span>{% endif %}
             </button>
             <button class="cx-btn-danger" onclick="doDelete()">
                 <i class="fas fa-trash"></i><span>حذف</span>
             </button>
-            {% elif transfer.status == 'confirmed' %}
+            {% endif %}
+            {% if can_cancel %}
             <button class="cx-btn-secondary" onclick="doCancel()" style="color:var(--danger)">
                 <i class="fas fa-ban"></i><span>إلغاء</span>
             </button>
@@ -66,19 +78,21 @@
             <table class="table table-sm">
                 <tr><th class="w-40">رقم التحويل</th><td><strong>{{ transfer.transfer_number }}</strong></td></tr>
                 <tr><th>التاريخ</th><td>{{ transfer.transfer_date }}</td></tr>
-                <tr><th>من مخزن</th><td>{{ transfer.from_stock.name }}</td></tr>
-                <tr><th>إلى مخزن</th><td>{{ transfer.to_stock.name }}</td></tr>
-                <tr><th>الحالة</th>
-                    <td>
-                        {% if transfer.status == 'draft' %}
-                            <span class="badge bg-secondary">مسودة</span>
-                        {% elif transfer.status == 'confirmed' %}
-                            <span class="badge bg-success">مؤكد</span>
-                        {% else %}
-                            <span class="badge bg-danger">ملغي</span>
-                        {% endif %}
+                <tr><th>من مخزن</th><td>{{ from_label }}</td></tr>
+                <tr><th>إلى مخزن</th><td>{{ to_label }}</td></tr>
+                <tr><th>الحالة</th><td>{{ transfer.get_status_display }}</td></tr>
+                {% if transfer.is_inter_branch %}
+                <tr><th>الإرسال</th><td>{{ transfer.sent_at|date:"Y-m-d H:i"|default:"—" }}</td></tr>
+                <tr><th>الاستلام</th><td>{% if transfer.received_at %}{{ transfer.received_at|date:"Y-m-d H:i" }} — {{ transfer.received_by|default:"" }}{% else %}—{% endif %}</td></tr>
+                {% if transfer.shortage_status != 'none' %}
+                <tr><th>الناقص</th>
+                    <td>{{ transfer.get_shortage_status_display }}
+                        {% if transfer.settled_at %}<small class="text-muted">({{ transfer.settled_at|date:"Y-m-d H:i" }} — {{ transfer.settled_by|default:"" }})</small>{% endif %}
+                        {% if transfer.shortage_destruction %}<div><small>سجل الإتلاف: <strong>{{ transfer.shortage_destruction.destruction_number }}</strong></small></div>{% endif %}
                     </td>
                 </tr>
+                {% endif %}
+                {% endif %}
                 {% if transfer.notes %}
                 <tr><th>ملاحظات</th><td>{{ transfer.notes }}</td></tr>
                 {% endif %}
@@ -88,9 +102,27 @@
 </div>
 
 <!-- Lines -->
+{% if can_receive %}
+<div class="alert alert-info mt-3">
+    أدخل الكمية <strong>الفعلية</strong> التي استلمتها لكل صنف. الفرق يتحمّله الفرع المحوِّل:
+    إن زادت الكمية تُخصم الزيادة من مخزنه، وإن نقصت يبقى الناقص معلّقاً حتى يسوّيه.
+</div>
+{% endif %}
+{% if can_settle %}
+<div class="alert alert-warning mt-3 d-flex flex-wrap align-items-center gap-2">
+    <div class="flex-grow-1">
+        <strong>ناقص بانتظار التسوية.</strong>
+        لو البضاعة لم تخرج فعلاً من مخزنكم أعيدوها للمخزن، ولو ضاعت أو تلفت تُشطب تالفاً على فرعكم بسجل إتلاف.
+    </div>
+    <button class="cx-btn-secondary" onclick="doSettle('restock')"><i class="fas fa-rotate-left me-1"></i>إرجاع للمخزن</button>
+    {% if can_write_off %}
+    <button class="cx-btn-danger" onclick="doSettle('write_off')"><i class="fas fa-trash-can me-1"></i>شطب تالفاً</button>
+    {% endif %}
+</div>
+{% endif %}
 <div class="cx-panel mt-3">
     <div class="cx-panel-header p-4 pb-2">
-        <h5 class="fw-semibold mb-0"><i class="fas fa-list me-2 text-warning"></i>البنود ({{ transfer.lines.count }})</h5>
+        <h5 class="fw-semibold mb-0"><i class="fas fa-list me-2 text-warning"></i>البنود ({{ lines|length }})</h5>
     </div>
     <div class="table-responsive">
         <table class="cx-table">
@@ -100,26 +132,57 @@
                     <th>المنتج</th>
                     <th>رمز المنتج</th>
                     <th>الوحدة</th>
-                    <th class="text-end">الكمية</th>
+                    <th class="text-end">{% if transfer.is_inter_branch %}المرسلة{% else %}الكمية{% endif %}</th>
+                    {% if transfer.is_inter_branch %}
+                    <th class="text-end">المستلَمة</th>
+                    <th class="text-end">الفرق</th>
+                    <th>الدفعات</th>
+                    {% endif %}
                     {% if transfer.notes %}<th>ملاحظات</th>{% endif %}
                 </tr>
             </thead>
             <tbody>
-                {% for ln in transfer.lines.all %}
+                {% for ln in lines %}
                 <tr>
                     <td>{{ forloop.counter }}</td>
                     <td><strong>{{ ln.item.name }}</strong></td>
                     <td><code>{{ ln.item.sku|default:"—" }}</code></td>
                     <td>{{ ln.item.base_unit_name|default:"—" }}</td>
                     <td class="text-end"><strong>{{ ln.quantity|floatformat:"-2" }}</strong></td>
+                    {% if transfer.is_inter_branch %}
+                    <td class="text-end">
+                        {% if can_receive %}
+                        <input type="number" class="cx-input recv-qty" style="width:120px;display:inline-block" step="0.0001" min="0"
+                               value="{{ ln.quantity|floatformat:'-4' }}" data-line="{{ ln.id }}">
+                        {% else %}{{ ln.quantity_received|floatformat:"-2"|default:"—" }}{% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% with d=ln.difference %}
+                        {% if d is not None and d != 0 %}
+                        <span class="fw-bold {% if d < 0 %}text-danger{% else %}text-warning{% endif %}">{% if d > 0 %}+{% endif %}{{ d|floatformat:"-2" }}</span>
+                        <small class="text-muted d-block">{% if d < 0 %}ناقص{% else %}زائد{% endif %}</small>
+                        {% else %}—{% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% for b in ln.batches.all %}
+                            {% if b.batch_number or b.expiry_date %}<span class="badge bg-light text-dark border">{{ b.batch_number|default:"—" }}{% if b.expiry_date %} · {{ b.expiry_date }}{% endif %} · {{ b.quantity_sent|floatformat:"-2" }}</span>{% endif %}
+                        {% endfor %}
+                    </td>
+                    {% endif %}
                     {% if transfer.notes %}<td>{{ ln.notes|default:"—" }}</td>{% endif %}
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" class="text-center text-muted py-3">لا توجد بنود</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-3">لا توجد بنود</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    {% if can_receive %}
+    <div class="p-3 d-flex justify-content-end">
+        <button class="cx-btn-add" id="btnReceive" style="background:var(--success)"><i class="fas fa-check me-1"></i> اعتماد الاستلام</button>
+    </div>
+    {% endif %}
 </div>
 
 </div>
@@ -128,10 +191,15 @@
 <div class="modal fade" id="confirmModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">تأكيد التحويل</h5></div>
+            <div class="modal-header"><h5 class="modal-title">{% if transfer.is_inter_branch %}إرسال التحويل{% else %}تأكيد التحويل{% endif %}</h5></div>
             <div class="modal-body">
+                {% if transfer.is_inter_branch %}
+                <p>ستخرج الكميات من <strong>{{ from_label }}</strong> فوراً، ويبقى التحويل «في الطريق» حتى يعتمد <strong>{{ to_label }}</strong> استلامه.</p>
+                <p class="text-muted">يمكن إلغاؤه ما دام في الطريق، فتعود الكميات لمخزنك.</p>
+                {% else %}
                 <p>سيتم خصم الكميات من <strong>{{ transfer.from_stock.name }}</strong> وإضافتها إلى <strong>{{ transfer.to_stock.name }}</strong>.</p>
                 <p class="text-muted">هذا الإجراء يمكن التراجع عنه لاحقاً.</p>
+                {% endif %}
             </div>
             <div class="modal-footer">
                 <button class="cx-btn-secondary" data-bs-dismiss="modal">إلغاء</button>
@@ -149,6 +217,35 @@ const CONFIRM_URL = "{% url 'stocks:transfer_confirm' transfer.pk %}";
 const CANCEL_URL  = "{% url 'stocks:transfer_cancel' transfer.pk %}";
 const DELETE_URL  = "{% url 'stocks:transfer_delete' transfer.pk %}";
 const LIST_URL    = "{% url 'stocks:transfer_list' %}";
+const RECEIVE_URL = "{% url 'stocks:transfer_receive' transfer.pk %}";
+const SETTLE_URL  = "{% url 'stocks:transfer_settle' transfer.pk %}";
+
+async function postJson(url, body) {
+    const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(body || {}),
+    });
+    const d = await r.json();
+    if (d.success) { showToast('success', d.message || 'تم'); setTimeout(() => location.reload(), 700); }
+    else showToast('error', d.message || 'تعذر تنفيذ العملية');
+}
+
+const recvBtn = document.getElementById('btnReceive');
+if (recvBtn) recvBtn.addEventListener('click', async () => {
+    const lines = {};
+    document.querySelectorAll('.recv-qty').forEach(i => { lines[i.dataset.line] = i.value === '' ? '0' : i.value; });
+    if (!await Enjaz.confirmAction('اعتماد استلام هذه الكميات؟ لا يمكن التراجع بعد الاعتماد.', 'اعتماد الاستلام')) return;
+    postJson(RECEIVE_URL, { lines });
+});
+
+async function doSettle(action) {
+    const msg = action === 'write_off'
+        ? 'شطب الناقص تالفاً على فرعكم؟ سيُنشأ سجل إتلاف مؤكد ولا يمكن التراجع عنه.'
+        : 'إرجاع الناقص لمخزنكم؟ استخدمه فقط لو البضاعة لم تخرج فعلاً.';
+    if (!await Enjaz.confirmAction(msg, 'تسوية الناقص')) return;
+    postJson(SETTLE_URL, { action });
+}
 
 function doConfirm() {
     const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
@@ -166,7 +263,7 @@ function doConfirm() {
 }
 
 async function doCancel() {
-    if (!await Enjaz.confirmAction('هل أنت متأكد من إلغاء هذا التحويل؟ سيتم عكس الكميات.', 'تأكيد الإلغاء')) return;
+    if (!await Enjaz.confirmAction('هل أنت متأكد من إلغاء هذا التحويل؟ ستعود الكميات للمخزن المحوِّل.', 'تأكيد الإلغاء')) return;
     const r = await fetch(CANCEL_URL, {
         method: 'POST', headers: { 'X-CSRFToken': CSRF },
     });
