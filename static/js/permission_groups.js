@@ -1,6 +1,6 @@
 /**
  * Enjaz — Permissions Management v3.0
- * Split-panel UI: dirty bar at top, members modal
+ * Split-panel UI: dirty bar at top, read-only members list
  */
 (function () {
     'use strict';
@@ -56,6 +56,14 @@
        ENTERPRISE_OWNER_EXCLUDED_CATEGORIES. */
     const isEnterprise  = !!window.IS_ENTERPRISE_TENANT;
     const scopeExcluded = window.GROUP_SCOPE_EXCLUDED || { branch: [], admin: [] };
+    // مفاتيح مفردة مستبعدة داخل أقسام مشتركة (مثل تقارير تفاصيل الفرع لمجموعات إدارة النشاط)
+    const scopeExcludedKeys = window.GROUP_SCOPE_EXCLUDED_KEYS || { branch: [], admin: [] };
+
+    function permsForScope(perms, scope) {
+        if (!isEnterprise || !scope || !scopeExcludedKeys[scope]) return Object.entries(perms);
+        const excluded = new Set(scopeExcludedKeys[scope]);
+        return Object.entries(perms).filter(([key]) => !excluded.has(key));
+    }
 
     function categoriesForScope(scope) {
         if (!isEnterprise || !scope || !scopeExcluded[scope]) return Object.keys(schema);
@@ -64,7 +72,7 @@
     }
 
     function scopeTotal(scope) {
-        return categoriesForScope(scope).reduce((s, name) => s + Object.keys(schema[name] || {}).length, 0);
+        return categoriesForScope(scope).reduce((s, name) => s + permsForScope(schema[name] || {}, scope).length, 0);
     }
 
     const SCOPE_LABELS = { branch: 'فروع', admin: 'إدارة النشاط' };
@@ -83,8 +91,8 @@
     let activeScope   = ''; // '' | 'branch' | 'admin' — current editor's group scope
     let createScope   = ''; // draft scope chosen in the "new group" modal
 
-    // Members state — array of user IDs currently selected for the group
-    let selectedUserIds = [];
+    // أعضاء المجموعة للعرض فقط — العضوية تُدار من شاشة إدارة المستخدمين
+    let memberIds = [];
 
     /* ── DOM shortcuts ───────────────────────────────────────── */
     const q  = (sel, ctx = document) => ctx.querySelector(sel);
@@ -129,15 +137,8 @@
     // Dirty bar
     const pmDirtyBar  = q('#pmDirtyBar');
 
-    // Members modal
-    const membersModalEl       = q('#membersModal');
-    const membersModal         = new bootstrap.Modal(membersModalEl);
-    const btnOpenMembers       = q('#btnOpenMembers');
-    const membersList          = q('#membersList');
-    const membersSearch        = q('#membersSearch');
-    const membersSelectedCount = q('#membersSelectedCount');
-    const btnMembersClearAll   = q('#btnMembersClearAll');
-    const btnSaveMembers       = q('#btnSaveMembers');
+    // Members (read-only)
+    const membersChips = q('#membersChips');
 
     // Create modal
     const createGroupModal   = new bootstrap.Modal(q('#createGroupModal'));
@@ -256,9 +257,10 @@
         editorIsActive.checked            = group.is_active;
         editorIsActiveLabel.textContent   = group.is_active ? 'نشط' : 'غير نشط';
 
-        // Members — store as local state, show count
-        selectedUserIds = [...(group.users || [])];
-        editorMemberCount.textContent = selectedUserIds.length;
+        // Members — read-only list
+        memberIds = [...(group.users || [])];
+        editorMemberCount.textContent = memberIds.length;
+        renderMembers();
 
         // Scope (Enterprise only) — '' for legacy groups shows every category
         // until the admin explicitly picks one, same as before this feature.
@@ -286,7 +288,6 @@
             desc:   editorDescInput.value.trim(),
             active: editorIsActive.checked,
             scope:  activeScope,
-            users:  [...selectedUserIds].sort(),
             perms:  getSelectedPerms(),
         });
     }
@@ -317,7 +318,8 @@
 
         Object.entries(schema).forEach(([secName, perms]) => {
             if (!visibleCategories.has(secName)) return;
-            const entries       = Object.entries(perms);
+            const entries       = permsForScope(perms, scope);
+            if (!entries.length) return;
             const enabledInSec  = entries.filter(([k]) => selectedPerms[k]).length;
             const icon          = ICONS[secName] || 'fa-circle-dot';
             const p             = pct(enabledInSec, entries.length);
@@ -434,7 +436,6 @@
         fd.append('is_active',   editorIsActive.checked ? 'on' : '');
         fd.append('scope',       activeScope);
         fd.append('permissions', JSON.stringify(getSelectedPerms()));
-        selectedUserIds.forEach(uid => fd.append('users[]', uid));
 
         fetch(API.update(activeGroupId), {
             method: 'POST',
@@ -460,7 +461,6 @@
                         allGroups[idx].name             = name;
                         allGroups[idx].is_active        = editorIsActive.checked;
                         allGroups[idx].permission_count = permCount;
-                        allGroups[idx].member_count     = selectedUserIds.length;
                         allGroups[idx].scope            = activeScope;
                     }
                     renderGroupList();
@@ -500,82 +500,22 @@
             });
     }
 
-    /* ── Members modal ───────────────────────────────────────── */
+    /* ── Members (read-only) ─────────────────────────────────── */
 
-    // Tracks the draft selection inside the modal (before confirming)
-    let modalDraftIds = [];
-
-    function openMembersModal() {
-        // Copy current state into draft
-        modalDraftIds = [...selectedUserIds];
-        renderMembersList('');
-        membersSearch.value = '';
-        membersModal.show();
-        setTimeout(() => membersSearch.focus(), 300);
-    }
-
-    function renderMembersList(filterStr) {
-        const q = filterStr.toLowerCase().trim();
-        membersList.innerHTML = '';
-
-        const visible = q
-            ? allUsers.filter(u => {
-                const full = `${u.first_name} ${u.last_name} ${u.username}`.toLowerCase();
-                return full.includes(q);
-            })
-            : allUsers;
-
-        if (!visible.length) {
-            membersList.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-tertiary);font-size:.82rem;">لا يوجد مستخدمون مطابقون</div>';
+    function renderMembers() {
+        const usersById = new Map(allUsers.map(u => [u.id, u]));
+        const members = memberIds.map(id => usersById.get(id)).filter(Boolean);
+        if (!members.length) {
+            membersChips.innerHTML = '<span class="pm-members-empty">لا يوجد أعضاء في هذه المجموعة</span>';
             return;
         }
-
-        visible.forEach(u => {
-            const checked = modalDraftIds.includes(u.id);
-            const row = document.createElement('div');
-            row.className = `pm-member-row${checked ? ' is-checked' : ''}`;
-            row.dataset.uid = u.id;
-
-            const displayName = (u.first_name && u.last_name)
-                ? `${u.first_name} ${u.last_name}`
-                : u.username;
-
-            row.innerHTML = `
-                <div class="pm-member-avatar">${esc(initials(displayName))}</div>
-                <div class="pm-member-info">
-                    <div class="pm-member-name">${esc(displayName)}</div>
-                    <div class="pm-member-username">@${esc(u.username)}</div>
-                </div>
-                <div class="pm-member-check"><i class="fas fa-check"></i></div>`;
-
-            row.addEventListener('click', () => {
-                const uid = +row.dataset.uid;
-                if (modalDraftIds.includes(uid)) {
-                    modalDraftIds = modalDraftIds.filter(id => id !== uid);
-                    row.classList.remove('is-checked');
-                } else {
-                    modalDraftIds.push(uid);
-                    row.classList.add('is-checked');
-                }
-                updateMembersSelectedCount();
-            });
-
-            membersList.appendChild(row);
-        });
-
-        updateMembersSelectedCount();
-    }
-
-    function updateMembersSelectedCount() {
-        membersSelectedCount.textContent = modalDraftIds.length;
-    }
-
-    // Confirm members: commit draft → selectedUserIds, update chip, mark dirty
-    function confirmMembers() {
-        selectedUserIds = [...modalDraftIds];
-        editorMemberCount.textContent = selectedUserIds.length;
-        membersModal.hide();
-        markDirty();
+        membersChips.innerHTML = members.map(u => {
+            const displayName = (u.first_name && u.last_name) ? `${u.first_name} ${u.last_name}` : u.username;
+            return `<span class="pm-member-chip" title="@${esc(u.username)}">
+                        <span class="pm-member-avatar">${esc(initials(displayName))}</span>
+                        <span class="pm-member-name">${esc(displayName)}</span>
+                    </span>`;
+        }).join('');
     }
 
     /* ── Create group modal ──────────────────────────────────── */
@@ -743,17 +683,6 @@
     });
 
     btnDeleteGroup.addEventListener('click', deleteGroup);
-
-    // Members modal
-    btnOpenMembers.addEventListener('click', openMembersModal);
-    btnSaveMembers.addEventListener('click', confirmMembers);
-
-    membersSearch.addEventListener('input', () => renderMembersList(membersSearch.value));
-
-    btnMembersClearAll.addEventListener('click', () => {
-        modalDraftIds = [];
-        renderMembersList(membersSearch.value);
-    });
 
     window.addEventListener('beforeunload', e => {
         if (isDirty) { e.preventDefault(); e.returnValue = ''; }

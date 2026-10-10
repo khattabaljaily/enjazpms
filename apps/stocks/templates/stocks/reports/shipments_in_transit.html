@@ -1,0 +1,91 @@
+{% extends "layouts/dashboard.html" %}
+{% load static number_format %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--stocks">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-truck-fast"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">الشحنات في الطريق</h1>
+                    <p class="rpt-hero-desc">شحنات التوزيع ومرتجعات الفروع التي لم يُؤكَّد استلامها بعد</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'stocks:reports:shipments_in_transit_report_export' %}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير CSV</a>
+                <a href="{% url 'stocks:shipment_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-truck"></i></div>
+            <div class="rpt-kpi-value">{{ report.distribution_count }}</div>
+            <div class="rpt-kpi-label">شحنات توزيع</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--amber">
+            <div class="rpt-kpi-icon"><i class="fas fa-rotate-left"></i></div>
+            <div class="rpt-kpi-value">{{ report.return_count }}</div>
+            <div class="rpt-kpi-label">مرتجعات فروع</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--green">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.total_value|money }}</div>
+            <div class="rpt-kpi-label">قيمة البضاعة في الطريق</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--stocks">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>قائمة الشحنات</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.rows %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>الرقم</th>
+                            <th>النوع</th>
+                            <th>الفرع</th>
+                            <th>التاريخ</th>
+                            <th class="text-center">أيام في الطريق</th>
+                            <th class="text-center">البنود</th>
+                            <th class="text-end">القيمة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in report.rows %}
+                        <tr>
+                            <td class="fw-bold"><a href="{% url 'stocks:shipment_detail' r.id %}">{{ r.number }}</a></td>
+                            <td>{{ r.kind }}</td>
+                            <td>{{ r.branch }}</td>
+                            <td class="text-muted">{{ r.date|date:"Y-m-d" }}</td>
+                            <td class="text-center">
+                                <span class="badge {% if r.days > 7 %}bg-danger{% elif r.days > 2 %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">{{ r.days }} يوم</span>
+                            </td>
+                            <td class="text-center">{{ r.lines }}</td>
+                            <td class="text-end fw-bold">{{ r.value|money }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty"><i class="fas fa-check-circle"></i><p>لا توجد شحنات في الطريق حالياً</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

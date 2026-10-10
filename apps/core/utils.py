@@ -75,7 +75,7 @@ def resolve_report_scope(request):
 
     branches_for_filter = Branch.objects.filter(tenant=tenant, is_active=True)
     requested_id = request.GET.get('branch')
-    if requested_id:
+    if requested_id and str(requested_id).isdigit():
         branch = branches_for_filter.filter(pk=requested_id).first()
         if branch:
             return branch, True, branches_for_filter

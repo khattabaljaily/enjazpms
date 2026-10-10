@@ -10,15 +10,15 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import F, Q
 
 from .models import OnlineOrder, StoreSettings
-from apps.accounts.decorators import require_permission, branch_scope_exempt
+from apps.accounts.decorators import require_any_permission, require_permission, branch_scope_exempt
 from apps.core.utils import enforce_branch_ownership
 from .services import (
-    approve_order, cart_add, cart_clear, cart_remove,
-    cart_update, get_cart, get_cart_items, place_order, reject_order,
-    validate_prescription_file,
+    approve_order, available_quantities, cart_add, cart_clear, cart_remove, cart_shortages,
+    cart_update, get_cart, get_cart_items, place_order, reject_order, shortage_message,
+    store_stock, validate_prescription_file,
 )
 
 
@@ -142,7 +142,8 @@ def _store_branches(store):
 
 def _resolve_store_branch(request, store):
     """
-    يحسم فرع الزائر: ?branch= ثم الجلسة ثم أول فرع. يُرجع (الفرع, قائمة الفروع)؛
+    يحسم فرع الزائر: ?branch= ثم الجلسة. يُرجع (الفرع, قائمة الفروع)؛ الفرع None
+    حتى يختاره الزائر صراحةً (لا فرع افتراضي — الطلب يذهب للفرع الذي اختاره).
     (None, []) خارج نسخة المؤسسات فلا يتغير سلوك المتجر هناك.
     """
     branches = list(_store_branches(store))
@@ -150,9 +151,17 @@ def _resolve_store_branch(request, store):
         return None, []
     key = f'store_branch_{store.slug}'
     chosen = request.GET.get('branch') or request.session.get(key)
-    branch = next((b for b in branches if str(b.id) == str(chosen)), None) or branches[0]
-    request.session[key] = branch.id
+    branch = next((b for b in branches if str(b.id) == str(chosen)), None)
+    if branch is not None:
+        request.session[key] = branch.id
     return branch, branches
+
+
+def _branch_required(request, store, branch, store_branches):
+    """صفحة اختيار الفرع لو للمتجر فروع ولم يختر الزائر بعد؛ وإلا None."""
+    if store_branches and branch is None:
+        return render(request, 'store/choose_branch.html', {'store': store, 'store_branches': store_branches})
+    return None
 
 
 def _rx_item_names(store, cart_items):
@@ -174,11 +183,10 @@ def _get_products(store: StoreSettings, branch=None):
     ).select_related('category', 'unit')
 
     if not store.show_out_of_stock:
-        # keep items with at least one positive StockQuantity
-        in_stock = StockQuantity.objects.filter(tenant=store.tenant, quantity__gt=0)
-        if branch is not None:
-            in_stock = in_stock.filter(stock__branch=branch)
-        in_stock_ids = in_stock.values_list('item_id', flat=True)
+        # المتوفر فعلاً في مخزن المتجر للفرع المختار (نفس المخزن الذي تُصدر منه الفاتورة)
+        stock = store_stock(store.tenant, branch)
+        in_stock_ids = StockQuantity.objects.filter(
+            stock=stock, quantity__gt=F('reserved_quantity')).values_list('item_id', flat=True)
         qs = qs.filter(id__in=in_stock_ids)
 
     return qs
@@ -197,6 +205,9 @@ def storefront(request, slug):
     if not status['is_open']:
         return _store_closed_response(store, status)
     branch, store_branches = _resolve_store_branch(request, store)
+    choose = _branch_required(request, store, branch, store_branches)
+    if choose:
+        return choose
     products = _get_products(store, branch)
 
     search = request.GET.get('q', '').strip()
@@ -220,16 +231,8 @@ def storefront(request, slug):
     # Build stock-quantity map if the store shows quantities
     stock_qty_map = {}
     if store.show_stock_quantity:
-        from apps.stocks.models import StockQuantity
-        from django.db.models import Sum
-        qs = (
-            StockQuantity.objects
-            .filter(tenant=store.tenant, item__in=products)
-            .filter(**({'stock__branch': branch} if branch is not None else {}))
-            .values('item_id')
-            .annotate(total=Sum('quantity'))
-        )
-        stock_qty_map = {r['item_id']: r['total'] for r in qs}
+        stock_qty_map = {k: max(v, 0) for k, v in available_quantities(
+            store_stock(store.tenant, branch), products.values_list('id', flat=True)).items()}
 
     return render(request, 'store/storefront.html', {
         'store':         store,
@@ -255,6 +258,9 @@ def price_list(request, slug):
         return _price_list_disabled_response(store)
 
     branch, store_branches = _resolve_store_branch(request, store)
+    choose = _branch_required(request, store, branch, store_branches)
+    if choose:
+        return choose
     products = list(
         _get_products(store, branch)
         .select_related('purchase_unit')
@@ -353,10 +359,27 @@ def cart_add_view(request, slug):
     qty     = _parse_qty(request.POST.get('qty'), default=1)
     if qty <= 0:
         qty = 1
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    branch, store_branches = _resolve_store_branch(request, store)
+    if store_branches and branch is None:
+        if is_ajax:
+            return JsonResponse({'error': 'اختر الفرع أولاً'}, status=400)
+        return redirect('store:storefront', slug=slug)
+    # لا نضيف للسلة أكثر من المتاح في مخزن الفرع (بلا حجز: يُعاد التحقق عند الطلب والقبول)
+    from decimal import Decimal
+    in_cart = Decimal(str(get_cart(request, slug).get(str(item_id), 0)))
+    have = max(available_quantities(store_stock(store.tenant, branch), [int(item_id)]).get(int(item_id), 0), 0)
+    if in_cart + Decimal(str(qty)) > have:
+        from apps.core.templatetags.number_format import qty as fmt_qty
+        msg = f'المتاح من هذا الصنف {fmt_qty(have)} فقط' + (f' (في سلتك {fmt_qty(in_cart)})' if in_cart else '')
+        if is_ajax:
+            return JsonResponse({'error': msg}, status=400)
+        messages.error(request, msg)
+        return redirect('store:cart', slug=slug)
     cart_add(request, slug, int(item_id), qty)
     cart        = get_cart(request, slug)
     cart_count  = int(sum(cart.values()))
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    if is_ajax:
         return JsonResponse({'cart_count': cart_count})
     return redirect('store:cart', slug=slug)
 
@@ -385,7 +408,13 @@ def cart_view(request, slug):
     cart_items = get_cart_items(slug, cart)
     subtotal   = sum(r['line_total'] for r in cart_items)
     branch, store_branches = _resolve_store_branch(request, store)
+    choose = _branch_required(request, store, branch, store_branches)
+    if choose:
+        return choose
+    shortages = cart_shortages(store_stock(store.tenant, branch), cart_items)
     return render(request, 'store/cart.html', {
+        'shortages':  shortages,
+        'shortage_ids': [s['item'].id for s in shortages],
         'branch':     branch,
         'store_branches': store_branches,
         'store':      store,
@@ -414,6 +443,14 @@ def checkout_view(request, slug):
 
     subtotal = sum(r['line_total'] for r in cart_items)
     branch, store_branches = _resolve_store_branch(request, store)
+    choose = _branch_required(request, store, branch, store_branches)
+    if choose:
+        return choose
+    # كميات السلة يجب أن تتوفر في مخزن الفرع قبل إتمام الطلب
+    shortages = cart_shortages(store_stock(store.tenant, branch), cart_items)
+    if shortages:
+        messages.error(request, shortage_message(shortages))
+        return redirect('store:cart', slug=slug)
     branch_ctx = {'branch': branch, 'store_branches': store_branches,
                   'rx_items': _rx_item_names(store, cart_items)}
 
@@ -441,7 +478,8 @@ def checkout_view(request, slug):
             errors['min_order'] = f'الحد الأدنى للطلب {store.min_order_amount:,.0f}'
 
         if not errors:
-            order = place_order(
+            try:
+                order = place_order(
                 store=store,
                 cart_items=cart_items,
                 customer_data={
@@ -453,7 +491,10 @@ def checkout_view(request, slug):
                     'prescription':   prescription,
                 },
                 branch=branch,
-            )
+                )
+            except ValueError as exc:   # الكمية نفدت بين عرض الصفحة والإرسال
+                messages.error(request, str(exc))
+                return redirect('store:cart', slug=slug)
             cart_clear(request, slug)
             return redirect('store:order_confirm', slug=slug, token=order.token)
 
@@ -573,8 +614,20 @@ def manage_settings(request):
 # MANAGE — Orders List
 # ══════════════════════════════════════════════════════════════
 
+def _scoped_orders(request, tenant):
+    """
+    طلبات نطاق الطلب: الفرع يرى طلباته فقط (هو من يقبلها ويُصدر فاتورتها)؛
+    الإدارة بلا فرع ترى الكل (للمتابعة في نسخة المؤسسات).
+    """
+    orders = OnlineOrder.objects.filter(tenant=tenant)
+    branch = getattr(request, 'branch', None)
+    if branch is not None:
+        orders = orders.filter(branch=branch)
+    return orders
+
+
 @login_required
-@require_permission('view_store_orders')
+@require_any_permission('view_store_orders', 'monitor_store_orders')
 def manage_orders(request):
     tenant = request.tenant
     if not tenant:
@@ -585,23 +638,20 @@ def manage_orders(request):
         return redirect('core:subscription')
 
     status_filter = request.GET.get('status', 'pending')
-    orders = OnlineOrder.objects.filter(tenant=tenant).select_related('store', 'sale_invoice', 'branch')
-    if getattr(request, 'branch', None) is not None:
-        orders = orders.filter(Q(branch=request.branch) | Q(branch__isnull=True))
+    scoped = _scoped_orders(request, tenant)
+    orders = scoped.select_related('store', 'sale_invoice', 'branch')
 
     if status_filter in ('pending', 'approved', 'rejected'):
         orders = orders.filter(status=status_filter)
 
-    counts = {
-        'pending':  OnlineOrder.objects.filter(tenant=tenant, status='pending').count(),
-        'approved': OnlineOrder.objects.filter(tenant=tenant, status='approved').count(),
-        'rejected': OnlineOrder.objects.filter(tenant=tenant, status='rejected').count(),
-    }
+    counts = {key: scoped.filter(status=key).count() for key in ('pending', 'approved', 'rejected')}
 
     return render(request, 'store/manage_orders.html', {
         'orders':        orders,
         'status_filter': status_filter,
         'counts':        counts,
+        'can_manage':    request.user.has_perm_key('manage_store_orders'),
+        'show_branch':   tenant.is_enterprise() and getattr(request, 'branch', None) is None,
     })
 
 
@@ -610,25 +660,33 @@ def manage_orders(request):
 # ══════════════════════════════════════════════════════════════
 
 @login_required
-@require_permission('view_store_orders')
+@require_any_permission('view_store_orders', 'monitor_store_orders')
 def manage_order_detail(request, pk):
     tenant = request.tenant
-    order  = get_object_or_404(OnlineOrder, pk=pk, tenant=tenant)
+    order  = get_object_or_404(_scoped_orders(request, tenant), pk=pk)
     enforce_branch_ownership(request, order)
-    lines  = order.lines.select_related('item').all()
+    lines  = list(order.lines.select_related('item'))
+    can_manage = request.user.has_perm_key('manage_store_orders')
+    # بلا حجز: نُظهر للفرع قبل القبول ما لم يعد متوفراً في مخزنه
+    shortages = []
+    if can_manage and order.status == 'pending':
+        shortages = cart_shortages(store_stock(tenant, order.branch),
+                                   [{'item': ln.item, 'qty': ln.quantity} for ln in lines])
     return render(request, 'store/manage_order_detail.html', {
         'order': order,
         'lines': lines,
+        'can_manage': can_manage,
+        'shortages': shortages,
     })
 
 
 @login_required
-@require_permission('view_store_orders')
+@require_any_permission('view_store_orders', 'monitor_store_orders')
 def manage_order_prescription(request, pk):
     """تنزيل/عرض الوصفة الطبية المرفقة — للمصرَّح لهم بطلبات المتجر وضمن فرع الطلب فقط."""
     import mimetypes
     from django.http import FileResponse, Http404
-    order = get_object_or_404(OnlineOrder, pk=pk, tenant=request.tenant)
+    order = get_object_or_404(_scoped_orders(request, request.tenant), pk=pk)
     enforce_branch_ownership(request, order)
     if not order.prescription:
         raise Http404
@@ -653,10 +711,10 @@ def manage_order_prescription(request, pk):
 @require_POST
 def manage_order_approve(request, pk):
     tenant = request.tenant
-    order  = get_object_or_404(OnlineOrder, pk=pk, tenant=tenant, status='pending')
+    order  = get_object_or_404(_scoped_orders(request, tenant), pk=pk, status='pending')
     enforce_branch_ownership(request, order)
     try:
-        invoice = approve_order(order)
+        invoice = approve_order(order, request.user)
         return JsonResponse({
             'success':    True,
             'invoice_id': invoice.pk,
@@ -672,7 +730,7 @@ def manage_order_approve(request, pk):
 @require_POST
 def manage_order_reject(request, pk):
     tenant = request.tenant
-    order  = get_object_or_404(OnlineOrder, pk=pk, tenant=tenant, status='pending')
+    order  = get_object_or_404(_scoped_orders(request, tenant), pk=pk, status='pending')
     enforce_branch_ownership(request, order)
     reject_order(order)
     return JsonResponse({'success': True})

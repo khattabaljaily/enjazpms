@@ -195,7 +195,7 @@
       }).then(function (res) {
         var toast = document.getElementById('sfToast');
         if (!res.ok) {
-          toast.innerHTML = '<i class="fas fa-lock"></i> ' + (res.data.error || 'المتجر مغلق');
+          toast.innerHTML = '<i class="fas fa-circle-exclamation"></i> ' + (res.data.error || 'تعذرت الإضافة للسلة');
           toast.classList.add('show', 'sf-toast--error');
           setTimeout(function () { toast.classList.remove('show', 'sf-toast--error'); }, 2500);
           return;

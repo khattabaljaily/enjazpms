@@ -11,6 +11,7 @@ class StoreCartManualQtyTests(TenantTestCase):
         self.store = StoreSettings.objects.create(tenant=self.tenant, is_enabled=True, status_override='open',
                                                   show_price_list=True)
         self.item = make_item(self.tenant, name='صنف متجر')
+        self.set_quantity(self.item, self.default_stock, '20')
         self.anon = Client()
 
     def test_add_with_manual_qty_and_update_by_typing(self):

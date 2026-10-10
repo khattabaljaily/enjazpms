@@ -1323,3 +1323,34 @@
     /* Prevent modal body overflow */
     .cx-modal-body { max-height: 60vh !important; }
 }
+
+/* ── Members (read-only) ─────────────────────────────────── */
+.pm-members-panel { padding: 0.9rem 1.1rem; margin-bottom: 1rem; }
+
+.pm-members-panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.35rem 1rem;
+    margin-bottom: 0.65rem;
+}
+
+.pm-members-panel-hint { font-size: 0.72rem; color: var(--text-tertiary); }
+
+.pm-members-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+
+.pm-member-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.25rem 0.7rem 0.25rem 0.3rem;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 999px;
+    background: var(--surface-hover, #f8fafc);
+}
+
+.pm-member-chip .pm-member-avatar { width: 26px; height: 26px; font-size: 0.65rem; }
+.pm-member-chip .pm-member-name { font-size: 0.78rem; }
+
+.pm-members-empty { font-size: 0.8rem; color: var(--text-tertiary); }

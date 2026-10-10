@@ -17,7 +17,7 @@
       <div class="cx-hero-icon-wrap"><i class="fas fa-inbox"></i></div>
       <div>
         <h1 class="cx-hero-title">طلبات المتجر</h1>
-        <p class="cx-hero-desc">مراجعة واعتماد الطلبات الواردة من المتجر الإلكتروني</p>
+        <p class="cx-hero-desc">{% if can_manage %}مراجعة واعتماد الطلبات الواردة من المتجر الإلكتروني{% else %}متابعة طلبات المتجر في كل الفروع — القبول والرفض من صلاحية كل فرع{% endif %}</p>
       </div>
     </div>
     <div class="cx-hero-right">
@@ -94,14 +94,14 @@
               <a href="{% url 'store:manage_order_detail' pk=order.pk %}" class="cx-action-btn cx-action-btn--view" title="تفاصيل">
                 <i class="fas fa-eye"></i>
               </a>
-              {% if order.status == 'pending' %}
+              {% if order.status == 'pending' and can_manage %}
               <button class="st-action-approve" onclick="approveOrder({{ order.pk }})" title="قبول وإنشاء فاتورة">
                 <i class="fas fa-check"></i>
               </button>
               <button class="st-action-reject" onclick="rejectOrder({{ order.pk }})" title="رفض">
                 <i class="fas fa-times"></i>
               </button>
-              {% elif order.status == 'approved' and order.sale_invoice %}
+              {% elif order.status == 'approved' and order.sale_invoice and can_manage %}
               <a href="/sales/{{ order.sale_invoice.pk }}/" class="st-action-invoice" title="عرض الفاتورة">
                 <i class="fas fa-file-invoice"></i>
               </a>

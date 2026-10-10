@@ -27,7 +27,7 @@ from apps.accounts.management.commands.generate_permission_reference import (
 EXPECTED_SECTION_ORDER = [
     'dashboard', 'ai', 'tenant_settings', 'branches', 'head_office_finance',
     'central_purchasing', 'store',
-    'permission_groups', 'users', 'insurance', 'sales', 'purchases',
+    'permission_groups', 'admin_users', 'users', 'insurance', 'sales', 'purchases',
     'categories', 'items', 'stocks', 'stock_destructions', 'incoming_shipments', 'customers',
     'suppliers', 'agents', 'employees', 'expenses', 'treasuries',
     'bank_accounts', 'employee_advances', 'employee_incentives',

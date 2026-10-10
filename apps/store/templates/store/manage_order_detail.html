@@ -1,5 +1,5 @@
 {% extends "layouts/dashboard.html" %}
-{% load static store_tags humanize %}
+{% load static store_tags humanize number_format %}
 
 {% block title %}تفاصيل الطلب {{ order.order_number }}{% endblock %}
 {% block page_header %}{% endblock %}
@@ -26,14 +26,14 @@
         <a href="{% url 'store:manage_orders' %}" class="cx-btn-secondary">
           <i class="fas fa-arrow-right"></i><span>العودة</span>
         </a>
-        {% if order.status == 'pending' %}
+        {% if order.status == 'pending' and can_manage %}
         <button class="cx-btn-primary" onclick="approveOrder({{ order.pk }})">
           <i class="fas fa-check"></i><span>قبول وإنشاء فاتورة</span>
         </button>
         <button class="cx-btn-secondary" style="color:#ef4444;border-color:#fecaca;" onclick="rejectOrder({{ order.pk }})">
           <i class="fas fa-times"></i><span>رفض الطلب</span>
         </button>
-        {% elif order.status == 'approved' and order.sale_invoice %}
+        {% elif order.status == 'approved' and order.sale_invoice and can_manage %}
         <a href="/sales/{{ order.sale_invoice.pk }}/" class="cx-btn-primary">
           <i class="fas fa-file-invoice"></i><span>عرض الفاتورة</span>
         </a>
@@ -42,6 +42,17 @@
     </div>
   </div>
 </div>
+
+{% if shortages %}
+<div class="alert alert-warning mt-3">
+  <i class="fas fa-triangle-exclamation me-1"></i>
+  <strong>بعض الأصناف لم تعد متوفرة بالكمية المطلوبة في مخزن الفرع:</strong>
+  {% for sh in shortages %}«{{ sh.item.name }}» (مطلوب {{ sh.requested|qty }}، متاح {{ sh.available|qty }}){% if not forloop.last %}، {% endif %}{% endfor %}.
+  تواصل مع الزبون لتعديل الطلب، أو ارفضه.
+</div>
+{% elif not can_manage and order.status == 'pending' %}
+<div class="alert alert-info mt-3"><i class="fas fa-circle-info me-1"></i> قبول الطلب أو رفضه من صلاحية فرع الطلب.</div>
+{% endif %}
 
 <div class="st-detail-grid">
 

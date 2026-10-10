@@ -1,10 +1,14 @@
 from django.urls import path
-from . import views
+from . import central_reports, views
 
 app_name = 'reports'
 
 urlpatterns = [
     path('', views.purchases_summary_report, name='reports'),
+
+    # Central purchases (hybrid purchasing, head office only)
+    path('central-by-supplier/', central_reports.central_purchases_report, name='central_purchases_report'),
+    path('central-by-supplier/export/', central_reports.central_purchases_report_export, name='central_purchases_report_export'),
 
     # Summary
     path('summary/', views.purchases_summary_report, name='summary_report'),

@@ -15,7 +15,7 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
-from .decorators import require_permission
+from .decorators import require_head_office_scoped_permission, require_permission
 from django.db import transaction
 from django.db.models import Q
 from django.urls import reverse
@@ -32,7 +32,7 @@ from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, Registra
 from .permissions import (
     get_permission_keys, filter_schema_for_tenant,
     get_branch_supervisor_permission_keys, get_enterprise_owner_permission_keys,
-    BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES, ENTERPRISE_OWNER_EXCLUDED_CATEGORIES,
+    BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES, ENTERPRISE_OWNER_EXCLUDED_CATEGORIES, get_scope_excluded_permission_keys,
 )
 
 
@@ -89,10 +89,28 @@ def _manageable_users(request, tenant):
     ولا مدير النشاط. بلا فرع (نسخ غير المؤسسات): كل مستخدمي النشاط كالمعتاد.
     """
     qs = User.objects.for_tenant(tenant)
+    if _is_head_office(request):
+        # نطاق إدارة النشاط: موظفو الإدارة بلا فرع فقط — لا مدير النشاط ولا موظفي الفروع.
+        return qs.filter(branch__isnull=True, is_tenant_admin=False, is_superuser=False)
     branch = getattr(request, 'branch', None)
     if branch is not None:
         qs = qs.filter(branch=branch, is_tenant_admin=False, is_superuser=False)
     return qs
+
+
+def _is_head_office(request):
+    """True لو نفّذ require_head_office_scoped_permission نطاق إدارة النشاط لهذا الطلب."""
+    return bool(getattr(request, 'head_office_scope', False))
+
+
+def _user_form(request, tenant, *args, **kwargs):
+    return UserManagementForm(*args, tenant=tenant, forced_branch=getattr(request, 'branch', None),
+                              head_office=_is_head_office(request), **kwargs)
+
+
+def _users_perm(request, action):
+    """صلاحية الإجراء في نطاق الطلب: مستخدمو إدارة النشاط أو المستخدمون المعتادون."""
+    return request.user.has_perm_key(f'{action}_admin_users' if _is_head_office(request) else f'{action}_users')
 
 
 def _branch_protected_user_error(request, target):
@@ -105,7 +123,7 @@ def _branch_protected_user_error(request, target):
 
 
 @login_required
-@require_permission('view_users')
+@require_head_office_scoped_permission('view_users', 'view_admin_users')
 def user_list(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -117,7 +135,7 @@ def user_list(request):
     inactive = total - active
 
     # is_owner_group مستبعدة عمداً — راجع apps/accounts/models.py::PermissionGroup.is_owner_group
-    form = UserManagementForm(tenant=tenant, forced_branch=getattr(request, 'branch', None))
+    form = _user_form(request, tenant)
     groups = form.fields['permission_groups'].queryset.values('id', 'name')
 
     context = {
@@ -128,13 +146,15 @@ def user_list(request):
         },
         'form': form,
         'permission_groups': json.dumps(list(groups), ensure_ascii=False),
-        'branch_locked': getattr(request, 'branch', None) is not None,
+        'branch_locked': getattr(request, 'branch', None) is not None or _is_head_office(request),
+        'head_office': _is_head_office(request),
+        'can': {action: _users_perm(request, action) for action in ('add', 'change', 'delete')},
     }
     return render(request, 'accounts/user_list.html', context)
 
 
 @login_required
-@require_permission('view_users')
+@require_head_office_scoped_permission('view_users', 'view_admin_users')
 def user_table_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -199,8 +219,8 @@ def user_table_api(request):
         'recordsFiltered': records_filtered,
         'data': data,
         'perms': {
-            'edit': request.user.has_perm_key('change_users'),
-            'delete': request.user.has_perm_key('delete_users'),
+            'edit': _users_perm(request, 'change'),
+            'delete': _users_perm(request, 'delete'),
         },
     }, json_dumps_params={'ensure_ascii': False})
 
@@ -211,7 +231,7 @@ def _active_users_count(tenant):
 
 
 @login_required
-@require_permission('add_users')
+@require_head_office_scoped_permission('add_users', 'add_admin_users')
 def user_create_api(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -235,7 +255,7 @@ def user_create_api(request):
             json_dumps_params={'ensure_ascii': False}
         )
 
-    form = UserManagementForm(request.POST, tenant=tenant, forced_branch=getattr(request, 'branch', None))
+    form = _user_form(request, tenant, request.POST)
     if not form.is_valid():
         return JsonResponse({
             'success': False,
@@ -251,7 +271,7 @@ def user_create_api(request):
 
 
 @login_required
-@require_permission('view_users')
+@require_head_office_scoped_permission('view_users', 'view_admin_users')
 def user_detail_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -278,7 +298,7 @@ def user_detail_api(request, pk):
 
 
 @login_required
-@require_permission('change_users')
+@require_head_office_scoped_permission('change_users', 'change_admin_users')
 def user_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -297,7 +317,7 @@ def user_update_api(request, pk):
             f'لا يمكن تفعيل المستخدم: وصلت للحد الأقصى من المستخدمين النشطين ({tenant.max_users}). '
             'عطّل مستخدماً آخر أو رقِّ الباقة.', status=403)
 
-    form = UserManagementForm(request.POST, instance=user, tenant=tenant, forced_branch=getattr(request, 'branch', None))
+    form = _user_form(request, tenant, request.POST, instance=user)
     if not form.is_valid():
         return JsonResponse({
             'success': False,
@@ -311,7 +331,7 @@ def user_update_api(request, pk):
 
 
 @login_required
-@require_permission('delete_users')
+@require_head_office_scoped_permission('delete_users', 'delete_admin_users')
 def user_delete_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -361,6 +381,11 @@ def permission_group_list(request):
             'branch': sorted(BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES),
             'admin': sorted(ENTERPRISE_OWNER_EXCLUDED_CATEGORIES),
         }, ensure_ascii=False),
+        # مفاتيح موسومة بنطاق مستبعد داخل أقسام مشتركة (مثل تقارير تفاصيل الفرع).
+        'group_scope_excluded_keys': json.dumps({
+            'branch': get_scope_excluded_permission_keys('admin_only'),
+            'admin': get_scope_excluded_permission_keys('branch_ops'),
+        }),
     })
 
 
@@ -470,7 +495,6 @@ def permission_group_create_api(request):
     name = request.POST.get('name', '').strip()
     description = request.POST.get('description', '').strip()
     permissions_json = request.POST.get('permissions', '{}')
-    user_ids = request.POST.getlist('users[]')
     scope = request.POST.get('scope', '').strip()
     if scope not in dict(PermissionGroup.SCOPE_CHOICES):
         scope = ''
@@ -503,9 +527,6 @@ def permission_group_create_api(request):
         is_active=request.POST.get('is_active') == 'on',
     )
 
-    if user_ids:
-        group.users.set(User.objects.filter(tenant=tenant, id__in=user_ids))
-
     enabled_count = sum(1 for p in sanitized_permissions.values() if p)
     log_activity(request, 'إنشاء مجموعة صلاحيات جديدة',
                  f"المجموعة: {group.name}\nعدد الصلاحيات المفعّلة: {enabled_count}", 'create')
@@ -530,7 +551,6 @@ def permission_group_update_api(request, pk):
     name = request.POST.get('name', '').strip()
     description = request.POST.get('description', '').strip()
     permissions_json = request.POST.get('permissions', '{}')
-    user_ids = request.POST.getlist('users[]')
     scope = request.POST.get('scope', group.scope).strip()
     if scope not in dict(PermissionGroup.SCOPE_CHOICES):
         scope = ''
@@ -559,9 +579,7 @@ def permission_group_update_api(request, pk):
     group.is_active = request.POST.get('is_active') == 'on'
     group.save()
 
-    # فقط تحديث المستخدمين إذا تم إرسال مستخدمين (قائمة غير فارغة)
-    if user_ids:
-        group.users.set(User.objects.filter(tenant=tenant, id__in=user_ids))
+    # العضوية لا تُعدَّل من هنا: تُسند المجموعات للمستخدم من شاشة إدارة المستخدمين.
 
     enabled_count = sum(1 for p in sanitized_permissions.values() if p)
     return _json_ok({

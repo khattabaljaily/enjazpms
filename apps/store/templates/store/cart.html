@@ -1,4 +1,4 @@
-{% load static store_tags %}
+{% load static store_tags number_format %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -32,6 +32,19 @@
     <i class="fas fa-shopping-bag"></i> سلة التسوق
   </h2>
 
+  {% if messages %}
+  {% for m in messages %}
+  <div class="sc-alert" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:12px;padding:.75rem 1rem;margin-bottom:1rem;font-weight:600;">
+    <i class="fas fa-circle-exclamation"></i> {{ m }}
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% if shortages %}
+  <div class="sc-alert" style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:.75rem 1rem;margin-bottom:1rem;">
+    <strong><i class="fas fa-triangle-exclamation"></i> بعض الكميات غير متوفرة في {{ branch.name|default:"المتجر" }}</strong> — عدّلها أو احذف الصنف لإتمام الطلب.
+  </div>
+  {% endif %}
+
   <div class="sc-card">
     {% if cart_items %}
 
@@ -53,6 +66,9 @@
         <div class="sc-item__name">{{ row.item.name }}</div>
         {% include 'store/partials/rx_badge.html' with rx=row.item.requires_prescription %}
         <div class="sc-item__unit">{{ row.unit_price|format_price }} {{ store.tenant.currency|currency_ar }}</div>
+        {% for sh in shortages %}{% if sh.item.id == row.item.id %}
+        <div style="color:#b45309;font-size:.8rem;font-weight:700;"><i class="fas fa-triangle-exclamation"></i> المتوفر {{ sh.available|qty }} فقط</div>
+        {% endif %}{% endfor %}
       </div>
 
       <div class="sc-qty">
@@ -96,9 +112,15 @@
         الإجمالي:
         <span>{{ subtotal|format_price }} {{ store.tenant.currency|currency_ar }}</span>
       </div>
+      {% if shortages %}
+      <span class="sc-checkout-btn" style="opacity:.5;cursor:not-allowed;" aria-disabled="true">
+        <i class="fas fa-credit-card"></i> عدّل الكميات لإتمام الطلب
+      </span>
+      {% else %}
       <a href="{% url 'store:checkout' slug=store.slug %}" class="sc-checkout-btn">
         <i class="fas fa-credit-card"></i> إتمام الطلب
       </a>
+      {% endif %}
     </div>
 
     {% else %}

@@ -1468,7 +1468,7 @@
         "ar": "تقارير المناديب",
         "en": "Sales Agent Reports"
       },
-      "role_scope": null,
+      "role_scope": "branch_ops",
       "permissions": [
         {
           "key": "view_agent_statement_report",

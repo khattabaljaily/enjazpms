@@ -77,8 +77,7 @@
                 {"key": "cancel_central_shipments", "label": {"ar": "إلغاء شحنة (مسودة أو في الطريق)", "en": "Cancel a shipment (draft or in transit)"}},
                 {"key": "receive_central_returns", "label": {"ar": "تأكيد استلام مرتجعات الفروع في المخزن المركزي", "en": "Confirm receipt of branch returns at the central warehouse"}},
                 {"key": "view_central_purchase_returns", "label": {"ar": "عرض مرتجعات المشتريات المركزية", "en": "View central purchase returns"}},
-                {"key": "add_central_purchase_returns", "label": {"ar": "إنشاء وتأكيد وإلغاء مرتجع شراء مركزي", "en": "Create, confirm and cancel central purchase returns"}},
-                {"key": "view_central_reports", "label": {"ar": "عرض تقارير المخزن المركزي والشحنات", "en": "View central warehouse and shipment reports"}}
+                {"key": "add_central_purchase_returns", "label": {"ar": "إنشاء وتأكيد وإلغاء مرتجع شراء مركزي", "en": "Create, confirm and cancel central purchase returns"}}
             ]
         },
         {
@@ -88,8 +87,9 @@
             "requires_plan_feature": "store",
             "permissions": [
                 {"key": "view_store_settings", "label": {"ar": "عرض وتعديل إعدادات المتجر الإلكتروني", "en": "View and edit online store settings"}},
-                {"key": "view_store_orders", "label": {"ar": "عرض طلبات المتجر الإلكتروني", "en": "View online store orders"}},
-                {"key": "manage_store_orders", "label": {"ar": "قبول ورفض طلبات المتجر الإلكتروني", "en": "Accept or reject online store orders"}}
+                {"key": "view_store_orders", "role_scope": "branch_ops", "label": {"ar": "عرض طلبات المتجر الإلكتروني", "en": "View online store orders"}},
+                {"key": "manage_store_orders", "role_scope": "branch_ops", "label": {"ar": "قبول ورفض طلبات المتجر الإلكتروني", "en": "Accept or reject online store orders"}},
+                {"key": "monitor_store_orders", "versions": ["multi_branch"], "label": {"ar": "متابعة طلبات المتجر في كل الفروع (قراءة فقط)", "en": "Monitor store orders across branches (read only)"}}
             ]
         },
         {
@@ -101,6 +101,18 @@
                 {"key": "change_permissiongroups", "label": {"ar": "تعديل بيانات المجموعة والصلاحيات", "en": "Edit permission group"}},
                 {"key": "delete_permissiongroups", "label": {"ar": "حذف مجموعة صلاحيات", "en": "Delete permission group"}},
                 {"key": "view_permissiongroups", "label": {"ar": "عرض مجموعات الصلاحيات", "en": "View permission groups"}}
+            ]
+        },
+        {
+            "key": "admin_users",
+            "name": {"ar": "مستخدمو إدارة النشاط", "en": "Head Office Users"},
+            "role_scope": "admin_only",
+            "versions": ["multi_branch"],
+            "permissions": [
+                {"key": "add_admin_users", "label": {"ar": "إضافة مستخدم لإدارة النشاط", "en": "Add head office user"}},
+                {"key": "change_admin_users", "label": {"ar": "تعديل بيانات مستخدم إدارة النشاط", "en": "Edit head office user"}},
+                {"key": "delete_admin_users", "label": {"ar": "حذف مستخدم إدارة النشاط", "en": "Delete head office user"}},
+                {"key": "view_admin_users", "label": {"ar": "عرض مستخدمي إدارة النشاط", "en": "View head office users"}}
             ]
         },
         {
@@ -366,12 +378,12 @@
             "name": {"ar": "تقارير المبيعات", "en": "Sales Reports"},
             "permissions": [
                 {"key": "view_sales_summary_report", "label": {"ar": "تقرير ملخص المبيعات", "en": "Sales summary report"}},
-                {"key": "view_sales_by_customer_report", "label": {"ar": "تقرير المبيعات حسب العميل", "en": "Sales by customer report"}},
+                {"key": "view_sales_by_customer_report", "role_scope": "branch_ops", "label": {"ar": "تقرير المبيعات حسب العميل", "en": "Sales by customer report"}},
                 {"key": "view_sales_by_item_report", "label": {"ar": "تقرير المبيعات حسب المنتج", "en": "Sales by product report"}},
                 {"key": "view_sales_by_date_report", "label": {"ar": "تقرير المبيعات حسب التاريخ", "en": "Sales by date report"}},
                 {"key": "view_sales_profit_margin_report", "label": {"ar": "تقرير هامش الربح (حساس)", "en": "Profit margin report (Sensitive)"}},
                 {"key": "view_sales_by_payment_method_report", "label": {"ar": "تقرير المبيعات حسب طريقة الدفع", "en": "Sales by payment method report"}},
-                {"key": "view_sales_by_user_report", "label": {"ar": "تقرير المبيعات حسب المستخدم", "en": "Sales by user report"}}
+                {"key": "view_sales_by_user_report", "role_scope": "branch_ops", "label": {"ar": "تقرير المبيعات حسب المستخدم", "en": "Sales by user report"}}
             ]
         },
         {
@@ -379,11 +391,12 @@
             "name": {"ar": "تقارير المشتريات", "en": "Purchases Reports"},
             "permissions": [
                 {"key": "view_purchases_summary_report", "label": {"ar": "تقرير ملخص المشتريات", "en": "Purchases summary report"}},
-                {"key": "view_purchases_by_supplier_report", "label": {"ar": "تقرير المشتريات حسب المورد", "en": "Purchases by supplier report"}},
+                {"key": "view_purchases_by_supplier_report", "role_scope": "branch_ops", "label": {"ar": "تقرير المشتريات حسب المورد", "en": "Purchases by supplier report"}},
                 {"key": "view_purchases_by_item_report", "label": {"ar": "تقرير المشتريات حسب المنتج", "en": "Purchases by product report"}},
                 {"key": "view_purchases_by_date_report", "label": {"ar": "تقرير المشتريات حسب التاريخ", "en": "Purchases by date report"}},
                 {"key": "view_purchases_price_history_report", "label": {"ar": "تقرير تاريخ أسعار الشراء", "en": "Purchase price history report"}},
-                {"key": "view_purchases_by_user_report", "label": {"ar": "تقرير المشتريات حسب المستخدم", "en": "Purchases by user report"}}
+                {"key": "view_purchases_by_user_report", "role_scope": "branch_ops", "label": {"ar": "تقرير المشتريات حسب المستخدم", "en": "Purchases by user report"}},
+                {"key": "view_central_purchases_report", "role_scope": "admin_only", "versions": ["multi_branch"], "label": {"ar": "تقرير المشتريات المركزية", "en": "Central purchases report"}}
             ]
         },
         {
@@ -402,37 +415,39 @@
                     "key": "view_stocks_controlled_substances_report",
                     "label": {"ar": "سجل الأصناف الخاضعة للرقابة (صيدليات)", "en": "Controlled substances log (pharmacies)"},
                     "requires_capability": "has_drug_classification"
-                }
+                },
+                {"key": "view_central_reports", "role_scope": "admin_only", "versions": ["multi_branch"], "label": {"ar": "تقارير شحنات المخزن المركزي (في الطريق والفروقات)", "en": "Central warehouse shipment reports (in transit and differences)"}}
             ]
         },
         {
             "key": "accounts_reports",
             "name": {"ar": "تقارير الحسابات", "en": "Financial Reports"},
             "permissions": [
-                {"key": "view_sales_customer_statement_report", "label": {"ar": "كشف حساب العميل", "en": "Customer statement"}},
-                {"key": "view_sales_customer_balances_report", "label": {"ar": "تقرير مديونيات العملاء", "en": "Customer balances report"}},
-                {"key": "view_sales_payments_report", "label": {"ar": "تقرير مدفوعات العملاء", "en": "Customer payments report"}},
-                {"key": "view_sales_returns_report", "label": {"ar": "تقرير مرتجعات المبيعات", "en": "Sales returns report"}},
-                {"key": "view_purchases_supplier_statement_report", "label": {"ar": "كشف حساب المورد", "en": "Supplier statement"}},
-                {"key": "view_purchases_supplier_balances_report", "label": {"ar": "تقرير مديونيات الموردين", "en": "Supplier balances report"}},
-                {"key": "view_purchases_payments_report", "label": {"ar": "تقرير مدفوعات الموردين", "en": "Supplier payments report"}},
-                {"key": "view_purchases_returns_report", "label": {"ar": "تقرير مرتجعات المشتريات", "en": "Purchase returns report"}},
+                {"key": "view_sales_customer_statement_report", "role_scope": "branch_ops", "label": {"ar": "كشف حساب العميل", "en": "Customer statement"}},
+                {"key": "view_sales_customer_balances_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مديونيات العملاء", "en": "Customer balances report"}},
+                {"key": "view_sales_payments_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مدفوعات العملاء", "en": "Customer payments report"}},
+                {"key": "view_sales_returns_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مرتجعات المبيعات", "en": "Sales returns report"}},
+                {"key": "view_purchases_supplier_statement_report", "role_scope": "branch_ops", "label": {"ar": "كشف حساب المورد", "en": "Supplier statement"}},
+                {"key": "view_purchases_supplier_balances_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مديونيات الموردين", "en": "Supplier balances report"}},
+                {"key": "view_purchases_payments_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مدفوعات الموردين", "en": "Supplier payments report"}},
+                {"key": "view_purchases_returns_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مرتجعات المشتريات", "en": "Purchase returns report"}},
                 {"key": "view_expenses_summary_report", "label": {"ar": "تقرير ملخص المصروفات", "en": "Expenses summary report"}},
-                {"key": "view_expenses_details_report", "label": {"ar": "تقرير تفاصيل المصروفات", "en": "Expense details report"}},
+                {"key": "view_expenses_details_report", "role_scope": "branch_ops", "label": {"ar": "تقرير تفاصيل المصروفات", "en": "Expense details report"}},
                 {"key": "view_expenses_by_category_report", "label": {"ar": "تقرير المصروفات حسب التصنيف", "en": "Expenses by category report"}},
                 {"key": "view_expenses_by_date_report", "label": {"ar": "تقرير المصروفات حسب التاريخ", "en": "Expenses by date report"}},
                 {"key": "view_treasury_balances_report", "label": {"ar": "تقرير أرصدة الخزائن", "en": "Treasury balances report"}},
-                {"key": "view_treasury_movements_report", "label": {"ar": "تقرير حركة الخزائن", "en": "Treasury movements report"}},
-                {"key": "view_treasury_statement_report", "label": {"ar": "كشف حساب خزينة", "en": "Treasury statement"}},
+                {"key": "view_treasury_movements_report", "role_scope": "branch_ops", "label": {"ar": "تقرير حركة الخزائن", "en": "Treasury movements report"}},
+                {"key": "view_treasury_statement_report", "role_scope": "branch_ops", "label": {"ar": "كشف حساب خزينة", "en": "Treasury statement"}},
                 {"key": "view_bank_account_balances_report", "label": {"ar": "تقرير أرصدة الحسابات البنكية", "en": "Bank account balances report"}},
-                {"key": "view_bank_account_movements_report", "label": {"ar": "تقرير حركة الحسابات البنكية", "en": "Bank account movements report"}},
-                {"key": "view_bank_account_statement_report", "label": {"ar": "كشف حساب بنكي", "en": "Bank account statement"}},
+                {"key": "view_bank_account_movements_report", "role_scope": "branch_ops", "label": {"ar": "تقرير حركة الحسابات البنكية", "en": "Bank account movements report"}},
+                {"key": "view_bank_account_statement_report", "role_scope": "branch_ops", "label": {"ar": "كشف حساب بنكي", "en": "Bank account statement"}},
                 {"key": "view_income_statement_report", "label": {"ar": "قائمة الدخل (الأرباح والخسائر)", "en": "Income statement (profit/loss)"}}
             ]
         },
         {
             "key": "agents_reports",
             "name": {"ar": "تقارير المناديب", "en": "Sales Agent Reports"},
+            "role_scope": "branch_ops",
             "requires_capability": "has_agents_module",
             "requires_plan_feature": "agents",
             "permissions": [

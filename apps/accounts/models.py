@@ -146,8 +146,13 @@ class User(AbstractUser):
             keys = set(get_branch_supervisor_permission_keys())
         else:
             keys = set()
+            enterprise = bool(self.tenant_id and self.tenant.is_enterprise())
+            owner_keys = set(get_enterprise_owner_permission_keys()) if enterprise else None
             for group in self.permission_groups.filter(is_active=True):
-                keys.update(group.get_permission_keys())
+                group_keys = set(group.get_permission_keys())
+                if enterprise and group.scope == 'admin':
+                    group_keys &= owner_keys  # راجع التعليق في has_perm_key
+                keys.update(group_keys)
         if self.branch_id:
             keys -= BRANCH_BLOCKED_KEYS
         return keys
@@ -168,9 +173,15 @@ class User(AbstractUser):
             return False
         if self.is_branch_supervisor and self.branch_id:
             return permission_key in get_branch_supervisor_permission_keys()
+        # مجموعة «إدارة النشاط» في نسخة المؤسسات لا تمنح إلا ما يملكه مدير النشاط نفسه —
+        # حتى لو حُفظ فيها سابقاً مفتاح صُنِّف لاحقاً عمليات فرع (مثل تقارير تفاصيل الفرع).
+        enterprise = bool(self.tenant_id and self.tenant.is_enterprise())
         for group in self.permission_groups.filter(is_active=True):
-            if group.has_permission(permission_key):
-                return True
+            if not group.has_permission(permission_key):
+                continue
+            if enterprise and group.scope == 'admin' and permission_key not in get_enterprise_owner_permission_keys():
+                continue
+            return True
         return False
 
 

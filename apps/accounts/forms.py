@@ -164,6 +164,9 @@ class UserManagementForm(forms.ModelForm):
         # فرع مفروض: مدير الفرع (أو أي مستخدم مربوط بفرع) يضيف مستخدمين لفرعه
         # فقط — لا يختار فرعاً ولا يعيّن مشرفاً (للفرع مشرف واحد يعيّنه مدير النشاط).
         self.forced_branch = kwargs.pop('forced_branch', None)
+        # نطاق إدارة النشاط (نسخة المؤسسات): مدير النشاط يضيف موظفي الإدارة — بلا فرع
+        # ولا إشراف، ولا يُسند لهم إلا مجموعات «إدارة النشاط».
+        self.head_office = kwargs.pop('head_office', False)
         super().__init__(*args, **kwargs)
         apply_arabic_error_messages(self)
         if self.tenant is not None:
@@ -175,7 +178,9 @@ class UserManagementForm(forms.ModelForm):
                 is_active=True,
                 is_owner_group=False,
             ).order_by('name')
-            if self.forced_branch is not None:
+            if self.head_office:
+                groups = groups.filter(scope='admin')
+            elif self.forced_branch is not None:
                 # لا يُمنح موظف الفرع مجموعة فيها صلاحيات إدارة النشاط (فروع،
                 # مستخدمو المنشأة، مجموعات الصلاحيات...) حتى لا يتصعّد.
                 allowed = branch_assignable_permission_keys()
@@ -188,7 +193,7 @@ class UserManagementForm(forms.ModelForm):
                 is_active=True
             ).order_by('name')
         self.fields['branch'].required = False
-        if self.forced_branch is not None:
+        if self.forced_branch is not None or self.head_office:
             del self.fields['branch']
             del self.fields['is_branch_supervisor']
         for field_name, field in self.fields.items():
@@ -238,8 +243,11 @@ class UserManagementForm(forms.ModelForm):
         # محدداً — وإلا ورث request.branch = None فتصبح كل سجلاته (مصروفات،
         # فواتير...) يتيمة بلا فرع، ظاهرة خطأً لكل الفروع (نفس فئة الخلل التي
         # سبّبت خزينة عملة صعبة يتيمة — راجع apps/core/signals.py).
+        # الاستثناء الوحيد: موظفو إدارة النشاط (head_office) — بلا فرع بالتصميم، ومجموعاتهم
+        # «إدارة النشاط» لا تحمل أي صلاحية من عمليات الفروع.
         if (
             self.tenant and self.tenant.is_enterprise() and not branch
+            and not self.head_office
             and not getattr(self.instance, 'is_tenant_admin', False)
         ):
             raise ValidationError('يجب اختيار الفرع لهذا المستخدم — كل مستخدم في نسخة المؤسسات يجب أن يتبع فرعاً محدداً.')
@@ -269,6 +277,9 @@ class UserManagementForm(forms.ModelForm):
             user.tenant = self.tenant
         if self.forced_branch is not None:
             user.branch = self.forced_branch
+        if self.head_office:
+            user.branch = None
+            user.is_branch_supervisor = False
         if commit:
             user.save()
             # Manually handle M2M relationship since permission_groups is defined in form

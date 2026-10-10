@@ -21,13 +21,13 @@
                     <i class="fas fa-user-shield"></i>
                 </div>
                 <div>
-                    <h1 class="cx-hero-title">المستخدمون</h1>
-                    <p class="cx-hero-desc">إدارة المستخدمين وصلاحيات الدخول للنظام</p>
+                    <h1 class="cx-hero-title">{% if head_office %}مستخدمو إدارة النشاط{% else %}المستخدمون{% endif %}</h1>
+                    <p class="cx-hero-desc">{% if head_office %}موظفو الإدارة بلا فرع — تُسند لهم مجموعات «إدارة النشاط» فقط. موظفو الفروع يضيفهم مشرف كل فرع.{% else %}إدارة المستخدمين وصلاحيات الدخول للنظام{% endif %}</p>
                 </div>
             </div>
             <div class="cx-hero-right">
                 <div class="cx-hero-actions">
-                    {% if user|has_perm_key:'add_users' %}
+                    {% if can.add %}
                     <button type="button" class="cx-btn-add" id="btnOpenCreateUser">
                         <i class="fas fa-plus"></i>
                         <span>إضافة مستخدم</span>
@@ -312,7 +312,7 @@
             </div>
             <div class="cx-view-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button>
-                {% if user|has_perm_key:'change_users' %}
+                {% if can.change %}
                 <button type="button" class="cx-btn-primary" id="viewEditUserBtn">
                     <i class="fas fa-pen-to-square me-1"></i> تعديل
                 </button>
@@ -328,8 +328,8 @@
 <script>
     window.PERMISSION_GROUPS = {{ permission_groups|safe }};
     window.USER_PERMS = {
-        edit:   {% if user|has_perm_key:'change_users' %}true{% else %}false{% endif %},
-        delete: {% if user|has_perm_key:'delete_users' %}true{% else %}false{% endif %}
+        edit:   {% if can.change %}true{% else %}false{% endif %},
+        delete: {% if can.delete %}true{% else %}false{% endif %}
     };
 </script>
 <script src="{% static 'js/users.js' %}?v=2.0"></script>

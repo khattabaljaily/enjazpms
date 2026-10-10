@@ -1,6 +1,7 @@
 """
 إدارة المستخدمين في نسخة المؤسسات: مدير الفرع هو من يضيف مستخدمي فرعه، ومدير
-النشاط لا يدير المستخدمين بل يعيّن مدير كل فرع من شاشة الفروع.
+النشاط لا يدير مستخدمي الفروع بل يعيّن مدير كل فرع من شاشة الفروع (ويضيف موظفي
+إدارة النشاط بلا فرع فقط).
 """
 from django.urls import reverse
 
@@ -38,12 +39,14 @@ class BranchUserManagementTests(TenantTestCase):
         return data
 
     # ── مدير النشاط ────────────────────────────────────────────
-    def test_tenant_admin_no_longer_manages_users(self):
+    def test_tenant_admin_cannot_add_branch_users(self):
+        # لا يملك صلاحيات مستخدمي الفروع؛ يضيف موظفي إدارة النشاط فقط (بلا فرع) —
+        # راجع tests_head_office_users.py.
         self.assertFalse(self.user.has_perm_key('view_users'))
         self.assertFalse(self.user.has_perm_key('add_users'))
         resp = self.client.post(reverse('accounts:user_create_api'), self._new_user_data(branch=self.b1.pk))
-        self.assertNotEqual(resp.status_code, 200)
-        self.assertFalse(User.objects.filter(username='newbie').exists())
+        self.assertEqual(resp.status_code, 200, resp.content)
+        self.assertIsNone(User.objects.get(username='newbie').branch_id)
 
     def test_tenant_admin_creates_branch_manager_from_branch_form(self):
         resp = self.client.post(reverse('core:branch_create_api'), {

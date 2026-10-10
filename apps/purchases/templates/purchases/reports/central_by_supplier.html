@@ -1,0 +1,115 @@
+{% extends "layouts/dashboard.html" %}
+{% load static number_format %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--purchases">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-warehouse"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">المشتريات المركزية</h1>
+                    <p class="rpt-hero-desc">فواتير الشراء على المخزن المركزي ومرتجعاتها حسب المورد</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'purchases:reports:central_purchases_report_export' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير CSV</a>
+                <a href="{% url 'purchases:order_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">من التاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">إلى التاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--purchases"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-file-invoice"></i></div>
+            <div class="rpt-kpi-value">{{ report.totals.count }}</div>
+            <div class="rpt-kpi-label">فواتير الشراء</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--purple">
+            <div class="rpt-kpi-icon"><i class="fas fa-cart-arrow-down"></i></div>
+            <div class="rpt-kpi-value">{{ report.totals.total|money }}</div>
+            <div class="rpt-kpi-label">إجمالي المشتريات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--red">
+            <div class="rpt-kpi-icon"><i class="fas fa-rotate-left"></i></div>
+            <div class="rpt-kpi-value">{{ report.totals.returns|money }}</div>
+            <div class="rpt-kpi-label">المرتجعات</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--green">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.totals.net|money }}</div>
+            <div class="rpt-kpi-label">الصافي</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--purchases">
+            <h3 class="rpt-panel-title"><i class="fas fa-truck me-2"></i>حسب المورد</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.rows %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>المورد</th>
+                            <th class="text-center">عدد الفواتير</th>
+                            <th class="text-end">المشتريات</th>
+                            <th class="text-end">المرتجعات</th>
+                            <th class="text-end">الصافي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in report.rows %}
+                        <tr>
+                            <td class="fw-bold">{{ r.supplier }}</td>
+                            <td class="text-center">{{ r.count }}</td>
+                            <td class="text-end">{{ r.total|money }}</td>
+                            <td class="text-end text-danger">{{ r.returns|money }}</td>
+                            <td class="text-end fw-bold" dir="ltr">{{ r.net|money }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:var(--bg-secondary);">
+                            <th>الإجمالي</th>
+                            <th class="text-center">{{ report.totals.count }}</th>
+                            <th class="text-end">{{ report.totals.total|money }}</th>
+                            <th class="text-end">{{ report.totals.returns|money }}</th>
+                            <th class="text-end" dir="ltr">{{ report.totals.net|money }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty"><i class="fas fa-file-invoice"></i><p>لا توجد مشتريات مركزية في هذه الفترة</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

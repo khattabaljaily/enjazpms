@@ -22,7 +22,7 @@
             </div>
             <div class="rpt-hero-actions">
                 <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
-                <a href="{% url 'stocks:reports:valuation_report_export' %}{% if selected_branch %}?branch={{ selected_branch.id }}{% endif %}" class="rpt-hero-btn">
+                <a href="{% url 'stocks:reports:valuation_report_export' %}{% if selected_branch %}?branch={{ selected_branch.id }}{% elif request.report_central %}?branch=central{% endif %}" class="rpt-hero-btn">
                     <i class="fas fa-download"></i> تصدير CSV
                 </a>
                 <a href="{% url 'stocks:list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>

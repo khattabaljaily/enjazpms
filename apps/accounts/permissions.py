@@ -28,9 +28,9 @@ def _load_structured_schema():
       - versions: قائمة version_type المسموحة، أو غائبة (= كل النسخ).
       - requires_capability / requires_plan_feature / requires_flag: اسم
         الخاصية على TenantCapabilities / Tenant.plan_allows / Tenant نفسه.
-    كل صلاحية {key, label: {ar, en}} قد تحمل نفس الوسوم الثلاثة الأخيرة
-    لتضييق صلاحية واحدة داخل قسم أوسع (مثال: transfer_treasuries داخل
-    الخزائن، أو view_stocks_controlled_substances_report داخل تقارير المخزن).
+    كل صلاحية {key, label: {ar, en}} قد تحمل نفس الوسوم كلها لتضييق صلاحية واحدة
+    داخل قسم أوسع (مثال: transfer_treasuries داخل الخزائن، أو تقرير «المبيعات حسب
+    العميل» role_scope=branch_ops داخل تقارير المبيعات المشتركة بين الدورين).
 
     هذا هو المصدر الوحيد لشجرة الصلاحيات — أي شاشة/دالة أخرى في المشروع يجب
     أن تمر عبر الدوال أدناه بدل قراءة الملف مباشرة.
@@ -91,24 +91,49 @@ def get_permission_choices(lang='ar'):
 # واحد مشترك بين كل الفروع (المتجر الإلكتروني — راجع BRANCH_SCOPING.md §9).
 # مُشتقّة الآن من role_scope=="admin_only" في الملف بدل قائمة يدوية منفصلة —
 # يستحيل أن تختلف عن الملف بعد اليوم (لا مجال لنسيان تحديثها).
+def _fully_scoped(section, scope):
+    """كل صلاحيات القسم نطاقها scope (وسم الصلاحية يتقدّم على وسم القسم)."""
+    return all((perm.get('role_scope') or section.get('role_scope')) == scope for perm in section['permissions'])
+
+
 BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES = {
     section['name']['ar']
     for section in _load_structured_schema()
-    if section.get('role_scope') == 'admin_only'
+    if _fully_scoped(section, 'admin_only')
 }
+
+
+def _effective_role_scope(section, perm):
+    """نطاق الصلاحية: وسمها الخاص إن وُجد، وإلا نطاق قسمها."""
+    return perm.get('role_scope') or section.get('role_scope')
+
+
+def _keys_excluding_scope(excluded_scope):
+    return [
+        perm['key']
+        for section in _load_structured_schema()
+        for perm in section['permissions']
+        if _effective_role_scope(section, perm) != excluded_scope
+    ]
+
+
+def get_scope_excluded_permission_keys(excluded_scope):
+    """مفاتيح نطاقها مستبعد داخل أقسام مختلطة (لإخفائها وحدها في شاشة المجموعات)."""
+    return sorted(
+        perm['key']
+        for section in _load_structured_schema()
+        if not _fully_scoped(section, excluded_scope)
+        for perm in section['permissions']
+        if _effective_role_scope(section, perm) == excluded_scope
+    )
 
 
 def get_branch_supervisor_permission_keys():
     """
     كل مفاتيح الصلاحيات المتاحة لمشرف الفرع تلقائياً: كل الصلاحيات ما عدا
-    التصنيفات الحصرية لمدير النشاط (role_scope == 'admin_only').
+    الحصرية لمدير النشاط (role_scope == 'admin_only' للقسم أو للصلاحية نفسها).
     """
-    return [
-        perm['key']
-        for section in _load_structured_schema()
-        if section.get('role_scope') != 'admin_only'
-        for perm in section['permissions']
-    ]
+    return _keys_excluding_scope('admin_only')
 
 
 # تصنيفات عمليات الفرع اليومية التي تُخفى عن مدير النشاط في نسخة المؤسسات
@@ -120,21 +145,17 @@ def get_branch_supervisor_permission_keys():
 ENTERPRISE_OWNER_EXCLUDED_CATEGORIES = {
     section['name']['ar']
     for section in _load_structured_schema()
-    if section.get('role_scope') == 'branch_ops'
+    if _fully_scoped(section, 'branch_ops')
 }
 
 
 def get_enterprise_owner_permission_keys():
     """
     كل مفاتيح الصلاحيات المتاحة لمدير النشاط في نسخة المؤسسات: كل الصلاحيات
-    ما عدا عمليات الفرع اليومية (role_scope == 'branch_ops').
+    ما عدا عمليات الفرع اليومية وتقارير تفاصيل الفرع (role_scope == 'branch_ops'
+    للقسم أو للصلاحية نفسها) — هو يحتاج صورة عامة، لا عملاء ومناديب كل فرع.
     """
-    return [
-        perm['key']
-        for section in _load_structured_schema()
-        if section.get('role_scope') != 'branch_ops'
-        for perm in section['permissions']
-    ]
+    return _keys_excluding_scope('branch_ops')
 
 
 # مفاتيح محظورة على أي مستخدم مربوط بفرع (request.branch/user.branch) بصرف
@@ -168,33 +189,23 @@ def _apply_tenant_filter(sections, *, version_type, has_capability, plan_allows,
     (management command) باستدعائها بقدرات "افتراضية قصوى" دون الحاجة لكائن
     Tenant وهمي غير محفوظ في قاعدة البيانات.
     """
-    def section_visible(section):
+    def visible(node):
         if version_type is not None:
-            versions = section.get('versions')
+            versions = node.get('versions')
             if versions and version_type not in versions:
                 return False
-        capability = section.get('requires_capability')
+        capability = node.get('requires_capability')
         if capability and not has_capability(capability):
             return False
-        feature = section.get('requires_plan_feature')
+        feature = node.get('requires_plan_feature')
         if feature and not plan_allows(feature):
             return False
-        flag = section.get('requires_flag')
+        flag = node.get('requires_flag')
         if flag and not get_flag(flag):
             return False
         return True
 
-    def perm_visible(perm):
-        capability = perm.get('requires_capability')
-        if capability and not has_capability(capability):
-            return False
-        feature = perm.get('requires_plan_feature')
-        if feature and not plan_allows(feature):
-            return False
-        flag = perm.get('requires_flag')
-        if flag and not get_flag(flag):
-            return False
-        return True
+    section_visible = perm_visible = visible
 
     result = []
     for section in sections:

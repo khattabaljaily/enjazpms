@@ -82,6 +82,37 @@ def require_scoped_permission(branch_key, central_key):
     return decorator
 
 
+def require_head_office_scoped_permission(branch_key, head_office_key):
+    """
+    صلاحية بنطاقين لشاشة المستخدمين في نسخة المؤسسات:
+      - من يملك branch_key: النطاق المعتاد (request.head_office_scope = False).
+      - من لا يملكه لكن يملك head_office_key، والنسخة multi_branch، وهو مستخدم بلا فرع
+        (مدير النشاط أو موظف إدارة): نطاق إدارة النشاط (request.head_office_scope = True)
+        — مستخدمو الإدارة بلا فرع فقط، ومجموعات «إدارة النشاط» فقط.
+      - غير ذلك: مرفوض.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect('accounts:login')
+            user = request.user
+            if user.is_superuser or user.has_perm_key(branch_key):
+                request.head_office_scope = False
+                return view_func(request, *args, **kwargs)
+            tenant = getattr(request, 'tenant', None)
+            if (tenant is not None and tenant.is_enterprise()
+                    and getattr(request, 'branch', None) is None
+                    and user.has_perm_key(head_office_key)):
+                request.head_office_scope = True
+                return view_func(request, *args, **kwargs)
+            return _deny(request)
+        wrapper._required_permission_keys = (branch_key, head_office_key)
+        wrapper._permission_check_mode = 'any'
+        return wrapper
+    return decorator
+
+
 def require_any_permission(*permission_keys):
     def decorator(view_func):
         @wraps(view_func)

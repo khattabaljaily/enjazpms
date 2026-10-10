@@ -148,6 +148,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'ar'
+# صيغة الأرقام: النقطة للكسور (راجع PROJECT/formats/ar/formats.py).
+FORMAT_MODULE_PATH = ['PROJECT.formats']
 TIME_ZONE = 'Africa/Cairo'
 USE_I18N = True
 USE_TZ = True

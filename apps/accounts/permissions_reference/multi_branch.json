@@ -297,13 +297,6 @@
             "ar": "إنشاء وتأكيد وإلغاء مرتجع شراء مركزي",
             "en": "Create, confirm and cancel central purchase returns"
           }
-        },
-        {
-          "key": "view_central_reports",
-          "label": {
-            "ar": "عرض تقارير المخزن المركزي والشحنات",
-            "en": "View central warehouse and shipment reports"
-          }
         }
       ]
     },
@@ -334,6 +327,13 @@
           "label": {
             "ar": "قبول ورفض طلبات المتجر الإلكتروني",
             "en": "Accept or reject online store orders"
+          }
+        },
+        {
+          "key": "monitor_store_orders",
+          "label": {
+            "ar": "متابعة طلبات المتجر في كل الفروع (قراءة فقط)",
+            "en": "Monitor store orders across branches (read only)"
           }
         }
       ]
@@ -372,6 +372,44 @@
           "label": {
             "ar": "عرض مجموعات الصلاحيات",
             "en": "View permission groups"
+          }
+        }
+      ]
+    },
+    {
+      "key": "admin_users",
+      "name": {
+        "ar": "مستخدمو إدارة النشاط",
+        "en": "Head Office Users"
+      },
+      "role_scope": "admin_only",
+      "permissions": [
+        {
+          "key": "add_admin_users",
+          "label": {
+            "ar": "إضافة مستخدم لإدارة النشاط",
+            "en": "Add head office user"
+          }
+        },
+        {
+          "key": "change_admin_users",
+          "label": {
+            "ar": "تعديل بيانات مستخدم إدارة النشاط",
+            "en": "Edit head office user"
+          }
+        },
+        {
+          "key": "delete_admin_users",
+          "label": {
+            "ar": "حذف مستخدم إدارة النشاط",
+            "en": "Delete head office user"
+          }
+        },
+        {
+          "key": "view_admin_users",
+          "label": {
+            "ar": "عرض مستخدمي إدارة النشاط",
+            "en": "View head office users"
           }
         }
       ]
@@ -1507,6 +1545,13 @@
             "ar": "تقرير المشتريات حسب المستخدم",
             "en": "Purchases by user report"
           }
+        },
+        {
+          "key": "view_central_purchases_report",
+          "label": {
+            "ar": "تقرير المشتريات المركزية",
+            "en": "Central purchases report"
+          }
         }
       ]
     },
@@ -1579,6 +1624,13 @@
           "label": {
             "ar": "سجل الأصناف الخاضعة للرقابة (صيدليات)",
             "en": "Controlled substances log (pharmacies)"
+          }
+        },
+        {
+          "key": "view_central_reports",
+          "label": {
+            "ar": "تقارير شحنات المخزن المركزي (في الطريق والفروقات)",
+            "en": "Central warehouse shipment reports (in transit and differences)"
           }
         }
       ]
@@ -1732,7 +1784,7 @@
         "ar": "تقارير المناديب",
         "en": "Sales Agent Reports"
       },
-      "role_scope": null,
+      "role_scope": "branch_ops",
       "permissions": [
         {
           "key": "view_agent_statement_report",

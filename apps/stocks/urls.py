@@ -1,5 +1,5 @@
 from django.urls import path, include
-from . import views, shipment_views, central_reports
+from . import views, shipment_views
 
 app_name = 'stocks'
 
@@ -47,7 +47,6 @@ urlpatterns = [
     path('shipments/<int:pk>/cancel/', shipment_views.shipment_cancel_ajax, name='shipment_cancel'),
     path('shipments/<int:pk>/receive/', shipment_views.shipment_receive_ajax, name='shipment_receive'),
 
-    path('central-reports/', central_reports.central_reports, name='central_reports'),
 
     # Stocktake
     path('stocktakes/', views.stocktake_list, name='stocktake_list'),

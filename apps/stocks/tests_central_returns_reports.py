@@ -205,30 +205,67 @@ class CentralPurchaseReturnTests(CentralPurchasingBase):
 
 
 class CentralReportsTests(ShipmentBase):
-    def test_reports_page_and_exports_for_owner(self):
-        sh = self.make_shipment(send=True)                       # في الطريق
+    """التقارير المركزية داخل أقسام التقارير: شحنات في الطريق، فروقات، مشتريات، ونطاق «المخزن المركزي»."""
+
+    def setUp(self):
+        super().setUp()
+        self.sh = self.make_shipment(send=True)                       # في الطريق
         sh2 = self.make_shipment(lines=[{'item': self.plain, 'quantity': Decimal('3')}], send=True)
-        lid = self.line_ids(sh2)[self.plain.pk]
-        receive_shipment(sh2, {lid: Decimal('1')}, self.u1)      # فرق 2
+        receive_shipment(sh2, {self.line_ids(sh2)[self.plain.pk]: Decimal('1')}, self.u1)  # ناقص 2
+
+    def test_shipment_reports_and_exports_for_owner(self):
         self.client.force_login(self.user)
-        page = self.client.get(reverse('stocks:central_reports'))
+        page = self.client.get(reverse('stocks:reports:shipments_in_transit_report'))
         self.assertEqual(page.status_code, 200)
-        data = page.context
-        self.assertEqual([r['number'] for r in data['transit']], [sh.shipment_number])
-        self.assertEqual([(r['item'], r['difference']) for r in data['differences']], [('مستلزم ب', Decimal('2'))])
-        self.assertTrue(any(r['item'] == 'دواء أ' for r in data['valuation']))
-        for kind in ('valuation', 'transit', 'differences', 'purchases'):
-            resp = self.client.get(reverse('stocks:central_reports'), {'export': kind})
-            self.assertEqual(resp.status_code, 200, kind)
+        self.assertEqual([r['number'] for r in page.context['report']['rows']], [self.sh.shipment_number])
+        page = self.client.get(reverse('stocks:reports:shipment_differences_report'))
+        self.assertEqual([(r['item'], r['difference']) for r in page.context['report']['rows']],
+                         [('مستلزم ب', Decimal('2'))])
+        self.assertContains(page, '10.00')  # قيمة الفرق: 2 × تكلفة 5
+        self.assertNotContains(page, ',00')
+        for name in ('stocks:reports:shipments_in_transit_report_export',
+                     'stocks:reports:shipment_differences_report_export',
+                     'purchases:reports:central_purchases_report_export'):
+            resp = self.client.get(reverse(name))
+            self.assertEqual(resp.status_code, 200, name)
             self.assertIn('text/csv', resp['Content-Type'])
+        self.assertEqual(self.client.get(reverse('purchases:reports:central_purchases_report')).status_code, 200)
+
+    def test_stock_reports_offer_central_warehouse_scope(self):
+        self.client.force_login(self.user)
+        url = reverse('stocks:reports:valuation_report')
+        page = self.client.get(url)
+        self.assertContains(page, 'value="central"')
+        central = self.client.get(url, {'branch': 'central'})
+        names = [row['item_name'] for cat in central.context['report']['categories'] for row in cat['items']]
+        self.assertIn('دواء أ', names)                                  # 4 باقية في المركزي
+        self.assertEqual(self.client.get(reverse('stocks:reports:valuation_report_export'),
+                                         {'branch': 'central'}).status_code, 200)
+        branch_only = self.client.get(url, {'branch': self.b2.pk})
+        self.assertEqual(branch_only.context['report']['categories'], [])
+
+    def test_old_combined_page_is_gone_and_links_live_in_reports(self):
+        from django.urls import NoReverseMatch
+        with self.assertRaises(NoReverseMatch):
+            reverse('stocks:central_reports')
+        self.client.force_login(self.user)
+        dash = self.client.get(reverse('core:dashboard'))
+        self.assertContains(dash, reverse('stocks:reports:shipments_in_transit_report'))
+        self.assertContains(dash, reverse('purchases:reports:central_purchases_report'))
 
     def test_reports_are_hidden_from_branches_and_non_hybrid(self):
+        names = ('stocks:reports:shipments_in_transit_report', 'stocks:reports:shipment_differences_report',
+                 'purchases:reports:central_purchases_report')
         self.client.force_login(self.u1)
-        self.assertIn(self.client.get(reverse('stocks:central_reports')).status_code, (302, 403, 404))
+        for name in names:
+            self.assertIn(self.client.get(reverse(name)).status_code, (302, 403, 404), name)
+        page = self.client.get(reverse('stocks:reports:valuation_report'), {'branch': 'central'})
+        self.assertNotContains(page, 'value="central"')
         self.tenant.purchasing_mode = 'decentralized'
         self.tenant.save(update_fields=['purchasing_mode'])
         self.client.force_login(self.user)
-        self.assertIn(self.client.get(reverse('stocks:central_reports')).status_code, (302, 403, 404))
+        for name in names:
+            self.assertIn(self.client.get(reverse(name)).status_code, (302, 403, 404), name)
 
 
 class Phase3PermissionKeysTests(ShipmentBase):

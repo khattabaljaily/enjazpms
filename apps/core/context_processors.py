@@ -37,9 +37,10 @@ def tenant_context(request):
 
         try:
             from apps.store.models import OnlineOrder
-            context['store_pending_count'] = OnlineOrder.objects.filter(
-                tenant=tenant, status='pending'
-            ).count() if tenant.plan_allows('store') else 0
+            pending = OnlineOrder.objects.filter(tenant=tenant, status='pending')
+            if getattr(request, 'branch', None) is not None:
+                pending = pending.filter(branch=request.branch)   # الفرع يرى عدد طلباته فقط
+            context['store_pending_count'] = pending.count() if tenant.plan_allows('store') else 0
         except Exception:
             context['store_pending_count'] = 0
 

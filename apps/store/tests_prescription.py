@@ -30,6 +30,9 @@ class PrescriptionStoreTests(TenantTestCase):
             tenant=self.tenant, is_enabled=True, status_override='open', show_out_of_stock=True)
         self.rx = make_item(self.tenant, name='مضاد حيوي', requires_prescription=True)
         self.otc = make_item(self.tenant, name='فيتامين', requires_prescription=False)
+        # الطلب يُتحقق فيه من رصيد مخزن المتجر
+        self.set_quantity(self.rx, self.default_stock, '10')
+        self.set_quantity(self.otc, self.default_stock, '10')
         self.anon = Client()
 
     def _cart(self, *items):

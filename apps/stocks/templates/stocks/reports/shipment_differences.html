@@ -1,0 +1,110 @@
+{% extends "layouts/dashboard.html" %}
+{% load static number_format %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene printable-scene">
+
+    <div class="rpt-hero rpt-hero--stocks">
+        <div class="rpt-hero-inner">
+            <div class="rpt-hero-left">
+                <div class="rpt-hero-icon"><i class="fas fa-scale-unbalanced"></i></div>
+                <div>
+                    <h1 class="rpt-hero-title">فروقات استلام الشحنات</h1>
+                    <p class="rpt-hero-desc">الأصناف التي استُلمت بكمية تختلف عن المرسلة في شحنات المخزن المركزي</p>
+                </div>
+            </div>
+            <div class="rpt-hero-actions">
+                <button onclick="window.print()" class="rpt-hero-btn"><i class="fas fa-print"></i> طباعة</button>
+                <a href="{% url 'stocks:reports:shipment_differences_report_export' %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" class="rpt-hero-btn"><i class="fas fa-download"></i> تصدير CSV</a>
+                <a href="{% url 'stocks:shipment_list' %}" class="rpt-hero-btn"><i class="fas fa-arrow-left"></i> عودة</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">من التاريخ</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">إلى التاريخ</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--stocks"><i class="fas fa-search me-1"></i>بحث</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rpt-kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="rpt-kpi-card rpt-kpi--blue">
+            <div class="rpt-kpi-icon"><i class="fas fa-truck"></i></div>
+            <div class="rpt-kpi-value">{{ report.shipment_count }}</div>
+            <div class="rpt-kpi-label">شحنات فيها فرق</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--amber">
+            <div class="rpt-kpi-icon"><i class="fas fa-list"></i></div>
+            <div class="rpt-kpi-value">{{ report.rows|length }}</div>
+            <div class="rpt-kpi-label">بنود فيها فرق</div>
+        </div>
+        <div class="rpt-kpi-card rpt-kpi--red">
+            <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
+            <div class="rpt-kpi-value">{{ report.total_value|money }}</div>
+            <div class="rpt-kpi-label">قيمة الفروقات</div>
+        </div>
+    </div>
+
+    <div class="rpt-panel">
+        <div class="rpt-panel-header rpt-panel-header--stocks">
+            <h3 class="rpt-panel-title"><i class="fas fa-table me-2"></i>تفاصيل الفروقات</h3>
+        </div>
+        <div class="rpt-panel-body">
+            {% if report.rows %}
+            <div class="table-responsive">
+                <p class="rpt-unit-note m-0 p-2"><i class="fas fa-ruler me-1"></i>الكميات بالوحدة الأساسية (الأصغر) للصنف — الفرق = المرسل − المستلَم (الموجب ناقص عاد للمُرسِل)</p>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>الشحنة</th>
+                            <th>النوع</th>
+                            <th>الفرع</th>
+                            <th>تاريخ الاستلام</th>
+                            <th>الصنف</th>
+                            <th class="text-end">المرسل</th>
+                            <th class="text-end">المستلَم</th>
+                            <th class="text-end">الفرق</th>
+                            <th class="text-end">القيمة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in report.rows %}
+                        <tr>
+                            <td class="fw-bold"><a href="{% url 'stocks:shipment_detail' r.shipment_id %}">{{ r.number }}</a></td>
+                            <td>{{ r.kind }}</td>
+                            <td>{{ r.branch }}</td>
+                            <td class="text-muted">{{ r.date|date:"Y-m-d" }}</td>
+                            <td>{{ r.item }}</td>
+                            <td class="text-end">{{ r.sent|qty }}</td>
+                            <td class="text-end">{{ r.received|qty }}</td>
+                            <td class="text-end fw-bold text-danger" dir="ltr">{{ r.difference|qty }}</td>
+                            <td class="text-end fw-bold" dir="ltr">{{ r.value|money }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="rpt-empty"><i class="fas fa-check-circle"></i><p>لا توجد فروقات استلام في هذه الفترة</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

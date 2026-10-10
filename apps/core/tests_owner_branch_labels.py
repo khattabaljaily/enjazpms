@@ -96,12 +96,12 @@ class OwnerBranchLabelTests(TenantTestCase):
         names = [r['customer_name'] for r in self._sales(self.b1).get_by_customer_report()['data']]
         self.assertEqual(names, ['عميل الأمل'])
 
-    def test_owner_report_pages_render_with_branch_label(self):
-        resp = self.client.get(reverse('reports:by_customer_report'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn('عميل الأمل (فرع الشمال)', resp.content.decode())
-        resp = self.client.get(reverse('reports:customer_balances'))
-        self.assertIn('عميل النور (فرع الجنوب)', resp.content.decode())
+    def test_owner_has_no_customer_detail_reports(self):
+        # تقارير العملاء تقارير تفاصيل فرع: مدير النشاط يرى الصورة العامة فقط
+        # (راجع apps/accounts/tests_owner_reports_scope.py)؛ إلحاق اسم الفرع يبقى
+        # لما يعرضه من تقارير عامة.
+        for name in ('reports:by_customer_report', 'reports:customer_balances'):
+            self.assertIn(self.client.get(reverse(name)).status_code, (302, 403), name)
 
     def test_branch_user_report_pages_unchanged(self):
         self.client.force_login(self.mgr1)
