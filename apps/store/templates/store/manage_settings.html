@@ -46,10 +46,12 @@
           <i class="fas fa-qrcode"></i><span>رمز QR</span>
         </button>
         {% endif %}
+        {% if user|has_perm_key:'view_store_orders' %}
         <a href="{% url 'store:manage_orders' %}" class="cx-btn-primary st-orders-btn">
           <i class="fas fa-inbox"></i><span>الطلبات</span>
           {% if pending_count > 0 %}<span class="st-orders-count">{{ pending_count }}</span>{% endif %}
         </a>
+        {% endif %}
       </div>
     </div>
   </div>

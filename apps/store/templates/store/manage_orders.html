@@ -17,14 +17,21 @@
       <div class="cx-hero-icon-wrap"><i class="fas fa-inbox"></i></div>
       <div>
         <h1 class="cx-hero-title">طلبات المتجر</h1>
-        <p class="cx-hero-desc">{% if can_manage %}مراجعة واعتماد الطلبات الواردة من المتجر الإلكتروني{% else %}متابعة طلبات المتجر في كل الفروع — القبول والرفض من صلاحية كل فرع{% endif %}</p>
+        <p class="cx-hero-desc">مراجعة واعتماد الطلبات الواردة من المتجر الإلكتروني</p>
       </div>
     </div>
     <div class="cx-hero-right">
       <div class="cx-hero-actions">
+        {% if store and store.is_enabled %}
+        <button type="button" class="cx-btn-secondary" onclick="openStoreQR('{{ request.scheme }}://{{ request.META.HTTP_HOST }}{% url "store:storefront" slug=store.slug %}{% if request.branch %}?branch={{ request.branch.id }}{% endif %}', '{{ store.display_name|default:request.tenant.name }}{% if request.branch %} — {{ request.branch.name }}{% endif %}')">
+          <i class="fas fa-qrcode"></i><span>رمز QR للمتجر</span>
+        </button>
+        {% endif %}
+        {% if user|has_perm_key:'view_store_settings' %}
         <a href="{% url 'store:manage_settings' %}" class="cx-btn-secondary">
           <i class="fas fa-cog"></i><span>إعدادات المتجر</span>
         </a>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -126,6 +133,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if store and store.is_enabled %}{% include "store/partials/qr_print_modal.html" %}{% endif %}
 <script>
 const CSRF = "{{ csrf_token }}";
 

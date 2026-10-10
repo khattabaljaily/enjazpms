@@ -13,7 +13,7 @@ from django.contrib import messages
 from django.db.models import F, Q
 
 from .models import OnlineOrder, StoreSettings
-from apps.accounts.decorators import require_any_permission, require_permission, branch_scope_exempt
+from apps.accounts.decorators import require_permission, branch_scope_exempt
 from apps.core.utils import enforce_branch_ownership
 from .services import (
     approve_order, available_quantities, cart_add, cart_clear, cart_remove, cart_shortages,
@@ -594,7 +594,8 @@ def manage_settings(request):
         messages.success(request, 'تم حفظ إعدادات المتجر بنجاح.')
         return redirect('store:manage_settings')
 
-    pending_count = OnlineOrder.objects.filter(tenant=tenant, status='pending').count()
+    pending_count = (OnlineOrder.objects.filter(tenant=tenant, status='pending').count()
+                     if request.user.has_perm_key('view_store_orders') else 0)
     hours = store.working_hours or DEFAULT_HOURS
 
     return render(request, 'store/manage_settings.html', {
@@ -617,7 +618,7 @@ def manage_settings(request):
 def _scoped_orders(request, tenant):
     """
     طلبات نطاق الطلب: الفرع يرى طلباته فقط (هو من يقبلها ويُصدر فاتورتها)؛
-    الإدارة بلا فرع ترى الكل (للمتابعة في نسخة المؤسسات).
+    بلا فرع (النسخ بلا فروع): كل طلبات المشترك.
     """
     orders = OnlineOrder.objects.filter(tenant=tenant)
     branch = getattr(request, 'branch', None)
@@ -627,7 +628,7 @@ def _scoped_orders(request, tenant):
 
 
 @login_required
-@require_any_permission('view_store_orders', 'monitor_store_orders')
+@require_permission('view_store_orders')
 def manage_orders(request):
     tenant = request.tenant
     if not tenant:
@@ -651,6 +652,8 @@ def manage_orders(request):
         'status_filter': status_filter,
         'counts':        counts,
         'can_manage':    request.user.has_perm_key('manage_store_orders'),
+        # رابط المتجر ورمز QR الخاص بفرع المستخدم (يفتح المتجر على فرعه مباشرة)
+        'store':         StoreSettings.objects.filter(tenant=tenant).first(),
         'show_branch':   tenant.is_enterprise() and getattr(request, 'branch', None) is None,
     })
 
@@ -660,7 +663,7 @@ def manage_orders(request):
 # ══════════════════════════════════════════════════════════════
 
 @login_required
-@require_any_permission('view_store_orders', 'monitor_store_orders')
+@require_permission('view_store_orders')
 def manage_order_detail(request, pk):
     tenant = request.tenant
     order  = get_object_or_404(_scoped_orders(request, tenant), pk=pk)
@@ -681,7 +684,7 @@ def manage_order_detail(request, pk):
 
 
 @login_required
-@require_any_permission('view_store_orders', 'monitor_store_orders')
+@require_permission('view_store_orders')
 def manage_order_prescription(request, pk):
     """تنزيل/عرض الوصفة الطبية المرفقة — للمصرَّح لهم بطلبات المتجر وضمن فرع الطلب فقط."""
     import mimetypes

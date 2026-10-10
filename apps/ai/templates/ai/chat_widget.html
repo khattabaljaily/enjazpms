@@ -1,8 +1,50 @@
 {% load static %}
 
 <!-- AI Floating Button -->
+<!-- Shared robot face (used by the floating button and the chat header) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+        <linearGradient id="aibShell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#fdf1e3"/><stop offset="1" stop-color="#f3d3ad"/></linearGradient>
+        <linearGradient id="aibScreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a2203"/><stop offset="1" stop-color="#2a1100"/></linearGradient>
+        <linearGradient id="aibBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffa63d"/><stop offset="1" stop-color="#e8680a"/></linearGradient>
+        <filter id="aibGlowF" x="-40%" y="-80%" width="180%" height="260%"><feDropShadow dx="0" dy="0" stdDeviation="1.1" flood-color="#7df9ff" flood-opacity=".9"/></filter>
+        <linearGradient id="aibPod" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb347"/><stop offset="1" stop-color="#f07a12"/></linearGradient>
+        <radialGradient id="aibEye" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#fffbe0"/><stop offset=".6" stop-color="#ffd36b"/><stop offset="1" stop-color="#ffb11f"/></radialGradient>
+        <filter id="aibBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6"/></filter>
+        <radialGradient id="aibGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff7c2"/><stop offset="1" stop-color="#ffb11f"/></radialGradient>
+        <symbol id="ai-bot-face" viewBox="0 0 48 48">
+            <ellipse cx="24" cy="46.5" rx="10" ry="1.3" fill="#000" opacity=".2"/>
+            <path d="M14 38 q10 -4 20 0 l-1.5 6.5 q-8.5 3 -17 0z" fill="url(#aibBody)" stroke="#fff" stroke-width="1"/>
+            <circle cx="24" cy="41.5" r="1.7" fill="url(#aibGlow)"/>
+            <line x1="24" y1="7" x2="24" y2="3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+            <circle class="ai-bot__antenna" cx="24" cy="2.8" r="2.6" fill="url(#aibGlow)" stroke="#fff" stroke-width="1"/>
+            <rect x="2.5" y="17" width="6" height="11" rx="3" fill="#2b1608" stroke="#fff" stroke-width="1"/>
+            <rect x="39.5" y="17" width="6" height="11" rx="3" fill="#2b1608" stroke="#fff" stroke-width="1"/>
+            <rect x="6.5" y="6.5" width="35" height="31" rx="14" fill="url(#aibShell)" stroke="#fff" stroke-width="1.2"/>
+            <rect x="10" y="12" width="28" height="19" rx="9.5" fill="url(#aibScreen)"/>
+            <path d="M14 15.5 q7 -2.5 14 -.5" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" opacity=".28"/>
+            <g class="ai-bot__eyes" fill="none" stroke="#7df9ff" stroke-width="2.6" stroke-linecap="round">
+                <path d="M15.5 22.5 q3 -5 6 0" filter="url(#aibGlowF)"/>
+                <path d="M26.5 22.5 q3 -5 6 0" filter="url(#aibGlowF)"/>
+            </g>
+            <path d="M20 26 q4 3.5 8 0" fill="none" stroke="#7df9ff" stroke-width="1.9" stroke-linecap="round"/>
+            <ellipse cx="13.5" cy="26.5" rx="2.2" ry="1.3" fill="#ff7aa8" opacity=".55"/>
+            <ellipse cx="34.5" cy="26.5" rx="2.2" ry="1.3" fill="#ff7aa8" opacity=".55"/>
+        </symbol>
+    </defs>
+</svg>
+
+<!-- AI Floating Button -->
 <button id="ai-fab" class="ai-fab" title="المساعد الذكي" aria-label="فتح المساعد الذكي">
-    <i class="fa-solid fa-robot ai-fab__icon"></i>
+    <svg class="ai-fab__bot" viewBox="0 0 70 58" width="62" height="51" aria-hidden="true">
+        <g class="ai-bot__head"><use href="#ai-bot-face" x="9" y="0" width="52" height="52"/></g>
+        <g class="ai-bot__arm">
+            <path d="M45 43 L58 33" stroke="#fff" stroke-width="6" stroke-linecap="round" fill="none"/>
+            <path d="M45 43 L58 33" stroke="#f07a12" stroke-width="3.6" stroke-linecap="round" fill="none"/>
+            <circle cx="59" cy="32" r="4" fill="#ffd36b" stroke="#fff" stroke-width="1.3"/>
+            <circle cx="46" cy="43" r="2.6" fill="#ffa63d" stroke="#fff" stroke-width="1"/>
+        </g>
+    </svg>
     <span class="ai-fab__pulse"></span>
 </button>
 
@@ -13,7 +55,7 @@
     <div class="ai-panel__header">
         <div class="ai-panel__header-info">
             <div class="ai-panel__avatar">
-                <i class="fa-solid fa-robot"></i>
+                <svg class="ai-panel__bot" viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><use href="#ai-bot-face"/></svg>
             </div>
             <div>
                 <div class="ai-panel__title">المساعد الذكي</div>
@@ -111,8 +153,34 @@
     align-items: center;
     justify-content: center;
 }
-.ai-fab:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(246,168,33,.55); }
-.ai-fab:active { transform: scale(.96); }
+.ai-fab:hover { box-shadow: 0 6px 28px rgba(246,168,33,.55); }
+
+.ai-fab { overflow: visible; }
+.ai-fab__bot { position: absolute; z-index: 2; overflow: visible; left: 50%; bottom: 2px; margin-left: -31px; filter: drop-shadow(0 4px 6px rgba(120,60,0,.35)); pointer-events: none; animation: ai-fab-call 4s ease-in-out infinite; }
+.ai-fab:hover .ai-fab__bot { animation-play-state: paused; }
+.ai-bot__arm { transform-origin: 45px 43px; animation: ai-bot-wave 0.9s ease-in-out infinite; }
+@keyframes ai-bot-wave { 0%,100% { transform: rotate(-14deg); } 50% { transform: rotate(20deg); } }
+@keyframes ai-fab-call {
+    0%, 60%, 100% { transform: translateY(0); }
+    66% { transform: translateY(-14px); }
+    72% { transform: translateY(0); }
+    78% { transform: translateY(-9px); }
+    84% { transform: translateY(0); }
+}
+.ai-bot__head { transform-box: fill-box; transform-origin: 50% 90%; animation: ai-bot-greet 2.5s ease-in-out infinite; }
+.ai-bot__antenna { animation: ai-bot-antenna 1.2s ease-in-out infinite; }
+.ai-bot__eyes { transform-box: fill-box; transform-origin: 50% 50%; animation: ai-bot-blink 5s infinite; }
+.ai-fab:hover .ai-bot__head { animation: ai-bot-greet 1.2s ease-in-out infinite; }
+@keyframes ai-bot-greet {
+    0%, 55%, 100% { transform: rotate(0) translateY(0); }
+    62% { transform: rotate(-12deg) translateY(-2px); }
+    70% { transform: rotate(10deg) translateY(-2px); }
+    78% { transform: rotate(-8deg) translateY(-1px); }
+    86% { transform: rotate(5deg); }
+}
+@keyframes ai-bot-antenna { 0%,100% { transform: translateY(0); } 50% { transform: translateY(1.5px); } }
+@keyframes ai-bot-blink { 0%, 90%, 100% { transform: scaleY(1); } 94% { transform: scaleY(.1); } }
+@media (prefers-reduced-motion: reduce) { .ai-fab__bot, .ai-bot__head, .ai-bot__antenna, .ai-bot__eyes, .ai-bot__arm { animation: none !important; } }
 
 .ai-fab__pulse {
     position: absolute;
@@ -178,6 +246,7 @@
     justify-content: center;
     font-size: 1.1rem;
 }
+.ai-panel__bot { overflow: visible; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
 .ai-panel__title { font-weight: 700; font-size: .95rem; }
 .ai-panel__subtitle { font-size: .72rem; opacity: .8; }
 .ai-panel__header-actions { display: flex; gap: 4px; }

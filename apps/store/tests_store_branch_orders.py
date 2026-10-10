@@ -122,16 +122,27 @@ class StoreBranchOrdersTests(TenantTestCase):
         self.assertEqual(order.sale_invoice.stock, self.s1)
         self.assertEqual(order.sale_invoice.created_by, self.sup1)
 
-    def test_owner_monitors_read_only(self):
+    def test_owner_has_no_order_access_and_branch_has_no_settings(self):
         order = self.order()
-        page = self.client.get(reverse('store:manage_orders'))
-        self.assertEqual(page.status_code, 200)
-        self.assertEqual(page.context['counts']['pending'], 1)
-        self.assertNotContains(page, 'onclick="approveOrder')
-        detail = self.client.get(reverse('store:manage_order_detail', args=[order.pk]))
-        self.assertContains(detail, 'من صلاحية فرع الطلب')
+        # مدير النشاط: إعدادات المتجر فقط — لا طلبات ولا عدّادها
+        self.assertIn(self.client.get(reverse('store:manage_orders')).status_code, (302, 403))
+        self.assertIn(self.client.get(reverse('store:manage_order_detail', args=[order.pk])).status_code, (302, 403))
         for name in ('store:manage_order_approve', 'store:manage_order_reject'):
             self.assertIn(self.client.post(reverse(name, args=[order.pk])).status_code, (302, 403), name)
+        settings_page = self.client.get(reverse('store:manage_settings'))
+        self.assertEqual(settings_page.status_code, 200)
+        self.assertNotContains(settings_page, f'href="{reverse("store:manage_orders")}"')
+        self.assertNotContains(self.client.get(reverse('core:dashboard')), f'href="{reverse("store:manage_orders")}"')
+        # الفرع: الطلبات فقط — لا إعدادات المتجر، ورابط متجره يفتح على فرعه
+        self.client.force_login(self.sup1)
+        self.assertNotContains(self.client.get(reverse('store:manage_orders')), f'href="{reverse("store:manage_settings")}"')
+        dash = self.client.get(reverse('core:dashboard'))
+        self.assertNotContains(dash, f'href="{reverse("store:manage_settings")}"')
+        self.assertContains(dash, f'/store/{self.store.slug}/?branch={self.b1.id}')
+        orders_page = self.client.get(reverse('store:manage_orders'))
+        self.assertContains(orders_page, 'رمز QR للمتجر')
+        self.assertContains(orders_page, f'/store/{self.store.slug}/?branch={self.b1.id}')
+        self.assertIn(self.client.get(reverse('store:manage_settings')).status_code, (302, 403))
         order.refresh_from_db()
         self.assertEqual(order.status, 'pending')
 

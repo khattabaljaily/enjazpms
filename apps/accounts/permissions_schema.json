@@ -88,8 +88,7 @@
             "permissions": [
                 {"key": "view_store_settings", "label": {"ar": "عرض وتعديل إعدادات المتجر الإلكتروني", "en": "View and edit online store settings"}},
                 {"key": "view_store_orders", "role_scope": "branch_ops", "label": {"ar": "عرض طلبات المتجر الإلكتروني", "en": "View online store orders"}},
-                {"key": "manage_store_orders", "role_scope": "branch_ops", "label": {"ar": "قبول ورفض طلبات المتجر الإلكتروني", "en": "Accept or reject online store orders"}},
-                {"key": "monitor_store_orders", "versions": ["multi_branch"], "label": {"ar": "متابعة طلبات المتجر في كل الفروع (قراءة فقط)", "en": "Monitor store orders across branches (read only)"}}
+                {"key": "manage_store_orders", "role_scope": "branch_ops", "label": {"ar": "قبول ورفض طلبات المتجر الإلكتروني", "en": "Accept or reject online store orders"}}
             ]
         },
         {

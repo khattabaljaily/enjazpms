@@ -328,13 +328,6 @@
             "ar": "قبول ورفض طلبات المتجر الإلكتروني",
             "en": "Accept or reject online store orders"
           }
-        },
-        {
-          "key": "monitor_store_orders",
-          "label": {
-            "ar": "متابعة طلبات المتجر في كل الفروع (قراءة فقط)",
-            "en": "Monitor store orders across branches (read only)"
-          }
         }
       ]
     },

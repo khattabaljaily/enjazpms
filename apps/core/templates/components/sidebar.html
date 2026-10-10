@@ -203,7 +203,7 @@
                 {% endif %}
                 {% if plan_allows_store and user|has_perm_key:'view_store_settings' %}
                 <li><a href="{% url 'store:manage_settings' %}" class="nav-sublink{% if 'store' in request.path %} active{% endif %}"><i class="fas fa-store me-2"></i>إعدادات المتجر
-                    {% if store_pending_count %}
+                    {% if store_pending_count and user|has_perm_key:'view_store_orders' %}
                     <span style="margin-right:auto;background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:.6rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;">{{ store_pending_count }}</span>
                     {% endif %}
                 </a></li>
