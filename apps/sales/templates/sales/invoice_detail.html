@@ -773,18 +773,18 @@ function submitEmail() {
     });
 
     document.getElementById('btnSubmitClaim').addEventListener('click', function() {
-        if (!foundCard) { alert('ابحث عن بطاقة تأمين صالحة أولاً'); return; }
+        if (!foundCard) { Enjaz.toast('ابحث عن بطاقة تأمين صالحة أولاً', 'warning'); return; }
         const lines = Array.from(document.querySelectorAll('.js-line-check:checked')).map(el => ({
             invoice_line_id: parseInt(el.dataset.id),
             coverage_percent: foundCard.coverage_percent,
         }));
-        if (!lines.length) { alert('اختر بنداً واحداً على الأقل'); return; }
+        if (!lines.length) { Enjaz.toast('اختر بنداً واحداً على الأقل', 'warning'); return; }
         fetch(urlCreate, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
             body: JSON.stringify({ invoice_id: {{ invoice.id }}, card_number: foundCard.card_number, lines: lines }),
         }).then(r => r.json()).then(resp => {
-            if (resp.success) { location.reload(); } else { alert(resp.message); }
+            if (resp.success) { location.reload(); } else { Enjaz.toast(resp.message, 'error'); }
         });
     });
 })();

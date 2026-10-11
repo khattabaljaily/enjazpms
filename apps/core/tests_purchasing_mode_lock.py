@@ -66,11 +66,16 @@ class AdminTenantFormTests(TestCase):
         t = form.save()
         self.assertEqual((t.purchasing_mode, t.purchasing_mode_locked), ('hybrid', True))
 
-    def test_create_defaults_to_decentralized_and_locks(self):
-        form = TenantForm(self._data())
+    def test_create_with_central_locks_it(self):
+        form = TenantForm(self._data(purchasing_mode='central'))
         self.assertTrue(form.is_valid(), form.errors)
         t = form.save()
-        self.assertEqual((t.purchasing_mode, t.purchasing_mode_locked), ('decentralized', True))
+        self.assertEqual((t.purchasing_mode, t.purchasing_mode_locked), ('central', True))
+
+    def test_new_enterprise_tenant_must_pick_central_or_hybrid(self):
+        form = TenantForm(self._data())
+        self.assertFalse(form.is_valid())
+        self.assertIn('purchasing_mode', form.errors)
 
     def test_non_enterprise_plan_is_always_decentralized(self):
         form = TenantForm(self._data(subscription_plan='basic', purchasing_mode='hybrid'))
@@ -129,11 +134,11 @@ class RegistrationTests(TestCase):
         t = Tenant.objects.get(name='نشاط جديد')
         self.assertEqual((t.version_type, t.purchasing_mode, t.purchasing_mode_locked), ('multi_branch', 'hybrid', True))
 
-    def test_registration_default_is_decentralized_and_locked(self):
+    def test_registration_default_is_central_and_locked(self):
         self._session()
         self._post()
         t = Tenant.objects.get(name='نشاط جديد')
-        self.assertEqual((t.purchasing_mode, t.purchasing_mode_locked), ('decentralized', True))
+        self.assertEqual((t.purchasing_mode, t.purchasing_mode_locked), ('central', True))
 
     def test_non_enterprise_registration_ignores_hybrid(self):
         self._session()
@@ -163,12 +168,12 @@ class RegistrationTests(TestCase):
 
 
 class OwnerSettingsReadOnlyTests(TestCase):
-    def test_owner_page_shows_mode_but_no_selector(self):
+    def test_owner_page_has_no_purchasing_mode_section_or_selector(self):
         t = _tenant(purchasing_mode='hybrid', purchasing_mode_locked=True)
         user = User.objects.create_user(username='lock-owner', password='x12345678', tenant=t, is_tenant_admin=True)
         self.client.force_login(user)
         page = self.client.get(reverse('core:tenant_settings')).content.decode()
-        self.assertIn('id="purchasingModeCard"', page)
-        self.assertIn('يُحدَّد مرة واحدة عند إنشاء الحساب ولا يمكن تغييره', page)
+        self.assertNotIn('id="purchasingModeCard"', page)
+        self.assertNotIn('نمط المشتريات', page)
         self.assertNotIn('name="purchasing_mode"', page)
         self.assertNotIn('saveTenantPurchasing', page)

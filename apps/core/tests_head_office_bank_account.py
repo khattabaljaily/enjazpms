@@ -91,11 +91,11 @@ class HeadOfficeBankAccountTransferTests(TenantTestCase):
             content_type='application/json',
         )
 
-    def test_branch_to_head_office_succeeds(self):
+    def test_branch_to_head_office_is_refused_here_and_lives_in_branch_transfers(self):
         self.client.force_login(self.user_a)
         resp = self._transfer(self.branch_a_account.id, self.hq_account.id, '100')
-        self.assertEqual(resp.status_code, 200, resp.content)
-        self.assertTrue(resp.json()['success'])
+        self.assertEqual(resp.status_code, 400, resp.content)
+        self.assertIn('تحويلات الفروع', resp.json()['message'])
 
     def test_direct_branch_to_branch_rejected(self):
         self.client.force_login(self.user_a)
@@ -103,11 +103,11 @@ class HeadOfficeBankAccountTransferTests(TenantTestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn('مباشر', resp.json()['message'])
 
-    def test_currency_mismatch_with_head_office_rejected(self):
+    def test_head_office_pair_is_refused_here_whatever_the_currency(self):
         self.client.force_login(self.user_a)
         resp = self._transfer(self.branch_a_usd_account.id, self.hq_account.id, '50')
         self.assertEqual(resp.status_code, 400)
-        self.assertIn('عملة', resp.json()['message'])
+        self.assertIn('تحويلات الفروع', resp.json()['message'])
 
     def test_owner_cannot_source_from_branch_account(self):
         self.client.force_login(self.user)

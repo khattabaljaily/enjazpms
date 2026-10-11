@@ -67,12 +67,19 @@
                             </div>
                         </div>
                         <div class="col-12 col-md-3">
+                            {% if current_tenant.is_central_purchasing and stocks|length == 1 %}
+                            {# النمط المركزي: مخزن الإدارة الوحيد يُحدَّد تلقائياً بلا اختيار #}
+                            <label class="cx-label">المخزن</label>
+                            <input type="hidden" id="stockId" value="{{ stocks.0.id }}">
+                            <input type="text" class="cx-input" value="{{ stocks.0.name }}" disabled>
+                            {% else %}
                             <label class="cx-label">المخزن <span class="text-danger">*</span></label>
                             <select id="stockId" class="cx-input" required>
                                 {% for s in stocks %}
                                 <option value="{{ s.id }}" {% if invoice and invoice.stock_id == s.id %}selected{% endif %}>{{ s.name }}</option>
                                 {% endfor %}
                             </select>
+                            {% endif %}
                         </div>
                         <div class="col-12 col-md-3">
                             <label class="cx-label">التاريخ <span class="text-danger">*</span></label>
@@ -477,6 +484,7 @@ function submitOrder(action) {
     }
 
     const header = {
+        requisition_id: {% if requisition %}{{ requisition.pk }}{% else %}null{% endif %},
         supplier_id: document.getElementById('supplierId').value || null,
         stock_id: document.getElementById('stockId').value,
         invoice_date: document.getElementById('invoiceDate').value,

@@ -87,9 +87,10 @@ def advices_api(request):
         import re
         cleaned = []
         for p in parts:
-            p2 = re.sub(r'^[0-9]+[\.).\s]+', '', p)
+            p2 = re.sub(r'^[\-•*#>\s]+', '', p).replace('**', '').strip()      # رموز القوائم والخط العريض
+            p2 = re.sub(r'^[0-9]+[\.).\s]+', '', p2)
             p2 = re.sub(r'^[٠-٩]+[\).\s]+', '', p2)
-            if len(p2) > 5:
+            if len(p2) > 5 and not p2.startswith('فرضية'):                       # مقدمات النموذج ليست نصائح
                 cleaned.append(p2)
 
         if not cleaned:

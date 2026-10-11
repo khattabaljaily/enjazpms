@@ -229,12 +229,25 @@ def cancel_bank_account_transfer(transfer, user=None):
     return transfer
 
 
+def assert_same_currency(tenant, treasury, bank_account):
+    """
+    الخزينة والحساب البنكي يتطابقان في العملة عند التحويل بينهما: المبلغ يُنقل كما هو بلا سعر صرف،
+    فاختلاف العملة يسجّل مبلغاً خاطئاً (مثلاً دولار يُودَع كأنه جنيه).
+    """
+    t_cur = (treasury.currency or tenant.currency or '').strip()
+    b_cur = (bank_account.currency or tenant.currency or '').strip()
+    if t_cur != b_cur:
+        raise ValueError(
+            f'لا يمكن التحويل بين خزينة بعملة {t_cur} وحساب بنكي بعملة {b_cur}؛ يجب أن تتطابق العملتان.')
+
+
 @transaction.atomic
 def post_treasury_to_bank_transfer(tenant, treasury, bank_account, amount, transfer_date, notes='', user=None):
     """سحب من الخزينة وإيداع في حساب بنكي (إيداع نقدي بالبنك)."""
     from apps.treasury.services import post_treasury_disbursement
     from .models import TreasuryBankTransfer
 
+    assert_same_currency(tenant, treasury, bank_account)
     amount = Decimal(str(amount))
     desc = f'تحويل من الخزينة {treasury.name} إلى الحساب البنكي {bank_account.name}'
 
@@ -277,6 +290,7 @@ def post_bank_to_treasury_transfer(tenant, bank_account, treasury, amount, trans
     from apps.treasury.services import post_treasury_receipt
     from .models import TreasuryBankTransfer
 
+    assert_same_currency(tenant, treasury, bank_account)
     amount = Decimal(str(amount))
     desc = f'تحويل من الحساب البنكي {bank_account.name} إلى الخزينة {treasury.name}'
 

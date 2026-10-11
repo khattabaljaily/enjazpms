@@ -46,38 +46,53 @@
             "versions": ["multi_branch"],
             "permissions": [
                 {"key": "view_head_office_treasury", "label": {"ar": "عرض خزينة الإدارة المركزية", "en": "View head office treasury"}},
-                {"key": "transfer_head_office_treasury", "label": {"ar": "تحويل الأموال بين خزينة الإدارة والفروع", "en": "Transfer funds between head office treasury and branches"}},
+                {"key": "transfer_head_office_treasury", "label": {"ar": "تحويل الأموال بين خزائن الإدارة المركزية", "en": "Transfer funds between head office treasury and branches"}},
                 {"key": "view_head_office_bank_accounts", "label": {"ar": "عرض الحسابات البنكية للإدارة المركزية", "en": "View head office bank accounts"}},
                 {"key": "add_head_office_bank_accounts", "label": {"ar": "إضافة حساب بنكي للإدارة المركزية", "en": "Add head office bank account"}},
                 {"key": "change_head_office_bank_accounts", "label": {"ar": "تعديل حساب بنكي للإدارة المركزية", "en": "Edit head office bank account"}},
                 {"key": "delete_head_office_bank_accounts", "label": {"ar": "حذف حساب بنكي للإدارة المركزية", "en": "Delete head office bank account"}},
-                {"key": "transfer_head_office_bank_accounts", "label": {"ar": "تحويل الأموال بين حسابات الإدارة والفروع", "en": "Transfer funds between head office bank accounts and branches"}}
+                {"key": "transfer_head_office_bank_accounts", "label": {"ar": "تحويل الأموال بين حسابات الإدارة المركزية", "en": "Transfer funds between head office bank accounts and branches"}},
+                {"key": "view_head_office_account_reports", "label": {"ar": "تقارير حركة وكشف حساب خزائن الإدارة المركزية وحساباتها البنكية", "en": "Head office treasury and bank statements and movement reports"}}
+            ]
+        },
+        {
+            "key": "head_office_expenses",
+            "name": {"ar": "مصروفات الإدارة المركزية", "en": "Head Office Expenses"},
+            "role_scope": "admin_only",
+            "versions": ["multi_branch"],
+            "permissions": [
+                {"key": "view_head_office_expenses", "label": {"ar": "عرض مصروفات الإدارة المركزية", "en": "View head office expenses"}},
+                {"key": "add_head_office_expenses", "label": {"ar": "تسجيل مصروف للإدارة المركزية (من خزائنها أو حساباتها البنكية) وإضافة تصنيفات", "en": "Record a head office expense and add categories"}},
+                {"key": "change_head_office_expenses", "label": {"ar": "تعديل وتأكيد مصروف الإدارة المركزية", "en": "Edit and confirm a head office expense"}},
+                {"key": "delete_head_office_expenses", "label": {"ar": "إلغاء مصروف الإدارة المركزية", "en": "Cancel a head office expense"}},
+                {"key": "view_head_office_expenses_report", "label": {"ar": "تقارير مصروفات الإدارة المركزية (الملخص، التفاصيل، حسب الفئة، حسب التاريخ)", "en": "Head office expense reports"}}
             ]
         },
         {
             "key": "central_purchasing",
             "name": {"ar": "المشتريات والمخزن المركزي", "en": "Central Purchasing & Warehouse"},
+            "name_when_central": {"ar": "المخزن المركزي وتوزيع الفروع", "en": "Central Warehouse & Branch Distribution"},
             "role_scope": "admin_only",
             "versions": ["multi_branch"],
-            "requires_flag": "hybrid_purchasing",
+            "requires_flag": "central_warehouse",
             "permissions": [
-                {"key": "view_central_purchases", "label": {"ar": "عرض فواتير الشراء المركزية", "en": "View central purchase invoices"}},
-                {"key": "add_central_purchases", "label": {"ar": "إضافة فاتورة شراء مركزية", "en": "Add central purchase invoice"}},
-                {"key": "change_central_purchases", "label": {"ar": "تعديل وتأكيد فاتورة شراء مركزية", "en": "Edit and confirm central purchase invoice"}},
-                {"key": "delete_central_purchases", "label": {"ar": "إلغاء فاتورة شراء مركزية", "en": "Cancel central purchase invoice"}},
-                {"key": "view_central_suppliers", "label": {"ar": "عرض الموردين المركزيين", "en": "View central suppliers"}},
-                {"key": "add_central_suppliers", "label": {"ar": "إضافة مورد مركزي", "en": "Add central supplier"}},
-                {"key": "change_central_suppliers", "label": {"ar": "تعديل مورد مركزي", "en": "Edit central supplier"}},
-                {"key": "delete_central_suppliers", "label": {"ar": "حذف مورد مركزي", "en": "Delete central supplier"}},
-                {"key": "view_central_supplier_payments", "label": {"ar": "عرض مدفوعات الموردين المركزيين", "en": "View central supplier payments"}},
-                {"key": "add_central_supplier_payments", "label": {"ar": "تسجيل سداد لمورد مركزي", "en": "Record central supplier payment"}},
-                {"key": "cancel_central_supplier_payments", "label": {"ar": "إلغاء سداد لمورد مركزي", "en": "Cancel central supplier payment"}},
+                {"key": "view_central_purchases", "requires_flag": "hybrid_purchasing", "label": {"ar": "عرض فواتير الشراء المركزية", "en": "View central purchase invoices"}},
+                {"key": "add_central_purchases", "requires_flag": "hybrid_purchasing", "label": {"ar": "إضافة فاتورة شراء مركزية", "en": "Add central purchase invoice"}},
+                {"key": "change_central_purchases", "requires_flag": "hybrid_purchasing", "label": {"ar": "تعديل وتأكيد فاتورة شراء مركزية", "en": "Edit and confirm central purchase invoice"}},
+                {"key": "delete_central_purchases", "requires_flag": "hybrid_purchasing", "label": {"ar": "إلغاء فاتورة شراء مركزية", "en": "Cancel central purchase invoice"}},
+                {"key": "view_central_suppliers", "requires_flag": "hybrid_purchasing", "label": {"ar": "عرض الموردين المركزيين", "en": "View central suppliers"}},
+                {"key": "add_central_suppliers", "requires_flag": "hybrid_purchasing", "label": {"ar": "إضافة مورد مركزي", "en": "Add central supplier"}},
+                {"key": "change_central_suppliers", "requires_flag": "hybrid_purchasing", "label": {"ar": "تعديل مورد مركزي", "en": "Edit central supplier"}},
+                {"key": "delete_central_suppliers", "requires_flag": "hybrid_purchasing", "label": {"ar": "حذف مورد مركزي", "en": "Delete central supplier"}},
+                {"key": "view_central_supplier_payments", "requires_flag": "hybrid_purchasing", "label": {"ar": "عرض مدفوعات الموردين المركزيين", "en": "View central supplier payments"}},
+                {"key": "add_central_supplier_payments", "requires_flag": "hybrid_purchasing", "label": {"ar": "تسجيل سداد لمورد مركزي", "en": "Record central supplier payment"}},
+                {"key": "cancel_central_supplier_payments", "requires_flag": "hybrid_purchasing", "label": {"ar": "إلغاء سداد لمورد مركزي", "en": "Cancel central supplier payment"}},
                 {"key": "view_central_shipments", "label": {"ar": "عرض شحنات الفروع من المخزن المركزي", "en": "View central warehouse shipments"}},
                 {"key": "add_central_shipments", "label": {"ar": "إنشاء وإرسال شحنة إلى فرع", "en": "Create and send a shipment to a branch"}},
                 {"key": "cancel_central_shipments", "label": {"ar": "إلغاء شحنة (مسودة أو في الطريق)", "en": "Cancel a shipment (draft or in transit)"}},
                 {"key": "receive_central_returns", "label": {"ar": "تأكيد استلام مرتجعات الفروع في المخزن المركزي", "en": "Confirm receipt of branch returns at the central warehouse"}},
-                {"key": "view_central_purchase_returns", "label": {"ar": "عرض مرتجعات المشتريات المركزية", "en": "View central purchase returns"}},
-                {"key": "add_central_purchase_returns", "label": {"ar": "إنشاء وتأكيد وإلغاء مرتجع شراء مركزي", "en": "Create, confirm and cancel central purchase returns"}}
+                {"key": "view_central_purchase_returns", "requires_flag": "hybrid_purchasing", "label": {"ar": "عرض مرتجعات المشتريات المركزية", "en": "View central purchase returns"}},
+                {"key": "add_central_purchase_returns", "requires_flag": "hybrid_purchasing", "label": {"ar": "إنشاء وتأكيد وإلغاء مرتجع شراء مركزي", "en": "Create, confirm and cancel central purchase returns"}}
             ]
         },
         {
@@ -166,6 +181,7 @@
             "key": "purchases",
             "name": {"ar": "المشتريات", "en": "Purchases"},
             "role_scope": "branch_ops",
+            "central_role_scope": "admin_only",
             "permissions": [
                 {"key": "add_purchases", "label": {"ar": "إنشاء فاتورة شراء أو طلب عرض سعر جديد", "en": "Create new purchase order or RFQ"}},
                 {"key": "change_purchases", "label": {"ar": "تعديل وتأكيد فاتورة مشتريات", "en": "Edit and confirm purchase invoice"}},
@@ -173,6 +189,29 @@
                 {"key": "view_purchases", "label": {"ar": "عرض وطباعة فواتير المشتريات وطلبات عروض الأسعار", "en": "View and print purchase invoices and RFQs"}},
                 {"key": "add_purchase_returns", "label": {"ar": "تسجيل مرتجع مشتريات", "en": "Record purchase return"}},
                 {"key": "view_purchase_returns", "label": {"ar": "عرض مرتجعات المشتريات", "en": "View purchase returns"}}
+            ]
+        },
+        {
+            "key": "purchase_requisitions",
+            "name": {"ar": "طلبات الشراء", "en": "Purchase Requests"},
+            "role_scope": "branch_ops",
+            "versions": ["multi_branch"],
+            "requires_flag": "central_purchasing",
+            "permissions": [
+                {"key": "view_purchase_requisitions", "label": {"ar": "عرض طلبات الشراء", "en": "View purchase requests"}},
+                {"key": "add_purchase_requisitions", "label": {"ar": "إنشاء طلب شراء وتعديله وإرساله للإدارة", "en": "Create, edit and submit purchase requests"}},
+                {"key": "cancel_purchase_requisitions", "label": {"ar": "إلغاء طلب شراء قبل اعتماده", "en": "Cancel a purchase request before approval"}}
+            ]
+        },
+        {
+            "key": "branch_requisitions",
+            "name": {"ar": "طلبات الفروع", "en": "Branch Requests"},
+            "role_scope": "admin_only",
+            "versions": ["multi_branch"],
+            "requires_flag": "central_purchasing",
+            "permissions": [
+                {"key": "view_branch_requisitions", "label": {"ar": "عرض طلبات الشراء الواردة من الفروع", "en": "View purchase requests from branches"}},
+                {"key": "review_branch_requisitions", "label": {"ar": "اعتماد طلبات الفروع أو رفضها أو إلغاؤها", "en": "Approve, reject or cancel branch requests"}}
             ]
         },
         {
@@ -227,7 +266,7 @@
             "name": {"ar": "الشحنات والمرتجعات مع الإدارة المركزية", "en": "Shipments and Returns with Head Office"},
             "role_scope": "branch_ops",
             "versions": ["multi_branch"],
-            "requires_flag": "hybrid_purchasing",
+            "requires_flag": "central_warehouse",
             "permissions": [
                 {"key": "view_incoming_shipments", "label": {"ar": "عرض الشحنات الواردة من المخزن المركزي", "en": "View incoming shipments"}},
                 {"key": "receive_incoming_shipments", "label": {"ar": "تأكيد استلام الشحنات (الكمية الفعلية)", "en": "Confirm receipt of shipments"}},
@@ -255,6 +294,7 @@
             "key": "suppliers",
             "name": {"ar": "الموردين", "en": "Suppliers"},
             "role_scope": "branch_ops",
+            "central_role_scope": "admin_only",
             "permissions": [
                 {"key": "add_suppliers", "label": {"ar": "إضافة مورد جديد", "en": "Add new supplier"}},
                 {"key": "change_suppliers", "label": {"ar": "تعديل بيانات المورد", "en": "Edit supplier"}},
@@ -341,6 +381,17 @@
             ]
         },
         {
+            "key": "branch_transfers",
+            "name": {"ar": "تحويلات الفروع", "en": "Branch Transfers"},
+            "versions": ["multi_branch"],
+            "permissions": [
+                {"key": "view_branch_transfers", "label": {"ar": "عرض تحويلات الفروع", "en": "View branch transfers"}},
+                {"key": "add_branch_transfers", "label": {"ar": "إرسال تحويل مالي (من الإدارة إلى فرع، أو من الفرع إلى الإدارة)", "en": "Send a branch transfer"}},
+                {"key": "receive_branch_transfers", "label": {"ar": "تأكيد استلام تحويل مالي بالمبلغ الفعلي", "en": "Confirm receipt of a branch transfer"}},
+                {"key": "cancel_branch_transfers", "label": {"ar": "إلغاء تحويل مالي قبل استلامه", "en": "Cancel a branch transfer before receipt"}}
+            ]
+        },
+        {
             "key": "employee_advances",
             "name": {"ar": "سلف الموظفين", "en": "Employee Advances"},
             "role_scope": "branch_ops",
@@ -388,14 +439,16 @@
         {
             "key": "purchases_reports",
             "name": {"ar": "تقارير المشتريات", "en": "Purchases Reports"},
+            "central_role_scope": "admin_only",
             "permissions": [
                 {"key": "view_purchases_summary_report", "label": {"ar": "تقرير ملخص المشتريات", "en": "Purchases summary report"}},
-                {"key": "view_purchases_by_supplier_report", "role_scope": "branch_ops", "label": {"ar": "تقرير المشتريات حسب المورد", "en": "Purchases by supplier report"}},
+                {"key": "view_purchases_by_supplier_report", "role_scope": "branch_ops", "central_role_scope": "admin_only", "label": {"ar": "تقرير المشتريات حسب المورد", "en": "Purchases by supplier report"}},
                 {"key": "view_purchases_by_item_report", "label": {"ar": "تقرير المشتريات حسب المنتج", "en": "Purchases by product report"}},
                 {"key": "view_purchases_by_date_report", "label": {"ar": "تقرير المشتريات حسب التاريخ", "en": "Purchases by date report"}},
                 {"key": "view_purchases_price_history_report", "label": {"ar": "تقرير تاريخ أسعار الشراء", "en": "Purchase price history report"}},
-                {"key": "view_purchases_by_user_report", "role_scope": "branch_ops", "label": {"ar": "تقرير المشتريات حسب المستخدم", "en": "Purchases by user report"}},
-                {"key": "view_central_purchases_report", "role_scope": "admin_only", "versions": ["multi_branch"], "label": {"ar": "تقرير المشتريات المركزية", "en": "Central purchases report"}}
+                {"key": "view_purchases_by_user_report", "role_scope": "branch_ops", "central_role_scope": "admin_only", "label": {"ar": "تقرير المشتريات حسب المستخدم", "en": "Purchases by user report"}},
+                {"key": "view_purchases_returns_report", "role_scope": "branch_ops", "central_role_scope": "admin_only", "label": {"ar": "تقرير مرتجعات المشتريات", "en": "Purchase returns report"}},
+                {"key": "view_central_purchases_report", "role_scope": "admin_only", "versions": ["multi_branch"], "requires_flag": "hybrid_purchasing", "label": {"ar": "تقرير المشتريات المركزية", "en": "Central purchases report"}}
             ]
         },
         {
@@ -426,10 +479,9 @@
                 {"key": "view_sales_customer_balances_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مديونيات العملاء", "en": "Customer balances report"}},
                 {"key": "view_sales_payments_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مدفوعات العملاء", "en": "Customer payments report"}},
                 {"key": "view_sales_returns_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مرتجعات المبيعات", "en": "Sales returns report"}},
-                {"key": "view_purchases_supplier_statement_report", "role_scope": "branch_ops", "label": {"ar": "كشف حساب المورد", "en": "Supplier statement"}},
-                {"key": "view_purchases_supplier_balances_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مديونيات الموردين", "en": "Supplier balances report"}},
-                {"key": "view_purchases_payments_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مدفوعات الموردين", "en": "Supplier payments report"}},
-                {"key": "view_purchases_returns_report", "role_scope": "branch_ops", "label": {"ar": "تقرير مرتجعات المشتريات", "en": "Purchase returns report"}},
+                {"key": "view_purchases_supplier_statement_report", "role_scope": "branch_ops", "central_role_scope": "admin_only", "label": {"ar": "كشف حساب المورد", "en": "Supplier statement"}},
+                {"key": "view_purchases_supplier_balances_report", "role_scope": "branch_ops", "central_role_scope": "admin_only", "label": {"ar": "تقرير مديونيات الموردين", "en": "Supplier balances report"}},
+                {"key": "view_purchases_payments_report", "role_scope": "branch_ops", "central_role_scope": "admin_only", "label": {"ar": "تقرير مدفوعات الموردين", "en": "Supplier payments report"}},
                 {"key": "view_expenses_summary_report", "label": {"ar": "تقرير ملخص المصروفات", "en": "Expenses summary report"}},
                 {"key": "view_expenses_details_report", "role_scope": "branch_ops", "label": {"ar": "تقرير تفاصيل المصروفات", "en": "Expense details report"}},
                 {"key": "view_expenses_by_category_report", "label": {"ar": "تقرير المصروفات حسب التصنيف", "en": "Expenses by category report"}},

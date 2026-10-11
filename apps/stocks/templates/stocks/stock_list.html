@@ -310,6 +310,8 @@
 
 {% block extra_js %}
 <script>
+// النمط المركزي: المخزن الرئيسي نظامي (يُنشأ تلقائياً) فلا تعديل ولا حذف ولا تعيين كافتراضي.
+const CENTRAL_MODE_LOCK = {{ current_tenant.is_central_purchasing|yesno:'true,false' }};
 (function () {
     'use strict';
     const hasPerm = window.hasPerm || (function(){ return false; });
@@ -371,10 +373,10 @@
                     </div>
                 </div>
                 <div class="cx-stock-card-actions">
-                    ${!r.is_default ? `<button class="cxr-act js-set-default-stock" data-id="${r.id}" aria-label="تعيين كافتراضي" title="تعيين كافتراضي"><i class="fas fa-star"></i></button>` : `<button class="cxr-act" disabled aria-label="المخزن الافتراضي" title="المخزن الافتراضي"><i class="fas fa-star text-warning"></i></button>`}
+                    ${!r.is_default && !(r.is_central && CENTRAL_MODE_LOCK) ? `<button class="cxr-act js-set-default-stock" data-id="${r.id}" aria-label="تعيين كافتراضي" title="تعيين كافتراضي"><i class="fas fa-star"></i></button>` : `<button class="cxr-act" disabled aria-label="المخزن الافتراضي" title="المخزن الافتراضي"><i class="fas fa-star text-warning"></i></button>`}
                     <button class="cxr-act cxr-act--view js-view-stock" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
-                    ${hasPerm('change_stocks') ? `<button class="cxr-act js-edit-stock" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
-                    ${hasPerm('delete_stocks') ? `<button class="cxr-act cxr-act--del js-delete-stock" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                    ${hasPerm('change_stocks') && !(r.is_central && CENTRAL_MODE_LOCK) ? `<button class="cxr-act js-edit-stock" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${hasPerm('delete_stocks') && !(r.is_central && CENTRAL_MODE_LOCK) ? `<button class="cxr-act cxr-act--del js-delete-stock" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
             </article>`;
         }).join('');
@@ -433,14 +435,15 @@
             {
                 data: null, orderable: false, searchable: false,
                 render: function(_, __, r) {
-                    const defBtn = !r.is_default
+                    const defBtn = r.is_central && CENTRAL_MODE_LOCK ? ''
+                        : !r.is_default
                         ? `<button class="cxr-act js-set-default-stock" data-id="${r.id}" title="تعيين كافتراضي"><i class="fas fa-star"></i></button>`
                         : `<button class="cxr-act" disabled title="المخزن الافتراضي"><i class="fas fa-star text-warning"></i></button>`;
                     return `<div class="cxr-actions">
                         ${defBtn}
                         <button class="cxr-act cxr-act--view js-view-stock" data-id="${r.id}" aria-label="عرض"><i class="fas fa-eye"></i></button>
-                        ${hasPerm('change_stocks') ? `<button class="cxr-act js-edit-stock" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
-                        ${hasPerm('delete_stocks') ? `<button class="cxr-act cxr-act--del js-delete-stock" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                        ${hasPerm('change_stocks') && !(r.is_central && CENTRAL_MODE_LOCK) ? `<button class="cxr-act js-edit-stock" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                        ${hasPerm('delete_stocks') && !(r.is_central && CENTRAL_MODE_LOCK) ? `<button class="cxr-act cxr-act--del js-delete-stock" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>` : ''}
                     </div>`;
                 }
             }

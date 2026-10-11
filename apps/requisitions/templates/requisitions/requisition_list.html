@@ -1,0 +1,102 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:var(--primary)"><i class="fas fa-clipboard-list"></i></div>
+            <div>
+                <h1 class="cx-hero-title">{% if scope == 'ho' %}طلبات الفروع{% else %}طلبات الشراء{% endif %}</h1>
+                <p class="cx-hero-desc">{% if scope == 'ho' %}طلبات الشراء المُرسَلة من الفروع؛ راجعها واعتمد الكميات ثم نفّذها بشحنة أو أمر شراء{% else %}اطلب من الإدارة ما يحتاجه فرعك، وتابع اعتماده وتوريده{% endif %}</p>
+            </div>
+        </div>
+        {% if scope == 'branch' %}
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a href="{% url 'requisitions:create' %}" class="cx-btn-add" data-require-perm="add_purchase_requisitions">
+                    <i class="fas fa-plus"></i><span>طلب شراء جديد</span>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--primary"><i class="fas fa-clipboard-list"></i><strong>{{ stats.total }}</strong><span>إجمالي</span></span>
+        <span class="cx-stat-badge cx-stat-badge--warning"><i class="fas fa-hourglass-half"></i><strong>{{ stats.submitted }}</strong><span>بانتظار المراجعة</span></span>
+        <span class="cx-stat-badge cx-stat-badge--info"><i class="fas fa-circle-check"></i><strong>{{ stats.approved }}</strong><span>معتمدة قيد التوريد</span></span>
+        <span class="cx-stat-badge cx-stat-badge--success"><i class="fas fa-truck-ramp-box"></i><strong>{{ stats.fulfilled }}</strong><span>مكتملة التوريد</span></span>
+    </div>
+</div>
+
+<form method="get" class="cx-panel mb-3 p-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4"><input type="text" name="q" value="{{ filters.q }}" class="cx-input" placeholder="ابحث برقم الطلب{% if scope == 'ho' %} أو الفرع{% endif %}…"></div>
+        {% if scope == 'ho' %}
+        <div class="col-md-3">
+            <select name="branch" class="cx-input">
+                <option value="">كل الفروع</option>
+                {% for b in branches %}<option value="{{ b.id }}"{% if filters.branch == b.id|stringformat:"s" %} selected{% endif %}>{{ b.name }}</option>{% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="col-md-3">
+            <select name="status" class="cx-input">
+                <option value="">كل الحالات</option>
+                {% for key, label in status_choices %}{% if scope == 'branch' or key != 'draft' %}
+                <option value="{{ key }}"{% if filters.status == key %} selected{% endif %}>{{ label }}</option>
+                {% endif %}{% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2"><button class="cx-btn-add w-100" type="submit"><i class="fas fa-filter"></i> تصفية</button></div>
+    </div>
+</form>
+
+<div class="cx-panel">
+    <div class="table-responsive cx-table-wrap">
+        <table class="cx-table w-100">
+            <thead>
+                <tr>
+                    <th>الرقم</th><th>التاريخ</th>{% if scope == 'ho' %}<th>الفرع</th>{% endif %}<th>المخزن المستلِم</th>
+                    <th>البنود</th><th>الأولوية</th><th>الحالة</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in page %}
+                <tr>
+                    <td><strong>{{ r.number }}</strong></td>
+                    <td>{{ r.request_date|date:"Y-m-d" }}</td>
+                    {% if scope == 'ho' %}<td>{{ r.branch.name }}</td>{% endif %}
+                    <td>{{ r.stock.name }}</td>
+                    <td><span class="badge bg-secondary">{{ r.line_count }}</span></td>
+                    <td>{% if r.priority == 'urgent' %}<span class="badge bg-danger">عاجل</span>{% else %}<span class="text-muted">عادي</span>{% endif %}</td>
+                    <td><span class="badge bg-{{ r.status_color }}">{{ r.get_status_display }}</span></td>
+                    <td><a href="{% url 'requisitions:detail' r.pk %}" class="cxr-act cxr-act--view" title="عرض"><i class="fas fa-eye"></i></a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>لا توجد طلبات</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page.paginator.num_pages > 1 %}
+    <div class="p-3 d-flex justify-content-between align-items-center">
+        <span class="text-muted small">صفحة {{ page.number }} من {{ page.paginator.num_pages }} — {{ page.paginator.count }} طلب</span>
+        <div class="d-flex gap-2">
+            {% if page.has_previous %}<a class="cx-btn-secondary" href="?page={{ page.previous_page_number }}&status={{ filters.status }}&branch={{ filters.branch }}&q={{ filters.q }}">السابق</a>{% endif %}
+            {% if page.has_next %}<a class="cx-btn-secondary" href="?page={{ page.next_page_number }}&status={{ filters.status }}&branch={{ filters.branch }}&q={{ filters.q }}">التالي</a>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}

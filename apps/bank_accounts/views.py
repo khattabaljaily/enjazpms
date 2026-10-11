@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
-from apps.accounts.decorators import require_permission, require_any_permission, branch_scope_exempt
+from apps.accounts.decorators import require_permission, require_any_permission, require_account_report, branch_scope_exempt
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -55,19 +55,33 @@ def bank_account_list(request):
     default = qs.filter(is_default=True).count()
 
     local_cur = tenant.currency or 'SDG'
-    treasuries = Treasury.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
-    # وجهات التحويل (منفصلة عن qs الجدول الرئيسي): تشمل حساب الإدارة المركزية
-    # دائماً كوجهة، حتى لو استُبعد من جدول "حساباتي" — نفس منطق other_treasuries
-    # في apps/treasury/views.py.
-    transfer_accounts_qs = BankAccount.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
+    # بيانات نافذة التحويل (منفصلة عن qs الجدول الرئيسي). مستخدم الفرع: حسابات وخزائن فرعه فقط. مدير النشاط:
+    # كل الحسابات والخزائن. التحويل بين الإدارة والفروع ليس هنا بل في قسم «تحويلات الفروع»؛ وتُطبّق
+    # القواعد في الواجهة (من/إلى/العملة) بنفس شروط bank_account_transfer_api.
+    user_branch = getattr(request, 'branch', None)
+    transfer_accounts_qs = BankAccount.objects.for_tenant(tenant).filter(is_active=True)
+    treasuries = Treasury.objects.for_tenant(tenant).filter(is_active=True)
+    if user_branch is not None:
+        transfer_accounts_qs = transfer_accounts_qs.filter(branch=user_branch, is_head_office=False)
+        treasuries = treasuries.filter(branch=user_branch)
+    transfer_data = {
+        'banks': list(transfer_accounts_qs.order_by('-is_head_office', 'name')
+                      .values('id', 'name', 'currency', 'is_head_office', 'branch_id')),
+        'treasuries': list(treasuries.order_by('-is_head_office', 'name')
+                           .values('id', 'name', 'currency', 'is_head_office', 'branch_id')),
+        'branch_id': user_branch.pk if user_branch is not None else None,
+        # يحوّل من أي حساب (لا حساب الإدارة وحده): مستخدم بلا فرع يملك صلاحية تحويل الفروع.
+        'can_from_any': bool(user_branch is None and request.user.has_perm_key('transfer_bank_accounts')),
+        'local_currency': local_cur,
+        'has_branch_transfers': bool(tenant.is_enterprise() and request.user.has_perm_key('view_branch_transfers')),
+    }
 
     context = {
         'form': BankAccountForm(),
         'today': dj_tz.localdate().isoformat(),
         'local_currency': local_cur,
         'local_currency_symbol': _currency_symbol(local_cur),
-        'transfer_bank_accounts': list(transfer_accounts_qs.values('id', 'name', 'currency', 'is_head_office')),
-        'transfer_treasuries': list(treasuries.values('id', 'name', 'currency')),
+        'transfer_data': transfer_data,
         'currency_symbols_json': {k: v for k, v in _CURRENCY_SYMBOLS.items()},
         'stats': {
             'total': total,
@@ -141,6 +155,7 @@ def bank_account_table_api(request):
             'currency': account.currency or local_currency,
             'is_active': account.is_active,
             'is_default': account.is_default,
+            'is_head_office': account.is_head_office,
         }
         for account in queryset
     ]
@@ -426,12 +441,17 @@ def bank_account_transfer_api(request):
     # معاً للإدارة المركزية (تحويل داخلي بين حسابين بنكيين لمدير النشاط).
     involves_head_office = from_account.is_head_office != to_account.is_head_office
     if involves_head_office:
-        from_currency = from_account.currency or tenant.currency
-        to_currency = to_account.currency or tenant.currency
-        if from_currency != to_currency:
-            return JsonResponse({'success': False, 'message': 'يجب أن تكون عملة الحسابين متطابقة عند التحويل مع حساب الإدارة المركزية.'}, status=400)
+        # كل ما بين الإدارة والفروع (إرسال ثم تأكيد استلام، بتطابق العملة) في قسم «تحويلات الفروع».
+        return JsonResponse({'success': False, 'message': 'التحويل بين الإدارة المركزية والفروع يتم من قسم «تحويلات الفروع» فقط.'}, status=400)
+    from_currency = from_account.currency or tenant.currency
+    to_currency = to_account.currency or tenant.currency
+    if from_currency == to_currency:
+        # نفس العملة: بلا سعر صرف، والمبلغ المستلَم هو المحوَّل نفسه (يُفرض هنا مهما أُرسل).
         exchange_rate = Decimal('1')
         to_amount = from_amount
+    elif abs((from_amount * exchange_rate).quantize(Decimal('0.01')) - to_amount) > Decimal('0.02'):
+        # عملتان مختلفتان (بين حسابين لجهة واحدة): المستلَم = المحوَّل × سعر الصرف.
+        return JsonResponse({'success': False, 'message': 'المبلغ المستلَم لا يطابق المبلغ المحوَّل × سعر الصرف.'}, status=400)
 
     try:
         transfer = post_bank_account_transfer(
@@ -490,7 +510,7 @@ def bank_account_transfer_cancel_api(request, pk):
 
 
 @login_required
-@require_permission('transfer_bank_accounts')
+@require_any_permission('transfer_bank_accounts', 'transfer_head_office_bank_accounts')
 @require_POST
 def treasury_bank_transfer_api(request):
     """تحويل بين الخزينة وحساب بنكي (بالاتجاهين)."""
@@ -529,6 +549,10 @@ def treasury_bank_transfer_api(request):
     user_branch = getattr(request, 'branch', None)
     if user_branch is not None and (treasury.branch_id != user_branch.id or bank_account.branch_id != user_branch.id):
         return JsonResponse({'success': False, 'message': 'يمكنك التحويل بين خزائن وحسابات فرعك فقط.'}, status=403)
+
+    # مدير النشاط (صلاحية الإدارة دون صلاحية الفروع): بين خزائن الإدارة المركزية وحساباتها البنكية فقط.
+    if not request.user.has_perm_key('transfer_bank_accounts') and not (treasury.is_head_office and bank_account.is_head_office):
+        return JsonResponse({'success': False, 'message': 'التحويل مع الخزينة يكون بين خزينة الإدارة المركزية وحساباتها البنكية فقط.'}, status=403)
 
     try:
         if direction == 'treasury_to_bank':
@@ -609,7 +633,7 @@ def bank_account_balances_report_export(request):
 
 
 @login_required
-@require_permission('view_bank_account_statement_report')
+@require_account_report('view_bank_account_statement_report')
 def bank_account_statement_report(request):
     from datetime import timedelta
     from django.utils import timezone
@@ -624,9 +648,11 @@ def bank_account_statement_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     branch = branch
-    gen = BankAccountReportGenerator(tenant, start_date, end_date, branch=branch)
+    gen = BankAccountReportGenerator(tenant, start_date, end_date, branch=branch, head_office=getattr(request, 'account_report_ho', False))
     report = gen.get_statement_report(bank_account_id) if bank_account_id else None
     accounts = BankAccount.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
+    if getattr(request, 'account_report_ho', False):
+        accounts = accounts.filter(is_head_office=True)
 
     return render(request, 'bank_accounts/reports/statement.html', {
         'report': report,
@@ -642,7 +668,7 @@ def bank_account_statement_report(request):
 
 
 @login_required
-@require_permission('view_bank_account_statement_report')
+@require_account_report('view_bank_account_statement_report')
 @branch_scope_exempt('الفلترة حسب الفرع تتم داخل BankAccountReportGenerator.get_statement_report عبر self.branch')
 def bank_account_statement_report_export(request):
     import csv
@@ -659,7 +685,7 @@ def bank_account_statement_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=branch).get_statement_report(bank_account_id) if bank_account_id else None
+    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=branch, head_office=getattr(request, 'account_report_ho', False)).get_statement_report(bank_account_id) if bank_account_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="bank_account_statement_{end_date}.csv"'
     response.write('﻿')
@@ -675,7 +701,7 @@ def bank_account_statement_report_export(request):
 
 
 @login_required
-@require_permission('view_bank_account_movements_report')
+@require_account_report('view_bank_account_movements_report')
 def bank_account_movements_report(request):
     from datetime import timedelta
     from django.utils import timezone
@@ -690,8 +716,10 @@ def bank_account_movements_report(request):
     bank_account_id = request.GET.get('bank_account_id') or None
 
     branch = branch
-    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=branch).get_movements_summary(bank_account_id=bank_account_id) if bank_account_id else None
+    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=branch, head_office=getattr(request, 'account_report_ho', False)).get_movements_summary(bank_account_id=bank_account_id) if bank_account_id else None
     accounts = BankAccount.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
+    if getattr(request, 'account_report_ho', False):
+        accounts = accounts.filter(is_head_office=True)
 
     return render(request, 'bank_accounts/reports/movements.html', {
         'report': report,
@@ -707,7 +735,7 @@ def bank_account_movements_report(request):
 
 
 @login_required
-@require_permission('view_bank_account_movements_report')
+@require_account_report('view_bank_account_movements_report')
 @branch_scope_exempt('الفلترة حسب الفرع تتم داخل BankAccountReportGenerator.get_movements_summary عبر filter_by_branch_via')
 def bank_account_movements_report_export(request):
     import csv
@@ -724,7 +752,7 @@ def bank_account_movements_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     bank_account_id = request.GET.get('bank_account_id') or None
 
-    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=branch).get_movements_summary(bank_account_id=bank_account_id) if bank_account_id else None
+    report = BankAccountReportGenerator(tenant, start_date, end_date, branch=branch, head_office=getattr(request, 'account_report_ho', False)).get_movements_summary(bank_account_id=bank_account_id) if bank_account_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="bank_account_movements_{end_date}.csv"'
     response.write('﻿')

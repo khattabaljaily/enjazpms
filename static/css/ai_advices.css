@@ -41,8 +41,9 @@
 .ai-advices{ display:flex; align-items:center; gap:.5rem; flex:1; min-width:0; padding:.55rem .9rem; background:var(--card-bg); }
 .ai-advices .ai-adv-btn{ background:transparent; border:0; font-size:1.05rem; width:32px; height:32px; border-radius:6px; cursor:pointer; color:var(--text-primary); flex-shrink:0; }
 .ai-advices .ai-adv-btn:hover{ background:rgba(246,168,33,.1); color:#c9840f; }
-.ai-advices .ai-adv-content{ flex:1; overflow:hidden; }
-.ai-advices .ai-adv-text{ font-weight:600; font-size:0.86rem; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; color:var(--text-primary); cursor:pointer; }
+.ai-advices .ai-adv-content{ flex:1; overflow:hidden; display:flex; align-items:center; min-height:calc(2 * 1.55em * .86); }
+/* النصيحة حتى سطرين ثم نقاط القص (…)، والضغط عليها يفتح النص كاملاً؛ ارتفاع الشريط ثابت فلا يقفز عند التبديل. */
+.ai-advices .ai-adv-text{ font-weight:600; font-size:0.86rem; line-height:1.55; white-space:normal; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; word-break:break-word; color:var(--text-primary); cursor:pointer; }
 .ai-advices .ai-adv-text:hover,
 .ai-advices .ai-adv-text:focus{ text-decoration:underline; }
 .ai-advices .ai-adv-source{ font-size:0.72rem; color:var(--text-tertiary); margin-left:.5rem; }
@@ -64,6 +65,7 @@
 @media (max-width: 768px){
   .ai-advices{ flex-wrap:wrap; gap:1rem; }
   .ai-adv-content{ width:100%; }
-  .ai-adv-text{ white-space:normal; text-overflow:clip; overflow:visible; }
+  .ai-adv-content{ min-height:0; display:block; }
+  .ai-adv-text{ display:block; -webkit-line-clamp:unset; line-clamp:unset; overflow:visible; }
 }
 

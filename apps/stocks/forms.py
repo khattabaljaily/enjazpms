@@ -52,7 +52,7 @@ class StockForm(forms.ModelForm):
         # المخزن المركزي: للمستخدم المركزي (مدير النشاط) فقط، في نمط المشتريات "هجين"،
         # عند الإنشاء فقط، ومخزن مركزي واحد لكل مشترك.
         can_make_central = bool(
-            tenant and tenant.is_hybrid_purchasing() and branch is None
+            tenant and tenant.has_central_warehouse() and branch is None
             and not (self.instance and self.instance.pk)
             and not Stock.objects.filter(tenant=tenant, is_central=True).exists()
         )

@@ -27,6 +27,10 @@ class PurchaseInvoice(TenantMixin):
     )
 
     invoice_number = models.CharField('رقم أمر الشراء', max_length=20, blank=True)
+    # طلب الشراء من الفرع الذي أُنشئ هذا الأمر لتلبيته (النمط المركزي)؛ للتتبّع فقط.
+    requisition = models.ForeignKey(
+        'requisitions.PurchaseRequisition', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='purchase_invoices', verbose_name='طلب الشراء')
     supplier = models.ForeignKey(
         'suppliers.Supplier',
         on_delete=models.PROTECT,

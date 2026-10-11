@@ -2655,6 +2655,7 @@ def analytics(request):
     from apps.purchases.models import PurchaseInvoice
     from apps.customers.models import Customer
     from apps.suppliers.models import Supplier
+    from django.db.models import F, ExpressionWrapper, DecimalField
 
     branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
 
@@ -2663,7 +2664,18 @@ def analytics(request):
             tenant=tenant, status__in=SaleInvoice.REVENUE_STATUSES, **qs_filter
         ), branch).aggregate(t=Sum('grand_total'))['t'] or 0)
 
+    # النمط المركزي: الفرع لا يشتري، فتكلفته = تكلفة البضاعة المباعة (لا فواتير شراء الإدارة).
+    use_cogs = tenant.is_central_purchasing() and branch is not None
+
     def purchase_total(qs_filter):
+        if use_cogs:
+            return float(filter_by_branch_strict(SaleInvoiceLine.objects.filter(
+                tenant=tenant, invoice__status__in=SaleInvoice.REVENUE_STATUSES,
+                **{f'invoice__{k}': v for k, v in qs_filter.items()}
+            ), branch, field='invoice__stock__branch').aggregate(
+                t=Sum(ExpressionWrapper(
+                    (F('quantity') - F('returned_quantity')) * F('cost_price_snapshot'),
+                    output_field=DecimalField())))['t'] or 0)
         return float(filter_by_branch_strict(PurchaseInvoice.objects.filter(
             tenant=tenant, status__in=PurchaseInvoice.EFFECTIVE_STATUSES, **qs_filter
         ), branch).aggregate(t=Sum('grand_total'))['t'] or 0)
@@ -2813,6 +2825,8 @@ def analytics(request):
         'treasury_total': treasury_total,
         'customer_debt': customer_debt,
         'supplier_debt': supplier_debt,
+        # النمط المركزي (فرع): التكلفة = تكلفة البضاعة المباعة، ولا مستحقات موردين في الفرع.
+        'cost_is_cogs': use_cogs,
         'is_central_admin': is_central_admin,
         'branches_for_filter': branches_for_filter,
         'selected_branch': branch,

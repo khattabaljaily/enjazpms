@@ -266,7 +266,7 @@
 
     <div class="anl-kpi anl-kpi--purchase">
         <div class="anl-kpi-accent"></div>
-        <div class="anl-kpi-label"><i class="fas fa-cart-shopping" style="margin-left:.3rem;"></i> إجمالي المشتريات</div>
+        <div class="anl-kpi-label"><i class="fas fa-cart-shopping" style="margin-left:.3rem;"></i> {% if cost_is_cogs %}تكلفة البضاعة المباعة{% else %}إجمالي المشتريات{% endif %}</div>
         <div class="anl-kpi-value">{{ kpis.purchases.value|money }}</div>
         <div class="anl-kpi-footer">
             <span class="anl-kpi-prev">الشهر السابق: {{ kpis.purchases.prev|money }}</span>
@@ -302,7 +302,7 @@
         <div class="anl-kpi-accent"></div>
         <div class="anl-kpi-label" style="display:flex;align-items:center;justify-content:space-between;">
             <span><i class="fas fa-coins" style="margin-left:.3rem;"></i> {% if kpis.profit.value >= 0 %}صافي الربح{% else %}صافي الخسارة{% endif %}</span>
-            <span title="الحساب: المبيعات − المشتريات − المصروفات" style="cursor:help;color:var(--text-tertiary);font-size:.85rem;">
+            <span title="الحساب: المبيعات − {% if cost_is_cogs %}تكلفة البضاعة المباعة{% else %}المشتريات{% endif %} − المصروفات" style="cursor:help;color:var(--text-tertiary);font-size:.85rem;">
                 <i class="fas fa-circle-question"></i>
             </span>
         </div>
@@ -311,7 +311,7 @@
         </div>
         {% if kpis.profit.value < 0 %}
         <div style="font-size:.74rem;color:var(--danger);margin-bottom:.35rem;font-weight:600;">
-            <i class="fas fa-triangle-exclamation" style="margin-left:.25rem;"></i>المشتريات تتجاوز المبيعات هذا الشهر
+            <i class="fas fa-triangle-exclamation" style="margin-left:.25rem;"></i>{% if cost_is_cogs %}التكلفة{% else %}المشتريات{% endif %} تتجاوز المبيعات هذا الشهر
         </div>
         {% endif %}
         <div class="anl-kpi-footer">
@@ -336,7 +336,7 @@
             <div class="anl-panel-head">
                 <h3 class="anl-panel-title">
                     <i class="fas fa-chart-area" style="color:var(--primary);"></i>
-                    الاتجاه السنوي — المبيعات والمشتريات والأرباح
+                    الاتجاه السنوي — المبيعات و{% if cost_is_cogs %}التكلفة{% else %}المشتريات{% endif %} والأرباح
                 </h3>
                 <span class="anl-panel-meta">آخر 12 شهراً</span>
             </div>
@@ -471,6 +471,7 @@
                             <div style="font-size:.68rem;color:var(--text-tertiary);margin-top:.15rem;">مبالغ لم يدفعها العملاء بعد</div>
                         </div>
                     </div>
+                    {% if not cost_is_cogs %}
                     <div class="anl-balance-item anl-balance-item--pay">
                         <div class="anl-balance-icon"><i class="fas fa-arrow-up"></i></div>
                         <div>
@@ -479,6 +480,7 @@
                             <div style="font-size:.68rem;color:var(--text-tertiary);margin-top:.15rem;">مبالغ لم تُسدَّد للموردين بعد</div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -541,7 +543,7 @@ new Chart(annualCtx, {
                 tension: 0.4,
             },
             {
-                label: 'المشتريات',
+                label: '{% if cost_is_cogs %}التكلفة{% else %}المشتريات{% endif %}',
                 data: M_PURCH,
                 borderColor: '#f59e0b',
                 backgroundColor: 'rgba(245,158,11,0.06)',

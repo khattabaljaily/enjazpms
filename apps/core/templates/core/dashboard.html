@@ -180,6 +180,8 @@
         </div>
     </div>
 
+    {# النمط المركزي: الموردون من اختصاص الإدارة، فلا تظهر بطاقتهم في لوحة الفرع. #}
+    {% if not current_tenant.is_central_purchasing or not request.branch %}
     <div class="db-stat">
         <div class="db-stat-icon" style="background:rgba(245,158,11,.1); color:#d97706;">
             <i class="fas fa-truck"></i>
@@ -189,6 +191,7 @@
             <div class="db-stat-lbl">موردون</div>
         </div>
     </div>
+    {% endif %}
 
 </div>
 
@@ -232,6 +235,7 @@
                             <span class="db-action-sub">عرض جميع الفواتير</span>
                         </div>
                     </a>
+                    {% if not current_tenant.is_central_purchasing or not request.branch %}
                     <a href="{% url 'purchases:order_list' %}" class="db-action db-action--violet">
                         <div class="db-action-icon"><i class="fas fa-cart-shopping"></i></div>
                         <div>
@@ -239,6 +243,7 @@
                             <span class="db-action-sub">إدارة المشتريات</span>
                         </div>
                     </a>
+                    {% endif %}
                     <a href="{% url 'reports:reports' %}" class="db-action db-action--rose">
                         <div class="db-action-icon"><i class="fas fa-chart-bar"></i></div>
                         <div>

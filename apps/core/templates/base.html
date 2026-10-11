@@ -97,7 +97,7 @@
     (function(){
         var _p = new Set({% user_perm_keys_json %});
         // نطاق الإدارة المركزية: أزرار المشتريات/الموردين تتبع صلاحيات المركزي لا صلاحيات الفروع.
-        var _central = {% if central_scope %}true{% else %}false{% endif %};
+        var _central = {% if central_keys_remap %}true{% else %}false{% endif %};
         var _centralKeys = {
             view_purchases: 'view_central_purchases', add_purchases: 'add_central_purchases',
             change_purchases: 'change_central_purchases', delete_purchases: 'delete_central_purchases',

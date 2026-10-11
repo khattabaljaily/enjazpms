@@ -44,3 +44,15 @@ class SupplierCreditLimitLockingTests(TenantTestCase):
         second = self.make_credit_purchase('20')  # 200 more → total 600 > 500
         with self.assertRaises(ValueError):
             confirm_purchase_invoice(second, self.user)
+
+
+class RfqFormAddSecondItemRegressionTests(TenantTestCase):
+    """إضافة منتج ثانٍ في طلب عرض الأسعار: صف «لا بنود» لا يُحذف من الصفحة (كان يعطّل أي إضافة بعد الأولى)."""
+
+    def test_empty_row_reference_is_kept_and_never_removed(self):
+        from django.urls import reverse
+        html = self.client.get(reverse('purchases:rfq_create')).content.decode()
+        self.assertIn("const EMPTY_ROW = document.getElementById('emptyRow');", html)
+        render = html[html.index('function renderLines()'):html.index('function updateQty')]
+        self.assertNotIn('.remove()', render)       # صف «لا بنود» لا يُحذف داخل renderLines
+        self.assertIn('tbody.appendChild(EMPTY_ROW)', render)

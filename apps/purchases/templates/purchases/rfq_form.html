@@ -137,7 +137,7 @@ const RFQ_SUPPLIERS = [{% for s in suppliers %}{id:{{ s.id }},name:'{{ s.name|es
     function renderSuppliers(list) {
         dropEl.innerHTML = list.length
             ? list.map(s => `<div style="padding:8px 12px;cursor:pointer;" onmousedown="event.preventDefault();document.getElementById('supplierSearch').value='${s.name.replace(/'/g,"\\'")}';document.getElementById('supplierId').value='${s.id}';document.getElementById('supplierDrop').style.display='none';">${s.name}</div>`).join('')
-            : '<div style="padding:8px 12px;color:#6c757d;">لا توجد نتائج</div>';
+            : '<div style="padding:8px 12px;color:var(--text-muted,#6c757d);">لا توجد نتائج</div>';
     }
     srchEl.addEventListener('focus', function() {
         srchEl.value = ''; hidEl.value = '';
@@ -155,14 +155,16 @@ const RFQ_SUPPLIERS = [{% for s in suppliers %}{id:{{ s.id }},name:'{{ s.name|es
 let lines = {};
 let searchTimeout;
 
+// صف «لا بنود» يُحفظ مرجعه مرة واحدة: كان يُحذف من الصفحة عند إضافة أول منتج، فتفشل الإضافة الثانية
+// (empty.remove() على null) ولا يستجيب الضغط على أي منتج آخر.
+const EMPTY_ROW = document.getElementById('emptyRow');
+
 function renderLines() {
     const tbody = document.getElementById('linesBody');
-    const empty = document.getElementById('emptyRow');
     const ids = Object.keys(lines);
     document.getElementById('lineCountBadge').textContent = ids.length;
 
-    if (!ids.length) { tbody.innerHTML = ''; tbody.appendChild(empty); return; }
-    empty.remove();
+    if (!ids.length) { tbody.innerHTML = ''; tbody.appendChild(EMPTY_ROW); return; }
 
     tbody.innerHTML = ids.map(id => {
         const ln = lines[id];

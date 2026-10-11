@@ -1,0 +1,153 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.0">
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:var(--primary)"><i class="fas fa-clipboard-list"></i></div>
+            <div>
+                <h1 class="cx-hero-title">طلب شراء {{ requisition.number }}</h1>
+                <p class="cx-hero-desc">فرع {{ requisition.branch.name }} — إلى مخزن {{ requisition.stock.name }}</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <span class="badge bg-{{ requisition.status_color }} fs-6">{{ requisition.get_status_display }}</span>
+                {% if requisition.priority == 'urgent' %}<span class="badge bg-danger fs-6">عاجل</span>{% endif %}
+                {% if can_edit %}<a class="cx-btn-secondary" href="{% url 'requisitions:edit' requisition.pk %}"><i class="fas fa-pen me-1"></i> تعديل</a>{% endif %}
+                {% if can_submit %}<button class="cx-btn-add" id="btnSubmit" style="background:var(--success)"><i class="fas fa-paper-plane me-1"></i> إرسال للإدارة</button>{% endif %}
+                {% if can_ship %}<a class="cx-btn-add" href="{% url 'stocks:shipment_create' %}?requisition={{ requisition.pk }}"><i class="fas fa-truck-fast me-1"></i> إنشاء شحنة</a>{% endif %}
+                {% if can_buy %}<a class="cx-btn-add" style="background:var(--warning)" href="{% url 'purchases:order_create' %}?requisition={{ requisition.pk }}"><i class="fas fa-cart-plus me-1"></i> إنشاء أمر شراء</a>{% endif %}
+                {% if can_cancel %}<button class="cx-btn-secondary" id="btnCancel"><i class="fas fa-ban me-1"></i> إلغاء الطلب</button>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="cx-panel p-3"><small class="text-muted">تاريخ الطلب</small><div><strong>{{ requisition.request_date|date:"Y-m-d" }}</strong></div></div></div>
+    <div class="col-md-3"><div class="cx-panel p-3"><small class="text-muted">مطلوب قبل</small><div><strong>{{ requisition.needed_by|date:"Y-m-d"|default:"—" }}</strong></div></div></div>
+    <div class="col-md-3"><div class="cx-panel p-3"><small class="text-muted">وقت الإرسال</small><div><strong>{{ requisition.submitted_at|date:"Y-m-d H:i"|default:"—" }}</strong></div></div></div>
+    <div class="col-md-3"><div class="cx-panel p-3"><small class="text-muted">المراجعة</small><div><strong>{% if requisition.reviewed_at %}{{ requisition.reviewed_at|date:"Y-m-d H:i" }} — {{ requisition.reviewed_by|default:"" }}{% else %}—{% endif %}</strong></div></div></div>
+</div>
+
+{% if requisition.notes %}<div class="cx-panel p-3 mb-3"><small class="text-muted">ملاحظات الفرع</small><div>{{ requisition.notes }}</div></div>{% endif %}
+{% if requisition.review_notes %}<div class="cx-panel p-3 mb-3"><small class="text-muted">ملاحظات الإدارة</small><div>{{ requisition.review_notes }}</div></div>{% endif %}
+
+{% if can_review %}
+<div class="alert alert-info">
+    راجع الكميات: اترك الكمية المعتمدة كما هي لاعتماد المطلوب، أو قلّلها، أو اجعلها صفراً لرفض البند. لا يمكن اعتماد أكثر من المطلوب.
+</div>
+{% endif %}
+
+<div class="cx-panel">
+    <div class="table-responsive">
+        <table class="cx-table table w-100">
+            <thead>
+                <tr>
+                    <th>المنتج</th><th>الكمية المطلوبة</th>
+                    <th>الكمية المعتمدة</th>
+                    {% if requisition.status == 'approved' or requisition.status == 'fulfilled' %}<th>خرج للفرع</th><th>المتبقي</th>{% endif %}
+                    <th>ملاحظة</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for line in lines %}
+                <tr>
+                    <td><strong>{{ line.item.name }}</strong><br><small class="text-muted">{{ line.item.sku|default:"" }}</small></td>
+                    <td>{{ line.requested_quantity|floatformat:"-2" }} <small class="text-muted">{{ line.item.base_unit_name }}</small></td>
+                    <td>
+                        {% if can_review %}
+                        <input type="number" class="cx-input appr-qty" style="width:120px" step="0.0001" min="0"
+                               max="{{ line.requested_quantity }}" value="{{ line.requested_quantity|floatformat:'-4' }}" data-line="{{ line.id }}">
+                        {% elif line.approved_quantity is None %}—{% else %}{{ line.approved_quantity|floatformat:"-2" }}{% endif %}
+                    </td>
+                    {% if requisition.status == 'approved' or requisition.status == 'fulfilled' %}
+                    <td>{{ line.fulfilled|floatformat:"-2" }}</td>
+                    <td>{% if line.approved_quantity and line.remaining > 0 %}<span class="text-warning fw-bold">{{ line.remaining|floatformat:"-2" }}</span>{% else %}—{% endif %}</td>
+                    {% endif %}
+                    <td>{{ line.notes|default:"—" }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if can_review %}
+    <div class="p-3">
+        <label class="cx-label">ملاحظات الإدارة (اختياري)</label>
+        <textarea id="reviewNotes" class="cx-input mb-3" rows="2"></textarea>
+        <div class="d-flex justify-content-end gap-2">
+            <button class="cx-btn-secondary" id="btnReject"><i class="fas fa-xmark me-1"></i> رفض الطلب</button>
+            <button class="cx-btn-add" id="btnApprove" style="background:var(--success)"><i class="fas fa-check me-1"></i> اعتماد</button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if shipments or invoices %}
+<div class="row g-3 mt-1">
+    {% if shipments %}
+    <div class="col-md-6"><div class="cx-panel p-3">
+        <h6 class="mb-2"><i class="fas fa-truck-ramp-box me-1"></i> الشحنات</h6>
+        {% for sh in shipments %}
+        <div class="d-flex justify-content-between border-bottom py-1">
+            <a href="{% url 'stocks:shipment_detail' sh.pk %}">{{ sh.shipment_number }}</a>
+            <span class="badge bg-secondary">{{ sh.get_status_display }}</span>
+        </div>
+        {% endfor %}
+    </div></div>
+    {% endif %}
+    {% if invoices %}
+    <div class="col-md-6"><div class="cx-panel p-3">
+        <h6 class="mb-2"><i class="fas fa-cart-shopping me-1"></i> أوامر الشراء</h6>
+        {% for inv in invoices %}
+        <div class="d-flex justify-content-between border-bottom py-1">
+            <a href="{% url 'purchases:order_detail' inv.pk %}">{{ inv.invoice_number }}</a>
+            <span class="badge bg-secondary">{{ inv.get_status_display }}</span>
+        </div>
+        {% endfor %}
+    </div></div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="mt-3"><a href="{% url 'requisitions:list' %}" class="cx-btn-secondary">رجوع إلى الطلبات</a></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+function toast(type, msg) { Enjaz.toast(msg, type === 'error' ? 'error' : 'success'); }
+async function act(url, body, okMsg) {
+    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF }, body: JSON.stringify(body || {}) });
+    const data = await resp.json();
+    if (!data.success) { toast('error', data.message || 'تعذر تنفيذ العملية'); return; }
+    toast('success', data.message || okMsg);
+    setTimeout(() => window.location.reload(), 700);
+}
+const submitBtn = document.getElementById('btnSubmit');
+if (submitBtn) submitBtn.addEventListener('click', async () => { if (await Enjaz.confirmAction('سيصل الطلب للإدارة للمراجعة ولن تستطيع تعديله بعد الإرسال.', 'تأكيد إرسال الطلب', 'نعم، أرسل')) act("{% url 'requisitions:submit' requisition.pk %}"); });
+const cancelBtn = document.getElementById('btnCancel');
+if (cancelBtn) cancelBtn.addEventListener('click', async () => { if (await Enjaz.confirmAction('سيُلغى طلب الشراء ولا يمكن التراجع.', 'إلغاء طلب الشراء', 'نعم، إلغاء الطلب')) act("{% url 'requisitions:cancel' requisition.pk %}"); });
+function reviewBody(action) {
+    const lines = [];
+    document.querySelectorAll('.appr-qty').forEach(i => lines.push({ line_id: i.dataset.line, approved_quantity: i.value === '' ? '0' : i.value }));
+    return { action, lines, notes: document.getElementById('reviewNotes').value };
+}
+const approveBtn = document.getElementById('btnApprove');
+if (approveBtn) approveBtn.addEventListener('click', async () => { if (await Enjaz.confirmAction('سيُعتمد الطلب بالكميات المدخلة، وتُنفَّذ بشحنة من المخزن أو بأمر شراء.', 'تأكيد اعتماد الطلب', 'نعم، اعتمد')) act("{% url 'requisitions:review' requisition.pk %}", reviewBody('approve')); });
+const rejectBtn = document.getElementById('btnReject');
+if (rejectBtn) rejectBtn.addEventListener('click', async () => { if (await Enjaz.confirmAction('سيُرفض الطلب بكل بنوده ويُخطَر الفرع.', 'رفض الطلب', 'نعم، ارفض الطلب')) act("{% url 'requisitions:review' requisition.pk %}", reviewBody('reject')); });
+</script>
+{% endblock %}

@@ -26,6 +26,10 @@ BRANCH_DETAIL_REPORTS = {
     'view_treasury_movements_report': 'treasury:reports:movements_report',
     'view_bank_account_movements_report': 'bank_accounts:reports:movements_report',
 }
+# تقارير لمدير النشاط عليها نسخة مقيّدة ببيانات الإدارة المركزية فقط.
+HEAD_OFFICE_SCOPED = {
+    'expenses:reports:details_report', 'treasury:reports:movements_report', 'bank_accounts:reports:movements_report',
+}
 OVERVIEW_REPORTS = [
     'reports:summary_report', 'reports:by_item_report', 'reports:by_date_report',
     'purchases:reports:summary_report', 'purchases:reports:by_item_report', 'purchases:reports:by_date_report',
@@ -58,9 +62,16 @@ class OwnerReportsScopeTests(TenantTestCase):
         for name in OVERVIEW_REPORTS:
             self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
         for key, name in BRANCH_DETAIL_REPORTS.items():
-            self.assertIn(self.client.get(reverse(name)).status_code, (302, 403), name)
+            if name in HEAD_OFFICE_SCOPED:
+                # تقارير مصروفات/حركة خزائن/حسابات الإدارة المركزية تُفتح لمدير النشاط لكن لبيانات الإدارة وحدها
+                # (مفاتيح *_head_office_*)؛ لا تفاصيل فرع (راجع tests_head_office_permissions).
+                self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
+            else:
+                self.assertIn(self.client.get(reverse(name)).status_code, (302, 403), name)
         dash = self.client.get(reverse('core:dashboard'))
         for name in BRANCH_DETAIL_REPORTS.values():
+            if name in HEAD_OFFICE_SCOPED:
+                continue
             self.assertNotContains(dash, f'href="{reverse(name)}"', msg_prefix=name)
         self.assertContains(dash, f'href="{reverse("reports:by_item_report")}"')
 

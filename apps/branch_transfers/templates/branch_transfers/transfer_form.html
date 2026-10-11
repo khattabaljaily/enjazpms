@@ -1,0 +1,188 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/treasury.css' %}?v=1.1">
+<style>
+.bt-kind-btn { flex: 1; }
+.bt-side { border: 1.5px solid var(--border-light); border-radius: 14px; padding: 1rem; height: 100%; }
+.bt-side h6 { font-weight: 700; margin-bottom: .75rem; }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:var(--primary)"><i class="fas fa-money-bill-transfer"></i></div>
+            <div>
+                <h1 class="cx-hero-title">{% if scope == 'ho' %}تحويل من الإدارة إلى فرع{% else %}تحويل من الفرع إلى الإدارة{% endif %}</h1>
+                <p class="cx-hero-desc">اختر نوع التحويل: خزينة لخزينة، أو حساب بنكي لحساب بنكي؛ العملة يجب أن تتطابق بلا سعر صرف، ويؤكد المستلِم المبلغ الفعلي عند الوصول</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel p-4">
+    <div class="alert alert-danger d-none" id="btErrors"></div>
+    <label class="cx-label">نوع التحويل</label>
+    <div class="d-flex gap-2 mb-3" id="btKind">
+        <button type="button" class="bt-kind-btn btn btn-outline-secondary active" data-kind="cash">
+            <i class="fas fa-vault me-1"></i> نقداً — من خزينة إلى خزينة
+        </button>
+        <button type="button" class="bt-kind-btn btn btn-outline-secondary" data-kind="bank">
+            <i class="fas fa-building-columns me-1"></i> بنكياً — من حساب بنكي إلى حساب بنكي
+        </button>
+    </div>
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label class="cx-label">الفرع</label>
+            <div class="cx-field">
+                <span class="cx-field__icon"><i class="fas fa-code-branch"></i></span>
+                <select id="btBranch" class="form-select cx-input"></select>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="cx-label">المبلغ <span class="text-danger">*</span> <small class="text-muted" id="btCurrencyHint"></small></label>
+            <div class="cx-field">
+                <span class="cx-field__icon"><i class="fas fa-money-bill"></i></span>
+                <input type="number" id="btAmount" class="form-control cx-input" step="0.01" min="0.01" placeholder="0.00">
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="cx-label">التاريخ</label>
+            <div class="cx-field">
+                <span class="cx-field__icon"><i class="fas fa-calendar"></i></span>
+                <input type="date" id="btDate" class="form-control cx-input" value="{{ today }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="bt-side">
+                <h6><i class="fas fa-arrow-up-from-bracket me-1 text-danger"></i> من ({% if scope == 'ho' %}الإدارة{% else %}فرعك{% endif %})</h6>
+                <label class="cx-label" id="btSourceLabel">الخزينة</label>
+                <div class="cx-field">
+                    <span class="cx-field__icon"><i class="fas fa-wallet"></i></span>
+                    <select id="btSource" class="form-select cx-input"></select>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="bt-side">
+                <h6><i class="fas fa-arrow-down-to-bracket me-1 text-success"></i> إلى ({% if scope == 'ho' %}الفرع{% else %}الإدارة{% endif %})</h6>
+                <label class="cx-label" id="btDestLabel">الخزينة</label>
+                <div class="cx-field">
+                    <span class="cx-field__icon"><i class="fas fa-wallet"></i></span>
+                    <select id="btDest" class="form-select cx-input"></select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="alert alert-warning mt-3 d-none" id="btHint"></div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-12">
+            <label class="cx-label">ملاحظات (اختياري)</label>
+            <div class="cx-field">
+                <span class="cx-field__icon"><i class="fas fa-align-left"></i></span>
+                <input type="text" id="btNotes" class="form-control cx-input" placeholder="مثال: تغطية احتياجات الفرع لهذا الأسبوع">
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end mt-4 gap-2">
+        <a href="{% url 'branch_transfers:list' %}" class="cx-btn-secondary">إلغاء</a>
+        <button id="btnSend" class="cx-btn-add" style="background:var(--success)"><i class="fas fa-paper-plane me-1"></i> إرسال التحويل</button>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ form_data|json_script:"btData" }}
+<script>
+const D = JSON.parse(document.getElementById('btData').textContent);
+const CREATE_API = "{% url 'branch_transfers:create' %}";
+const CSRF = "{{ csrf_token }}";
+const state = { kind: 'cash' };  // نوع واحد للطرفين: خزينة↔خزينة أو حساب↔حساب
+const curOf = a => a.currency || D.local_currency;
+// العملة المحلية أولاً في القوائم.
+const localFirst = (x, y) => ((curOf(x) !== D.local_currency) - (curOf(y) !== D.local_currency)) || x.name.localeCompare(y.name, 'ar');
+D.sources.sort(localFirst); D.destinations.sort(localFirst);
+const KIND_ICON = { cash: '', bank: '' };
+const label = a => a.name + ' (' + curOf(a) + ')';
+
+function fillSelect(el, list, keep) {
+    el.innerHTML = list.map(a => `<option value="${a.id}">${label(a)}</option>`).join('');
+    if (keep && list.some(a => String(a.id) === String(keep))) el.value = String(keep);
+}
+function selectedBranch() { return parseInt(document.getElementById('btBranch').value) || null; }
+function sourceList() { return D.sources.filter(a => a.kind === state.kind); }
+function selectedSource() { return D.sources.find(a => a.kind === state.kind && String(a.id) === document.getElementById('btSource').value); }
+// وجهات الفرع: حسابات الفرع المختار (أو حسابات الإدارة لو المُرسِل فرع)، من النوع المختار وبعملة المصدر.
+function destList() {
+    const src = selectedSource();
+    return D.destinations.filter(a => a.kind === state.kind)
+        .filter(a => D.direction === 'to_head_office' || a.branch_id === selectedBranch())
+        .filter(a => src && curOf(a) === curOf(src));
+}
+function setHint(msg) { const el = document.getElementById('btHint'); el.textContent = msg || ''; el.classList.toggle('d-none', !msg); }
+
+function refresh() {
+    const sEl = document.getElementById('btSource'), dEl = document.getElementById('btDest');
+    fillSelect(sEl, sourceList(), sEl.value);
+    const src = selectedSource();
+    document.getElementById('btCurrencyHint').textContent = src ? '(' + curOf(src) + ')' : '';
+    const dests = destList();
+    fillSelect(dEl, dests, dEl.value);
+    const noun = state.kind === 'cash' ? 'خزينة' : 'حساب بنكي';
+    document.getElementById('btSourceLabel').textContent = state.kind === 'cash' ? 'الخزينة' : 'الحساب البنكي';
+    document.getElementById('btDestLabel').textContent = state.kind === 'cash' ? 'الخزينة' : 'الحساب البنكي';
+    let msg = '';
+    if (!sourceList().length) msg = 'لا توجد ' + (state.kind === 'cash' ? 'خزينة' : 'حساب بنكي') + ' متاحة كمصدر.';
+    else if (!dests.length) msg = 'لا يوجد ' + noun + ' بعملة المصدر (' + curOf(src) + ') في الجهة المقابلة؛ يلزم أن تتطابق العملة بلا سعر صرف.';
+    setHint(msg);
+}
+document.querySelectorAll('#btKind .bt-kind-btn').forEach(btn => btn.addEventListener('click', function () {
+    document.querySelectorAll('#btKind .bt-kind-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    state.kind = this.dataset.kind;
+    refresh();
+}));
+
+const bEl = document.getElementById('btBranch');
+bEl.innerHTML = D.branches.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+bEl.disabled = D.branch_fixed;
+bEl.addEventListener('change', refresh);
+document.getElementById('btSource').addEventListener('change', refresh);
+
+function toast(type, msg) { Enjaz.toast(msg, type === 'error' ? 'error' : 'success'); }
+document.getElementById('btnSend').addEventListener('click', async function () {
+    const errEl = document.getElementById('btErrors');
+    errEl.classList.add('d-none');
+    const body = {
+        branch_id: selectedBranch(), source_kind: state.kind, source_id: document.getElementById('btSource').value,
+        dest_kind: state.kind, dest_id: document.getElementById('btDest').value,
+        amount: document.getElementById('btAmount').value, transfer_date: document.getElementById('btDate').value,
+        notes: document.getElementById('btNotes').value,
+    };
+    if (!body.amount || parseFloat(body.amount) <= 0) { errEl.textContent = 'أدخل مبلغاً أكبر من صفر'; errEl.classList.remove('d-none'); return; }
+    if (!(await Enjaz.confirmAction('سيخرج المبلغ من المصدر فوراً ويدخل الوجهة عند تأكيد المستلِم للمبلغ الفعلي.', 'تأكيد إرسال التحويل', 'نعم، أرسل التحويل'))) return;
+    this.disabled = true;
+    const resp = await fetch(CREATE_API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF }, body: JSON.stringify(body) });
+    const data = await resp.json().catch(() => ({ success: false, message: 'خطأ من الخادم' }));
+    this.disabled = false;
+    if (!data.success) { errEl.textContent = data.message || 'تعذر الإرسال'; errEl.classList.remove('d-none'); return; }
+    window.location = data.redirect;
+});
+refresh();
+</script>
+{% endblock %}

@@ -130,7 +130,7 @@
         {
           "key": "transfer_head_office_treasury",
           "label": {
-            "ar": "تحويل الأموال بين خزينة الإدارة والفروع",
+            "ar": "تحويل الأموال بين خزائن الإدارة المركزية",
             "en": "Transfer funds between head office treasury and branches"
           }
         },
@@ -165,8 +165,60 @@
         {
           "key": "transfer_head_office_bank_accounts",
           "label": {
-            "ar": "تحويل الأموال بين حسابات الإدارة والفروع",
+            "ar": "تحويل الأموال بين حسابات الإدارة المركزية",
             "en": "Transfer funds between head office bank accounts and branches"
+          }
+        },
+        {
+          "key": "view_head_office_account_reports",
+          "label": {
+            "ar": "تقارير حركة وكشف حساب خزائن الإدارة المركزية وحساباتها البنكية",
+            "en": "Head office treasury and bank statements and movement reports"
+          }
+        }
+      ]
+    },
+    {
+      "key": "head_office_expenses",
+      "name": {
+        "ar": "مصروفات الإدارة المركزية",
+        "en": "Head Office Expenses"
+      },
+      "role_scope": "admin_only",
+      "permissions": [
+        {
+          "key": "view_head_office_expenses",
+          "label": {
+            "ar": "عرض مصروفات الإدارة المركزية",
+            "en": "View head office expenses"
+          }
+        },
+        {
+          "key": "add_head_office_expenses",
+          "label": {
+            "ar": "تسجيل مصروف للإدارة المركزية (من خزائنها أو حساباتها البنكية) وإضافة تصنيفات",
+            "en": "Record a head office expense and add categories"
+          }
+        },
+        {
+          "key": "change_head_office_expenses",
+          "label": {
+            "ar": "تعديل وتأكيد مصروف الإدارة المركزية",
+            "en": "Edit and confirm a head office expense"
+          }
+        },
+        {
+          "key": "delete_head_office_expenses",
+          "label": {
+            "ar": "إلغاء مصروف الإدارة المركزية",
+            "en": "Cancel a head office expense"
+          }
+        },
+        {
+          "key": "view_head_office_expenses_report",
+          "label": {
+            "ar": "تقارير مصروفات الإدارة المركزية (الملخص، التفاصيل، حسب الفئة، حسب التاريخ)",
+            "en": "Head office expense reports"
           }
         }
       ]
@@ -667,6 +719,61 @@
           "label": {
             "ar": "عرض مرتجعات المشتريات",
             "en": "View purchase returns"
+          }
+        }
+      ]
+    },
+    {
+      "key": "purchase_requisitions",
+      "name": {
+        "ar": "طلبات الشراء",
+        "en": "Purchase Requests"
+      },
+      "role_scope": "branch_ops",
+      "permissions": [
+        {
+          "key": "view_purchase_requisitions",
+          "label": {
+            "ar": "عرض طلبات الشراء",
+            "en": "View purchase requests"
+          }
+        },
+        {
+          "key": "add_purchase_requisitions",
+          "label": {
+            "ar": "إنشاء طلب شراء وتعديله وإرساله للإدارة",
+            "en": "Create, edit and submit purchase requests"
+          }
+        },
+        {
+          "key": "cancel_purchase_requisitions",
+          "label": {
+            "ar": "إلغاء طلب شراء قبل اعتماده",
+            "en": "Cancel a purchase request before approval"
+          }
+        }
+      ]
+    },
+    {
+      "key": "branch_requisitions",
+      "name": {
+        "ar": "طلبات الفروع",
+        "en": "Branch Requests"
+      },
+      "role_scope": "admin_only",
+      "permissions": [
+        {
+          "key": "view_branch_requisitions",
+          "label": {
+            "ar": "عرض طلبات الشراء الواردة من الفروع",
+            "en": "View purchase requests from branches"
+          }
+        },
+        {
+          "key": "review_branch_requisitions",
+          "label": {
+            "ar": "اعتماد طلبات الفروع أو رفضها أو إلغاؤها",
+            "en": "Approve, reject or cancel branch requests"
           }
         }
       ]
@@ -1324,6 +1431,44 @@
       ]
     },
     {
+      "key": "branch_transfers",
+      "name": {
+        "ar": "تحويلات الفروع",
+        "en": "Branch Transfers"
+      },
+      "role_scope": null,
+      "permissions": [
+        {
+          "key": "view_branch_transfers",
+          "label": {
+            "ar": "عرض تحويلات الفروع",
+            "en": "View branch transfers"
+          }
+        },
+        {
+          "key": "add_branch_transfers",
+          "label": {
+            "ar": "إرسال تحويل مالي (من الإدارة إلى فرع، أو من الفرع إلى الإدارة)",
+            "en": "Send a branch transfer"
+          }
+        },
+        {
+          "key": "receive_branch_transfers",
+          "label": {
+            "ar": "تأكيد استلام تحويل مالي بالمبلغ الفعلي",
+            "en": "Confirm receipt of a branch transfer"
+          }
+        },
+        {
+          "key": "cancel_branch_transfers",
+          "label": {
+            "ar": "إلغاء تحويل مالي قبل استلامه",
+            "en": "Cancel a branch transfer before receipt"
+          }
+        }
+      ]
+    },
+    {
       "key": "employee_advances",
       "name": {
         "ar": "سلف الموظفين",
@@ -1540,6 +1685,13 @@
           }
         },
         {
+          "key": "view_purchases_returns_report",
+          "label": {
+            "ar": "تقرير مرتجعات المشتريات",
+            "en": "Purchase returns report"
+          }
+        },
+        {
           "key": "view_central_purchases_report",
           "label": {
             "ar": "تقرير المشتريات المركزية",
@@ -1683,13 +1835,6 @@
           "label": {
             "ar": "تقرير مدفوعات الموردين",
             "en": "Supplier payments report"
-          }
-        },
-        {
-          "key": "view_purchases_returns_report",
-          "label": {
-            "ar": "تقرير مرتجعات المشتريات",
-            "en": "Purchase returns report"
           }
         },
         {

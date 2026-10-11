@@ -23,7 +23,7 @@ DIRECTION_LABELS = {'to_branch': 'توزيع', 'to_central': 'مرتجع'}
 
 def central_scope_or_404(request):
     tenant = getattr(request, 'tenant', None)
-    if not tenant or not tenant.is_hybrid_purchasing() or getattr(request, 'branch', None) is not None:
+    if not tenant or not tenant.has_central_warehouse() or getattr(request, 'branch', None) is not None:
         raise Http404
     return tenant
 

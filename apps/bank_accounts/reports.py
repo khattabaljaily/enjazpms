@@ -26,6 +26,9 @@ REFERENCE_TYPE_AR = {
     **_TREASURY_REFERENCE_TYPE_AR,
     'transfer': 'تحويل بين حسابات بنكية',
     'treasury_bank_transfer': 'تحويل بين الخزينة وحساب بنكي',
+    'branch_transfer': 'تحويل فروع',
+    'branch_transfer_cancel': 'إلغاء تحويل فروع',
+    'branch_transfer_return': 'إعادة فرق تحويل فروع',
     'supplier_payment_bank': 'دفعة مورد بنكي',
     'supplier_payment_bank_cancel': 'إلغاء دفعة مورد بنكي',
     'customer_payment_bank': 'دفعة عميل بنكي',
@@ -35,9 +38,11 @@ REFERENCE_TYPE_AR = {
 
 class BankAccountReportGenerator(BranchLabelMixin):
 
-    def __init__(self, tenant, start_date=None, end_date=None, branch=None):
+    def __init__(self, tenant, start_date=None, end_date=None, branch=None, head_office=False):
         self.tenant = tenant
         self.branch = branch
+        # مستخدم الإدارة بمفتاح تقارير الإدارة فقط: خزائن الإدارة المركزية وحساباتها البنكية وحدها.
+        self.head_office = head_office
         self.start_date = start_date or (timezone.localdate() - timedelta(days=30))
         self.end_date = end_date or timezone.localdate()
 
@@ -70,6 +75,8 @@ class BankAccountReportGenerator(BranchLabelMixin):
         except BankAccount.DoesNotExist:
             return None
         if self.branch is not None and account.branch is not None and account.branch != self.branch:
+            return None
+        if self.head_office and not account.is_head_office:
             return None
 
         movements = BankAccountMovement.objects.filter(
@@ -120,6 +127,8 @@ class BankAccountReportGenerator(BranchLabelMixin):
             movement_date__gte=self.start_date,
             movement_date__lte=self.end_date,
         ), self.branch, field='bank_account__branch').select_related('bank_account').order_by('movement_date', 'id')
+        if self.head_office:
+            movements = movements.filter(bank_account__is_head_office=True)
 
         if bank_account_id:
             movements = movements.filter(bank_account_id=bank_account_id)

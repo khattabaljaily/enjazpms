@@ -26,6 +26,8 @@ urlpatterns = [
     path('data-import/', include('apps.data_import.urls')),
     path('catalog/', include('apps.catalog.urls')),
     path('purchases/', include('apps.purchases.urls')),
+    path('requisitions/', include('apps.requisitions.urls')),
+    path('branch-transfers/', include('apps.branch_transfers.urls')),
     path('sales/', include('apps.sales.urls')),
     path('reports/', include('apps.sales.reports_urls')),
     path('insurance/', include('apps.insurance.urls')),

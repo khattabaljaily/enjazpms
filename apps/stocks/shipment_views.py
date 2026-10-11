@@ -51,7 +51,7 @@ def _shipments(request, tenant):
 def _central_only(request):
     """إنشاء/إرسال/إلغاء الشحنات للمستخدم المركزي في النمط الهجين فقط."""
     tenant = _tenant(request)
-    if not tenant or not tenant.is_hybrid_purchasing() or getattr(request, 'branch', None) is not None:
+    if not tenant or not tenant.has_central_warehouse() or getattr(request, 'branch', None) is not None:
         raise Http404
 
 
@@ -165,11 +165,18 @@ def shipment_create(request):
                 return _err('بيانات البنود غير صالحة')
             lines.append({'item': item, 'quantity': qty})
 
+        requisition = None
+        if data.get('requisition_id'):
+            from apps.requisitions.models import PurchaseRequisition
+            requisition = PurchaseRequisition.objects.filter(
+                tenant=tenant, pk=data.get('requisition_id'), status='approved').first()
+            if requisition is None or not tenant.is_central_purchasing():
+                return _err('طلب الشراء غير موجود أو ليس معتمداً.')
         try:
             with transaction.atomic():
                 shipment = create_shipment(
                     tenant, central, to_stock, data.get('shipment_date') or timezone.localdate(),
-                    data.get('notes', ''), lines, user=request.user)
+                    data.get('notes', ''), lines, user=request.user, requisition=requisition)
         except ValueError as exc:
             return _err(str(exc))
 
@@ -190,9 +197,35 @@ def shipment_create(request):
     branch_stocks = (
         Stock.objects.for_tenant(tenant).filter(is_active=True, is_central=False, branch__isnull=False)
         .select_related('branch').order_by('branch__name', 'name'))
-    return render(request, 'stocks/shipment_form.html', {
-        'central_stock': central, 'branch_stocks': branch_stocks, 'today': str(timezone.localdate()),
-    })
+    context = {'central_stock': central, 'branch_stocks': branch_stocks, 'today': str(timezone.localdate())}
+    requisition = _requisition_to_fulfil(request, tenant, central)
+    if requisition is not None:
+        # شحنة تلبّي طلب شراء معتمداً: المخزن المستلِم والبنود تُملأ مسبقاً بالمتبقي من المعتمد.
+        from apps.requisitions.services import remaining_lines
+        context['requisition'] = requisition
+        context['prefill_stock_id'] = requisition.stock_id
+        context['prefill_lines'] = [
+            {'id': ln.item_id, 'name': ln.item.name, 'sku': ln.item.sku or '', 'unit': ln.item.base_unit_name,
+             'available_qty': _central_available(tenant, central, ln.item), 'quantity': float(remaining)}
+            for ln, remaining in remaining_lines(requisition)]
+    return render(request, 'stocks/shipment_form.html', context)
+
+
+def _requisition_to_fulfil(request, tenant, central):
+    """طلب الشراء المعتمد المطلوب تنفيذه عبر ?requisition=ID (النمط المركزي فقط)."""
+    req_id = request.GET.get('requisition')
+    if not req_id or not tenant.is_central_purchasing():
+        return None
+    from apps.requisitions.models import PurchaseRequisition
+    return PurchaseRequisition.objects.filter(
+        tenant=tenant, pk=req_id if str(req_id).isdigit() else 0, status='approved').select_related('branch', 'stock').first()
+
+
+def _central_available(tenant, central, item):
+    if central is None:
+        return 0
+    sq = StockQuantity.objects.filter(tenant=tenant, stock=central, item=item).first()
+    return float((sq.quantity - sq.reserved_quantity) if sq else 0)
 
 
 @login_required
@@ -223,7 +256,7 @@ def shipment_items_api(request):
 
 def _branch_only(request):
     tenant = _tenant(request)
-    if not tenant or not tenant.is_hybrid_purchasing() or getattr(request, 'branch', None) is None:
+    if not tenant or not tenant.has_central_warehouse() or getattr(request, 'branch', None) is None:
         raise Http404
 
 
@@ -357,7 +390,7 @@ def shipment_cancel_ajax(request, pk):
     (create_central_returns)، فتعود الكمية لمخزن الفرع.
     """
     tenant = _tenant(request)
-    if not tenant or not tenant.is_hybrid_purchasing():
+    if not tenant or not tenant.has_central_warehouse():
         raise Http404
     shipment = get_object_or_404(Shipment.objects.for_tenant(tenant), pk=pk)
     branch = getattr(request, 'branch', None)
@@ -391,7 +424,7 @@ def shipment_receive_ajax(request, pk):
     تأكيد الكميات الفعلية: التوزيع يؤكده الفرع المستلِم فقط؛ والمرتجع تؤكده الإدارة المركزية فقط.
     """
     tenant = _tenant(request)
-    if not tenant or not tenant.is_hybrid_purchasing():
+    if not tenant or not tenant.has_central_warehouse():
         raise Http404
     branch = getattr(request, 'branch', None)
     user = request.user

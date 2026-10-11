@@ -188,33 +188,6 @@
             </div>
         </div>
 
-        {% if current_tenant.version_type == 'multi_branch' %}
-        <!-- Purchasing mode (للعرض فقط: يُحدَّد عند إنشاء الحساب ولا يتغير) -->
-        <div class="ts-card mt-3" id="purchasingModeCard">
-            <div class="ts-card__header">
-                <div class="ts-card__icon ts-card__icon--green">
-                    <i class="fas fa-truck-ramp-box"></i>
-                </div>
-                <div>
-                    <div class="ts-card__title">نمط المشتريات</div>
-                    <div class="ts-card__subtitle">يُحدَّد مرة واحدة عند إنشاء الحساب ولا يمكن تغييره</div>
-                </div>
-            </div>
-            <div class="ts-card__body">
-                <p class="mb-2"><strong>{{ current_tenant.get_purchasing_mode_display }}</strong></p>
-                <div class="form-text">
-                    {% if current_tenant.purchasing_mode == 'hybrid' %}
-                    تعمل الإدارة بمخزن مركزي وموردين مركزيين وفواتير شراء مركزية، وتوزّع الكميات على الفروع بشحنات يؤكد الفرع استلامها، ويبقى شراء الفروع المحلي مسموحاً.
-                    {% else %}
-                    كل فرع يشتري من موردينه ويدير مخازنه.
-                    {% if not current_tenant.purchasing_mode_locked %}
-                    هذا الحساب أُنشئ قبل إتاحة الشراء المركزي؛ لتفعيل النمط الهجين تواصل مع إدارة المنصة لتحديده لك مرة واحدة.
-                    {% endif %}
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
     </div>
 
     <!-- ══════════ TAB: إعدادات النظام ══════════ -->

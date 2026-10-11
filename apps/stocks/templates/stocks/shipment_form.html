@@ -34,6 +34,12 @@
     </div>
 </div>
 
+{% if requisition %}
+<div class="alert alert-info">
+    تنفيذ طلب الشراء <a href="{% url 'requisitions:detail' requisition.pk %}"><strong>{{ requisition.number }}</strong></a>
+    من فرع {{ requisition.branch.name }} — البنود مملوءة بالمتبقي من الكميات المعتمدة، ويمكنك تقليلها.
+</div>
+{% endif %}
 {% if not central_stock %}
 <div class="alert alert-warning">لا يوجد مخزن مركزي نشط. أنشئ المخزن المركزي أولاً من شاشة المخازن.</div>
 {% else %}
@@ -60,9 +66,9 @@
             </div>
             <div class="mb-3">
                 <label class="cx-label">إلى مخزن الفرع <span class="text-danger">*</span></label>
-                <select id="toStock" class="cx-input">
+                <select id="toStock" class="cx-input"{% if requisition %} disabled{% endif %}>
                     <option value="">— اختر —</option>
-                    {% for s in branch_stocks %}<option value="{{ s.id }}">{{ s.branch.name }} — {{ s.name }}</option>{% endfor %}
+                    {% for s in branch_stocks %}<option value="{{ s.id }}"{% if s.id == prefill_stock_id %} selected{% endif %}>{{ s.branch.name }} — {{ s.name }}</option>{% endfor %}
                 </select>
             </div>
             {% endif %}
@@ -105,12 +111,16 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if prefill_lines %}{{ prefill_lines|json_script:"prefillData" }}{% endif %}
 <script>
 const MODE = "{{ mode|default:'shipment' }}";
 const ITEMS_API = "{% if mode == 'return' %}{% url 'stocks:return_items_api' %}{% else %}{% url 'stocks:shipment_items_api' %}{% endif %}";
 const SAVE_API = "{% if mode == 'return' %}{% url 'stocks:return_create' %}{% else %}{% url 'stocks:shipment_create' %}{% endif %}";
 const CSRF = "{{ csrf_token }}";
 let lines = {};
+const REQUISITION_ID = {% if requisition %}{{ requisition.pk }}{% else %}null{% endif %};
+const PREFILL = document.getElementById('prefillData') ? JSON.parse(document.getElementById('prefillData').textContent) : [];
+PREFILL.forEach(it => { lines[it.id] = it; });
 let searchTimeout;
 
 function renderLines() {
@@ -158,7 +168,7 @@ document.getElementById('itemSearch').addEventListener('input', function () {
     const q = this.value.trim();
     searchTimeout = setTimeout(() => searchItems(q), 280);
 });
-function toast(type, msg) { if (window.Enjaz && Enjaz.toast) Enjaz.toast(msg, type === 'error' ? 'error' : 'success'); else alert(msg); }
+function toast(type, msg) { Enjaz.toast(msg, type === 'error' ? 'error' : 'success'); }
 
 async function save(send) {
     const toStock = document.getElementById('toStock').value;
@@ -170,7 +180,8 @@ async function save(send) {
         body: JSON.stringify(MODE === 'return'
             ? { from_stock: toStock, notes: document.getElementById('shipmentNotes').value, lines: arr }
             : { to_stock: toStock, shipment_date: document.getElementById('shipmentDate').value,
-                notes: document.getElementById('shipmentNotes').value, lines: arr, send }),
+                notes: document.getElementById('shipmentNotes').value, lines: arr, send,
+                requisition_id: REQUISITION_ID }),
     });
     const data = await resp.json();
     if (!data.success) {

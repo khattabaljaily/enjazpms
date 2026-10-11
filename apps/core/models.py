@@ -217,9 +217,14 @@ class Tenant(models.Model):
     # موردينه ويدير مخازنه. 'hybrid' يضيف مخزناً ومشتريات وموردين مركزيين تديرها
     # الإدارة وتوزّعها على الفروع بشحنات يؤكدها الفرع، ويبقى الشراء المحلي للفرع
     # مسموحاً. لا يُفعَّل خارج multi_branch ولا يُعاد منه بعد وجود بيانات مركزية.
+    # 'central' مركزي بالكامل: الإدارة وحدها تشتري وتدير الموردين وحساباتهم، والفرع يرسل
+    # طلب شراء ويستلم الشحنات؛ شاشات المشتريات والموردين نفسها (بأسمائها وصلاحياتها
+    # المعتادة) تعمل في لوحة مدير النشاط ولا تظهر في لوحة الفرع.
+    # 'decentralized' قيمة قديمة تعني «لم يُحدَّد النمط بعد» لمشتركي ما قبل الميزة، ولا تُعرض خياراً جديداً.
     PURCHASING_MODE_CHOICES = (
         ('decentralized', 'لامركزي (كل فرع يشتري لنفسه)'),
         ('hybrid', 'هجين (شراء مركزي من الإدارة + شراء الفروع)'),
+        ('central', 'مركزي (الإدارة تشتري والفروع ترسل طلبات الشراء)'),
     )
     purchasing_mode = models.CharField(
         'نمط المشتريات', max_length=15, choices=PURCHASING_MODE_CHOICES, default='decentralized'
@@ -273,6 +278,10 @@ class Tenant(models.Model):
                 if self.purchasing_mode != previous['purchasing_mode']:
                     raise ValueError('نمط المشتريات يُحدَّد مرة واحدة عند إنشاء المشترك ولا يمكن تغييره.')
                 self.purchasing_mode_locked = True
+            elif previous and self.purchasing_mode == 'central' and previous['purchasing_mode'] != 'central':
+                blocker = self.central_mode_blocker()
+                if blocker:
+                    raise ValueError(blocker)
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -325,6 +334,40 @@ class Tenant(models.Model):
     def hybrid_purchasing(self) -> bool:
         """خاصية للاستعلام من شجرة الصلاحيات (requires_flag)."""
         return self.is_hybrid_purchasing()
+
+    def central_mode_blocker(self):
+        """
+        سبب يمنع تحويل مشترك قائم إلى النمط «مركزي» (نص عربي) أو None إن جاز.
+        في المركزي لا يوجد شراء ولا موردون عند الفروع، فبقاء بيانات شراء فرعية يجعلها
+        مخفية عن الجميع؛ لذلك يُمنع التحويل ما دامت موجودة (يُحدَّد النمط للمشترك الجديد عند الإنشاء).
+        """
+        if not self.pk:
+            return None
+        from apps.purchases.models import PurchaseInvoice
+        from apps.suppliers.models import Supplier
+        if PurchaseInvoice.objects.filter(tenant=self).exclude(stock__is_central=True).exists():
+            return 'لا يمكن التحويل إلى النمط المركزي: توجد فواتير شراء مسجّلة على مخازن الفروع.'
+        if Supplier.unscoped.filter(tenant=self, branch__isnull=False).exists():
+            return 'لا يمكن التحويل إلى النمط المركزي: توجد موردون مسجّلون لدى الفروع.'
+        return None
+
+    def is_central_purchasing(self) -> bool:
+        """المشتريات مركزية بالكامل: نسخة المؤسسات + نمط المشتريات "مركزي"."""
+        return self.is_enterprise() and self.purchasing_mode == 'central'
+
+    def has_central_warehouse(self) -> bool:
+        """يوجد مخزن مركزي وشحنات توزيع على الفروع (النمطان "هجين" و"مركزي")."""
+        return self.is_hybrid_purchasing() or self.is_central_purchasing()
+
+    @property
+    def central_purchasing(self) -> bool:
+        """خاصية للاستعلام من شجرة الصلاحيات (requires_flag)."""
+        return self.is_central_purchasing()
+
+    @property
+    def central_warehouse(self) -> bool:
+        """خاصية للاستعلام من شجرة الصلاحيات (requires_flag)."""
+        return self.has_central_warehouse()
 
     def auto_backup_daily_count(self) -> int:
         """عدد النسخ الاحتياطية التلقائية يومياً حسب الباقة"""

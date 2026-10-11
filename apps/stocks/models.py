@@ -413,6 +413,10 @@ class Shipment(TenantMixin):
     received_by = models.ForeignKey(
         'accounts.User', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='received_shipments', verbose_name='استلمها')
+    # طلب الشراء الذي تنفّذه هذه الشحنة (النمط المركزي)؛ فارغ للشحنات المبادَر بها من الإدارة.
+    requisition = models.ForeignKey(
+        'requisitions.PurchaseRequisition', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='shipments', verbose_name='طلب الشراء')
 
     class Meta:
         db_table = 'stock_shipments'
@@ -449,6 +453,9 @@ class ShipmentLine(TenantMixin):
     item = models.ForeignKey('items.Item', on_delete=models.PROTECT, related_name='shipment_lines', verbose_name='المنتج')
     quantity_sent = models.DecimalField('الكمية المرسلة', max_digits=12, decimal_places=4)
     quantity_received = models.DecimalField('الكمية المستلَمة', max_digits=12, decimal_places=4, null=True, blank=True)
+    requisition_line = models.ForeignKey(
+        'requisitions.PurchaseRequisitionLine', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='shipment_lines', verbose_name='بند طلب الشراء')
     # تكلفة الصنف وقت الإرسال (تكلفة الشراء المركزي) — لقطة للتقارير.
     unit_cost = models.DecimalField('تكلفة الوحدة', max_digits=14, decimal_places=4, default=0)
 

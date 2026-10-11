@@ -9,7 +9,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from apps.core.models import Tenant, TenantQuerySet
 from .permissions import (
     get_permission_keys, get_branch_supervisor_permission_keys, BRANCH_BLOCKED_KEYS,
-    get_enterprise_owner_permission_keys, load_permission_schema,
+    get_enterprise_owner_permission_keys, load_permission_schema, get_central_mode_admin_only_keys,
 )
 
 
@@ -135,19 +135,24 @@ class User(AbstractUser):
             return perm in (self.platform_permissions or [])
         return False
 
+    def _central_purchasing(self):
+        """مشترك نمط مشترياته «مركزي»: المشتريات والموردون من اختصاص الإدارة لا الفروع."""
+        return bool(self.tenant_id and self.tenant.is_central_purchasing())
+
     def get_permission_keys(self):
         if self.is_superuser:
             return set(get_permission_keys())
+        central = self._central_purchasing()
         if self.is_tenant_admin:
             if self.tenant_id and self.tenant.is_enterprise():
-                return set(get_enterprise_owner_permission_keys())
+                return set(get_enterprise_owner_permission_keys(central))
             return set(get_permission_keys())
         if self.is_branch_supervisor and self.branch_id:
-            keys = set(get_branch_supervisor_permission_keys())
+            keys = set(get_branch_supervisor_permission_keys(central))
         else:
             keys = set()
             enterprise = bool(self.tenant_id and self.tenant.is_enterprise())
-            owner_keys = set(get_enterprise_owner_permission_keys()) if enterprise else None
+            owner_keys = set(get_enterprise_owner_permission_keys(central)) if enterprise else None
             for group in self.permission_groups.filter(is_active=True):
                 group_keys = set(group.get_permission_keys())
                 if enterprise and group.scope == 'admin':
@@ -155,6 +160,8 @@ class User(AbstractUser):
                 keys.update(group_keys)
         if self.branch_id:
             keys -= BRANCH_BLOCKED_KEYS
+            if central:
+                keys -= get_central_mode_admin_only_keys()
         return keys
 
     def has_perm_key(self, permission_key):
@@ -162,24 +169,28 @@ class User(AbstractUser):
             return False
         if self.is_superuser:
             return True
+        central = self._central_purchasing()
         if self.is_tenant_admin:
             if self.tenant_id and self.tenant.is_enterprise():
-                return permission_key in get_enterprise_owner_permission_keys()
+                return permission_key in get_enterprise_owner_permission_keys(central)
             return True
         # قيد مطلق: أي مستخدم مربوط بفرع لا يقدر أبداً على صلاحيات كتالوج
         # المنتجات الحصرية (إضافة/تعديل/حذف/استيراد) — بصرف النظر عن مجموعة
         # الصلاحيات المسندة له، لأن المنتج مورد مركزي مشترك بين كل الفروع.
         if self.branch_id and permission_key in BRANCH_BLOCKED_KEYS:
             return False
+        # النمط «مركزي»: المشتريات والموردون وتقاريرهم للإدارة فقط، ومحظورة مطلقاً على مستخدم الفرع.
+        if self.branch_id and central and permission_key in get_central_mode_admin_only_keys():
+            return False
         if self.is_branch_supervisor and self.branch_id:
-            return permission_key in get_branch_supervisor_permission_keys()
+            return permission_key in get_branch_supervisor_permission_keys(central)
         # مجموعة «إدارة النشاط» في نسخة المؤسسات لا تمنح إلا ما يملكه مدير النشاط نفسه —
         # حتى لو حُفظ فيها سابقاً مفتاح صُنِّف لاحقاً عمليات فرع (مثل تقارير تفاصيل الفرع).
         enterprise = bool(self.tenant_id and self.tenant.is_enterprise())
         for group in self.permission_groups.filter(is_active=True):
             if not group.has_permission(permission_key):
                 continue
-            if enterprise and group.scope == 'admin' and permission_key not in get_enterprise_owner_permission_keys():
+            if enterprise and group.scope == 'admin' and permission_key not in get_enterprise_owner_permission_keys(central):
                 continue
             return True
         return False
@@ -265,7 +276,7 @@ class PermissionGroup(models.Model):
     def create_owner_group(cls, tenant, name='مدير النشاط'):
         is_enterprise = tenant.is_enterprise()
         if is_enterprise:
-            default_keys = get_enterprise_owner_permission_keys()
+            default_keys = get_enterprise_owner_permission_keys(tenant.is_central_purchasing())
         else:
             default_keys = get_permission_keys()
         group = cls.objects.create(

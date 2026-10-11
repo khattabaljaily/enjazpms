@@ -113,6 +113,14 @@ class TenantForm(forms.ModelForm):
             self.instance.purchasing_mode if self.instance.pk else 'decentralized')
         if cleaned_data['version_type'] != 'multi_branch':
             mode = 'decentralized'
+        elif mode == 'decentralized' and not self.instance.pk:
+            # «لامركزي» قيمة قديمة لمشتركين سابقين فقط؛ المشترك الجديد من نسخة المؤسسات يختار مركزي أو هجين.
+            self.add_error('purchasing_mode', 'حدّد نمط المشتريات لنسخة المؤسسات: مركزي أو هجين.')
+        if (mode == 'central' and self.instance.pk and self._original_purchasing_mode != 'central'
+                and not self.instance.purchasing_mode_locked):
+            blocker = self.instance.central_mode_blocker()
+            if blocker:
+                self.add_error('purchasing_mode', blocker)
         cleaned_data['purchasing_mode'] = mode
         return cleaned_data
 

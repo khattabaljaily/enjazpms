@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum
+from django.http import Http404
 from django.shortcuts import render
 
 from apps.accounts.decorators import require_permission
@@ -49,10 +50,17 @@ def central_purchases_data(tenant, start, end):
     return {'rows': rows, 'totals': totals}
 
 
+def _hybrid_only(tenant):
+    """هذا التقرير للنمط الهجين فقط؛ في النمط المركزي تقارير المشتريات العادية هي نفسها تقارير الإدارة."""
+    if not tenant.is_hybrid_purchasing():
+        raise Http404
+    return tenant
+
+
 @login_required
 @require_permission('view_central_purchases_report')
 def central_purchases_report(request):
-    tenant = central_scope_or_404(request)
+    tenant = _hybrid_only(central_scope_or_404(request))
     start, end = report_period(request)
     return render(request, 'purchases/reports/central_by_supplier.html', {
         'report': central_purchases_data(tenant, start, end), 'section': 'purchases_reports',
@@ -62,7 +70,7 @@ def central_purchases_report(request):
 @login_required
 @require_permission('view_central_purchases_report')
 def central_purchases_report_export(request):
-    tenant = central_scope_or_404(request)
+    tenant = _hybrid_only(central_scope_or_404(request))
     start, end = report_period(request)
     rows = central_purchases_data(tenant, start, end)['rows']
     return csv_response('central_purchases_by_supplier',

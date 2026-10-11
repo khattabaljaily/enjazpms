@@ -37,6 +37,10 @@
     <div class="col-md-4"><div class="cx-panel p-3"><small class="text-muted">الاستلام</small><div><strong>{% if shipment.received_at %}{{ shipment.received_at|date:"Y-m-d H:i" }} — {{ shipment.received_by|default:"" }}{% else %}—{% endif %}</strong></div></div></div>
 </div>
 
+{% if shipment.requisition %}
+<div class="cx-panel p-3 mb-3"><small class="text-muted">تلبية طلب الشراء</small>
+    <div><a href="{% url 'requisitions:detail' shipment.requisition.pk %}"><strong>{{ shipment.requisition.number }}</strong></a> — فرع {{ shipment.requisition.branch.name }}</div></div>
+{% endif %}
 {% if shipment.notes %}<div class="cx-panel p-3 mb-3"><small class="text-muted">ملاحظات</small><div>{{ shipment.notes }}</div></div>{% endif %}
 
 {% if can_receive %}
@@ -91,7 +95,7 @@
 {% block extra_js %}
 <script>
 const CSRF = "{{ csrf_token }}";
-function toast(type, msg) { if (window.Enjaz && Enjaz.toast) Enjaz.toast(msg, type === 'error' ? 'error' : 'success'); else alert(msg); }
+function toast(type, msg) { Enjaz.toast(msg, type === 'error' ? 'error' : 'success'); }
 async function act(url, body, okMsg) {
     const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF }, body: JSON.stringify(body || {}) });
     const data = await resp.json();
@@ -100,14 +104,14 @@ async function act(url, body, okMsg) {
     setTimeout(() => window.location.reload(), 700);
 }
 const sendBtn = document.getElementById('btnSend');
-if (sendBtn) sendBtn.addEventListener('click', () => { if (confirm('إرسال الشحنة؟ ستخرج الكميات من المخزن المركزي فوراً.')) act("{% url 'stocks:shipment_send' shipment.pk %}"); });
+if (sendBtn) sendBtn.addEventListener('click', async () => { if (await Enjaz.confirmAction('ستخرج الكميات من المخزن المركزي فوراً وتبقى في الطريق حتى يؤكد الفرع استلامها.', 'تأكيد إرسال الشحنة', 'نعم، أرسل')) act("{% url 'stocks:shipment_send' shipment.pk %}"); });
 const cancelBtn = document.getElementById('btnCancel');
-if (cancelBtn) cancelBtn.addEventListener('click', () => { if (confirm('إلغاء الشحنة؟ إن كانت في الطريق تعود كمياتها للمخزن المركزي.')) act("{% url 'stocks:shipment_cancel' shipment.pk %}"); });
+if (cancelBtn) cancelBtn.addEventListener('click', async () => { if (await Enjaz.confirmAction('إن كانت الشحنة في الطريق تعود كمياتها للمخزن المركزي.', 'إلغاء الشحنة', 'نعم، إلغاء الشحنة')) act("{% url 'stocks:shipment_cancel' shipment.pk %}"); });
 const recvBtn = document.getElementById('btnReceive');
-if (recvBtn) recvBtn.addEventListener('click', () => {
+if (recvBtn) recvBtn.addEventListener('click', async () => {
     const lines = {};
     document.querySelectorAll('.recv-qty').forEach(i => { lines[i.dataset.line] = i.value === '' ? '0' : i.value; });
-    if (confirm('تأكيد استلام هذه الكميات؟')) act("{% url 'stocks:shipment_receive' shipment.pk %}", { lines }, 'تم تأكيد الاستلام');
+    if (await Enjaz.confirmAction('سيدخل مخزن الفرع ما أدخلته من كميات فعلية، ويعود أي نقص للمخزن المركزي.', 'تأكيد استلام الشحنة', 'نعم، أكّد الاستلام')) act("{% url 'stocks:shipment_receive' shipment.pk %}", { lines }, 'تم تأكيد الاستلام');
 });
 </script>
 {% endblock %}

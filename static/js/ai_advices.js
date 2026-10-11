@@ -38,6 +38,8 @@
         if(advices.length===0){ container.textContent = 'لا توجد نصائح حالياً.'; return; }
         container.textContent = advices[idx];
         container.setAttribute('data-advice-index', idx);
+        // نصيحة أطول من سطرين تُقصّ بنقاط؛ نبيّن أنها قابلة للقراءة كاملة بالضغط.
+        container.title = container.scrollHeight > container.clientHeight + 1 ? 'اضغط لقراءة النص كاملاً' : '';
     }
 
     function next(){ if(advices.length===0) return; idx = (idx+1) % advices.length; render(); }

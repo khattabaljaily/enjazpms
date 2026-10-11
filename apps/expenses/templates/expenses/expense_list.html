@@ -16,7 +16,7 @@
         <div class="cx-hero-inner">
             <div class="cx-hero-right">
                 <div class="cx-hero-actions">
-                    {% if user|has_perm_key:'add_expenses' %}
+                    {% if can_add %}
                     <button id="btnOpenCreateExpense" type="button" class="cx-btn-add">
                         <i class="fas fa-plus"></i><span>مصروف جديد</span>
                     </button>
@@ -313,9 +313,11 @@
 {% block extra_js %}
 <script>
     window.EXPENSE_PERMS = {
-        edit:   {% if user|has_perm_key:'change_expenses' %}true{% else %}false{% endif %},
-        cancel: {% if user|has_perm_key:'delete_expenses' %}true{% else %}false{% endif %}
+        edit:   {% if can_change %}true{% else %}false{% endif %},
+        cancel: {% if can_cancel %}true{% else %}false{% endif %}
     };
+    // مصروفات الإدارة المركزية: تُسدَّد من خزائنها/حساباتها البنكية فقط، بالعملة المحلية ({{ local_currency }}).
+    window.EXPENSE_HO = {% if ho_scope %}true{% else %}false{% endif %};
 </script>
 <script>
 (function () {
@@ -378,7 +380,9 @@
     }
 
     function buildTreasuryOptions(select, selectedId) {
-        select.innerHTML = '<option value="">— الخزينة الافتراضية —</option>';
+        select.innerHTML = window.EXPENSE_HO
+            ? '<option value="">— اختر خزينة الإدارة —</option>'
+            : '<option value="">— الخزينة الافتراضية —</option>';
         EXPENSE_TREASURIES.forEach(function (t) {
             const opt = document.createElement('option');
             opt.value = t.id;
@@ -533,6 +537,14 @@
         if (!description) return Enjaz.toast('أدخل الوصف', 'error');
         if (!amount || amount <= 0) return Enjaz.toast('أدخل مبلغاً صحيحاً', 'error');
         if (paymentMethod === 'bank' && !bankAccountId) return Enjaz.toast('اختر الحساب البنكي', 'error');
+        if (window.EXPENSE_HO && paymentMethod === 'cash' && !treasuryId) return Enjaz.toast('اختر خزينة من خزائن الإدارة', 'error');
+        // كفاية الرصيد (يتحقق الخادم أيضاً): لا يتجاوز المصروف رصيد الخزينة/الحساب المختار.
+        const sel = paymentMethod === 'bank' ? expenseBankAccountSel : expenseTreasurySel;
+        const opt = sel.options[sel.selectedIndex];
+        const bal = opt && opt.dataset ? parseFloat(opt.dataset.balance) : NaN;
+        if (!isNaN(bal) && amount > bal) {
+            return Enjaz.toast('رصيد ' + (paymentMethod === 'bank' ? 'الحساب' : 'الخزينة') + ' لا يكفي (المتاح: ' + Enjaz.formatMoney(bal) + ')', 'error');
+        }
 
         const payload = {
             category_id: parseInt(categoryId, 10),

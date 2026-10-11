@@ -183,7 +183,7 @@ class UserManagementForm(forms.ModelForm):
             elif self.forced_branch is not None:
                 # لا يُمنح موظف الفرع مجموعة فيها صلاحيات إدارة النشاط (فروع،
                 # مستخدمو المنشأة، مجموعات الصلاحيات...) حتى لا يتصعّد.
-                allowed = branch_assignable_permission_keys()
+                allowed = branch_assignable_permission_keys(self.tenant.is_central_purchasing())
                 groups = groups.filter(pk__in=[
                     g.pk for g in groups if set(g.get_permission_keys()) <= allowed
                 ])
@@ -404,10 +404,10 @@ class Step3SettingsForm(forms.Form):
     purchasing_mode = forms.ChoiceField(
         label='نمط المشتريات',
         choices=(
-            ('decentralized', 'لامركزي — كل فرع يشتري من موردينه'),
+            ('central', 'مركزي — الإدارة وحدها تشتري، والفروع ترسل طلبات الشراء وتستلم الشحنات'),
             ('hybrid', 'هجين — شراء مركزي من الإدارة وتوزيع على الفروع، مع شراء الفروع المحلي'),
         ),
-        initial='decentralized',
+        initial='central',
         required=False,
         widget=forms.Select(attrs={'class': 'form-select'}),
         help_text='يُحدَّد مرة واحدة الآن ولا يمكن تغييره بعد إنشاء الحساب.',
@@ -494,7 +494,7 @@ class Step3SettingsForm(forms.Form):
         if cleaned_data['version_type'] != 'multi_branch':
             cleaned_data['purchasing_mode'] = 'decentralized'
         else:
-            cleaned_data['purchasing_mode'] = cleaned_data.get('purchasing_mode') or 'decentralized'
+            cleaned_data['purchasing_mode'] = cleaned_data.get('purchasing_mode') or 'central'
 
         if cleaned_data.get('hard_currency_mode'):
             if not cleaned_data.get('exchange_rate'):
@@ -508,7 +508,7 @@ class RegistrationRequestForm(forms.Form):
 
     VERSION_CHOICES = Step3SettingsForm.VERSION_CHOICES
     PURCHASING_CHOICES = (
-        ('decentralized', 'لامركزي — كل فرع يشتري من موردينه'),
+        ('central', 'مركزي — الإدارة وحدها تشتري، والفروع ترسل طلبات الشراء'),
         ('hybrid', 'هجين — شراء مركزي من الإدارة وتوزيع على الفروع'),
     )
 
@@ -567,10 +567,10 @@ class RegistrationRequestForm(forms.Form):
     purchasing_mode = forms.ChoiceField(
         label='نمط المشتريات (لنسخة الفروع المتعددة)',
         choices=(
-            ('decentralized', 'لامركزي — كل فرع يشتري من موردينه'),
+            ('central', 'مركزي — الإدارة وحدها تشتري، والفروع ترسل طلبات الشراء'),
             ('hybrid', 'هجين — شراء مركزي من الإدارة وتوزيع على الفروع'),
         ),
-        initial='decentralized',
+        initial='central',
         required=False,
         widget=forms.Select(attrs={'class': 'form-select'}),
     )

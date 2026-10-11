@@ -32,7 +32,7 @@ from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, Registra
 from .permissions import (
     get_permission_keys, filter_schema_for_tenant,
     get_branch_supervisor_permission_keys, get_enterprise_owner_permission_keys,
-    BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES, ENTERPRISE_OWNER_EXCLUDED_CATEGORIES, get_scope_excluded_permission_keys,
+    branch_supervisor_excluded_categories, enterprise_owner_excluded_categories, get_scope_excluded_permission_keys,
 )
 
 
@@ -372,19 +372,20 @@ def permission_group_list(request):
     users = User.objects.for_tenant(tenant).filter(is_active=True).values('id', 'username', 'first_name', 'last_name')
 
     schema = filter_schema_for_tenant(tenant)
+    central = tenant.is_central_purchasing()
 
     return render(request, 'accounts/permission_group_list.html', {
         'permission_schema': json.dumps(schema, ensure_ascii=False),
         'users': json.dumps(list(users), ensure_ascii=False),
         'is_enterprise_tenant': tenant.is_enterprise(),
         'group_scope_excluded': json.dumps({
-            'branch': sorted(BRANCH_SUPERVISOR_EXCLUDED_CATEGORIES),
-            'admin': sorted(ENTERPRISE_OWNER_EXCLUDED_CATEGORIES),
+            'branch': sorted(branch_supervisor_excluded_categories(central)),
+            'admin': sorted(enterprise_owner_excluded_categories(central)),
         }, ensure_ascii=False),
         # مفاتيح موسومة بنطاق مستبعد داخل أقسام مشتركة (مثل تقارير تفاصيل الفرع).
         'group_scope_excluded_keys': json.dumps({
-            'branch': get_scope_excluded_permission_keys('admin_only'),
-            'admin': get_scope_excluded_permission_keys('branch_ops'),
+            'branch': get_scope_excluded_permission_keys('admin_only', central),
+            'admin': get_scope_excluded_permission_keys('branch_ops', central),
         }),
     })
 
@@ -471,10 +472,11 @@ def _valid_keys_for_scope(tenant, scope):
     صلاحية لميزة لا تدعمها باقته/قدراته أصلاً (لا يظهر أصلاً كـ checkbox في
     الواجهة) لو أُرسل يدوياً في الطلب.
     """
+    central = tenant.is_central_purchasing()
     if tenant.is_enterprise() and scope == 'branch':
-        base_keys = set(get_branch_supervisor_permission_keys())
+        base_keys = set(get_branch_supervisor_permission_keys(central))
     elif tenant.is_enterprise() and scope == 'admin':
-        base_keys = set(get_enterprise_owner_permission_keys())
+        base_keys = set(get_enterprise_owner_permission_keys(central))
     else:
         base_keys = set(get_permission_keys())
 
@@ -645,7 +647,7 @@ def registration_request_api(request):
         'address': data['address'],
         'version_type': version_label,
         'purchasing_mode': (
-            dict(RegistrationRequestForm.PURCHASING_CHOICES).get(data.get('purchasing_mode') or 'decentralized', '')
+            dict(RegistrationRequestForm.PURCHASING_CHOICES).get(data.get('purchasing_mode') or 'central', '')
             if data['version_type'] == 'multi_branch' else '—'),
         'hard_currency_mode': 'مفعّل' if data['hard_currency_mode'] else 'غير مفعّل',
         'now': _tz.now(),

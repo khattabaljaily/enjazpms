@@ -39,7 +39,7 @@ def _stock_report_scope(request):
     branch, is_central_admin, branches_for_filter = resolve_report_scope(request)
     tenant = getattr(request, 'tenant', None)
     central_option = bool(
-        is_central_admin and tenant is not None and tenant.is_hybrid_purchasing()
+        is_central_admin and tenant is not None and tenant.has_central_warehouse()
         and request.user.has_perm_key('view_central_reports'))
     central = central_option and request.GET.get('branch') == 'central'
     request.report_central_option = central_option
@@ -49,6 +49,11 @@ def _stock_report_scope(request):
 
 def _ensure_tenant(request):
     return getattr(request, 'tenant', None)
+
+
+def _is_locked_main_stock(tenant, stock):
+    """النمط المركزي: المخزن الرئيسي (المركزي) نظامي يُنشأ تلقائياً ولا يُعدَّل ولا يُحذف ولا يُعطَّل."""
+    return bool(stock.is_central and tenant.is_central_purchasing())
 
 
 def _serialize_errors(form):
@@ -260,6 +265,8 @@ def stock_update_api(request, pk):
     except Stock.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=404)
     enforce_branch_ownership(request, stock)
+    if _is_locked_main_stock(tenant, stock):
+        return JsonResponse({'success': False, 'message': 'المخزن الرئيسي نظامي ولا يمكن تعديله أو حذفه.'}, status=400)
 
     form = StockForm(request.POST, instance=stock, tenant=tenant, branch=getattr(request, 'branch', None))
     if form.is_valid():
@@ -298,6 +305,9 @@ def stock_delete_api(request, pk):
     except Stock.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=404)
     enforce_branch_ownership(request, stock)
+
+    if _is_locked_main_stock(tenant, stock):
+        return JsonResponse({'success': False, 'message': 'المخزن الرئيسي نظامي ولا يمكن تعديله أو حذفه.'}, status=400)
 
     if stock.is_central:
         return JsonResponse({
@@ -355,6 +365,8 @@ def stock_set_default_api(request, pk):
     except Stock.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=404)
     enforce_branch_ownership(request, stock)
+    if _is_locked_main_stock(tenant, stock):
+        return JsonResponse({'success': False, 'message': 'المخزن الرئيسي نظامي ولا يمكن تعديله أو حذفه.'}, status=400)
 
     # عمليتان في transaction واحدة: إلغاء الافتراضي القديم + تعيين الجديد
     Stock.objects.for_tenant(tenant).filter(is_default=True).update(is_default=False)

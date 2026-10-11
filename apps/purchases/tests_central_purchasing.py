@@ -318,25 +318,28 @@ class CentralStockIsDistributionOnlyTests(CentralPurchasingBase):
 
 
 class CentralPurchasingDiscoverabilityTests(CentralPurchasingBase):
-    """مدير النشاط يجد النمط الهجين وقائمته: التلميح قبل التفعيل، والقائمة بعده."""
+    """قائمة الهجين تظهر بعد التفعيل؛ ولا يُذكر نمط المشتريات في إعدادات المشترك ولا تلميح له بالقائمة."""
 
-    def test_sidebar_hint_before_activation_and_menu_after(self):
-        import re
+    def test_sidebar_menu_for_hybrid_and_no_mode_hint_for_legacy(self):
         self.client.force_login(self.user)
         self.tenant.purchasing_mode = 'decentralized'
         self.tenant.save(update_fields=['purchasing_mode'])
         html = self.client.get(reverse('core:dashboard')).content.decode()
-        self.assertIn('المشتريات المركزية (غير مفعّلة)', html)
+        self.assertNotIn('المشتريات المركزية (غير مفعّلة)', html)
         self.assertNotIn('فواتير الشراء المركزية', html)
-        page = self.client.get(reverse('core:tenant_settings')).content.decode()
-        i = page.find('id="purchasingModeCard"')
-        panes = [(m.start(), m.group(1)) for m in re.finditer(r'id="tab-([a-z_-]+)"', page)]
-        self.assertEqual([p for p in panes if p[0] < i][-1][1], 'business')  # التبويب الافتراضي
         self.tenant.purchasing_mode = 'hybrid'
         self.tenant.save(update_fields=['purchasing_mode'])
         html = self.client.get(reverse('core:dashboard')).content.decode()
         self.assertIn('فواتير الشراء المركزية', html)
-        self.assertNotIn('المشتريات المركزية (غير مفعّلة)', html)
+
+    def test_tenant_settings_page_does_not_mention_purchasing_mode(self):
+        self.client.force_login(self.user)
+        for mode in ('decentralized', 'hybrid'):
+            self.tenant.purchasing_mode = mode
+            self.tenant.save(update_fields=['purchasing_mode'])
+            page = self.client.get(reverse('core:tenant_settings')).content.decode()
+            self.assertNotIn('purchasingModeCard', page)
+            self.assertNotIn('نمط المشتريات', page)
 
     def test_central_pages_expose_central_scope_to_the_permission_helper(self):
         """أزرار «جديد/تعديل/حذف» تُخفى بـ hasPerm؛ في نطاق المركزي يجب أن تُترجم لصلاحيات المركزي."""

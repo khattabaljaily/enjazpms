@@ -1,0 +1,173 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sales.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/stocks.css' %}?v=1.0">
+<style>
+.rq-lines-table th, .rq-lines-table td { vertical-align: middle; }
+.rq-lines-table .qty-input { width: 120px; }
+.rq-stock-qty { font-size: .8rem; color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap" style="background:var(--primary)"><i class="fas fa-clipboard-list"></i></div>
+            <div>
+                <h1 class="cx-hero-title">{% if requisition %}تعديل طلب الشراء {{ requisition.number }}{% else %}طلب شراء جديد{% endif %}</h1>
+                <p class="cx-hero-desc">حدّد الأصناف والكميات التي يحتاجها فرعك؛ تراجعها الإدارة وتوردها لمخزنك</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not stocks %}
+<div class="alert alert-warning">لا يوجد مخزن نشط تابع لفرعك لاستلام الطلب. تواصل مع الإدارة.</div>
+{% else %}
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="cx-panel p-4 mb-3">
+            <div class="cx-panel-header mb-3"><h3 class="cx-panel-title"><i class="fas fa-info-circle me-2"></i>بيانات الطلب</h3></div>
+            <div class="mb-3">
+                <label class="cx-label">المخزن المستلِم <span class="text-danger">*</span></label>
+                <select id="rqStock" class="cx-input">
+                    {% for s in stocks %}<option value="{{ s.id }}"{% if requisition and requisition.stock_id == s.id %} selected{% endif %}>{{ s.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">تاريخ الطلب</label>
+                <input type="date" id="rqDate" class="cx-input" value="{% if requisition %}{{ requisition.request_date|date:'Y-m-d' }}{% else %}{{ today }}{% endif %}">
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">مطلوب قبل</label>
+                <input type="date" id="rqNeededBy" class="cx-input" value="{% if requisition and requisition.needed_by %}{{ requisition.needed_by|date:'Y-m-d' }}{% endif %}">
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">الأولوية</label>
+                <select id="rqPriority" class="cx-input">
+                    <option value="normal"{% if requisition and requisition.priority == 'normal' %} selected{% endif %}>عادي</option>
+                    <option value="urgent"{% if requisition and requisition.priority == 'urgent' %} selected{% endif %}>عاجل</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="cx-label">ملاحظات</label>
+                <textarea id="rqNotes" class="cx-input" rows="3">{% if requisition %}{{ requisition.notes }}{% endif %}</textarea>
+            </div>
+        </div>
+        <div class="cx-panel p-4">
+            <div class="cx-panel-header mb-3"><h3 class="cx-panel-title"><i class="fas fa-search me-2"></i>إضافة منتج</h3></div>
+            <input type="text" id="itemSearch" class="cx-input mb-2" placeholder="ابحث باسم المنتج أو الرمز…">
+            <div id="itemResults" class="list-group" style="max-height:260px;overflow-y:auto;"></div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="cx-panel p-4">
+            <div class="cx-panel-header mb-3"><h3 class="cx-panel-title"><i class="fas fa-list me-2"></i>بنود الطلب</h3></div>
+            <div class="table-responsive">
+                <table class="cx-table table rq-lines-table w-100">
+                    <thead><tr><th>المنتج</th><th>رصيدك الحالي</th><th>الكمية المطلوبة</th><th>ملاحظة</th><th></th></tr></thead>
+                    <tbody id="linesBody"></tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-end mt-4 gap-2">
+                <a href="{% if requisition %}{% url 'requisitions:detail' requisition.pk %}{% else %}{% url 'requisitions:list' %}{% endif %}" class="cx-btn-secondary">إلغاء</a>
+                <button id="btnSave" class="cx-btn-secondary"><i class="fas fa-save me-1"></i> حفظ كمسودة</button>
+                <button id="btnSubmit" class="cx-btn-add" style="background:var(--success)" data-require-perm="add_purchase_requisitions"><i class="fas fa-paper-plane me-1"></i> إرسال للإدارة</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ initial_lines|json_script:"initialLines" }}
+<script>
+const ITEMS_API = "{% url 'requisitions:items_api' %}";
+const SAVE_API = "{% if requisition %}{% url 'requisitions:edit' requisition.pk %}{% else %}{% url 'requisitions:create' %}{% endif %}";
+const CSRF = "{{ csrf_token }}";
+let lines = {};
+JSON.parse(document.getElementById('initialLines').textContent).forEach(it => { lines[it.id] = { ...it, stock_qty: null }; });
+let searchTimeout;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function renderLines() {
+    const body = document.getElementById('linesBody');
+    const ids = Object.keys(lines);
+    if (!ids.length) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>ابحث عن منتج وأضفه للقائمة</td></tr>';
+        return;
+    }
+    body.innerHTML = ids.map(id => {
+        const ln = lines[id];
+        return `<tr>
+            <td><strong>${esc(ln.name)}</strong><br><small class="text-muted">${esc(ln.sku)}</small></td>
+            <td><span class="rq-stock-qty">${ln.stock_qty === null || ln.stock_qty === undefined ? '—' : esc(ln.stock_qty)}</span> <small class="text-muted">${esc(ln.unit)}</small></td>
+            <td><input type="number" class="cx-input qty-input" step="0.0001" min="0.0001" value="${esc(ln.quantity)}" onchange="setQty('${id}', this.value)"></td>
+            <td><input type="text" class="cx-input" maxlength="200" value="${esc(ln.notes || '')}" onchange="setNote('${id}', this.value)"></td>
+            <td><button class="btn btn-outline-danger btn-sm" onclick="removeLine('${id}')"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+    }).join('');
+}
+function setQty(id, v) { lines[id].quantity = parseFloat(v) || 0; }
+function setNote(id, v) { lines[id].notes = v; }
+function removeLine(id) { delete lines[id]; renderLines(); }
+function addLine(item) {
+    if (lines[item.id]) { lines[item.id].quantity += 1; } else { lines[item.id] = { id: item.id, name: item.name, sku: item.sku, unit: item.unit, stock_qty: item.stock_qty, quantity: 1, notes: '' }; }
+    document.getElementById('itemSearch').value = '';
+    document.getElementById('itemResults').innerHTML = '';
+    renderLines();
+}
+function searchItems(q) {
+    const stockId = document.getElementById('rqStock').value || 0;
+    fetch(`${ITEMS_API}?q=${encodeURIComponent(q || '')}&stock_id=${stockId}`).then(r => r.json()).then(data => {
+        const box = document.getElementById('itemResults');
+        if (!data.items.length) { box.innerHTML = '<div class="list-group-item text-muted">لا نتائج</div>'; return; }
+        box.innerHTML = '';
+        data.items.forEach(it => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+            b.innerHTML = `<span>${esc(it.name)} <small class="text-muted">${esc(it.sku)}</small></span><span class="badge bg-secondary" title="رصيدك الحالي">${esc(it.stock_qty)} ${esc(it.unit)}</span>`;
+            b.addEventListener('click', () => addLine(it));
+            box.appendChild(b);
+        });
+    });
+}
+document.getElementById('itemSearch').addEventListener('focus', function () { if (!document.getElementById('itemResults').children.length) searchItems(''); });
+document.getElementById('itemSearch').addEventListener('input', function () {
+    clearTimeout(searchTimeout);
+    const q = this.value.trim();
+    searchTimeout = setTimeout(() => searchItems(q), 280);
+});
+function toast(type, msg) { Enjaz.toast(msg, type === 'error' ? 'error' : 'success'); }
+
+async function save(action) {
+    const arr = Object.keys(lines).map(id => ({ item_id: parseInt(id), quantity: lines[id].quantity, notes: lines[id].notes || '' }));
+    if (!arr.length) { toast('error', 'أضف بنداً واحداً على الأقل'); return; }
+    const resp = await fetch(SAVE_API, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({
+            stock_id: document.getElementById('rqStock').value, request_date: document.getElementById('rqDate').value,
+            needed_by: document.getElementById('rqNeededBy').value, priority: document.getElementById('rqPriority').value,
+            notes: document.getElementById('rqNotes').value, lines: arr, action }),
+    });
+    const data = await resp.json();
+    if (!data.success) { toast('error', data.message || 'خطأ في الحفظ'); return; }
+    window.location = data.redirect;
+}
+const saveBtn = document.getElementById('btnSave');
+if (saveBtn) saveBtn.addEventListener('click', () => save('save_draft'));
+const submitBtn = document.getElementById('btnSubmit');
+if (submitBtn) submitBtn.addEventListener('click', async () => { if (await Enjaz.confirmAction('سيصل الطلب للإدارة للمراجعة ولن تستطيع تعديله بعد الإرسال.', 'تأكيد إرسال الطلب', 'نعم، أرسل')) save('submit'); });
+renderLines();
+</script>
+{% endblock %}

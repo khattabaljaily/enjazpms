@@ -41,7 +41,7 @@ def _scope_payment_ledger(qs, request):
         return qs.filter(supplier__branch__isnull=True)
     qs = filter_by_branch_via(qs, getattr(request, 'branch', None), field='supplier__branch')
     tenant = getattr(request, 'tenant', None)
-    if tenant is not None and tenant.is_hybrid_purchasing() and getattr(request, 'branch', None) is None:
+    if tenant is not None and tenant.has_central_warehouse() and getattr(request, 'branch', None) is None:
         qs = qs.exclude(supplier__branch__isnull=True)
     return qs
 

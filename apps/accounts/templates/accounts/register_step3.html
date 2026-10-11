@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const modeWrap = document.querySelector('.js-purchasing-mode');
         const isEnterprise = versionTypeField.value === 'multi_branch';
         modeWrap.style.display = isEnterprise ? 'block' : 'none';
-        if (!isEnterprise) { modeWrap.querySelector('select').value = 'decentralized'; }
+        if (!isEnterprise) { modeWrap.querySelector('select').selectedIndex = 0; }
     }
 
     planField.addEventListener('change', applyPlanConstraints);

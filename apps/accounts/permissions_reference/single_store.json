@@ -1243,6 +1243,13 @@
             "ar": "تقرير المشتريات حسب المستخدم",
             "en": "Purchases by user report"
           }
+        },
+        {
+          "key": "view_purchases_returns_report",
+          "label": {
+            "ar": "تقرير مرتجعات المشتريات",
+            "en": "Purchase returns report"
+          }
         }
       ]
     },
@@ -1374,13 +1381,6 @@
           "label": {
             "ar": "تقرير مدفوعات الموردين",
             "en": "Supplier payments report"
-          }
-        },
-        {
-          "key": "view_purchases_returns_report",
-          "label": {
-            "ar": "تقرير مرتجعات المشتريات",
-            "en": "Purchase returns report"
           }
         },
         {

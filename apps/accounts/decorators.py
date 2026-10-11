@@ -52,9 +52,10 @@ def require_permission(permission_key):
 
 def require_scoped_permission(branch_key, central_key):
     """
-    صلاحية بنطاقين لشاشات المشتريات/الموردين في النمط الهجين:
-      - من يملك branch_key: نطاق الفرع/المعتاد (request.central_scope = False).
-      - من لا يملكه لكن يملك central_key، ونمط مشتريات المشترك "هجين"، وهو مستخدم
+    صلاحية بنطاقين لشاشات المشتريات/الموردين/الشحنات في النمطين الهجين والمركزي:
+      - من يملك branch_key: نطاق الفرع/المعتاد (request.central_scope = False)، إلا مستخدم الإدارة
+        (بلا فرع) في النمط «مركزي» فنطاقه المخزن المركزي (central_scope = True) بصلاحياته المعتادة.
+      - من لا يملكه لكن يملك central_key، ونمط المشتريات "هجين" أو "مركزي"، وهو مستخدم
         مركزي (بلا فرع): نطاق الإدارة المركزية (request.central_scope = True).
       - غير ذلك: مرفوض. (بدون هذا الفحص كان مدير النشاط، الذي يملك المفتاح المركزي
         في أي نمط، يعبر إلى نطاق "كل الفروع" المعتاد.)
@@ -66,17 +67,48 @@ def require_scoped_permission(branch_key, central_key):
             if not request.user.is_authenticated:
                 return redirect('accounts:login')
             user = request.user
-            if user.is_superuser or user.has_perm_key(branch_key):
-                request.central_scope = False
-                return view_func(request, *args, **kwargs)
             tenant = getattr(request, 'tenant', None)
-            if (tenant is not None and tenant.is_hybrid_purchasing()
-                    and getattr(request, 'branch', None) is None
-                    and user.has_perm_key(central_key)):
+            branchless = getattr(request, 'branch', None) is None
+            if user.is_superuser or user.has_perm_key(branch_key):
+                # النمط المركزي: مستخدم الإدارة (بلا فرع) بالصلاحية المعتادة يعمل بنطاق المخزن المركزي.
+                request.central_scope = bool(
+                    tenant is not None and tenant.is_central_purchasing() and branchless)
+                return view_func(request, *args, **kwargs)
+            if (tenant is not None and tenant.has_central_warehouse() and branchless
+                    and central_key is not None and user.has_perm_key(central_key)):
                 request.central_scope = True
                 return view_func(request, *args, **kwargs)
             return _deny(request)
-        wrapper._required_permission_keys = (branch_key, central_key)
+        wrapper._required_permission_keys = (branch_key,) if central_key is None else (branch_key, central_key)
+        wrapper._permission_check_mode = 'any'
+        return wrapper
+    return decorator
+
+
+def require_account_report(std_key, ho_key='view_head_office_account_reports'):
+    """
+    تقارير الخزائن والحسابات البنكية (كشف الحساب والحركات) بنطاقين في نسخة المؤسسات:
+      - من يملك std_key: النطاق المعتاد (request.account_report_ho = False).
+      - مدير النشاط/موظف الإدارة (بلا فرع) بمفتاح الإدارة فقط: خزائن الإدارة المركزية وحساباتها البنكية وحدها
+        (request.account_report_ho = True).
+      - غير ذلك: مرفوض.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect('accounts:login')
+            user = request.user
+            tenant = getattr(request, 'tenant', None)
+            if user.has_perm_key(std_key):
+                request.account_report_ho = False
+            elif (user.has_perm_key(ho_key) and tenant is not None and tenant.is_enterprise()
+                  and getattr(request, 'branch', None) is None):
+                request.account_report_ho = True
+            else:
+                return _deny(request)
+            return view_func(request, *args, **kwargs)
+        wrapper._required_permission_keys = (ho_key, std_key)
         wrapper._permission_check_mode = 'any'
         return wrapper
     return decorator

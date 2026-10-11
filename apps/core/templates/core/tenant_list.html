@@ -689,6 +689,10 @@
         const isEnterpriseVersion = $('#id_version_type').val() === 'multi_branch';
         $('#purchasingModeWrap').toggle(isEnterpriseVersion);
         if (!isEnterpriseVersion) { $('#id_purchasing_mode').val('decentralized'); }
+        else if ($('#id_purchasing_mode').val() === 'decentralized' && !$('#id_purchasing_mode').prop('disabled')) {
+            // «لامركزي» قيمة قديمة؛ المشترك الجديد من نسخة المؤسسات يبدأ بالنمط المركزي ويمكن تغييره للهجين.
+            $('#id_purchasing_mode').val('central');
+        }
 
         // تحذير مبكر (غير مانع) لو الاستخدام الحالي يتجاوز حدود الباقة
         // المختارة — التحقق الفعلي المانع يبقى دائماً من السيرفر (clean())،

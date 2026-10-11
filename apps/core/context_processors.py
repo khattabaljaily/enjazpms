@@ -17,11 +17,16 @@ def tenant_context(request):
         'tenant_capabilities': None,
         # نطاق الإدارة المركزية (النمط الهجين): يضبطه require_scoped_permission على الطلب.
         'central_scope': bool(getattr(request, 'central_scope', False)),
+        # صلاحيات المركزي (view_central_*) تُستبدل بالعادية في الأزرار فقط في النمط الهجين؛
+        # في النمط «مركزي» الشاشات نفسها بصلاحياتها المعتادة.
+        'central_keys_remap': False,
     }
 
     if hasattr(request, 'tenant') and request.tenant:
         tenant = request.tenant
         context['current_tenant'] = tenant
+        context['central_keys_remap'] = bool(
+            context['central_scope'] and not tenant.is_central_purchasing())
 
         try:
             context['tenant_settings'] = Settings.objects.get(tenant=tenant)

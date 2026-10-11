@@ -269,3 +269,22 @@
 @media (max-width: 360px) {
     .cx-treasury-card-actions { justify-content: flex-start; }
 }
+
+/* ── حقول نوافذ التحويل (cx-field): أيقونة جانبية + سهم القوائم المنسدلة ──
+   كانت هذه الأنماط غير معرّفة فتظهر الأيقونة فوق الحقل وتبدو القوائم كحقول نصية. */
+.cx-field { position: relative; display: block; }
+.cx-field__icon {
+    position: absolute; inset-inline-start: .95rem; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted, #6b7280); font-size: .9rem; pointer-events: none; z-index: 2;
+}
+.cx-field .cx-input, .cx-field .form-control, .cx-field .form-select { padding-inline-start: 2.6rem; }
+.cx-field select.cx-input, .cx-field select.form-select {
+    cursor: pointer;
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    padding-inline-end: 2.4rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left .9rem center;
+    background-size: 1.05rem;
+}
+.cx-field select.cx-input:disabled, .cx-field select.form-select:disabled { cursor: not-allowed; opacity: .6; }

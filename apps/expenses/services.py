@@ -6,6 +6,39 @@ from apps.treasury.services import post_treasury_disbursement, post_treasury_mov
 from apps.bank_accounts.services import post_bank_account_disbursement, post_bank_account_movement
 
 
+def validate_expense_account(expense):
+    """
+    يتحقق من حساب سداد المصروف قبل أي حركة مالية:
+      - العملة: المصروف بالعملة المحلية للمشترك، فالخزينة/الحساب البنكي يطابقانها (لا خصم 100 جنيه من حساب دولار).
+      - نسخة المؤسسات: مصروف الإدارة (بلا فرع) يُسدَّد من خزائن/حسابات الإدارة المركزية فقط، ومصروف الفرع من
+        خزائن/حسابات ذلك الفرع فقط.
+      - كفاية الرصيد يفحصها ترحيل الحركة نفسه (post_*_disbursement) بالرسالة المعتادة.
+    """
+    tenant = expense.tenant
+    if expense.payment_method == expense.PAYMENT_CASH:
+        account, kind = expense.treasury, 'الخزينة'
+    elif expense.payment_method == expense.PAYMENT_BANK:
+        account, kind = expense.bank_account, 'الحساب البنكي'
+    else:
+        return
+    if account is None:
+        if tenant.is_enterprise() and expense.branch_id is None:
+            raise ValueError('اختر خزينة أو حساباً بنكياً من حسابات الإدارة المركزية.')
+        return  # غير المؤسسات: الخزينة الافتراضية كالمعتاد
+    local = (tenant.currency or '').strip()
+    account_currency = (account.currency or tenant.currency or '').strip()
+    if account_currency != local:
+        raise ValueError(
+            f'عملة {kind} «{account.name}» هي {account_currency} بينما المصروفات تُسجَّل بالعملة المحلية {local}؛ '
+            'اختر حساباً بنفس العملة.')
+    if tenant.is_enterprise():
+        # حساب بلا فرع وغير إداري (قديم/يتيم) لا يُرفض؛ المرفوض فقط حساب يخص الجهة الأخرى بوضوح.
+        if expense.branch_id is None and account.branch_id is not None and not account.is_head_office:
+            raise ValueError(f'مصروف الإدارة المركزية يُسدَّد من {kind} تابع للإدارة المركزية فقط.')
+        if expense.branch_id is not None and (account.is_head_office or account.branch_id not in (None, expense.branch_id)):
+            raise ValueError(f'مصروف الفرع يُسدَّد من {kind} تابع لنفس الفرع فقط.')
+
+
 @transaction.atomic
 def confirm_expense(expense, user=None):
     """
@@ -14,6 +47,7 @@ def confirm_expense(expense, user=None):
     """
     if expense.status != expense.STATUS_DRAFT:
         raise ValueError('المصروف ليس في حالة مسودة.')
+    validate_expense_account(expense)
 
     if expense.payment_method == expense.PAYMENT_CASH:
         movement = post_treasury_disbursement(

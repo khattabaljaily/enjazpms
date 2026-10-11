@@ -387,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!wrap) return;
         var enterprise = fieldValue('version_type') === 'multi_branch';
         wrap.style.display = enterprise ? '' : 'none';
-        if (!enterprise) { wrap.querySelector('select').value = 'decentralized'; }
+        if (!enterprise) { wrap.querySelector('select').selectedIndex = 0; }
     }
     var versionSelect = form.querySelector('[name="version_type"]');
     if (versionSelect) { versionSelect.addEventListener('change', syncPurchasingMode); }

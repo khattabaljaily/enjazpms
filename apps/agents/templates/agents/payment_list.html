@@ -153,12 +153,12 @@
                                         <h3 class="cx-panel-title"><i class="fas fa-id-badge me-2"></i>تفاصيل المندوب</h3>
                                     </div>
                                     <div style="display:flex;flex-direction:column;gap:10px;">
-                                        <div style="background:#f8f9fa;border-radius:8px;padding:10px 14px;">
-                                            <div style="font-size:0.68rem;color:#6c757d;margin-bottom:3px;">اسم المندوب</div>
+                                        <div style="background:var(--surface-alt,#f8f9fa);color:var(--text-primary,#111827);border-radius:8px;padding:10px 14px;">
+                                            <div style="font-size:0.68rem;color:var(--text-muted,#6c757d);margin-bottom:3px;">اسم المندوب</div>
                                             <div style="font-size:0.88rem;font-weight:600;" id="paymentModalAgentName">—</div>
                                         </div>
-                                        <div style="background:#f8f9fa;border-radius:8px;padding:10px 14px;">
-                                            <div style="font-size:0.68rem;color:#6c757d;margin-bottom:3px;">المستحقات</div>
+                                        <div style="background:var(--surface-alt,#f8f9fa);color:var(--text-primary,#111827);border-radius:8px;padding:10px 14px;">
+                                            <div style="font-size:0.68rem;color:var(--text-muted,#6c757d);margin-bottom:3px;">المستحقات</div>
                                             <div style="font-size:0.88rem;font-weight:600;" id="paymentModalAgentBalance">—</div>
                                         </div>
                                     </div>
@@ -311,7 +311,7 @@
     function renderAgentDrop(list) {
         paymentAgentDrop.innerHTML = list.length
             ? list.map(a => `<div class="pay-sup-opt" data-id="${a.id}" data-name="${a.name.replace(/"/g,'&quot;')}" data-balance="${a.balance}" style="padding:8px 12px;cursor:pointer;">${a.name}</div>`).join('')
-            : '<div style="padding:8px 12px;color:#6c757d;">لا توجد نتائج</div>';
+            : '<div style="padding:8px 12px;color:var(--text-muted,#6c757d);">لا توجد نتائج</div>';
         paymentAgentDrop.querySelectorAll('.pay-sup-opt').forEach(el => {
             el.addEventListener('mousedown', function(e) {
                 e.preventDefault();

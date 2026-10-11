@@ -48,14 +48,19 @@ REFERENCE_TYPE_AR = {
     'transfer':                  'تحويل بين خزائن',
     'transfer_cancel':           'إلغاء تحويل',
     'treasury_bank_transfer':    'تحويل مع حساب بنكي',
+    'branch_transfer': 'تحويل فروع',
+    'branch_transfer_cancel': 'إلغاء تحويل فروع',
+    'branch_transfer_return': 'إعادة فرق تحويل فروع',
 }
 
 
 class TreasuryReportGenerator(BranchLabelMixin):
 
-    def __init__(self, tenant, start_date=None, end_date=None, branch=None):
+    def __init__(self, tenant, start_date=None, end_date=None, branch=None, head_office=False):
         self.tenant = tenant
         self.branch = branch
+        # مستخدم الإدارة بمفتاح تقارير الإدارة فقط: خزائن الإدارة المركزية وحساباتها البنكية وحدها.
+        self.head_office = head_office
         self.start_date = start_date or (timezone.localdate() - timedelta(days=30))
         self.end_date = end_date or timezone.localdate()
 
@@ -91,6 +96,8 @@ class TreasuryReportGenerator(BranchLabelMixin):
         # IDOR عبر الفرع اكتشفتها أداة التدقيق check_branch_scoping: مستخدم
         # بفرع يقدر يمرر treasury_id لفرع آخر ويحصل على كشف حسابه كاملاً.
         if self.branch is not None and treasury.branch is not None and treasury.branch != self.branch:
+            return None
+        if self.head_office and not treasury.is_head_office:
             return None
 
         movements = TreasuryMovement.objects.filter(
@@ -141,6 +148,8 @@ class TreasuryReportGenerator(BranchLabelMixin):
             movement_date__gte=self.start_date,
             movement_date__lte=self.end_date,
         ), self.branch, field='treasury__branch').select_related('treasury').order_by('movement_date', 'id')
+        if self.head_office:
+            movements = movements.filter(treasury__is_head_office=True)
 
         if treasury_id:
             movements = movements.filter(treasury_id=treasury_id)

@@ -18,7 +18,7 @@
 </div>
 
 <!-- Status tabs -->
-<div style="background:#fff;border-bottom:1px solid #e5e7eb;padding:0 1rem;display:flex;gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+<div style="background:var(--surface,#fff);border-bottom:1px solid var(--border-light,#e5e7eb);padding:0 1rem;display:flex;gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
   <a href="?status=pending"
      style="padding:.65rem 1.1rem;font-size:.88rem;font-weight:600;text-decoration:none;border-bottom:2px solid {% if status_filter == 'pending' %}#c9840f{% else %}transparent{% endif %};color:{% if status_filter == 'pending' %}#c9840f{% else %}#64748b{% endif %};white-space:nowrap;">
     في الانتظار
@@ -74,7 +74,7 @@
   <!-- Mobile cards -->
   <div class="d-md-none p-3" style="display:flex;flex-direction:column;gap:.75rem;">
     {% for req in requests %}
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:1rem;box-shadow:0 1px 4px rgba(0,0,0,.04);">
+    <div style="background:var(--surface,#fff);color:var(--text-primary,#111827);border:1px solid var(--border-light,#e5e7eb);border-radius:12px;padding:1rem;box-shadow:0 1px 4px rgba(0,0,0,.04);">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.65rem;">
         <div>
           <code style="color:#c9840f;font-size:.85rem;font-weight:700;">{{ req.request_number }}</code>

@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from apps.accounts.activity_service import log_activity
 from django.contrib.auth.decorators import login_required
-from apps.accounts.decorators import require_permission, require_any_permission, branch_scope_exempt
+from apps.accounts.decorators import require_permission, require_any_permission, require_account_report, branch_scope_exempt
 from django.db.models import Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -74,7 +74,11 @@ def treasury_list(request):
     # لا من كل خزائن الـ tenant، وإلا قد تُختار خزينة العملة الصعبة الخاصة
     # بالإدارة المركزية أو بفرع آخر بالخطأ (نفس فئة الخلل الأصلية).
     hc_treasury = qs.filter(is_hard_currency=True).first()
+    # التحويل في شاشة الخزائن داخلي فقط: لوحة الفرع = خزائن فرعه، ولوحة الإدارة = خزائن الإدارة المركزية فقط
+    # (التحويل بين الإدارة والفروع من قسم «تحويلات الفروع»).
     other_treasuries = Treasury.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True)
+    if tenant.is_enterprise() and getattr(request, 'branch', None) is None:
+        other_treasuries = other_treasuries.filter(is_head_office=True)
 
     local_cur = tenant.currency or 'SDG'
     hc_cur = tenant.hard_currency if tenant.hard_currency_mode else ''
@@ -468,13 +472,8 @@ def treasury_transfer_api(request):
     # العملة الصعبة — نفس تحويل التحويل العادي داخل أي فرع، بسعر صرف).
     involves_head_office = from_treasury.is_head_office != to_treasury.is_head_office
     if involves_head_office:
-        from_currency = from_treasury.currency or tenant.currency
-        to_currency = to_treasury.currency or tenant.currency
-        if from_currency != to_currency:
-            return JsonResponse({'success': False, 'message': 'يجب أن تكون عملة الخزينتين متطابقة عند التحويل مع الخزينة المركزية للإدارة.'}, status=400)
-        # لا تحويل عملة هنا — مبلغ واحد بلا سعر صرف، بصرف النظر عمّا أُرسل.
-        exchange_rate = Decimal('1')
-        to_amount = from_amount
+        # كل ما بين الإدارة والفروع (إرسال ثم تأكيد استلام، بتطابق العملة) في قسم «تحويلات الفروع».
+        return JsonResponse({'success': False, 'message': 'التحويل بين الإدارة المركزية والفروع يتم من قسم «تحويلات الفروع» فقط.'}, status=400)
 
     # ── قيد: التحويل يجب أن يشمل خزينة العملة الصعبة عندها ──
     hc_treasuries = {from_treasury.is_hard_currency, to_treasury.is_hard_currency}
@@ -596,7 +595,7 @@ def treasury_balances_report_export(request):
 
 
 @login_required
-@require_permission('view_treasury_statement_report')
+@require_account_report('view_treasury_statement_report')
 def treasury_statement_report(request):
     from datetime import timedelta
     from django.utils import timezone
@@ -611,9 +610,11 @@ def treasury_statement_report(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
     branch = branch
-    gen = TreasuryReportGenerator(tenant, start_date, end_date, branch=branch)
+    gen = TreasuryReportGenerator(tenant, start_date, end_date, branch=branch, head_office=getattr(request, 'account_report_ho', False))
     report = gen.get_statement_report(treasury_id) if treasury_id else None
     treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
+    if getattr(request, 'account_report_ho', False):
+        treasuries = treasuries.filter(is_head_office=True)
 
     return render(request, 'treasury/reports/statement.html', {
         'report': report,
@@ -629,7 +630,7 @@ def treasury_statement_report(request):
 
 
 @login_required
-@require_permission('view_treasury_statement_report')
+@require_account_report('view_treasury_statement_report')
 @branch_scope_exempt('الفلترة حسب الفرع تتم داخل TreasuryReportGenerator.get_statement_report عبر self.branch')
 def treasury_statement_report_export(request):
     import csv
@@ -646,7 +647,7 @@ def treasury_statement_report_export(request):
     start_date = _parse_date(request.GET.get('start_date')) or (timezone.localdate() - timedelta(days=30))
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
 
-    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=branch).get_statement_report(treasury_id) if treasury_id else None
+    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=branch, head_office=getattr(request, 'account_report_ho', False)).get_statement_report(treasury_id) if treasury_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="treasury_statement_{end_date}.csv"'
     response.write('﻿')
@@ -662,7 +663,7 @@ def treasury_statement_report_export(request):
 
 
 @login_required
-@require_permission('view_treasury_movements_report')
+@require_account_report('view_treasury_movements_report')
 def treasury_movements_report(request):
     from datetime import timedelta
     from django.utils import timezone
@@ -677,8 +678,10 @@ def treasury_movements_report(request):
     treasury_id = request.GET.get('treasury_id') or None
 
     branch = branch
-    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=branch).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
+    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=branch, head_office=getattr(request, 'account_report_ho', False)).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
     treasuries = Treasury.objects.filter(tenant=tenant, is_active=True).for_branch(branch).order_by('name')
+    if getattr(request, 'account_report_ho', False):
+        treasuries = treasuries.filter(is_head_office=True)
 
     return render(request, 'treasury/reports/movements.html', {
         'report': report,
@@ -694,7 +697,7 @@ def treasury_movements_report(request):
 
 
 @login_required
-@require_permission('view_treasury_movements_report')
+@require_account_report('view_treasury_movements_report')
 @branch_scope_exempt('الفلترة حسب الفرع تتم داخل TreasuryReportGenerator.get_movements_summary عبر filter_by_branch_via')
 def treasury_movements_report_export(request):
     import csv
@@ -711,7 +714,7 @@ def treasury_movements_report_export(request):
     end_date = _parse_date(request.GET.get('end_date')) or timezone.localdate()
     treasury_id = request.GET.get('treasury_id') or None
 
-    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=branch).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
+    report = TreasuryReportGenerator(tenant, start_date, end_date, branch=branch, head_office=getattr(request, 'account_report_ho', False)).get_movements_summary(treasury_id=treasury_id) if treasury_id else None
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="treasury_movements_{end_date}.csv"'
     response.write('﻿')

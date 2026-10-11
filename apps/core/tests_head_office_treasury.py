@@ -141,15 +141,17 @@ class HeadOfficeTransferTests(TenantTestCase):
             content_type='application/json',
         )
 
-    def test_branch_user_can_transfer_to_head_office(self):
+    def assert_moved_to_branch_transfers_section(self, resp):
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('تحويلات الفروع', resp.json()['message'])
+        for t in (self.hq_local, self.hq_usd, self.branch_a_local, self.branch_a_usd):
+            t.refresh_from_db()
+            self.assertEqual(t.current_balance, Decimal('1000'))  # لم يتحرك شيء
+
+    def test_branch_user_cannot_transfer_to_head_office_from_the_treasury_screen(self):
+        """التحويل بين الفرع والإدارة صار حصراً من قسم «تحويلات الفروع» (إرسال ثم تأكيد استلام)."""
         self.client.force_login(self.user_a)
-        resp = self._transfer(self.branch_a_local.id, self.hq_local.id, '100')
-        self.assertEqual(resp.status_code, 200)
-        self.assertTrue(resp.json()['success'])
-        self.branch_a_local.refresh_from_db()
-        self.hq_local.refresh_from_db()
-        self.assertEqual(self.branch_a_local.current_balance, Decimal('900'))
-        self.assertEqual(self.hq_local.current_balance, Decimal('1100'))
+        self.assert_moved_to_branch_transfers_section(self._transfer(self.branch_a_local.id, self.hq_local.id, '100'))
 
     def test_branch_user_cannot_transfer_directly_to_another_branch(self):
         self.client.force_login(self.user_a)
@@ -158,15 +160,9 @@ class HeadOfficeTransferTests(TenantTestCase):
         self.assertFalse(resp.json()['success'])
         self.assertIn('مباشر', resp.json()['message'])
 
-    def test_owner_can_transfer_from_head_office_to_branch(self):
+    def test_owner_cannot_transfer_from_head_office_to_branch_from_the_treasury_screen(self):
         self.client.force_login(self.user)  # self.user = tenant admin/owner, from TenantTestCase
-        resp = self._transfer(self.hq_local.id, self.branch_a_local.id, '200')
-        self.assertEqual(resp.status_code, 200)
-        self.assertTrue(resp.json()['success'])
-        self.hq_local.refresh_from_db()
-        self.branch_a_local.refresh_from_db()
-        self.assertEqual(self.hq_local.current_balance, Decimal('800'))
-        self.assertEqual(self.branch_a_local.current_balance, Decimal('1200'))
+        self.assert_moved_to_branch_transfers_section(self._transfer(self.hq_local.id, self.branch_a_local.id, '200'))
 
     def test_owner_cannot_source_transfer_from_a_branch_treasury(self):
         self.client.force_login(self.user)
@@ -174,18 +170,10 @@ class HeadOfficeTransferTests(TenantTestCase):
         self.assertEqual(resp.status_code, 403)
         self.assertFalse(resp.json()['success'])
 
-    def test_currency_mismatch_between_branch_and_head_office_is_rejected(self):
+    def test_any_head_office_branch_pair_is_refused_here_whatever_the_currency(self):
         self.client.force_login(self.user_a)
-        # فرع أ (خزينة محلية SDG) -> إدارة (خزينة عملة صعبة USD): عملتان مختلفتان
-        resp = self._transfer(self.branch_a_local.id, self.hq_usd.id, '100')
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn('عملة', resp.json()['message'])
-
-    def test_matching_currency_hc_transfer_to_head_office_succeeds(self):
-        self.client.force_login(self.user_a)
-        resp = self._transfer(self.branch_a_usd.id, self.hq_usd.id, '50')
-        self.assertEqual(resp.status_code, 200)
-        self.assertTrue(resp.json()['success'])
+        self.assert_moved_to_branch_transfers_section(self._transfer(self.branch_a_local.id, self.hq_usd.id, '100'))
+        self.assert_moved_to_branch_transfers_section(self._transfer(self.branch_a_usd.id, self.hq_usd.id, '50'))
 
     def test_owner_internal_local_to_hc_conversion_still_uses_exchange_rate(self):
         """تحويل داخلي لمدير النشاط بين خزينتيه (محلية وعملة صعبة) — يبقى بسعر صرف، لا قيد تطابق العملة."""

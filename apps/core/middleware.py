@@ -133,6 +133,38 @@ class TenantMiddleware:
             current_branch_id.reset(token)
 
 
+class CentralPurchasingMiddleware:
+    """
+    النمط المركزي (Tenant.purchasing_mode == 'central'): المشتريات والموردون وتقاريرهم وحساباتهم
+    من اختصاص الإدارة وحدها. هذا السياج يغطي كل شاشات تطبيقي purchases و suppliers (بما فيها
+    التقارير وطلبات AJAX) دفعة واحدة:
+      - مستخدم الفرع مرفوض مهما كانت صلاحياته؛
+      - مستخدم الإدارة يعمل بنطاق المخزن المركزي (request.central_scope = True).
+    يتجاوز غيرهما تماماً: لا أثر على الباقتين الأساسية والاحترافية ولا على النمطين الهجين واللامركزي.
+    """
+    APPS = ('purchases', 'suppliers')
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        tenant = getattr(request, 'tenant', None)
+        if tenant is None or not request.user.is_authenticated:
+            return None
+        match = getattr(request, 'resolver_match', None)
+        app_names = getattr(match, 'app_names', None) or []
+        if not app_names or app_names[0] not in self.APPS or not tenant.is_central_purchasing():
+            return None
+        if getattr(request, 'branch', None) is not None:
+            from apps.accounts.decorators import _deny
+            return _deny(request)
+        request.central_scope = True
+        return None
+
+
 class ActiveTenantMiddleware:
     """
     Middleware يتأكد من أن المستخدم لديه tenant نشط

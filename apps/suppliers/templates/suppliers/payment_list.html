@@ -174,12 +174,12 @@
                                         <h3 class="cx-panel-title"><i class="fas fa-user me-2"></i>تفاصيل المورد</h3>
                                     </div>
                                     <div style="display:flex;flex-direction:column;gap:10px;">
-                                        <div style="background:#f8f9fa;border-radius:8px;padding:10px 14px;">
-                                            <div style="font-size:0.68rem;color:#6c757d;margin-bottom:3px;">اسم المورد</div>
+                                        <div style="background:var(--surface-alt,#f8f9fa);color:var(--text-primary,#111827);border-radius:8px;padding:10px 14px;">
+                                            <div style="font-size:0.68rem;color:var(--text-muted,#6c757d);margin-bottom:3px;">اسم المورد</div>
                                             <div style="font-size:0.88rem;font-weight:600;overflow-wrap:break-word;" id="paymentModalSupplierName">—</div>
                                         </div>
-                                        <div style="background:#f8f9fa;border-radius:8px;padding:10px 14px;">
-                                            <div style="font-size:0.68rem;color:#6c757d;margin-bottom:3px;" id="paymentModalBalanceLabel">المديونية</div>
+                                        <div style="background:var(--surface-alt,#f8f9fa);color:var(--text-primary,#111827);border-radius:8px;padding:10px 14px;">
+                                            <div style="font-size:0.68rem;color:var(--text-muted,#6c757d);margin-bottom:3px;" id="paymentModalBalanceLabel">المديونية</div>
                                             <div style="font-size:0.88rem;font-weight:600;" id="paymentModalSupplierBalance">—</div>
                                         </div>
                                     </div>
@@ -470,7 +470,7 @@
         function renderSupDrop(list) {
             paymentSupplierDrop.innerHTML = list.length
                 ? list.map(s => `<div class="pay-sup-opt" data-id="${s.id}" data-name="${s.name.replace(/"/g,'&quot;')}" data-currency="${s.currency||''}" data-balance="${s.balance}" data-hc-balance="${s.hcBalance||0}" style="padding:8px 12px;cursor:pointer;">${s.name}${s.currency ? `<span style="margin-right:6px;font-size:0.7rem;background:#fef3e2;color:#a8660c;padding:1px 5px;border-radius:4px;">${s.currency}</span>` : ''}</div>`).join('')
-                : '<div style="padding:8px 12px;color:#6c757d;">لا توجد نتائج</div>';
+                : '<div style="padding:8px 12px;color:var(--text-muted,#6c757d);">لا توجد نتائج</div>';
             paymentSupplierDrop.querySelectorAll('.pay-sup-opt').forEach(el => {
                 el.addEventListener('mousedown', function(e) {
                     e.preventDefault();

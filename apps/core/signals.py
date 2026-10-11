@@ -285,6 +285,22 @@ def _make_doc_handler(model_label, name_ar):
 
 
 @receiver(post_save, sender=Tenant)
+def ensure_central_stock_for_central_purchasing(sender, instance, **kwargs):
+    """
+    النمط المركزي: المخزن المركزي يُنشأ تلقائياً (واحد لكل مشترك) فلا يحتاج مدير النشاط لإنشائه
+    ولا لاختياره في أمر الشراء. في النمط الهجين يبقى إنشاؤه يدوياً من مدير النشاط كما هو.
+    """
+    if not instance.is_central_purchasing():
+        return
+    from apps.stocks.models import Stock
+    if Stock.objects.filter(tenant=instance, is_central=True).exists():
+        return
+    stock = Stock.objects.create(tenant=instance, name='المخزن الرئيسي', is_central=True, is_active=True)
+    # مخزن توزيع لا يُباع منه؛ لا يكون المخزن الافتراضي حتى لو كان أول مخزن للمشترك.
+    Stock.objects.filter(pk=stock.pk).update(is_default=False)
+
+
+@receiver(post_save, sender=Tenant)
 def create_tenant_defaults(sender, instance, created, **kwargs):
     if not created:
         return

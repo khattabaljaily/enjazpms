@@ -3,7 +3,8 @@
 {% load humanize %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/treasury.css' %}?v=1.0">
+<link rel="stylesheet" href="{% static 'css/treasury.css' %}?v=1.1">
+<style>[data-require-any-perm]{display:none!important}</style>
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -22,10 +23,10 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
-                <button type="button" class="cx-btn-secondary" id="btnOpenTransfer" data-require-perm="transfer_bank_accounts">
+                <button type="button" class="cx-btn-secondary" id="btnOpenTransfer" data-require-any-perm="transfer_bank_accounts,transfer_head_office_bank_accounts">
                     <i class="fas fa-exchange-alt"></i><span>تحويل</span>
                 </button>
-                <button type="button" class="cx-btn-add" id="btnOpenCreateBankAccount" data-require-perm="add_bank_accounts">
+                <button type="button" class="cx-btn-add" id="btnOpenCreateBankAccount" data-require-any-perm="add_bank_accounts,add_head_office_bank_accounts">
                     <i class="fas fa-plus"></i><span>إضافة حساب بنكي</span>
                 </button>
             </div>
@@ -192,6 +193,11 @@
                 </div>
                 <div class="cx-modal-body">
                     <div class="alert alert-danger d-none js-transfer-errors mb-3"></div>
+                    {% if current_tenant.version_type == 'multi_branch' and user|has_perm_key:'view_branch_transfers' %}
+                    <div class="alert alert-info py-2 small mb-3"><i class="fas fa-circle-info me-1"></i>
+                        التحويل بين الإدارة والفروع ليس من هنا؛ استخدم قسم <a href="{% url 'branch_transfers:list' %}"><strong>تحويلات الفروع</strong></a>.
+                    </div>
+                    {% endif %}
 
                     <!-- Transfer type selector -->
                     <div class="d-flex gap-2 mb-4" id="transferTypeBtns">
@@ -207,27 +213,20 @@
 
                     <!-- ── Bank to bank ───────────────────────────── -->
                     <div id="panelBankToBank">
+                        <div class="alert alert-warning d-none mb-3" id="transferEmptyHint"></div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="cx-label">من حساب بنكي</label>
                                 <div class="cx-field">
                                     <span class="cx-field__icon"><i class="fas fa-building-columns"></i></span>
-                                    <select id="transferFromBankAccount" class="form-select cx-input">
-                                        {% for b in transfer_bank_accounts %}
-                                        <option value="{{ b.id }}" data-currency="{{ b.currency }}">{% if b.is_head_office %}🏢 {% endif %}{{ b.name }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <select id="transferFromBankAccount" class="form-select cx-input"></select>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="cx-label">إلى حساب بنكي</label>
                                 <div class="cx-field">
                                     <span class="cx-field__icon"><i class="fas fa-building-columns"></i></span>
-                                    <select id="transferToBankAccount" class="form-select cx-input">
-                                        {% for b in transfer_bank_accounts %}
-                                        <option value="{{ b.id }}" data-currency="{{ b.currency }}">{% if b.is_head_office %}🏢 {% endif %}{{ b.name }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <select id="transferToBankAccount" class="form-select cx-input"></select>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -250,7 +249,7 @@
                                     <span class="cx-field__icon"><i class="fas fa-chart-line"></i></span>
                                     <input type="number" id="transferRate" class="form-control cx-input" step="0.0001" min="0.0001" value="1" placeholder="مثال: 1">
                                 </div>
-                                <small class="text-muted">وحدات العملة الهدف مقابل وحدة واحدة من عملة المصدر</small>
+                                <small class="text-muted" id="transferRateHint">وحدات العملة الهدف مقابل وحدة واحدة من عملة المصدر</small>
                             </div>
                         </div>
                     </div>
@@ -266,27 +265,20 @@
                             </button>
                         </div>
                         <input type="hidden" id="tbDirection" value="treasury_to_bank">
+                        <div class="alert alert-warning d-none mb-3" id="tbEmptyHint"></div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="cx-label">الخزينة</label>
                                 <div class="cx-field">
                                     <span class="cx-field__icon"><i class="fas fa-vault"></i></span>
-                                    <select id="tbTreasury" class="form-select cx-input">
-                                        {% for t in transfer_treasuries %}
-                                        <option value="{{ t.id }}">{{ t.name }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <select id="tbTreasury" class="form-select cx-input"></select>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="cx-label">الحساب البنكي</label>
                                 <div class="cx-field">
                                     <span class="cx-field__icon"><i class="fas fa-building-columns"></i></span>
-                                    <select id="tbBankAccount" class="form-select cx-input">
-                                        {% for b in transfer_bank_accounts %}
-                                        <option value="{{ b.id }}">{{ b.name }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    <select id="tbBankAccount" class="form-select cx-input"></select>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -369,10 +361,18 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ transfer_data|json_script:"transferData" }}
 <script>
 (function () {
     'use strict';
     const hasPerm = window.hasPerm || (function(){ return false; });
+    // حساب الإدارة المركزية تحكمه صلاحيات *_head_office_bank_accounts، وحساب الفرع صلاحيات *_bank_accounts.
+    const canOn = (row, action) => row.is_head_office
+        ? hasPerm(action + '_head_office_bank_accounts') : hasPerm(action + '_bank_accounts');
+    // أزرار تُظهرها أي صلاحية من قائمة (فرع أو إدارة).
+    document.querySelectorAll('[data-require-any-perm]').forEach(function (el) {
+        if (el.dataset.requireAnyPerm.split(',').some(k => hasPerm(k.trim()))) el.removeAttribute('data-require-any-perm');
+    });
 
     const BANK_ACCOUNT_TABLE_API = "{% url 'bank_accounts:table_api' %}";
     const BANK_ACCOUNT_CREATE_API = "{% url 'bank_accounts:create_api' %}";
@@ -515,11 +515,11 @@
     }
 
     // إلغاء تحويل من داخل سجل الحركات (تفويض الحدث)
-    document.getElementById('bankAccountLedgerBody')?.addEventListener('click', function (e) {
+    document.getElementById('bankAccountLedgerBody')?.addEventListener('click', async function (e) {
         const btn = e.target.closest('.js-cancel-bank-transfer');
         if (!btn) return;
         const transferId = btn.dataset.transferId;
-        if (!confirm('هل أنت متأكد من إلغاء هذا التحويل؟ سيُسجَّل كحركتين عكسيتين جديدتين.')) return;
+        if (!(await Enjaz.confirmAction('هل أنت متأكد من إلغاء هذا التحويل؟ سيُسجَّل كحركتين عكسيتين جديدتين.', 'إلغاء التحويل', 'نعم، إلغاء التحويل'))) return;
 
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -602,8 +602,8 @@
                 </div>
                 <div class="cx-treasury-card-actions">
                     <button class="cxr-act cxr-act--view js-view-bank-account" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>
-                    ${hasPerm('change_bank_accounts') ? `<button class="cxr-act js-edit-bank-account" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
-                    ${hasPerm('delete_bank_accounts') ? (!r.is_default ? `<button class="cxr-act cxr-act--del js-delete-bank-account" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : '') : ''}
+                    ${canOn(r, 'change') ? `<button class="cxr-act js-edit-bank-account" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${canOn(r, 'delete') ? (!r.is_default ? `<button class="cxr-act cxr-act--del js-delete-bank-account" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : '') : ''}
                 </div>
             </article>`;
         }).join('');
@@ -653,8 +653,8 @@
                     const canDelete = !row.is_default;
                     return `<div class="cx-actions">
                         <button class="cx-btn-icon" onclick="window.openBankAccountLedger(${row.id})" title="السجل"><i class="fas fa-list"></i></button>
-                        ${hasPerm('change_bank_accounts') ? `<button class="cx-btn-icon" onclick="window.openEdit(${row.id})" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
-                        ${hasPerm('delete_bank_accounts') ? (canDelete ? `<button class="cx-btn-icon cx-btn-icon--danger" onclick="window.openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>') : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
+                        ${canOn(row, 'change') ? `<button class="cx-btn-icon" onclick="window.openEdit(${row.id})" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
+                        ${canOn(row, 'delete') ? (canDelete ? `<button class="cx-btn-icon cx-btn-icon--danger" onclick="window.openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>') : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
                     </div>`;
                 }
             }
@@ -741,6 +741,113 @@
 
     /* ── Transfer Modal ─────────────────────────────────────────── */
     const TRANSFER_API = "{% url 'bank_accounts:transfer_api' %}";
+    const TD = JSON.parse(document.getElementById('transferData').textContent);
+    const curOf = a => a.currency || TD.local_currency;
+    const optLabel = a => (a.is_head_office ? '🏢 ' : '') + a.name + ' (' + curOf(a) + ')';
+
+    // من أي حساب يجوز التحويل: مستخدم الفرع من حسابات فرعه، ومدير النشاط من حسابات الإدارة (إلا لو يملك
+    // صلاحية تحويل الفروع أيضاً). والتحويل بين الإدارة والفروع ليس هنا بل في قسم «تحويلات الفروع».
+    function bankSources() {
+        if (TD.branch_id) return TD.banks.filter(b => !b.is_head_office && b.branch_id === TD.branch_id);
+        if (TD.can_from_any) return TD.banks;
+        return TD.banks.filter(b => b.is_head_office);
+    }
+    // إلى أي حساب: لا نفس الحساب، ومن نفس الجهة فقط (إدارة↔إدارة، أو داخل الفرع نفسه).
+    function bankTargets(from) {
+        if (!from) return [];
+        return TD.banks.filter(b => b.id !== from.id && b.is_head_office === from.is_head_office
+            && (b.is_head_office || b.branch_id === from.branch_id));
+    }
+    const bankById = id => TD.banks.find(b => String(b.id) === String(id));
+    function fillSelect(el, list, selectedId) {
+        el.innerHTML = list.map(a => `<option value="${a.id}">${optLabel(a)}</option>`).join('');
+        if (selectedId && list.some(a => String(a.id) === String(selectedId))) el.value = String(selectedId);
+    }
+    function showHint(id, msg) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = msg || '';
+        el.classList.toggle('d-none', !msg);
+    }
+    function isCrossing(from, to) { return !!(from && to && from.is_head_office !== to.is_head_office); }
+
+    function refreshBankToBank(keepFrom) {
+        const fromEl = document.getElementById('transferFromBankAccount');
+        const toEl = document.getElementById('transferToBankAccount');
+        const sources = bankSources();
+        fillSelect(fromEl, sources, keepFrom ? fromEl.value : null);
+        const from = bankById(fromEl.value);
+        const targets = bankTargets(from);
+        fillSelect(toEl, targets, toEl.value);
+        if (!sources.length) {
+            showHint('transferEmptyHint', 'لا توجد حسابات بنكية متاحة للتحويل منها. أضف حساباً بنكياً أولاً.');
+        } else if (!targets.length) {
+            showHint('transferEmptyHint', 'لا يوجد حساب بنكي آخر في نفس الجهة يمكن التحويل إليه.' + (TD.has_branch_transfers ? ' للتحويل بين الإدارة والفروع استخدم قسم «تحويلات الفروع».' : ''));
+        } else {
+            showHint('transferEmptyHint', '');
+        }
+        applyCrossing();
+    }
+    // التحويل بين الإدارة والفرع: بنفس العملة وسعر صرف 1 والمبلغان متساويان (يفرضه الخادم أيضاً).
+    function applyCrossing() {
+        const from = bankById(document.getElementById('transferFromBankAccount').value);
+        const to = bankById(document.getElementById('transferToBankAccount').value);
+        const rateEl = document.getElementById('transferRate');
+        const toAmt = document.getElementById('transferToAmount');
+        // نفس العملة (أو بين الإدارة والفرع، وهو دائماً بنفس العملة): بلا سعر صرف والمبلغان متساويان.
+        const lock = !!(from && to && (isCrossing(from, to) || curOf(from) === curOf(to)));
+        rateEl.readOnly = lock; toAmt.readOnly = lock;
+        if (lock) {
+            rateEl.value = 1;
+            toAmt.value = document.getElementById('transferFromAmount').value;
+        }
+        document.getElementById('transferRateHint').textContent = lock
+            ? 'الحسابان بنفس العملة (' + curOf(from) + ') — بلا سعر صرف، والمبلغ المستلَم يساوي المحوَّل'
+            : 'وحدات العملة الهدف مقابل وحدة واحدة من عملة المصدر';
+    }
+
+    // مثال الملاحظات يتبع نوع التحويل (لا يصح «إيداع نقدي» لتحويل بين حسابين بنكيين).
+    const NOTE_EXAMPLES = {
+        bank_to_bank: 'مثال: تحويل لتغطية مصروفات الفرع',
+        treasury_to_bank: 'مثال: إيداع نقدي في البنك',
+        bank_to_treasury: 'مثال: سحب نقدي من البنك',
+    };
+    function updateNotesPlaceholder() {
+        const key = currentTransferType === 'bank_to_bank' ? 'bank_to_bank' : document.getElementById('tbDirection').value;
+        const el = document.getElementById('transferNotes');
+        if (el) el.placeholder = NOTE_EXAMPLES[key] || '';
+    }
+
+    function treasurySources() {
+        if (TD.branch_id || TD.can_from_any) return TD.treasuries;
+        return TD.treasuries.filter(t => t.is_head_office);
+    }
+    function tbBanks() {
+        if (TD.branch_id) return TD.banks.filter(b => !b.is_head_office && b.branch_id === TD.branch_id);
+        if (TD.can_from_any) return TD.banks;
+        return TD.banks.filter(b => b.is_head_office);
+    }
+    // الخزينة والحساب البنكي بنفس العملة (يتحقق الخادم أيضاً): نعرض للخزينة المختارة حساباتها بعملتها فقط.
+    function refreshTreasuryBank(keepTreasury) {
+        const tEl = document.getElementById('tbTreasury');
+        const bEl = document.getElementById('tbBankAccount');
+        const treasuries = treasurySources();
+        const prev = keepTreasury ? tEl.value : null;
+        tEl.innerHTML = treasuries.map(t => `<option value="${t.id}">${(t.is_head_office ? '🏢 ' : '') + t.name} (${curOf(t)})</option>`).join('');
+        if (prev && treasuries.some(t => String(t.id) === String(prev))) tEl.value = String(prev);
+        const treasury = treasuries.find(t => String(t.id) === String(tEl.value));
+        const allBanks = tbBanks();
+        const banks = treasury ? allBanks.filter(b => curOf(b) === curOf(treasury)) : [];
+        fillSelect(bEl, banks, bEl.value);
+        let msg = '';
+        if (!treasuries.length) msg = 'لا توجد خزينة متاحة للتحويل.';
+        else if (!allBanks.length) msg = 'لا توجد حسابات بنكية متاحة. أضف حساباً بنكياً أولاً.';
+        else if (!banks.length) msg = 'لا يوجد حساب بنكي بعملة هذه الخزينة (' + curOf(treasury) + ')؛ التحويل بين خزينة وحساب بنكي يلزم أن يكونا بنفس العملة.';
+        showHint('tbEmptyHint', msg);
+    }
+    document.getElementById('tbTreasury')?.addEventListener('change', () => refreshTreasuryBank(true));
+    document.getElementById('transferFromBankAccount')?.addEventListener('change', () => refreshBankToBank(true));
+    document.getElementById('transferToBankAccount')?.addEventListener('change', applyCrossing);
     const TREASURY_TRANSFER_API = "{% url 'bank_accounts:treasury_transfer_api' %}";
 
     const transferDateEl = document.getElementById('transferDate');
@@ -759,6 +866,7 @@
             document.getElementById('panelBankToBank').style.display = currentTransferType === 'bank_to_bank' ? '' : 'none';
             document.getElementById('panelTreasuryBank').style.display = currentTransferType === 'treasury_bank' ? '' : 'none';
             document.querySelector('.js-transfer-errors')?.classList.add('d-none');
+            updateNotesPlaceholder();
         });
     });
 
@@ -767,11 +875,16 @@
             document.querySelectorAll('.js-tb-dir-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             document.getElementById('tbDirection').value = this.dataset.dir;
+            updateNotesPlaceholder();
         });
     });
 
     // Auto-compute amounts based on exchange rate
     document.getElementById('transferFromAmount')?.addEventListener('input', function () {
+        if (document.getElementById('transferRate').readOnly) {
+            document.getElementById('transferToAmount').value = this.value;
+            return;
+        }
         const rate = parseFloat(document.getElementById('transferRate').value) || 0;
         const fromAmt = parseFloat(this.value) || 0;
         if (rate > 0 && fromAmt > 0) {
@@ -810,6 +923,9 @@
         document.getElementById('transferNotes').value = '';
         if (transferDateEl) transferDateEl.value = todayStr();
         document.querySelector('.js-transfer-errors')?.classList.add('d-none');
+        refreshBankToBank(false);
+        refreshTreasuryBank();
+        updateNotesPlaceholder();
     }
 
     function openTransferModal() {

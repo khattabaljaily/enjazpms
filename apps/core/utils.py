@@ -267,7 +267,7 @@ def scoped_suppliers(request, tenant):
     if is_central_request(request):
         return Supplier.unscoped.filter(tenant=tenant, branch__isnull=True)
     qs = Supplier.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None))
-    if tenant.is_hybrid_purchasing() and getattr(request, 'branch', None) is None:
+    if tenant.has_central_warehouse() and getattr(request, 'branch', None) is None:
         qs = qs.exclude(branch__isnull=True)
     return qs
 
