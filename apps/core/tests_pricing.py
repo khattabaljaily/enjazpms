@@ -18,9 +18,9 @@ class PricingRulesTests(TenantTestCase):
         self.assertEqual(perpetual(Decimal('25')), Decimal('2400'))
 
     def test_enterprise_is_base_plus_per_branch(self):
-        self.assertEqual(enterprise_monthly(0), Decimal('90'))
-        self.assertEqual(enterprise_monthly(5), Decimal('240'))
-        self.assertEqual(enterprise_monthly(10), Decimal('390'))
+        self.assertEqual(enterprise_monthly(0), Decimal('55'))
+        self.assertEqual(enterprise_monthly(5), Decimal('105'))
+        self.assertEqual(enterprise_monthly(10), Decimal('155'))
 
     def test_tenant_fee_counts_only_active_branches_for_enterprise(self):
         self.tenant.subscription_plan = 'enterprise'
@@ -28,7 +28,7 @@ class PricingRulesTests(TenantTestCase):
         Branch.objects.create(tenant=self.tenant, name='فرع 1')
         Branch.objects.create(tenant=self.tenant, name='فرع 2')
         Branch.objects.create(tenant=self.tenant, name='فرع مغلق', is_active=False)
-        self.assertEqual(tenant_monthly_fee(self.tenant), Decimal('150'))
+        self.assertEqual(tenant_monthly_fee(self.tenant), Decimal('75'))   # 55 + 2 فرعين نشطين × 10
 
     def test_tenant_fee_for_flat_plans(self):
         for plan, fee in (('trial', '0'), ('basic', '25'), ('pro', '45')):
@@ -41,7 +41,7 @@ class PricingPageTests(TenantTestCase):
         self.client.logout()
         page = self.client.get(reverse('core:pricing'))
         self.assertEqual(page.status_code, 200)
-        for text in ('$25', '$250', '$2,400', '$45', '$450', '$4,320', '$90', '$30', 'branchCount'):
+        for text in ('$25', '$250', '$2,400', '$45', '$450', '$4,320', '$55', '$10', 'branchCount'):
             self.assertContains(page, text)
         self.assertNotContains(page, '$149')
         self.assertNotContains(page, 'حتى 10 فروع')
@@ -59,6 +59,6 @@ class RevenueReportTests(TenantTestCase):
         self.assertEqual(resp.status_code, 200)
         enterprise = resp.context['plan_revenue']['enterprise']
         self.assertEqual(enterprise['count'], 1)
-        self.assertEqual(enterprise['monthly'], Decimal('180'))
+        self.assertEqual(enterprise['monthly'], Decimal('85'))
         row = next(r for r in resp.context['tenant_stats'] if r['slug'] == self.tenant.slug)
-        self.assertEqual(row['monthly_fee'], Decimal('180'))
+        self.assertEqual(row['monthly_fee'], Decimal('85'))

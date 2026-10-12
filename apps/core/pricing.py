@@ -15,9 +15,9 @@ PLAN_MONTHLY = {
     'trial': Decimal('0'),
     'basic': Decimal('25'),
     'pro': Decimal('45'),
-    'enterprise': Decimal('90'),
+    'enterprise': Decimal('55'),
 }
-ENTERPRISE_PER_BRANCH_MONTHLY = Decimal('30')
+ENTERPRISE_PER_BRANCH_MONTHLY = Decimal('10')
 
 
 def annual(monthly):
