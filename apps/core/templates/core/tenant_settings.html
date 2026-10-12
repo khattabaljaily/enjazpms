@@ -6,7 +6,7 @@
 {% block page_description %}تعديل بيانات النشاط التجاري والإعدادات الأساسية وحفظها مباشرة{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/tenant_settings.css' %}?v=5.0">
+<link rel="stylesheet" href="{% static 'css/tenant_settings.css' %}?v=5.1">
 {% endblock %}
 
 {% block breadcrumb_items %}
@@ -506,12 +506,18 @@
                                 {% endif %}
                             </td>
                             <td data-label="">
+                                <div class="bk-row-actions">
                                 {% if b.status == 'completed' %}
                                 <a href="{% url 'core:tenant_backup_download' b.pk %}"
                                    class="ts-btn ts-btn--sm ts-btn--outline">
                                     <i class="fas fa-download"></i> تنزيل
                                 </a>
                                 {% endif %}
+                                <button type="button" class="ts-btn ts-btn--sm ts-btn--danger-soft bk-btn-delete"
+                                        data-id="{{ b.pk }}" data-filename="{{ b.filename }}">
+                                    <i class="fas fa-trash-alt"></i> حذف
+                                </button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -529,6 +535,31 @@
         </div>
     </div>
 
+</div>
+
+<!-- مودال تأكيد حذف نسخة احتياطية -->
+<div class="modal fade" id="deleteBackupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
+        <div class="modal-content cx-confirm-modal">
+            <div class="cx-confirm-body">
+                <div class="cx-confirm-icon cx-confirm-icon--danger">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <h5 class="cx-confirm-title">حذف النسخة الاحتياطية؟</h5>
+                <p class="cx-confirm-desc">
+                    ستقوم بحذف الملف:
+                    <strong id="deleteBackupFilename" class="bk-delete-filename"></strong>
+                    <span class="text-danger" style="font-size:.82rem">لا يمكن التراجع عن هذا الإجراء.</span>
+                </p>
+            </div>
+            <div class="cx-confirm-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-danger" id="btnConfirmDeleteBackup">
+                    <i class="fas fa-trash"></i> نعم، احذف
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -796,7 +827,8 @@ function createBackup() {
                 + '<td data-label="النوع">يدوي</td>'
                 + '<td data-label="الحجم">' + b.size + '</td>'
                 + '<td data-label="الحالة"><span class="ts-badge ts-badge--green">مكتمل</span></td>'
-                + '<td data-label=""><a href="/settings/backup/download/' + b.id + '/" class="ts-btn ts-btn--sm ts-btn--outline"><i class="fas fa-download"></i> تنزيل</a></td>'
+                + '<td data-label=""><div class="bk-row-actions"><a href="/settings/backup/download/' + b.id + '/" class="ts-btn ts-btn--sm ts-btn--outline"><i class="fas fa-download"></i> تنزيل</a>'
+                + '<button type="button" class="ts-btn ts-btn--sm ts-btn--danger-soft bk-btn-delete" data-id="' + b.id + '" data-filename="' + b.filename + '"><i class="fas fa-trash-alt"></i> حذف</button></div></td>'
                 + '</tr>';
             tbody.insertAdjacentHTML('afterbegin', row);
         } else {
@@ -811,5 +843,61 @@ function createBackup() {
         msg.innerHTML = '<span style="color:#ef4444;"><i class="fas fa-exclamation-circle"></i> تعذّر الاتصال بالخادم</span>';
     });
 }
+
+// ── حذف نسخة احتياطية (مودال تأكيد) ──────────────────────────────
+(function () {
+    var modalEl   = document.getElementById('deleteBackupModal');
+    var modal     = new bootstrap.Modal(modalEl);
+    var confirmBtn = document.getElementById('btnConfirmDeleteBackup');
+    var pendingId = null;
+
+    function showMsg(ok, text) {
+        var msg = document.getElementById('backupMsg');
+        msg.style.display = 'block';
+        msg.innerHTML = '<span style="color:' + (ok ? '#10b981' : '#ef4444') + ';"><i class="fas fa-' +
+            (ok ? 'check-circle' : 'exclamation-circle') + '"></i> ' + text + '</span>';
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.bk-btn-delete');
+        if (!btn) return;
+        pendingId = btn.dataset.id;
+        document.getElementById('deleteBackupFilename').textContent = btn.dataset.filename;
+        modal.show();
+    });
+
+    confirmBtn.addEventListener('click', function () {
+        if (!pendingId) return;
+        var id = pendingId;
+        var orig = confirmBtn.innerHTML;
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<span class="bk-spinner"></span> جاري الحذف...';
+        fetch('/settings/backup/delete/' + id + '/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '' },
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            modal.hide();
+            if (d.success) {
+                var row = document.getElementById('brow-' + id);
+                if (row) row.remove();
+                var tbody = document.getElementById('backupTbody');
+                if (tbody && !tbody.children.length) {
+                    document.getElementById('backupListWrap').innerHTML =
+                        '<div class="bk-empty" id="backupEmpty"><i class="fas fa-cloud-upload-alt"></i>' +
+                        '<p>لا توجد نسخ احتياطية بعد — أنشئ أول نسخة الآن</p></div>';
+                }
+            }
+            showMsg(d.success, d.message || (d.success ? 'تم الحذف' : 'حدث خطأ'));
+        })
+        .catch(function () { modal.hide(); showMsg(false, 'تعذّر الاتصال بالخادم'); })
+        .finally(function () {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = orig;
+            pendingId = null;
+        });
+    });
+})();
 </script>
 {% endblock %}

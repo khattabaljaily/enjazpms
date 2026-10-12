@@ -1457,6 +1457,21 @@ def tenant_backup_create_api(request):
 
 
 @login_required
+@require_POST
+def tenant_backup_delete_api(request, backup_id):
+    """حذف نسخة احتياطية — للمشترك نفسه فقط"""
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط مرتبط بالمستخدم'}, status=400)
+    if not TenantBackup.objects.filter(pk=backup_id, tenant=tenant).exists():
+        return JsonResponse({'success': False, 'message': 'النسخة غير موجودة'}, status=404)
+
+    from .backup_service import delete_backup
+    success, message = delete_backup(backup_id)
+    return JsonResponse({'success': success, 'message': message})
+
+
+@login_required
 def tenant_backup_download(request, backup_id):
     """تنزيل نسخة احتياطية — للمشترك نفسه فقط"""
     from django.http import FileResponse, Http404

@@ -101,6 +101,7 @@ urlpatterns = [
     # Tenant Backup (manual — all plans)
     path('settings/backup/create/', views.tenant_backup_create_api, name='tenant_backup_create_api'),
     path('settings/backup/download/<int:backup_id>/', views.tenant_backup_download, name='tenant_backup_download'),
+    path('settings/backup/delete/<int:backup_id>/', views.tenant_backup_delete_api, name='tenant_backup_delete_api'),
 
     # Help panel tracking
     path('help/open/', views.help_open_track, name='help_open_track'),
