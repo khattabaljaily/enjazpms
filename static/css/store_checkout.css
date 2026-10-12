@@ -299,3 +299,6 @@ body {
   .sco-steps { display: none; }
   .sco-panel { padding: 1.1rem; }
 }
+
+/* v4 — brand accent (matches storefront) */
+.sco-header { border-top: 3px solid var(--brand); }

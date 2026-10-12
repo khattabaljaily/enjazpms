@@ -296,3 +296,8 @@ body {
   .sc-item__total { min-width: 75px; font-size: .88rem; }
   .sc-qty__btn { width: 28px; height: 28px; }
 }
+
+/* v4 — brand accent + softer cards (matches storefront) */
+.sc-header { border-top: 3px solid var(--brand); }
+.sc-card { border-radius: 20px; box-shadow: 0 10px 30px -18px rgba(15,23,42,.3); }
+.sc-page-title { font-weight: 900; }

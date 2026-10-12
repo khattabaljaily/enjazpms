@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="{% static 'css/store_storefront.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/store_storefront.css' %}?v=4.0">
 <style>:root { --brand: {{ store.accent_color }}; }</style>
 {% include 'store/partials/rx_styles.html' %}
 </head>
@@ -51,17 +51,18 @@
         <span class="sf-status__sub"><i class="fas fa-clock"></i> {{ status.today_hours }}</span>
       {% endif %}
     </div>
+    {% include 'store/partials/branch_bar.html' with variant='sf-branch-wrap--hero' %}
   </div>
 </div>
-{% endif %}
-
+{% else %}
 {% include 'store/partials/branch_bar.html' %}
+{% endif %}
 <!-- ── Search ─────────────────────────────────────────── -->
-<div class="sf-search-wrap">
+<div class="sf-search-wrap{% if not search %} sf-search-wrap--float{% endif %}">
   <form class="sf-search" method="get" role="search">
     <i class="fas fa-search sf-search__icon"></i>
     <input class="sf-search__input" type="search" name="q"
-           value="{{ search }}" placeholder="ابحث في المنتجات..." autocomplete="off">
+           value="{{ search }}" placeholder="ابحث عن دواء أو منتج..." autocomplete="off">
     {% if search %}
     <a href="{% url 'store:storefront' slug=store.slug %}" class="sf-search__clear" title="مسح البحث">
       <i class="fas fa-times"></i>
@@ -101,12 +102,14 @@
         {% if item.image %}
         <img src="{{ item.image.url }}" alt="{{ item.name }}" class="sf-card__img" loading="lazy">
         {% else %}
-        <div class="sf-card__no-img"><i class="fas fa-box"></i></div>
+        <div class="sf-card__no-img"><i class="fas fa-capsules"></i></div>
         {% endif %}
         {% if store.show_stock_quantity %}
           {% with qty=stock_qty_map|get_qty:item.id %}
           {% if not qty or qty <= 0 %}
           <span class="sf-badge sf-badge--out">نافد</span>
+          {% elif qty <= 5 %}
+          <span class="sf-badge sf-badge--low">آخر {{ qty|floatformat:0 }} قطع</span>
           {% endif %}
           {% endwith %}
         {% endif %}
@@ -117,29 +120,29 @@
         <h3 class="sf-card__name">{{ item.name }}</h3>
         {% include 'store/partials/rx_badge.html' with rx=item.requires_prescription %}
 
-        <div class="sf-card__meta">
-          {% if store.show_prices %}
-          <div class="sf-card__price">
-            {{ item.selling_price|format_price }}
-            <span class="sf-card__cur">{{ store.tenant.currency|currency_ar }}</span>
-          </div>
-          {% endif %}
-          {% if store.show_stock_quantity %}
-          {% with qty=stock_qty_map|get_qty:item.id %}
-          {% if qty and qty > 0 %}
-          <span class="sf-badge sf-badge--in">{{ qty|floatformat:0 }} متوفر</span>
-          {% endif %}
-          {% endwith %}
-          {% endif %}
+        {% if store.show_prices %}
+        <div class="sf-card__price">
+          {{ item.selling_price|format_price }}
+          <span class="sf-card__cur">{{ store.tenant.currency|currency_ar }}</span>
         </div>
+        {% endif %}
+        {% if store.show_stock_quantity %}
+          {% with qty=stock_qty_map|get_qty:item.id %}
+          {% if qty and qty > 0 %}<span class="sf-stock"><i class="fas fa-circle-check"></i> متوفر ({{ qty|floatformat:0 }})</span>{% endif %}
+          {% endwith %}
+        {% endif %}
 
         <form method="post" action="{% url 'store:cart_add' slug=store.slug %}" class="add-to-cart-form">
           {% csrf_token %}
           <input type="hidden" name="item_id" value="{{ item.id }}">
-          <input type="number" name="qty" class="sf-qty-input" value="1" min="1" step="1"
-                 inputmode="numeric" aria-label="الكمية">
+          <div class="sf-stepper">
+            <button type="button" class="sf-stepper__btn" data-step="1" aria-label="زيادة الكمية"><i class="fas fa-plus"></i></button>
+            <input type="number" name="qty" class="sf-qty-input" value="1" min="1" step="1"
+                   inputmode="numeric" aria-label="الكمية">
+            <button type="button" class="sf-stepper__btn" data-step="-1" aria-label="إنقاص الكمية"><i class="fas fa-minus"></i></button>
+          </div>
           <button type="submit" class="sf-add-btn">
-            <i class="fas fa-cart-plus"></i> أضف للسلة
+            <i class="fas fa-cart-plus"></i> <span>أضف</span>
           </button>
         </form>
       </div>
@@ -174,6 +177,13 @@
   </div>
 </footer>
 
+<!-- ── Mobile cart bar ────────────────────────────────── -->
+<a href="{% url 'store:cart' slug=store.slug %}" class="sf-cartbar{% if cart_count > 0 %} show{% endif %}" id="sfCartBar">
+  <span class="sf-cartbar__count" id="sfCartBarCount">{{ cart_count }}</span>
+  <span class="sf-cartbar__label">عرض السلة وإتمام الطلب</span>
+  <i class="fas fa-arrow-left"></i>
+</a>
+
 <!-- ── Toast ──────────────────────────────────────────── -->
 <div class="sf-toast" id="sfToast">
   <i class="fas fa-check-circle"></i> تمت الإضافة للسلة
@@ -181,6 +191,15 @@
 
 <script>
 (function () {
+  document.querySelectorAll('.sf-stepper').forEach(function (box) {
+    var input = box.querySelector('.sf-qty-input');
+    box.querySelectorAll('.sf-stepper__btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var v = (parseInt(input.value, 10) || 1) + parseInt(btn.dataset.step, 10);
+        input.value = Math.max(1, v);
+      });
+    });
+  });
   document.querySelectorAll('.add-to-cart-form').forEach(function (form) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -211,6 +230,11 @@
             b.textContent = d.cart_count;
             document.querySelector('.sf-cart').appendChild(b);
           }
+        }
+        var bar = document.getElementById('sfCartBar');
+        if (bar && d.cart_count > 0) {
+          document.getElementById('sfCartBarCount').textContent = d.cart_count;
+          bar.classList.add('show');
         }
         toast.innerHTML = '<i class="fas fa-check-circle"></i> تمت الإضافة للسلة';
         toast.classList.remove('sf-toast--error');
