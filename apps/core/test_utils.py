@@ -61,6 +61,10 @@ class TenantTestCase(TestCase):
             max_stocks=self.max_stocks if self.max_stocks is not None else limits['max_stocks'],
             max_branches=self.max_branches if self.max_branches is not None else limits['max_branches'],
             currency='SDG', hard_currency_mode=False,
+            # الـ middleware يفعّل توقيت المشترك أثناء الطلب، فنثبّته على توقيت المشروع كي يتفق
+            # «اليوم» في الاختبار (timezone.localdate()) مع «اليوم» داخل الـ view، وإلا فشلت
+            # اختبارات بيانات اليوم في الساعة التي يختلف فيها تاريخ التوقيتين.
+            timezone=settings.TIME_ZONE,
             # يتفادى إعادة التوجيه إلى /terms/ عبر TermsMiddleware عند اختبار
             # views/URLs حقيقية عبر self.client.
             terms_version=settings.TERMS_VERSION, terms_accepted_at=timezone.now(),
