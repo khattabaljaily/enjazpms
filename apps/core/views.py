@@ -1859,8 +1859,9 @@ def admin_exchange_rates(request):
     from .market_rates import (
         HARD_CURRENCIES, CURRENCY_NAME_AR, DEFAULT_THRESHOLD_PERCENT, set_market_usd_rate,
         find_deviating_tenants, generate_exchange_rate_notifications,
+        fetch_market_suggestion, pending_suggestion, last_confirmed_usd,
     )
-    from .models import MarketExchangeRate
+    from .models import MarketExchangeRate, MarketRateSuggestion
 
     today = dj_timezone.localdate()
     if request.method == 'POST':
@@ -1878,6 +1879,28 @@ def admin_exchange_rates(request):
             messages.success(request, f'تم حفظ سعر السوق لليوم ({len(saved)} عملات).')
             if missing:
                 messages.warning(request, 'تعذّر اشتقاق: ' + '، '.join(missing) + ' (لم يُجلب سعرها العالمي). أعد الحفظ لاحقًا.')
+        elif action == 'fetch':
+            found = fetch_market_suggestion()
+            if found:
+                messages.success(request, f'اقتراح جديد من {found.source_name}: بيع الدولار {found.usd_sell}.')
+            else:
+                messages.info(request, 'لا يوجد اقتراح جديد: لا مقال حديث صالح، أو سبقت قراءته.')
+        elif action in ('accept_suggestion', 'dismiss_suggestion'):
+            suggestion = MarketRateSuggestion.objects.filter(pk=request.POST.get('suggestion_id'), status='pending').first()
+            if not suggestion:
+                messages.error(request, 'الاقتراح غير موجود أو سبقت مراجعته.')
+            elif action == 'dismiss_suggestion':
+                suggestion.status = 'dismissed'
+                suggestion.save(update_fields=['status'])
+                messages.info(request, 'تم تجاهل الاقتراح.')
+            else:
+                saved, missing = set_market_usd_rate(suggestion.usd_sell, user=request.user, rate_date=today)
+                suggestion.status = 'accepted'
+                suggestion.save(update_fields=['status'])
+                log_activity(request, 'اعتماد سعر الصرف المقترح', f'USD = {suggestion.usd_sell}', 'update')
+                messages.success(request, f'تم اعتماد {suggestion.usd_sell} سعرًا لليوم ({len(saved)} عملات).')
+                if missing:
+                    messages.warning(request, 'تعذّر اشتقاق: ' + '، '.join(missing) + ' (لم يُجلب سعرها العالمي).')
         elif action == 'send':
             notified = generate_exchange_rate_notifications(rate_date=today)
             log_activity(request, 'إرسال تنبيهات سعر الصرف', f'{len(notified)} مشترك', 'update')
@@ -1885,12 +1908,17 @@ def admin_exchange_rates(request):
         return redirect('core:admin_exchange_rates')
 
     todays = {r.currency: r for r in MarketExchangeRate.objects.filter(rate_date=today)}
+    suggestion = pending_suggestion()
+    reference = last_confirmed_usd()
     hard_tenants = Tenant.objects.filter(is_active=True, hard_currency_mode=True).count()
     deviating = find_deviating_tenants(today) if todays else []
     return render(request, 'core/admin_exchange_rates.html', {
         'today': today,
         'rows': [(c, CURRENCY_NAME_AR.get(c, c), todays.get(c)) for c in HARD_CURRENCIES],
         'usd_today': todays.get('USD'),
+        'suggestion': suggestion,
+        'suggestion_pct': ((suggestion.usd_sell - reference) / reference * 100) if suggestion and reference else None,
+        'reference_usd': reference,
         'history': MarketExchangeRate.objects.filter(currency='USD').select_related('entered_by')[:14],
         'hard_tenants': hard_tenants,
         'deviating': deviating,

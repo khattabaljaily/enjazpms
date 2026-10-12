@@ -147,3 +147,127 @@ class AdminExchangeRatePageTests(TenantTestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.context['market'].rate, Decimal('9000.00'))
         self.assertContains(r, 'سعر السوق اليوم')
+
+
+# ── الاقتراح الآلي من خلاصة الأخبار ─────────────────────────────────────
+BODY = ('سجل الدولار الأميركي ارتفاعاً جديداً في السوق الموازي بالسودان، متجاوزاً حاجز 9000 جنيه. '
+        'وبلغ متوسط سعر بيع الدولار 9004.27 جنيهات، مقابل 8900 جنيه للشراء، وسط تفاوت بين التجار.')
+
+
+def _feed(items):
+    from email.utils import format_datetime
+    rows = ''.join(
+        f'<item><title>{t}</title><link>{link}</link><pubDate>{format_datetime(p)}</pubDate>'
+        f'<content:encoded><![CDATA[<p>{b}</p>]]></content:encoded></item>' for t, link, p, b in items)
+    return ('<?xml version="1.0"?><rss xmlns:content="http://purl.org/rss/1.0/modules/content/">'
+            f'<channel>{rows}</channel></rss>').encode()
+
+
+def _serve(xml):
+    resp = mock.MagicMock()
+    resp.__enter__.return_value.read.return_value = xml
+    return mock.patch.object(market_rates.urllib.request, 'urlopen', return_value=resp)
+
+
+class MarketSuggestionTests(TenantTestCase):
+    def _item(self, title='الدولار يتجاوز 9000 جنيه في السوق الموازي', link='https://x.test/1',
+              age_hours=10, body=BODY):
+        return (title, link, timezone.now() - timezone.timedelta(hours=age_hours), body)
+
+    def test_reads_sell_and_buy_and_notifies_platform_staff(self):
+        from apps.core.models import AdminNotification, MarketRateSuggestion
+        with _serve(_feed([self._item()])):
+            s = market_rates.fetch_market_suggestion()
+        self.assertEqual((s.usd_sell, s.usd_buy), (Decimal('9004.27'), Decimal('8900')))
+        self.assertEqual(MarketRateSuggestion.objects.count(), 1)
+        n = AdminNotification.objects.get(notification_type='exchange_rate')
+        self.assertIn('9,004.27', n.title)
+        self.assertEqual(n.link, '/system/exchange-rates/')
+        # لا يصل المشتركين شيء، ولا يتغير أي سعر معتمد
+        self.assertFalse(Notification.objects.filter(notification_type='exchange_rate').exists())
+        self.assertFalse(MarketExchangeRate.objects.exists())
+
+    def test_same_article_is_not_proposed_twice(self):
+        with _serve(_feed([self._item()])):
+            self.assertIsNotNone(market_rates.fetch_market_suggestion())
+            self.assertIsNone(market_rates.fetch_market_suggestion())
+
+    def test_ignores_customs_dollar_old_and_unrelated_articles(self):
+        items = [
+            self._item(title='ارتفاع الدولار الجمركي في السوق الموازي', link='https://x.test/c'),
+            self._item(link='https://x.test/old', age_hours=200),
+            self._item(title='خبر رياضي', link='https://x.test/s', body='مباراة'),
+            self._item(link='https://x.test/nonum', body='ارتفع الدولار في السوق الموازي بلا أرقام'),
+        ]
+        with _serve(_feed(items)):
+            self.assertIsNone(market_rates.fetch_market_suggestion())
+
+    def test_reading_far_from_last_confirmed_rate_is_discarded(self):
+        MarketExchangeRate.objects.create(currency='USD', rate=Decimal('3000'), rate_date=timezone.localdate())
+        with _serve(_feed([self._item()])):                            # 9004 مقابل 3000: خطأ قراءة محتمل
+            self.assertIsNone(market_rates.fetch_market_suggestion())
+
+    def test_inconsistent_buy_sell_is_discarded(self):
+        body = BODY.replace('8900 جنيه للشراء', '100 جنيه للشراء')
+        with _serve(_feed([self._item(body=body)])):
+            self.assertIsNone(market_rates.fetch_market_suggestion())
+
+    def test_feed_failure_returns_none(self):
+        with mock.patch.object(market_rates.urllib.request, 'urlopen', side_effect=OSError('down')):
+            self.assertIsNone(market_rates.fetch_market_suggestion())
+
+    def test_newer_suggestion_supersedes_pending_one(self):
+        from apps.core.models import MarketRateSuggestion
+        with _serve(_feed([self._item(link='https://x.test/a', age_hours=30)])):
+            market_rates.fetch_market_suggestion()
+        with _serve(_feed([self._item(link='https://x.test/b', age_hours=2, body=BODY.replace('9004.27', '9100'))])):
+            market_rates.fetch_market_suggestion()
+        self.assertEqual(MarketRateSuggestion.objects.get(status='pending').source_url, 'https://x.test/b')
+        self.assertEqual(MarketRateSuggestion.objects.filter(status='dismissed').count(), 1)
+
+
+class SuggestionReviewViewTests(TenantTestCase):
+    def setUp(self):
+        super().setUp()
+        _hard(self.tenant, '8400')
+        self.su = User.objects.create_superuser(username='root-sg', password='secret123')
+        self.client.force_login(self.su)
+        with _serve(_feed([(
+                'x', 'https://x.test/s', timezone.now() - timezone.timedelta(hours=3), BODY)])):
+            self.s = market_rates.fetch_market_suggestion()
+
+    def _post(self, **data):
+        return self.client.post(reverse('core:admin_exchange_rates'), data)
+
+    def test_page_shows_pending_suggestion(self):
+        page = self.client.get(reverse('core:admin_exchange_rates'))
+        self.assertEqual(page.context['suggestion'].pk, self.s.pk)
+        self.assertContains(page, 'اعتمد هذا السعر')
+
+    def test_accepting_sets_the_reference_but_does_not_alert_tenants_yet(self):
+        with mock.patch.object(market_rates, 'fetch_units_per_usd', return_value={}):
+            self._post(action='accept_suggestion', suggestion_id=self.s.pk)
+        self.s.refresh_from_db()
+        self.assertEqual(self.s.status, 'accepted')
+        self.assertEqual(MarketExchangeRate.objects.get(currency='USD').rate, Decimal('9004.27'))
+        self.assertFalse(Notification.objects.filter(notification_type='exchange_rate').exists())
+        # الإرسال خطوة منفصلة بيد المشرف (أو أمر الظهر)
+        self._post(action='send')
+        self.assertEqual(Notification.objects.filter(notification_type='exchange_rate').count(), 1)
+
+    def test_dismissing_changes_nothing_else(self):
+        self._post(action='dismiss_suggestion', suggestion_id=self.s.pk)
+        self.s.refresh_from_db()
+        self.assertEqual(self.s.status, 'dismissed')
+        self.assertFalse(MarketExchangeRate.objects.exists())
+
+    def test_manual_fetch_button(self):
+        with _serve(_feed([])):
+            r = self._post(action='fetch')
+        self.assertEqual(r.status_code, 302)
+
+    def test_non_platform_user_cannot_accept(self):
+        self.client.force_login(self.user)                              # مدير مشترك
+        self._post(action='accept_suggestion', suggestion_id=self.s.pk)
+        self.s.refresh_from_db()
+        self.assertEqual(self.s.status, 'pending')

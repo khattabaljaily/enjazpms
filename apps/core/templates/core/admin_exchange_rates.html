@@ -26,6 +26,12 @@
 .xr-tag { font-size: .68rem; padding: .1rem .5rem; border-radius: 999px; background: rgba(148,163,184,.18); color: var(--text-secondary); }
 .xr-up { color: #dc2626; font-weight: 800; } .xr-down { color: #16a34a; font-weight: 800; }
 .xr-empty { text-align: center; color: var(--text-secondary); padding: 1.2rem; font-size: .85rem; }
+.xr-suggest { border-color: rgba(201,132,15,.45); }
+.xr-sug-row { display: flex; gap: 1rem; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.xr-sug-rate { font-size: 1.7rem; font-weight: 900; color: var(--text-primary); }
+.xr-sug-rate small { font-size: .75rem; font-weight: 600; color: var(--text-secondary); }
+.xr-sug-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.xr-sug-actions form { margin: 0; }
 .xr-stale { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.35); color: #b45309; border-radius: 12px; padding: .7rem 1rem; font-size: .84rem; margin-bottom: 1.25rem; }
 @media (max-width: 900px) { .xr-grid { grid-template-columns: 1fr; } }
 </style>
@@ -37,6 +43,37 @@
     لم يُدخَل سعر اليوم ({{ today|date:"Y-m-d" }}) بعد. إلى أن تُدخله لن يُرسل النظام أي تنبيه للمشتركين.</div>
 {% endif %}
 
+<div class="xr-card xr-suggest" style="margin-bottom:1.25rem">
+    <h3><i class="fas fa-satellite-dish"></i> فحص السوق الآلي
+        <form method="post" style="margin-right:auto">{% csrf_token %}<input type="hidden" name="action" value="fetch">
+            <button type="submit" class="xr-btn xr-btn--ghost" style="padding:.35rem .9rem;font-size:.78rem"><i class="fas fa-rotate"></i> افحص الآن</button></form>
+    </h3>
+    {% if suggestion %}
+    <div class="xr-sug-row">
+        <div>
+            <div class="xr-sug-rate">{{ suggestion.usd_sell|floatformat:2 }} <small>ج.س لكل 1 دولار (متوسط البيع)</small></div>
+            <div class="xr-hint" style="margin:.3rem 0 0">
+                {% if suggestion.usd_buy %}الشراء {{ suggestion.usd_buy|floatformat:2 }} · {% endif %}
+                {% if suggestion_pct %}<span dir="ltr" class="{% if suggestion_pct > 0 %}xr-up{% else %}xr-down{% endif %}">{{ suggestion_pct|floatformat:1 }}%</span> عن آخر سعر معتمد ({{ reference_usd|floatformat:2 }}) ·{% endif %}
+                المصدر: <a href="{{ suggestion.source_url }}" target="_blank" rel="noopener">{{ suggestion.source_name }}</a>
+                · نُشر {{ suggestion.published_at|date:"Y-m-d H:i" }}
+            </div>
+            <div class="xr-hint" style="margin:.2rem 0 0;font-style:italic">«{{ suggestion.headline }}»</div>
+        </div>
+        <div class="xr-sug-actions">
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="accept_suggestion"><input type="hidden" name="suggestion_id" value="{{ suggestion.pk }}">
+                <button type="submit" class="xr-btn"><i class="fas fa-check"></i> اعتمد هذا السعر</button></form>
+            <button type="button" class="xr-btn xr-btn--ghost" onclick="var i=document.getElementById('xrUsd');i.value='{{ suggestion.usd_sell|stringformat:'.2f' }}';i.focus();i.scrollIntoView({behavior:'smooth',block:'center'})"><i class="fas fa-pen"></i> عدّل</button>
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="dismiss_suggestion"><input type="hidden" name="suggestion_id" value="{{ suggestion.pk }}">
+                <button type="submit" class="xr-btn xr-btn--ghost" style="border-color:var(--border-color);color:var(--text-secondary)">تجاهل</button></form>
+        </div>
+    </div>
+    <p class="xr-hint" style="margin:.8rem 0 0">اقتراح آلي يُقرأ من خبر منشور، وقد يختلف عن سعر منطقتك. لا يصل المشتركين منه شيء إلا بعد أن تعتمده أنت.</p>
+    {% else %}
+    <div class="xr-empty" style="padding:.6rem">لا يوجد اقتراح بانتظار المراجعة. يفحص النظام السوق كل صباح، ويمكنك الفحص الآن.</div>
+    {% endif %}
+</div>
+
 <div class="xr-grid">
     <div class="xr-card">
         <h3><i class="fas fa-pen-to-square"></i> سعر السوق الموازي اليوم</h3>
@@ -46,7 +83,7 @@
         <form method="post" class="xr-row">
             {% csrf_token %}
             <input type="hidden" name="action" value="save">
-            <input type="number" name="usd_rate" class="xr-input" step="0.01" min="0.01" inputmode="decimal"
+            <input type="number" id="xrUsd" name="usd_rate" class="xr-input" step="0.01" min="0.01" inputmode="decimal"
                    placeholder="مثال: 9000" value="{{ usd_today.rate|default_if_none:'' }}" required>
             <button type="submit" class="xr-btn"><i class="fas fa-save"></i> حفظ</button>
         </form>

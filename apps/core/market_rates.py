@@ -7,17 +7,22 @@
 وينبّه مدير نشاطه إذا اختلفا. لا يغيّر سعر أي مشترك تلقائيًا: تغييره يعيد تسعير
 أصنافه، فالقرار له.
 """
+import hashlib
+import html
 import json
 import logging
+import re
 import urllib.request
-from datetime import datetime, time
+import xml.etree.ElementTree as ET
+from datetime import datetime, time, timedelta
+from email.utils import parsedate_to_datetime
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.utils import timezone
 
 from .constants import CURRENCY_AR
-from .models import MarketExchangeRate, Tenant
+from .models import AdminNotification, MarketExchangeRate, MarketRateSuggestion, Tenant
 
 logger = logging.getLogger(__name__)
 
@@ -173,3 +178,119 @@ def generate_exchange_rate_notifications(rate_date=None, threshold=DEFAULT_THRES
             link='/settings/exchange-rate/',
         )
     return notified
+
+
+# ══════════════════════════════════════════════════════════════
+# اقتراح آلي لسعر السوق (للمشرف فقط — لا يصل المشتركين منه شيء)
+# ══════════════════════════════════════════════════════════════
+# خلاصات RSS تحمل نص المقال كاملًا. المقال اليومي يذكر «متوسط سعر بيع الدولار X ... Y للشراء».
+SUGGESTION_FEEDS = [('تاق برس', 'https://www.tagpress.net/feed')]
+SUGGESTION_MAX_AGE = timedelta(hours=72)
+SUGGESTION_MAX_JUMP = Decimal('0.30')   # أي قراءة تبعد أكثر من 30% عن آخر سعر معتمد تُهمَل كخطأ قراءة
+_NUM = r'([\d][\d,]*(?:\.\d+)?)'
+_SELL_RE = re.compile(r'متوسط\s+سعر\s+بيع\s+الدولار[^\d]{0,20}' + _NUM)
+_BUY_RE = re.compile(_NUM + r'\s*جنيه[ًا]?\s+للشراء')
+
+
+def _plain(text):
+    return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', html.unescape(text or ''))).strip()
+
+
+def _num(text):
+    return Decimal(text.replace(',', ''))
+
+
+def parse_feed_items(xml_bytes):
+    """[(title, link, published_at, plain_body)] من خلاصة RSS."""
+    ns = {'c': 'http://purl.org/rss/1.0/modules/content/'}
+    out = []
+    for item in ET.fromstring(xml_bytes).findall('.//item'):
+        try:
+            published = parsedate_to_datetime(item.findtext('pubDate'))
+        except (TypeError, ValueError):
+            continue
+        body = item.findtext('c:encoded', namespaces=ns) or item.findtext('description') or ''
+        out.append((_plain(item.findtext('title')), (item.findtext('link') or '').strip(), published, _plain(body)))
+    return out
+
+
+def extract_usd_quote(title, body):
+    """(بيع، شراء) من مقال عن السوق الموازي للدولار، أو None إن لم يكن مقالًا صالحًا."""
+    text = f'{title} {body}'
+    if 'الدولار' not in text or not ('السوق الموازي' in text or 'السوق السوداء' in text):
+        return None
+    if 'الجمركي' in title:                      # الدولار الجمركي سعر آخر
+        return None
+    sell = _SELL_RE.search(body)
+    if not sell:
+        return None
+    buy = _BUY_RE.search(body)
+    return _num(sell.group(1)), (_num(buy.group(1)) if buy else None)
+
+
+def last_confirmed_usd():
+    row = MarketExchangeRate.objects.filter(currency='USD').order_by('-rate_date').first()
+    return row.rate if row else None
+
+
+def fetch_market_suggestion(now=None, feeds=None):
+    """
+    يقرأ الخلاصات وينشئ اقتراحًا جديدًا (ويُشعر المشرف) إن وُجد مقال حديث صالح لم يُقرأ من قبل.
+    يُرجع الاقتراح الجديد أو None. لا يخمّن: قراءة مشكوك فيها تُهمَل.
+    """
+    now = now or timezone.now()
+    reference = last_confirmed_usd()
+    best = None
+    for name, url in (feeds or SUGGESTION_FEEDS):
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                items = parse_feed_items(resp.read())
+        except Exception as exc:
+            logger.warning('تعذّر قراءة الخلاصة %s: %s', url, exc)
+            continue
+        for title, link, published, body in items:
+            if not link or now - published > SUGGESTION_MAX_AGE:
+                continue
+            quote = extract_usd_quote(title, body)
+            if quote is None:
+                continue
+            sell, buy = quote
+            if sell <= 0 or (buy is not None and not (sell * Decimal('0.8') <= buy <= sell * Decimal('1.2'))):
+                continue
+            if reference and abs(sell - reference) / reference > SUGGESTION_MAX_JUMP:
+                logger.warning('قراءة مهمَلة (بعيدة جدًا عن آخر سعر معتمد): %s', sell)
+                continue
+            if best is None or published > best[0]:
+                best = (published, name, link, title, sell, buy)
+    if best is None:
+        return None
+    published, name, link, title, sell, buy = best
+    key = hashlib.sha1(link.encode('utf-8')).hexdigest()
+    if MarketRateSuggestion.objects.filter(source_key=key).exists():
+        return None
+    with transaction.atomic():
+        MarketRateSuggestion.objects.filter(status='pending').update(status='dismissed')
+        suggestion = MarketRateSuggestion.objects.create(
+            usd_sell=sell, usd_buy=buy, source_name=name, source_url=link, source_key=key,
+            headline=title[:300], published_at=published,
+        )
+        change = ''
+        if reference:
+            change = f' ({(sell - reference) / reference * 100:+.1f}% عن آخر سعر معتمد {_fmt(reference)})'
+        AdminNotification.push(
+            notification_type='exchange_rate',
+            title=f'اقتراح سعر الدولار اليوم: {_fmt(sell)} ج.س',
+            message=f'قرأ النظام من {name}: متوسط بيع الدولار {_fmt(sell)}{change}. راجعه واعتمده أو عدّله، '
+                    f'ومن سعرك أنت يُنبَّه المشتركون.',
+            link='/system/exchange-rates/', priority='high',
+            ref_key=f'xr_suggestion_{suggestion.pk}',
+        )
+    return suggestion
+
+
+def pending_suggestion(now=None):
+    """أحدث اقتراح بانتظار المراجعة وغير قديم، أو None."""
+    now = now or timezone.now()
+    s = MarketRateSuggestion.objects.filter(status='pending').order_by('-published_at').first()
+    return s if s and now - s.published_at <= SUGGESTION_MAX_AGE else None

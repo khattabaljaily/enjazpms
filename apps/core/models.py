@@ -967,6 +967,7 @@ class AdminNotification(models.Model):
         ('subscription_expiring', 'اشتراك قارب الانتهاء'),
         ('subscription_expired',  'اشتراك منتهٍ'),
         ('old_ticket',            'تذكرة مفتوحة منذ فترة'),
+        ('exchange_rate',         'اقتراح سعر الصرف'),
         ('general',               'عام'),
     ]
     PRIORITY_CHOICES = [('low', 'منخفضة'), ('medium', 'متوسطة'), ('high', 'عالية')]
@@ -1104,3 +1105,31 @@ class MarketExchangeRate(models.Model):
 
     def __str__(self):
         return f'{self.currency} {self.rate} @ {self.rate_date}'
+
+
+class MarketRateSuggestion(models.Model):
+    """
+    سعر دولار مقترح يقرؤه النظام آليًا من خلاصة أخبار كل صباح، لتراجعه إدارة المنصة.
+    لا يصل أي مشترك منه شيء: الاعتماد يدوي ومنه فقط يُنبَّه المشتركون (راجع MarketExchangeRate).
+    """
+    STATUS_CHOICES = (('pending', 'بانتظار المراجعة'), ('accepted', 'اعتُمد'), ('dismissed', 'تم تجاهله'))
+
+    usd_sell     = models.DecimalField('متوسط بيع الدولار', max_digits=14, decimal_places=2)
+    usd_buy      = models.DecimalField('متوسط شراء الدولار', max_digits=14, decimal_places=2, null=True, blank=True)
+    source_name  = models.CharField('المصدر', max_length=80)
+    source_url   = models.CharField('رابط المقال', max_length=500)
+    # بصمة الرابط (SHA-1): فريدة لمنع تكرار الاقتراح، بدل عمود طويل فريد قد يرفضه MySQL
+    source_key   = models.CharField('بصمة الرابط', max_length=40, unique=True, editable=False)
+    headline     = models.CharField('العنوان', max_length=300, blank=True)
+    published_at = models.DateTimeField('وقت نشر المقال')
+    status       = models.CharField('الحالة', max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    fetched_at   = models.DateTimeField('وقت القراءة', auto_now_add=True)
+
+    class Meta:
+        db_table = 'market_rate_suggestions'
+        ordering = ['-published_at']
+        verbose_name = 'اقتراح سعر السوق'
+        verbose_name_plural = 'اقتراحات سعر السوق'
+
+    def __str__(self):
+        return f'{self.usd_sell} ({self.source_name}) {self.published_at:%Y-%m-%d}'
