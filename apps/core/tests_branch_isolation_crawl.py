@@ -300,11 +300,16 @@ class BranchWriteIsolationTests(BranchIsolationCrawlTests):
         for model in (Customer, Supplier, Agent, Employee, Stock, Treasury, BankAccount,
                       Expense, SaleInvoice, PurchaseInvoice, Notification, Shipment):
             mgr = getattr(model, 'unscoped', model.objects)
+            rows = mgr.filter(tenant__in=[self.tenant, self.other]).exclude(
+                pk__in=self.ids_b.get(model.__name__, []))
+            # سجلات الفرع B كلها (ومنها ما يُنشأ تلقائياً معه، كخزينته) له أن يعدّلها أو يحذفها؛
+            # والأرقام المحقونة تتصادف معها حسب تسلسل المعرّفات، فلا تُحسب مخالفة.
+            if any(f.name == 'branch' for f in model._meta.get_fields()):
+                rows = rows.exclude(branch=self.b)
             snap[model.__name__] = sorted(
                 (r.pk, str(r), getattr(r, 'status', None), getattr(r, 'is_active', None),
                  getattr(r, 'is_read', None))
-                for r in mgr.filter(tenant__in=[self.tenant, self.other]).exclude(
-                    pk__in=self.ids_b.get(model.__name__, [])))
+                for r in rows)
         snap['Branch'] = sorted(
             (b.pk, b.name, b.is_active) for b in Branch.objects.filter(tenant__in=[self.tenant, self.other])
             .exclude(pk=self.b.pk))
@@ -330,6 +335,10 @@ class BranchWriteIsolationTests(BranchIsolationCrawlTests):
                 sent += 1
         self.assertGreater(sent, 100)
         after = self._snapshot()
+        # إلغاء الفرع B لمرتجعه هو يُنشئ إشعاراً جديداً للإدارة: إضافة مشروعة، فنقارن الإشعارات
+        # التي كانت موجودة قبل الطلبات فقط.
+        existing = {row[0] for row in before['Notification']}
+        after['Notification'] = [row for row in after['Notification'] if row[0] in existing]
         for key in before:
             self.assertEqual(before[key], after[key], f'تغيّرت سجلات {key} بعد POST من فرع آخر')
 
