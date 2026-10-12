@@ -22,7 +22,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .constants import CURRENCY_AR
-from .models import AdminNotification, MarketExchangeRate, MarketRateSuggestion, Tenant
+from .models import AdminNotification, GlobalFxRate, MarketExchangeRate, MarketRateSuggestion, Tenant
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +40,13 @@ DEFAULT_THRESHOLD_PERCENT = Decimal('2')
 
 def fetch_units_per_usd(codes):
     """
-    {code: وحدات العملة لكل 1 دولار} للعملات غير المربوطة، من سعر السوق العالمي.
+    {code: وحدات العملة لكل 1 دولار} من السعر العالمي (شبكة!). لا يُستدعى أثناء طلب المستخدم.
     يُرجع {} عند أي فشل: لا نخمّن سعرًا.
     """
     try:
-        with urllib.request.urlopen(FX_URL, timeout=10) as resp:
+        with urllib.request.urlopen(FX_URL, timeout=5) as resp:
             rates = json.load(resp).get('rates', {})
-    except Exception as exc:  # الشبكة غير مضمونة؛ الفشل لا يوقف إدخال الدولار
+    except Exception as exc:  # الشبكة غير مضمونة؛ الفشل لا يوقف شيئًا
         logger.warning('تعذّر جلب الأسعار العالمية: %s', exc)
         return {}
     out = {}
@@ -60,19 +60,32 @@ def fetch_units_per_usd(codes):
     return out
 
 
+def floating_currencies():
+    return [c for c in HARD_CURRENCIES if c != 'USD' and c not in PEGGED_PER_USD]
+
+
+def refresh_global_rates():
+    """يجلب الأسعار العالمية من الشبكة ويخزّنها (للأمر الصباحي وزر الفحص). يُرجع ما حُدِّث."""
+    fetched = fetch_units_per_usd(floating_currencies())
+    for code, value in fetched.items():
+        GlobalFxRate.objects.update_or_create(currency=code, defaults={'per_usd': value})
+    return fetched
+
+
 def units_per_usd(codes):
-    """وحدات كل عملة لكل دولار: الربط الرسمي أولًا ثم السعر العالمي. العملة بلا سعر لا تظهر."""
+    """
+    وحدات كل عملة لكل دولار دون أي شبكة: الربط الرسمي أولًا ثم آخر سعر عالمي مخزّن.
+    العملة بلا سعر معروف لا تظهر في النتيجة.
+    """
     out = {'USD': Decimal(1)}
-    floating = []
+    stored = {r.currency: r.per_usd for r in GlobalFxRate.objects.filter(currency__in=list(codes))}
     for code in codes:
         if code in out:
             continue
         if code in PEGGED_PER_USD:
             out[code] = PEGGED_PER_USD[code]
-        else:
-            floating.append(code)
-    if floating:
-        out.update(fetch_units_per_usd(floating))
+        elif code in stored and stored[code] > 0:
+            out[code] = stored[code]
     return out
 
 
@@ -245,7 +258,7 @@ def fetch_market_suggestion(now=None, feeds=None):
     for name, url in (feeds or SUGGESTION_FEEDS):
         try:
             req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 items = parse_feed_items(resp.read())
         except Exception as exc:
             logger.warning('تعذّر قراءة الخلاصة %s: %s', url, exc)

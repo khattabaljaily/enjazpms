@@ -45,7 +45,7 @@
 
 <div class="xr-card xr-suggest" style="margin-bottom:1.25rem">
     <h3><i class="fas fa-satellite-dish"></i> فحص السوق الآلي
-        <form method="post" style="margin-right:auto">{% csrf_token %}<input type="hidden" name="action" value="fetch">
+        <form method="post" style="margin-right:auto" onsubmit="var b=this.querySelector('button');b.disabled=true;b.innerHTML='<i class=&quot;fas fa-spinner fa-spin&quot;></i> جاري الفحص…'">{% csrf_token %}<input type="hidden" name="action" value="fetch">
             <button type="submit" class="xr-btn xr-btn--ghost" style="padding:.35rem .9rem;font-size:.78rem"><i class="fas fa-rotate"></i> افحص الآن</button></form>
     </h3>
     {% if suggestion %}

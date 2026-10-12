@@ -9,13 +9,15 @@ Cron المقترح (صباحًا بتوقيت الخرطوم، قبل أمر ا
 """
 from django.core.management.base import BaseCommand
 
-from apps.core.market_rates import fetch_market_suggestion, fmt_money
+from apps.core.market_rates import fetch_market_suggestion, fmt_money, refresh_global_rates
 
 
 class Command(BaseCommand):
     help = 'Read the parallel-market USD rate from news feeds and propose it to platform staff'
 
     def handle(self, *args, **opts):
+        refreshed = refresh_global_rates()   # أسعار اليوان والجنيه المصري العالمية للحفظ السريع لاحقًا
+        self.stdout.write(f'الأسعار العالمية المحدَّثة: {", ".join(refreshed) or "لا شيء"}')
         suggestion = fetch_market_suggestion()
         if suggestion is None:
             self.stdout.write('لا يوجد اقتراح جديد (لا مقال حديث صالح أو سبقت قراءته).')

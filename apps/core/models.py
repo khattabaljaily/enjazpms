@@ -1133,3 +1133,22 @@ class MarketRateSuggestion(models.Model):
 
     def __str__(self):
         return f'{self.usd_sell} ({self.source_name}) {self.published_at:%Y-%m-%d}'
+
+
+class GlobalFxRate(models.Model):
+    """
+    آخر سعر عالمي معروف لعملة غير مربوطة بالدولار (اليوان، الجنيه المصري): وحدات العملة لكل 1 دولار.
+    يُحدَّث في الخلفية (الأمر الصباحي أو زر «افحص الآن») ويستخدمه حفظ سعر السوق دون أي استدعاء
+    شبكة، لأن انتظار مصدر خارجي أثناء الطلب كان يؤخر الحفظ نصف دقيقة.
+    """
+    currency   = models.CharField('العملة', max_length=3, unique=True)
+    per_usd    = models.DecimalField('وحدات لكل 1 دولار', max_digits=16, decimal_places=6)
+    updated_at = models.DateTimeField('آخر تحديث', auto_now=True)
+
+    class Meta:
+        db_table = 'global_fx_rates'
+        verbose_name = 'سعر عالمي مقابل الدولار'
+        verbose_name_plural = 'الأسعار العالمية مقابل الدولار'
+
+    def __str__(self):
+        return f'{self.currency} {self.per_usd}/USD'

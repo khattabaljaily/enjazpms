@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.core import market_rates
-from apps.core.models import MarketExchangeRate
+from apps.core.models import GlobalFxRate, MarketExchangeRate
 from apps.core.test_utils import TenantTestCase
 from apps.notifications.models import Notification
 
@@ -25,8 +25,8 @@ def _hard(tenant, rate, currency='USD', mode=True):
 
 class MarketRateDerivationTests(TenantTestCase):
     def test_usd_manual_and_others_derived_from_it(self):
-        with mock.patch.object(market_rates, 'fetch_units_per_usd', return_value=CNY):
-            saved, missing = market_rates.set_market_usd_rate(9000)
+        GlobalFxRate.objects.create(currency='CNY', per_usd=Decimal('7.2'))
+        saved, missing = market_rates.set_market_usd_rate(9000)
         by = {r.currency: r for r in saved}
         self.assertEqual(by['USD'].rate, Decimal('9000.00'))
         self.assertEqual(by['USD'].source, 'manual')
@@ -34,18 +34,32 @@ class MarketRateDerivationTests(TenantTestCase):
         self.assertEqual(by['AED'].rate, Decimal('2450.65'))          # 9000 / 3.6725
         self.assertEqual(by['CNY'].rate, Decimal('1250.00'))          # 9000 / 7.2
         self.assertEqual(by['SAR'].source, 'derived')
-        self.assertEqual(missing, ['EGP'])                            # لم يُجلب سعره العالمي
+        self.assertEqual(missing, ['EGP'])                            # لا سعر عالمي مخزّن له بعد
 
-    def test_global_fetch_failure_keeps_usd_and_pegged_currencies_only(self):
-        with mock.patch.object(market_rates, 'fetch_units_per_usd', return_value={}):
+    def test_saving_never_touches_the_network(self):
+        """الحفظ كان يؤخر نصف دقيقة بانتظار مصدر خارجي: ممنوع أي استدعاء شبكة فيه."""
+        with mock.patch.object(market_rates.urllib.request, 'urlopen',
+                               side_effect=AssertionError('network call during save')):
             saved, missing = market_rates.set_market_usd_rate(9000)
         self.assertEqual({r.currency for r in saved}, {'USD', 'SAR', 'AED'})
         self.assertEqual(set(missing), {'CNY', 'EGP'})
 
-    def test_saving_twice_same_day_updates_instead_of_duplicating(self):
+    def test_refresh_stores_global_rates_for_later_saves(self):
+        with mock.patch.object(market_rates, 'fetch_units_per_usd', return_value={**CNY, 'EGP': Decimal('50')}):
+            market_rates.refresh_global_rates()
+        saved, missing = market_rates.set_market_usd_rate(9000)
+        self.assertEqual(missing, [])
+        self.assertEqual({r.currency: r.rate for r in saved}['EGP'], Decimal('180.00'))
+
+    def test_failed_refresh_keeps_previous_global_rates(self):
+        GlobalFxRate.objects.create(currency='CNY', per_usd=Decimal('7.2'))
         with mock.patch.object(market_rates, 'fetch_units_per_usd', return_value={}):
-            market_rates.set_market_usd_rate(9000)
-            market_rates.set_market_usd_rate(9100)
+            market_rates.refresh_global_rates()
+        self.assertEqual(GlobalFxRate.objects.get(currency='CNY').per_usd, Decimal('7.200000'))
+
+    def test_saving_twice_same_day_updates_instead_of_duplicating(self):
+        market_rates.set_market_usd_rate(9000)
+        market_rates.set_market_usd_rate(9100)
         self.assertEqual(MarketExchangeRate.objects.filter(currency='USD').count(), 1)
         self.assertEqual(MarketExchangeRate.objects.get(currency='USD').rate, Decimal('9100.00'))
 
@@ -58,8 +72,7 @@ class ExchangeRateAlertTests(TenantTestCase):
     def setUp(self):
         super().setUp()
         _hard(self.tenant, '8400')
-        with mock.patch.object(market_rates, 'fetch_units_per_usd', return_value={}):
-            market_rates.set_market_usd_rate(9000)
+        market_rates.set_market_usd_rate(9000)
 
     def _alerts(self):
         return Notification.objects.filter(tenant=self.tenant, notification_type='exchange_rate')
@@ -141,8 +154,7 @@ class AdminExchangeRatePageTests(TenantTestCase):
 
     def test_tenant_page_offers_todays_market_rate(self):
         _hard(self.tenant, '8400')
-        with mock.patch.object(market_rates, 'fetch_units_per_usd', return_value={}):
-            market_rates.set_market_usd_rate(9000)
+        market_rates.set_market_usd_rate(9000)
         r = self.client.get(reverse('core:exchange_rate_page'))
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.context['market'].rate, Decimal('9000.00'))

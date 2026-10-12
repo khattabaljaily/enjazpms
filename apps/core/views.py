@@ -1859,7 +1859,7 @@ def admin_exchange_rates(request):
     from .market_rates import (
         HARD_CURRENCIES, CURRENCY_NAME_AR, DEFAULT_THRESHOLD_PERCENT, set_market_usd_rate,
         find_deviating_tenants, generate_exchange_rate_notifications,
-        fetch_market_suggestion, pending_suggestion, last_confirmed_usd, fmt_money,
+        fetch_market_suggestion, pending_suggestion, last_confirmed_usd, fmt_money, refresh_global_rates,
     )
     from .models import MarketExchangeRate, MarketRateSuggestion
 
@@ -1878,8 +1878,9 @@ def admin_exchange_rates(request):
             log_activity(request, 'تحديث سعر الصرف المرجعي', f'USD = {fmt_money(usd)}', 'update')
             messages.success(request, f'تم حفظ سعر السوق لليوم ({len(saved)} عملات).')
             if missing:
-                messages.warning(request, 'تعذّر اشتقاق: ' + '، '.join(missing) + ' (لم يُجلب سعرها العالمي). أعد الحفظ لاحقًا.')
+                messages.warning(request, 'تعذّر اشتقاق: ' + '، '.join(missing) + ' (لا يوجد سعرها العالمي بعد). اضغط «افحص الآن» ثم أعد الحفظ.')
         elif action == 'fetch':
+            refresh_global_rates()                      # أسعار اليوان/المصري العالمية (شبكة، لا في الحفظ)
             found = fetch_market_suggestion()
             if found:
                 messages.success(request, f'اقتراح جديد من {found.source_name}: بيع الدولار {fmt_money(found.usd_sell)}.')
