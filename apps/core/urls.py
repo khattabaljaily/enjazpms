@@ -79,6 +79,7 @@ urlpatterns = [
     path('system/settings/api/update/', views.admin_settings_update_api, name='admin_settings_update_api'),
 
     # System — Backup
+    path('system/exchange-rates/', views.admin_exchange_rates, name='admin_exchange_rates'),
     path('system/backup/', views.admin_backup, name='admin_backup'),
     path('system/backup/<str:tenant_slug>/', views.admin_backup_detail, name='admin_backup_detail'),
     path('system/backup/<str:tenant_slug>/create/', views.admin_backup_create_api, name='admin_backup_create_api'),

@@ -92,6 +92,7 @@ def notification_api(request):
         'rfq_expiry':      'fa-clock text-info',
         'transfer_done':   'fa-arrows-left-right text-success',
         'stocktake_done':  'fa-clipboard-check text-success',
+        'exchange_rate':   'fa-coins text-warning',
         'general':         'fa-bell text-secondary',
     }
 

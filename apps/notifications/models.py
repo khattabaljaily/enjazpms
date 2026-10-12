@@ -17,6 +17,7 @@ class Notification(TenantMixin):
         ('online_order',     'طلب جديد من المتجر'),
         ('agent_request',    'طلب مندوب جديد'),
         ('expiry_soon',      'قرب انتهاء صلاحية'),
+        ('exchange_rate',    'تغيّر سعر الصرف'),
         ('general',          'إشعار عام'),
     )
 

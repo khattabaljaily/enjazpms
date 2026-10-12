@@ -1070,3 +1070,37 @@ class ExchangeRateHistory(models.Model):
 
     def __str__(self):
         return f'{self.tenant} — {self.rate} @ {self.changed_at:%Y-%m-%d}'
+
+
+class MarketExchangeRate(models.Model):
+    """
+    سعر السوق المرجعي (الموازي) للعملة الصعبة، تُدخله إدارة المنصة يوميًا.
+
+    rate = كم جنيهًا سودانيًا لكل وحدة من العملة. يُدخَل الدولار يدويًا (source='manual')،
+    وبقية العملات (ريال، درهم، يوان، جنيه مصري) تُشتق منه بسعرها العالمي مقابل الدولار
+    (source='derived'). يقارن بها الأمر المجدول سعر كل مشترك مفعّل للعملة الصعبة.
+    """
+    SOURCE_CHOICES = (('manual', 'يدوي'), ('derived', 'مشتق من الدولار'))
+
+    currency   = models.CharField('العملة', max_length=3, db_index=True)
+    rate       = models.DecimalField('السعر بالجنيه', max_digits=14, decimal_places=2)
+    rate_date  = models.DateField('تاريخ السعر', db_index=True)
+    source     = models.CharField('المصدر', max_length=10, choices=SOURCE_CHOICES, default='manual')
+    entered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, verbose_name='أدخله',
+    )
+    created_at = models.DateTimeField('وقت الإدخال', auto_now_add=True)
+    updated_at = models.DateTimeField('آخر تحديث', auto_now=True)
+
+    class Meta:
+        db_table = 'market_exchange_rates'
+        ordering = ['-rate_date', 'currency']
+        verbose_name = 'سعر السوق المرجعي'
+        verbose_name_plural = 'أسعار السوق المرجعية'
+        constraints = [
+            models.UniqueConstraint(fields=['currency', 'rate_date'], name='uniq_market_rate_currency_date'),
+        ]
+
+    def __str__(self):
+        return f'{self.currency} {self.rate} @ {self.rate_date}'

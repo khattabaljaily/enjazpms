@@ -180,6 +180,22 @@
         </div>
     </div>
 
+    {% if market %}
+    <div class="er-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;{% if market_pct and market_pct > 2 or market_pct and market_pct < -2 %}border-color:#f59e0b;{% endif %}">
+        <div>
+            <div class="er-card-title" style="margin-bottom:.25rem"><i class="fas fa-chart-line"></i> سعر السوق اليوم</div>
+            <div style="font-size:.85rem;color:var(--text-secondary)">
+                <strong style="font-size:1.15rem;color:var(--text-primary)">{{ market.rate|floatformat:2 }}</strong>
+                ج.س لكل 1 {{ tenant.hard_currency }}
+                {% if market_pct %}· <span dir="ltr">{{ market_pct|floatformat:1 }}%</span> عن سعرك الحالي{% endif %}
+            </div>
+        </div>
+        <button type="button" class="er-btn" onclick="document.getElementById('erRateInput').value='{{ market.rate|stringformat:'.2f' }}';document.getElementById('erRateInput').focus()">
+            استخدم هذا السعر
+        </button>
+    </div>
+    {% endif %}
+
     <!-- Update form -->
     <div class="er-card">
         <div class="er-card-title"><i class="fas fa-pen-to-square"></i> تحديث سعر الصرف</div>

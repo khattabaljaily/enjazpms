@@ -91,6 +91,19 @@
     </ul>
     {% endif %}
 
+    <!-- سعر الصرف المرجعي -->
+    {% if user.is_superuser or 'manage_exchange_rates' in user.platform_permissions %}
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link{% if request.resolver_match.url_name == 'admin_exchange_rates' %} active{% endif %}" href="{% url 'core:admin_exchange_rates' %}">
+                <span class="nav-icon"><i class="fas fa-coins"></i></span>
+                سعر الصرف المرجعي
+            </a>
+        </li>
+    </ul>
+    {% endif %}
+
     <!-- النسخ الاحتياطي -->
     {% if user.is_superuser or 'manage_backups' in user.platform_permissions %}
     <div class="sidebar-divider"></div>

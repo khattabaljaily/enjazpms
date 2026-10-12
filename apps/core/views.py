@@ -512,6 +512,7 @@ PLATFORM_PERMS = [
     ('manage_support',    'إدارة الدعم الفني',        'fa-headset'),
     ('view_audit_log',    'سجل المراجعة',             'fa-clock-rotate-left'),
     ('manage_backups',    'النسخ الاحتياطية',          'fa-database'),
+    ('manage_exchange_rates', 'سعر الصرف المرجعي',       'fa-coins'),
     ('view_notifications','إشعارات النظام',            'fa-bell'),
     ('manage_marketing',  'إدارة التسويق',              'fa-bullhorn'),
 ]
@@ -1714,9 +1715,13 @@ def exchange_rate_page(request):
         return redirect('core:dashboard')
 
     history = ExchangeRateHistory.objects.filter(tenant=tenant).order_by('-changed_at')[:90]
+    from .market_rates import get_reference_rate, deviation_percent
+    market = get_reference_rate(tenant.hard_currency) if tenant.hard_currency else None
     return render(request, 'core/exchange_rate.html', {
         'tenant': tenant,
         'history': history,
+        'market': market,
+        'market_pct': deviation_percent(tenant.exchange_rate, market.rate) if market else None,
     })
 
 
@@ -1842,6 +1847,55 @@ def _superuser_required(request, perm=None):
         if not request.user.is_superuser:
             return JsonResponse({'success': False, 'message': 'غير مصرح'}, status=403)
     return None
+
+
+@login_required
+def admin_exchange_rates(request):
+    """سعر السوق المرجعي للعملة الصعبة (يُدخل يوميًا) + معاينة المشتركين المتأثرين وإرسال التنبيهات."""
+    if not request.user.has_platform_perm('manage_exchange_rates'):
+        return redirect('core:no_permission')
+
+    from django.contrib import messages
+    from .market_rates import (
+        HARD_CURRENCIES, CURRENCY_NAME_AR, DEFAULT_THRESHOLD_PERCENT, set_market_usd_rate,
+        find_deviating_tenants, generate_exchange_rate_notifications,
+    )
+    from .models import MarketExchangeRate
+
+    today = dj_timezone.localdate()
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'save':
+            try:
+                usd = Decimal(request.POST.get('usd_rate', '').replace(',', '.').strip())
+                if usd <= 0:
+                    raise ValueError
+            except (InvalidOperation, ValueError):
+                messages.error(request, 'سعر الدولار غير صالح')
+                return redirect('core:admin_exchange_rates')
+            saved, missing = set_market_usd_rate(usd, user=request.user, rate_date=today)
+            log_activity(request, 'تحديث سعر الصرف المرجعي', f'USD = {usd}', 'update')
+            messages.success(request, f'تم حفظ سعر السوق لليوم ({len(saved)} عملات).')
+            if missing:
+                messages.warning(request, 'تعذّر اشتقاق: ' + '، '.join(missing) + ' (لم يُجلب سعرها العالمي). أعد الحفظ لاحقًا.')
+        elif action == 'send':
+            notified = generate_exchange_rate_notifications(rate_date=today)
+            log_activity(request, 'إرسال تنبيهات سعر الصرف', f'{len(notified)} مشترك', 'update')
+            messages.success(request, f'تم إرسال التنبيه إلى {len(notified)} مشترك.')
+        return redirect('core:admin_exchange_rates')
+
+    todays = {r.currency: r for r in MarketExchangeRate.objects.filter(rate_date=today)}
+    hard_tenants = Tenant.objects.filter(is_active=True, hard_currency_mode=True).count()
+    deviating = find_deviating_tenants(today) if todays else []
+    return render(request, 'core/admin_exchange_rates.html', {
+        'today': today,
+        'rows': [(c, CURRENCY_NAME_AR.get(c, c), todays.get(c)) for c in HARD_CURRENCIES],
+        'usd_today': todays.get('USD'),
+        'history': MarketExchangeRate.objects.filter(currency='USD').select_related('entered_by')[:14],
+        'hard_tenants': hard_tenants,
+        'deviating': deviating,
+        'threshold': DEFAULT_THRESHOLD_PERCENT,
+    })
 
 
 @login_required
