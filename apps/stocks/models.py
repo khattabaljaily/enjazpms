@@ -105,6 +105,19 @@ class Stock(TenantMixin):
 
         super().save(*args, **kwargs)
 
+    def has_linked_records(self):
+        """
+        هل للمخزن سجلات مرتبطة (فواتير، شحنات، حركات، جرد…) أو كميات غير صفرية؟
+        مخزن بلا سجلات يجوز حذفه أو تغيير نوعه (مركزي ↔ فرعي) بأمان؛ وإلا يُمنع حفاظًا على التقارير.
+        يتجاهل سجلات StockQuantity/ItemBatch التي تُنشأ تلقائيًا بالصفر.
+        """
+        for rel in self._meta.related_objects:
+            if rel.related_model.__name__ in ('StockQuantity', 'ItemBatch'):
+                continue
+            if rel.related_model._base_manager.filter(**{rel.field.name: self}).exists():
+                return True
+        return self.quantities.exclude(quantity=0).exists()
+
     @staticmethod
     def can_add_stock(tenant):
         """

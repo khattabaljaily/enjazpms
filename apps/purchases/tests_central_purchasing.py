@@ -99,14 +99,15 @@ class CentralSettingsAndStockTests(CentralPurchasingBase):
         resp = self.client.post(reverse('stocks:create_api'), {'name': 'بلا فرع', 'is_active': 'on'})
         self.assertEqual(resp.status_code, 400)
 
-    def test_central_stock_hidden_from_branch_user_and_cannot_be_deleted(self):
+    def test_central_stock_hidden_from_branch_user_and_cannot_be_deleted_by_them(self):
         self.client.force_login(self.branch_user)
         resp = self.client.get(reverse('stocks:table_api'), {'draw': 1, 'start': 0, 'length': 50})
         names = [r['name'] for r in resp.json()['data']]
         self.assertEqual(names, ['مخزن الشمال'])
-        self.client.force_login(self.user)
         resp = self.client.post(reverse('stocks:delete_api', args=[self.central.pk]))
-        self.assertEqual(resp.status_code, 400)
+        self.assertNotEqual(resp.status_code, 200)
+        self.assertTrue(Stock.objects.filter(pk=self.central.pk).exists())
+        # حذف مدير النشاط له (بلا سجلات) وحالة وجود سجلات: apps/stocks/tests_central_stock_edit.py
 
     def test_central_stock_checkbox_not_offered_when_not_hybrid(self):
         self.tenant.purchasing_mode = 'decentralized'

@@ -79,7 +79,8 @@ def stock_list(request):
     can_add = active < tenant.max_stocks
 
     context = {
-        'form': StockForm(tenant=tenant, branch=getattr(request, 'branch', None)),
+        'form': StockForm(tenant=tenant, branch=getattr(request, 'branch', None), show_central_toggle=True),
+        'central_exists': Stock.objects.filter(tenant=tenant, is_central=True).exists(),
         'stats': {
             'total': total,
             'active': active,
@@ -242,6 +243,7 @@ def stock_detail_api(request, pk):
             'notes': stock.notes,
             'is_active': stock.is_active,
             'is_default': stock.is_default,
+            'is_central': stock.is_central,
         },
     })
 
@@ -309,10 +311,13 @@ def stock_delete_api(request, pk):
     if _is_locked_main_stock(tenant, stock):
         return JsonResponse({'success': False, 'message': 'المخزن الرئيسي نظامي ولا يمكن تعديله أو حذفه.'}, status=400)
 
-    if stock.is_central:
+    # المخزن المركزي (النمط الهجين): يُحذف كغيره ما لم تكن عليه سجلات. المانع الأوضح هنا؛ والحماية
+    # الأخيرة تبقى في ProtectedError أدناه. (النمط المركزي نظامي ومحجوب أعلاه.)
+    if stock.is_central and stock.has_linked_records():
         return JsonResponse({
             'success': False,
-            'message': 'لا يمكن حذف المخزن المركزي. يمكنك تعطيله إن لم تعد تحتاجه.',
+            'message': 'لا يمكن حذف المخزن المركزي لوجود فواتير أو شحنات أو حركات أو كميات مرتبطة به. '
+                       'يمكنك تعطيله إن لم تعد تحتاجه.',
         }, status=400)
 
     if stock.is_system_default:

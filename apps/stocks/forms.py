@@ -35,7 +35,7 @@ class StockForm(forms.ModelForm):
             'is_central': 'مخزن مركزي للإدارة',
         }
 
-    def __init__(self, *args, tenant=None, branch=None, **kwargs):
+    def __init__(self, *args, tenant=None, branch=None, show_central_toggle=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['branch'].required = False
         if tenant:
@@ -50,11 +50,15 @@ class StockForm(forms.ModelForm):
 
         self.tenant = tenant
         # المخزن المركزي: للمستخدم المركزي (مدير النشاط) فقط، في نمط المشتريات "هجين"،
-        # عند الإنشاء فقط، ومخزن مركزي واحد لكل مشترك.
-        can_make_central = bool(
-            tenant and tenant.has_central_warehouse() and branch is None
-            and not (self.instance and self.instance.pk)
-            and not Stock.objects.filter(tenant=tenant, is_central=True).exists()
+        # مخزن مركزي واحد لكل مشترك. يظهر الحقل: عند الإنشاء (إن لم يوجد مركزي)، وعند تعديل
+        # المخزن المركزي نفسه (لإلغاء مركزيته)، وفي نموذج الصفحة (show_central_toggle) ليتحكم
+        # به الـ JS؛ أما فرض القواعد فهنا في clean.
+        editing = bool(self.instance and self.instance.pk)
+        central_user = bool(tenant and tenant.has_central_warehouse() and branch is None)
+        can_make_central = central_user and (
+            show_central_toggle
+            or (editing and self.instance.is_central)
+            or (not editing and not Stock.objects.filter(tenant=tenant, is_central=True).exists())
         )
         if not can_make_central:
             del self.fields['is_central']
@@ -69,6 +73,13 @@ class StockForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        # إلغاء مركزية مخزن موجود: مسموح فقط إن لم تكن له سجلات مرتبطة (فواتير/شحنات/حركات/كميات).
+        # تحويل مخزن عادي إلى مركزي غير مسموح (الحقل لا يظهر أصلًا لغير المركزي عند التعديل).
+        if ('is_central' in self.fields and self.instance.pk and self.instance.is_central
+                and not cleaned.get('is_central') and self.instance.has_linked_records()):
+            self.add_error(
+                'is_central',
+                'لا يمكن إلغاء المركزية: للمخزن فواتير أو شحنات أو حركات أو كميات مرتبطة به.')
         if cleaned.get('is_central'):
             # مخزن الإدارة المركزية: بلا فرع، وغير افتراضي (الافتراضي للشراء التلقائي في الفروع).
             cleaned['branch'] = None
