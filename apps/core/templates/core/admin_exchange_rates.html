@@ -1,5 +1,5 @@
 {% extends "layouts/dashboard.html" %}
-{% load static %}
+{% load static number_format %}
 
 {% block page_title %}سعر الصرف المرجعي{% endblock %}
 {% block page_description %}سعر السوق الموازي اليومي، ويُنبَّه به المشتركون المفعّلون للعملة الصعبة{% endblock %}
@@ -51,10 +51,10 @@
     {% if suggestion %}
     <div class="xr-sug-row">
         <div>
-            <div class="xr-sug-rate">{{ suggestion.usd_sell|floatformat:2 }} <small>ج.س لكل 1 دولار (متوسط البيع)</small></div>
+            <div class="xr-sug-rate">{{ suggestion.usd_sell|money }} <small>ج.س لكل 1 دولار (متوسط البيع)</small></div>
             <div class="xr-hint" style="margin:.3rem 0 0">
-                {% if suggestion.usd_buy %}الشراء {{ suggestion.usd_buy|floatformat:2 }} · {% endif %}
-                {% if suggestion_pct %}<span dir="ltr" class="{% if suggestion_pct > 0 %}xr-up{% else %}xr-down{% endif %}">{{ suggestion_pct|floatformat:1 }}%</span> عن آخر سعر معتمد ({{ reference_usd|floatformat:2 }}) ·{% endif %}
+                {% if suggestion.usd_buy %}الشراء {{ suggestion.usd_buy|money }} · {% endif %}
+                {% if suggestion_pct %}<span dir="ltr" class="{% if suggestion_pct > 0 %}xr-up{% else %}xr-down{% endif %}">{{ suggestion_pct|floatformat:1 }}%</span> عن آخر سعر معتمد ({{ reference_usd|money }}) ·{% endif %}
                 المصدر: <a href="{{ suggestion.source_url }}" target="_blank" rel="noopener">{{ suggestion.source_name }}</a>
                 · نُشر {{ suggestion.published_at|date:"Y-m-d H:i" }}
             </div>
@@ -84,7 +84,7 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="save">
             <input type="number" id="xrUsd" name="usd_rate" class="xr-input" step="0.01" min="0.01" inputmode="decimal"
-                   placeholder="مثال: 9000" value="{{ usd_today.rate|default_if_none:'' }}" required>
+                   placeholder="مثال: 9,000.00" value="{{ usd_today.rate|default_if_none:'' }}" required>
             <button type="submit" class="xr-btn"><i class="fas fa-save"></i> حفظ</button>
         </form>
 
@@ -93,7 +93,7 @@
             <tbody>
             {% for code, name, row in rows %}
                 <tr><td>{{ name }} ({{ code }})</td>
-                    <td>{% if row %}<strong>{{ row.rate|floatformat:2 }}</strong>{% else %}—{% endif %}</td>
+                    <td>{% if row %}<strong>{{ row.rate|money }}</strong>{% else %}—{% endif %}</td>
                     <td>{% if row %}<span class="xr-tag">{{ row.get_source_display }}</span>{% endif %}</td></tr>
             {% endfor %}
             </tbody>
@@ -111,8 +111,8 @@
                 <tbody>
                 {% for tenant, ref, pct in deviating %}
                     <tr><td>{{ tenant.name }} <span class="xr-tag">{{ tenant.hard_currency }}</span></td>
-                        <td>{{ tenant.exchange_rate|floatformat:2 }}</td>
-                        <td>{{ ref.rate|floatformat:2 }}</td>
+                        <td>{{ tenant.exchange_rate|money }}</td>
+                        <td>{{ ref.rate|money }}</td>
                         <td class="{% if pct > 0 %}xr-up{% else %}xr-down{% endif %}" dir="ltr">{{ pct|floatformat:1 }}%</td></tr>
                 {% endfor %}
                 </tbody>
@@ -135,7 +135,7 @@
         <thead><tr><th>التاريخ</th><th>السعر</th><th>أدخله</th></tr></thead>
         <tbody>
         {% for h in history %}
-            <tr><td>{{ h.rate_date|date:"Y-m-d" }}</td><td><strong>{{ h.rate|floatformat:2 }}</strong></td>
+            <tr><td>{{ h.rate_date|date:"Y-m-d" }}</td><td><strong>{{ h.rate|money }}</strong></td>
                 <td>{{ h.entered_by.get_full_name|default:h.entered_by.username|default:"—" }}</td></tr>
         {% empty %}
             <tr><td colspan="3" class="xr-empty">لا توجد أسعار بعد.</td></tr>

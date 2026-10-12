@@ -69,8 +69,8 @@ class ExchangeRateAlertTests(TenantTestCase):
         self.assertEqual([t for t, _ in notified], [self.tenant])
         n = self._alerts().get()
         self.assertEqual(n.priority, 'high')                          # +7.1% ≥ 5%
-        self.assertIn('9,000', n.message)
-        self.assertIn('8,400', n.message)
+        self.assertIn('9,000.00', n.message)                           # صيغة النظام: 9,000.00
+        self.assertIn('8,400.00', n.message)
         self.assertEqual(n.link, '/settings/exchange-rate/')
         self.assertEqual(market_rates.generate_exchange_rate_notifications(), [])
         self.assertEqual(self._alerts().count(), 1)
@@ -147,6 +147,7 @@ class AdminExchangeRatePageTests(TenantTestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.context['market'].rate, Decimal('9000.00'))
         self.assertContains(r, 'سعر السوق اليوم')
+        self.assertContains(r, '9,000.00')
 
 
 # ── الاقتراح الآلي من خلاصة الأخبار ─────────────────────────────────────
@@ -182,6 +183,7 @@ class MarketSuggestionTests(TenantTestCase):
         self.assertEqual(MarketRateSuggestion.objects.count(), 1)
         n = AdminNotification.objects.get(notification_type='exchange_rate')
         self.assertIn('9,004.27', n.title)
+        self.assertIn('9,004.27', n.message)
         self.assertEqual(n.link, '/system/exchange-rates/')
         # لا يصل المشتركين شيء، ولا يتغير أي سعر معتمد
         self.assertFalse(Notification.objects.filter(notification_type='exchange_rate').exists())
@@ -243,6 +245,7 @@ class SuggestionReviewViewTests(TenantTestCase):
         page = self.client.get(reverse('core:admin_exchange_rates'))
         self.assertEqual(page.context['suggestion'].pk, self.s.pk)
         self.assertContains(page, 'اعتمد هذا السعر')
+        self.assertContains(page, '9,004.27')                          # لا 9004.27 ولا 9,004
 
     def test_accepting_sets_the_reference_but_does_not_alert_tenants_yet(self):
         with mock.patch.object(market_rates, 'fetch_units_per_usd', return_value={}):

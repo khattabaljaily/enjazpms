@@ -139,8 +139,9 @@ def find_deviating_tenants(rate_date=None, threshold=DEFAULT_THRESHOLD_PERCENT, 
     return result
 
 
-def _fmt(value):
-    return f'{Decimal(value):,.2f}'.rstrip('0').rstrip('.')
+def fmt_money(value):
+    """صيغة الأرقام في النظام: 9,000.00"""
+    return f'{Decimal(str(value)):,.2f}'
 
 
 def generate_exchange_rate_notifications(rate_date=None, threshold=DEFAULT_THRESHOLD_PERCENT,
@@ -171,8 +172,8 @@ def generate_exchange_rate_notifications(rate_date=None, threshold=DEFAULT_THRES
             priority='high' if abs(pct) >= 5 else 'medium',
             title=f'تغيّر سعر الصرف: {name} {direction} في السوق',
             message=(
-                f'سعر السوق اليوم لكل 1 {name}: {_fmt(ref.rate)} ج.س، بينما سعر الصرف المعتمد في '
-                f'نظامك {_fmt(tenant.exchange_rate)} ج.س (فرق {pct:+.1f}%). '
+                f'سعر السوق اليوم لكل 1 {name}: {fmt_money(ref.rate)} ج.س، بينما سعر الصرف المعتمد في '
+                f'نظامك {fmt_money(tenant.exchange_rate)} ج.س (فرق {pct:+.1f}%). '
                 f'حدّث السعر ليُعاد تسعير أصنافك وتبقى هوامش ربحك دقيقة.'
             ),
             link='/settings/exchange-rate/',
@@ -277,11 +278,11 @@ def fetch_market_suggestion(now=None, feeds=None):
         )
         change = ''
         if reference:
-            change = f' ({(sell - reference) / reference * 100:+.1f}% عن آخر سعر معتمد {_fmt(reference)})'
+            change = f' ({(sell - reference) / reference * 100:+.1f}% عن آخر سعر معتمد {fmt_money(reference)})'
         AdminNotification.push(
             notification_type='exchange_rate',
-            title=f'اقتراح سعر الدولار اليوم: {_fmt(sell)} ج.س',
-            message=f'قرأ النظام من {name}: متوسط بيع الدولار {_fmt(sell)}{change}. راجعه واعتمده أو عدّله، '
+            title=f'اقتراح سعر الدولار اليوم: {fmt_money(sell)} ج.س',
+            message=f'قرأ النظام من {name}: متوسط بيع الدولار {fmt_money(sell)}{change}. راجعه واعتمده أو عدّله، '
                     f'ومن سعرك أنت يُنبَّه المشتركون.',
             link='/system/exchange-rates/', priority='high',
             ref_key=f'xr_suggestion_{suggestion.pk}',

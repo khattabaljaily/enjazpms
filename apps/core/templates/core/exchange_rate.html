@@ -1,5 +1,5 @@
 {% extends "layouts/dashboard.html" %}
-{% load static %}
+{% load static number_format %}
 
 {% block page_title %}سعر الصرف{% endblock %}
 {% block page_description %}تحديث سعر الصرف ومتابعة سجل التغييرات{% endblock %}
@@ -185,7 +185,7 @@
         <div>
             <div class="er-card-title" style="margin-bottom:.25rem"><i class="fas fa-chart-line"></i> سعر السوق اليوم</div>
             <div style="font-size:.85rem;color:var(--text-secondary)">
-                <strong style="font-size:1.15rem;color:var(--text-primary)">{{ market.rate|floatformat:2 }}</strong>
+                <strong style="font-size:1.15rem;color:var(--text-primary)">{{ market.rate|money }}</strong>
                 ج.س لكل 1 {{ tenant.hard_currency }}
                 {% if market_pct %}· <span dir="ltr">{{ market_pct|floatformat:1 }}%</span> عن سعرك الحالي{% endif %}
             </div>

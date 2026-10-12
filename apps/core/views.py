@@ -1859,7 +1859,7 @@ def admin_exchange_rates(request):
     from .market_rates import (
         HARD_CURRENCIES, CURRENCY_NAME_AR, DEFAULT_THRESHOLD_PERCENT, set_market_usd_rate,
         find_deviating_tenants, generate_exchange_rate_notifications,
-        fetch_market_suggestion, pending_suggestion, last_confirmed_usd,
+        fetch_market_suggestion, pending_suggestion, last_confirmed_usd, fmt_money,
     )
     from .models import MarketExchangeRate, MarketRateSuggestion
 
@@ -1875,14 +1875,14 @@ def admin_exchange_rates(request):
                 messages.error(request, 'سعر الدولار غير صالح')
                 return redirect('core:admin_exchange_rates')
             saved, missing = set_market_usd_rate(usd, user=request.user, rate_date=today)
-            log_activity(request, 'تحديث سعر الصرف المرجعي', f'USD = {usd}', 'update')
+            log_activity(request, 'تحديث سعر الصرف المرجعي', f'USD = {fmt_money(usd)}', 'update')
             messages.success(request, f'تم حفظ سعر السوق لليوم ({len(saved)} عملات).')
             if missing:
                 messages.warning(request, 'تعذّر اشتقاق: ' + '، '.join(missing) + ' (لم يُجلب سعرها العالمي). أعد الحفظ لاحقًا.')
         elif action == 'fetch':
             found = fetch_market_suggestion()
             if found:
-                messages.success(request, f'اقتراح جديد من {found.source_name}: بيع الدولار {found.usd_sell}.')
+                messages.success(request, f'اقتراح جديد من {found.source_name}: بيع الدولار {fmt_money(found.usd_sell)}.')
             else:
                 messages.info(request, 'لا يوجد اقتراح جديد: لا مقال حديث صالح، أو سبقت قراءته.')
         elif action in ('accept_suggestion', 'dismiss_suggestion'):
@@ -1897,8 +1897,8 @@ def admin_exchange_rates(request):
                 saved, missing = set_market_usd_rate(suggestion.usd_sell, user=request.user, rate_date=today)
                 suggestion.status = 'accepted'
                 suggestion.save(update_fields=['status'])
-                log_activity(request, 'اعتماد سعر الصرف المقترح', f'USD = {suggestion.usd_sell}', 'update')
-                messages.success(request, f'تم اعتماد {suggestion.usd_sell} سعرًا لليوم ({len(saved)} عملات).')
+                log_activity(request, 'اعتماد سعر الصرف المقترح', f'USD = {fmt_money(suggestion.usd_sell)}', 'update')
+                messages.success(request, f'تم اعتماد {fmt_money(suggestion.usd_sell)} سعرًا لليوم ({len(saved)} عملات).')
                 if missing:
                     messages.warning(request, 'تعذّر اشتقاق: ' + '، '.join(missing) + ' (لم يُجلب سعرها العالمي).')
         elif action == 'send':

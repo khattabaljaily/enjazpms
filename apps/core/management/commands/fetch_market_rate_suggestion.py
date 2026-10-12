@@ -9,7 +9,7 @@ Cron المقترح (صباحًا بتوقيت الخرطوم، قبل أمر ا
 """
 from django.core.management.base import BaseCommand
 
-from apps.core.market_rates import fetch_market_suggestion
+from apps.core.market_rates import fetch_market_suggestion, fmt_money
 
 
 class Command(BaseCommand):
@@ -21,4 +21,5 @@ class Command(BaseCommand):
             self.stdout.write('لا يوجد اقتراح جديد (لا مقال حديث صالح أو سبقت قراءته).')
             return
         self.stdout.write(self.style.SUCCESS(
-            f'اقتراح جديد: بيع {suggestion.usd_sell} / شراء {suggestion.usd_buy} — {suggestion.source_name}'))
+            f'اقتراح جديد: بيع {fmt_money(suggestion.usd_sell)} / شراء '
+            f'{fmt_money(suggestion.usd_buy) if suggestion.usd_buy else "—"} — {suggestion.source_name}'))
