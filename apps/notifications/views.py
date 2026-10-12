@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST, require_GET
 from apps.accounts.decorators import require_permission
+from apps.core.utils import short_text
 
 from .models import Notification
 from .services import (
@@ -101,7 +102,7 @@ def notification_api(request):
         items.append({
             'id': n.id,
             'title': n.title,
-            'message': (f'[{n.branch.name}] ' if show_branch and n.branch_id else '') + n.message[:80],
+            'message': (f'[{n.branch.name}] ' if show_branch and n.branch_id else '') + short_text(n.message),
             'is_read': n.is_read,
             'link': n.link,
             'priority': n.priority,

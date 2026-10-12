@@ -6,7 +6,9 @@
 
 {% block extra_css %}
 <style>
-.xr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
+.xr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: stretch; }
+.xr-card--fill { display: flex; flex-direction: column; }
+.xr-card--fill .xr-table { margin-top: .2rem; }
 .xr-card { background: var(--surface); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.25rem; }
 .xr-card h3 { font-size: 1rem; font-weight: 800; margin: 0 0 .9rem; color: var(--text-primary); display: flex; align-items: center; gap: .5rem; }
 .xr-card h3 i { color: var(--primary); }
@@ -79,7 +81,7 @@
         <h3><i class="fas fa-pen-to-square"></i> سعر السوق الموازي اليوم</h3>
         <p class="xr-hint">أدخل سعر <strong>الدولار الواحد بالجنيه السوداني</strong>. تُشتق منه تلقائيًا بقية العملات
             (الريال والدرهم بربطهما الرسمي، واليوان والجنيه المصري بسعرهما العالمي مقابل الدولار).
-            أدخله مرة واحدة يوميًا بعد استقرار السوق (الظهر تقريبًا).</p>
+            أدخله بعد استقرار السوق، ويمكنك تحديثه إن تغيّر. بعد الحفظ يُنبَّه المشتركون المتأثرون تلقائيًا (يفحص النظام كل ساعة، ويُنبَّه من يزيد فرق سعره عن {{ threshold }}%).</p>
         <form method="post" class="xr-row">
             {% csrf_token %}
             <input type="hidden" name="action" value="save">
@@ -100,68 +102,20 @@
         </table>
     </div>
 
-    <div class="xr-card">
-        <h3><i class="fas fa-bell"></i> التنبيهات</h3>
-        <p class="xr-hint">{{ hard_tenants }} مشترك مفعّل للعملة الصعبة. يُنبَّه من يزيد فرق سعره عن السوق على {{ threshold }}%،
-            مرة واحدة كحد أقصى في اليوم. يعمل ذلك تلقائيًا كل يوم الظهر، ويمكنك إرساله الآن بعد إدخال السعر.</p>
-        {% if usd_today %}
-            {% if deviating %}
-            <table class="xr-table">
-                <thead><tr><th>المشترك</th><th>سعره</th><th>السوق</th><th>الفرق</th></tr></thead>
-                <tbody>
-                {% for tenant, ref, pct in deviating %}
-                    <tr><td>{{ tenant.name }} <span class="xr-tag">{{ tenant.hard_currency }}</span></td>
-                        <td>{{ tenant.exchange_rate|money }}</td>
-                        <td>{{ ref.rate|money }}</td>
-                        <td class="{% if pct > 0 %}xr-up{% else %}xr-down{% endif %}" dir="ltr">{{ pct|floatformat:1 }}%</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            <button type="button" class="xr-btn" style="margin-top:1rem" data-bs-toggle="modal" data-bs-target="#sendAlertsModal">
-                <i class="fas fa-paper-plane"></i> إرسال التنبيه الآن
-            </button>
-            {% else %}
-            <div class="xr-empty"><i class="fas fa-circle-check"></i> لا يوجد مشترك يختلف سعره عن السوق بأكثر من {{ threshold }}%.</div>
-            {% endif %}
-        {% else %}
-            <div class="xr-empty">أدخل سعر اليوم لمعاينة المشتركين المتأثرين.</div>
-        {% endif %}
-    </div>
-</div>
-
-<div class="xr-card" style="margin-top:1.25rem">
+<div class="xr-card xr-card--fill">
     <h3><i class="fas fa-clock-rotate-left"></i> سجل سعر الدولار</h3>
     <table class="xr-table">
         <thead><tr><th>التاريخ</th><th>السعر</th><th>أدخله</th></tr></thead>
         <tbody>
         {% for h in history %}
             <tr><td>{{ h.rate_date|date:"Y-m-d" }}</td><td><strong>{{ h.rate|money }}</strong></td>
-                <td>{{ h.entered_by.get_full_name|default:h.entered_by.username|default:"—" }}</td></tr>
+                <td>{% if h.entered_by %}{{ h.entered_by.get_full_name|default:h.entered_by.username }}{% else %}—{% endif %}</td></tr>
         {% empty %}
             <tr><td colspan="3" class="xr-empty">لا توجد أسعار بعد.</td></tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
-
-<!-- مودال تأكيد إرسال التنبيهات -->
-<div class="modal fade" id="sendAlertsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
-        <div class="modal-content cx-confirm-modal">
-            <div class="cx-confirm-body">
-                <div class="cx-confirm-icon"><i class="fas fa-paper-plane"></i></div>
-                <h5 class="cx-confirm-title">إرسال تنبيه سعر الصرف؟</h5>
-                <p class="cx-confirm-desc">سيصل إشعار إلى مديري {{ deviating|length }} مشترك يختلف سعرهم عن السوق.
-                    لن يتغير أي سعر تلقائيًا، فالقرار لكل مشترك.</p>
-            </div>
-            <div class="cx-confirm-footer">
-                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
-                <form method="post" style="display:inline">
-                    {% csrf_token %}<input type="hidden" name="action" value="send">
-                    <button type="submit" class="cx-btn-warning"><i class="fas fa-paper-plane"></i> نعم، أرسل</button>
-                </form>
-            </div>
-        </div>
-    </div>
 </div>
+
 {% endblock %}

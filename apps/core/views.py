@@ -25,7 +25,7 @@ from .forms import TenantForm, BranchForm
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country, CURRENCY_CHOICES
 from apps.treasury.models import Treasury, TreasuryMovement
 from apps.expenses.models import Expense
-from .utils import filter_by_branch_via, filter_by_branch_strict, resolve_report_scope
+from .utils import filter_by_branch_via, filter_by_branch_strict, resolve_report_scope, short_text
 
 
 def about(request):
@@ -1202,7 +1202,7 @@ def admin_notifications_api(request):
         {
             'id':      n.pk,
             'title':   n.title,
-            'message': n.message[:80],
+            'message': short_text(n.message),
             'is_read': n.is_read,
             'link':    n.link,
             'priority': n.priority,
@@ -1851,14 +1851,13 @@ def _superuser_required(request, perm=None):
 
 @login_required
 def admin_exchange_rates(request):
-    """سعر السوق المرجعي للعملة الصعبة (يُدخل يوميًا) + معاينة المشتركين المتأثرين وإرسال التنبيهات."""
+    """سعر السوق المرجعي للعملة الصعبة. حفظه/اعتماده يُنبّه المشتركين تلقائيًا (فحص كل ساعة: check_exchange_rates)."""
     if not request.user.has_platform_perm('manage_exchange_rates'):
         return redirect('core:no_permission')
 
     from django.contrib import messages
     from .market_rates import (
         HARD_CURRENCIES, CURRENCY_NAME_AR, DEFAULT_THRESHOLD_PERCENT, set_market_usd_rate,
-        find_deviating_tenants, generate_exchange_rate_notifications,
         fetch_market_suggestion, pending_suggestion, last_confirmed_usd, fmt_money, refresh_global_rates,
     )
     from .models import MarketExchangeRate, MarketRateSuggestion
@@ -1876,7 +1875,7 @@ def admin_exchange_rates(request):
                 return redirect('core:admin_exchange_rates')
             saved, missing = set_market_usd_rate(usd, user=request.user, rate_date=today)
             log_activity(request, 'تحديث سعر الصرف المرجعي', f'USD = {fmt_money(usd)}', 'update')
-            messages.success(request, f'تم حفظ سعر السوق لليوم ({len(saved)} عملات).')
+            messages.success(request, f'تم حفظ سعر السوق لليوم ({len(saved)} عملات). سيصل التنبيه للمشتركين المتأثرين تلقائيًا خلال ساعة.')
             if missing:
                 messages.warning(request, 'تعذّر اشتقاق: ' + '، '.join(missing) + ' (لا يوجد سعرها العالمي بعد). اضغط «افحص الآن» ثم أعد الحفظ.')
         elif action == 'fetch':
@@ -1899,20 +1898,14 @@ def admin_exchange_rates(request):
                 suggestion.status = 'accepted'
                 suggestion.save(update_fields=['status'])
                 log_activity(request, 'اعتماد سعر الصرف المقترح', f'USD = {fmt_money(suggestion.usd_sell)}', 'update')
-                messages.success(request, f'تم اعتماد {fmt_money(suggestion.usd_sell)} سعرًا لليوم ({len(saved)} عملات).')
+                messages.success(request, f'تم اعتماد {fmt_money(suggestion.usd_sell)} سعرًا لليوم ({len(saved)} عملات). سيصل التنبيه للمشتركين المتأثرين تلقائيًا خلال ساعة.')
                 if missing:
                     messages.warning(request, 'تعذّر اشتقاق: ' + '، '.join(missing) + ' (لم يُجلب سعرها العالمي).')
-        elif action == 'send':
-            notified = generate_exchange_rate_notifications(rate_date=today)
-            log_activity(request, 'إرسال تنبيهات سعر الصرف', f'{len(notified)} مشترك', 'update')
-            messages.success(request, f'تم إرسال التنبيه إلى {len(notified)} مشترك.')
         return redirect('core:admin_exchange_rates')
 
     todays = {r.currency: r for r in MarketExchangeRate.objects.filter(rate_date=today)}
     suggestion = pending_suggestion()
     reference = last_confirmed_usd()
-    hard_tenants = Tenant.objects.filter(is_active=True, hard_currency_mode=True).count()
-    deviating = find_deviating_tenants(today) if todays else []
     return render(request, 'core/admin_exchange_rates.html', {
         'today': today,
         'rows': [(c, CURRENCY_NAME_AR.get(c, c), todays.get(c)) for c in HARD_CURRENCIES],
@@ -1920,9 +1913,7 @@ def admin_exchange_rates(request):
         'suggestion': suggestion,
         'suggestion_pct': ((suggestion.usd_sell - reference) / reference * 100) if suggestion and reference else None,
         'reference_usd': reference,
-        'history': MarketExchangeRate.objects.filter(currency='USD').select_related('entered_by')[:14],
-        'hard_tenants': hard_tenants,
-        'deviating': deviating,
+        'history': MarketExchangeRate.objects.filter(currency='USD').select_related('entered_by')[:8],
         'threshold': DEFAULT_THRESHOLD_PERCENT,
     })
 

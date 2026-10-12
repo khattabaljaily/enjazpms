@@ -280,3 +280,13 @@ def scoped_money_accounts(qs, request):
     if is_central_request(request):
         return qs.filter(is_head_office=True)
     return operational_money_accounts(qs, request)
+
+
+def short_text(text, limit=220):
+    """يقصّ النص عند حدّ كلمة مع «…» (لا في منتصف رقم)، ويُبقيه كاملًا إن كان أقصر من الحد."""
+    text = text or ''
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(' ', 1)[0].rstrip('،,.:؛ ')
+    return cut + '…'
+

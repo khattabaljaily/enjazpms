@@ -85,8 +85,21 @@ class ExchangeRateAlertTests(TenantTestCase):
         self.assertIn('9,000.00', n.message)                           # صيغة النظام: 9,000.00
         self.assertIn('8,400.00', n.message)
         self.assertEqual(n.link, '/settings/exchange-rate/')
+        self.assertEqual(market_rates.generate_exchange_rate_notifications(), [])   # الساعة التالية: لا تكرار
+        self.assertEqual(self._alerts().count(), 1)
+
+    def test_resaving_the_same_rate_does_not_alert_again(self):
+        market_rates.generate_exchange_rate_notifications()
+        market_rates.set_market_usd_rate(9000)                        # نفس الرقم
         self.assertEqual(market_rates.generate_exchange_rate_notifications(), [])
         self.assertEqual(self._alerts().count(), 1)
+
+    def test_a_changed_rate_the_same_day_alerts_again(self):
+        market_rates.generate_exchange_rate_notifications()
+        market_rates.set_market_usd_rate(9500)                        # تغيّر السعر مرة ثانية في اليوم
+        self.assertEqual(len(market_rates.generate_exchange_rate_notifications()), 1)
+        self.assertEqual(self._alerts().count(), 2)
+        self.assertIn('9,500.00', self._alerts().order_by('-created_at').first().message)
 
     def test_tenant_within_threshold_is_not_alerted(self):
         _hard(self.tenant, '8900')                                    # +1.1%
@@ -132,19 +145,37 @@ class AdminExchangeRatePageTests(TenantTestCase):
         r = self.client.get(reverse('core:admin_exchange_rates'))
         self.assertEqual(r.status_code, 302)
 
-    def test_superuser_saves_rate_and_sends_alerts(self):
+    def test_superuser_saves_rate_and_hourly_check_alerts_tenants(self):
         _hard(self.tenant, '8400')
         su = User.objects.create_superuser(username='root-xr', password='secret123')
         self.client.force_login(su)
-        with mock.patch.object(market_rates, 'fetch_units_per_usd', return_value={}):
-            r = self.client.post(reverse('core:admin_exchange_rates'), {'action': 'save', 'usd_rate': '9000'})
+        r = self.client.post(reverse('core:admin_exchange_rates'), {'action': 'save', 'usd_rate': '9000'})
         self.assertEqual(r.status_code, 302)
         self.assertEqual(MarketExchangeRate.objects.get(currency='USD').rate, Decimal('9000.00'))
+        # لا زر إرسال يدوي: التنبيه يخرج من الفحص الدوري
+        self.assertFalse(Notification.objects.filter(notification_type='exchange_rate').exists())
+        call_command('check_exchange_rates', stdout=StringIO())
+        self.assertEqual(Notification.objects.filter(notification_type='exchange_rate').count(), 1)
         page = self.client.get(reverse('core:admin_exchange_rates'))
         self.assertEqual(page.status_code, 200)
-        self.assertEqual(len(page.context['deviating']), 1)
+        self.assertNotContains(page, 'إرسال التنبيه الآن')
+        self.assertContains(page, 'سجل سعر الدولار')
+
+    def test_manual_send_action_is_gone(self):
+        _hard(self.tenant, '8400')
+        su = User.objects.create_superuser(username='root-xr3', password='secret123')
+        self.client.force_login(su)
+        market_rates.set_market_usd_rate(9000)
         self.client.post(reverse('core:admin_exchange_rates'), {'action': 'send'})
-        self.assertEqual(Notification.objects.filter(notification_type='exchange_rate').count(), 1)
+        self.assertFalse(Notification.objects.filter(notification_type='exchange_rate').exists())
+
+    def test_page_renders_when_the_entering_user_was_deleted(self):
+        su = User.objects.create_superuser(username='root-xr4', password='secret123')
+        staff = User.objects.create_user(username='gone-xr', password='secret123')
+        market_rates.set_market_usd_rate(9000, user=staff)
+        staff.delete()                                                 # entered_by يصير فارغًا (SET_NULL)
+        self.client.force_login(su)
+        self.assertEqual(self.client.get(reverse('core:admin_exchange_rates')).status_code, 200)
 
     def test_invalid_rate_is_rejected(self):
         su = User.objects.create_superuser(username='root-xr2', password='secret123')
@@ -266,8 +297,8 @@ class SuggestionReviewViewTests(TenantTestCase):
         self.assertEqual(self.s.status, 'accepted')
         self.assertEqual(MarketExchangeRate.objects.get(currency='USD').rate, Decimal('9004.27'))
         self.assertFalse(Notification.objects.filter(notification_type='exchange_rate').exists())
-        # الإرسال خطوة منفصلة بيد المشرف (أو أمر الظهر)
-        self._post(action='send')
+        # التنبيه يخرج من الفحص الدوري (كل ساعة) بعد اعتماد المشرف
+        market_rates.generate_exchange_rate_notifications()
         self.assertEqual(Notification.objects.filter(notification_type='exchange_rate').count(), 1)
 
     def test_dismissing_changes_nothing_else(self):
@@ -286,3 +317,24 @@ class SuggestionReviewViewTests(TenantTestCase):
         self._post(action='accept_suggestion', suggestion_id=self.s.pk)
         self.s.refresh_from_db()
         self.assertEqual(self.s.status, 'pending')
+
+
+class NotificationDropdownTextTests(TenantTestCase):
+    """قائمة الإشعارات المنسدلة كانت تقص الرسالة عند 80 حرفًا فتظهر «...سعرك 7,» بدل «7,500.00»."""
+
+    def test_exchange_alert_is_shown_with_the_full_figures(self):
+        _hard(self.tenant, '7500')
+        market_rates.set_market_usd_rate(9000)
+        market_rates.generate_exchange_rate_notifications()
+        data = self.client.get(reverse('notifications:api')).json()
+        message = data['items'][0]['message']
+        self.assertIn('7,500.00', message)
+        self.assertIn('9,000.00', message)
+
+    def test_short_text_cuts_on_a_word_boundary(self):
+        from apps.core.utils import short_text
+        self.assertEqual(short_text('قصير', 50), 'قصير')
+        out = short_text('كلمة ' * 100, 50)
+        self.assertTrue(out.endswith('…'))
+        self.assertLessEqual(len(out), 51)
+        self.assertNotIn('كلم…', out)

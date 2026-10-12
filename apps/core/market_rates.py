@@ -14,7 +14,7 @@ import logging
 import re
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, time, timedelta
+from datetime import timedelta
 from email.utils import parsedate_to_datetime
 from decimal import Decimal, InvalidOperation
 
@@ -109,10 +109,15 @@ def set_market_usd_rate(usd_rate, user=None, rate_date=None):
         else:
             missing.append(code)
             continue
-        row, _ = MarketExchangeRate.objects.update_or_create(
-            currency=code, rate_date=rate_date,
-            defaults={'rate': value.quantize(Decimal('0.01')), 'source': source, 'entered_by': user},
-        )
+        value = value.quantize(Decimal('0.01'))
+        row = MarketExchangeRate.objects.filter(currency=code, rate_date=rate_date).first()
+        if row is None:
+            row = MarketExchangeRate.objects.create(
+                currency=code, rate_date=rate_date, rate=value, source=source, entered_by=user)
+        elif row.rate != value or row.source != source:
+            # updated_at يتحرك فقط عند تغيّر السعر فعلًا، فإعادة حفظ نفس الرقم لا تُعيد التنبيه
+            row.rate, row.source, row.entered_by = value, source, user
+            row.save()
         saved.append(row)
     return saved, missing
 
@@ -160,17 +165,16 @@ def fmt_money(value):
 def generate_exchange_rate_notifications(rate_date=None, threshold=DEFAULT_THRESHOLD_PERCENT,
                                          tenant_slug=None, dry_run=False):
     """
-    ينشئ إشعارًا واحدًا في اليوم لكل مشترك اختلف سعره عن السوق. يُرجع قائمة (tenant, pct)
-    للمشتركين الذين أُنشئ لهم إشعار (أو سيُنشأ في dry_run).
+    ينشئ إشعارًا لكل مشترك اختلف سعره عن سعر السوق المرجعي المعتمد. يعمل كل ساعة، لذلك لا يكرر
+    التنبيه لنفس السعر المرجعي: إن وُجد إشعار للمشترك أحدث من آخر تغيير للمرجع تجاوزناه، وإن غيّرت
+    الإدارة السعر لاحقًا (مرتين في اليوم مثلًا) وبقي الفرق وصل تنبيه جديد. يُرجع قائمة (tenant, pct).
     """
     from apps.notifications.models import Notification
 
-    # نطاق زمني لا __date: على MySQL بلا جداول المناطق الزمنية يرجع __date فارغًا.
-    day_start = timezone.make_aware(datetime.combine(timezone.localdate(), time.min))
     notified = []
     for tenant, ref, pct in find_deviating_tenants(rate_date, threshold, tenant_slug):
         already = Notification.objects.filter(
-            tenant=tenant, notification_type='exchange_rate', created_at__gte=day_start,
+            tenant=tenant, notification_type='exchange_rate', created_at__gte=ref.updated_at,
         ).exists()
         if already:
             continue
