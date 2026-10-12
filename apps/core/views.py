@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator
 from apps.accounts.decorators import require_permission, deny_branch_scoped, branch_scope_exempt
 from apps.accounts.activity_service import log_activity
-from django.db.models import Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
+from django.db.models import ProtectedError, Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
 from datetime import datetime, timedelta, date as date_type
@@ -23,7 +23,7 @@ from .models import Settings, Tenant, BusinessType, SupportTicket, SupportMessag
 from apps.notifications.models import Notification
 from .forms import TenantForm, BranchForm
 from .constants import COUNTRY_CHOICES, COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country, CURRENCY_CHOICES
-from apps.treasury.models import TreasuryMovement
+from apps.treasury.models import Treasury, TreasuryMovement
 from apps.expenses.models import Expense
 from .utils import filter_by_branch_via, filter_by_branch_strict, resolve_report_scope
 
@@ -3214,8 +3214,12 @@ def branch_update_api(request, pk):
     except Branch.DoesNotExist:
         return _branch_json_error('الفرع غير موجود', status=404)
 
+    was_active = b.is_active
     form = BranchForm(request.POST, instance=b)
     if form.is_valid():
+        if form.cleaned_data.get('is_active') and not was_active and not Branch.can_add_branch(tenant):
+            return _branch_json_error(
+                f'لقد وصلت للحد الأقصى المسموح به من الفروع ({tenant.max_branches}). يرجى ترقية الباقة لزيادة الحد.')
         from django.db import transaction
         with transaction.atomic():
             updated = form.save()
@@ -3242,6 +3246,25 @@ def branch_update_api(request, pk):
                          status=400, json_dumps_params={'ensure_ascii': False})
 
 
+def _branch_has_records(branch):
+    """هل يرتبط بالفرع أي سجل (مستخدم، خزينة، فاتورة...)؟ الإشعارات وحدها لا تمنع الحذف."""
+    for rel in Branch._meta.related_objects:
+        if rel.related_model is Notification or not rel.one_to_many:
+            continue
+        qs = rel.related_model._base_manager.filter(**{rel.field.name: branch})
+        if rel.related_model is Treasury:
+            qs = qs.exclude(pk__in=_untouched_branch_treasuries(branch).values('pk'))
+        if qs.exists():
+            return True
+    return False
+
+
+def _untouched_branch_treasuries(branch):
+    """خزائن الفرع المُنشأة تلقائياً مع الفرع ولم تُستخدم (رصيد صفر وبلا حركات)."""
+    return Treasury.objects.filter(branch=branch, current_balance=0).exclude(
+        pk__in=TreasuryMovement.objects.values('treasury_id'))
+
+
 @login_required
 @require_permission('delete_branches')
 def branch_delete_api(request, pk):
@@ -3256,8 +3279,16 @@ def branch_delete_api(request, pk):
         return _branch_json_error('الفرع غير موجود', status=404)
     if b.stocks.exists():
         return _branch_json_error('لا يمكن حذف فرع مرتبط بمخازن — أزل الربط من المخازن أولاً.')
+    if _branch_has_records(b):
+        return _branch_json_error('لا يمكن حذف فرع له مستخدمون أو خزائن أو حسابات بنكية أو عمليات — عطّله بدل حذفه.')
     name = b.name
-    b.delete()
+    from django.db import transaction
+    try:
+        with transaction.atomic():
+            _untouched_branch_treasuries(b).delete()
+            b.delete()
+    except ProtectedError:
+        return _branch_json_error('لا يمكن حذف فرع له عمليات — عطّله بدل حذفه.')
     log_activity(request, 'حذف فرع', name, 'delete')
     return _branch_json_ok(msg=f'تم حذف "{name}" بنجاح')
 
