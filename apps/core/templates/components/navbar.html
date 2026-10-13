@@ -207,8 +207,38 @@ function getCookie(name) {
     return v ? v.pop() : '';
 }
 
-// Load on dropdown open + poll every 2 minutes
+// تحديث العدّاد: عند فتح القائمة، وعند تحميل الصفحة، وكل 30 ثانية (والتبويب ظاهر)،
+// وعند رجوع المستخدم للتبويب، وفور نجاح أي عملية كتابة في الصفحة (إرسال شحنة، تأكيد فاتورة...).
 document.getElementById('notifDropdown')?.addEventListener('show.bs.dropdown', loadNotifications);
 loadNotifications();
-setInterval(loadNotifications, 120000);
+setInterval(function () { if (!document.hidden) loadNotifications(); }, 30000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) loadNotifications(); });
+
+let _notifRefreshTimer = null;
+function refreshNotificationsSoon() {
+    clearTimeout(_notifRefreshTimer);
+    _notifRefreshTimer = setTimeout(loadNotifications, 700);
+}
+function _isNotifUrl(url) { return /notif/i.test(String(url || '')); }
+
+(function () {
+    const origFetch = window.fetch;
+    if (origFetch) {
+        window.fetch = function (input, init) {
+            const method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+            const url = typeof input === 'string' ? input : (input && input.url);
+            const p = origFetch.apply(this, arguments);
+            if (method !== 'GET' && method !== 'HEAD' && !_isNotifUrl(url)) {
+                p.then(function (resp) { if (resp && resp.ok) refreshNotificationsSoon(); }).catch(function () {});
+            }
+            return p;
+        };
+    }
+    if (window.jQuery) {
+        window.jQuery(document).ajaxSuccess(function (e, xhr, settings) {
+            const type = String((settings && settings.type) || 'GET').toUpperCase();
+            if (type !== 'GET' && type !== 'HEAD' && !_isNotifUrl(settings && settings.url)) refreshNotificationsSoon();
+        });
+    }
+})();
 </script>
