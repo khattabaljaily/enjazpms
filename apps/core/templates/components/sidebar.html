@@ -304,11 +304,11 @@
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
-                {% if user|has_perm_key:'view_central_purchases' %}
-                <li><a href="{% url 'purchases:order_list' %}" class="nav-sublink{% if request.resolver_match.app_name == 'purchases' %} active{% endif %}"><i class="fas fa-file-invoice me-2"></i>فواتير الشراء المركزية</a></li>
-                {% endif %}
                 {% if user|has_perm_key:'view_central_suppliers' %}
                 <li><a href="{% url 'suppliers:list' %}" class="nav-sublink{% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'suppliers' %} active{% endif %}"><i class="fas fa-truck me-2"></i>الموردون المركزيون</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'view_central_purchases' %}
+                <li><a href="{% url 'purchases:order_list' %}" class="nav-sublink{% if request.resolver_match.app_name == 'purchases' %} active{% endif %}"><i class="fas fa-file-invoice me-2"></i>فواتير الشراء المركزية</a></li>
                 {% endif %}
                 {% if user|has_perm_key:'view_central_shipments' %}
                 <li><a href="{% url 'stocks:shipment_list' %}" class="nav-sublink{% if 'shipments' in request.path %} active{% endif %}"><i class="fas fa-truck-ramp-box me-2"></i>شحنات الفروع ومرتجعاتها</a></li>
@@ -369,7 +369,7 @@
     {% endif %}
 
     <!-- ── Transactions ── -->
-    {% if user|has_perm_key:'view_sales' or user|has_perm_key:'view_purchases' %}
+    {% if user|has_perm_key:'view_sales' or user|has_perm_key:'view_suppliers' or user|has_perm_key:'view_purchases' %}
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         {% if user|has_perm_key:'view_sales' %}
@@ -399,6 +399,14 @@
                 </a></li>
                 {% endif %}
             </ul>
+        </li>
+        {% endif %}
+        {% if user|has_perm_key:'view_suppliers' %}
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'suppliers:list' %}">
+                <span class="nav-icon nav-icon--buy"><i class="fas fa-truck"></i></span>
+                الموردين
+            </a>
         </li>
         {% endif %}
         {% if user|has_perm_key:'view_purchases' %}
@@ -457,7 +465,7 @@
     {% endif %}
 
     <!-- ── Contacts ── -->
-    {% if user|has_perm_key:'view_customers' or user|has_perm_key:'view_suppliers' or user|has_perm_key:'view_agents' %}
+    {% if user|has_perm_key:'view_customers' or user|has_perm_key:'view_agents' %}
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         {% if user|has_perm_key:'view_customers' %}
@@ -465,14 +473,6 @@
             <a class="nav-link" href="{% url 'customers:list' %}">
                 <span class="nav-icon nav-icon--sales"><i class="fas fa-users"></i></span>
                 العملاء
-            </a>
-        </li>
-        {% endif %}
-        {% if user|has_perm_key:'view_suppliers' %}
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'suppliers:list' %}">
-                <span class="nav-icon nav-icon--buy"><i class="fas fa-truck"></i></span>
-                الموردين
             </a>
         </li>
         {% endif %}
