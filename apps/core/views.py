@@ -1418,13 +1418,9 @@ def admin_backup_download(request, backup_id):
     file_path = Path(backup.file_path)
     if not file_path.exists():
         raise Http404("الملف غير موجود")
-    response = FileResponse(
-        open(file_path, 'rb'),
-        as_attachment=True,
-        filename=backup.filename,
-        content_type='application/sql',
-    )
-    return response
+    from .backup_service import build_backup_download
+    fileobj, filename, content_type = build_backup_download(backup)
+    return FileResponse(fileobj, as_attachment=True, filename=filename, content_type=content_type)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1484,12 +1480,9 @@ def tenant_backup_download(request, backup_id):
     file_path = Path(backup.file_path)
     if not file_path.exists():
         raise Http404("الملف غير موجود")
-    return FileResponse(
-        open(file_path, 'rb'),
-        as_attachment=True,
-        filename=backup.filename,
-        content_type='application/sql',
-    )
+    from .backup_service import build_backup_download
+    fileobj, filename, content_type = build_backup_download(backup)
+    return FileResponse(fileobj, as_attachment=True, filename=filename, content_type=content_type)
 
 
 @login_required
