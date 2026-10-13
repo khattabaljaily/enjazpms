@@ -35,17 +35,32 @@ def _serialize_errors(form):
     return {f: [str(e) for e in errs] for f, errs in form.errors.items()}
 
 
-def _apply_hc_prices(item, tenant):
-    """إذا كان وضع العملة الصعبة مفعّلاً، يحسب الأسعار المحلية من سعر العملة الصعبة × سعر الصرف."""
+def _apply_hc_prices(item, tenant, from_local=False):
+    """
+    وضع العملة الصعبة: يربط الأسعار المحلية بسعر العملة الصعبة.
+
+    الافتراضي (الاستيراد والكتالوج): العملة الصعبة هي المرجع، فيُحسب المحلي = صعبة × سعر الصرف.
+    from_local=True (نماذج الإضافة والتعديل): ما كتبه المشترك بالعملة المحلية هو المرجع ويبقى كما
+    هو، والصعبة تُحسب منه = محلي ÷ سعر الصرف. ولا يجوز عكس ذلك: الصعبة مخزّنة بـ4 خانات فقط،
+    فإعادة ضربها في السعر تغيّر الرقم المكتوب (4,000,000 ← 3,999,999.75).
+    """
     if not (tenant and tenant.hard_currency_mode and tenant.exchange_rate):
         return
     rate = Decimal(str(tenant.exchange_rate))
-    if item.selling_price_hc:
-        item.selling_price = (item.selling_price_hc * rate).quantize(Decimal('0.01'))
-    if item.cost_price_hc:
-        item.cost_price = (item.cost_price_hc * rate).quantize(Decimal('0.01'))
-    if item.min_selling_price_hc:
-        item.min_selling_price = (item.min_selling_price_hc * rate).quantize(Decimal('0.01'))
+    for local_field, hc_field in (
+        ('selling_price', 'selling_price_hc'),
+        ('cost_price', 'cost_price_hc'),
+        ('min_selling_price', 'min_selling_price_hc'),
+    ):
+        local = getattr(item, local_field)
+        hc = getattr(item, hc_field)
+        if from_local:
+            if local:
+                setattr(item, hc_field, (local / rate).quantize(Decimal('0.0001')))
+            elif hc:
+                setattr(item, local_field, (hc * rate).quantize(Decimal('0.01')))
+        elif hc:
+            setattr(item, local_field, (hc * rate).quantize(Decimal('0.01')))
 
 
 # ============================================================
@@ -620,7 +635,7 @@ def item_create_api(request):
         item.tenant = tenant
         item.created_by = request.user
         item.updated_by = request.user
-        _apply_hc_prices(item, tenant)
+        _apply_hc_prices(item, tenant, from_local=True)
         try:
             item.save()
         except IntegrityError:
@@ -795,7 +810,7 @@ def item_update_api(request, pk):
     if form.is_valid():
         updated = form.save(commit=False)
         updated.updated_by = request.user
-        _apply_hc_prices(updated, tenant)
+        _apply_hc_prices(updated, tenant, from_local=True)
         updated.save()
         form.save_m2m()
         _save_item_units(item, request.POST.get('units_json', ''), tenant)
