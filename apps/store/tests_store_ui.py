@@ -61,6 +61,55 @@ class PriceListColumnsTests(TenantTestCase):
         self.assertEqual(self.store.price_list_columns, ['name', 'unit'])
 
 
+class PriceListUnitAndQtyColumnTests(TenantTestCase):
+    """اسم الوحدة يُقرأ من وحدات الصنف، وعمود «الكمية المطلوبة» يُظهر/يُخفى من إعدادات المتجر."""
+    subscription_plan = 'pro'
+
+    def setUp(self):
+        super().setUp()
+        from apps.items.models import ItemUnit
+        self.store, _ = StoreSettings.objects.update_or_create(
+            tenant=self.tenant,
+            defaults=dict(is_enabled=True, show_price_list=True, show_out_of_stock=True))
+        self.item = make_item(self.tenant, name='صنف بوحدات')
+        ItemUnit.objects.create(tenant=self.tenant, item=self.item, name='كرتونة', factor=12)
+        ItemUnit.objects.create(tenant=self.tenant, item=self.item, name='قطعة', factor=1)
+        self.url = reverse('store:price_list', args=[self.store.slug])
+
+    def test_unit_comes_from_the_items_smallest_unit(self):
+        # الصنف بلا وحدة بيع قديمة (unit)، ووحداته في جدول الوحدات المتعددة
+        self.assertIsNone(self.item.unit_id)
+        r = self.client.get(self.url)
+        self.assertContains(r, '<td class="pl-col-unit">قطعة</td>')
+        self.assertNotContains(r, '<td class="pl-col-unit">-</td>')
+
+    def test_unit_falls_back_to_legacy_unit_field(self):
+        from apps.items.models import Unit
+        make_item(self.tenant, name='صنف قديم', unit=Unit.objects.create(tenant=self.tenant, name='لتر'))
+        r = self.client.get(self.url)
+        self.assertContains(r, '<td class="pl-col-unit">لتر</td>')
+
+    def _save_columns(self, columns):
+        # نموذج الإعدادات يقرأ غياب is_enabled/show_out_of_stock كإيقاف، فنرسلهما صراحةً
+        self.client.post(reverse('store:manage_settings'), {
+            'display_name': 'x', 'is_enabled': 'on', 'show_out_of_stock': 'on',
+            'show_prices': 'on', 'show_price_list': 'on', 'price_list_columns': columns,
+        })
+
+    def test_requested_quantity_column_can_be_hidden_and_shown(self):
+        self.assertContains(self.client.get(self.url), '>Quantity<')
+
+        self._save_columns(['name', 'unit', 'retail'])
+        r = self.client.get(self.url)
+        self.assertContains(r, 'R. Price')                # الصفحة موجودة فعلاً
+        self.assertNotContains(r, '>Quantity<')
+
+        self._save_columns(['name', 'unit', 'retail', 'qty'])
+        r = self.client.get(self.url)
+        self.assertContains(r, 'R. Price')
+        self.assertContains(r, '>Quantity<')
+
+
 class StoreBranchSelectionTests(TenantTestCase):
     version_type = 'multi_branch'
     subscription_plan = 'enterprise'

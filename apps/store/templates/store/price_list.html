@@ -93,7 +93,7 @@
             {% if cols.idx %}<td class="pl-col-idx">{{ forloop.counter }}</td>{% endif %}
             {% if cols.name %}<td class="pl-col-name">{{ item.name }}{% if item.sku %}<div class="pl-row__sku">{{ item.sku }}</div>{% endif %}</td>{% endif %}
             {% if cols.generic %}<td class="pl-col-desc">{{ item.generic_name|default:'-' }}</td>{% endif %}
-            {% if cols.unit %}<td class="pl-col-unit">{{ item.unit.name|default:'-' }}</td>{% endif %}
+            {% if cols.unit %}<td class="pl-col-unit">{{ item.unit_label|default:'-' }}</td>{% endif %}
             {% if cols.wholesale %}<td class="pl-col-price">{{ item.cost_price|format_price }}</td>{% endif %}
             {% if cols.retail %}<td class="pl-col-price">{{ item.selling_price|format_price }}</td>{% endif %}
             {% if cols.pack %}<td class="pl-col-pack">{{ item.pack_qty|default:'-' }}</td>{% endif %}

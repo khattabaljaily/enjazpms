@@ -264,6 +264,7 @@ def price_list(request, slug):
     products = list(
         _get_products(store, branch)
         .select_related('purchase_unit')
+        .prefetch_related('item_units')
         .order_by('sudan_agent', 'name')
     )
 
@@ -301,6 +302,10 @@ def price_list(request, slug):
             item.purchase_unit.conversion_factor
             if item.purchase_unit_id else None
         )
+        # وحدة السعر المعروض: أصغر وحدة من وحدات الصنف (حيث تُحفظ وحدات الأصناف الحالية)،
+        # وإلا حقل «وحدة البيع» القديم. قراءة item.unit وحده كانت تترك العمود فارغاً.
+        units = sorted(item.item_units.all(), key=lambda u: u.factor)
+        item.unit_label = units[0].name if units else (item.unit.name if item.unit_id else '')
 
     # Group by agent/distributor (المورد/الوكيل بحسب الكتالوج) — items with no
     # agent set fall into a single "أخرى" group at the end.
