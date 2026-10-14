@@ -326,6 +326,12 @@ class Tenant(models.Model):
         """
         return self.version_type == 'multi_branch'
 
+    def branches_manage_items(self) -> bool:
+        """نسخة المؤسسات + مدير النشاط سمح للفروع بإضافة منتجاتها للكتالوج المركزي."""
+        if not self.is_enterprise():
+            return False
+        return Settings.objects.filter(tenant=self, branches_can_manage_items=True).exists()
+
     def is_hybrid_purchasing(self) -> bool:
         """الشراء المركزي مفعّل: نسخة المؤسسات + نمط المشتريات "هجين"."""
         return self.is_enterprise() and self.purchasing_mode == 'hybrid'
@@ -587,6 +593,10 @@ class Settings(models.Model):
     # Stock Settings
     show_zero_stock = models.BooleanField('إظهار منتجات بمخزون صفر', default=True)
     low_stock_alert = models.BooleanField('تنبيه المخزون المنخفض', default=True)
+
+    # نسخة المؤسسات: يسمح مدير النشاط للفروع بإضافة منتجات للكتالوج المركزي
+    # (يتحكم كل فرع في منتجاته التي أضافها فقط)
+    branches_can_manage_items = models.BooleanField('السماح للفروع بإضافة منتجات', default=False)
     
     # Display Settings
     items_per_page = models.IntegerField('عدد العناصر في الصفحة', default=25)

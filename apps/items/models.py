@@ -138,6 +138,16 @@ class Item(TenantMixin):
         choices=ITEM_TYPE_CHOICES, default='product'
     )
 
+    # الفرع الذي أضاف المنتج (نسخة المؤسسات): null = منتج الإدارة المركزية.
+    # الفرع لا يعدّل ولا يحذف إلا المنتجات المسجّلة باسمه.
+    branch = models.ForeignKey(
+        'core.Branch',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='owned_items',
+        verbose_name='الفرع المضيف'
+    )
+
     # ------ التصنيف والوحدة ------
     category = models.ForeignKey(
         Category,

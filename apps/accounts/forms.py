@@ -183,7 +183,9 @@ class UserManagementForm(forms.ModelForm):
             elif self.forced_branch is not None:
                 # لا يُمنح موظف الفرع مجموعة فيها صلاحيات إدارة النشاط (فروع،
                 # مستخدمو المنشأة، مجموعات الصلاحيات...) حتى لا يتصعّد.
-                allowed = branch_assignable_permission_keys(self.tenant.is_central_purchasing())
+                allowed = branch_assignable_permission_keys(
+                    self.tenant.is_central_purchasing(), self.tenant.branches_manage_items(),
+                )
                 groups = groups.filter(pk__in=[
                     g.pk for g in groups if set(g.get_permission_keys()) <= allowed
                 ])

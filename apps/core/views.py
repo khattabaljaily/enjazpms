@@ -1639,6 +1639,10 @@ def tenant_settings_update_api(request):
     settings_obj.print_agent_name = _as_bool(data.get('print_agent_name', settings_obj.print_agent_name))
     settings_obj.show_zero_stock = _as_bool(data.get('show_zero_stock', settings_obj.show_zero_stock))
     settings_obj.low_stock_alert = _as_bool(data.get('low_stock_alert', settings_obj.low_stock_alert))
+    if tenant.is_enterprise():
+        settings_obj.branches_can_manage_items = _as_bool(
+            data.get('branches_can_manage_items', settings_obj.branches_can_manage_items)
+        )
     settings_obj.save()
 
     return JsonResponse({'success': True, 'message': 'تم تحديث إعدادات النظام بنجاح'})

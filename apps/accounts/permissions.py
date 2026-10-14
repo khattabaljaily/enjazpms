@@ -213,12 +213,25 @@ BRANCH_BLOCKED_KEYS = {
 }
 
 
-def branch_assignable_permission_keys(central=False):
+# مفاتيح المنتجات التي تُفتح لمستخدم الفرع حين يسمح مدير النشاط بذلك
+# (Settings.branches_can_manage_items) — الاستيراد يبقى محظوراً دائماً، والتعديل/الحذف
+# مقيّدان في الـ views بالمنتجات التي أضافها فرعه (Item.branch).
+BRANCH_ITEM_KEYS = {'add_items', 'change_items', 'delete_items'}
+
+
+def branch_blocked_keys(branch_items_allowed=False):
+    """المفاتيح المحظورة على مستخدم الفرع، مع استثناء إدارة منتجات الفرع إن سُمح بها."""
+    if branch_items_allowed:
+        return BRANCH_BLOCKED_KEYS - BRANCH_ITEM_KEYS
+    return BRANCH_BLOCKED_KEYS
+
+
+def branch_assignable_permission_keys(central=False, branch_items_allowed=False):
     """
     أقصى ما يجوز لمستخدم مربوط بفرع أن يمنحه لموظفي فرعه عبر مجموعات الصلاحيات:
     صلاحيات مشرف الفرع ما عدا المحظور مطلقاً على أي مستخدم فرع.
     """
-    return set(get_branch_supervisor_permission_keys(central)) - BRANCH_BLOCKED_KEYS
+    return set(get_branch_supervisor_permission_keys(central)) - branch_blocked_keys(branch_items_allowed)
 
 
 def _apply_tenant_filter(sections, *, version_type, has_capability, plan_allows, get_flag):

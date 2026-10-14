@@ -8,7 +8,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from apps.core.models import Tenant, TenantQuerySet
 from .permissions import (
-    get_permission_keys, get_branch_supervisor_permission_keys, BRANCH_BLOCKED_KEYS,
+    get_permission_keys, get_branch_supervisor_permission_keys, branch_blocked_keys,
     get_enterprise_owner_permission_keys, load_permission_schema, get_central_mode_admin_only_keys,
 )
 
@@ -139,6 +139,10 @@ class User(AbstractUser):
         """مشترك نمط مشترياته «مركزي»: المشتريات والموردون من اختصاص الإدارة لا الفروع."""
         return bool(self.tenant_id and self.tenant.is_central_purchasing())
 
+    def _branch_items_allowed(self):
+        """مدير النشاط سمح للفروع بإضافة منتجاتها (نسخة المؤسسات فقط)."""
+        return bool(self.tenant_id and self.branch_id and self.tenant.branches_manage_items())
+
     def get_permission_keys(self):
         if self.is_superuser:
             return set(get_permission_keys())
@@ -159,7 +163,7 @@ class User(AbstractUser):
                     group_keys &= owner_keys  # راجع التعليق في has_perm_key
                 keys.update(group_keys)
         if self.branch_id:
-            keys -= BRANCH_BLOCKED_KEYS
+            keys -= branch_blocked_keys(self._branch_items_allowed())
             if central:
                 keys -= get_central_mode_admin_only_keys()
         return keys
@@ -177,7 +181,7 @@ class User(AbstractUser):
         # قيد مطلق: أي مستخدم مربوط بفرع لا يقدر أبداً على صلاحيات كتالوج
         # المنتجات الحصرية (إضافة/تعديل/حذف/استيراد) — بصرف النظر عن مجموعة
         # الصلاحيات المسندة له، لأن المنتج مورد مركزي مشترك بين كل الفروع.
-        if self.branch_id and permission_key in BRANCH_BLOCKED_KEYS:
+        if self.branch_id and permission_key in branch_blocked_keys(self._branch_items_allowed()):
             return False
         # النمط «مركزي»: المشتريات والموردون وتقاريرهم للإدارة فقط، ومحظورة مطلقاً على مستخدم الفرع.
         if self.branch_id and central and permission_key in get_central_mode_admin_only_keys():

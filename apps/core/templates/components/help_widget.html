@@ -41,7 +41,7 @@
                     <i class="fa-solid fa-users"></i><span>العملاء</span>
                 </a>
                 {% endif %}
-                {% if user|has_perm_key:'view_items' %}
+                {% if user|has_perm_key:'view_items' and not request.branch or user|has_perm_key:'view_items' and current_tenant.branches_manage_items %}
                 <a href="{% url 'items:list' %}" class="help-quick-link">
                     <i class="fa-solid fa-box"></i><span>الأصناف</span>
                 </a>

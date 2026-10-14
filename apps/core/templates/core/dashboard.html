@@ -214,13 +214,13 @@
                             <span class="db-action-sub">تسجيل بيع جديد</span>
                         </div>
                     </a>
-                    <a href="{% url 'items:list' %}" class="db-action db-action--emerald">
+                    {% if not request.branch or current_tenant.branches_manage_items %}<a href="{% url 'items:list' %}" class="db-action db-action--emerald">
                         <div class="db-action-icon"><i class="fas fa-box"></i></div>
                         <div>
                             <span class="db-action-title">المنتجات</span>
                             <span class="db-action-sub">إدارة الأصناف</span>
                         </div>
-                    </a>
+                    </a>{% endif %}
                     <a href="{% url 'customers:create' %}" class="db-action db-action--sky">
                         <div class="db-action-icon"><i class="fas fa-user-plus"></i></div>
                         <div>

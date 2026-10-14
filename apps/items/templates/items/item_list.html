@@ -211,6 +211,12 @@
                     <option value="{{ s.id }}">{{ s.name }}</option>
                 {% endfor %}
             </select>
+            {% if request.branch %}
+            <label class="cx-filter-tab-mine d-inline-flex align-items-center gap-1 mb-0" for="mineFilter" style="cursor:pointer;white-space:nowrap">
+                <input type="checkbox" id="mineFilter" class="form-check-input mt-0">
+                <span>منتجاتي فقط</span>
+            </label>
+            {% endif %}
             <div class="cx-filter-tabs" role="group">
                 <button type="button" class="cx-filter-tab active" data-status="">الكل</button>
                 <button type="button" class="cx-filter-tab" data-status="active">نشط</button>
@@ -1130,8 +1136,8 @@
                 <div class="cx-item-card-actions">
                     ${ledgerBtn}
                     <button class="cxr-act cxr-act--view js-view-item" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
-                    ${hasPerm('change_items') ? `<button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
-                    ${hasPerm('delete_items') ? `<button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                    ${hasPerm('change_items') && r.can_manage !== false ? `<button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${hasPerm('delete_items') && r.can_manage !== false ? `<button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
             </article>`;
         }).join('');
@@ -1155,7 +1161,7 @@
         },
         ajax: {
             url : urlTable,
-            data: function (d) { d.status = activeStatus; d.supplier = $('#supplierFilter').val(); }
+            data: function (d) { d.status = activeStatus; d.supplier = $('#supplierFilter').val(); if ($('#mineFilter').is(':checked')) d.mine = 1; }
         },
         drawCallback: function () {
             renderMobileItemCards(dt.rows({ page: 'current' }).data().toArray());
@@ -1221,8 +1227,8 @@
                     return `<div class="cxr-actions">
                         ${ledgerBtn}
                         <button class="cxr-act cxr-act--view js-view-item" data-id="${r.id}" aria-label="عرض"><i class="fas fa-eye"></i></button>
-                        ${hasPerm('change_items') ? `<button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
-                        ${hasPerm('delete_items') ? `<button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                        ${hasPerm('change_items') && r.can_manage !== false ? `<button class="cxr-act js-edit-item" data-id="${r.id}" aria-label="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                        ${hasPerm('delete_items') && r.can_manage !== false ? `<button class="cxr-act cxr-act--del js-delete-item" data-id="${r.id}" data-name="${r.name}" aria-label="حذف"><i class="fas fa-trash"></i></button>` : ''}
                     </div>`;
                 }
             }
@@ -1241,7 +1247,7 @@
         activeStatus = $(this).data('status');
         dt.ajax.reload();
     });
-    $('#supplierFilter').on('change', function () { dt.ajax.reload(); });
+    $('#supplierFilter, #mineFilter').on('change', function () { dt.ajax.reload(); });
 
     /* ── Reset form ────────────────────────────────────────── */
     /* ══════════════════════════════════════════════════════════
@@ -1685,7 +1691,7 @@
                 if (d.track_serial)  tracking.push('رقم تسلسلي');
                 $('#viewItemTracking').text(tracking.length ? tracking.join(' ، ') : 'لا يوجد');
 
-                $('#viewEditItemBtn').data('id', d.id);
+                $('#viewEditItemBtn').data('id', d.id).toggle(d.can_manage !== false);
                 viewModal.show();
             },
             error: function() { Enjaz.toast('تعذر تحميل البيانات', 'error'); }

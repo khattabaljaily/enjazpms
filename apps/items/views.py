@@ -24,6 +24,15 @@ def _ensure_tenant(request):
     return getattr(request, 'tenant', None)
 
 
+def _branch_owns(request, item):
+    """مستخدم الفرع يتحكم فقط في المنتجات التي أضافها فرعه؛ مستخدم الإدارة بلا قيد."""
+    branch = getattr(request, 'branch', None)
+    return branch is None or item.branch_id == branch.id
+
+
+_NOT_OWNER_MSG = 'لا يمكنك تعديل أو حذف منتج لم يضفه فرعك'
+
+
 def _get_capabilities(tenant):
     try:
         return tenant.capabilities
@@ -170,10 +179,14 @@ def item_table_api(request):
     status_filter = request.GET.get('status', '').strip()
     category_id = request.GET.get('category', '').strip()
     supplier_id = request.GET.get('supplier', '').strip()
+    branch = getattr(request, 'branch', None)
 
     from .models import ItemUnit
     qs = Item.objects.for_tenant(tenant).select_related('category', 'supplier').prefetch_related('item_units')
     records_total = qs.count()
+
+    if branch is not None and request.GET.get('mine') == '1':
+        qs = qs.filter(branch=branch)
 
     if status_filter == 'active':
         qs = qs.filter(is_active=True)
@@ -242,6 +255,7 @@ def item_table_api(request):
             'is_controlled_substance': item.is_controlled_substance,
             'is_insurance_excluded': item.is_insurance_excluded,
             'is_active': item.is_active,
+            'can_manage': _branch_owns(request, item),
         }
         for item in qs
     ]
@@ -423,6 +437,7 @@ def item_create_from_catalog(request):
     # مُدخل من المشترك عبر النموذج — لا يُتجاهل أي حقل بصمت.
     item = Item(
         tenant=tenant, created_by=request.user, updated_by=request.user,
+        branch=getattr(request, 'branch', None),
         name=name, name_en=request.POST.get('name_en', '').strip(),
         sku=request.POST.get('sku', '').strip(),
         barcode=barcode, item_type=item_type, category=category,
@@ -550,6 +565,7 @@ def bulk_create_from_catalog(request):
             category = _resolve_tenant_category(tenant, drug.category.name if drug.category_id else '', request.user)
             item = Item(
                 tenant=tenant, created_by=request.user, updated_by=request.user,
+                branch=getattr(request, 'branch', None),
                 name=name, barcode=barcode, category=category,
                 generic_name=drug.generic_name, manufacturer=alias.manufacturer if alias else '',
                 dosage_form=drug.dosage_form, strength=drug.strength,
@@ -633,6 +649,7 @@ def item_create_api(request):
     if form.is_valid():
         item = form.save(commit=False)
         item.tenant = tenant
+        item.branch = getattr(request, 'branch', None)
         item.created_by = request.user
         item.updated_by = request.user
         _apply_hc_prices(item, tenant, from_local=True)
@@ -674,6 +691,7 @@ def item_detail_api(request, pk):
         'success': True,
         'data': {
             'id': item.id,
+            'can_manage': _branch_owns(request, item),
             'name': item.name,
             'name_en': item.name_en,
             'sku': item.sku,
@@ -805,6 +823,8 @@ def item_update_api(request, pk):
         item = Item.objects.for_tenant(tenant).get(pk=pk)
     except Item.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المنتج غير موجود'}, status=404)
+    if not _branch_owns(request, item):
+        return JsonResponse({'success': False, 'message': _NOT_OWNER_MSG}, status=403)
 
     form = ItemForm(request.POST, request.FILES, instance=item, tenant=tenant, capabilities=_get_capabilities(tenant))
     if form.is_valid():
@@ -842,6 +862,9 @@ def item_delete_api(request, pk):
         item = Item.objects.for_tenant(tenant).get(pk=pk)
     except Item.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المنتج غير موجود'}, status=404)
+
+    if not _branch_owns(request, item):
+        return JsonResponse({'success': False, 'message': _NOT_OWNER_MSG}, status=403)
 
     name = item.name
     try:

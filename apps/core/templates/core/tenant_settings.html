@@ -304,7 +304,7 @@
                                         <span class="ts-switch__track"></span>
                                     </div>
                                 </label>
-                                <label class="ts-switch ts-switch--last" for="lowStockAlert">
+                                <label class="ts-switch{% if not current_tenant.version_type == 'multi_branch' %} ts-switch--last{% endif %}" for="lowStockAlert">
                                     <div class="ts-switch__info">
                                         <span class="ts-switch__name">تنبيه المخزون المنخفض</span>
                                         <span class="ts-switch__hint">تشغيل التنبيهات عند اقتراب الكميات من الحد الأدنى.</span>
@@ -314,6 +314,18 @@
                                         <span class="ts-switch__track"></span>
                                     </div>
                                 </label>
+                                {% if current_tenant.version_type == 'multi_branch' %}
+                                <label class="ts-switch ts-switch--last" for="branchesCanManageItems">
+                                    <div class="ts-switch__info">
+                                        <span class="ts-switch__name">السماح للفروع بإضافة منتجات</span>
+                                        <span class="ts-switch__hint">تظهر المنتجات للفرع ويضيف إلى الكتالوج المركزي، ويتحكم فقط في المنتجات التي أضافها.</span>
+                                    </div>
+                                    <div class="ts-switch__toggle">
+                                        <input type="checkbox" id="branchesCanManageItems" name="branches_can_manage_items" {% if tenant_settings.branches_can_manage_items %}checked{% endif %}>
+                                        <span class="ts-switch__track"></span>
+                                    </div>
+                                </label>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
