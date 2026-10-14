@@ -2077,6 +2077,22 @@ div.dataTables_wrapper div.dataTables_paginate {
 .training-fab.is-open {
     background: linear-gradient(135deg, #ee1379 0%, #c91068 100%);
 }
+/* الـ navbar (z-index 1000) يحتوي قوائمه المنسدلة (تسجيل الخروج...) في طبقة واحدة أدنى من الزر،
+   فكان الزر يغطي القائمة على الموبايل — نُنزله تحت الـ navbar ما دامت قائمة مفتوحة. */
+body:has(.navbar .dropdown-menu.show) .training-fab {
+    z-index: 999;
+}
+
+/* الموبايل: الزر كان يغطي أيقونة المستخدم (تسجيل الخروج) في أقصى يسار الـ navbar —
+   نضعه فوق زر المساعدة أسفل اليمين بعيداً عن الـ navbar. */
+@media (max-width: 768px) {
+    .training-fab {
+        top: auto;
+        left: auto;
+        right: 22px;
+        bottom: 78px;
+    }
+}
 
 /* Panel */
 .training-panel {

@@ -168,7 +168,8 @@
 }
 
 .navbar-shell {
-    padding: 0 2rem;
+    /* يسار الـ navbar محجوز لزر دليل الاستخدام العائم (.training-fab) حتى لا يغطي اسم المستخدم */
+    padding: 0 2rem 0 4.5rem;
     display: flex;
     align-items: center;
     justify-content: space-between;

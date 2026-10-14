@@ -85,9 +85,18 @@ class BranchItemsEnabledTests(BranchItemsBase):
         rows = self.client.get(reverse('items:table_api'), {'length': 50}).json()['data']
         self.assertTrue(all(r['can_manage'] for r in rows))
 
-    def test_sidebar_link_shown_for_branch(self):
+    def test_sidebar_link_shown_for_branch_without_categories(self):
         self.client.force_login(self.sup1)
-        self.assertContains(self.client.get(reverse('core:dashboard')), reverse('items:list'))
+        html = self.client.get(reverse('core:dashboard')).content.decode()
+        self.assertIn(f'href="{reverse("items:list")}"', html)
+        self.assertNotIn(f'href="{reverse("items:category_list")}"', html)
+
+    def test_items_page_hides_categories_button_for_branch(self):
+        self.client.force_login(self.sup1)
+        link = f'href="{reverse("items:category_list")}"'
+        self.assertNotContains(self.client.get(reverse('items:list')), link)
+        self.client.force_login(self.user)
+        self.assertContains(self.client.get(reverse('items:list')), link)
 
 
 class NonEnterpriseUnaffectedTests(TenantTestCase):

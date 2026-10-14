@@ -158,10 +158,12 @@
         </div>
         <div class="cx-hero-right">
             <div class="cx-hero-actions">
+{% if not request.branch %}
                 <a href="{% url 'items:category_list' %}" class="cx-btn-secondary">
                     <i class="fas fa-tags"></i>
                     <span>التصنيفات</span>
                 </a>
+{% endif %}
                 <a href="{% url 'items:export_api' %}" class="cx-btn-secondary" data-require-perm="export_items">
                     <i class="fas fa-file-export"></i>
                     <span>تصدير</span>
