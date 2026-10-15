@@ -152,6 +152,19 @@ class StoreSettings(TenantMixin):
             keys -= {'wholesale', 'retail'}
         return keys
 
+    def for_branch(self, branch):
+        """
+        نسخة من إعدادات المتجر بعد تطبيق تخصيص الفرع عليها (للعرض فقط — لا تُحفظ).
+        بلا فرع أو بلا تخصيص يرجع المتجر نفسه، فلا يتغير سلوك النسخ الأخرى.
+        """
+        if branch is None:
+            return self
+        own = BranchStoreSettings.objects.filter(branch=branch, tenant=self.tenant).first()
+        if own is None:
+            return self
+        import copy
+        return own.apply_to(copy.copy(self))
+
     def __str__(self):
         return f"متجر {self.display_name or self.tenant.name}"
 
@@ -260,6 +273,67 @@ class StoreSettings(TenantMixin):
             else:
                 return f'يفتح {day_ar} الساعة {open_time}'
         return ''
+
+
+# ──────────────────────────────────────────────────────────────
+# Branch Store Settings (نسخة المؤسسات)
+# ──────────────────────────────────────────────────────────────
+
+class BranchStoreSettings(TenantMixin):
+    """
+    تخصيص المتجر لفرع واحد (نسخة المؤسسات). كل حقل فارغ/None يعني «وراثة قيمة النشاط»
+    من StoreSettings، فلا يحتاج الفرع لتعبئة إلا ما يختلف فيه (اتصال، حساب بنكي، دوام...).
+    يعدّلها الفرع نفسه؛ ويقرؤها المتجر العام عبر StoreSettings.for_branch().
+    """
+
+    branch = models.OneToOneField(
+        'core.Branch', on_delete=models.CASCADE,
+        related_name='store_settings', verbose_name='الفرع'
+    )
+
+    # الاتصال والدفع والتسليم
+    whatsapp         = models.CharField('واتساب', max_length=30, blank=True)
+    bank_details     = models.TextField('بيانات التحويل البنكي', blank=True)
+    delivery_message = models.TextField('رسالة الشحن/التسليم', blank=True)
+
+    # خيارات العرض (None = وراثة)
+    show_out_of_stock   = models.BooleanField('عرض المنتجات النافدة', null=True, blank=True)
+    show_prices         = models.BooleanField('عرض الأسعار', null=True, blank=True)
+    show_stock_quantity = models.BooleanField('عرض الكمية المتوفرة', null=True, blank=True)
+    show_price_list     = models.BooleanField('تفعيل قائمة الأسعار', null=True, blank=True)
+    price_list_columns  = models.JSONField('أعمدة قائمة الأسعار', null=True, blank=True)
+
+    # الدوام والحالة (فارغ = وراثة)
+    status_override = models.CharField(
+        'حالة المتجر', max_length=10, blank=True, choices=StoreSettings.OVERRIDE_CHOICES)
+    open_message    = models.CharField('رسالة المفتوح', max_length=200, blank=True)
+    closed_message  = models.CharField('رسالة المغلق', max_length=200, blank=True)
+    working_hours   = models.JSONField('ساعات العمل', default=dict, blank=True)
+
+    class Meta:
+        db_table     = 'store_branch_settings'
+        verbose_name = 'إعدادات متجر الفرع'
+
+    TEXT_FIELDS = ('whatsapp', 'bank_details', 'delivery_message',
+                   'status_override', 'open_message', 'closed_message')
+    TRISTATE_FIELDS = ('show_out_of_stock', 'show_prices', 'show_stock_quantity', 'show_price_list')
+
+    def __str__(self):
+        return f"متجر {self.branch}"
+
+    def apply_to(self, store):
+        """يكتب القيم المخصصة فوق نسخة store (في الذاكرة فقط، لا تُحفظ)."""
+        for f in self.TEXT_FIELDS:
+            if getattr(self, f):
+                setattr(store, f, getattr(self, f))
+        for f in self.TRISTATE_FIELDS:
+            if getattr(self, f) is not None:
+                setattr(store, f, getattr(self, f))
+        if self.price_list_columns is not None:
+            store.price_list_columns = self.price_list_columns
+        if self.working_hours:
+            store.working_hours = self.working_hours
+        return store
 
 
 # ──────────────────────────────────────────────────────────────

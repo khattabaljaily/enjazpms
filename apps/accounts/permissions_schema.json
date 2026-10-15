@@ -103,7 +103,8 @@
             "permissions": [
                 {"key": "view_store_settings", "label": {"ar": "عرض وتعديل إعدادات المتجر الإلكتروني", "en": "View and edit online store settings"}},
                 {"key": "view_store_orders", "role_scope": "branch_ops", "label": {"ar": "عرض طلبات المتجر الإلكتروني", "en": "View online store orders"}},
-                {"key": "manage_store_orders", "role_scope": "branch_ops", "label": {"ar": "قبول ورفض طلبات المتجر الإلكتروني", "en": "Accept or reject online store orders"}}
+                {"key": "manage_store_orders", "role_scope": "branch_ops", "label": {"ar": "قبول ورفض طلبات المتجر الإلكتروني", "en": "Accept or reject online store orders"}},
+                {"key": "manage_branch_store_settings", "role_scope": "branch_ops", "label": {"ar": "تعديل إعدادات متجر الفرع (اتصال، حساب بنكي، دوام، عرض)", "en": "Edit branch store settings (contact, bank, hours, display)"}}
             ]
         },
         {

@@ -56,7 +56,9 @@ class OwnerReportsScopeTests(TenantTestCase):
             'view_sales_payments_report', 'view_sales_returns_report', 'view_purchases_payments_report',
             'view_purchases_returns_report', 'view_treasury_statement_report', 'view_bank_account_statement_report',
             # طلبات المتجر يستقبلها الفرع ويقبلها (راجع apps/store/tests_store_branch_orders.py)
-            'view_store_orders', 'manage_store_orders'})
+            'view_store_orders', 'manage_store_orders',
+            # الفرع يعدّل اتصاله وحسابه ودوامه بنفسه (apps/store/tests_branch_store_settings.py)
+            'manage_branch_store_settings'})
 
     def test_owner_routes_follow_the_split(self):
         for name in OVERVIEW_REPORTS:

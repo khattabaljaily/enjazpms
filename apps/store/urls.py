@@ -6,6 +6,7 @@ app_name = 'store'
 urlpatterns = [
     # ── Tenant management (must come before <slug> patterns) ──
     path('manage/',                         views.manage_settings,      name='manage_settings'),
+    path('manage/branch/',                  views.manage_branch_settings, name='manage_branch_settings'),
     path('manage/orders/',                  views.manage_orders,         name='manage_orders'),
     path('manage/orders/<int:pk>/',         views.manage_order_detail,   name='manage_order_detail'),
     path('manage/orders/<int:pk>/prescription/', views.manage_order_prescription, name='manage_order_prescription'),

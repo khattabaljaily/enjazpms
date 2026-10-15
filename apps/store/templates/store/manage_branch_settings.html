@@ -1,0 +1,128 @@
+{% extends "layouts/dashboard.html" %}
+{% load store_tags %}
+
+{% block title %}إعدادات متجر الفرع{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width:900px;">
+
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+      <h4 class="mb-1"><i class="fas fa-store me-2"></i>إعدادات متجر الفرع — {{ branch.name }}</h4>
+      <div class="text-muted small">
+        أي حقل تتركه «كإعدادات النشاط» يأخذ قيمة مدير النشاط؛ عبّئ فقط ما يختلف في فرعك.
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'store:storefront' slug=store.slug %}?branch={{ branch.id }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-external-link-alt"></i> عرض متجر الفرع
+      </a>
+      <a href="{% url 'store:manage_orders' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-inbox"></i> الطلبات</a>
+    </div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="card mb-3"><div class="card-header fw-bold">الاتصال والدفع والتسليم</div><div class="card-body">
+      <div class="mb-3">
+        <label class="form-label">واتساب الفرع</label>
+        <input type="text" name="whatsapp" value="{{ own.whatsapp }}" class="form-control" dir="ltr" placeholder="{{ store.whatsapp|default:'مثال: 249912345678' }}">
+        <div class="form-text">اتركه فارغاً لاستخدام واتساب النشاط{% if store.whatsapp %} ({{ store.whatsapp }}){% endif %}.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">بيانات التحويل البنكي للفرع</label>
+        <textarea name="bank_details" rows="4" class="form-control" placeholder="{{ store.bank_details }}">{{ own.bank_details }}</textarea>
+        <div class="form-text">تظهر للعميل عند اختيار التحويل البنكي لطلب هذا الفرع. فارغ = بيانات النشاط.</div>
+      </div>
+      <div>
+        <label class="form-label">رسالة الشحن/التسليم</label>
+        <textarea name="delivery_message" rows="2" class="form-control" placeholder="{{ store.delivery_message }}">{{ own.delivery_message }}</textarea>
+      </div>
+    </div></div>
+
+    <div class="card mb-3"><div class="card-header fw-bold">خيارات العرض</div><div class="card-body">
+      <div class="row g-3">
+        {% for field, label, value, central in tristate %}
+        <div class="col-md-6">
+          <label class="form-label">{{ label }}</label>
+          <select name="{{ field }}" class="form-select">
+            <option value="" {% if value is None %}selected{% endif %}>كإعدادات النشاط ({% if central %}نعم{% else %}لا{% endif %})</option>
+            <option value="1" {% if value is True %}selected{% endif %}>نعم</option>
+            <option value="0" {% if value is False %}selected{% endif %}>لا</option>
+          </select>
+        </div>
+        {% endfor %}
+      </div>
+      <hr>
+      <label class="form-label">أعمدة قائمة الأسعار</label>
+      <div class="mb-2">
+        <label class="me-3"><input type="radio" name="columns_mode" value="inherit" {% if not columns_custom %}checked{% endif %}> كإعدادات النشاط</label>
+        <label><input type="radio" name="columns_mode" value="custom" {% if columns_custom %}checked{% endif %}> أعمدة خاصة بالفرع</label>
+      </div>
+      <div class="row">
+        {% for key, label, checked in price_list_columns %}
+        <div class="col-md-6"><label><input type="checkbox" name="price_list_columns" value="{{ key }}" {% if checked %}checked{% endif %}> {{ label }}</label></div>
+        {% endfor %}
+      </div>
+    </div></div>
+
+    <div class="card mb-3"><div class="card-header fw-bold">الدوام وحالة المتجر</div><div class="card-body">
+      <div class="alert alert-light border py-2 small">
+        الحالة الآن: <strong>{{ status.label }}</strong>
+        {% if status.next_open %}— {{ status.next_open }}{% elif status.today_hours %}— {{ status.today_hours }}{% endif %}
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label class="form-label">حالة المتجر</label>
+          <select name="status_override" class="form-select">
+            <option value="" {% if not own.status_override %}selected{% endif %}>كإعدادات النشاط</option>
+            {% for val, label in override_choices %}
+            <option value="{{ val }}" {% if own.status_override == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4"><label class="form-label">رسالة المفتوح</label>
+          <input type="text" name="open_message" value="{{ own.open_message }}" class="form-control" maxlength="200" placeholder="{{ store.open_message }}"></div>
+        <div class="col-md-4"><label class="form-label">رسالة المغلق</label>
+          <input type="text" name="closed_message" value="{{ own.closed_message }}" class="form-control" maxlength="200" placeholder="{{ store.closed_message }}"></div>
+      </div>
+      <div class="mb-2">
+        <label class="me-3"><input type="radio" name="hours_mode" value="inherit" {% if not own.working_hours %}checked{% endif %}> دوام النشاط</label>
+        <label><input type="radio" name="hours_mode" value="custom" {% if own.working_hours %}checked{% endif %}> دوام خاص بالفرع</label>
+      </div>
+      <table class="table table-sm align-middle mb-0">
+        {% for day_key, day_ar in days %}
+        {% with d=hours|get_item:day_key %}
+        <tr>
+          <td style="width:25%">{{ day_ar }}</td>
+          <td style="width:15%"><input type="checkbox" name="day_{{ day_key }}_enabled" {% if d.enabled %}checked{% endif %}> يعمل</td>
+          <td><input type="time" name="day_{{ day_key }}_open" value="{{ d.open }}" class="form-control form-control-sm d-inline-block" style="width:130px"></td>
+          <td><input type="time" name="day_{{ day_key }}_close" value="{{ d.close }}" class="form-control form-control-sm d-inline-block" style="width:130px"></td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </table>
+    </div></div>
+
+    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+// تعديل الأعمدة أو الدوام يعني تخصيصاً للفرع: نفعّل خيار «خاص بالفرع» تلقائياً حتى لا يُتجاهل التعديل عند الحفظ
+(function () {
+  function bind(selector, radioName) {
+    document.querySelectorAll(selector).forEach(function (el) {
+      el.addEventListener('change', function () {
+        var radio = document.querySelector('input[name="' + radioName + '"][value="custom"]');
+        if (radio) radio.checked = true;
+      });
+    });
+  }
+  bind('input[name="price_list_columns"]', 'columns_mode');
+  bind('input[name^="day_"]', 'hours_mode');
+})();
+</script>
+{% endblock %}

@@ -400,6 +400,9 @@
                     {% if store_pending_count %}<span style="margin-right:auto;background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:.6rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;">{{ store_pending_count }}</span>{% endif %}
                 </a></li>
                 {% endif %}
+                {% if plan_allows_store and current_tenant.version_type == 'multi_branch' and request.branch and user|has_perm_key:'manage_branch_store_settings' %}
+                <li><a href="{% url 'store:manage_branch_settings' %}" class="nav-sublink{% if 'store/manage/branch' in request.path %} active{% endif %}"><i class="fas fa-store me-2"></i>إعدادات متجر الفرع</a></li>
+                {% endif %}
             </ul>
         </li>
         {% endif %}

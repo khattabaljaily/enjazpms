@@ -102,6 +102,13 @@
             "ar": "قبول ورفض طلبات المتجر الإلكتروني",
             "en": "Accept or reject online store orders"
           }
+        },
+        {
+          "key": "manage_branch_store_settings",
+          "label": {
+            "ar": "تعديل إعدادات متجر الفرع (اتصال، حساب بنكي، دوام، عرض)",
+            "en": "Edit branch store settings (contact, bank, hours, display)"
+          }
         }
       ]
     },

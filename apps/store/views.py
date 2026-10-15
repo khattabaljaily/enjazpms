@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.db.models import F, Q
 
-from .models import OnlineOrder, StoreSettings
+from .models import BranchStoreSettings, OnlineOrder, StoreSettings
 from apps.accounts.decorators import require_permission, branch_scope_exempt
 from apps.core.utils import enforce_branch_ownership
 from .services import (
@@ -201,13 +201,14 @@ def storefront(request, slug):
     store = _get_store(slug)
     if getattr(store, '_disabled', False):
         return _store_disabled_response(store)
-    status = store.get_status()
-    if not status['is_open']:
-        return _store_closed_response(store, status)
     branch, store_branches = _resolve_store_branch(request, store)
     choose = _branch_required(request, store, branch, store_branches)
     if choose:
         return choose
+    store = store.for_branch(branch)
+    status = store.get_status()
+    if not status['is_open']:
+        return _store_closed_response(store, status)
     products = _get_products(store, branch)
 
     search = request.GET.get('q', '').strip()
@@ -254,13 +255,13 @@ def storefront(request, slug):
 
 def price_list(request, slug):
     store = get_object_or_404(StoreSettings, slug=slug)
-    if not store.show_price_list:
-        return _price_list_disabled_response(store)
-
     branch, store_branches = _resolve_store_branch(request, store)
     choose = _branch_required(request, store, branch, store_branches)
     if choose:
         return choose
+    store = store.for_branch(branch)
+    if not store.show_price_list:
+        return _price_list_disabled_response(store)
     products = list(
         _get_products(store, branch)
         .select_related('purchase_unit')
@@ -355,6 +356,8 @@ def cart_add_view(request, slug):
     store = _get_store(slug)
     if getattr(store, '_disabled', False):
         return _store_disabled_response(store)
+    branch, store_branches = _resolve_store_branch(request, store)
+    store = store.for_branch(branch)
     status = store.get_status()
     if not status['is_open']:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -365,7 +368,6 @@ def cart_add_view(request, slug):
     if qty <= 0:
         qty = 1
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    branch, store_branches = _resolve_store_branch(request, store)
     if store_branches and branch is None:
         if is_ajax:
             return JsonResponse({'error': 'اختر الفرع أولاً'}, status=400)
@@ -416,6 +418,7 @@ def cart_view(request, slug):
     choose = _branch_required(request, store, branch, store_branches)
     if choose:
         return choose
+    store = store.for_branch(branch)
     shortages = cart_shortages(store_stock(store.tenant, branch), cart_items)
     return render(request, 'store/cart.html', {
         'shortages':  shortages,
@@ -437,9 +440,6 @@ def checkout_view(request, slug):
     store = _get_store(slug)
     if getattr(store, '_disabled', False):
         return _store_disabled_response(store)
-    status = store.get_status()
-    if not status['is_open']:
-        return _store_closed_response(store, status)
     cart       = get_cart(request, slug)
     cart_items = get_cart_items(slug, cart)
 
@@ -451,6 +451,10 @@ def checkout_view(request, slug):
     choose = _branch_required(request, store, branch, store_branches)
     if choose:
         return choose
+    store = store.for_branch(branch)
+    status = store.get_status()
+    if not status['is_open']:
+        return _store_closed_response(store, status)
     # كميات السلة يجب أن تتوفر في مخزن الفرع قبل إتمام الطلب
     shortages = cart_shortages(store_stock(store.tenant, branch), cart_items)
     if shortages:
@@ -528,7 +532,7 @@ def order_confirm_view(request, slug, token):
     store = _get_store(slug, require_enabled=False)  # allow even if disabled after order placed
     order = get_object_or_404(OnlineOrder, token=token, store=store)
     return render(request, 'store/order_confirm.html', {
-        'store': store,
+        'store': store.for_branch(order.branch),
         'order': order,
         'rx_items': list(order.lines.filter(requires_prescription=True).values_list('item_name', flat=True)),
     })
@@ -613,6 +617,83 @@ def manage_settings(request):
             (k, label, k in store.price_list_visible_columns())
             for k, label in StoreSettings.PRICE_LIST_COLUMNS
         ],
+    })
+
+
+# ══════════════════════════════════════════════════════════════
+# MANAGE — Branch store settings (نسخة المؤسسات: الفرع يعدّل بياناته بنفسه)
+# ══════════════════════════════════════════════════════════════
+
+def _tristate(raw):
+    """'1' → True، '0' → False، غير ذلك → None (وراثة قيمة النشاط)."""
+    return {'1': True, '0': False}.get(raw)
+
+
+@login_required
+@require_permission('manage_branch_store_settings')
+def manage_branch_settings(request):
+    from .models import DAYS_AR, DAYS_ORDER, DEFAULT_HOURS
+    tenant = request.tenant
+    branch = getattr(request, 'branch', None)
+    if not tenant or branch is None:
+        return redirect('/')
+    if not tenant.plan_allows('store'):
+        messages.error(request, 'المتجر الإلكتروني متاح للباقة الاحترافية فما فوق.')
+        return redirect('core:subscription')
+    store = StoreSettings.objects.filter(tenant=tenant).first()
+    if store is None:
+        messages.error(request, 'لم يُنشئ مدير النشاط المتجر الإلكتروني بعد.')
+        return redirect('core:dashboard')
+
+    own, _ = BranchStoreSettings.objects.get_or_create(tenant=tenant, branch=branch)
+
+    if request.method == 'POST':
+        post = request.POST
+        own.whatsapp          = post.get('whatsapp', '').strip()
+        own.bank_details      = post.get('bank_details', '').strip()
+        own.delivery_message  = post.get('delivery_message', '').strip()
+        for f in BranchStoreSettings.TRISTATE_FIELDS:
+            setattr(own, f, _tristate(post.get(f)))
+        valid_cols = {k for k, _ in StoreSettings.PRICE_LIST_COLUMNS}
+        own.price_list_columns = (
+            [c for c in post.getlist('price_list_columns') if c in valid_cols]
+            if post.get('columns_mode') == 'custom' else None)
+        status = post.get('status_override', '')
+        own.status_override = status if status in dict(StoreSettings.OVERRIDE_CHOICES) else ''
+        own.open_message    = post.get('open_message', '').strip()
+        own.closed_message  = post.get('closed_message', '').strip()
+        if post.get('hours_mode') == 'custom':
+            own.working_hours = {
+                day: {
+                    'enabled': post.get(f'day_{day}_enabled') == 'on',
+                    'open':    post.get(f'day_{day}_open', '08:00'),
+                    'close':   post.get(f'day_{day}_close', '22:00'),
+                } for day in DAYS_ORDER
+            }
+        else:
+            own.working_hours = {}
+        own.save()
+        messages.success(request, 'تم حفظ إعدادات متجر الفرع.')
+        return redirect('store:manage_branch_settings')
+
+    effective = store.for_branch(branch)
+    return render(request, 'store/manage_branch_settings.html', {
+        'store':     store,
+        'own':       own,
+        'effective': effective,
+        'status':    effective.get_status(),
+        'branch':    branch,
+        'hours':     own.working_hours or store.working_hours or DEFAULT_HOURS,
+        'days':      [(d, DAYS_AR[d]) for d in DAYS_ORDER],
+        'columns_custom': own.price_list_columns is not None,
+        'price_list_columns': [
+            (k, label, k in (own.price_list_columns if own.price_list_columns is not None
+                             else store.price_list_visible_columns()))
+            for k, label in StoreSettings.PRICE_LIST_COLUMNS
+        ],
+        'tristate': [(f, BranchStoreSettings._meta.get_field(f).verbose_name, getattr(own, f),
+                      getattr(store, f)) for f in BranchStoreSettings.TRISTATE_FIELDS],
+        'override_choices': StoreSettings.OVERRIDE_CHOICES,
     })
 
 

@@ -27,6 +27,11 @@
           <i class="fas fa-qrcode"></i><span>رمز QR للمتجر</span>
         </button>
         {% endif %}
+        {% if request.branch and user|has_perm_key:'manage_branch_store_settings' %}
+        <a href="{% url 'store:manage_branch_settings' %}" class="cx-btn-secondary">
+          <i class="fas fa-cog"></i><span>إعدادات متجر الفرع</span>
+        </a>
+        {% endif %}
         {% if user|has_perm_key:'view_store_settings' %}
         <a href="{% url 'store:manage_settings' %}" class="cx-btn-secondary">
           <i class="fas fa-cog"></i><span>إعدادات المتجر</span>
