@@ -2599,10 +2599,6 @@ def pricing(request):
             'features': [
                 {'text': '1 مخزن',                          'ok': True},
                 {'text': 'بدون فروع',                        'ok': False},
-                {'text': 'حتى 5 مستخدمين',                  'ok': True},
-                {'text': f'تجربة مجانية {trial_days} أيام', 'ok': True},
-                {'text': 'فواتير مبيعات وشراء',              'ok': True},
-                {'text': 'تقارير تفصيلية',                   'ok': True},
                 {'text': 'نسخ احتياطي يدوي',                 'ok': True},
                 {'text': 'الكتالوج المركزي للأدوية',          'ok': True},
                 {'text': 'متجر إلكتروني مدمج',               'ok': False},
@@ -2622,10 +2618,6 @@ def pricing(request):
             'features': [
                 {'text': 'حتى 5 مخازن',                      'ok': True},
                 {'text': 'بدون فروع',                        'ok': False},
-                {'text': 'حتى 15 مستخدمًا',                  'ok': True},
-                {'text': f'تجربة مجانية {trial_days} أيام', 'ok': True},
-                {'text': 'فواتير مبيعات وشراء',              'ok': True},
-                {'text': 'تقارير تفصيلية',                   'ok': True},
                 {'text': 'نسخ احتياطي يدوي',                 'ok': True},
                 {'text': 'الكتالوج المركزي للأدوية',          'ok': True},
                 {'text': 'متجر إلكتروني مدمج',               'ok': True},
@@ -2647,10 +2639,6 @@ def pricing(request):
             'features': [
                 {'text': 'حتى 20 مخزن',                      'ok': True},
                 {'text': 'فروع متعددة حسب اشتراكك',             'ok': True},
-                {'text': 'حتى 40 مستخدمًا',                  'ok': True},
-                {'text': f'تجربة مجانية {trial_days} أيام', 'ok': True},
-                {'text': 'فواتير مبيعات وشراء',              'ok': True},
-                {'text': 'تقارير تفصيلية',                   'ok': True},
                 {'text': 'نسخ احتياطي يدوي',                 'ok': True},
                 {'text': 'الكتالوج المركزي للأدوية',          'ok': True},
                 {'text': 'متجر إلكتروني مدمج',               'ok': True},

@@ -59,6 +59,12 @@ class PricingPageTests(TenantTestCase):
             self.assertContains(page, text)
         for gone in ('$2,400', '$4,320', 'شهران مجاناً'):
             self.assertNotContains(page, gone)
+        self.assertContains(page, 'متاح في كل الباقات')
+        for gone in ('حتى 5 مستخدمين', 'حتى 40 مستخدمًا'):
+            self.assertNotContains(page, gone)
+        html = page.content.decode()
+        for common in ('فواتير مبيعات وشراء', 'تقارير تفصيلية', 'تجربة مجانية 14 أيام'):
+            self.assertEqual(html.count(common), 1, common)       # في الفقرة فقط لا في البطاقات
         self.assertNotContains(page, '$149')
         self.assertNotContains(page, 'حتى 10 فروع')
 

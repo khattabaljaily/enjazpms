@@ -4,7 +4,7 @@
 {% block title %}خطط الأسعار | {{ app_name }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/pricing.css' %}?v=3.2">
+<link rel="stylesheet" href="{% static 'css/pricing.css' %}?v=3.3">
 {% endblock %}
 
 {% block body %}
@@ -84,7 +84,14 @@
             <div class="pr-section-head">
                 <span class="pr-section-kicker">خطط الأسعار</span>
                 <h2 class="pr-section-title">اختر ما يناسب نشاطك</h2>
-                <p class="pr-section-sub">كل خطة تشمل نظام مخزون كامل، فواتير مبيعات وشراء، وتقارير تفصيلية.</p>
+            </div>
+
+            <div class="pr-basics">
+                <span class="pr-basics__label">متاح في كل الباقات:</span>
+                <span class="pr-basics__item"><i class="fas fa-check"></i>نظام مخزون كامل</span>
+                <span class="pr-basics__item"><i class="fas fa-check"></i>فواتير مبيعات وشراء</span>
+                <span class="pr-basics__item"><i class="fas fa-check"></i>تقارير تفصيلية</span>
+                <span class="pr-basics__item"><i class="fas fa-check"></i>تجربة مجانية {{ trial_days }} أيام</span>
             </div>
 
             <div class="pr-cards">

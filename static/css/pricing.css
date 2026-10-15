@@ -358,6 +358,19 @@
 
 .pr-card > .pr-btn--full { margin-top: auto; }
 
+/* ── الميزات الأساسية المشتركة بين كل الباقات ─────────────────── */
+.pr-basics {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .6rem 1.5rem;
+    max-width: 860px; margin: 0 auto 2rem; padding: .95rem 1.4rem;
+    background: #fff; border: 1px solid #e8ecf2; border-radius: 16px; box-shadow: 0 2px 12px rgba(15,23,42,.05);
+}
+.pr-basics__label { font-weight: 800; color: #0f172a; font-size: .92rem; }
+.pr-basics__item { display: inline-flex; align-items: center; gap: .45rem; font-size: .88rem; font-weight: 600; color: #475569; }
+.pr-basics__item i {
+    width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    background: #dcfce7; color: #16a34a; font-size: .6rem;
+}
+
 /* ── Plan Card ───────────────────────────────────────────── */
 .pr-card {
     position: relative;
