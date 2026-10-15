@@ -1,6 +1,6 @@
 """
 أسعار الباقات: مصدر واحد (apps/core/pricing.py) لصفحة الأسعار وتقدير إيرادات المنصة؛
-المؤسسات رسوم أساسية + سعر لكل فرع نشط، والسنوي 10 أشهر، والدائم 8 سنوات.
+المؤسسات رسوم أساسية + سعر لكل فرع نشط، والسنوي 10 أشهر، والدائم سعر ثابت لكل باقة.
 """
 from decimal import Decimal
 
@@ -8,14 +8,28 @@ from django.urls import reverse
 
 from apps.accounts.models import User
 from apps.core.models import Branch
-from apps.core.pricing import annual, enterprise_monthly, perpetual, tenant_monthly_fee
+from apps.core.pricing import (
+    ENTERPRISE_PER_BRANCH_PERPETUAL, PERPETUAL_PRICE, annual, enterprise_monthly, enterprise_perpetual,
+    perpetual_from_annual, tenant_monthly_fee,
+)
 from apps.core.test_utils import TenantTestCase
 
 
 class PricingRulesTests(TenantTestCase):
-    def test_annual_is_ten_months_and_perpetual_is_eight_years(self):
+    def test_annual_is_ten_months(self):
         self.assertEqual(annual(Decimal('25')), Decimal('250'))
-        self.assertEqual(perpetual(Decimal('25')), Decimal('2400'))
+        self.assertEqual(annual(Decimal('45')), Decimal('450'))
+
+    def test_perpetual_prices_are_fixed_per_plan(self):
+        self.assertEqual(PERPETUAL_PRICE['basic'], Decimal('1900'))
+        self.assertEqual(PERPETUAL_PRICE['pro'], Decimal('3420'))
+        self.assertEqual(PERPETUAL_PRICE['enterprise'], Decimal('4940'))
+
+    def test_enterprise_branch_perpetual_is_annual_rent_x8_minus_5_percent(self):
+        self.assertEqual(perpetual_from_annual(Decimal('100')), Decimal('760'))
+        self.assertEqual(ENTERPRISE_PER_BRANCH_PERPETUAL, Decimal('760'))
+        self.assertEqual(enterprise_perpetual(0), Decimal('4940'))
+        self.assertEqual(enterprise_perpetual(3), Decimal('4940') + 3 * Decimal('760'))
 
     def test_enterprise_is_base_plus_per_branch(self):
         self.assertEqual(enterprise_monthly(0), Decimal('55'))
@@ -41,8 +55,10 @@ class PricingPageTests(TenantTestCase):
         self.client.logout()
         page = self.client.get(reverse('core:pricing'))
         self.assertEqual(page.status_code, 200)
-        for text in ('$25', '$250', '$2,400', '$45', '$450', '$4,320', '$55', '$10', 'branchCount'):
+        for text in ('$25', '$250', '$1,900', '$45', '$450', '$3,420', '$55', '$10', '$4,940', '$760', 'branchCount'):
             self.assertContains(page, text)
+        for gone in ('$2,400', '$4,320', 'شهران مجاناً'):
+            self.assertNotContains(page, gone)
         self.assertNotContains(page, '$149')
         self.assertNotContains(page, 'حتى 10 فروع')
 

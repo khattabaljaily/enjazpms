@@ -1,15 +1,17 @@
 """
 أسعار الباقات (بالدولار) — المصدر الوحيد لصفحة الأسعار وتقديرات إيرادات المنصة.
 
-- السنوي = 10 أشهر (شهران مجاناً).
-- الترخيص الدائم = 8 سنوات × 12 شهراً من السعر الشهري: النظام SaaS والاشتراك هو الخيار
-  الطبيعي، والدائم متاح لمن يصرّ عليه فقط.
+- السنوي = 10 أشهر (السعر كما هو؛ لا تُذكر «شهران مجاناً» في صفحة الأسعار).
+- الترخيص الدائم: سعر ثابت لكل باقة (PERPETUAL_PRICE). وسعر الفرع الإضافي في المؤسسات
+  بقاعدة: الإيجار السنوي × 8 سنوات ثم خصم 5٪. النظام SaaS والاشتراك هو الخيار الطبيعي،
+  والدائم متاح لمن يصرّ عليه فقط.
 - باقة المؤسسات: رسوم أساسية للإدارة والمخزن المركزي + سعر لكل فرع.
 """
 from decimal import Decimal
 
 ANNUAL_MONTHS = 10
-PERPETUAL_MONTHS = 8 * 12
+PERPETUAL_YEARS = 8
+PERPETUAL_DISCOUNT = Decimal('0.05')
 
 PLAN_MONTHLY = {
     'trial': Decimal('0'),
@@ -19,17 +21,33 @@ PLAN_MONTHLY = {
 }
 ENTERPRISE_PER_BRANCH_MONTHLY = Decimal('10')
 
+# الترخيص الدائم (دفعة واحدة). المؤسسات: الرسوم الأساسية فقط، وتُضاف الفروع.
+PERPETUAL_PRICE = {
+    'basic': Decimal('1900'),
+    'pro': Decimal('3420'),
+    'enterprise': Decimal('4940'),
+}
+
 
 def annual(monthly):
     return monthly * ANNUAL_MONTHS
 
 
-def perpetual(monthly):
-    return monthly * PERPETUAL_MONTHS
+def perpetual_from_annual(annual_rent):
+    """الدائم = الإيجار السنوي × 8 سنوات − 5٪."""
+    return annual_rent * PERPETUAL_YEARS * (1 - PERPETUAL_DISCOUNT)
+
+
+# سعر الفرع الواحد في الترخيص الدائم لباقة المؤسسات
+ENTERPRISE_PER_BRANCH_PERPETUAL = perpetual_from_annual(annual(ENTERPRISE_PER_BRANCH_MONTHLY))
 
 
 def enterprise_monthly(branches):
     return PLAN_MONTHLY['enterprise'] + ENTERPRISE_PER_BRANCH_MONTHLY * max(int(branches), 0)
+
+
+def enterprise_perpetual(branches):
+    return PERPETUAL_PRICE['enterprise'] + ENTERPRISE_PER_BRANCH_PERPETUAL * max(int(branches), 0)
 
 
 def tenant_monthly_fee(tenant, branch_count=None):

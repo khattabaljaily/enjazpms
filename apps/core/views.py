@@ -2578,13 +2578,14 @@ def pricing(request):
     """صفحة خطط التسعير"""
     from apps.core.models import PlatformSettings
     from apps.core.pricing import (
-        ENTERPRISE_PER_BRANCH_MONTHLY, PLAN_MONTHLY, annual, perpetual, usd,
+        ENTERPRISE_PER_BRANCH_MONTHLY, ENTERPRISE_PER_BRANCH_PERPETUAL, PERPETUAL_PRICE, PLAN_MONTHLY,
+        annual, usd,
     )
     trial_days = PlatformSettings.get().default_trial_days or 14
 
     def prices(key):
         m = PLAN_MONTHLY[key]
-        return {'monthly': usd(m), 'annual': usd(annual(m)), 'perpetual': usd(perpetual(m))}
+        return {'monthly': usd(m), 'annual': usd(annual(m)), 'perpetual': usd(PERPETUAL_PRICE[key])}
 
     per_branch = ENTERPRISE_PER_BRANCH_MONTHLY
     plans = [
@@ -2641,7 +2642,7 @@ def pricing(request):
             'description': 'سلاسل الصيدليات وشركات التوزيع: إدارة مركزية وفروع متعددة',
             **prices('enterprise'),
             'per_branch': {'monthly': usd(per_branch), 'annual': usd(annual(per_branch)),
-                           'perpetual': usd(perpetual(per_branch))},
+                           'perpetual': usd(ENTERPRISE_PER_BRANCH_PERPETUAL)},
             'highlight': False,
             'features': [
                 {'text': 'حتى 20 مخزن',                      'ok': True},
@@ -2671,7 +2672,11 @@ def pricing(request):
         'trial_days': trial_days,
         'enterprise_pricing': {
             'base': int(PLAN_MONTHLY['enterprise']), 'per_branch': int(per_branch),
-            'annual_months': annual(1), 'perpetual_months': perpetual(1),
+            'annual_months': int(annual(1)),
+            'perpetual_base': int(PERPETUAL_PRICE['enterprise']),
+            'perpetual_per_branch': int(ENTERPRISE_PER_BRANCH_PERPETUAL),
+            'perpetual_base_label': usd(PERPETUAL_PRICE['enterprise']),
+            'perpetual_per_branch_label': usd(ENTERPRISE_PER_BRANCH_PERPETUAL),
         },
         'current_subscription_plan_display': tenant.get_subscription_plan_display() if tenant else None,
     })
