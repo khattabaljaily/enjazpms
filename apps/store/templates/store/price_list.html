@@ -17,7 +17,7 @@
 <div class="pl-hero">
   <div class="pl-hero__bg"></div>
   <div class="pl-hero__inner">
-    <a href="{% url 'store:storefront' slug=store.slug %}" class="pl-back">
+    <a href="{% url 'store:storefront' slug=store.slug %}{% if branch %}?branch={{ branch.id }}{% endif %}" class="pl-back">
       <i class="fas fa-arrow-right"></i> {{ store.display_name }}
     </a>
     <div class="pl-hero__row">

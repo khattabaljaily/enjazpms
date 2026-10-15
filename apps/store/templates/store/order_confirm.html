@@ -68,7 +68,7 @@
   {% endif %}
 
   <div class="confirm-actions">
-    <a href="{% url 'store:storefront' slug=store.slug %}" class="confirm-btn confirm-btn--primary">
+    <a href="{% url 'store:storefront' slug=store.slug %}{% if order.branch_id %}?branch={{ order.branch_id }}{% endif %}" class="confirm-btn confirm-btn--primary">
       <i class="fas fa-store"></i> متابعة التسوق
     </a>
     {% if store.whatsapp %}

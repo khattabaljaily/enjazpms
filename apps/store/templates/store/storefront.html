@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="{% static 'css/store_storefront.css' %}?v=4.0">
+<link rel="stylesheet" href="{% static 'css/store_storefront.css' %}?v=4.1">
 <style>:root { --brand: {{ store.accent_color }}; }</style>
 {% include 'store/partials/rx_styles.html' %}
 </head>
@@ -17,7 +17,7 @@
 <!-- ── Header ─────────────────────────────────────────── -->
 <header class="sf-header">
   <div class="sf-header__inner">
-    <a href="{% url 'store:storefront' slug=store.slug %}" class="sf-brand">
+    <a href="{% url 'store:storefront' slug=store.slug %}{% if branch %}?branch={{ branch.id }}{% endif %}" class="sf-brand">
       {% if store.cover_image %}
       <img src="{{ store.cover_image.url }}" alt="{{ store.display_name }}" class="sf-brand__img">
       {% endif %}
@@ -25,7 +25,7 @@
     </a>
     <div class="sf-header__actions">
       {% if store.show_price_list %}
-      <a href="{% url 'store:price_list' slug=store.slug %}" class="sf-pricelist-btn">
+      <a href="{% url 'store:price_list' slug=store.slug %}{% if branch %}?branch={{ branch.id }}{% endif %}" class="sf-pricelist-btn">
         <i class="fas fa-tags"></i><span>قائمة الأسعار</span>
       </a>
       {% endif %}
@@ -60,11 +60,12 @@
 <!-- ── Search ─────────────────────────────────────────── -->
 <div class="sf-search-wrap{% if not search %} sf-search-wrap--float{% endif %}">
   <form class="sf-search" method="get" role="search">
+    {% if branch %}<input type="hidden" name="branch" value="{{ branch.id }}">{% endif %}
     <i class="fas fa-search sf-search__icon"></i>
     <input class="sf-search__input" type="search" name="q"
            value="{{ search }}" placeholder="ابحث عن دواء أو منتج..." autocomplete="off">
     {% if search %}
-    <a href="{% url 'store:storefront' slug=store.slug %}" class="sf-search__clear" title="مسح البحث">
+    <a href="{% url 'store:storefront' slug=store.slug %}{% if branch %}?branch={{ branch.id }}{% endif %}" class="sf-search__clear" title="مسح البحث">
       <i class="fas fa-times"></i>
     </a>
     {% endif %}
@@ -75,12 +76,12 @@
 {% if categories %}
 <div class="sf-cats">
   <div class="sf-cats__scroll">
-    <a href="{% url 'store:storefront' slug=store.slug %}"
+    <a href="{% url 'store:storefront' slug=store.slug %}{% if branch %}?branch={{ branch.id }}{% endif %}"
        class="sf-cat {% if not category_id %}sf-cat--active{% endif %}">
       <i class="fas fa-border-all"></i> الكل
     </a>
     {% for cat in categories %}
-    <a href="?cat={{ cat.id }}"
+    <a href="?cat={{ cat.id }}{% if branch %}&branch={{ branch.id }}{% endif %}"
        class="sf-cat {% if category_id == cat.id|stringformat:'s' %}sf-cat--active{% endif %}">
       {{ cat.name }}
     </a>
@@ -156,7 +157,7 @@
         {% else %}لا توجد منتجات متاحة حالياً.{% endif %}
       </p>
       {% if search %}
-      <a href="{% url 'store:storefront' slug=store.slug %}" class="sf-empty__link">
+      <a href="{% url 'store:storefront' slug=store.slug %}{% if branch %}?branch={{ branch.id }}{% endif %}" class="sf-empty__link">
         <i class="fas fa-arrow-right"></i> عرض كل المنتجات
       </a>
       {% endif %}

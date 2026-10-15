@@ -79,7 +79,7 @@ class BranchStoreSettingsTests(TenantTestCase):
         page = Client().get(self.url('storefront'), {'branch': self.b2.id})
         self.assertContains(page, 'wa.me/111')
         # قائمة الأسعار مُعطّلة لفرع أ فقط
-        self.assertEqual(self.anon.get(self.url('price_list')).status_code, 404)
+        self.assertEqual(self.anon.get(self.url('price_list'), {'branch': self.b1.id}).status_code, 404)
         self.assertContains(Client().get(self.url('price_list'), {'branch': self.b2.id}), 'بنادول')
 
     def test_saved_blank_value_is_the_branch_decision(self):
@@ -140,20 +140,48 @@ class BranchStoreSettingsTests(TenantTestCase):
 
     def test_closed_branch_page_offers_other_open_branches(self):
         self.save_form(status_override='closed')         # فرع أ مغلق، فرع ب مفتوح (يرث «مفتوح»)
-        c = Client()
-        c.get(self.url('storefront'), {'branch': self.b1.id})            # الجلسة تتذكر فرع أ
-        page = c.get(self.url('storefront'))                              # فتح الرابط بلا اختيار
-        self.assertContains(page, 'هذا الفرع مغلق حالياً')
+        page = Client().get(self.url('storefront'), {'branch': self.b1.id})
+        self.assertContains(page, 'فرع أ مغلق حالياً')
         self.assertContains(page, f'?branch={self.b2.id}')
         self.assertNotContains(page, f'?branch={self.b1.id}')
-        # اختيار فرع ب من الصفحة يفتح المتجر عادةً
-        self.assertContains(c.get(self.url('storefront'), {'branch': self.b2.id}), 'بنادول')
-        self.assertContains(c.get(self.url('storefront')), 'بنادول')       # والجلسة صارت على فرع ب
+        self.assertContains(Client().get(self.url('storefront'), {'branch': self.b2.id}), 'بنادول')
+
+    def test_public_link_never_remembers_the_branch(self):
+        c = Client()
+        c.get(self.url('storefront'), {'branch': self.b1.id})
+        page = c.get(self.url('storefront'))                              # فتح الرابط العام بلا اختيار
+        self.assertContains(page, 'اختر الفرع')
+        self.assertNotContains(page, 'بنادول')
+
+    def test_cart_cannot_switch_branch(self):
+        c = Client()
+        c.get(self.url('storefront'), {'branch': self.b1.id})
+        c.post(self.url('cart_add'), {'item_id': self.item.id, 'qty': '1'})
+        page = c.get(self.url('cart'), {'branch': self.b2.id})            # محاولة تغيير من السلة
+        self.assertContains(page, 'فرع أ')
+        self.assertNotContains(page, 'sfbOverlay')                        # لا نافذة تغيير فرع
+        self.assertEqual(c.session[f'store_branch_{self.store.slug}'], self.b1.id)
+        # فرع السلة أُغلق: صفحة السلة والدفع تعرض الإغلاق مع الفروع البديلة
+        BranchStoreSettings.objects.update_or_create(
+            tenant=self.tenant, branch=self.b1, defaults={'is_enabled': True, 'status_override': 'closed'})
+        for name in ('cart', 'checkout'):
+            page = c.get(self.url(name))
+            self.assertContains(page, 'فرع أ مغلق حالياً', msg_prefix=name)
+            self.assertContains(page, f'?branch={self.b2.id}', msg_prefix=name)
+
+    def test_storefront_switcher_lists_branches_with_status(self):
+        BranchStoreSettings.objects.create(tenant=self.tenant, branch=self.b2, is_enabled=True,
+                                           status_override='closed')
+        page = Client().get(self.url('storefront'), {'branch': self.b1.id})
+        self.assertContains(page, 'sfbOverlay')
+        self.assertContains(page, 'مغلق حالياً')
+        self.assertContains(page, 'مفتوح الآن')
 
     def test_chooser_marks_closed_branches_and_does_not_link_them(self):
         self.save_form(status_override='closed')
         page = Client().get(self.url('storefront'))
         self.assertContains(page, 'مغلق حالياً')
+        self.assertContains(page, 'مفتوح الآن')
         self.assertContains(page, f'?branch={self.b2.id}')
         self.assertNotContains(page, f'?branch={self.b1.id}')
 

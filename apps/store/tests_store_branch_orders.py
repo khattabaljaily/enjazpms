@@ -62,10 +62,13 @@ class StoreBranchOrdersTests(TenantTestCase):
 
     # ---- اختيار الفرع ---------------------------------------------------
     def test_branch_must_be_chosen_first(self):
-        for name in ('storefront', 'cart'):
-            page = self.anon.get(self.url(name))
-            self.assertContains(page, 'اختر الفرع')
-            self.assertNotContains(page, 'بنادول')
+        page = self.anon.get(self.url('storefront'))
+        self.assertContains(page, 'اختر الفرع')
+        self.assertNotContains(page, 'بنادول')
+        # السلة والدفع بلا فرع محفوظ: يُحوَّل الزائر لواجهة المتجر ليختار هناك
+        for name in ('cart', 'checkout'):
+            self.assertRedirects(self.anon.get(self.url(name)), self.url('storefront'),
+                                 fetch_redirect_response=False)
         self.assertEqual(self.add('1').status_code, 400)
         page = self.anon.get(self.url('storefront'), {'branch': self.b1.id})
         self.assertContains(page, 'بنادول')

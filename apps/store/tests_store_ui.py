@@ -143,10 +143,12 @@ class StoreBranchSelectionTests(TenantTestCase):
         self.assertContains(r, 'صنف ب')
         self.assertNotContains(r, 'صنف أ')
 
-    def test_choice_persists_and_invalid_branch_falls_back(self):
+    def test_choice_is_not_remembered_and_invalid_branch_falls_back(self):
         self._front(branch=self.b2.id)
-        self.assertContains(self._front(), 'صنف ب')
-        self.assertContains(self._front(branch=99999), 'فرع')
+        page = self._front()                                   # الرابط العام يعرض الفروع دائماً
+        self.assertContains(page, 'اختر الفرع')
+        self.assertNotContains(page, 'صنف ب')
+        self.assertContains(self._front(branch=99999), 'اختر الفرع')
 
     def test_order_records_branch_and_approval_uses_its_stock(self):
         from apps.store.models import OnlineOrder

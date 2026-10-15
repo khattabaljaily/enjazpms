@@ -17,7 +17,7 @@
 <!-- Header -->
 <header class="sc-header">
   <div class="sc-header__inner">
-    <a href="{% url 'store:storefront' slug=store.slug %}" class="sc-back">
+    <a href="{% url 'store:storefront' slug=store.slug %}{% if branch %}?branch={{ branch.id }}{% endif %}" class="sc-back">
       <i class="fas fa-arrow-right"></i>
       <span>متابعة التسوق</span>
     </a>
@@ -27,7 +27,7 @@
 </header>
 
 <main class="sc-wrap">
-{% include 'store/partials/branch_bar.html' %}
+{% include 'store/partials/branch_bar.html' with locked=True %}
   <h2 class="sc-page-title">
     <i class="fas fa-shopping-bag"></i> سلة التسوق
   </h2>
@@ -129,7 +129,7 @@
       <div class="sc-empty__icon"><i class="fas fa-shopping-bag"></i></div>
       <h3 class="sc-empty__title">سلتك فارغة</h3>
       <p class="sc-empty__text">لم تضف أي منتجات بعد</p>
-      <a href="{% url 'store:storefront' slug=store.slug %}" class="sc-empty__link">
+      <a href="{% url 'store:storefront' slug=store.slug %}{% if branch %}?branch={{ branch.id }}{% endif %}" class="sc-empty__link">
         <i class="fas fa-arrow-right"></i> تصفح المنتجات
       </a>
     </div>

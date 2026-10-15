@@ -760,3 +760,25 @@ body {
   .cb-hero { padding: 2.2rem 1rem 5.6rem; }
   .cb-card { padding: 1.4rem 1rem 1.1rem; border-radius: 22px; }
 }
+
+/* ── حالة الفرع (مفتوح/مغلق) في صفحة اختيار الفرع وصفحة الفرع المغلق ───────────── */
+.cb-status {
+  display: inline-flex; align-items: center; gap: .35rem; width: fit-content; margin-top: .3rem;
+  padding: .16rem .6rem; border-radius: 999px; font-size: .7rem; font-weight: 800;
+}
+.cb-status--open { background: #dcfce7; color: #15803d; }
+.cb-status--open::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+.cb-status--closed { background: #fee2e2; color: #b91c1c; }
+.cb-branch--closed { cursor: not-allowed; background: #f8fafc; }
+.cb-branch--closed .cb-branch__ico { background: #e2e8f0; color: #94a3b8; }
+.cb-branch--closed .cb-branch__txt strong { color: var(--sf-t600); }
+.cb-branch--closed:hover { transform: none; border-color: var(--sf-border); box-shadow: none; background: #f8fafc; }
+.cb-branch--closed:hover .cb-branch__ico { background: #e2e8f0; color: #94a3b8; }
+.cb-lock {
+  width: 64px; height: 64px; margin: 0 auto .9rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: #fee2e2; color: #dc2626; font-size: 1.5rem;
+}
+.cb-sub { margin: 1.3rem 0 .8rem; text-align: center; font-size: .85rem; font-weight: 800; color: var(--sf-t600); }
+.cb-closed-msg { margin-top: .5rem; color: var(--sf-t600); font-size: .86rem; line-height: 1.8; }
+.cb-next { display: inline-flex; align-items: center; gap: .4rem; margin-top: .6rem; padding: .4rem .9rem; border-radius: 10px;
+  background: #fef3c7; color: #b45309; font-size: .8rem; font-weight: 700; }
