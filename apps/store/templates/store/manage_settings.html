@@ -6,7 +6,7 @@
 {% block page_header %}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/store_manage_settings.css' %}?v=2.0">
+<link rel="stylesheet" href="{% static 'css/store_manage_settings.css' %}?v=2.1">
 {% endblock %}
 
 {% block content %}
@@ -204,7 +204,7 @@
 {% endif %}{# /not multi_branch: status #}
 
 {# ── 2. Two-column settings ───────────────────────────────── #}
-<div class="st-two-col"{% if multi_branch %} style="grid-template-columns:minmax(0,720px);"{% endif %}>
+<div class="st-two-col{% if multi_branch %} st-two-col--single{% endif %}">
 
   {# Left: Store identity #}
   <div class="cx-panel p-3">
