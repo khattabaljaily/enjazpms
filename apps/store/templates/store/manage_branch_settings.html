@@ -1,128 +1,407 @@
 {% extends "layouts/dashboard.html" %}
-{% load store_tags %}
+{% load static store_tags %}
 
 {% block title %}إعدادات متجر الفرع{% endblock %}
 
-{% block content %}
-<div class="container-fluid" style="max-width:900px;">
+{% block page_header %}{% endblock %}
 
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <div>
-      <h4 class="mb-1"><i class="fas fa-store me-2"></i>إعدادات متجر الفرع — {{ branch.name }}</h4>
-      <div class="text-muted small">
-        أي حقل تتركه «كإعدادات النشاط» يأخذ قيمة مدير النشاط؛ عبّئ فقط ما يختلف في فرعك.
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/store_manage_settings.css' %}?v=2.0">
+{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+
+{# ── Hero ────────────────────────────────────────────────── #}
+<div class="cx-hero">
+  <div class="cx-hero-inner">
+    <div class="cx-hero-left">
+      <div class="cx-hero-icon-wrap"><i class="fas fa-store"></i></div>
+      <div>
+        <h1 class="cx-hero-title">إعدادات المتجر — {{ branch.name }}</h1>
+        <p class="cx-hero-desc">
+          {% if store.is_enabled %}
+            رابط متجر الفرع:
+            <a href="{% url 'store:storefront' slug=store.slug %}?branch={{ branch.id }}" target="_blank" class="st-link">
+              /store/{{ store.slug }}/?branch={{ branch.id }}
+            </a>
+            <button type="button" class="st-copy-btn"
+                    onclick="copyStoreLink('{{ request.scheme }}://{{ request.META.HTTP_HOST }}{% url "store:storefront" slug=store.slug %}?branch={{ branch.id }}')"
+                    title="نسخ الرابط">
+              <i class="fas fa-copy"></i>
+            </button>
+          {% else %}
+            المتجر غير متاح لهذا الفرع حالياً
+          {% endif %}
+        </p>
       </div>
     </div>
-    <div class="d-flex gap-2">
-      <a href="{% url 'store:storefront' slug=store.slug %}?branch={{ branch.id }}" target="_blank" class="btn btn-outline-secondary btn-sm">
-        <i class="fas fa-external-link-alt"></i> عرض متجر الفرع
-      </a>
-      <a href="{% url 'store:manage_orders' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-inbox"></i> الطلبات</a>
+    <div class="cx-hero-right">
+      <div class="cx-hero-actions">
+        {% if store.is_enabled %}
+        <a href="{% url 'store:storefront' slug=store.slug %}?branch={{ branch.id }}" target="_blank" class="cx-btn-secondary">
+          <i class="fas fa-external-link-alt"></i><span>عرض المتجر</span>
+        </a>
+        <button type="button" class="cx-btn-secondary" onclick="openStoreQR('{{ request.scheme }}://{{ request.META.HTTP_HOST }}{% url "store:storefront" slug=store.slug %}?branch={{ branch.id }}', '{{ store.display_name|default:request.tenant.name }} — {{ branch.name }}')">
+          <i class="fas fa-qrcode"></i><span>رمز QR</span>
+        </button>
+        {% endif %}
+        {% if user|has_perm_key:'view_store_orders' %}
+        <a href="{% url 'store:manage_orders' %}" class="cx-btn-primary st-orders-btn">
+          <i class="fas fa-inbox"></i><span>الطلبات</span>
+          {% if pending_count > 0 %}<span class="st-orders-count">{{ pending_count }}</span>{% endif %}
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Form ────────────────────────────────────────────────── #}
+<form method="post" id="storeForm">
+{% csrf_token %}
+
+{# hidden radios for form submission — decoupled from visual buttons #}
+<input type="radio" name="status_override" value="auto"   id="_r_auto"   {% if store.status_override == 'auto'   %}checked{% endif %} style="display:none">
+<input type="radio" name="status_override" value="open"   id="_r_open"   {% if store.status_override == 'open'   %}checked{% endif %} style="display:none">
+<input type="radio" name="status_override" value="closed" id="_r_closed" {% if store.status_override == 'closed' %}checked{% endif %} style="display:none">
+
+{# ── 1. Store Status ──────────────────────────────────────── #}
+<div class="st-status-section">
+  <div class="st-status-section__header">
+
+    {# Live indicator #}
+    {% if store.is_enabled %}
+    <div class="st-live-indicator {% if status.is_open %}st-live-indicator--open{% else %}st-live-indicator--closed{% endif %}" id="liveIndicator">
+      <span class="st-live-dot"></span>
+      <span class="st-live-label" id="liveLabel">
+        {% if store.status_override == 'open' %}مفتوح
+        {% elif store.status_override == 'closed' %}مغلق
+        {% elif status.is_open %}مفتوح — جدول
+        {% else %}مغلق — جدول{% endif %}
+      </span>
+      {% if status.next_open %}<span class="st-live-sub">{{ status.next_open }}</span>
+      {% elif status.today_hours %}<span class="st-live-sub">{{ status.today_hours }}</span>{% endif %}
+    </div>
+    {% else %}
+    <div class="st-live-indicator st-live-indicator--closed" id="liveIndicator">
+      <span class="st-live-dot"></span>
+      <span class="st-live-label" id="liveLabel">
+        {% if store.status_override == 'open' %}مفتوح
+        {% elif store.status_override == 'closed' %}مغلق
+        {% elif status.is_open %}مفتوح — جدول
+        {% else %}مغلق — جدول{% endif %}
+      </span>
+    </div>
+    <div style="margin-top:.6rem;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);border-radius:8px;padding:.55rem .9rem;font-size:.8rem;color:#fbbf24;display:flex;align-items:center;gap:.5rem;">
+      <i class="fas fa-exclamation-triangle"></i>
+      المتجر غير متاح لهذا الفرع — فعّله من خيار "المتجر متاح للفرع" أدناه ثم احفظ.
+    </div>
+    {% endif %}
+
+    {# Mode buttons — completely separate from radio inputs #}
+    <div class="st-mode-pills" id="modePills">
+      <button type="button" class="st-mode-pill {% if store.status_override == 'auto' %}active{% endif %}" data-mode="auto">
+        <i class="fas fa-clock"></i> تلقائي
+      </button>
+      <button type="button" class="st-mode-pill st-mode-pill--open {% if store.status_override == 'open' %}active{% endif %}" data-mode="open">
+        <i class="fas fa-door-open"></i> مفتوح دائماً
+      </button>
+      <button type="button" class="st-mode-pill st-mode-pill--closed {% if store.status_override == 'closed' %}active{% endif %}" data-mode="closed">
+        <i class="fas fa-lock"></i> مغلق دائماً
+      </button>
     </div>
   </div>
 
-  <form method="post">
-    {% csrf_token %}
+  {# Inline script — defined immediately after the buttons it controls #}
+  <script>
+  (function() {
+    var autoLabel = '{% if status.is_open %}مفتوح — جدول{% else %}مغلق — جدول{% endif %}';
+    var autoCls   = '{% if status.is_open %}st-live-indicator--open{% else %}st-live-indicator--closed{% endif %}';
 
-    <div class="card mb-3"><div class="card-header fw-bold">الاتصال والدفع والتسليم</div><div class="card-body">
-      <div class="mb-3">
-        <label class="form-label">واتساب الفرع</label>
-        <input type="text" name="whatsapp" value="{{ own.whatsapp }}" class="form-control" dir="ltr" placeholder="{{ store.whatsapp|default:'مثال: 249912345678' }}">
-        <div class="form-text">اتركه فارغاً لاستخدام واتساب النشاط{% if store.whatsapp %} ({{ store.whatsapp }}){% endif %}.</div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">بيانات التحويل البنكي للفرع</label>
-        <textarea name="bank_details" rows="4" class="form-control" placeholder="{{ store.bank_details }}">{{ own.bank_details }}</textarea>
-        <div class="form-text">تظهر للعميل عند اختيار التحويل البنكي لطلب هذا الفرع. فارغ = بيانات النشاط.</div>
-      </div>
-      <div>
-        <label class="form-label">رسالة الشحن/التسليم</label>
-        <textarea name="delivery_message" rows="2" class="form-control" placeholder="{{ store.delivery_message }}">{{ own.delivery_message }}</textarea>
-      </div>
-    </div></div>
+    document.getElementById('modePills').addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-mode]');
+      if (!btn) return;
+      var value = btn.getAttribute('data-mode');
 
-    <div class="card mb-3"><div class="card-header fw-bold">خيارات العرض</div><div class="card-body">
-      <div class="row g-3">
-        {% for field, label, value, central in tristate %}
-        <div class="col-md-6">
-          <label class="form-label">{{ label }}</label>
-          <select name="{{ field }}" class="form-select">
-            <option value="" {% if value is None %}selected{% endif %}>كإعدادات النشاط ({% if central %}نعم{% else %}لا{% endif %})</option>
-            <option value="1" {% if value is True %}selected{% endif %}>نعم</option>
-            <option value="0" {% if value is False %}selected{% endif %}>لا</option>
-          </select>
+      // 1. Check the correct hidden radio
+      var radio = document.getElementById('_r_' + value);
+      if (radio) radio.checked = true;
+
+      // 2. Highlight button
+      var pills = document.querySelectorAll('.st-mode-pill');
+      for (var i = 0; i < pills.length; i++) pills[i].classList.remove('active');
+      btn.classList.add('active');
+
+      // 3. Update live indicator
+      var ind = document.getElementById('liveIndicator');
+      var lbl = document.getElementById('liveLabel');
+      if (!ind || !lbl) return;
+      if (value === 'open') {
+        ind.className = 'st-live-indicator st-live-indicator--open';
+        lbl.textContent = 'مفتوح';
+      } else if (value === 'closed') {
+        ind.className = 'st-live-indicator st-live-indicator--closed';
+        lbl.textContent = 'مغلق';
+      } else {
+        ind.className = 'st-live-indicator ' + autoCls;
+        lbl.textContent = autoLabel;
+      }
+    });
+  })();
+  </script>
+  <div class="st-status-section__messages">
+    <div class="st-msg-field">
+      <label class="st-msg-label st-msg-label--open">
+        <i class="fas fa-circle-dot"></i> رسالة الترحيب (تظهر عند الفتح)
+      </label>
+      <input class="st-msg-input" type="text" name="open_message"
+             value="{{ store.open_message }}" maxlength="200"
+             placeholder="أهلاً! المتجر مفتوح الآن...">
+    </div>
+    <div class="st-msg-field">
+      <label class="st-msg-label st-msg-label--closed">
+        <i class="fas fa-circle-dot"></i> رسالة الإغلاق
+      </label>
+      <input class="st-msg-input" type="text" name="closed_message"
+             value="{{ store.closed_message }}" maxlength="200"
+             placeholder="المتجر مغلق حالياً...">
+    </div>
+  </div>
+</div>
+
+{# ── 2. Two-column settings ───────────────────────────────── #}
+<div class="st-two-col">
+
+  {# Left: Branch availability + contact #}
+  <div class="cx-panel p-3">
+    <div class="cx-panel-head"><i class="fas fa-store"></i> متجر الفرع</div>
+    <div class="st-form-body">
+
+      <div class="st-toggle-row">
+        <div>
+          <div class="st-field-title">المتجر متاح للفرع</div>
+          <div class="st-field-hint">عند الإيقاف لا يظهر هذا الفرع للزبائن ولا يستقبل طلبات (مثلاً إن كان الفرع متوقفاً)</div>
         </div>
-        {% endfor %}
+        <label class="st-toggle">
+          <input type="checkbox" name="is_enabled" {% if store.is_enabled %}checked{% endif %}>
+          <span class="st-toggle__track"><span class="st-toggle__thumb"></span></span>
+        </label>
       </div>
-      <hr>
-      <label class="form-label">أعمدة قائمة الأسعار</label>
-      <div class="mb-2">
-        <label class="me-3"><input type="radio" name="columns_mode" value="inherit" {% if not columns_custom %}checked{% endif %}> كإعدادات النشاط</label>
-        <label><input type="radio" name="columns_mode" value="custom" {% if columns_custom %}checked{% endif %}> أعمدة خاصة بالفرع</label>
-      </div>
-      <div class="row">
-        {% for key, label, checked in price_list_columns %}
-        <div class="col-md-6"><label><input type="checkbox" name="price_list_columns" value="{{ key }}" {% if checked %}checked{% endif %}> {{ label }}</label></div>
-        {% endfor %}
-      </div>
-    </div></div>
 
-    <div class="card mb-3"><div class="card-header fw-bold">الدوام وحالة المتجر</div><div class="card-body">
-      <div class="alert alert-light border py-2 small">
-        الحالة الآن: <strong>{{ status.label }}</strong>
-        {% if status.next_open %}— {{ status.next_open }}{% elif status.today_hours %}— {{ status.today_hours }}{% endif %}
+      <div class="st-field">
+        <label class="st-label"><i class="fab fa-whatsapp" style="color:#25d366;"></i> واتساب الفرع</label>
+        <input class="st-input" type="text" name="whatsapp" value="{{ store.whatsapp }}" placeholder="249912345678">
+        <div class="st-field-hint">للتواصل السريع مع عملاء هذا الفرع</div>
       </div>
-      <div class="row g-3 mb-3">
-        <div class="col-md-4">
-          <label class="form-label">حالة المتجر</label>
-          <select name="status_override" class="form-select">
-            <option value="" {% if not own.status_override %}selected{% endif %}>كإعدادات النشاط</option>
-            {% for val, label in override_choices %}
-            <option value="{{ val }}" {% if own.status_override == val %}selected{% endif %}>{{ label }}</option>
+
+      <div class="st-field mb-0">
+        <div class="st-field-hint">اسم المتجر ووصفه ورابطه واحد لكل الفروع ويحدده مدير النشاط: <strong>{{ store.display_name }}</strong></div>
+      </div>
+
+    </div>
+  </div>
+
+  {# Right: Catalog + Payment #}
+  <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+    <div class="cx-panel p-3">
+      <div class="cx-panel-head"><i class="fas fa-boxes"></i> عرض المنتجات</div>
+      <div class="st-form-body">
+
+        <div class="st-toggle-row">
+          <div>
+            <div class="st-field-title">عرض الأسعار</div>
+            <div class="st-field-hint">إظهار سعر البيع على كل منتج</div>
+          </div>
+          <label class="st-toggle">
+            <input type="checkbox" name="show_prices" {% if store.show_prices %}checked{% endif %}>
+            <span class="st-toggle__track"><span class="st-toggle__thumb"></span></span>
+          </label>
+        </div>
+
+        <div class="st-toggle-row">
+          <div>
+            <div class="st-field-title">عرض الكمية المتوفرة</div>
+            <div class="st-field-hint">إظهار عدد الوحدات المتاحة للشراء</div>
+          </div>
+          <label class="st-toggle">
+            <input type="checkbox" name="show_stock_quantity" {% if store.show_stock_quantity %}checked{% endif %}>
+            <span class="st-toggle__track"><span class="st-toggle__thumb"></span></span>
+          </label>
+        </div>
+
+        <div class="st-toggle-row">
+          <div>
+            <div class="st-field-title">عرض المنتجات النافدة</div>
+            <div class="st-field-hint">تظهر بدون زر الشراء</div>
+          </div>
+          <label class="st-toggle">
+            <input type="checkbox" name="show_out_of_stock" {% if store.show_out_of_stock %}checked{% endif %}>
+            <span class="st-toggle__track"><span class="st-toggle__thumb"></span></span>
+          </label>
+        </div>
+
+        <div class="st-field">
+          <label class="st-label">الحد الأدنى للطلب</label>
+          <div class="st-input-group">
+            <input class="st-input" type="number" name="min_order_amount"
+                   value="{% if store.min_order_amount %}{{ store.min_order_amount|stringformat:'.2f' }}{% endif %}" min="0" step="0.01">
+            <span class="st-input-suffix">{{ request.tenant.currency|currency_ar }}</span>
+          </div>
+          <div class="st-field-hint mt-1">اتركه صفراً لعدم تطبيق حد أدنى</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="cx-panel p-3">
+      <div class="cx-panel-head"><i class="fas fa-tags"></i> قائمة الأسعار</div>
+      <div class="st-form-body">
+
+        <div class="st-toggle-row mb-0">
+          <div>
+            <div class="st-field-title">تفعيل قائمة الأسعار</div>
+            <div class="st-field-hint">صفحة عامة منفصلة تعرض كل المنتجات وأسعارها، مع بحث وفلترة حسب الفئة. رابطها يظهر تلقائياً في صفحة المتجر</div>
+          </div>
+          <label class="st-toggle">
+            <input type="checkbox" name="show_price_list" {% if store.show_price_list %}checked{% endif %}>
+            <span class="st-toggle__track"><span class="st-toggle__thumb"></span></span>
+          </label>
+        </div>
+
+        <div class="st-field mt-3">
+          <div class="st-field-title">الأعمدة الظاهرة في قائمة الأسعار</div>
+          <div class="st-field-hint">اختر الأعمدة التي تظهر للزائر. أعمدة الأسعار تختفي أيضاً إذا أُوقف خيار "عرض الأسعار"</div>
+          <div class="d-flex flex-wrap gap-3 mt-2">
+            {% for key, label, checked in price_list_columns %}
+            <label class="d-flex align-items-center gap-2">
+              <input type="checkbox" name="price_list_columns" value="{{ key }}" {% if checked %}checked{% endif %}>
+              <span>{{ label }}</span>
+            </label>
             {% endfor %}
-          </select>
+          </div>
         </div>
-        <div class="col-md-4"><label class="form-label">رسالة المفتوح</label>
-          <input type="text" name="open_message" value="{{ own.open_message }}" class="form-control" maxlength="200" placeholder="{{ store.open_message }}"></div>
-        <div class="col-md-4"><label class="form-label">رسالة المغلق</label>
-          <input type="text" name="closed_message" value="{{ own.closed_message }}" class="form-control" maxlength="200" placeholder="{{ store.closed_message }}"></div>
+
       </div>
-      <div class="mb-2">
-        <label class="me-3"><input type="radio" name="hours_mode" value="inherit" {% if not own.working_hours %}checked{% endif %}> دوام النشاط</label>
-        <label><input type="radio" name="hours_mode" value="custom" {% if own.working_hours %}checked{% endif %}> دوام خاص بالفرع</label>
+    </div>
+
+    <div class="cx-panel p-3">
+      <div class="cx-panel-head"><i class="fas fa-credit-card"></i> الدفع والتسليم</div>
+      <div class="st-form-body">
+        <div class="st-field">
+          <label class="st-label">بيانات التحويل البنكي</label>
+          <textarea class="st-input st-textarea" name="bank_details" rows="2"
+                    placeholder="اسم البنك، رقم الحساب، اسم صاحب الحساب...">{{ store.bank_details }}</textarea>
+          <div class="st-field-hint">تظهر للعميل عند اختيار التحويل البنكي</div>
+        </div>
+        <div class="st-field mb-0">
+          <label class="st-label">رسالة التسليم / الشحن</label>
+          <textarea class="st-input st-textarea" name="delivery_message" rows="2"
+                    placeholder="مثال: سيتم التواصل معك خلال 24 ساعة لتأكيد التسليم">{{ store.delivery_message }}</textarea>
+        </div>
       </div>
-      <table class="table table-sm align-middle mb-0">
-        {% for day_key, day_ar in days %}
-        {% with d=hours|get_item:day_key %}
+    </div>
+
+  </div>
+</div>
+
+{# ── 3. Working Hours ─────────────────────────────────────── #}
+<div class="cx-panel p-3 st-hours-panel">
+  <div class="cx-panel-head">
+    <i class="fas fa-business-time"></i> ساعات العمل
+    <span class="st-hours-hint">تُفعَّل عند ضبط الحالة على "تلقائي"</span>
+  </div>
+  <div class="st-form-body">
+    <table class="st-hours-table">
+      <thead>
         <tr>
-          <td style="width:25%">{{ day_ar }}</td>
-          <td style="width:15%"><input type="checkbox" name="day_{{ day_key }}_enabled" {% if d.enabled %}checked{% endif %}> يعمل</td>
-          <td><input type="time" name="day_{{ day_key }}_open" value="{{ d.open }}" class="form-control form-control-sm d-inline-block" style="width:130px"></td>
-          <td><input type="time" name="day_{{ day_key }}_close" value="{{ d.close }}" class="form-control form-control-sm d-inline-block" style="width:130px"></td>
+          <th>اليوم</th>
+          <th style="width:60px;text-align:center;">مفعّل</th>
+          <th style="width:130px;">وقت الفتح</th>
+          <th style="width:20px;"></th>
+          <th style="width:130px;">وقت الإغلاق</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for day_key, day_ar in days %}
+        {% with day_info=hours|get_item:day_key %}
+        <tr class="st-hours-row {% if not day_info.enabled %}st-hours-row--off{% endif %}" id="row-{{ day_key }}">
+          <td class="st-day-name">{{ day_ar }}</td>
+          <td class="st-day-toggle-cell">
+            <label class="st-toggle st-toggle--sm">
+              <input class="day-toggle" type="checkbox" name="day_{{ day_key }}_enabled"
+                     {% if day_info.enabled %}checked{% endif %}
+                     onchange="toggleDay('{{ day_key }}', this.checked)">
+              <span class="st-toggle__track"><span class="st-toggle__thumb"></span></span>
+            </label>
+          </td>
+          <td>
+            <input class="st-time-input" type="time" name="day_{{ day_key }}_open"
+                   value="{{ day_info.open }}" {% if not day_info.enabled %}disabled{% endif %}>
+          </td>
+          <td class="st-time-sep"><i class="fas fa-arrow-left"></i></td>
+          <td>
+            <input class="st-time-input" type="time" name="day_{{ day_key }}_close"
+                   value="{{ day_info.close }}" {% if not day_info.enabled %}disabled{% endif %}>
+          </td>
         </tr>
         {% endwith %}
         {% endfor %}
-      </table>
-    </div></div>
+      </tbody>
+    </table>
+  </div>
+</div>
 
-    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
-  </form>
+{# ── Save ─────────────────────────────────────────────────── #}
+<div class="st-save-row">
+  <button type="submit" class="cx-btn-primary">
+    <i class="fas fa-save"></i><span>حفظ الإعدادات</span>
+  </button>
+</div>
+
+</form>
 </div>
 {% endblock %}
+
 {% block extra_js %}
+<!-- Copy toast -->
+<div id="copyToast" class="st-copy-toast" aria-live="polite"></div>
+
+{% include "store/partials/qr_print_modal.html" %}
+
 <script>
-// تعديل الأعمدة أو الدوام يعني تخصيصاً للفرع: نفعّل خيار «خاص بالفرع» تلقائياً حتى لا يُتجاهل التعديل عند الحفظ
-(function () {
-  function bind(selector, radioName) {
-    document.querySelectorAll(selector).forEach(function (el) {
-      el.addEventListener('change', function () {
-        var radio = document.querySelector('input[name="' + radioName + '"][value="custom"]');
-        if (radio) radio.checked = true;
-      });
-    });
-  }
-  bind('input[name="price_list_columns"]', 'columns_mode');
-  bind('input[name^="day_"]', 'hours_mode');
-})();
+// ── Copy link ──────────────────────────────────────────
+function copyStoreLink(url) {
+    const fallback = () => {
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showCopyToast();
+    };
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(showCopyToast).catch(fallback);
+    } else {
+        fallback();
+    }
+}
+
+function showCopyToast() {
+    const toast = document.getElementById('copyToast');
+    toast.textContent = '✓ تم نسخ الرابط';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+// Day toggle
+function toggleDay(dayKey, enabled) {
+  const row = document.getElementById('row-' + dayKey);
+  row.classList.toggle('st-hours-row--off', !enabled);
+  row.querySelectorAll('.st-time-input').forEach(inp => inp.disabled = !enabled);
+}
 </script>
 {% endblock %}

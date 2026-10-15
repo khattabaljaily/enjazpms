@@ -20,7 +20,7 @@
       <div>
         <h1 class="cx-hero-title">المتجر الإلكتروني</h1>
         <p class="cx-hero-desc">
-          {% if store.is_enabled %}
+          {% if store.is_enabled or multi_branch %}
             رابط متجرك:
             <a href="{% url 'store:storefront' slug=store.slug %}" target="_blank" class="st-link">
               /store/{{ store.slug }}/
@@ -38,7 +38,7 @@
     </div>
     <div class="cx-hero-right">
       <div class="cx-hero-actions">
-        {% if store.is_enabled %}
+        {% if store.is_enabled or multi_branch %}
         <a href="{% url 'store:storefront' slug=store.slug %}" target="_blank" class="cx-btn-secondary">
           <i class="fas fa-external-link-alt"></i><span>عرض المتجر</span>
         </a>
@@ -58,7 +58,7 @@
 </div>
 
 {# ── Intro Banner (disabled state) ──────────────────────── #}
-{% if not store.is_enabled %}
+{% if not store.is_enabled and not multi_branch %}
 <div class="st-intro-banner">
   <div class="st-intro-orb st-intro-orb--1"></div>
   <div class="st-intro-orb st-intro-orb--2"></div>
@@ -91,6 +91,7 @@
 <form method="post" enctype="multipart/form-data" id="storeForm">
 {% csrf_token %}
 
+{% if not multi_branch %}
 {# hidden radios for form submission — decoupled from visual buttons #}
 <input type="radio" name="status_override" value="auto"   id="_r_auto"   {% if store.status_override == 'auto'   %}checked{% endif %} style="display:none">
 <input type="radio" name="status_override" value="open"   id="_r_open"   {% if store.status_override == 'open'   %}checked{% endif %} style="display:none">
@@ -200,14 +201,17 @@
   </div>
 </div>
 
+{% endif %}{# /not multi_branch: status #}
+
 {# ── 2. Two-column settings ───────────────────────────────── #}
-<div class="st-two-col">
+<div class="st-two-col"{% if multi_branch %} style="grid-template-columns:minmax(0,720px);"{% endif %}>
 
   {# Left: Store identity #}
   <div class="cx-panel p-3">
     <div class="cx-panel-head"><i class="fas fa-store"></i> هوية المتجر</div>
     <div class="st-form-body">
 
+      {% if not multi_branch %}
       <div class="st-toggle-row">
         <div>
           <div class="st-field-title">تفعيل المتجر للعامة</div>
@@ -218,6 +222,8 @@
           <span class="st-toggle__track"><span class="st-toggle__thumb"></span></span>
         </label>
       </div>
+
+      {% endif %}
 
       <div class="st-field">
         <label class="st-label">اسم المتجر</label>
@@ -251,6 +257,9 @@
                   placeholder="وصف مختصر يظهر في صفحة المتجر...">{{ store.description }}</textarea>
       </div>
 
+      {% if multi_branch %}
+      <div class="st-field-hint">الاتصال والدفع والتسليم وساعات العمل وخيارات العرض وتفعيل المتجر يضبطها كل فرع من صفحة «إعدادات المتجر» الخاصة به.</div>
+      {% else %}
       <div class="st-field-row">
         <div class="st-field">
           <label class="st-label">اللون الرئيسي</label>
@@ -265,14 +274,17 @@
         </div>
       </div>
 
+      {% endif %}
+
     </div>
   </div>
 
+  {% if not multi_branch %}
   {# Right: Catalog + Payment #}
   <div style="display:flex;flex-direction:column;gap:1.25rem;">
 
     <div class="cx-panel p-3">
-      <div class="cx-panel-head"><i class="fas fa-boxes"></i> الكتالوج</div>
+      <div class="cx-panel-head"><i class="fas fa-boxes"></i> عرض المنتجات</div>
       <div class="st-form-body">
 
         <div class="st-toggle-row">
@@ -370,8 +382,10 @@
     </div>
 
   </div>
+  {% endif %}
 </div>
 
+{% if not multi_branch %}
 {# ── 3. Working Hours ─────────────────────────────────────── #}
 <div class="cx-panel p-3 st-hours-panel">
   <div class="cx-panel-head">
@@ -418,6 +432,8 @@
     </table>
   </div>
 </div>
+
+{% endif %}{# /not multi_branch: hours #}
 
 {# ── Save ─────────────────────────────────────────────────── #}
 <div class="st-save-row">

@@ -5,6 +5,7 @@ Public  (no login):  storefront, cart ops, checkout, order_confirm
 Manage  (login req): settings, orders list, order detail/approve/reject
 """
 import json
+from decimal import Decimal, InvalidOperation
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -26,10 +27,15 @@ from .services import (
 # PUBLIC — helpers
 # ══════════════════════════════════════════════════════════════
 
+def _is_multi_branch(store):
+    return getattr(store.tenant, 'version_type', '') == 'multi_branch'
+
+
 def _get_store(slug: str, require_enabled: bool = True):
     """Return store or render 'store unavailable' response."""
     store = get_object_or_404(StoreSettings, slug=slug)
-    if require_enabled and not store.is_enabled:
+    # نسخة المؤسسات: التفعيل لكل فرع (يُفحص بعد اختيار الفرع، راجع _store_branches)
+    if require_enabled and not store.is_enabled and not _is_multi_branch(store):
         from django.template.loader import render_to_string
         from django.http import HttpResponse
         # Return a sentinel so callers can short-circuit
@@ -133,11 +139,21 @@ h2{{font-size:1.55rem;font-weight:900;margin-bottom:.6rem;letter-spacing:-.01em;
 
 
 def _store_branches(store):
-    """فروع المتجر التي يختار منها الزائر (نسخة المؤسسات فقط)."""
+    """
+    فروع المتجر التي يختار منها الزائر (نسخة المؤسسات فقط): الفروع النشطة التي
+    متجرها متاح. الفرع بلا تخصيص محفوظ يتبع تفعيل النشاط.
+    """
     from apps.core.models import Branch
-    if getattr(store.tenant, 'version_type', '') != 'multi_branch':
-        return Branch.objects.none()
-    return Branch.objects.filter(tenant=store.tenant, is_active=True).order_by('name')
+    if not _is_multi_branch(store):
+        return []
+    own = {o.branch_id: o for o in BranchStoreSettings.objects.filter(tenant=store.tenant)}
+
+    def enabled(branch):
+        o = own.get(branch.id)
+        return store.is_enabled if o is None or o.is_enabled is None else o.is_enabled
+
+    return [b for b in Branch.objects.filter(tenant=store.tenant, is_active=True).order_by('name')
+            if enabled(b)]
 
 
 def _resolve_store_branch(request, store):
@@ -146,7 +162,7 @@ def _resolve_store_branch(request, store):
     حتى يختاره الزائر صراحةً (لا فرع افتراضي — الطلب يذهب للفرع الذي اختاره).
     (None, []) خارج نسخة المؤسسات فلا يتغير سلوك المتجر هناك.
     """
-    branches = list(_store_branches(store))
+    branches = _store_branches(store)
     if not branches:
         return None, []
     key = f'store_branch_{store.slug}'
@@ -158,7 +174,12 @@ def _resolve_store_branch(request, store):
 
 
 def _branch_required(request, store, branch, store_branches):
-    """صفحة اختيار الفرع لو للمتجر فروع ولم يختر الزائر بعد؛ وإلا None."""
+    """
+    نسخة المؤسسات بلا أي فرع متاح: المتجر غير متاح. وإلا صفحة اختيار الفرع لو لم يختر
+    الزائر بعد؛ وإلا None.
+    """
+    if _is_multi_branch(store) and not store_branches:
+        return _store_disabled_response(store)
     if store_branches and branch is None:
         return render(request, 'store/choose_branch.html', {'store': store, 'store_branches': store_branches})
     return None
@@ -357,6 +378,8 @@ def cart_add_view(request, slug):
     if getattr(store, '_disabled', False):
         return _store_disabled_response(store)
     branch, store_branches = _resolve_store_branch(request, store)
+    if _is_multi_branch(store) and not store_branches:
+        return _store_disabled_response(store)
     store = store.for_branch(branch)
     status = store.get_status()
     if not status['is_open']:
@@ -559,6 +582,21 @@ def manage_settings(request):
         defaults={'display_name': tenant.name},
     )
 
+    multi_branch = _is_multi_branch(store)
+
+    if request.method == 'POST' and multi_branch:
+        # نسخة المؤسسات: مدير النشاط يضبط هوية المتجر الواحد فقط؛ الباقي (تفعيل، دوام، دفع،
+        # عرض...) لكل فرع في صفحته — فلا نمسّ أي حقل آخر
+        store.display_name = request.POST.get('display_name', '').strip() or tenant.name
+        store.description  = request.POST.get('description', '').strip()
+        new_slug = request.POST.get('slug', '').strip()
+        if new_slug and new_slug != store.slug:
+            if not StoreSettings.objects.filter(slug=new_slug).exclude(pk=store.pk).exists():
+                store.slug = new_slug
+        store.save()
+        messages.success(request, 'تم حفظ إعدادات المتجر بنجاح.')
+        return redirect('store:manage_settings')
+
     if request.method == 'POST':
         store.is_enabled        = request.POST.get('is_enabled') == 'on'
         store.display_name      = request.POST.get('display_name', '').strip() or tenant.name
@@ -608,6 +646,7 @@ def manage_settings(request):
     hours = store.working_hours or DEFAULT_HOURS
 
     return render(request, 'store/manage_settings.html', {
+        'multi_branch':  multi_branch,
         'store':         store,
         'pending_count': pending_count,
         'status':        store.get_status(),
@@ -623,11 +662,6 @@ def manage_settings(request):
 # ══════════════════════════════════════════════════════════════
 # MANAGE — Branch store settings (نسخة المؤسسات: الفرع يعدّل بياناته بنفسه)
 # ══════════════════════════════════════════════════════════════
-
-def _tristate(raw):
-    """'1' → True، '0' → False، غير ذلك → None (وراثة قيمة النشاط)."""
-    return {'1': True, '0': False}.get(raw)
-
 
 @login_required
 @require_permission('manage_branch_store_settings')
@@ -649,51 +683,47 @@ def manage_branch_settings(request):
 
     if request.method == 'POST':
         post = request.POST
+        own.is_enabled        = post.get('is_enabled') == 'on'
         own.whatsapp          = post.get('whatsapp', '').strip()
         own.bank_details      = post.get('bank_details', '').strip()
         own.delivery_message  = post.get('delivery_message', '').strip()
         for f in BranchStoreSettings.TRISTATE_FIELDS:
-            setattr(own, f, _tristate(post.get(f)))
+            setattr(own, f, post.get(f) == 'on')
         valid_cols = {k for k, _ in StoreSettings.PRICE_LIST_COLUMNS}
-        own.price_list_columns = (
-            [c for c in post.getlist('price_list_columns') if c in valid_cols]
-            if post.get('columns_mode') == 'custom' else None)
-        status = post.get('status_override', '')
-        own.status_override = status if status in dict(StoreSettings.OVERRIDE_CHOICES) else ''
+        own.price_list_columns = [c for c in post.getlist('price_list_columns') if c in valid_cols]
+        try:
+            own.min_order_amount = max(Decimal(post.get('min_order_amount') or 0), Decimal(0))
+        except InvalidOperation:
+            own.min_order_amount = Decimal(0)
+        status = post.get('status_override', 'auto')
+        own.status_override = status if status in dict(StoreSettings.OVERRIDE_CHOICES) else 'auto'
         own.open_message    = post.get('open_message', '').strip()
         own.closed_message  = post.get('closed_message', '').strip()
-        if post.get('hours_mode') == 'custom':
-            own.working_hours = {
-                day: {
-                    'enabled': post.get(f'day_{day}_enabled') == 'on',
-                    'open':    post.get(f'day_{day}_open', '08:00'),
-                    'close':   post.get(f'day_{day}_close', '22:00'),
-                } for day in DAYS_ORDER
-            }
-        else:
-            own.working_hours = {}
+        own.working_hours = {
+            day: {
+                'enabled': post.get(f'day_{day}_enabled') == 'on',
+                'open':    post.get(f'day_{day}_open', '08:00'),
+                'close':   post.get(f'day_{day}_close', '22:00'),
+            } for day in DAYS_ORDER
+        }
         own.save()
         messages.success(request, 'تم حفظ إعدادات متجر الفرع.')
         return redirect('store:manage_branch_settings')
 
     effective = store.for_branch(branch)
+    all_cols = [k for k, _ in StoreSettings.PRICE_LIST_COLUMNS]
+    chosen_cols = set(effective.price_list_columns or all_cols)
+    pending_count = OnlineOrder.objects.filter(tenant=tenant, branch=branch, status='pending').count()
     return render(request, 'store/manage_branch_settings.html', {
-        'store':     store,
-        'own':       own,
-        'effective': effective,
-        'status':    effective.get_status(),
-        'branch':    branch,
-        'hours':     own.working_hours or store.working_hours or DEFAULT_HOURS,
-        'days':      [(d, DAYS_AR[d]) for d in DAYS_ORDER],
-        'columns_custom': own.price_list_columns is not None,
+        'store':         effective,
+        'branch':        branch,
+        'status':        effective.get_status(),
+        'pending_count': pending_count,
+        'hours':         effective.working_hours or DEFAULT_HOURS,
+        'days':          [(d, DAYS_AR[d]) for d in DAYS_ORDER],
         'price_list_columns': [
-            (k, label, k in (own.price_list_columns if own.price_list_columns is not None
-                             else store.price_list_visible_columns()))
-            for k, label in StoreSettings.PRICE_LIST_COLUMNS
+            (k, label, k in chosen_cols) for k, label in StoreSettings.PRICE_LIST_COLUMNS
         ],
-        'tristate': [(f, BranchStoreSettings._meta.get_field(f).verbose_name, getattr(own, f),
-                      getattr(store, f)) for f in BranchStoreSettings.TRISTATE_FIELDS],
-        'override_choices': StoreSettings.OVERRIDE_CHOICES,
     })
 
 

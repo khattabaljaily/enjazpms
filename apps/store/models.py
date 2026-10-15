@@ -291,6 +291,10 @@ class BranchStoreSettings(TenantMixin):
         related_name='store_settings', verbose_name='الفرع'
     )
 
+    # تفعيل المتجر لهذا الفرع (None = وراثة تفعيل النشاط). حفظ الفرع لصفحته يضبطه صراحةً،
+    # وعندها تُعتمد كل قيم الفرع كما هي (حتى الفارغة) بدل الرجوع لقيم النشاط.
+    is_enabled = models.BooleanField('المتجر متاح للفرع', null=True, blank=True)
+
     # الاتصال والدفع والتسليم
     whatsapp         = models.CharField('واتساب', max_length=30, blank=True)
     bank_details     = models.TextField('بيانات التحويل البنكي', blank=True)
@@ -302,6 +306,8 @@ class BranchStoreSettings(TenantMixin):
     show_stock_quantity = models.BooleanField('عرض الكمية المتوفرة', null=True, blank=True)
     show_price_list     = models.BooleanField('تفعيل قائمة الأسعار', null=True, blank=True)
     price_list_columns  = models.JSONField('أعمدة قائمة الأسعار', null=True, blank=True)
+    min_order_amount    = models.DecimalField(
+        'الحد الأدنى للطلب', max_digits=12, decimal_places=2, null=True, blank=True)
 
     # الدوام والحالة (فارغ = وراثة)
     status_override = models.CharField(
@@ -321,14 +327,24 @@ class BranchStoreSettings(TenantMixin):
     def __str__(self):
         return f"متجر {self.branch}"
 
+    @property
+    def is_configured(self):
+        """الفرع حفظ صفحته مرة على الأقل: قيمه كلها صريحة ولا يُرجَع فيها لإعدادات النشاط."""
+        return self.is_enabled is not None
+
     def apply_to(self, store):
         """يكتب القيم المخصصة فوق نسخة store (في الذاكرة فقط، لا تُحفظ)."""
+        configured = self.is_configured
         for f in self.TEXT_FIELDS:
-            if getattr(self, f):
-                setattr(store, f, getattr(self, f))
-        for f in self.TRISTATE_FIELDS:
+            value = getattr(self, f)
+            # الحقول النصية الفارغة تعني «وراثة» قبل أول حفظ فقط؛ بعده الفراغ قرار الفرع
+            if value or (configured and f != 'status_override'):
+                setattr(store, f, value)
+        for f in self.TRISTATE_FIELDS + ('is_enabled',):
             if getattr(self, f) is not None:
                 setattr(store, f, getattr(self, f))
+        if self.min_order_amount is not None:
+            store.min_order_amount = self.min_order_amount
         if self.price_list_columns is not None:
             store.price_list_columns = self.price_list_columns
         if self.working_hours:

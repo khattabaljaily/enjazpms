@@ -346,6 +346,31 @@
     </ul>
     {% endif %}
 
+    {% if plan_allows_store and current_tenant.version_type == 'multi_branch' and request.branch %}
+    {% if user|has_perm_key:'view_store_orders' or user|has_perm_key:'manage_branch_store_settings' %}
+    <!-- ── متجر الفرع (نسخة المؤسسات) ── -->
+    <div class="sidebar-divider"></div>
+    <ul class="nav flex-column">
+        <li class="nav-item has-submenu">
+            <a class="nav-link nav-link-toggle" href="#">
+                <span class="nav-icon nav-icon--sales"><i class="fas fa-store"></i></span>
+                المتجر
+                {% if store_pending_count %}<span style="margin-right:auto;margin-left:.4rem;background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:.6rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;">{{ store_pending_count }}</span>{% endif %}
+                <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+            </a>
+            <ul class="nav-submenu">
+                {% if user|has_perm_key:'view_store_orders' %}
+                <li><a href="{% url 'store:manage_orders' %}" class="nav-sublink{% if 'store/manage/orders' in request.path %} active{% endif %}"><i class="fas fa-bag-shopping me-2"></i>الطلبات</a></li>
+                {% endif %}
+                {% if user|has_perm_key:'manage_branch_store_settings' %}
+                <li><a href="{% url 'store:manage_branch_settings' %}" class="nav-sublink{% if 'store/manage/branch' in request.path %} active{% endif %}"><i class="fas fa-sliders me-2"></i>إعدادات المتجر</a></li>
+                {% endif %}
+            </ul>
+        </li>
+    </ul>
+    {% endif %}
+    {% endif %}
+
     {% if tenant_capabilities|has_capability:"has_insurance_billing" %}
     {% if user|has_perm_key:'view_insurance_companies' or user|has_perm_key:'view_insurance_claims' %}
     <!-- ── Insurance ── -->
@@ -394,14 +419,6 @@
                 <li><a href="{% url 'sales:invoice_list' %}" class="nav-sublink"><i class="fas fa-list me-2"></i>قائمة الفواتير</a></li>
                 {% if user|has_perm_key:'view_sales_returns' %}
                 <li><a href="{% url 'sales:return_list' %}" class="nav-sublink"><i class="fas fa-rotate-left me-2"></i>مرتجعات</a></li>
-                {% endif %}
-                {% if plan_allows_store and current_tenant.version_type == 'multi_branch' and request.branch and user|has_perm_key:'view_store_orders' %}
-                <li><a href="{% url 'store:manage_orders' %}" class="nav-sublink{% if 'store/manage/orders' in request.path %} active{% endif %}"><i class="fas fa-bag-shopping me-2"></i>طلبات المتجر
-                    {% if store_pending_count %}<span style="margin-right:auto;background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:.6rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;">{{ store_pending_count }}</span>{% endif %}
-                </a></li>
-                {% endif %}
-                {% if plan_allows_store and current_tenant.version_type == 'multi_branch' and request.branch and user|has_perm_key:'manage_branch_store_settings' %}
-                <li><a href="{% url 'store:manage_branch_settings' %}" class="nav-sublink{% if 'store/manage/branch' in request.path %} active{% endif %}"><i class="fas fa-store me-2"></i>إعدادات متجر الفرع</a></li>
                 {% endif %}
             </ul>
         </li>
