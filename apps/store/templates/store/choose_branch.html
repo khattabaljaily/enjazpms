@@ -9,7 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{% static 'css/store_storefront.css' %}?v=4.0">
-<style>:root { --brand: {{ store.accent_color }}; }</style>
+<style>:root { --brand: {{ store.accent_color }}; }
+.cb-branch--closed { opacity:.55; cursor:not-allowed; }
+.cb-branch__closed-tag { font-size:.75rem; font-weight:700; white-space:nowrap; }</style>
 </head>
 <body class="cb-body">
 
@@ -33,6 +35,16 @@
     </div>
     <div class="cb-list">
       {% for b in store_branches %}
+      {% if b.id in closed_ids %}
+      <div class="cb-branch cb-branch--closed">
+        <span class="cb-branch__ico"><i class="fas fa-store"></i></span>
+        <span class="cb-branch__txt">
+          <strong>{{ b.name }}</strong>
+          {% if b.address %}<small><i class="fas fa-location-dot"></i> {{ b.address }}</small>{% endif %}
+        </span>
+        <span class="cb-branch__go cb-branch__closed-tag"><i class="fas fa-lock"></i> مغلق حالياً</span>
+      </div>
+      {% else %}
       <a class="cb-branch" href="?branch={{ b.id }}">
         <span class="cb-branch__ico"><i class="fas fa-store"></i></span>
         <span class="cb-branch__txt">
@@ -41,6 +53,7 @@
         </span>
         <span class="cb-branch__go"><i class="fas fa-arrow-left"></i></span>
       </a>
+      {% endif %}
       {% endfor %}
     </div>
     <p class="cb-note"><i class="fas fa-circle-info"></i> يمكنك تغيير الفرع في أي وقت من أعلى صفحة المتجر.</p>

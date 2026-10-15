@@ -155,15 +155,19 @@ class StoreSettings(TenantMixin):
     def for_branch(self, branch):
         """
         نسخة من إعدادات المتجر بعد تطبيق تخصيص الفرع عليها (للعرض فقط — لا تُحفظ).
-        بلا فرع أو بلا تخصيص يرجع المتجر نفسه، فلا يتغير سلوك النسخ الأخرى.
+        بلا فرع أو بلا تخصيص يرجع المتجر الأصلي، فلا يتغير سلوك النسخ الأخرى.
+        تبدأ دائماً من المتجر الأصلي حتى لو استُدعيت على نسخة فرع آخر (فلا تتسرب قيمه).
         """
+        base = getattr(self, '_base', self)
         if branch is None:
-            return self
-        own = BranchStoreSettings.objects.filter(branch=branch, tenant=self.tenant).first()
+            return base
+        own = BranchStoreSettings.objects.filter(branch=branch, tenant=base.tenant).first()
         if own is None:
-            return self
+            return base
         import copy
-        return own.apply_to(copy.copy(self))
+        clone = own.apply_to(copy.copy(base))
+        clone._base = base
+        return clone
 
     def __str__(self):
         return f"متجر {self.display_name or self.tenant.name}"

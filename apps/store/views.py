@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.html import escape
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.db.models import F, Q
@@ -43,7 +44,7 @@ def _get_store(slug: str, require_enabled: bool = True):
     return store
 
 
-def _store_closed_response(store, status):
+def _store_closed_response(store, status, other_branches=()):
     from django.http import HttpResponse
     # Only show next-open chip in auto mode (schedule-based), not when manually forced closed
     next_open_html = ''
@@ -55,6 +56,13 @@ def _store_closed_response(store, status):
         if store.whatsapp else ''
     )
     label = 'مغلق'
+    # نسخة المؤسسات: الفرع المختار مغلق لكن فروعاً أخرى قد تكون مفتوحة
+    others_html = ''
+    if other_branches:
+        links = ''.join(
+            f'<a href="?branch={b.id}" class="other-branch"><i class="fas fa-store"></i> {escape(b.name)}'
+            f'<i class="fas fa-arrow-left go"></i></a>' for b in other_branches)
+        others_html = f'<div class="others"><p>هذا الفرع مغلق حالياً — يمكنك الطلب من فرع آخر:</p>{links}</div>'
     html = f"""<!DOCTYPE html><html lang="ar" dir="rtl">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{store.display_name}</title>
@@ -71,12 +79,17 @@ h2{{font-size:1.55rem;font-weight:900;margin-bottom:.6rem;letter-spacing:-.01em;
 .badge-closed{{display:inline-flex;align-items:center;gap:.5rem;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.28);color:#fca5a5;border-radius:30px;padding:.42rem 1.1rem;font-size:.8rem;font-weight:700;margin-bottom:1.5rem;}}
 .next{{display:inline-flex;align-items:center;gap:.5rem;color:#fbbf24;font-size:.85rem;font-weight:600;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:.5rem 1rem;margin-bottom:1.5rem;}}
 .wa-link{{display:inline-flex;align-items:center;gap:.45rem;color:#4ade80;font-weight:700;text-decoration:none;font-size:.9rem;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);padding:.5rem 1.2rem;border-radius:10px;}}
+.others{{margin:0 0 1.5rem;display:flex;flex-direction:column;gap:.5rem;}}
+.others p{{color:#94a3b8;font-size:.85rem;margin-bottom:.35rem;}}
+.other-branch{{display:flex;align-items:center;gap:.6rem;color:#fff;text-decoration:none;font-weight:700;font-size:.9rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);padding:.65rem 1rem;border-radius:10px;}}
+.other-branch .go{{margin-right:auto;color:var(--brand);}}
 </style></head><body>
 <div class="box">
   <div class="store-icon">🔒</div>
   <div class="badge-closed"><i class="fas fa-lock"></i> {label}</div>
   <h2>{store.display_name}</h2>
   {next_open_html}
+  {others_html}
   {wa_html}
 </div></body></html>"""
     return HttpResponse(html, status=200)
@@ -173,6 +186,14 @@ def _resolve_store_branch(request, store):
     return branch, branches
 
 
+def _open_other_branches(store, branch, store_branches):
+    """الفروع الأخرى المفتوحة الآن (لتحويل زائر وصل لفرع مغلق)."""
+    if branch is None:
+        return []
+    return [b for b in store_branches
+            if b.id != branch.id and store.for_branch(b).get_status()['is_open']]
+
+
 def _branch_required(request, store, branch, store_branches):
     """
     نسخة المؤسسات بلا أي فرع متاح: المتجر غير متاح. وإلا صفحة اختيار الفرع لو لم يختر
@@ -181,7 +202,9 @@ def _branch_required(request, store, branch, store_branches):
     if _is_multi_branch(store) and not store_branches:
         return _store_disabled_response(store)
     if store_branches and branch is None:
-        return render(request, 'store/choose_branch.html', {'store': store, 'store_branches': store_branches})
+        closed_ids = {b.id for b in store_branches if not store.for_branch(b).get_status()['is_open']}
+        return render(request, 'store/choose_branch.html', {
+            'store': store, 'store_branches': store_branches, 'closed_ids': closed_ids})
     return None
 
 
@@ -229,7 +252,7 @@ def storefront(request, slug):
     store = store.for_branch(branch)
     status = store.get_status()
     if not status['is_open']:
-        return _store_closed_response(store, status)
+        return _store_closed_response(store, status, _open_other_branches(store, branch, store_branches))
     products = _get_products(store, branch)
 
     search = request.GET.get('q', '').strip()
@@ -385,7 +408,7 @@ def cart_add_view(request, slug):
     if not status['is_open']:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'error': 'المتجر مغلق حالياً'}, status=403)
-        return _store_closed_response(store, status)
+        return _store_closed_response(store, status, _open_other_branches(store, branch, store_branches))
     item_id = request.POST.get('item_id')
     qty     = _parse_qty(request.POST.get('qty'), default=1)
     if qty <= 0:
@@ -477,7 +500,7 @@ def checkout_view(request, slug):
     store = store.for_branch(branch)
     status = store.get_status()
     if not status['is_open']:
-        return _store_closed_response(store, status)
+        return _store_closed_response(store, status, _open_other_branches(store, branch, store_branches))
     # كميات السلة يجب أن تتوفر في مخزن الفرع قبل إتمام الطلب
     shortages = cart_shortages(store_stock(store.tenant, branch), cart_items)
     if shortages:

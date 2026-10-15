@@ -138,6 +138,32 @@ class BranchStoreSettingsTests(TenantTestCase):
         self.assertEqual(Client().get(self.url('storefront'), {'branch': self.b2.id}).status_code, 200)
         self.assertNotContains(Client().get(self.url('storefront'), {'branch': self.b2.id}), 'بنادول')
 
+    def test_closed_branch_page_offers_other_open_branches(self):
+        self.save_form(status_override='closed')         # فرع أ مغلق، فرع ب مفتوح (يرث «مفتوح»)
+        c = Client()
+        c.get(self.url('storefront'), {'branch': self.b1.id})            # الجلسة تتذكر فرع أ
+        page = c.get(self.url('storefront'))                              # فتح الرابط بلا اختيار
+        self.assertContains(page, 'هذا الفرع مغلق حالياً')
+        self.assertContains(page, f'?branch={self.b2.id}')
+        self.assertNotContains(page, f'?branch={self.b1.id}')
+        # اختيار فرع ب من الصفحة يفتح المتجر عادةً
+        self.assertContains(c.get(self.url('storefront'), {'branch': self.b2.id}), 'بنادول')
+        self.assertContains(c.get(self.url('storefront')), 'بنادول')       # والجلسة صارت على فرع ب
+
+    def test_chooser_marks_closed_branches_and_does_not_link_them(self):
+        self.save_form(status_override='closed')
+        page = Client().get(self.url('storefront'))
+        self.assertContains(page, 'مغلق حالياً')
+        self.assertContains(page, f'?branch={self.b2.id}')
+        self.assertNotContains(page, f'?branch={self.b1.id}')
+
+    def test_branch_overrides_do_not_leak_into_other_branches(self):
+        self.save_form(whatsapp='999', status_override='closed')
+        a = self.store.for_branch(self.b1)
+        b = a.for_branch(self.b2)                         # الاستدعاء على نسخة فرع آخر
+        self.assertEqual(b.whatsapp, '111')
+        self.assertEqual(b.status_override, 'open')
+
     def test_clearing_inheritance_fields(self):
         self.save_form(price_list_columns=['name'])
         own = BranchStoreSettings.objects.get(branch=self.b1)
