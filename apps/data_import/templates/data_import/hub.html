@@ -42,6 +42,13 @@
 
 <div class="cx-panel">
     <div class="di-cards">
+        {% if can_import_categories %}
+        <a href="{% url 'data_import:category_page' %}" class="di-card">
+            <div class="di-card-icon"><i class="fas fa-tags"></i></div>
+            <div class="di-card-title">استيراد التصنيفات</div>
+            <div class="di-card-desc">أضف التصنيفات الرئيسية والفرعية دفعة واحدة — ابدأ بها قبل المنتجات</div>
+        </a>
+        {% endif %}
         {% if can_import_items %}
         <a href="{% url 'data_import:product_page' %}" class="di-card">
             <div class="di-card-icon"><i class="fas fa-box-open"></i></div>
@@ -61,6 +68,13 @@
             <div class="di-card-icon"><i class="fas fa-truck"></i></div>
             <div class="di-card-title">استيراد الموردين</div>
             <div class="di-card-desc">قالب Excel يشمل بيانات التواصل والمديونية الافتتاحية والعملة</div>
+        </a>
+        {% endif %}
+        {% if can_import_agents %}
+        <a href="{% url 'data_import:agent_page' %}" class="di-card">
+            <div class="di-card-icon"><i class="fas fa-id-badge"></i></div>
+            <div class="di-card-title">استيراد المناديب</div>
+            <div class="di-card-desc">بيانات التواصل والمستحقات الافتتاحية للمناديب</div>
         </a>
         {% endif %}
     </div>

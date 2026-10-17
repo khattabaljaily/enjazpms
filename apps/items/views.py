@@ -1349,7 +1349,7 @@ _CATEGORY_FIELD_SCHEMA = [
 
 
 @login_required
-@require_permission('add_items')
+@require_permission('add_categories')
 def category_import_api(request):
     from apps.core.io_utils import parse_uploaded_file, smart_get, bool_from_str
     from apps.ai.services import smart_map_headers

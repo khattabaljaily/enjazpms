@@ -30,6 +30,9 @@
                     <i class="fas fa-link"></i><span>رابط البوابة</span><i class="fas fa-copy" style="opacity:.65;font-size:.8rem;"></i>
                 </button>
                 <span id="heroPortalUrl" style="display:none;"></span>
+                <button type="button" class="cx-btn-secondary" id="btnExportAgents" data-require-perm="export_agents">
+                    <i class="fas fa-arrow-up"></i><span>تصدير</span>
+                </button>
                 <button type="button" class="cx-btn-add" id="btnOpenCreateAgent" data-require-perm="add_agents">
                     <i class="fas fa-plus"></i><span>إضافة مندوب</span>
                 </button>
@@ -427,57 +430,6 @@
     </div>
 </div>
 
-<!-- ══════════════════════════ IMPORT MODAL ══════════════════════════ -->
-<div class="modal fade" id="importAgentsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered cx-import-dialog">
-        <div class="modal-content cx-import-modal">
-            <div class="cx-import-header">
-                <div>
-                    <h5 class="cx-import-title"><i class="fas fa-upload"></i> استيراد المناديب</h5>
-                    <p class="cx-import-subtitle">قم برفع ملف Excel أو CSV يحتوي على بيانات المناديب</p>
-                </div>
-                <button type="button" class="cx-import-close" data-bs-dismiss="modal" aria-label="Close">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="cx-import-body">
-                <div class="cx-upload-area" id="uploadArea">
-                    <div class="cx-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                    <h6 class="cx-upload-title">اسحب وأفلت الملف هنا</h6>
-                    <p class="cx-upload-text">أو اضغط لاختيار ملف</p>
-                    <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" hidden>
-                    <button type="button" class="cx-btn-upload" id="btnChooseFile"><i class="fas fa-folder-open me-1"></i> اختر ملف</button>
-                    <p class="cx-upload-hint">يدعم ملفات Excel و CSV</p>
-                </div>
-                <div class="cx-file-selected" id="fileSelected" style="display:none;">
-                    <div class="cx-file-info">
-                        <div class="cx-file-icon"><i class="fas fa-file-excel"></i></div>
-                        <div class="cx-file-details">
-                            <div class="cx-file-name" id="fileName"></div>
-                            <div class="cx-file-size" id="fileSize"></div>
-                        </div>
-                    </div>
-                    <button type="button" class="cx-file-remove" id="btnRemoveFile"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="cx-import-instructions">
-                    <h6 class="cx-instructions-title"><i class="fas fa-info-circle"></i> تعليمات هامة</h6>
-                    <ul class="cx-instructions-list">
-                        <li>يجب أن يحتوي الملف على الأعمدة التالية: الاسم، الهاتف، المدينة</li>
-                        <li>يمكنك تحميل نموذج ملف من هنا: <a href="#" class="cx-template-link" id="btnDownloadTemplate">نموذج Excel</a></li>
-                        <li>الحد الأقصى لحجم الملف: 5 MB</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="cx-import-footer">
-                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="cx-btn-primary" id="btnStartImport" disabled>
-                    <i class="fas fa-check me-1"></i> بدء الاستيراد
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- ══════════════════════════ USER CREDENTIALS MODAL ══════════════════════════ -->
 <div class="modal fade" id="agentUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
@@ -558,7 +510,7 @@
     };
 
     // Move modals to body
-    ['agentModal','deleteAgentModal','viewAgentModal','agentLedgerModal','importAgentsModal','agentUserModal'].forEach(function(id) {
+    ['agentModal','deleteAgentModal','viewAgentModal','agentLedgerModal','agentUserModal'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el && el.parentElement !== document.body) document.body.appendChild(el);
     });
@@ -567,7 +519,6 @@
     const deleteModal     = new bootstrap.Modal(document.getElementById('deleteAgentModal'));
     const viewModal       = new bootstrap.Modal(document.getElementById('viewAgentModal'));
     const ledgerModal     = new bootstrap.Modal(document.getElementById('agentLedgerModal'));
-    const importModal     = new bootstrap.Modal(document.getElementById('importAgentsModal'));
     const userModal       = new bootstrap.Modal(document.getElementById('agentUserModal'));
 
     const $form      = $('#agentForm');
@@ -1057,58 +1008,7 @@
         createUserForAgent($(this).data('id'), $(this));
     });
 
-    /* ── Import / Export ── */
-    let selectedFile = null;
-    $('#btnImportAgents').on('click', function() {
-        selectedFile = null;
-        $('#importFileInput').val('');
-        $('#fileSelected').hide(); $('#uploadArea').show();
-        $('#btnStartImport').prop('disabled', true);
-        importModal.show();
-    });
-    $('#btnChooseFile, #uploadArea').on('click', function(e) {
-        if (e.target === this || $(e.target).closest('.cx-upload-icon, .cx-upload-title, .cx-upload-text, .cx-upload-hint, .cx-btn-upload').length)
-            $('#importFileInput').click();
-    });
-    $('#importFileInput').on('change', function(e) { const f = e.target.files[0]; if (f) handleFile(f); });
-
-    const uploadAreaEl = document.getElementById('uploadArea');
-    ['dragenter','dragover','dragleave','drop'].forEach(ev => uploadAreaEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
-    ['dragenter','dragover'].forEach(ev => uploadAreaEl.addEventListener(ev, () => uploadAreaEl.classList.add('drag-over')));
-    ['dragleave','drop'].forEach(ev => uploadAreaEl.addEventListener(ev, () => uploadAreaEl.classList.remove('drag-over')));
-    uploadAreaEl.addEventListener('drop', function(e) { const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
-
-    function handleFile(file) {
-        const valid = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-excel','text/csv'];
-        if (!valid.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) { Enjaz.toast('نوع الملف غير مدعوم', 'error'); return; }
-        if (file.size > 5*1024*1024) { Enjaz.toast('حجم الملف كبير جداً. الحد الأقصى 5 MB', 'error'); return; }
-        selectedFile = file;
-        $('#fileName').text(file.name);
-        const kb = file.size/1024;
-        $('#fileSize').text(kb < 1024 ? kb.toFixed(1)+' KB' : (kb/1024).toFixed(1)+' MB');
-        $('#uploadArea').hide(); $('#fileSelected').show();
-        $('#btnStartImport').prop('disabled', false);
-    }
-    $('#btnRemoveFile').on('click', function() {
-        selectedFile = null; $('#importFileInput').val('');
-        $('#fileSelected').hide(); $('#uploadArea').show();
-        $('#btnStartImport').prop('disabled', true);
-    });
-    $('#btnStartImport').on('click', function() {
-        if (!selectedFile) return;
-        const fd = new FormData(); fd.append('file', selectedFile);
-        $.ajax({ url: '{% url "agents:import_api" %}', method: 'POST', data: fd, processData: false, contentType: false,
-            success: function(resp) {
-                if (resp.success) {
-                    if (resp.imported > 0) { importModal.hide(); dt.ajax.reload(); }
-                    Enjaz.toast(resp.message, resp.imported > 0 ? 'success' : 'error');
-                    if (resp.errors && resp.errors.length) resp.errors.forEach(e => Enjaz.toast(e, 'error'));
-                } else { Enjaz.toast(resp.message || 'فشل الاستيراد', 'error'); }
-            },
-            error: function(xhr) { Enjaz.toast((xhr.responseJSON||{}).message || 'خطأ أثناء الاستيراد', 'error'); }
-        });
-    });
-    $('#btnDownloadTemplate').on('click', function(e) { e.preventDefault(); window.location.href = '{% url "agents:download_template" %}'; });
+    /* ── Export ── */
     $('#btnExportAgents').on('click', function() {
         window.location.href = '{% url "agents:export_api" %}';
         Enjaz.toast('جاري تصدير البيانات...', 'info');

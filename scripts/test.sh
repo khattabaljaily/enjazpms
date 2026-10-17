@@ -27,7 +27,7 @@ TARGETS=(
   apps.core.tests_purchasing_mode_lock apps.core.tests_report_scope apps.core.tests_tenant_plan_downgrade
   apps.accounts apps.customers apps.suppliers apps.items
   apps.stocks apps.sales apps.purchases apps.treasury apps.bank_accounts
-  apps.agents apps.insurance apps.expenses apps.employees apps.notifications apps.requisitions apps.branch_transfers
+  apps.data_import apps.agents apps.insurance apps.expenses apps.employees apps.notifications apps.requisitions apps.branch_transfers
 )
 if [ "$#" -gt 0 ]; then
   TARGETS=("$@")

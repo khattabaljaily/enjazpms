@@ -5,6 +5,8 @@ app_name = 'data_import'
 
 urlpatterns = [
     path('', views.hub, name='hub'),
+    path('categories/', views.category_import_page, name='category_page'),
+
     path('products/', views.product_import_page, name='product_page'),
     path('products/template/', views.product_template_download, name='product_template'),
     path('products/commit/', views.product_import_commit, name='product_commit'),
@@ -16,4 +18,6 @@ urlpatterns = [
     path('suppliers/', views.supplier_import_page, name='supplier_page'),
     path('suppliers/template/', views.supplier_template_download, name='supplier_template'),
     path('suppliers/commit/', views.supplier_import_commit, name='supplier_commit'),
+
+    path('agents/', views.agent_import_page, name='agent_page'),
 ]

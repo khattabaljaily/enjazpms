@@ -4,7 +4,9 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect, render
 
-from apps.accounts.decorators import require_permission, require_any_permission
+from apps.accounts.decorators import (
+    require_permission, require_any_permission, require_capability, require_plan_feature,
+)
 from apps.core.io_utils import xlsx_response
 from apps.items.models import Category
 from apps.stocks.models import Stock
@@ -21,15 +23,27 @@ def _ensure_tenant(request):
 
 
 @login_required
-@require_any_permission('import_items', 'import_customers', 'import_suppliers')
+@require_any_permission('add_categories', 'import_items', 'import_customers', 'import_suppliers', 'import_agents')
 def hub(request):
     user = request.user
     can_all = user.is_superuser
+    tenant = _ensure_tenant(request)
     return render(request, 'data_import/hub.html', {
+        # التصنيفات تُدار من الإدارة فقط (مثل قائمة التصنيفات في القائمة الجانبية)
+        'can_import_categories': (can_all or user.has_perm_key('add_categories')) and not getattr(request, 'branch', None),
         'can_import_items': can_all or user.has_perm_key('import_items'),
         'can_import_customers': can_all or user.has_perm_key('import_customers'),
         'can_import_suppliers': can_all or user.has_perm_key('import_suppliers'),
+        'can_import_agents': _agents_enabled(tenant, user) and (can_all or user.has_perm_key('import_agents')),
     })
+
+
+def _agents_enabled(tenant, user):
+    """وحدة المناديب متاحة للمشترك (قدرة النسخة + ميزة الباقة)؛ السوبريوزر يتجاوزها."""
+    if user.is_superuser:
+        return True
+    caps = getattr(tenant, 'capabilities', None)
+    return bool(tenant and tenant.plan_allows('agents') and getattr(caps, 'has_agents_module', False))
 
 
 @login_required
@@ -230,3 +244,40 @@ def supplier_import_commit(request):
         return HttpResponseNotAllowed(['POST'])
     from apps.suppliers.models import Supplier
     return _simple_import_commit(request, tenant, get_supplier_schema, Supplier, 'مورد')
+
+
+# ============================================================
+# Categories & Agents — صفحات الاستيراد الموحّدة؛ المنطق والقوالب في
+# items.category_import_api / agents.import_api (استجابة JSON تفهمها simple_import.html)
+# ============================================================
+
+@login_required
+@require_permission('add_categories')
+def category_import_page(request):
+    if not _ensure_tenant(request):
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    if getattr(request, 'branch', None):
+        return redirect('data_import:hub')
+    return render(request, 'data_import/simple_import.html', {
+        'title': 'استيراد التصنيفات',
+        'icon': 'fa-tags',
+        'template_url': 'items:category_template_api',
+        'commit_url': 'items:category_import_api',
+        'hub_url': 'data_import:hub',
+    })
+
+
+@login_required
+@require_capability('has_agents_module')
+@require_plan_feature('agents')
+@require_permission('import_agents')
+def agent_import_page(request):
+    if not _ensure_tenant(request):
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    return render(request, 'data_import/simple_import.html', {
+        'title': 'استيراد المناديب',
+        'icon': 'fa-id-badge',
+        'template_url': 'agents:download_template',
+        'commit_url': 'agents:import_api',
+        'hub_url': 'data_import:hub',
+    })
