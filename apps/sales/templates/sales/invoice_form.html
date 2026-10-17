@@ -685,6 +685,7 @@ function selectItem(itemId) {
             track_batch: !!item.track_batch,
             track_serial: !!item.track_serial,
             track_expiry: !!item.track_expiry,
+            batches: item.batches || [],
             is_insurance_excluded: !!item.is_insurance_excluded,
         });
         closeItemSearch();
@@ -725,7 +726,7 @@ function addLineToTable(lineData) {
     const showExpiry = CAP.hasExpiryDates   && (lineData.track_expiry ?? true);
 
     const trackingHtml = [
-        showBatch  ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="batch-${id}" value="${(lineData.batch_number || '').replace(/"/g, '&quot;')}" placeholder="رقم الدفعة"></div>` : '',
+        showBatch  ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="batch-${id}" list="batches-${id}" autocomplete="off" value="${(lineData.batch_number || '').replace(/"/g, '&quot;')}" placeholder="رقم الدفعة" onfocus="refreshBatches(${id})" oninput="onBatchInput(${id})" onchange="onBatchInput(${id})"><datalist id="batches-${id}"></datalist></div>` : '',
         showSerial ? `<div class="mt-1"><input type="text" class="cx-input cx-input--xs" id="serial-${id}" value="${(lineData.serial_number || '').replace(/"/g, '&quot;')}" placeholder="الرقم التسلسلي"></div>` : '',
         showExpiry ? `<div class="mt-1"><input type="date" class="cx-input cx-input--xs" id="expiry-${id}" value="${lineData.expiry_date || ''}"></div>` : '',
     ].join('');
@@ -782,8 +783,39 @@ function addLineToTable(lineData) {
     row.querySelector('.line-disc').classList.add('sales-input-pct');
     row.querySelector('.line-tax').classList.add('sales-input-pct');
 
+    setBatches(id, lineData.batches);
     updateLineCount();
     recalcTotals();
+}
+
+// ── دفعات المنتج: اختيار الدفعة أو كتابة رقمها يعرض تاريخ صلاحيتها مباشرة ──
+const lineBatches = {};
+function setBatches(id, batches) {
+    lineBatches[id] = batches || [];
+    const list = document.getElementById(`batches-${id}`);
+    if (!list) return;
+    list.innerHTML = lineBatches[id].map(b => {
+        const label = [b.expiry_date ? `ينتهي ${b.expiry_date}` : '', `متاح ${b.quantity}`].filter(Boolean).join(' — ');
+        return `<option value="${String(b.batch_number).replace(/"/g, '&quot;')}">${label}</option>`;
+    }).join('');
+}
+function onBatchInput(id) {
+    const input = document.getElementById(`batch-${id}`);
+    const expiry = document.getElementById(`expiry-${id}`);
+    if (!input || !expiry) return;
+    const found = (lineBatches[id] || []).find(b => b.batch_number === input.value.trim());
+    if (!found) return;
+    expiry.value = found.expiry_date || '';
+    document.getElementById(`line-${id}`).dataset.expiryDate = expiry.value;
+}
+function refreshBatches(id) {
+    // يُحدَّث عند التركيز (المخزن قد يتغير بعد إضافة السطر، وسطور الفواتير المحفوظة لا تحمل قائمة الدفعات)
+    const row = document.getElementById(`line-${id}`);
+    const stockId = document.getElementById('stockId').value;
+    if (!row || !stockId) return;
+    fetch(`${ITEM_INFO_URL}?item_id=${row.dataset.itemId}&stock_id=${stockId}`)
+        .then(r => r.json())
+        .then(data => { if (data.success) { setBatches(id, data.item.batches); onBatchInput(id); } });
 }
 
 function onUnitChange(id) {

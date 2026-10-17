@@ -123,7 +123,7 @@
                     <i class="fa-solid fa-bell"></i><span>الإشعارات</span>
                 </a>
                 {% endif %}
-                {% if user|has_perm_key:'add_categories' or user|has_perm_key:'import_items' and user|has_perm_key:'add_items' or user|has_perm_key:'import_customers' and user|has_perm_key:'add_customers' or user|has_perm_key:'import_suppliers' and user|has_perm_key:'add_suppliers' or user|has_perm_key:'import_agents' and user|has_perm_key:'add_agents' %}
+                {% if user|has_perm_key:'add_categories' or user|has_perm_key:'import_items' and user|has_perm_key:'add_items' or user|has_perm_key:'import_customers' and user|has_perm_key:'add_customers' or user|has_perm_key:'import_suppliers' and user|has_perm_key:'add_suppliers' or user|has_perm_key:'import_agents' and user|has_perm_key:'add_agents' or user|has_perm_key:'add_central_suppliers' %}
                 <a href="{% url 'data_import:hub' %}" class="help-quick-link">
                     <i class="fa-solid fa-file-import"></i><span>استيراد البيانات</span>
                 </a>
@@ -302,7 +302,7 @@
             {% endif %}
             {% endif %}
 
-            {% if user|has_perm_key:'add_categories' or user|has_perm_key:'import_items' and user|has_perm_key:'add_items' or user|has_perm_key:'import_customers' and user|has_perm_key:'add_customers' or user|has_perm_key:'import_suppliers' and user|has_perm_key:'add_suppliers' or user|has_perm_key:'import_agents' and user|has_perm_key:'add_agents' %}
+            {% if user|has_perm_key:'add_categories' or user|has_perm_key:'import_items' and user|has_perm_key:'add_items' or user|has_perm_key:'import_customers' and user|has_perm_key:'add_customers' or user|has_perm_key:'import_suppliers' and user|has_perm_key:'add_suppliers' or user|has_perm_key:'import_agents' and user|has_perm_key:'add_agents' or user|has_perm_key:'add_central_suppliers' %}
             <div class="help-tip">
                 <button class="help-tip__toggle" data-target="tip-import">
                     <i class="fa-solid fa-file-import"></i> استيراد البيانات

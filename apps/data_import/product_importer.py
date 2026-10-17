@@ -35,9 +35,9 @@ logger = logging.getLogger('data_import')
 HC_TO_LOCAL = {'cost_price_hc': 'cost_price', 'selling_price_hc': 'selling_price',
                'min_selling_price_hc': 'min_selling_price'}
 LOCAL_PRICE_HEADERS = {
-    'cost_price': ('سعر التكلفة', 'التكلفة', 'cost_price'),
-    'selling_price': ('سعر البيع', 'selling_price'),
-    'min_selling_price': ('أدنى سعر بيع', 'min_selling_price'),
+    'cost_price': ('سعر التكلفة (محلي)', 'سعر التكلفة', 'التكلفة', 'cost_price'),
+    'selling_price': ('سعر البيع (محلي)', 'سعر البيع', 'selling_price'),
+    'min_selling_price': ('أدنى سعر بيع (محلي)', 'أدنى سعر بيع', 'min_selling_price'),
 }
 _HC_MARKERS = ('صعبة', 'hc', 'usd', 'دولار', '$')
 
@@ -46,6 +46,8 @@ def _apply_local_prices(item, tenant, local_prices):
     """السعر المحلي الوارد في الملف هو المرجع (يبقى كما كُتب) والصعبة تُشتق منه = محلي ÷ سعر الصرف."""
     rate = Decimal(str(tenant.exchange_rate or 0))
     for field, value in local_prices.items():
+        if getattr(item, field) == value and getattr(item, field + '_hc'):
+            continue   # لم يتغير السعر المحلي: لا نعيد اشتقاق الصعبة منه فلا ينحرف شيء
         setattr(item, field, value)
         setattr(item, field + '_hc', (value / rate).quantize(Decimal('0.0001')) if rate else Decimal('0'))
 
@@ -71,6 +73,9 @@ def import_products(tenant, uploaded_file, user):
     if not rows:
         return {**empty_result, 'errors': [{'row': 0, 'field': '', 'message': 'الملف فارغ أو لا يحتوي على بيانات'}]}
 
+    # مستخدم الفرع (حين يُسمح للفروع بإدارة المنتجات) يستورد إلى فرعه فقط: منتجاته ومخازنه وموردوه.
+    branch = user.branch if getattr(user, 'branch_id', None) else None
+
     schema = get_product_schema(tenant)
     schema_by_field = {s['field']: s for s in schema}
     has_stock_column = 'stock' in schema_by_field
@@ -90,12 +95,12 @@ def import_products(tenant, uploaded_file, user):
                 mapping[header] = HC_TO_LOCAL[canonical]
 
     categories = _name_lookup(Category.objects.for_tenant(tenant).filter(is_active=True))
-    stocks = _name_lookup(Stock.objects.for_tenant(tenant).filter(is_active=True))
-    suppliers = _name_lookup(Supplier.objects.for_tenant(tenant).filter(is_active=True))
+    stocks = _name_lookup(Stock.objects.for_tenant(tenant).for_branch(branch).filter(is_active=True))
+    suppliers = _name_lookup(Supplier.objects.for_tenant(tenant).for_branch(branch).filter(is_active=True))
 
     default_stock = None
     if not has_stock_column:
-        active_stocks = Stock.objects.for_tenant(tenant).filter(is_active=True).order_by('-is_default', 'name')
+        active_stocks = Stock.objects.for_tenant(tenant).for_branch(branch).filter(is_active=True).order_by('-is_default', 'name')
         default_stock = active_stocks.filter(is_default=True).first() or active_stocks.first()
 
     category_ai_cache: dict = {}
@@ -133,7 +138,9 @@ def import_products(tenant, uploaded_file, user):
         key = raw.lower()
         if key in suppliers:
             return suppliers[key]
-        supplier = Supplier.objects.create(tenant=tenant, name=raw, created_by=user, updated_by=user)
+        if branch is not None and tenant.is_central_purchasing():
+            return None   # في النمط «مركزي» لا موردين لدى الفروع
+        supplier = Supplier.objects.create(tenant=tenant, name=raw, created_by=user, updated_by=user, branch=branch)
         suppliers[key] = supplier
         return supplier
 
@@ -185,7 +192,7 @@ def import_products(tenant, uploaded_file, user):
                         continue
 
                 kwargs = {
-                    'tenant': tenant, 'created_by': user, 'updated_by': user,
+                    'tenant': tenant, 'created_by': user, 'updated_by': user, 'branch': branch,
                     'name': name, 'category': category, 'supplier': supplier,
                     'is_active': True,
                 }
@@ -210,11 +217,17 @@ def import_products(tenant, uploaded_file, user):
                 # المحلي هو المرجع والصعبة تُشتق منه، لا العكس.
                 local_prices = {}
                 if tenant.hard_currency_mode:
+                    rate = Decimal(str(tenant.exchange_rate or 0))
                     for local_field, headers in LOCAL_PRICE_HEADERS.items():
                         raw = smart_get(row, local_field, mapping, *headers)
-                        hc_field = local_field + '_hc'
-                        if raw and not kwargs.get(hc_field):
-                            local_prices[local_field] = safe_decimal(raw, default=Decimal('0'))
+                        if not raw:
+                            continue
+                        value = safe_decimal(raw, default=Decimal('0'))
+                        hc_in_file = kwargs.get(local_field + '_hc')
+                        # الملف الذي يحمل العمودين (تصدير النظام): المحلي هو المرجع ما دام متسقًا مع الصعبة
+                        # (فارق تقريب الـ4 خانات فقط)، وإلا فالمستخدم عدّل الصعبة عمدًا فتُعتمد هي.
+                        if not hc_in_file or (rate and abs(value / rate - hc_in_file) <= Decimal('0.0001')):
+                            local_prices[local_field] = value
 
                 dup_match = find_existing_item_match(
                     tenant, name=name,
@@ -228,6 +241,10 @@ def import_products(tenant, uploaded_file, user):
                     # Re-importing/overlapping supplier lists should update the
                     # existing tenant-specific fields, not create a full duplicate.
                     existing = dup_match['item']
+                    if branch is not None and existing.branch_id != branch.id:
+                        errors.append({'row': i, 'field': 'name',
+                                       'message': f'المنتج "{existing.name}" موجود في كتالوج الإدارة أو فرع آخر ولا يمكن لفرعك تعديله'})
+                        continue
                     update_fields = []
                     for field in ('cost_price', 'selling_price', 'min_selling_price', 'tax_rate',
                                   'min_quantity', 'max_quantity'):
@@ -239,11 +256,14 @@ def import_products(tenant, uploaded_file, user):
                     if tenant.hard_currency_mode:
                         # أسعار العملة الصعبة هي المصدر في هذا الوضع: نأخذ القيم الواردة
                         # في الملف قبل اشتقاق الأسعار المحلية، وإلا طغت الأسعار القديمة.
-                        for field in ('cost_price_hc', 'selling_price_hc', 'min_selling_price_hc'):
-                            if kwargs.get(field):
-                                setattr(existing, field, kwargs[field])
-                                update_fields.append(field)
-                        _apply_hc_prices(existing, tenant)
+                        # تُحدَّث الأسعار التي تغيّرت فعلًا فقط؛ غير المتغيرة تبقى حرفيًا، لأن الصعبة مخزّنة
+                        # بـ4 خانات فإعادة ضربها في سعر الصرف تُنحرف عن المحلي (10,000.00 ← 9,999.75).
+                        rate = Decimal(str(tenant.exchange_rate or 0))
+                        for hc_field, local_field in HC_TO_LOCAL.items():
+                            new_hc = kwargs.get(hc_field)
+                            if new_hc and new_hc != getattr(existing, hc_field):
+                                setattr(existing, hc_field, new_hc)
+                                setattr(existing, local_field, (new_hc * rate).quantize(Decimal('0.01')))
                         _apply_local_prices(existing, tenant, local_prices)
                         update_fields += ['cost_price', 'selling_price', 'min_selling_price',
                                           'cost_price_hc', 'selling_price_hc', 'min_selling_price_hc']

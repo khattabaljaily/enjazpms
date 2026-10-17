@@ -34,6 +34,7 @@ class BranchItemsBase(TenantTestCase):
 
 class BranchItemsDisabledTests(BranchItemsBase):
     def test_branch_cannot_add_edit_or_delete(self):
+        self.assertFalse(self.sup1.has_perm_key('import_items'))
         self.client.force_login(self.sup1)
         before = Item.objects.count()
         for url, data in ((reverse('items:create_api'), self.create_payload()),
@@ -68,8 +69,8 @@ class BranchItemsEnabledTests(BranchItemsBase):
         self.assertEqual(resp.status_code, 200, resp.content)
         self.assertFalse(Item.objects.filter(pk=self.own_item.pk).exists())
 
-    def test_branch_still_cannot_import(self):
-        self.assertFalse(self.sup1.has_perm_key('import_items'))
+    def test_branch_can_import_along_with_add(self):
+        self.assertTrue(self.sup1.has_perm_key('import_items'))
         self.assertTrue(self.sup1.has_perm_key('add_items'))
 
     def test_mine_filter_and_can_manage_flag(self):

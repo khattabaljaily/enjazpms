@@ -214,9 +214,9 @@ BRANCH_BLOCKED_KEYS = {
 
 
 # مفاتيح المنتجات التي تُفتح لمستخدم الفرع حين يسمح مدير النشاط بذلك
-# (Settings.branches_can_manage_items) — الاستيراد يبقى محظوراً دائماً، والتعديل/الحذف
+# (Settings.branches_can_manage_items) — والاستيراد معها (يُنشئ منتجات تحمل فرعه ولا يعدّل إلا منتجاته)، والتعديل/الحذف
 # مقيّدان في الـ views بالمنتجات التي أضافها فرعه (Item.branch).
-BRANCH_ITEM_KEYS = {'add_items', 'change_items', 'delete_items'}
+BRANCH_ITEM_KEYS = {'add_items', 'change_items', 'delete_items', 'import_items'}
 
 
 def branch_blocked_keys(branch_items_allowed=False):

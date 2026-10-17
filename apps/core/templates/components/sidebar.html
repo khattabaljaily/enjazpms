@@ -225,7 +225,7 @@
         </li>
     </ul>
     {% endif %}
-    {% if user|has_perm_key:'add_categories' and not request.branch or user|has_perm_key:'import_items' and user|has_perm_key:'add_items' or user|has_perm_key:'import_customers' and user|has_perm_key:'add_customers' or user|has_perm_key:'import_suppliers' and user|has_perm_key:'add_suppliers' or plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'import_agents' and user|has_perm_key:'add_agents' %}
+    {% if user|has_perm_key:'add_categories' and not request.branch or user|has_perm_key:'import_items' and user|has_perm_key:'add_items' or user|has_perm_key:'import_customers' and user|has_perm_key:'add_customers' or user|has_perm_key:'import_suppliers' and user|has_perm_key:'add_suppliers' or plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'import_agents' and user|has_perm_key:'add_agents' or current_tenant.version_type == 'multi_branch' and current_tenant.purchasing_mode == 'hybrid' and not request.branch and user|has_perm_key:'add_central_suppliers' %}
     <ul class="nav flex-column">
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle{% if request.resolver_match.app_name == 'data_import' %} submenu-active{% endif %}" href="#">
@@ -245,6 +245,9 @@
                 {% endif %}
                 {% if user|has_perm_key:'import_suppliers' and user|has_perm_key:'add_suppliers' %}
                 <li><a href="{% url 'data_import:supplier_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'supplier_page' %} active{% endif %}"><i class="fas fa-truck me-2"></i>استيراد الموردين</a></li>
+                {% endif %}
+                {% if current_tenant.version_type == 'multi_branch' and current_tenant.purchasing_mode == 'hybrid' and not request.branch and user|has_perm_key:'add_central_suppliers' and not user|has_perm_key:'import_suppliers' %}
+                <li><a href="{% url 'data_import:supplier_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'supplier_page' %} active{% endif %}"><i class="fas fa-truck me-2"></i>استيراد الموردين المركزيين</a></li>
                 {% endif %}
                 {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'import_agents' and user|has_perm_key:'add_agents' %}
                 <li><a href="{% url 'data_import:agent_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'agent_page' %} active{% endif %}"><i class="fas fa-id-badge me-2"></i>استيراد المناديب</a></li>

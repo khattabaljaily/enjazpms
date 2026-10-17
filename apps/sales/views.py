@@ -1170,12 +1170,26 @@ def item_info_api(request):
     base_unit_id   = iu_qs[0].id   if iu_qs else None
     base_unit_name = iu_qs[0].name if iu_qs else ''
 
+    # دفعات المنتج المتاحة في المخزن (الأقرب انتهاءً أولاً) لاختيار الدفعة وإظهار تاريخ صلاحيتها
+    batches = []
+    if item.track_batch and stock_id and not is_service:
+        from apps.items.models import ItemBatch
+        batch_qs = ItemBatch.objects.filter(
+            tenant=tenant, item=item, stock_id=stock_id, quantity_remaining__gt=0,
+        ).exclude(batch_number='').order_by('expiry_date', 'batch_number')
+        batches = [{
+            'batch_number': b.batch_number,
+            'expiry_date': b.expiry_date.isoformat() if b.expiry_date else '',
+            'quantity': str(b.quantity_remaining.normalize()),
+        } for b in batch_qs]
+
     return JsonResponse({
         'success': True,
         'item': {
             'id': item.id,
             'name': item.name,
             'sku': item.sku,
+            'batches': batches,
             'selling_price': str(item.selling_price),
             'min_selling_price': str(item.min_selling_price),
             'cost_price': str(item.cost_price),

@@ -1279,7 +1279,10 @@ def item_export_api(request):
     response = csv_response('items.csv')
     writer = csv_writer(response)
     hc_mode = bool(tenant.hard_currency_mode)
-    price_headers = (['سعر التكلفة (عملة صعبة)', 'سعر البيع (عملة صعبة)', 'أدنى سعر بيع (عملة صعبة)']
+    # وضع العملة الصعبة: أعمدة الصعبة (بعناوين قالب الاستيراد) ثم نظيرتها المحلية بعناوين «(محلي)»،
+    # كي يعيد الاستيراد المحلي كما هو بالضبط دون انحراف تقريب الصعبة.
+    price_headers = (['سعر التكلفة (عملة صعبة)', 'سعر البيع (عملة صعبة)', 'أدنى سعر بيع (عملة صعبة)',
+                      'سعر التكلفة (محلي)', 'سعر البيع (محلي)', 'أدنى سعر بيع (محلي)']
                      if hc_mode else ['سعر التكلفة', 'سعر البيع', 'أدنى سعر بيع'])
     writer.writerow([
         'الاسم', 'الاسم الإنجليزي', 'الرمز (SKU)', 'الباركود',
@@ -1299,7 +1302,8 @@ def item_export_api(request):
             item.category.name if item.category else '',
             item.base_unit_name,
             '',
-            *((item.cost_price_hc, item.selling_price_hc, item.min_selling_price_hc) if hc_mode
+            *((item.cost_price_hc, item.selling_price_hc, item.min_selling_price_hc,
+               item.cost_price, item.selling_price, item.min_selling_price) if hc_mode
               else (item.cost_price, item.selling_price, item.min_selling_price)),
             item.min_quantity,
             item.max_quantity,
