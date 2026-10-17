@@ -1231,33 +1231,74 @@ def password_reset_complete(request):
 
 @login_required
 def activity_log(request):
+    from urllib.parse import urlencode
+
+    from django.core.paginator import Paginator
+
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:dashboard')
 
-    is_admin = request.user.is_tenant_admin
+    me = request.user
+    is_admin = me.is_tenant_admin
+    # مدير الفرع (مشرف الفرع) يرى نشاط مستخدمي فرعه كلهم؛ بقية مستخدمي الفرع يرون نشاطهم فقط.
+    is_branch_manager = bool(not is_admin and me.is_branch_supervisor and me.branch_id)
+    can_see_others = is_admin or is_branch_manager
 
     users_qs = None
     selected_user_id = request.GET.get('user', '').strip()
 
-    if is_admin:
+    if can_see_others:
         from .models import User as AccountUser
         users_qs = AccountUser.objects.filter(tenant=tenant).order_by('first_name', 'username')
         qs = UserActivity.objects.filter(tenant=tenant).select_related('user')
-        if selected_user_id:
+        if is_branch_manager:
+            users_qs = users_qs.filter(branch_id=me.branch_id)
+            qs = qs.filter(Q(branch_id=me.branch_id) | Q(user__branch_id=me.branch_id))
+        if selected_user_id and users_qs.filter(pk=selected_user_id).exists():
             qs = qs.filter(user_id=selected_user_id)
+        else:
+            selected_user_id = ''
     else:
-        qs = UserActivity.objects.filter(tenant=tenant, user=request.user)
+        selected_user_id = ''
+        qs = UserActivity.objects.filter(tenant=tenant, user=me)
+        branch = getattr(request, 'branch', None)
+        if branch is not None:
+            qs = qs.filter(Q(branch=branch) | Q(branch__isnull=True))
 
-    branch = getattr(request, 'branch', None)
-    if branch is not None:
-        qs = qs.filter(Q(branch=branch) | Q(branch__isnull=True))
+    def _parse_date(value):
+        try:
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        except (TypeError, ValueError):
+            return None
 
-    qs = qs.order_by('-created_at')[:500]
+    date_from_raw = request.GET.get('date_from', '').strip()
+    date_to_raw = request.GET.get('date_to', '').strip()
+    date_from, date_to = _parse_date(date_from_raw), _parse_date(date_to_raw)
+    # نطاق زمني صريح بتوقيت المشترك (لا __date، فهو يحتاج جداول المناطق الزمنية في MySQL)
+    if date_from:
+        qs = qs.filter(created_at__gte=_tz.make_aware(datetime.combine(date_from, datetime.min.time())))
+    if date_to:
+        qs = qs.filter(created_at__lt=_tz.make_aware(datetime.combine(date_to + timedelta(days=1), datetime.min.time())))
+
+    paginator = Paginator(qs.order_by('-created_at', '-id'), 24)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    filter_params = {k: v for k, v in (
+        ('user', selected_user_id),
+        ('date_from', date_from.isoformat() if date_from else ''),
+        ('date_to', date_to.isoformat() if date_to else ''),
+    ) if v}
 
     return render(request, 'accounts/activity_log.html', {
-        'activities': qs,
+        'activities': page_obj,
+        'page_obj': page_obj,
+        'total_count': paginator.count,
         'users': users_qs,
         'selected_user_id': selected_user_id,
-        'is_admin_view': is_admin,
+        'date_from': date_from.isoformat() if date_from else '',
+        'date_to': date_to.isoformat() if date_to else '',
+        'has_filters': bool(filter_params),
+        'filter_qs': urlencode(filter_params),
+        'is_admin_view': can_see_others,
+        'is_branch_manager_view': is_branch_manager,
     })

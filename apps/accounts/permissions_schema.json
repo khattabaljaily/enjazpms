@@ -47,6 +47,7 @@
             "permissions": [
                 {"key": "view_head_office_treasury", "label": {"ar": "عرض خزينة الإدارة المركزية", "en": "View head office treasury"}},
                 {"key": "transfer_head_office_treasury", "label": {"ar": "تحويل الأموال بين خزائن الإدارة المركزية", "en": "Transfer funds between head office treasury and branches"}},
+                {"key": "change_head_office_treasury", "label": {"ar": "تعديل بيانات خزينة الإدارة المركزية وأرصدتها الافتتاحية", "en": "Edit head office treasury and opening balances"}},
                 {"key": "view_head_office_bank_accounts", "label": {"ar": "عرض الحسابات البنكية للإدارة المركزية", "en": "View head office bank accounts"}},
                 {"key": "add_head_office_bank_accounts", "label": {"ar": "إضافة حساب بنكي للإدارة المركزية", "en": "Add head office bank account"}},
                 {"key": "change_head_office_bank_accounts", "label": {"ar": "تعديل حساب بنكي للإدارة المركزية", "en": "Edit head office bank account"}},
@@ -512,7 +513,7 @@
             "name": {"ar": "الإشعارات", "en": "Notifications"},
             "permissions": [
                 {"key": "view_notifications", "label": {"ar": "عرض الإشعارات", "en": "View notifications"}},
-                {"key": "generate_notifications", "label": {"ar": "توليد الإشعارات يدوياً", "en": "Generate notifications manually"}}
+                {"key": "generate_notifications", "label": {"ar": "فحص الإشعارات يدوياً", "en": "Check notifications manually"}}
             ]
         }
     ]

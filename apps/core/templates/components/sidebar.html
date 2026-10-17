@@ -750,7 +750,7 @@
         <li class="nav-item">
             <a class="nav-link{% if request.resolver_match.url_name == 'activity_log' %} active{% endif %}" href="{% url 'accounts:activity_log' %}">
                 <span class="nav-icon" style="background:linear-gradient(135deg,#c9840f,#8f5c0a);color:#fff;"><i class="fas fa-clock-rotate-left"></i></span>
-                سجل نشاطاتي
+                {% if user.is_branch_supervisor and user.branch_id %}سجل نشاط الفرع{% else %}سجل نشاطاتي{% endif %}
             </a>
         </li>
     </ul>
@@ -774,7 +774,7 @@
         <div class="sidebar-footer-avatar">{{ user.get_full_name|slice:':1'|default:user.username|slice:':1'|upper }}</div>
         <div>
             <div class="sidebar-footer-name">{{ user.get_full_name|default:user.username }}</div>
-            <div class="sidebar-footer-role">{% if user.is_superuser %}مشرف{% elif user.is_platform_staff %}مساعد منصة{% elif user.is_tenant_admin %}مدير{% else %}مستخدم{% endif %}</div>
+            <div class="sidebar-footer-role">{% if user.is_superuser %}مشرف{% elif user.is_platform_staff %}مساعد منصة{% elif user.is_tenant_admin %}مدير{% else %}مستخدم{% endif %}{% if user.branch_id %} · {{ user.branch.name }}{% endif %}</div>
         </div>
     </div>
 

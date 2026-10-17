@@ -167,6 +167,7 @@ def treasury_table_api(request):
             'is_system_default': treasury.is_system_default,
             'is_hard_currency': treasury.is_hard_currency,
             'is_branch_main': treasury.is_branch_main,
+            'is_head_office': treasury.is_head_office,
         }
         for treasury in queryset
     ]
@@ -270,6 +271,7 @@ def treasury_detail_api(request, pk):
             'is_default': treasury.is_default,
             'is_system_default': treasury.is_system_default,
             'is_hard_currency': treasury.is_hard_currency,
+            'is_head_office': treasury.is_head_office,
             'current_balance': str(treasury.current_balance),
             'opening_balance': str(ob_mv.amount) if ob_mv else '0',
             'opening_balance_date': ob_mv.movement_date.isoformat() if ob_mv else '',
@@ -319,7 +321,7 @@ def treasury_transactions_api(request, pk):
 
 
 @login_required
-@require_permission('change_treasuries')
+@require_any_permission('change_treasuries', 'change_head_office_treasury')
 def treasury_update_api(request, pk):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -329,9 +331,12 @@ def treasury_update_api(request, pk):
         return HttpResponseNotAllowed(['POST'])
 
     treasury = get_object_or_404(Treasury.objects.for_tenant(tenant), pk=pk)
-    if treasury.is_head_office:
-        return JsonResponse({'success': False, 'message': 'لا يمكن تعديل خزينة الإدارة المركزية من هنا.'}, status=403)
+    # خزائن الإدارة المركزية بصلاحيتها (تعديل الاسم والرمز والملاحظات والرصيد الافتتاحي فقط)، وخزائن الفروع بصلاحية الخزائن.
+    needed = 'change_head_office_treasury' if treasury.is_head_office else 'change_treasuries'
+    if not request.user.has_perm_key(needed):
+        return JsonResponse({'success': False, 'message': 'ليس لديك صلاحية للقيام بهذا الإجراء'}, status=403)
     enforce_branch_ownership(request, treasury)
+    keep_default, keep_active = treasury.is_default, treasury.is_active
     form = TreasuryForm(request.POST, instance=treasury)
 
     if form.is_valid():
@@ -341,12 +346,15 @@ def treasury_update_api(request, pk):
         if treasury.is_system_default:
             treasury.is_default = True
             treasury.is_active = True
+        if treasury.is_head_office:
+            # خزينة الإدارة المركزية: لا تتغير حالتها الافتراضية/النشطة من هنا
+            treasury.is_default, treasury.is_active = keep_default, keep_active
         if treasury.is_hard_currency:
             # خزينة العملة الصعبة نظامية: تُعدَّل بياناتها ورصيدها الافتتاحي فقط، لا تصير افتراضية ولا تُعطَّل.
             treasury.is_default = False
             treasury.is_active = True
 
-        if treasury.is_default:
+        if treasury.is_default and not treasury.is_head_office:
             Treasury.objects.for_tenant(tenant).exclude(pk=treasury.pk).for_branch(treasury.branch).filter(is_default=True).update(is_default=False)
 
         treasury.save()

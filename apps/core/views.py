@@ -74,8 +74,9 @@ def dashboard(request):
             stats['total_products'] = Item.objects.filter(tenant=tenant).count()
         else:
             from apps.stocks.models import StockQuantity as _SQ
+            # منتجات الكتالوج المتاحة لمخازن الفرع (لا الموجودة كميتها فقط، وإلا ظهر 0 لفرع بلا أرصدة)
             stats['total_products'] = _SQ.objects.filter(
-                tenant=tenant, stock__branch=branch, quantity__gt=0,
+                tenant=tenant, stock__branch=branch, item__is_active=True,
             ).values('item').distinct().count()
 
         # Suppliers

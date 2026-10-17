@@ -1511,8 +1511,8 @@
         {
           "key": "generate_notifications",
           "label": {
-            "ar": "توليد الإشعارات يدوياً",
-            "en": "Generate notifications manually"
+            "ar": "فحص الإشعارات يدوياً",
+            "en": "Check notifications manually"
           }
         }
       ]

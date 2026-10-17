@@ -54,16 +54,16 @@
     <div class="act-hero">
         <h1>
             <i class="fas fa-clock-rotate-left me-2"></i>
-            {% if is_admin_view %}سجل نشاط المستخدمين{% else %}سجل نشاطاتي{% endif %}
+            {% if is_branch_manager_view %}سجل نشاط الفرع{% elif is_admin_view %}سجل نشاط المستخدمين{% else %}سجل نشاطاتي{% endif %}
         </h1>
-        <p>{% if is_admin_view %}كل إجراءات المستخدمين مسجّلة بالتفصيل{% else %}جميع إجراءاتك داخل النظام{% endif %}</p>
-        <span class="act-stat"><i class="fas fa-list-check"></i> {{ activities|length }} سجل</span>
+        <p>{% if is_branch_manager_view %}إجراءات مستخدمي فرعك مسجّلة بالتفصيل{% elif is_admin_view %}كل إجراءات المستخدمين مسجّلة بالتفصيل{% else %}جميع إجراءاتك داخل النظام{% endif %}</p>
+        <span class="act-stat"><i class="fas fa-list-check"></i> {{ total_count }} سجل</span>
     </div>
 
-    {% if is_admin_view %}
     <!-- ══ FILTER BAR ══ -->
     <div class="act-filter-bar">
         <form method="get" class="row align-items-end g-3">
+            {% if is_admin_view %}
             <div class="col-md-4">
                 <label class="form-label fw-semibold mb-1" style="font-size:.85rem;">تصفية حسب المستخدم</label>
                 <select name="user" class="form-select form-select-sm" onchange="this.form.submit()">
@@ -75,8 +75,18 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-auto">
-                {% if selected_user_id %}
+            {% endif %}
+            <div class="col-6 col-md-3">
+                <label class="form-label fw-semibold mb-1" style="font-size:.85rem;" for="actDateFrom">من تاريخ</label>
+                <input type="date" id="actDateFrom" name="date_from" value="{{ date_from }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label fw-semibold mb-1" style="font-size:.85rem;" for="actDateTo">إلى تاريخ</label>
+                <input type="date" id="actDateTo" name="date_to" value="{{ date_to }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-auto d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-magnifying-glass me-1"></i>بحث</button>
+                {% if has_filters %}
                 <a href="{% url 'accounts:activity_log' %}" class="btn btn-sm btn-outline-secondary">
                     <i class="fas fa-xmark me-1"></i>إعادة تعيين
                 </a>
@@ -84,7 +94,6 @@
             </div>
         </form>
     </div>
-    {% endif %}
 
     <!-- ══ CARDS GRID ══ -->
     <div class="act-grid">
@@ -130,6 +139,31 @@
         </div>
         {% endfor %}
     </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="mt-4 d-flex justify-content-center" aria-label="صفحات السجل">
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?{% if filter_qs %}{{ filter_qs }}&{% endif %}page={{ page_obj.previous_page_number }}">السابق</a></li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">السابق</span></li>
+            {% endif %}
+            {% for n in page_obj.paginator.page_range %}
+            {% if n == 1 or n == page_obj.paginator.num_pages or n >= page_obj.number|add:'-2' and n <= page_obj.number|add:'2' %}
+            <li class="page-item{% if n == page_obj.number %} active{% endif %}"><a class="page-link" href="?{% if filter_qs %}{{ filter_qs }}&{% endif %}page={{ n }}">{{ n }}</a></li>
+            {% elif n == page_obj.number|add:'-3' or n == page_obj.number|add:'3' %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?{% if filter_qs %}{{ filter_qs }}&{% endif %}page={{ page_obj.next_page_number }}">التالي</a></li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">التالي</span></li>
+            {% endif %}
+        </ul>
+    </nav>
+    <p class="text-center text-muted mt-2 mb-0" style="font-size:.8rem;">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</p>
+    {% endif %}
 
 </div>
 
