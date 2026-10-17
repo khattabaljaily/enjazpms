@@ -94,6 +94,7 @@ def notification_api(request):
         'transfer_done':   'fa-arrows-left-right text-success',
         'stocktake_done':  'fa-clipboard-check text-success',
         'exchange_rate':   'fa-coins text-warning',
+        'agent_request':   'fa-id-badge text-primary',
         'general':         'fa-bell text-secondary',
     }
 

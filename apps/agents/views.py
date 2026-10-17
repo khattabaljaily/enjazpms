@@ -11,12 +11,15 @@ from django.views.decorators.http import require_POST
 from decimal import Decimal
 import csv
 import json
+import logging
 
 from apps.accounts.decorators import require_permission, require_capability, require_plan_feature, branch_scope_exempt
 from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
 from .forms import AgentForm
 from .models import Agent, AgentLedger
 from .services import _apply_agent_ledger, agent_ledger_display_label
+
+logger = logging.getLogger('agents')
 from apps.treasury.models import Treasury, TreasuryMovement
 from apps.treasury.services import post_treasury_disbursement
 
@@ -1173,24 +1176,23 @@ def agent_portal_request_new(request):
             req.total_amount = subtotal
             req.save(update_fields=['subtotal', 'total_amount', 'updated_at'])
 
-        # إشعار لجميع مديري النظام في المؤسسة
+        # إشعار واحد على فرع المندوب: يراه مستخدمو ذلك الفرع (نسخة المؤسسات) ومالك الحساب؛
+        # مندوب بلا فرع ← إشعار عام يراه مالك الحساب ومستخدموه. (كان يُنشأ بلا فرع فلا يراه الفرع،
+        # وبنسخة لكل مالك فتتكرر عنده.)
         try:
             from apps.notifications.models import Notification
             from django.urls import reverse
-            admin_users = tenant.users.filter(is_active=True, is_tenant_admin=True)
-            detail_url = reverse('agents:request_detail', args=[req.pk])
-            for u in admin_users:
-                Notification.objects.create(
-                    tenant=tenant,
-                    user=u,
-                    notification_type='agent_request',
-                    priority='medium',
-                    title=f'طلب فاتورة جديد من {agent.name}',
-                    message=f'المندوب {agent.name} أرسل طلب فاتورة جديد ({req.request_number}) للعميل {req.customer_name}.',
-                    link=detail_url,
-                )
+            Notification.objects.create(
+                tenant=tenant,
+                branch_id=agent.branch_id,
+                notification_type='agent_request',
+                priority='medium',
+                title=f'طلب فاتورة جديد من {agent.name}',
+                message=f'المندوب {agent.name} أرسل طلب فاتورة جديد ({req.request_number}) للعميل {req.customer_name}.',
+                link=reverse('agents:request_detail', args=[req.pk]),
+            )
         except Exception:
-            pass
+            logger.exception('agent request notification failed (request %s)', req.pk)
 
         return _json_ok(data={'id': req.id, 'number': req.request_number},
                         msg='تم إرسال الطلب بنجاح وسيصلك الرد قريباً')
