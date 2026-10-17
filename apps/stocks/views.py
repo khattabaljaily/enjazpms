@@ -23,6 +23,7 @@ from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, reso
 from .forms import StockForm
 from .models import Stock, StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine, ManufacturingOrder, StockDestruction, StockDestructionLine
 from .reports import StocksReportGenerator
+from .scope import opening_balance_stocks
 from .services import (
     confirm_stock_transfer, cancel_stock_transfer, confirm_stocktake,
     confirm_manufacturing_order, cancel_manufacturing_order,
@@ -385,6 +386,9 @@ def stock_set_default_api(request, pk):
 # صفحة الكميات الافتتاحية
 # ============================================================
 
+OWNER_BRANCH_STOCK_MSG = 'الكميات الافتتاحية لمخازن الفروع من اختصاص الفرع نفسه، لا يعدّلها مدير النشاط.'
+
+
 @login_required
 @require_permission('view_stocks')
 def opening_balance_list(request):
@@ -392,7 +396,7 @@ def opening_balance_list(request):
     if not tenant:
         return redirect('core:no_tenant')
 
-    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name')
+    stocks = opening_balance_stocks(tenant, getattr(request, 'branch', None)).order_by('-is_default', 'name')
     default_stock = stocks.filter(is_default=True).first() or stocks.first()
 
     return render(request, 'stocks/opening_balance_list.html', {
@@ -424,6 +428,8 @@ def opening_balance_table_api(request):
     except Stock.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=404)
     enforce_branch_ownership(request, stock)
+    if not opening_balance_stocks(tenant, getattr(request, 'branch', None)).filter(pk=stock.pk).exists():
+        return JsonResponse({'success': False, 'message': OWNER_BRANCH_STOCK_MSG}, status=403)
 
     draw = int(request.GET.get('draw', 1))
     start = int(request.GET.get('start', 0))
@@ -507,6 +513,8 @@ def opening_balance_save_api(request):
     except Stock.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'المخزن غير موجود'}, status=404)
     enforce_branch_ownership(request, stock)
+    if not opening_balance_stocks(tenant, getattr(request, 'branch', None)).filter(pk=stock.pk).exists():
+        return JsonResponse({'success': False, 'message': OWNER_BRANCH_STOCK_MSG}, status=403)
 
     if not rows:
         return JsonResponse({'success': False, 'message': 'لا توجد تعديلات للحفظ'}, status=400)

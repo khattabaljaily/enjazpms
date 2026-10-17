@@ -20,6 +20,7 @@ from apps.items.views import _apply_hc_prices, _save_item_units
 from apps.items.dedup import find_existing_item_match
 from apps.suppliers.models import Supplier
 from apps.stocks.models import Stock, StockQuantity
+from apps.stocks.scope import opening_balance_stocks
 from apps.sales.models import StockMovement
 from apps.ai.services import smart_map_headers, match_category_name
 from apps.core.io_utils import parse_uploaded_file, smart_get, safe_decimal, safe_date, bool_from_str
@@ -95,12 +96,12 @@ def import_products(tenant, uploaded_file, user):
                 mapping[header] = HC_TO_LOCAL[canonical]
 
     categories = _name_lookup(Category.objects.for_tenant(tenant).filter(is_active=True))
-    stocks = _name_lookup(Stock.objects.for_tenant(tenant).for_branch(branch).filter(is_active=True))
+    stocks = _name_lookup(opening_balance_stocks(tenant, branch))
     suppliers = _name_lookup(Supplier.objects.for_tenant(tenant).for_branch(branch).filter(is_active=True))
 
     default_stock = None
     if not has_stock_column:
-        active_stocks = Stock.objects.for_tenant(tenant).for_branch(branch).filter(is_active=True).order_by('-is_default', 'name')
+        active_stocks = opening_balance_stocks(tenant, branch).order_by('-is_default', 'name')
         default_stock = active_stocks.filter(is_default=True).first() or active_stocks.first()
 
     category_ai_cache: dict = {}

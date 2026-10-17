@@ -13,6 +13,7 @@ from apps.accounts.decorators import (
 from apps.core.io_utils import xlsx_response
 from apps.items.models import Category
 from apps.stocks.models import Stock
+from apps.stocks.scope import opening_balance_stocks
 
 from .gating import products_import_blocked_reason, BLOCKED_MESSAGES
 from .schemas import get_product_schema, get_customer_schema, get_supplier_schema
@@ -105,7 +106,7 @@ def _tenant_lists(tenant, schema, branch=None):
         )
     if 'stock' in sources:
         lists['stock'] = list(
-            Stock.objects.for_tenant(tenant).for_branch(branch).filter(is_active=True).order_by('name').values_list('name', flat=True)
+            opening_balance_stocks(tenant, branch).order_by('name').values_list('name', flat=True)
         )
     return lists
 

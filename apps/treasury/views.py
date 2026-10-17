@@ -166,6 +166,7 @@ def treasury_table_api(request):
             'is_default': treasury.is_default,
             'is_system_default': treasury.is_system_default,
             'is_hard_currency': treasury.is_hard_currency,
+            'is_branch_main': treasury.is_branch_main,
         }
         for treasury in queryset
     ]
@@ -268,6 +269,7 @@ def treasury_detail_api(request, pk):
             'is_active': treasury.is_active,
             'is_default': treasury.is_default,
             'is_system_default': treasury.is_system_default,
+            'is_hard_currency': treasury.is_hard_currency,
             'current_balance': str(treasury.current_balance),
             'opening_balance': str(ob_mv.amount) if ob_mv else '0',
             'opening_balance_date': ob_mv.movement_date.isoformat() if ob_mv else '',
@@ -339,6 +341,10 @@ def treasury_update_api(request, pk):
         if treasury.is_system_default:
             treasury.is_default = True
             treasury.is_active = True
+        if treasury.is_hard_currency:
+            # خزينة العملة الصعبة نظامية: تُعدَّل بياناتها ورصيدها الافتتاحي فقط، لا تصير افتراضية ولا تُعطَّل.
+            treasury.is_default = False
+            treasury.is_active = True
 
         if treasury.is_default:
             Treasury.objects.for_tenant(tenant).exclude(pk=treasury.pk).for_branch(treasury.branch).filter(is_default=True).update(is_default=False)
@@ -395,6 +401,9 @@ def treasury_delete_api(request, pk):
 
     if treasury.is_hard_currency:
         return JsonResponse({'success': False, 'message': 'لا يمكن حذف خزينة العملة الصعبة.'}, status=400)
+
+    if treasury.is_branch_main:
+        return JsonResponse({'success': False, 'message': 'لا يمكن حذف الخزينة الرئيسية للفرع.'}, status=400)
 
     if treasury.is_default:
         return JsonResponse({'success': False, 'message': 'لا يمكن حذف الخزينة الافتراضية. عيّن خزينة أخرى كافتراضية أولاً.'}, status=400)

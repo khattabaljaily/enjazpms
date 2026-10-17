@@ -18,6 +18,7 @@ from .models import Category, Item, Unit, BOMRecipe, BOMLine, ItemBatch
 from apps.catalog.models import MasterDrug, MasterDrugAlias
 from apps.sales.models import StockMovement
 from apps.stocks.models import StockQuantity
+from apps.stocks.scope import opening_balance_stocks
 
 
 def _ensure_tenant(request):
@@ -281,7 +282,7 @@ def catalog_picker(request):
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
-    stocks = Stock.objects.for_tenant(tenant).for_branch(getattr(request, 'branch', None)).filter(is_active=True).order_by('-is_default', 'name')
+    stocks = opening_balance_stocks(tenant, getattr(request, 'branch', None)).order_by('-is_default', 'name')
     return render(request, 'items/catalog_picker.html', {'stocks': stocks})
 
 
@@ -400,7 +401,7 @@ def item_create_from_catalog(request):
 
     if request.method != 'POST':
         from apps.stocks.models import Stock
-        stocks = Stock.objects.for_tenant(tenant).filter(is_active=True)
+        stocks = opening_balance_stocks(tenant, getattr(request, 'branch', None))
         capabilities = _get_capabilities(tenant)
         return render(request, 'items/catalog_create.html', {
             'drug': drug, 'alias': alias, 'stocks': stocks,
@@ -491,7 +492,7 @@ def item_create_from_catalog(request):
     stock_id = request.POST.get('stock_id')
     opening_qty = safe_decimal_or_zero(request.POST.get('opening_quantity'))
     if stock_id and opening_qty:
-        stock = Stock.objects.for_tenant(tenant).filter(pk=stock_id, is_active=True).first()
+        stock = opening_balance_stocks(tenant, getattr(request, 'branch', None)).filter(pk=stock_id).first()
         if stock:
             apply_opening_stock(
                 tenant, item, stock, opening_qty,
@@ -543,7 +544,7 @@ def bulk_create_from_catalog(request):
 
     stock = None
     if body.get('stock_id'):
-        stock = Stock.objects.for_tenant(tenant).filter(pk=body['stock_id'], is_active=True).first()
+        stock = opening_balance_stocks(tenant, getattr(request, 'branch', None)).filter(pk=body['stock_id']).first()
 
     created = 0
     skipped = []

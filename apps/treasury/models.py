@@ -22,6 +22,9 @@ class Treasury(TenantMixin):
     # مملوكة لمدير النشاط وحده، منفصلة عن أي خزينة فرع. راجع
     # apps/core/signals.py::_ensure_head_office_treasuries.
     is_head_office = models.BooleanField('خزينة الإدارة المركزية', default=False)
+    # الخزينة المحلية الرئيسية لفرع في نسخة المؤسسات (تُنشأ تلقائيًا مع الفرع)؛ لا تُحذف من الواجهة.
+    # راجع apps/core/signals.py::_ensure_branch_treasuries.
+    is_branch_main = models.BooleanField('خزينة الفرع الرئيسية', default=False)
     is_active = models.BooleanField('نشطة', default=True)
     currency = models.CharField('العملة', max_length=3, blank=True, default='')
     current_balance = models.DecimalField('الرصيد الحالي', max_digits=14, decimal_places=2, default=0)

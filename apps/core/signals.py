@@ -107,6 +107,7 @@ def _ensure_branch_treasuries(branch):
         defaults={
             'name': f'خزينة {branch.name}',
             'code': f'TR-{branch.code}',
+            'is_branch_main': True,
             'is_active': True,
             'current_balance': 0,
             'currency': tenant.currency or '',

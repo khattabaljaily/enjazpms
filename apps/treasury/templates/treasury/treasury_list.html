@@ -489,6 +489,12 @@
                     document.getElementById('id_is_default').disabled = true;
                     document.getElementById('id_is_active').disabled = true;
                 }
+                if (d.is_hard_currency) {
+                    document.getElementById('id_is_default').checked = false;
+                    document.getElementById('id_is_active').checked = true;
+                    document.getElementById('id_is_default').disabled = true;
+                    document.getElementById('id_is_active').disabled = true;
+                }
 
                 document.getElementById('treasuryModalTitle').textContent = 'تعديل خزينة';
                 $submitBtn.html('<i class="fas fa-check me-1"></i>حفظ التعديلات');
@@ -649,8 +655,8 @@
                 </div>
                 <div class="cx-treasury-card-actions">
                     <button class="cxr-act cxr-act--view js-view-treasury" data-id="${r.id}" aria-label="السجل" title="السجل"><i class="fas fa-list"></i></button>
-                    ${hasPerm('change_treasuries') && !r.is_hard_currency ? `<button class="cxr-act js-edit-treasury" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
-                    ${hasPerm('delete_treasuries') ? (!r.is_system_default && !r.is_hard_currency ? `<button class="cxr-act cxr-act--del js-delete-treasury" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : '') : ''}
+                    ${hasPerm('change_treasuries') ? `<button class="cxr-act js-edit-treasury" data-id="${r.id}" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : ''}
+                    ${hasPerm('delete_treasuries') ? (!r.is_system_default && !r.is_hard_currency && !r.is_branch_main ? `<button class="cxr-act cxr-act--del js-delete-treasury" data-id="${r.id}" data-name="${r.name}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>` : '') : ''}
                 </div>
             </article>`;
         }).join('');
