@@ -33,6 +33,8 @@
 .req-step-sep { flex: 1; height: 1.5px; background: #f1f0ff; margin: 0 .75rem; min-width: 24px; }
 
 /* Customer search */
+/* لوحة العميل تسمح لقائمة العملاء المنسدلة بالظهور فوق لوحة المنتجات (اللوحات عادةً overflow:hidden فتقصّها) */
+.p-panel--customer { overflow: visible; position: relative; z-index: 20; }
 .cust-dropdown {
   display: none; position: absolute; top: calc(100% + 4px); right: 0; left: 0;
   background: #fff; border: 1.5px solid #ffd699; border-radius: 11px;
@@ -162,7 +164,7 @@
 <div class="row g-3">
   <!-- Customer section -->
   <div class="col-12">
-    <div class="p-panel">
+    <div class="p-panel p-panel--customer">
       <div class="p-panel-head"><i class="fas fa-user-circle"></i> بيانات العميل</div>
       <div class="p-panel-body">
         <div class="row g-3">
