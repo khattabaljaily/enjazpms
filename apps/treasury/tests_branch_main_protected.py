@@ -56,8 +56,12 @@ class HardCurrencyTreasuryEditTests(TenantTestCase):
 
     def test_edit_button_is_not_hidden_for_hard_currency_rows(self):
         html = self.client.get(reverse('treasury:list')).content.decode()
-        self.assertIn("hasPerm('change_treasuries')", html)
-        self.assertNotIn("&& !r.is_hard_currency ? `<button class=\"cxr-act js-edit-treasury", html)
+        # عرضا الجدول (سطح المكتب) والبطاقات (الجوال) كلاهما: لا شرط يخفي زر التعديل عن خزائن العملة الصعبة
+        self.assertEqual(html.count('window.openEdit(${row.id})'), 1)
+        self.assertIn("const canEdit = row.is_head_office ? hasPerm('change_head_office_treasury') : hasPerm('change_treasuries');", html)
+        self.assertIn("${canEdit ? `<button class=\"cx-btn-icon\" onclick=\"window.openEdit", html)
+        self.assertNotIn("&& !row.is_hard_currency ?", html)
+        self.assertNotIn("&& !r.is_hard_currency ?", html)
 
     def test_edit_sets_opening_balance_but_keeps_flags(self):
         resp = self.client.post(reverse('treasury:update_api', args=[self.hc.pk]), {
@@ -147,3 +151,20 @@ class BranchManagerEditTests(TenantTestCase):
             self.assertEqual(str(treasury.current_balance), '75.00')
             self.assertEqual(self.client.post(reverse('treasury:delete_api', args=[treasury.pk])).status_code, 400)
             self.assertTrue(Treasury.objects.filter(pk=treasury.pk).exists())
+
+
+class EditButtonPermissionKeysTests(TenantTestCase):
+    """مفاتيح الصلاحيات المحقونة في الصفحة (window.hasPerm) تتيح زر التعديل للمالك في كل نسخة."""
+
+    def test_basic_owner_gets_change_treasuries(self):
+        html = self.client.get(reverse('treasury:list')).content.decode()
+        self.assertIn('"change_treasuries"', html)
+
+
+class EnterpriseOwnerEditKeyTests(TenantTestCase):
+    version_type = 'multi_branch'
+    subscription_plan = 'enterprise'
+
+    def test_enterprise_owner_gets_head_office_edit_key(self):
+        html = self.client.get(reverse('treasury:list')).content.decode()
+        self.assertIn('"change_head_office_treasury"', html)

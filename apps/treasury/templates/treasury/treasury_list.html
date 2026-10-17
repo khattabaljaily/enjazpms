@@ -710,10 +710,11 @@
                 searchable: false,
                 className: 'text-center',
                 render: function(_, __, row) {
-                    const canDelete = !row.is_system_default && !row.is_hard_currency;
+                    const canDelete = !row.is_system_default && !row.is_hard_currency && !row.is_branch_main && !row.is_head_office;
+                    const canEdit = row.is_head_office ? hasPerm('change_head_office_treasury') : hasPerm('change_treasuries');
                     return `<div class="cx-actions">
                         <button class="cx-btn-icon" onclick="window.openTreasuryLedger(${row.id})" title="السجل"><i class="fas fa-list"></i></button>
-                        ${hasPerm('change_treasuries') && !row.is_hard_currency ? `<button class="cx-btn-icon" onclick="window.openEdit(${row.id})" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
+                        ${canEdit ? `<button class="cx-btn-icon" onclick="window.openEdit(${row.id})" title="تعديل"><i class="fas fa-pen-to-square"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
                         ${hasPerm('delete_treasuries') ? (canDelete ? `<button class="cx-btn-icon cx-btn-icon--danger" onclick="window.openDelete(${row.id}, '${(row.name || '').replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>` : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>') : '<span class="cx-btn-icon sales-btn-placeholder" aria-hidden="true"></span>'}
                     </div>`;
                 }
