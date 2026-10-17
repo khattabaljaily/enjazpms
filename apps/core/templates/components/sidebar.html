@@ -198,7 +198,7 @@
         </li>
     </ul>
 
-    {% if not request.branch %}
+    {% if not request.branch or user|has_perm_key:'add_categories' and not request.branch or user|has_perm_key:'import_items' or user|has_perm_key:'import_customers' or user|has_perm_key:'import_suppliers' or plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'import_agents' %}
     <div class="sidebar-divider"></div>
     <ul class="nav flex-column">
         <li class="nav-item has-submenu">
@@ -208,6 +208,7 @@
                 <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </a>
             <ul class="nav-submenu">
+                {% if not request.branch %}
                 {% if user|has_perm_key:'view_tenant_settings' %}
                 <li><a href="{% url 'core:tenant_settings' %}" class="nav-sublink{% if request.resolver_match.url_name == 'tenant_settings' %} active{% endif %}"><i class="fas fa-building me-2"></i>إعدادات المنشأة</a></li>
                 {% endif %}
@@ -220,6 +221,32 @@
                     <span style="margin-right:auto;background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:.6rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;">{{ store_pending_count }}</span>
                     {% endif %}
                 </a></li>
+                {% endif %}
+                {% endif %}
+                {% if user|has_perm_key:'add_categories' and not request.branch or user|has_perm_key:'import_items' or user|has_perm_key:'import_customers' or user|has_perm_key:'import_suppliers' or plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'import_agents' %}
+                <li class="nav-item has-submenu">
+                    <a class="nav-sublink nav-link-toggle" href="#">
+                        <i class="fas fa-file-import me-2"></i>استيراد البيانات
+                        <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+                    </a>
+                    <ul class="nav-submenu">
+                        {% if user|has_perm_key:'add_categories' and not request.branch %}
+                        <li><a href="{% url 'data_import:category_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'category_page' %} active{% endif %}"><i class="fas fa-tags me-2"></i>استيراد التصنيفات</a></li>
+                        {% endif %}
+                        {% if user|has_perm_key:'import_items' %}
+                        <li><a href="{% url 'data_import:product_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'product_page' %} active{% endif %}"><i class="fas fa-box-open me-2"></i>استيراد المنتجات</a></li>
+                        {% endif %}
+                        {% if user|has_perm_key:'import_customers' %}
+                        <li><a href="{% url 'data_import:customer_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'customer_page' %} active{% endif %}"><i class="fas fa-users me-2"></i>استيراد العملاء</a></li>
+                        {% endif %}
+                        {% if user|has_perm_key:'import_suppliers' %}
+                        <li><a href="{% url 'data_import:supplier_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'supplier_page' %} active{% endif %}"><i class="fas fa-truck me-2"></i>استيراد الموردين</a></li>
+                        {% endif %}
+                        {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'import_agents' %}
+                        <li><a href="{% url 'data_import:agent_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'agent_page' %} active{% endif %}"><i class="fas fa-id-badge me-2"></i>استيراد المناديب</a></li>
+                        {% endif %}
+                    </ul>
+                </li>
                 {% endif %}
             </ul>
         </li>
@@ -257,7 +284,7 @@
             </ul>
         </li>
         {% endif %}
-        {% if user|has_perm_key:'view_items' and not request.branch or user|has_perm_key:'view_items' and current_tenant.branches_manage_items or user|has_perm_key:'view_items' and user|has_perm_key:'import_customers' or user|has_perm_key:'view_items' and user|has_perm_key:'import_suppliers' or user|has_perm_key:'view_items' and user|has_perm_key:'import_agents' %}
+        {% if user|has_perm_key:'view_items' and not request.branch or user|has_perm_key:'view_items' and current_tenant.branches_manage_items %}
         <li class="nav-item has-submenu">
             <a class="nav-link nav-link-toggle{% if request.resolver_match.app_name == 'items' %} submenu-active{% endif %}" href="#">
                 <span class="nav-icon nav-icon--stock"><i class="fas fa-box-open"></i></span>
@@ -271,31 +298,6 @@
 {% if not request.branch or current_tenant.branches_manage_items %}
                 <li><a href="{% url 'items:list' %}" class="nav-sublink{% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'items' %} active{% endif %}"><i class="fas fa-list me-2"></i>قائمة المنتجات</a></li>
 {% endif %}
-                {% if user|has_perm_key:'add_categories' and not request.branch or user|has_perm_key:'import_items' or user|has_perm_key:'import_customers' or user|has_perm_key:'import_suppliers' or plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'import_agents' %}
-                <li class="nav-item has-submenu">
-                    <a class="nav-sublink nav-link-toggle" href="#">
-                        <i class="fas fa-file-import me-2"></i>استيراد البيانات
-                        <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
-                    </a>
-                    <ul class="nav-submenu">
-                        {% if user|has_perm_key:'add_categories' and not request.branch %}
-                        <li><a href="{% url 'data_import:category_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'category_page' %} active{% endif %}"><i class="fas fa-tags me-2"></i>استيراد التصنيفات</a></li>
-                        {% endif %}
-                        {% if user|has_perm_key:'import_items' %}
-                        <li><a href="{% url 'data_import:product_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'product_page' %} active{% endif %}"><i class="fas fa-box-open me-2"></i>استيراد المنتجات</a></li>
-                        {% endif %}
-                        {% if user|has_perm_key:'import_customers' %}
-                        <li><a href="{% url 'data_import:customer_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'customer_page' %} active{% endif %}"><i class="fas fa-users me-2"></i>استيراد العملاء</a></li>
-                        {% endif %}
-                        {% if user|has_perm_key:'import_suppliers' %}
-                        <li><a href="{% url 'data_import:supplier_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'supplier_page' %} active{% endif %}"><i class="fas fa-truck me-2"></i>استيراد الموردين</a></li>
-                        {% endif %}
-                        {% if plan_allows_agents and tenant_capabilities|has_capability:"has_agents_module" and user|has_perm_key:'import_agents' %}
-                        <li><a href="{% url 'data_import:agent_page' %}" class="nav-sublink{% if request.resolver_match.app_name == 'data_import' and request.resolver_match.url_name == 'agent_page' %} active{% endif %}"><i class="fas fa-id-badge me-2"></i>استيراد المناديب</a></li>
-                        {% endif %}
-                    </ul>
-                </li>
-                {% endif %}
             </ul>
         </li>
         {% endif %}

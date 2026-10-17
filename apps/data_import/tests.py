@@ -74,3 +74,16 @@ class ImportCommitTests(TenantTestCase):
         csv = 'الاسم,الهاتف\nأحمد,0912345678\n'.encode('utf-8')
         resp = self.client.post(reverse('agents:import_api'), {'file': SimpleUploadedFile('a.csv', csv)})
         self.assertEqual(resp.json()['imported'], 1)
+
+
+class SidebarPlacementTests(TenantTestCase):
+    subscription_plan = 'pro'
+
+    def test_import_link_lives_under_settings_not_products(self):
+        html = self.client.get(reverse('data_import:hub')).content.decode()
+        settings_at = html.index('الإعدادات')
+        import_at = html.index('استيراد البيانات', settings_at)
+        # قائمة المنتجات تأتي بعد الإعدادات؛ رابط الاستيراد يجب أن يسبقها
+        products_at = html.index('>\n                المنتجات', settings_at)
+        self.assertLess(settings_at, import_at)
+        self.assertLess(import_at, products_at)
