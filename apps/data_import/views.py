@@ -28,14 +28,16 @@ def hub(request):
     user = request.user
     can_all = user.is_superuser
     tenant = _ensure_tenant(request)
-    return render(request, 'data_import/hub.html', {
+    flags = {
         # التصنيفات تُدار من الإدارة فقط (مثل قائمة التصنيفات في القائمة الجانبية)
         'can_import_categories': (can_all or user.has_perm_key('add_categories')) and not getattr(request, 'branch', None),
-        'can_import_items': can_all or user.has_perm_key('import_items'),
-        'can_import_customers': can_all or user.has_perm_key('import_customers'),
-        'can_import_suppliers': can_all or user.has_perm_key('import_suppliers'),
-        'can_import_agents': _agents_enabled(tenant, user) and (can_all or user.has_perm_key('import_agents')),
-    })
+        'can_import_items': can_all or (user.has_perm_key('import_items') and user.has_perm_key('add_items')),
+        'can_import_customers': can_all or (user.has_perm_key('import_customers') and user.has_perm_key('add_customers')),
+        'can_import_suppliers': can_all or (user.has_perm_key('import_suppliers') and user.has_perm_key('add_suppliers')),
+        'can_import_agents': _agents_enabled(tenant, user) and (can_all or (user.has_perm_key('import_agents') and user.has_perm_key('add_agents'))),
+    }
+    flags['has_any'] = any(flags.values())
+    return render(request, 'data_import/hub.html', flags)
 
 
 def _agents_enabled(tenant, user):
@@ -48,6 +50,7 @@ def _agents_enabled(tenant, user):
 
 @login_required
 @require_permission('import_items')
+@require_permission('add_items')
 def product_import_page(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -77,6 +80,7 @@ def _tenant_lists(tenant, schema):
 
 @login_required
 @require_permission('import_items')
+@require_permission('add_items')
 def product_template_download(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -103,6 +107,7 @@ def product_template_download(request):
 
 @login_required
 @require_permission('import_items')
+@require_permission('add_items')
 def product_import_commit(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -176,6 +181,7 @@ def _simple_import_commit(request, tenant, schema_fn, model, entity_label):
 
 @login_required
 @require_permission('import_customers')
+@require_permission('add_customers')
 def customer_import_page(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -191,6 +197,7 @@ def customer_import_page(request):
 
 @login_required
 @require_permission('import_customers')
+@require_permission('add_customers')
 def customer_template_download(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -200,6 +207,7 @@ def customer_template_download(request):
 
 @login_required
 @require_permission('import_customers')
+@require_permission('add_customers')
 def customer_import_commit(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -212,6 +220,7 @@ def customer_import_commit(request):
 
 @login_required
 @require_permission('import_suppliers')
+@require_permission('add_suppliers')
 def supplier_import_page(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -227,6 +236,7 @@ def supplier_import_page(request):
 
 @login_required
 @require_permission('import_suppliers')
+@require_permission('add_suppliers')
 def supplier_template_download(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -236,6 +246,7 @@ def supplier_template_download(request):
 
 @login_required
 @require_permission('import_suppliers')
+@require_permission('add_suppliers')
 def supplier_import_commit(request):
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -271,6 +282,7 @@ def category_import_page(request):
 @require_capability('has_agents_module')
 @require_plan_feature('agents')
 @require_permission('import_agents')
+@require_permission('add_agents')
 def agent_import_page(request):
     if not _ensure_tenant(request):
         return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)

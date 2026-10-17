@@ -671,6 +671,7 @@ _AGENT_FIELD_SCHEMA = [
 @require_capability('has_agents_module')
 @require_plan_feature('agents')
 @require_permission('import_agents')
+@require_permission('add_agents')
 @branch_scope_exempt('استيراد يُنشئ سجلات جديدة فقط (لا يقرأ بيانات فروع أخرى) ويُختم كل سجل بفرع المستخدم الحالي إن وُجد — نفس منطق agent_create_api')
 def agent_import_api(request):
     from apps.core.io_utils import parse_uploaded_file, smart_get, safe_decimal, clean_phone, clean_email
@@ -733,6 +734,7 @@ def agent_import_api(request):
 @require_capability('has_agents_module')
 @require_plan_feature('agents')
 @require_permission('import_agents')
+@require_permission('add_agents')
 def download_template(request):
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="agents_template.csv"'

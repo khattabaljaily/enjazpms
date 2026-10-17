@@ -29,6 +29,31 @@ from .gating import products_import_blocked_reason
 
 logger = logging.getLogger('data_import')
 
+# وضع العملة الصعبة: حقول الاستيراد بالعملة الصعبة ونظيراتها المحلية، وعناوين الأعمدة المحلية المعروفة
+# (التي يكتبها التصدير). عمود لا يدل عنوانه على «عملة صعبة» لا يجوز أن يُقرأ كسعر بالعملة الصعبة،
+# وإلا ضُرب سعر محلي في سعر الصرف فخرجت أسعار ضخمة.
+HC_TO_LOCAL = {'cost_price_hc': 'cost_price', 'selling_price_hc': 'selling_price',
+               'min_selling_price_hc': 'min_selling_price'}
+LOCAL_PRICE_HEADERS = {
+    'cost_price': ('سعر التكلفة', 'التكلفة', 'cost_price'),
+    'selling_price': ('سعر البيع', 'selling_price'),
+    'min_selling_price': ('أدنى سعر بيع', 'min_selling_price'),
+}
+_HC_MARKERS = ('صعبة', 'hc', 'usd', 'دولار', '$')
+
+
+def _apply_local_prices(item, tenant, local_prices):
+    """السعر المحلي الوارد في الملف هو المرجع (يبقى كما كُتب) والصعبة تُشتق منه = محلي ÷ سعر الصرف."""
+    rate = Decimal(str(tenant.exchange_rate or 0))
+    for field, value in local_prices.items():
+        setattr(item, field, value)
+        setattr(item, field + '_hc', (value / rate).quantize(Decimal('0.0001')) if rate else Decimal('0'))
+
+
+def _is_hc_header(header) -> bool:
+    text = str(header or '').lower()
+    return any(marker in text for marker in _HC_MARKERS)
+
 
 def _name_lookup(queryset):
     return {obj.name.strip().lower(): obj for obj in queryset}
@@ -59,6 +84,10 @@ def import_products(tenant, uploaded_file, user):
         mapping = smart_map_headers(actual_headers, ai_schema)
     except Exception:
         mapping = {}
+    if tenant.hard_currency_mode:
+        for header, canonical in list(mapping.items()):
+            if canonical in HC_TO_LOCAL and not _is_hc_header(header):
+                mapping[header] = HC_TO_LOCAL[canonical]
 
     categories = _name_lookup(Category.objects.for_tenant(tenant).filter(is_active=True))
     stocks = _name_lookup(Stock.objects.for_tenant(tenant).filter(is_active=True))
@@ -177,6 +206,16 @@ def import_products(tenant, uploaded_file, user):
                     else:
                         kwargs[field] = raw_value
 
+                # أسعار محلية وردت في الملف (مثل ملف صدّره النظام نفسه) بلا نظيرتها بالعملة الصعبة:
+                # المحلي هو المرجع والصعبة تُشتق منه، لا العكس.
+                local_prices = {}
+                if tenant.hard_currency_mode:
+                    for local_field, headers in LOCAL_PRICE_HEADERS.items():
+                        raw = smart_get(row, local_field, mapping, *headers)
+                        hc_field = local_field + '_hc'
+                        if raw and not kwargs.get(hc_field):
+                            local_prices[local_field] = safe_decimal(raw, default=Decimal('0'))
+
                 dup_match = find_existing_item_match(
                     tenant, name=name,
                     generic_name=kwargs.get('generic_name', ''),
@@ -205,7 +244,9 @@ def import_products(tenant, uploaded_file, user):
                                 setattr(existing, field, kwargs[field])
                                 update_fields.append(field)
                         _apply_hc_prices(existing, tenant)
-                        update_fields += ['cost_price', 'selling_price', 'min_selling_price']
+                        _apply_local_prices(existing, tenant, local_prices)
+                        update_fields += ['cost_price', 'selling_price', 'min_selling_price',
+                                          'cost_price_hc', 'selling_price_hc', 'min_selling_price_hc']
                     existing.save(update_fields=list(set(update_fields)))
                     updated += 1
                     continue
@@ -221,6 +262,7 @@ def import_products(tenant, uploaded_file, user):
                 item = Item(**kwargs)
                 if tenant.hard_currency_mode:
                     _apply_hc_prices(item, tenant)
+                    _apply_local_prices(item, tenant, local_prices)
                 item.save()
 
                 if units_data:

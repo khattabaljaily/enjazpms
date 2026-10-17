@@ -42,6 +42,9 @@
 
 <div class="cx-panel">
     <div class="di-cards">
+        {% if not has_any %}
+        <p class="di-card-desc">لا تملك صلاحية استيراد أي نوع من البيانات: يلزم أن تملك صلاحيتي «الاستيراد» و«الإضافة» معًا للنوع نفسه.</p>
+        {% endif %}
         {% if can_import_categories %}
         <a href="{% url 'data_import:category_page' %}" class="di-card">
             <div class="di-card-icon"><i class="fas fa-tags"></i></div>
