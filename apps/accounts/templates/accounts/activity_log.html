@@ -3,13 +3,13 @@
 {% load humanize %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reports_base.css' %}?v=4.0">
 <style>
 .act-hero { background: linear-gradient(135deg, #c9840f 0%, #a8660c 60%, #8f5c0a 100%); color: #fff; border-radius: 16px; padding: 28px 32px 20px; margin-bottom: 28px; }
 .act-hero h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
 .act-hero p { margin: 0; opacity: .75; font-size: .9rem; }
 .act-stat { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.15); border-radius: 20px; padding: 4px 14px; font-size: .82rem; font-weight: 600; margin-top: 14px; margin-left: 8px; }
 
-.act-filter-bar { background: var(--surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px 20px; margin-bottom: 22px; }
 
 .act-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 
@@ -60,37 +60,32 @@
         <span class="act-stat"><i class="fas fa-list-check"></i> {{ total_count }} سجل</span>
     </div>
 
-    <!-- ══ FILTER BAR ══ -->
-    <div class="act-filter-bar">
-        <form method="get" class="row align-items-end g-3">
+    <!-- ══ FILTER BAR (نفس شريط فلترة التقارير) ══ -->
+    <div class="rpt-filters">
+        <form method="get" class="row g-3">
             {% if is_admin_view %}
             <div class="col-md-4">
-                <label class="form-label fw-semibold mb-1" style="font-size:.85rem;">تصفية حسب المستخدم</label>
-                <select name="user" class="form-select form-select-sm" onchange="this.form.submit()">
+                <label class="form-label" for="actUser">المستخدم</label>
+                <select name="user" id="actUser" class="form-select">
                     <option value="">جميع المستخدمين</option>
                     {% for u in users %}
                     <option value="{{ u.id }}" {% if selected_user_id == u.id|stringformat:"s" %}selected{% endif %}>
-                        {{ u.get_full_name }}{% if not u.is_active %} (غير نشط){% endif %}
+                        {{ u.get_full_name|default:u.username }}{% if not u.is_active %} (غير نشط){% endif %}
                     </option>
                     {% endfor %}
                 </select>
             </div>
             {% endif %}
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-semibold mb-1" style="font-size:.85rem;" for="actDateFrom">من تاريخ</label>
-                <input type="date" id="actDateFrom" name="date_from" value="{{ date_from }}" class="form-control form-control-sm">
+            <div class="col-md-3">
+                <label class="form-label" for="actDateFrom">من التاريخ</label>
+                <input type="date" id="actDateFrom" name="date_from" value="{{ date_from }}" class="form-control">
             </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label fw-semibold mb-1" style="font-size:.85rem;" for="actDateTo">إلى تاريخ</label>
-                <input type="date" id="actDateTo" name="date_to" value="{{ date_to }}" class="form-control form-control-sm">
+            <div class="col-md-3">
+                <label class="form-label" for="actDateTo">إلى التاريخ</label>
+                <input type="date" id="actDateTo" name="date_to" value="{{ date_to }}" class="form-control">
             </div>
-            <div class="col-auto d-flex gap-2">
-                <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-magnifying-glass me-1"></i>بحث</button>
-                {% if has_filters %}
-                <a href="{% url 'accounts:activity_log' %}" class="btn btn-sm btn-outline-secondary">
-                    <i class="fas fa-xmark me-1"></i>إعادة تعيين
-                </a>
-                {% endif %}
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="rpt-filter-btn rpt-filter-btn--sales"><i class="fas fa-search me-1"></i>بحث</button>
             </div>
         </form>
     </div>
