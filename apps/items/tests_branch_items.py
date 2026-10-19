@@ -1,7 +1,7 @@
 """نسخة المؤسسات: السماح للفروع بإضافة منتجات للكتالوج المركزي (Settings.branches_can_manage_items)."""
 from django.urls import reverse
 
-from apps.accounts.models import User
+from apps.accounts.models import PermissionGroup, User
 from apps.core.models import Branch, Settings
 from apps.core.test_utils import TenantTestCase, make_item
 from apps.items.models import Item
@@ -98,6 +98,25 @@ class BranchItemsEnabledTests(BranchItemsBase):
         self.assertNotContains(self.client.get(reverse('items:list')), link)
         self.client.force_login(self.user)
         self.assertContains(self.client.get(reverse('items:list')), link)
+
+    def _employee(self, perms):
+        group = PermissionGroup.objects.create(tenant=self.tenant, name='موظف منتجات', scope='branch', permissions=perms)
+        emp = User.objects.create_user(username='bi-emp', password='x12345678', tenant=self.tenant, branch=self.b1)
+        group.users.add(emp)
+        return emp
+
+    def test_add_items_alone_implies_list_access_and_sidebar_link(self):
+        emp = self._employee({'add_items': True})
+        self.assertTrue(emp.has_perm_key('view_items'))
+        self.assertIn('view_items', emp.get_permission_keys())
+        self.client.force_login(emp)
+        html = self.client.get(reverse('core:dashboard')).content.decode()
+        self.assertIn(f'href="{reverse("items:list")}"', html)
+        self.assertEqual(self.client.get(reverse('items:list')).status_code, 200)
+
+    def test_group_without_item_keys_gets_no_list_access(self):
+        emp = self._employee({'view_dashboard': True})
+        self.assertFalse(emp.has_perm_key('view_items'))
 
 
 class NonEnterpriseUnaffectedTests(TenantTestCase):

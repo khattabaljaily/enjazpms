@@ -8,7 +8,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from apps.core.models import Tenant, TenantQuerySet
 from .permissions import (
-    get_permission_keys, get_branch_supervisor_permission_keys, branch_blocked_keys,
+    get_permission_keys, get_branch_supervisor_permission_keys, branch_blocked_keys, BRANCH_ITEM_KEYS,
     get_enterprise_owner_permission_keys, load_permission_schema, get_central_mode_admin_only_keys,
 )
 
@@ -166,6 +166,9 @@ class User(AbstractUser):
             keys -= branch_blocked_keys(self._branch_items_allowed())
             if central:
                 keys -= get_central_mode_admin_only_keys()
+            # إضافة المنتجات تتم من شاشة قائمة المنتجات، فمن مُنح إدارة منتجات فرعه يرى القائمة تلقائياً
+            if self._branch_items_allowed() and keys & BRANCH_ITEM_KEYS:
+                keys.add('view_items')
         return keys
 
     def has_perm_key(self, permission_key):
@@ -188,6 +191,10 @@ class User(AbstractUser):
             return False
         if self.is_branch_supervisor and self.branch_id:
             return permission_key in get_branch_supervisor_permission_keys(central)
+        if permission_key == 'view_items' and self.branch_id and self._branch_items_allowed():
+            # إضافة/تعديل منتجات الفرع تتم من شاشة القائمة، فأي صلاحية منها تمنح عرض القائمة
+            if any(self.has_perm_key(k) for k in BRANCH_ITEM_KEYS):
+                return True
         # مجموعة «إدارة النشاط» في نسخة المؤسسات لا تمنح إلا ما يملكه مدير النشاط نفسه —
         # حتى لو حُفظ فيها سابقاً مفتاح صُنِّف لاحقاً عمليات فرع (مثل تقارير تفاصيل الفرع).
         enterprise = bool(self.tenant_id and self.tenant.is_enterprise())
