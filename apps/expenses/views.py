@@ -215,7 +215,7 @@ def expense_table_api(request):
         )
 
     filtered_count = qs.count()
-    qs = qs.order_by('-expense_date', '-id')[start: start + length]
+    qs = qs.order_by('-id')[start: start + length]
 
     STATUS_LABELS = {
         'draft': '<span class="badge bg-secondary">مسودة</span>',

@@ -90,7 +90,7 @@ def employee_table_api(request):
         )
 
     records_filtered = qs.count()
-    qs = qs[start: start + length]
+    qs = qs.order_by('-id')[start: start + length]
 
     rows = []
     for emp in qs:
@@ -308,7 +308,7 @@ def advance_table_api(request):
         qs = qs.filter(Q(employee__name__icontains=search) | Q(notes__icontains=search))
 
     records_filtered = qs.count()
-    qs = qs[start: start + length]
+    qs = qs.order_by('-id')[start: start + length]
 
     rows = []
     for adv in qs:
@@ -467,7 +467,7 @@ def salary_table_api(request):
         qs = qs.filter(Q(employee__name__icontains=search))
 
     records_filtered = qs.count()
-    qs = qs[start: start + length]
+    qs = qs.order_by('-id')[start: start + length]
 
     rows = []
     for sp in qs:
@@ -698,7 +698,7 @@ def incentive_table_api(request):
         )
 
     records_filtered = qs.count()
-    qs = qs[start: start + length]
+    qs = qs.order_by('-id')[start: start + length]
 
     rows = []
     for inc in qs:

@@ -485,7 +485,7 @@ function initTable() {
                 sortDescending: ': تفعيل للترتيب التنازلي'
             }
         },
-        order: [[1, 'desc']],
+        order: [],
         pageLength: 25,
         drawCallback: function () {
             renderMobileInvoiceCards(salesTable.rows({ page: 'current' }).data().toArray());

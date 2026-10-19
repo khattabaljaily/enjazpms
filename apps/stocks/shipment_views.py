@@ -112,7 +112,7 @@ def shipment_table_api(request):
                        | Q(to_stock__name__icontains=search) | Q(notes__icontains=search))
     filtered = qs.count()
     rows = []
-    for sh in qs[start:start + length]:
+    for sh in qs.order_by('-id')[start:start + length]:
         rows.append({
             'id': sh.id,
             'shipment_number': sh.shipment_number,

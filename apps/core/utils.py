@@ -290,3 +290,13 @@ def short_text(text, limit=220):
     cut = text[:limit].rsplit(' ', 1)[0].rstrip('،,.:؛ ')
     return cut + '…'
 
+
+
+def dt_ordering(request, order_field):
+    """
+    ترتيب جداول DataTables من جهة الخادم: الأحدث أولاً (-id) افتراضياً، وإن ضغط المستخدم
+    على عنوان عمود نُرتّب به ثم -id لثبات الترتيب. يُستخدم مع الواجهات التي تُرسل order[0][column].
+    """
+    if request.GET.get('order[0][column]') in (None, ''):
+        return ('-id',)
+    return (order_field, '-id')

@@ -21,7 +21,7 @@ def _ensure_tenant(request):
     return getattr(request, 'tenant', None)
 
 
-from apps.core.utils import CURRENCY_SYMBOLS as _CURRENCY_SYMBOLS, currency_symbol as _currency_symbol, enforce_branch_ownership, enforce_transfer_branch_ownership, resolve_report_scope
+from apps.core.utils import dt_ordering, CURRENCY_SYMBOLS as _CURRENCY_SYMBOLS, currency_symbol as _currency_symbol, enforce_branch_ownership, enforce_transfer_branch_ownership, resolve_report_scope
 
 
 def _serialize_form_errors(form):
@@ -141,7 +141,7 @@ def bank_account_table_api(request):
     if order_dir == 'desc':
         order_field = f'-{order_field}'
 
-    queryset = queryset.order_by(order_field)[start:start + length]
+    queryset = queryset.order_by(*dt_ordering(request, order_field))[start:start + length]
 
     local_currency = tenant.currency or 'SDG'
     data = [

@@ -6,6 +6,7 @@ permission decorators the rest of the app uses.
 """
 import json
 
+from apps.core.utils import dt_ordering
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -155,7 +156,7 @@ def master_drug_table_api(request):
     if order_dir == 'desc':
         order_field = f'-{order_field}'
 
-    qs = qs.order_by(order_field)[start:start + length]
+    qs = qs.order_by(*dt_ordering(request, order_field))[start:start + length]
 
     data = [
         {

@@ -137,7 +137,7 @@ $(document).ready(function () {
             paginate    : { next: 'التالي', previous: 'السابق' },
             processing  : 'جاري التحميل...',
         },
-        order: [[2, 'desc']], pageLength: 25,
+        order: [], pageLength: 25,
         dom: '<"d-none"f>rt<"cx-dt-bottom"ip>',
     });
     $('#searchInput').on('keyup change', function () { table.search(this.value).draw(); });

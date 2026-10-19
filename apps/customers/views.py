@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.decorators import require_permission, require_any_permission
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, operational_money_accounts
+from apps.core.utils import dt_ordering, filter_by_branch_via, enforce_branch_ownership, operational_money_accounts
 from .forms import CustomerForm
 from .models import Customer
 from apps.sales.models import CustomerLedger, SalePayment
@@ -135,7 +135,7 @@ def customer_table_api(request):
     if order_dir == 'desc':
         order_field = f'-{order_field}'
 
-    queryset = queryset.order_by(order_field)[start:start + length]
+    queryset = queryset.order_by(*dt_ordering(request, order_field))[start:start + length]
 
     data = [
         {
@@ -418,7 +418,7 @@ def customer_payments_table_api(request):
         order_field = col_map.get(order_col, 'id')
         if order_dir == 'desc':
             order_field = f'-{order_field}'
-    qs = qs.order_by(order_field)
+    qs = qs.order_by(*dt_ordering(request, order_field))
 
     cancel_qs = CustomerLedger.objects.for_tenant(tenant).filter(
         reference_type='customer_payment_cancel',

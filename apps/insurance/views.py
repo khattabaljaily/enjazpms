@@ -78,7 +78,7 @@ def company_table_api(request):
         qs = qs.filter(Q(name__icontains=search) | Q(code__icontains=search) | Q(phone__icontains=search))
     records_filtered = qs.count()
 
-    qs = qs.order_by('-created_at')[start:start + length]
+    qs = qs.order_by('-id')[start:start + length]
 
     data = [
         {
@@ -306,7 +306,7 @@ def claim_table_api(request):
         )
     records_filtered = qs.count()
 
-    qs = qs.order_by('-created_at')[start:start + length]
+    qs = qs.order_by('-id')[start:start + length]
 
     data = [
         {

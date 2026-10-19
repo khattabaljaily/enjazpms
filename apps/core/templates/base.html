@@ -79,6 +79,10 @@
     <!-- DataTables -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+    /* الأحدث أولاً دائماً: لا ترتيب ابتدائي من العميل، فيُرتّب الخادم بـ -id (إلا إن ضغط المستخدم على عنوان عمود). */
+    $.extend(true, $.fn.dataTable.defaults, { order: [] });
+    </script>
     
     <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}?v=4.0"></script>

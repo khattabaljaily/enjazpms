@@ -5,6 +5,7 @@ import json
 import os
 from decimal import Decimal, InvalidOperation
 
+from apps.core.utils import dt_ordering
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
@@ -1994,7 +1995,7 @@ def tenant_table_api(request):
     order_field = col_map.get(order_col_idx, 'created_at')
     if order_dir == 'desc':
         order_field = f'-{order_field}'
-    qs = qs.order_by(order_field)[start:start + length]
+    qs = qs.order_by(*dt_ordering(request, order_field))[start:start + length]
 
     import logging as _logging
     _logger = _logging.getLogger(__name__)
@@ -3209,7 +3210,7 @@ def branch_table_api(request):
     qs = Branch.objects.filter(tenant=tenant)
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(code__icontains=search))
-    qs = qs.order_by('-is_default', 'name')
+    qs = qs.order_by('-is_default', '-id')
 
     from apps.accounts.models import User
     supervisors = {

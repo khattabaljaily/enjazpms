@@ -18,7 +18,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from apps.sales.models import StockMovement
-from apps.core.utils import filter_by_branch_via, enforce_branch_ownership, resolve_report_scope
+from apps.core.utils import dt_ordering, filter_by_branch_via, enforce_branch_ownership, resolve_report_scope
 
 from .forms import StockForm
 from .models import Stock, StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine, ManufacturingOrder, StockDestruction, StockDestructionLine
@@ -137,7 +137,7 @@ def stock_table_api(request):
     if order_dir == 'desc':
         order_field = f'-{order_field}'
 
-    qs = qs.order_by(order_field)[start:start + length]
+    qs = qs.order_by(*dt_ordering(request, order_field))[start:start + length]
 
     data = [
         {
@@ -454,7 +454,7 @@ def opening_balance_table_api(request):
 
     filtered = qs.count()
     qs = qs.select_related('item').prefetch_related('item__item_units')
-    qs = qs.order_by('item__name')[start:start + length]
+    qs = qs.order_by('-id')[start:start + length]
 
     data = []
     for sq in qs:
@@ -652,7 +652,7 @@ def stock_quantities_table_api(request):
             )
 
         filtered = qs.count()
-        qs = qs.order_by('item__name')[start:start + length]
+        qs = qs.order_by('-id')[start:start + length]
 
         data = []
         for sq in qs:
@@ -700,7 +700,7 @@ def stock_quantities_table_api(request):
             )
 
         total = filtered = agg_qs.count()
-        agg_page = list(agg_qs.order_by('item__name')[start:start + length])
+        agg_page = list(agg_qs.order_by('-item_id')[start:start + length])
 
         item_ids = [r['item_id'] for r in agg_page]
         items_map = {
@@ -1401,7 +1401,7 @@ def transfer_table_api(request):
         )
 
     filtered = qs.count()
-    qs = qs[start:start + length]
+    qs = qs.order_by('-id')[start:start + length]
 
     rows = []
     for t in qs:
@@ -1819,7 +1819,7 @@ def stocktake_table_api(request):
         )
 
     filtered = qs.count()
-    qs = qs[start:start + length]
+    qs = qs.order_by('-id')[start:start + length]
 
     STATUS_LABELS = {'draft': 'جاري الجرد', 'confirmed': 'مكتمل', 'cancelled': 'ملغي'}
     STATUS_COLORS = {'draft': 'warning', 'confirmed': 'success', 'cancelled': 'danger'}
@@ -2036,7 +2036,7 @@ def destruction_table_api(request):
         qs = qs.filter(Q(destruction_number__icontains=search) | Q(stock__name__icontains=search))
 
     filtered = qs.count()
-    qs = qs[start:start + length]
+    qs = qs.order_by('-id')[start:start + length]
 
     STATUS_LABELS = {'draft': 'مسودة', 'confirmed': 'مؤكد', 'cancelled': 'ملغي'}
     STATUS_COLORS = {'draft': 'warning', 'confirmed': 'success', 'cancelled': 'danger'}
@@ -2310,7 +2310,7 @@ def manufacturing_table_api(request):
         )
 
     records_filtered = qs.count()
-    qs = qs.order_by('-order_date', '-id')[start:start + length]
+    qs = qs.order_by('-id')[start:start + length]
 
     data = [
         {

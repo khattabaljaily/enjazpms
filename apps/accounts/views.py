@@ -3,6 +3,7 @@ Views للحسابات - التسجيل وتسجيل الدخول
 """
 import json
 
+from apps.core.utils import dt_ordering
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth import login, logout, authenticate
@@ -199,7 +200,7 @@ def user_table_api(request):
     if order_dir == 'desc':
         order_field = f'-{order_field}'
 
-    queryset = queryset.order_by(order_field)[start:start + length]
+    queryset = queryset.order_by(*dt_ordering(request, order_field))[start:start + length]
 
     data = [
         {
@@ -409,7 +410,7 @@ def permission_group_table_api(request):
         queryset = queryset.filter(name__icontains=search_value)
 
     filtered = queryset.count()
-    groups = queryset.order_by('name')[start:start + length]
+    groups = queryset.order_by('-id')[start:start + length]
 
     data = [
         {

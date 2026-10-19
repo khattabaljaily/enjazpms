@@ -200,7 +200,7 @@ def order_table_api(request):
                 Decimal('0')
             )
         )
-        rows = list(qs.order_by('-invoice_date', '-id')[start:start + length])
+        rows = list(qs.order_by('-id')[start:start + length])
 
         status_labels = {
             'draft': ('مسودة', 'secondary'),
@@ -705,7 +705,7 @@ def return_table_api(request):
         )
 
     filtered = qs.count()
-    page_qs = qs.order_by('-return_date', '-created_at')[start:start + length]
+    page_qs = qs.order_by('-id')[start:start + length]
 
     labels = {
         'draft': ('مسودة', 'secondary'),
@@ -1715,7 +1715,7 @@ def rfq_table_api(request):
         )
 
     filtered = qs.count()
-    qs = qs[start:start + length]
+    qs = qs.order_by('-id')[start:start + length]
 
     STATUS_COLORS = {
         'draft': 'secondary', 'sent': 'info', 'received': 'primary',

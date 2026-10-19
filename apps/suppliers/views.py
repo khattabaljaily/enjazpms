@@ -15,6 +15,7 @@ import json
 
 from apps.accounts.decorators import require_permission, require_scoped_permission, branch_scope_exempt
 from apps.core.utils import (
+    dt_ordering,
     CURRENCY_NAMES_AR, filter_by_branch_via, enforce_branch_ownership, operational_money_accounts,
     is_central_request, scoped_suppliers, scoped_money_accounts,
 )
@@ -152,7 +153,7 @@ def supplier_table_api(request):
     if order_dir == 'desc':
         order_field = f'-{order_field}'
 
-    queryset = queryset.order_by(order_field)[start:start + length]
+    queryset = queryset.order_by(*dt_ordering(request, order_field))[start:start + length]
 
     hc_mode_table = getattr(tenant, 'hard_currency_mode', False)
     current_rate = Decimal(str(tenant.exchange_rate or 1)) if hc_mode_table and tenant.exchange_rate else None
@@ -502,7 +503,7 @@ def supplier_payments_table_api(request):
         order_field = col_map.get(order_col, 'id')
         if order_dir == 'desc':
             order_field = f'-{order_field}'
-    qs = qs.order_by(order_field)
+    qs = qs.order_by(*dt_ordering(request, order_field))
 
     cancel_qs = SupplierLedger.objects.for_tenant(tenant).filter(
         reference_type='supplier_payment_cancel',

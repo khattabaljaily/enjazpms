@@ -41,7 +41,7 @@ from apps.customers.models import Customer
 from apps.items.models import Item
 from apps.items.alternatives import get_all_alternatives
 from apps.stocks.models import Stock, StockQuantity
-from apps.core.utils import filter_by_branch_via, filter_by_branch_strict, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
+from apps.core.utils import dt_ordering, filter_by_branch_via, filter_by_branch_strict, enforce_branch_ownership, resolve_report_scope, operational_money_accounts
 
 from .models import (
     CustomerLedger,
@@ -264,7 +264,7 @@ def invoice_table_api(request):
     order_field = col_map.get(order_col, 'invoice_date')
     if order_dir == 'desc':
         order_field = f'-{order_field}'
-    qs = qs.order_by(order_field).annotate(
+    qs = qs.order_by(*dt_ordering(request, order_field)).annotate(
         returned_amt=Coalesce(Subquery(_returned_sq, output_field=DecimalField(max_digits=14, decimal_places=2)), Decimal('0'))
     )
 
@@ -936,7 +936,7 @@ def return_table_api(request):
         )
 
     filtered = qs.count()
-    qs = qs.order_by('-return_date', '-created_at')
+    qs = qs.order_by('-id')
     page_qs = qs[start: start + length]
 
     STATUS_LABELS = {
@@ -1401,7 +1401,7 @@ def quote_table_api(request):
     order_field = col_map.get(order_col_idx, 'quote_date')
     if order_dir == 'desc':
         order_field = f'-{order_field}'
-    qs = qs.order_by(order_field)[start:start + length]
+    qs = qs.order_by(*dt_ordering(request, order_field))[start:start + length]
 
     STATUS_COLOR = {
         'draft': 'muted', 'sent': 'primary', 'accepted': 'success',

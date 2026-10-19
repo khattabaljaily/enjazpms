@@ -362,7 +362,7 @@ function initTable() {
             emptyTable: 'لا توجد بيانات', info: 'عرض _START_ إلى _END_ من _TOTAL_',
             infoEmpty: 'لا توجد سجلات', paginate: { previous: 'السابق', next: 'التالي' }
         },
-        order: [[1, 'desc']],
+        order: [],
         pageLength: 25,
         drawCallback: function () {
             renderMobileQuoteCards(quotesTable.rows({ page: 'current' }).data().toArray());
