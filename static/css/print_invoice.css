@@ -480,6 +480,29 @@
     visibility: hidden !important;
   }
 
+  /* visibility:hidden still reserves layout space, which produced blank pages
+     after the invoice. Remove everything that is neither the print doc, one
+     of its ancestors, nor one of its descendants from the flow entirely. */
+  body *:not(.print-doc):not(:has(.print-doc)):not(.print-doc *) {
+    display: none !important;
+  }
+
+  /* Layout wrappers use min-vh-100 / margins / padding that push the page
+     height past one A4 sheet. Flatten them for print. */
+  body *:has(.print-doc) {
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
   /* Show ONLY the print doc and all its children */
   .print-doc {
     display: block !important;
