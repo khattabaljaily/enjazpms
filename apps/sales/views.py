@@ -577,11 +577,17 @@ def _process_invoice_post(request, tenant, invoice):
                     from apps.items.models import Item as _Item
                     for ld in lines_data:
                         item = _Item.objects.get(id=ld['item_id'], tenant=tenant)
+                        from apps.items.models import unit_for_item_unit
                         line = SaleInvoiceLine(
                             tenant=tenant, invoice=invoice, item=item,
                             quantity=ld['quantity'], unit_price=ld['unit_price'],
                             discount_percent=ld['discount_percent'], tax_rate=ld['tax_rate'],
                             cost_price_snapshot=ld['cost_price_snapshot'],
+                            batch_number=ld.get('batch_number', ''),
+                            serial_number=ld.get('serial_number', ''),
+                            expiry_date=ld.get('expiry_date'),
+                            unit=unit_for_item_unit(tenant, ld['unit_id']) if ld.get('unit_id') else None,
+                            unit_factor=ld.get('unit_factor') or Decimal('1'),
                         )
                         line.calculate()
                         line.save()
@@ -645,6 +651,14 @@ def _process_invoice_post(request, tenant, invoice):
                         else:
                             invoice.agent = None
 
+                    # مبلغ التأمين المتوقع يُحسَب من الخادم بعد كل تعديل (البنود أو العضو قد تغيّروا)
+                    invoice.insurance_amount = Decimal('0')
+                    if invoice.insurance_member_id:
+                        from apps.insurance.services import build_line_selections
+                        _pct = (Decimal(str(header['insurance_coverage_percent']))
+                                if header.get('insurance_coverage_percent')
+                                else invoice.insurance_member.effective_coverage_percent)
+                        _sel, invoice.insurance_amount = build_line_selections(invoice, _pct)
                     invoice.recalculate_totals()
                     invoice.save()
                     inv = invoice
@@ -763,7 +777,11 @@ def invoice_confirm_ajax(request, pk):
     invoice = get_object_or_404(SaleInvoice, pk=pk, tenant=tenant)
     enforce_branch_ownership(request, invoice, field='stock__branch')
     try:
-        confirm_sale_invoice(invoice, request.user)
+        with transaction.atomic():
+            confirm_sale_invoice(invoice, request.user)
+            if invoice.insurance_member_id:
+                from apps.insurance import services as insurance_services
+                insurance_services.create_claim_from_sale(invoice, tenant, None, request.user)
         cust = invoice.customer.name if invoice.customer else 'زبون عابر'
         log_activity(request, 'تأكيد فاتورة مبيعات', f'{invoice.invoice_number} — {cust}', 'create')
         return _json_ok(msg='تم تأكيد الفاتورة بنجاح')

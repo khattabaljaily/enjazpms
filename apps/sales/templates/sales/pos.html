@@ -422,6 +422,7 @@ const $bankRef    = document.getElementById('bankRef');
 const $bankAccountSelect = document.getElementById('bankAccountSelect');
 const $splitCash  = document.getElementById('splitCash');
 const $splitBank  = document.getElementById('splitBank');
+let splitManuallyEdited = false;
 const $splitFields= document.getElementById('splitFields');
 const $cashRow    = document.getElementById('cashRow');
 const $cashRcvd   = document.getElementById('cashReceived');
@@ -947,11 +948,22 @@ function updateInsuranceEstimate() {
     const grand = calcTotals().grand;
     document.getElementById('totInsuranceCovered').textContent = fmt(covered);
     document.getElementById('totPatientShare').textContent = fmt(grand - covered);
+    // تحمل المريض يُحصَّل الآن: نُبقي خانة النقدي مطابقة له تلقائياً (بعد أي تغيير في السلة)
+    // ما لم يعدّل الكاشير الخانتين يدوياً.
+    if (!splitManuallyEdited && currentMethod === 'split') {
+        const bankVal = parseFloat($splitBank.value) || 0;
+        const share = Math.max(0, grand - covered - bankVal);
+        $splitCash.value = share > 0 ? share.toFixed(2) : '';
+    }
     coveredRow.style.display = '';
     shareRow.style.display = '';
     $insEstimate.textContent = 'قد يختلف المبلغان قليلاً حسب الأصناف المستثناة من التغطية — تحمل المريض يُحصَّل الآن.';
     $insEstimate.classList.add('visible');
 }
+
+[$splitCash, $splitBank].forEach(el => el.addEventListener('input', e => {
+    if (e.isTrusted) splitManuallyEdited = true;
+}));
 
 $insToggle.addEventListener('change', () => {
     $insCardBox.classList.toggle('visible', $insToggle.checked);
@@ -965,6 +977,7 @@ $insToggle.addEventListener('change', () => {
         $insCardResult.classList.remove('visible');
         closeInsuranceNewCardModal();
     }
+    splitManuallyEdited = false;
     updateInsuranceEstimate();
 });
 

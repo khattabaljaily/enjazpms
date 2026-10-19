@@ -155,12 +155,12 @@
       </div>
       {% endif %}
 
-      {% if store.is_pharmacy and rx_items %}
-      <div class="rx-contact" id="rxContact" hidden>
+      {% if store.is_pharmacy %}
+      <div class="rx-contact" id="rxContact">
         <h4><i class="fas fa-user-doctor"></i> تواصل مع الصيدلي قبل تأكيد الطلب</h4>
-        <p>أرفقت وصفة طبية. يُنصح بالتواصل مع الصيدلي للتأكد من الوصفة وتوفر الأدوية قبل تأكيد الطلب.</p>
+        <p>يمكنك التواصل مع الصيدلي قبل تأكيد الطلب للاستفسار عن الأدوية أو التأكد من الوصفة وتوفر الأصناف.</p>
         {% if store.whatsapp %}
-        <a href="https://wa.me/{{ store.whatsapp }}?text=مرحباً،+أريد+التأكد+من+وصفتي+الطبية+قبل+تأكيد+الطلب" target="_blank" rel="noopener" class="rx-contact__btn">
+        <a href="https://wa.me/{{ store.whatsapp }}?text=مرحباً،+أريد+التواصل+مع+الصيدلي+قبل+تأكيد+طلبي" target="_blank" rel="noopener" class="rx-contact__btn">
           <i class="fab fa-whatsapp"></i> تواصل مع الصيدلي عبر واتساب
         </a>
         {% else %}
@@ -187,14 +187,6 @@ document.querySelectorAll('input[name=payment_method]').forEach(function(radio) 
     if (bd) bd.classList.toggle('sco-bank--show', this.value === 'bank');
   });
 });
-var rxInput = document.getElementById('prescriptionInput');
-var rxContact = document.getElementById('rxContact');
-if (rxInput && rxContact) {
-  rxInput.addEventListener('change', function() {
-    rxContact.hidden = !this.files.length;
-    if (this.files.length) rxContact.scrollIntoView({behavior: 'smooth', block: 'center'});
-  });
-}
 document.getElementById('checkoutForm').addEventListener('submit', function() {
   var btn = document.getElementById('submitBtn');
   btn.disabled = true;
