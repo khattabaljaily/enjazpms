@@ -19,7 +19,6 @@ from apps.insurance.services import (
     create_claim_from_sale,
     record_claim_response,
     settle_claim_payment,
-    submit_claim,
 )
 from apps.sales.models import SaleInvoice, SaleInvoiceLine
 from apps.sales.services import confirm_sale_invoice
@@ -69,7 +68,6 @@ class InsuranceClaimLifecycleTests(TenantTestCase):
 
     def test_partial_approval_writes_off_the_shortfall(self):
         invoice, claim = self.make_covered_sale()
-        submit_claim(claim, self.user)
         record_claim_response(claim, Decimal('40'), 'partially_approved', '', self.user)
         claim.refresh_from_db()
         invoice.refresh_from_db()
@@ -81,7 +79,6 @@ class InsuranceClaimLifecycleTests(TenantTestCase):
 
     def test_full_rejection_writes_off_the_entire_covered_amount(self):
         invoice, claim = self.make_covered_sale()
-        submit_claim(claim, self.user)
         record_claim_response(claim, Decimal('0'), 'rejected', 'وثائق ناقصة', self.user)
         claim.refresh_from_db()
         invoice.refresh_from_db()
@@ -90,16 +87,15 @@ class InsuranceClaimLifecycleTests(TenantTestCase):
         self.assertEqual(claim.rejection_reason, 'وثائق ناقصة')
         self.assertEqual(invoice.remaining_amount, Decimal('0.00'))  # 100 - 40(cash) - 60(writeoff) = 0
 
-    def test_cancel_draft_claim_has_no_ledger_effect(self):
+    def test_claim_created_from_sale_is_submitted_immediately(self):
         invoice, claim = self.make_covered_sale()
-        cancel_claim(claim, self.user, 'إلغاء قبل التقديم')
         claim.refresh_from_db()
-        self.assertEqual(claim.status, 'cancelled')
-        self.assertEqual(self.settlement_total(), Decimal('0'))
+        self.assertEqual(claim.status, 'submitted')
+        self.assertIsNotNone(claim.due_date)
+        self.assertEqual(self.settlement_total(), Decimal('60.00'))
 
     def test_cancel_submitted_claim_reverses_the_submission_ledger_entry(self):
         invoice, claim = self.make_covered_sale()
-        submit_claim(claim, self.user)
         self.assertEqual(self.settlement_total(), Decimal('60.00'))
 
         cancel_claim(claim, self.user, 'العميل عدل رأيه')
@@ -109,7 +105,6 @@ class InsuranceClaimLifecycleTests(TenantTestCase):
 
     def test_cancel_rejected_when_partially_paid(self):
         invoice, claim = self.make_covered_sale()
-        submit_claim(claim, self.user)
         record_claim_response(claim, Decimal('60'), 'approved', '', self.user)
         settle_claim_payment(
             claim, Decimal('30'), date(2026, 9, 13), 'SET-1', self.user,
@@ -121,7 +116,6 @@ class InsuranceClaimLifecycleTests(TenantTestCase):
 
     def test_settlement_rejects_amount_beyond_remaining(self):
         invoice, claim = self.make_covered_sale()
-        submit_claim(claim, self.user)
         record_claim_response(claim, Decimal('60'), 'approved', '', self.user)
         with self.assertRaises(ValueError):
             settle_claim_payment(

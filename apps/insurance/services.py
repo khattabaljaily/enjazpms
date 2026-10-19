@@ -135,7 +135,7 @@ def quick_register_card(tenant, data, user):
 
 def create_claim_from_sale(invoice, tenant, insurance_coverage_percent, user):
     """
-    ينشئ مطالبة تأمين تلقائياً بعد تأكيد فاتورة تحمل بيانات تأمين — نقطة
+    ينشئ مطالبة تأمين تلقائياً (مُقدَّمة مباشرة) بعد تأكيد فاتورة تحمل بيانات تأمين — نقطة
     استدعاء واحدة مشتركة بين POS والفاتورة اليدوية (إنشاء وتعديل). يتجاهل
     الطلب بصمت إذا لم يوجد عضو تأمين مرتبط بالفاتورة أصلاً.
     """
@@ -150,10 +150,12 @@ def create_claim_from_sale(invoice, tenant, insurance_coverage_percent, user):
     line_selections, _covered_total = build_line_selections(invoice, coverage_percent)
     if not line_selections:
         return None
-    return create_claim_for_invoice(
+    claim = create_claim_for_invoice(
         invoice, member.insurance_company, line_selections, user,
         member=member, card_number=invoice.insurance_card_number,
     )
+    # البيع نفسه هو التقديم: لا خطوة مسودة ولا زر «تقديم» يدوي — تُقدَّم المطالبة فوراً.
+    return submit_claim(claim, user)
 
 
 def discard_draft_claim(invoice):

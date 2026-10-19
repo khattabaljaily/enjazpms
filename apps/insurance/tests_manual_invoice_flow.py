@@ -62,7 +62,7 @@ class ManualInsuranceInvoiceFlowTests(TenantTestCase):
         self.assertEqual(qty, Decimal('99'))
         self.assertEqual(cash, Decimal('30'))
         claim = InsuranceClaim.objects.get(tenant=self.tenant)
-        self.assertEqual(claim.covered_amount, Decimal('70'))
+        self.assertEqual((claim.covered_amount, claim.status), (Decimal('70'), 'submitted'))
 
     def test_editing_draft_recomputes_expected_insurance_amount(self):
         self.post(reverse('sales:invoice_create'), self.body('save_draft'))

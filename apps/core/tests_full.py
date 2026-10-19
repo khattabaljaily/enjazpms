@@ -19,7 +19,6 @@ from apps.insurance.services import (
     create_claim_from_sale,
     record_claim_response,
     settle_claim_payment,
-    submit_claim,
 )
 from apps.items.models import Item
 from apps.purchases.models import PurchaseInvoice, PurchaseInvoiceLine, PurchaseReturn, PurchaseReturnLine
@@ -304,9 +303,8 @@ class FullBusinessFlowTests(TestCase):
         self.assertEqual(claim.covered_amount, Decimal('60.00'))
         self.assertEqual(claim.patient_amount, Decimal('40.00'))
 
-        submit_claim(claim, self.user)
         claim.refresh_from_db()
-        self.assertEqual(claim.status, 'submitted')
+        self.assertEqual(claim.status, 'submitted')  # تُقدَّم تلقائياً عند البيع
         record_claim_response(claim, Decimal('60'), 'approved', '', self.user)
         claim.refresh_from_db()
         self.assertEqual(claim.status, 'approved')
