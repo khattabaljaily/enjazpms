@@ -844,6 +844,21 @@ select.pos-insurance-input {
     background: var(--bg-card);
 }
 
+/* Desktop: when the payment panel grows (insurance, split, bank…) it scrolls
+   internally and the checkout button stays pinned at the bottom. */
+@media (min-width: 700px) {
+    .pos-payment {
+        max-height: 62vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+    .pos-payment .pos-checkout-btn {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+    }
+}
+
 .pos-pay-methods {
     display: flex;
     gap: .4rem;
