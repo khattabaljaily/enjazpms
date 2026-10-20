@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .ingest import create_import_batch, process_batch_chunk, commit_batch, fix_missing_generic_names
-from .matching import normalize_text
+from .matching import normalize_text, merge_strength_into_name
 from .models import MasterCategory, MasterDrug, MasterDrugAlias, CatalogImportBatch, CatalogImportRow
 
 
@@ -124,14 +124,18 @@ def master_drug_list(request):
 
 @_require_platform_staff
 def master_drug_table_api(request):
-    from django.db.models import Count, Q
+    from django.db.models import Count, OuterRef, Q, Subquery
 
     draw = int(request.GET.get('draw', 1))
     start = int(request.GET.get('start', 0))
     length = int(request.GET.get('length', 100))
     search_value = request.GET.get('search[value]', '').strip()
 
-    qs = MasterDrug.objects.filter(status='active').select_related('category').annotate(alias_count=Count('aliases'))
+    primary_trade = MasterDrugAlias.objects.filter(master_drug=OuterRef('pk')).order_by('-is_primary', 'trade_name')
+    qs = MasterDrug.objects.filter(status='active').select_related('category').annotate(
+        alias_count=Count('aliases', distinct=True),
+        primary_trade_name=Subquery(primary_trade.values('trade_name')[:1]),
+    )
     records_total = qs.count()
 
     if search_value:
@@ -147,12 +151,12 @@ def master_drug_table_api(request):
 
     order_col = request.GET.get('order[0][column]', '0')
     order_dir = request.GET.get('order[0][dir]', 'asc')
-    col_name = request.GET.get(f'columns[{order_col}][data]', 'generic_name')
+    col_name = request.GET.get(f'columns[{order_col}][data]', 'trade_name')
     allowed = {
-        'generic_name': 'generic_name', 'strength': 'strength', 'dosage_form': 'dosage_form',
+        'trade_name': 'primary_trade_name', 'generic_name': 'generic_name', 'dosage_form': 'dosage_form',
         'category': 'category__name', 'alias_count': 'alias_count',
     }
-    order_field = allowed.get(col_name, 'generic_name')
+    order_field = allowed.get(col_name, 'primary_trade_name')
     if order_dir == 'desc':
         order_field = f'-{order_field}'
 
@@ -161,8 +165,8 @@ def master_drug_table_api(request):
     data = [
         {
             'id': d.id,
+            'trade_name': merge_strength_into_name(d.primary_trade_name or d.generic_name, d.strength),
             'generic_name': d.generic_name,
-            'strength': d.strength or '-',
             'dosage_form': d.dosage_form or '-',
             'category': d.category.name if d.category_id else '-',
             'alias_count': d.alias_count,
@@ -197,6 +201,8 @@ def master_drug_view_api(request, pk):
     ]
     return JsonResponse({
         'id': drug.id,
+        'trade_name': merge_strength_into_name(
+            aliases[0]['trade_name'] if aliases else drug.generic_name, drug.strength),
         'generic_name': drug.generic_name,
         'dosage_form': drug.dosage_form or '-',
         'strength': drug.strength or '-',
@@ -273,7 +279,11 @@ def master_drug_detail(request, pk):
         return redirect('catalog:master_drug_detail', pk=drug.pk)
 
     from apps.items.models import Item
+    primary_alias = drug.aliases.order_by('-is_primary', 'trade_name').first()
+    display_name = merge_strength_into_name(
+        primary_alias.trade_name if primary_alias else drug.generic_name, drug.strength)
     return render(request, 'catalog/master_drug_detail.html', {
+        'display_name': display_name,
         'drug': drug,
         'aliases': drug.aliases.all(),
         'tenant_items_count': drug.tenant_items.count(),

@@ -16,8 +16,8 @@
         <div class="cx-hero-left">
             <div class="cx-hero-icon-wrap"><i class="fas fa-capsules"></i></div>
             <div>
-                <h1 class="cx-hero-title">{{ drug.generic_name }}</h1>
-                <p class="cx-hero-desc">{{ drug.strength|default:'-' }} — {{ drug.dosage_form|default:'-' }}</p>
+                <h1 class="cx-hero-title">{{ display_name }}</h1>
+                <p class="cx-hero-desc">{{ drug.generic_name }} — {{ drug.dosage_form|default:'-' }}</p>
             </div>
         </div>
         <div class="cx-hero-right">

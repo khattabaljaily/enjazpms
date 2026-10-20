@@ -62,8 +62,8 @@
         <table id="drugsTable" class="cx-table">
             <thead>
                 <tr>
+                    <th>الاسم التجاري</th>
                     <th>الاسم العلمي</th>
-                    <th>التركيز</th>
                     <th>الشكل الصيدلاني</th>
                     <th>التصنيف</th>
                     <th>الأسماء التجارية</th>
@@ -86,6 +86,7 @@
       </div>
       <div class="modal-body">
         <div class="cx-view-meta">
+            <div><span class="cx-view-meta-label">الاسم العلمي</span><span class="cx-view-meta-value" id="viewDrugGeneric">-</span></div>
             <div><span class="cx-view-meta-label">الشكل الصيدلاني</span><span class="cx-view-meta-value" id="viewDrugForm">-</span></div>
             <div><span class="cx-view-meta-label">التركيز</span><span class="cx-view-meta-value" id="viewDrugStrength">-</span></div>
             <div><span class="cx-view-meta-label">التصنيف</span><span class="cx-view-meta-value" id="viewDrugCategory">-</span></div>
@@ -164,8 +165,8 @@ $(function () {
             return `<article class="cx-drug-card">
                 <div class="cx-drug-card-head">
                     <div class="cx-drug-card-title-wrap">
-                        <h2 class="cx-drug-card-title">${esc(r.generic_name)}</h2>
-                        <p class="cx-drug-card-sub">${esc(r.dosage_form)} — ${esc(r.strength)}</p>
+                        <h2 class="cx-drug-card-title">${esc(r.trade_name)}</h2>
+                        <p class="cx-drug-card-sub">${esc(r.generic_name)} — ${esc(r.dosage_form)}</p>
                     </div>
                 </div>
                 <div class="cx-drug-card-meta">
@@ -181,7 +182,7 @@ $(function () {
                 <div class="cx-drug-card-actions">
                     <button class="cxr-act cxr-act--view js-view-drug" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
                     <a class="cxr-act" href="/catalog/${r.id}/" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></a>
-                    <button class="cxr-act cxr-act--del js-delete-drug" data-id="${r.id}" data-name="${esc(r.generic_name)}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                    <button class="cxr-act cxr-act--del js-delete-drug" data-id="${r.id}" data-name="${esc(r.trade_name)}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
                 </div>
             </article>`;
         }).join('');
@@ -193,7 +194,8 @@ $(function () {
         $('#viewDrugAliasesBody').html('<tr><td colspan="7" class="text-muted text-center">جاري التحميل...</td></tr>');
         viewModal.show();
         $.get('/catalog/' + id + '/view-api/', function (d) {
-            $('#viewDrugTitle').text(d.generic_name);
+            $('#viewDrugTitle').text(d.trade_name);
+            $('#viewDrugGeneric').text(d.generic_name);
             $('#viewDrugForm').text(d.dosage_form);
             $('#viewDrugStrength').text(d.strength);
             $('#viewDrugCategory').text(d.category);
@@ -249,12 +251,12 @@ $(function () {
         },
         columns: [
             {
-                data: 'generic_name',
+                data: 'trade_name',
                 render: function (name, _, r) {
                     return `<a href="/catalog/${r.id}/">${esc(name)}</a>`;
                 }
             },
-            { data: 'strength', width: '120px' },
+            { data: 'generic_name' },
             { data: 'dosage_form', width: '160px' },
             { data: 'category', width: '110px' },
             { data: 'alias_count', width: '90px', className: 'text-center' },
@@ -264,7 +266,7 @@ $(function () {
                     return `<div class="cxr-actions">
                         <button type="button" class="cxr-act cxr-act--view js-view-drug" data-id="${r.id}" aria-label="عرض" title="عرض"><i class="fas fa-eye"></i></button>
                         <a class="cxr-act" href="/catalog/${r.id}/" aria-label="تعديل" title="تعديل"><i class="fas fa-pen-to-square"></i></a>
-                        <button type="button" class="cxr-act cxr-act--del js-delete-drug" data-id="${r.id}" data-name="${esc(r.generic_name)}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
+                        <button type="button" class="cxr-act cxr-act--del js-delete-drug" data-id="${r.id}" data-name="${esc(r.trade_name)}" aria-label="حذف" title="حذف"><i class="fas fa-trash"></i></button>
                     </div>`;
                 }
             }
