@@ -195,7 +195,7 @@ class Command(BaseCommand):
 
         taken = {(a.trade_name_normalized, a.manufacturer, a.master_drug_id): a.pk for a in aliases}
         changes = {}          # pk -> {field: (old, new)}
-        collisions = []
+        duplicates = []
         for a in aliases:
             name = clean_product_name(a.trade_name)
             strength = a.master_drug.strength.strip()
@@ -210,7 +210,9 @@ class Command(BaseCommand):
             old_key = (a.trade_name_normalized, a.manufacturer, a.master_drug_id)
             new_key = (normalize_text(new['trade_name']), new['manufacturer'], a.master_drug_id)
             if new_key != old_key and taken.get(new_key, a.pk) != a.pk:
-                collisions.append((a, new['trade_name'], new['manufacturer']))
+                # Same drug, same company, same name once cleaned: the same listing twice
+                # ("Aldomet" next to "Aldomet 250 mg") -> keep the existing one, drop this.
+                duplicates.append(a)
                 continue
             taken.pop(old_key, None)
             taken[new_key] = a.pk
@@ -227,10 +229,13 @@ class Command(BaseCommand):
                 self.stdout.write(f'   {old!r} -> {new!r}')
         distinct = {f: len({new for _, new in items}) for f, items in by_kind.items() if f != 'trade_name'}
         self.stdout.write(f'distinct canonical companies touched: {distinct}')
-        self.stdout.write(f'collisions left for manual review: {len(collisions)}')
-        for a, t, m in collisions[:show]:
-            self.stdout.write(f'   drug #{a.master_drug_id} alias #{a.pk}: {a.trade_name!r}/{a.manufacturer!r} -> {t!r}/{m!r}')
+        self.stdout.write(f'identical duplicates removed (same drug + company + name): {len(duplicates)}')
+        for a in duplicates[:show]:
+            self.stdout.write(f'   drug #{a.master_drug_id}: {a.trade_name!r} / {a.manufacturer!r}')
 
+        for a in duplicates:
+            backup['deleted'].append({f: getattr(a, f) for f in ALIAS_BACKUP_FIELDS})
+            a.delete()
         for pk, diff in changes.items():
             saved = backup['aliases'].setdefault(pk, {})
             for f, (old, _) in diff.items():
@@ -239,7 +244,7 @@ class Command(BaseCommand):
             if 'trade_name' in values:
                 values['trade_name_normalized'] = normalize_text(values['trade_name'])
             MasterDrugAlias.objects.filter(pk=pk).update(**values)
-        return len(changes)
+        return len(changes) + len(duplicates)
 
     # ---- step 4 (opt-in): merge duplicate MasterDrug rows -------------------
     def _merge_duplicates(self, backup, show):
