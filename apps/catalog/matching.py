@@ -85,8 +85,10 @@ def is_clean_strength(strength: str) -> bool:
     strength = (strength or '').strip()
     if not strength or len(strength) > 30 or not re.search(r'\d', strength):
         return False
-    if strength.count('(') != strength.count(')') or strength[-1] in '/(+-,&':
+    if strength.count('(') != strength.count(')') or strength[-1] in '/(+-,&.':
         return False
+    if re.search(r'[+/]', strength) and not re.search(r'[a-z%)]$', strength.lower()):
+        return False      # compound amount cut off before its unit ("500 mg + 500")
     return all(w in _STRENGTH_WORDS for w in re.findall(r'[A-Za-z]+', strength.lower()))
 
 
@@ -260,7 +262,6 @@ def build_manufacturer_canon(names) -> dict:
 # ---------------------------------------------------------------------------
 
 _UNIT_WORDS = {'mg', 'g', 'gm', 'ml', 'mcg', 'iu', 'w', 'v', 'l', 'ug', 'mmol', 'meq'}
-_TRAILING_STRENGTH_RE = re.compile(r'[\s\-–]*\d[\d.,]*\s*(?:mg|mcg|gm|g|ml|iu|%)?\b.*$', re.IGNORECASE)
 
 
 def name_match_key(name: str) -> str:
@@ -273,8 +274,15 @@ def name_match_key(name: str) -> str:
 
 def strip_trailing_strength(name: str) -> str:
     """"Acetazolamide 250" -> "Acetazolamide" (keeps the name if nothing would be left)."""
-    stripped = _TRAILING_STRENGTH_RE.sub('', (name or '').strip()).strip(' -–')
-    return stripped if len(stripped) >= 3 else (name or '').strip()
+    name = (name or '').strip()
+    for match in re.finditer(r'\d', name):
+        tail = name[match.start():]
+        # only a tail made of amounts/units counts as a strength ("... 100 mg+200 mcg"),
+        # not a digit in the middle of the name ("(Vitamin B1) + Pyridoxine ...")
+        if all(w in _STRENGTH_WORDS or w in ('x', 'tablet', 'tablets') for w in re.findall(r'[A-Za-z]+', tail.lower())):
+            stripped = name[:match.start()].strip(' -–+(')
+            return stripped if len(stripped) >= 3 else name
+    return name
 
 
 _SCIENTIFIC_ENDINGS = (
