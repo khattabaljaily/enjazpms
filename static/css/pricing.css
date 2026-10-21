@@ -482,7 +482,22 @@
     color: #64748b;
     margin: 1.5rem 0 0;
 }
+.pr-note p { margin: 0 0 0.75rem; }
 .pr-note a { color: inherit; font-weight: 600; }
+.pr-note__qr {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    text-decoration: none;
+}
+.pr-note__qr img {
+    background: #fff;
+    padding: 6px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
 
 /* ── Enterprise per-branch calculator ───────────────────── */
 .pr-card__per-branch {

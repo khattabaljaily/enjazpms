@@ -143,7 +143,13 @@
                 {% endfor %}
             </div>
 
-            <p class="pr-note">للترخيص الدائم يرجى التواصل معنا: <a href="mailto:info@enjaztechnology.com">info@enjaztechnology.com</a> &nbsp;·&nbsp; <a href="https://wa.me/249110100110" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> واتساب</a></p>
+            <div class="pr-note">
+                <p>للترخيص الدائم يرجى التواصل معنا: <a href="mailto:info@enjaztechnology.com">info@enjaztechnology.com</a> &nbsp;·&nbsp; <a href="https://wa.me/249110100110" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> واتساب</a></p>
+                <a href="https://wa.me/249110100110" target="_blank" rel="noopener" class="pr-note__qr" aria-label="واتساب إنجاز">
+                    <img src="{% static 'img/whatsapp-qr.svg' %}" alt="باركود واتساب" width="120" height="120">
+                    <span>امسح الباركود للتواصل عبر واتساب</span>
+                </a>
+            </div>
 
             {% if enterprise_pricing %}
             <div class="pr-calc-band" id="enterpriseCalc">

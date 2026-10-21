@@ -53,6 +53,7 @@ class PricingPageTests(TenantTestCase):
         self.assertContains(page, 'للترخيص الدائم يرجى التواصل')
         self.assertContains(page, 'mailto:info@enjaztechnology.com')
         self.assertContains(page, 'https://wa.me/249110100110')
+        self.assertContains(page, 'whatsapp-qr')
         self.assertNotContains(page, 'ترخيص دائم</bdi>')
         self.assertContains(page, 'متاح في كل الباقات')
         for gone in ('حتى 5 مستخدمين', 'حتى 40 مستخدمًا'):
