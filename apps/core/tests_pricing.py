@@ -51,6 +51,8 @@ class PricingPageTests(TenantTestCase):
         for gone in ('$2,400', '$4,320', 'شهران مجاناً', '$1,900', '$3,420', '$4,940', '$1,520', 'calcPerpetual'):
             self.assertNotContains(page, gone)
         self.assertContains(page, 'للترخيص الدائم يرجى التواصل')
+        self.assertContains(page, 'mailto:info@enjaztechnology.com')
+        self.assertContains(page, 'https://wa.me/249110100110')
         self.assertNotContains(page, 'ترخيص دائم</bdi>')
         self.assertContains(page, 'متاح في كل الباقات')
         for gone in ('حتى 5 مستخدمين', 'حتى 40 مستخدمًا'):
