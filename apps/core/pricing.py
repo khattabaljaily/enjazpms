@@ -17,9 +17,9 @@ PLAN_MONTHLY = {
     'trial': Decimal('0'),
     'basic': Decimal('25'),
     'pro': Decimal('45'),
-    'enterprise': Decimal('55'),
+    'enterprise': Decimal('65'),
 }
-ENTERPRISE_PER_BRANCH_MONTHLY = Decimal('10')
+ENTERPRISE_PER_BRANCH_MONTHLY = Decimal('20')
 
 # الترخيص الدائم (دفعة واحدة). المؤسسات: الرسوم الأساسية فقط، وتُضاف الفروع.
 PERPETUAL_PRICE = {

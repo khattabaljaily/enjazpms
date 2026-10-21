@@ -27,14 +27,14 @@ class PricingRulesTests(TenantTestCase):
 
     def test_enterprise_branch_perpetual_is_annual_rent_x8_minus_5_percent(self):
         self.assertEqual(perpetual_from_annual(Decimal('100')), Decimal('760'))
-        self.assertEqual(ENTERPRISE_PER_BRANCH_PERPETUAL, Decimal('760'))
+        self.assertEqual(ENTERPRISE_PER_BRANCH_PERPETUAL, Decimal('1520'))      # 20 × 10 × 8 − 5%
         self.assertEqual(enterprise_perpetual(0), Decimal('4940'))
-        self.assertEqual(enterprise_perpetual(3), Decimal('4940') + 3 * Decimal('760'))
+        self.assertEqual(enterprise_perpetual(3), Decimal('4940') + 3 * Decimal('1520'))
 
     def test_enterprise_is_base_plus_per_branch(self):
-        self.assertEqual(enterprise_monthly(0), Decimal('55'))
-        self.assertEqual(enterprise_monthly(5), Decimal('105'))
-        self.assertEqual(enterprise_monthly(10), Decimal('155'))
+        self.assertEqual(enterprise_monthly(0), Decimal('65'))
+        self.assertEqual(enterprise_monthly(5), Decimal('165'))
+        self.assertEqual(enterprise_monthly(10), Decimal('265'))
 
     def test_tenant_fee_counts_only_active_branches_for_enterprise(self):
         self.tenant.subscription_plan = 'enterprise'
@@ -42,7 +42,7 @@ class PricingRulesTests(TenantTestCase):
         Branch.objects.create(tenant=self.tenant, name='فرع 1')
         Branch.objects.create(tenant=self.tenant, name='فرع 2')
         Branch.objects.create(tenant=self.tenant, name='فرع مغلق', is_active=False)
-        self.assertEqual(tenant_monthly_fee(self.tenant), Decimal('75'))   # 55 + 2 فرعين نشطين × 10
+        self.assertEqual(tenant_monthly_fee(self.tenant), Decimal('105'))   # 65 + 2 فرعين نشطين × 20
 
     def test_tenant_fee_for_flat_plans(self):
         for plan, fee in (('trial', '0'), ('basic', '25'), ('pro', '45')):
@@ -55,7 +55,7 @@ class PricingPageTests(TenantTestCase):
         self.client.logout()
         page = self.client.get(reverse('core:pricing'))
         self.assertEqual(page.status_code, 200)
-        for text in ('$25', '$250', '$1,900', '$45', '$450', '$3,420', '$55', '$10', '$4,940', '$760', 'branchCount'):
+        for text in ('$25', '$250', '$1,900', '$45', '$450', '$3,420', '$65', '$20', '$4,940', '$1,520', 'branchCount'):
             self.assertContains(page, text)
         for gone in ('$2,400', '$4,320', 'شهران مجاناً'):
             self.assertNotContains(page, gone)
@@ -81,6 +81,6 @@ class RevenueReportTests(TenantTestCase):
         self.assertEqual(resp.status_code, 200)
         enterprise = resp.context['plan_revenue']['enterprise']
         self.assertEqual(enterprise['count'], 1)
-        self.assertEqual(enterprise['monthly'], Decimal('85'))
+        self.assertEqual(enterprise['monthly'], Decimal('125'))
         row = next(r for r in resp.context['tenant_stats'] if r['slug'] == self.tenant.slug)
-        self.assertEqual(row['monthly_fee'], Decimal('85'))
+        self.assertEqual(row['monthly_fee'], Decimal('125'))
