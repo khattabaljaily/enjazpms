@@ -122,7 +122,7 @@
                     <a href="#enterpriseCalc" class="pr-card__price-alt pr-card__calc-link">احسب اشتراك مؤسستك <i class="fas fa-arrow-down"></i></a>
                     {% else %}
                     <div class="pr-card__price-alt">
-                        <bdi>{{ plan.annual }}</bdi> سنوياً &nbsp;·&nbsp; <bdi>{{ plan.perpetual }}</bdi> ترخيص دائم
+                        <bdi>{{ plan.annual }}</bdi> سنوياً
                     </div>
                     {% endif %}
 
@@ -143,6 +143,8 @@
                 {% endfor %}
             </div>
 
+            <p class="pr-note">للترخيص الدائم يرجى التواصل معنا: <a href="mailto:info@enjaztechnology.com">info@enjaztechnology.com</a></p>
+
             {% if enterprise_pricing %}
             <div class="pr-calc-band" id="enterpriseCalc">
                 <div class="pr-calc-band__info">
@@ -151,7 +153,6 @@
                     <p class="pr-calc-band__desc">
                         رسوم أساسية <bdi>${{ enterprise_pricing.base }}</bdi> شهرياً للإدارة والمخزن المركزي،
                         و<bdi>${{ enterprise_pricing.per_branch }}</bdi> شهرياً لكل فرع.
-                        <br>الترخيص الدائم: <bdi>{{ enterprise_pricing.perpetual_base_label }}</bdi> رسوماً أساسية، و<bdi>{{ enterprise_pricing.perpetual_per_branch_label }}</bdi> لكل فرع.
                     </p>
                     <ul class="pr-calc-band__list">
                         <li><i class="fas fa-check"></i>مخزن مركزي ومشتريات مركزية</li>
@@ -168,7 +169,6 @@
                     </div>
                     <div class="pr-calc__total"><strong><bdi id="calcMonthly"></bdi></strong> شهرياً</div>
                     <div class="pr-calc__alt"><bdi id="calcAnnual"></bdi> سنوياً</div>
-                    <div class="pr-calc__alt"><bdi id="calcPerpetual"></bdi> ترخيص دائم</div>
                 </div>
             </div>
             {% endif %}
@@ -298,7 +298,6 @@
         const monthly = cfg.base + cfg.per_branch * n;
         document.getElementById('calcMonthly').textContent = fmt(monthly);
         document.getElementById('calcAnnual').textContent = fmt(monthly * cfg.annual_months);
-        document.getElementById('calcPerpetual').textContent = fmt(cfg.perpetual_base + cfg.perpetual_per_branch * n);
     }
     document.querySelectorAll('.pr-calc .pr-calc__btn').forEach(btn => btn.addEventListener('click', () => {
         input.value = Math.max(1, (parseInt(input.value, 10) || 1) + parseInt(btn.dataset.step, 10));

@@ -1,6 +1,6 @@
 """
 أسعار الباقات: مصدر واحد (apps/core/pricing.py) لصفحة الأسعار وتقدير إيرادات المنصة؛
-المؤسسات رسوم أساسية + سعر لكل فرع نشط، والسنوي 10 أشهر، والدائم سعر ثابت لكل باقة.
+المؤسسات رسوم أساسية + سعر لكل فرع نشط، والسنوي 10 أشهر، والترخيص الدائم بلا سعر منشور (يرجى التواصل).
 """
 from decimal import Decimal
 
@@ -8,10 +8,7 @@ from django.urls import reverse
 
 from apps.accounts.models import User
 from apps.core.models import Branch
-from apps.core.pricing import (
-    ENTERPRISE_PER_BRANCH_PERPETUAL, PERPETUAL_PRICE, annual, enterprise_monthly, enterprise_perpetual,
-    perpetual_from_annual, tenant_monthly_fee,
-)
+from apps.core.pricing import annual, enterprise_monthly, tenant_monthly_fee
 from apps.core.test_utils import TenantTestCase
 
 
@@ -20,16 +17,10 @@ class PricingRulesTests(TenantTestCase):
         self.assertEqual(annual(Decimal('25')), Decimal('250'))
         self.assertEqual(annual(Decimal('45')), Decimal('450'))
 
-    def test_perpetual_prices_are_fixed_per_plan(self):
-        self.assertEqual(PERPETUAL_PRICE['basic'], Decimal('1900'))
-        self.assertEqual(PERPETUAL_PRICE['pro'], Decimal('3420'))
-        self.assertEqual(PERPETUAL_PRICE['enterprise'], Decimal('4940'))
-
-    def test_enterprise_branch_perpetual_is_annual_rent_x8_minus_5_percent(self):
-        self.assertEqual(perpetual_from_annual(Decimal('100')), Decimal('760'))
-        self.assertEqual(ENTERPRISE_PER_BRANCH_PERPETUAL, Decimal('1520'))      # 20 × 10 × 8 − 5%
-        self.assertEqual(enterprise_perpetual(0), Decimal('4940'))
-        self.assertEqual(enterprise_perpetual(3), Decimal('4940') + 3 * Decimal('1520'))
+    def test_no_perpetual_price_is_defined(self):
+        import apps.core.pricing as pricing
+        for name in ('PERPETUAL_PRICE', 'ENTERPRISE_PER_BRANCH_PERPETUAL', 'enterprise_perpetual', 'perpetual_from_annual'):
+            self.assertFalse(hasattr(pricing, name), name)
 
     def test_enterprise_is_base_plus_per_branch(self):
         self.assertEqual(enterprise_monthly(0), Decimal('65'))
@@ -55,10 +46,12 @@ class PricingPageTests(TenantTestCase):
         self.client.logout()
         page = self.client.get(reverse('core:pricing'))
         self.assertEqual(page.status_code, 200)
-        for text in ('$25', '$250', '$1,900', '$45', '$450', '$3,420', '$65', '$20', '$4,940', '$1,520', 'branchCount'):
+        for text in ('$25', '$250', '$45', '$450', '$65', '$20', 'branchCount'):
             self.assertContains(page, text)
-        for gone in ('$2,400', '$4,320', 'شهران مجاناً'):
+        for gone in ('$2,400', '$4,320', 'شهران مجاناً', '$1,900', '$3,420', '$4,940', '$1,520', 'calcPerpetual'):
             self.assertNotContains(page, gone)
+        self.assertContains(page, 'للترخيص الدائم يرجى التواصل')
+        self.assertNotContains(page, 'ترخيص دائم</bdi>')
         self.assertContains(page, 'متاح في كل الباقات')
         for gone in ('حتى 5 مستخدمين', 'حتى 40 مستخدمًا'):
             self.assertNotContains(page, gone)

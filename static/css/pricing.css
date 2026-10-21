@@ -476,6 +476,14 @@
     margin-top: -0.5rem;
 }
 
+.pr-note {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #64748b;
+    margin: 1.5rem 0 0;
+}
+.pr-note a { color: inherit; font-weight: 600; }
+
 /* ── Enterprise per-branch calculator ───────────────────── */
 .pr-card__per-branch {
     font-size: 0.85rem;
