@@ -145,10 +145,16 @@
 
             <div class="pr-note">
                 <p>للترخيص الدائم يرجى التواصل معنا: <a href="mailto:info@enjaztechnology.com">info@enjaztechnology.com</a> &nbsp;·&nbsp; <a href="https://wa.me/249110100110" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> واتساب</a></p>
-                <a href="https://wa.me/249110100110" target="_blank" rel="noopener" class="pr-note__qr" aria-label="واتساب إنجاز">
-                    <img src="{% static 'img/whatsapp-qr.svg' %}" alt="باركود واتساب" width="120" height="120">
-                    <span>امسح الباركود للتواصل عبر واتساب</span>
-                </a>
+                <div class="pr-note__qrs">
+                    <a href="https://wa.me/249110100110" target="_blank" rel="noopener" class="pr-note__qr" aria-label="واتساب إنجاز">
+                        <img src="{% static 'img/whatsapp-qr.svg' %}" alt="باركود واتساب" width="120" height="120">
+                        <span><i class="fab fa-whatsapp"></i> امسح للتواصل عبر واتساب</span>
+                    </a>
+                    <a href="mailto:info@enjaztechnology.com" class="pr-note__qr" aria-label="البريد الإلكتروني لإنجاز">
+                        <img src="{% static 'img/email-qr.svg' %}" alt="باركود البريد الإلكتروني" width="120" height="120">
+                        <span><i class="fas fa-envelope"></i> امسح لفتح البريد الإلكتروني</span>
+                    </a>
+                </div>
             </div>
 
             {% if enterprise_pricing %}

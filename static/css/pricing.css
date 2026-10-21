@@ -484,6 +484,12 @@
 }
 .pr-note p { margin: 0 0 0.75rem; }
 .pr-note a { color: inherit; font-weight: 600; }
+.pr-note__qrs {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
 .pr-note__qr {
     display: inline-flex;
     flex-direction: column;
