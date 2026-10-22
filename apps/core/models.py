@@ -1063,6 +1063,45 @@ class SocialMediaPost(models.Model):
         return self.content[:50]
 
 
+class ClientSurvey(models.Model):
+    """رابط استبيان تعريف لعميل مستهدف — يُنشئه مدير المنصة ويرسله للعميل، وتُحفظ ردوده وملف PDF المعبّأ."""
+
+    FORM_CHOICES = [
+        ('distribution', 'شركات التوزيع'),
+        ('pharmacy',     'الصيدليات'),
+    ]
+
+    token         = models.CharField('الرمز', max_length=40, unique=True, db_index=True)
+    form_type     = models.CharField('نوع الاستبيان', max_length=20, choices=FORM_CHOICES)
+    client_name   = models.CharField('اسم العميل', max_length=200)
+    client_phone  = models.CharField('هاتف العميل', max_length=50, blank=True)
+    client_note   = models.CharField('ملاحظة داخلية', max_length=300, blank=True)
+    created_at    = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True, db_index=True)
+    created_by    = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+', verbose_name='أنشأه'
+    )
+    opened_at     = models.DateTimeField('أول فتح للرابط', null=True, blank=True)
+    submitted_at  = models.DateTimeField('تاريخ الرد', null=True, blank=True, db_index=True)
+    answers       = models.JSONField('الإجابات', default=dict, blank=True)
+    pdf_file      = models.FileField('ملف PDF', upload_to='client_surveys/', blank=True)
+    email_sent_at = models.DateTimeField('وقت إرسال الإيميل', null=True, blank=True)
+    email_error   = models.CharField('خطأ الإرسال', max_length=500, blank=True)
+
+    class Meta:
+        db_table = 'client_surveys'
+        verbose_name = 'استبيان عميل'
+        verbose_name_plural = 'استبيانات العملاء'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.client_name} — {self.get_form_type_display()}'
+
+    @property
+    def is_submitted(self):
+        return self.submitted_at is not None
+
+
 class ExchangeRateHistory(models.Model):
     tenant     = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='exchange_rate_history', db_index=True)
     rate       = models.DecimalField('سعر الصرف', max_digits=12, decimal_places=2)

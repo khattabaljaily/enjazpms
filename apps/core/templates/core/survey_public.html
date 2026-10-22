@@ -1,0 +1,41 @@
+{% load static %}<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{ form_title }}</title>
+{% include "core/survey/_base_css.html" %}
+</head>
+<body>
+<header class="sv-head"><h1>{{ form_title }}</h1><span class="brand">ENJAZ</span></header>
+<main class="sv-wrap">
+  <form method="post" class="sv-card" id="svForm" novalidate>
+    {% csrf_token %}
+    <p class="sv-intro">{{ intro }}</p>
+    <div class="sv-callout"><strong>ملاحظة مهمة:</strong> {{ important_note }}</div>
+    {% if errors %}
+      <div class="sv-errors"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+    {% endif %}
+
+    {% for sec in sections %}
+      <h2 class="sv-sec">{{ sec.title }}</h2>
+      {% for q in sec.questions %}
+        {% include "core/survey/_question.html" %}
+      {% endfor %}
+    {% endfor %}
+
+    <div class="sv-actions">
+      <button class="sv-btn" type="submit" id="svSubmit">إرسال الاستبيان</button>
+      <p class="sv-foot">بعد الإرسال لن يمكن تعديل الإجابات. شكراً لوقتك.</p>
+    </div>
+  </form>
+</main>
+<script>
+document.getElementById('svForm').addEventListener('submit', function () {
+  var b = document.getElementById('svSubmit');
+  b.disabled = true; b.textContent = 'جارٍ الإرسال…';
+});
+</script>
+</body>
+</html>

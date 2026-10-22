@@ -1,0 +1,64 @@
+{% load survey_tags %}
+{% with val=answers|get_item:q.id %}
+{% if q.type == 'text' or q.type == 'number' or q.type == 'textarea' %}
+  <div class="sv-field{% if not q.numbered %} sv-field--plain{% endif %}">
+    <label class="sv-label" for="q_{{ q.id }}">{{ q.label }}</label>
+    {% if q.type == 'textarea' %}
+      <textarea id="q_{{ q.id }}" name="q_{{ q.id }}" rows="3" maxlength="2000" class="sv-input">{{ val }}</textarea>
+    {% else %}
+      <input id="q_{{ q.id }}" name="q_{{ q.id }}" value="{{ val }}" maxlength="200" class="sv-input"
+             {% if q.type == 'number' %}inputmode="numeric"{% elif q.id == 'phone' %}inputmode="tel"{% endif %}>
+    {% endif %}
+  </div>
+{% else %}
+  <div class="{% if q.numbered %}sv-q{% else %}sv-sub{% endif %}">
+    <div class="sv-q-title">
+      {% if q.num %}<span class="sv-badge">{{ q.num }}</span>{% endif %}
+      <span>{{ q.label }}</span>
+    </div>
+    {% if q.hint %}<p class="sv-hint">{{ q.hint }}</p>{% endif %}
+    {% if q.image %}
+      {% load static %}
+      <a href="{% static q.image %}" target="_blank" rel="noopener"><img class="sv-shot" src="{% static q.image %}" alt="شاشة بيانات المنتج في النظام"></a>
+    {% endif %}
+
+    {% if q.type == 'radio' %}
+      {% for o in q.options %}
+        <label class="sv-opt">
+          <input type="radio" name="q_{{ q.id }}" value="{{ o.value }}" {% if val == o.value %}checked{% endif %}>
+          <span class="sv-mark sv-mark--radio"></span>
+          <span class="sv-opt-text">{{ o.label }}{% if o.hint %}<small>{{ o.hint }}</small>{% endif %}</span>
+        </label>
+      {% endfor %}
+    {% elif q.type == 'checkbox' %}
+      {% for o in q.options %}
+        <label class="sv-opt">
+          <input type="checkbox" name="q_{{ q.id }}" value="{{ o.value }}" {% if val|has_choice:o.value %}checked{% endif %}>
+          <span class="sv-mark sv-mark--check"></span>
+          <span class="sv-opt-text">{{ o.label }}{% if o.hint %}<small>{{ o.hint }}</small>{% endif %}</span>
+        </label>
+      {% endfor %}
+    {% elif q.type == 'count_list' %}
+      {% for it in q.items %}
+        {% with row=val|get_item:it.value %}
+        <div class="sv-count">
+          <label class="sv-opt">
+            <input type="checkbox" name="q_{{ q.id }}__{{ it.value }}" value="1" {% if row.on %}checked{% endif %}>
+            <span class="sv-mark sv-mark--check"></span>
+            <span class="sv-opt-text">{{ it.label }}</span>
+          </label>
+          <input class="sv-input sv-input--count" name="q_{{ q.id }}__{{ it.value }}__n" value="{{ row.count }}"
+                 inputmode="numeric" maxlength="10" placeholder="العدد" aria-label="عدد {{ it.label }}">
+        </div>
+        {% endwith %}
+      {% endfor %}
+    {% endif %}
+
+    {% if q.note %}<div class="sv-note">{{ q.note }}</div>{% endif %}
+
+    {% for s in q.sub %}
+      {% include "core/survey/_question.html" with q=s %}
+    {% endfor %}
+  </div>
+{% endif %}
+{% endwith %}

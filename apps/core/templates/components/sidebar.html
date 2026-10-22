@@ -142,6 +142,7 @@
             </a>
             <ul class="nav-submenu">
                 <li><a href="{% url 'core:admin_marketing_posts' %}" class="nav-sublink{% if request.resolver_match.url_name == 'admin_marketing_posts' %} active{% endif %}"><i class="fas fa-share-nodes me-2"></i>وسائل التواصل</a></li>
+                <li><a href="{% url 'core:admin_surveys' %}" class="nav-sublink{% if request.resolver_match.url_name == 'admin_surveys' %} active{% endif %}"><i class="fas fa-clipboard-list me-2"></i>استبيانات العملاء</a></li>
             </ul>
         </li>
     </ul>

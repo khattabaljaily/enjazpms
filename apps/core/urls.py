@@ -2,7 +2,7 @@
 Core URLs
 """
 from django.urls import path
-from . import views
+from . import views, survey_views
 
 app_name = 'core'
 
@@ -98,6 +98,15 @@ urlpatterns = [
     path('system/marketing/social-posts/api/generate/', views.admin_marketing_post_generate, name='admin_marketing_post_generate'),
     path('system/marketing/social-posts/api/<int:pk>/publish/', views.admin_marketing_post_publish, name='admin_marketing_post_publish'),
     path('system/marketing/social-posts/api/<int:pk>/unpublish/', views.admin_marketing_post_unpublish, name='admin_marketing_post_unpublish'),
+
+    # System — Client surveys (استبيانات تعريف العملاء المستهدفين)
+    path('system/marketing/surveys/', survey_views.admin_surveys, name='admin_surveys'),
+    path('system/marketing/surveys/api/create/', survey_views.admin_survey_create, name='admin_survey_create'),
+    path('system/marketing/surveys/api/<int:pk>/delete/', survey_views.admin_survey_delete, name='admin_survey_delete'),
+    path('system/marketing/surveys/api/<int:pk>/resend/', survey_views.admin_survey_resend, name='admin_survey_resend'),
+    path('system/marketing/surveys/<int:pk>/pdf/', survey_views.admin_survey_pdf, name='admin_survey_pdf'),
+    # رابط عام للعميل (بلا تسجيل دخول)
+    path('survey/<str:token>/', survey_views.survey_public, name='survey_public'),
 
     # Tenant Backup (manual — all plans)
     path('settings/backup/create/', views.tenant_backup_create_api, name='tenant_backup_create_api'),

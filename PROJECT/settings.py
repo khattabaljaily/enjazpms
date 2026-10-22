@@ -189,6 +189,8 @@ EMAIL_USE_SSL       = str(_email_cfg.get('EMAIL_USE_SSL', 'True')).lower() == 't
 EMAIL_USE_TLS       = False
 EMAIL_TIMEOUT       = int(_email_cfg.get('EMAIL_TIMEOUT', 10))
 DEFAULT_FROM_EMAIL  = f'ENJAZ <{EMAIL_HOST_USER}>'
+# بريد استلام ردود استبيانات تعريف العملاء (core.survey_views)
+SURVEY_RESULTS_EMAIL = get_secret('SURVEY_RESULTS_EMAIL', 'gnabi1998@gmail.com')
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
