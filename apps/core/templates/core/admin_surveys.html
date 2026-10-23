@@ -9,6 +9,9 @@
 .sv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem;align-items:end}
 .sv-grid label{display:block;font-size:.78rem;font-weight:600;margin-bottom:.2rem;color:var(--text-muted,#64748b)}
 .sv-grid input,.sv-grid select{width:100%;border:1px solid var(--border-color,#e2e8f0);border-radius:10px;padding:.45rem .7rem;font-size:.85rem;background:var(--input-bg,#f8fafc);color:var(--text-main,#1e293b)}
+.sv-grid select{appearance:none;-webkit-appearance:none;-moz-appearance:none;padding-inline-end:2.2rem;cursor:pointer;
+background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%2364748b' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+background-repeat:no-repeat;background-position:left .8rem center;background-size:.7rem}
 .sv-b{padding:.42rem .95rem;border-radius:10px;font-size:.8rem;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;text-decoration:none}
 .sv-b--p{background:linear-gradient(135deg,#ff8a3d,#f6a821);color:#fff}
 .sv-b--s{background:var(--input-bg,#f1f5f9);color:var(--text-main,#1e293b);border:1px solid var(--border-color,#e2e8f0)}
@@ -23,6 +26,19 @@
 .sv-stats{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem}
 .sv-stat{padding:.3rem .9rem;border-radius:30px;font-size:.78rem;font-weight:700;background:var(--input-bg,#f1f5f9)}
 .sv-err{color:#b91c1c;font-size:.72rem}
+.sv-cards-wrap{overflow-x:auto}
+@media(max-width:768px){
+  .sv-cards-wrap{overflow:visible;padding:0!important;background:none!important;border:0!important;box-shadow:none!important}
+  .sv-tbl,.sv-tbl tbody{display:block}
+  .sv-tbl thead{display:none}
+  .sv-tbl tr{display:block;background:var(--card-bg,#fff);border:1px solid var(--border-color,#e2e8f0);border-radius:14px;padding:.8rem 1rem;margin-bottom:.8rem;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+  .sv-tbl td{display:flex;justify-content:space-between;align-items:center;gap:.8rem;border:0;padding:.35rem 0;text-align:left}
+  .sv-tbl td::before{content:attr(data-label);color:var(--text-muted,#64748b);font-weight:600;font-size:.75rem;flex:none}
+  .sv-tbl td:first-child{display:block;text-align:right;padding-bottom:.5rem;margin-bottom:.3rem;border-bottom:1px solid var(--border-color,#eef2f7)}
+  .sv-tbl td:first-child::before{display:none}
+  .sv-tbl td[colspan]{display:block;text-align:center}.sv-tbl td[colspan]::before{display:none}
+  .sv-act{justify-content:flex-end}
+}
 .sv-link{display:none;margin-top:.8rem;padding:.7rem .9rem;border-radius:10px;background:#ecfdf5;border:1px dashed #34d399;font-size:.82rem}
 .sv-link code{direction:ltr;display:inline-block;word-break:break-all}
 </style>
@@ -58,23 +74,23 @@
   </div>
 </div>
 
-<div class="sv-box" style="overflow-x:auto">
+<div class="sv-box sv-cards-wrap">
   <table class="sv-tbl">
     <thead><tr><th>العميل</th><th>النوع</th><th>الحالة</th><th>أُنشئ</th><th>الرابط</th><th>إجراءات</th></tr></thead>
     <tbody>
     {% for s in surveys %}
       <tr>
         <td><strong>{{ s.client_name }}</strong>{% if s.client_phone %}<div dir="ltr" style="text-align:right;color:#64748b">{{ s.client_phone }}</div>{% endif %}{% if s.client_note %}<div style="color:#64748b;font-size:.75rem">{{ s.client_note }}</div>{% endif %}</td>
-        <td>{{ s.get_form_type_display }}</td>
-        <td>
+        <td data-label="النوع">{{ s.get_form_type_display }}</td>
+        <td data-label="الحالة">
           {% if s.is_submitted %}<span class="sv-pill sv-pill--done">تم الرد {{ s.submitted_at|date:"Y/m/d H:i" }}</span>
             {% if s.email_sent_at %}<div style="font-size:.72rem;color:#15803d">أُرسل الإيميل ✓</div>{% elif s.email_error %}<div class="sv-err" title="{{ s.email_error }}">فشل إرسال الإيميل</div>{% endif %}
           {% elif s.opened_at %}<span class="sv-pill sv-pill--open">فُتح ولم يُرسل</span>
           {% else %}<span class="sv-pill sv-pill--wait">لم يُفتح بعد</span>{% endif %}
         </td>
-        <td>{{ s.created_at|date:"Y/m/d" }}</td>
-        <td><button class="sv-b sv-b--s" type="button" onclick="svCopy('{{ s.public_url }}', this)"><i class="fas fa-copy"></i> نسخ</button></td>
-        <td><div class="sv-act">
+        <td data-label="أُنشئ">{{ s.created_at|date:"Y/m/d" }}</td>
+        <td data-label="الرابط"><button class="sv-b sv-b--s" type="button" onclick="svCopy('{{ s.public_url }}', this)"><i class="fas fa-copy"></i> نسخ</button></td>
+        <td data-label="إجراءات"><div class="sv-act">
           <a class="sv-b sv-b--w" target="_blank" rel="noopener" href="https://wa.me/{{ s.client_phone|cut:'+'|cut:' ' }}?text={{ s.public_url|urlencode }}"><i class="fab fa-whatsapp"></i></a>
           {% if s.is_submitted %}
             <a class="sv-b sv-b--p" href="{% url 'core:admin_survey_pdf' s.pk %}" target="_blank"><i class="fas fa-file-pdf"></i> PDF</a>
