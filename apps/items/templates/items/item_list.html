@@ -2131,14 +2131,19 @@
         if (JSON.stringify(data) !== previewKey) { showError('تغيّرت المدخلات — اضغط معاينة أولاً'); invalidate(); return; }
         data.note = $('#paNote').val().trim();
         if (data.note.length < 3) { showError('اكتب تعليقاً يوضح سبب التعديل (إلزامي)'); $('#paNote').focus(); return; }
-        if (!confirm('سيتم تعديل الأسعار فعلياً. هل أنت متأكد؟')) return;
         var $btn = $(this).prop('disabled', true);
+        Enjaz.confirmAction('سيتم تعديل أسعار ' + $('#paPreview strong').first().text() + ' منتج فعلياً. هل أنت متأكد؟', 'تطبيق تعديل الأسعار', 'نعم، طبّق التعديل').then(function (ok) {
+            if (!ok) { $btn.prop('disabled', false); return; }
+            doApply(data, $btn);
+        });
+    });
+    function doApply(data, $btn) {
         post(URL_APPLY, data).done(function (r) {
             modal.hide();
             Enjaz.toast(r.message, 'success');
             $('#itemsTable').DataTable().ajax.reload(null, false);
         }).fail(function (xhr) { showError(errMsg(xhr, 'تعذر التطبيق')); $btn.prop('disabled', false); });
-    });
+    }
 
     $('#btnOpenPriceHistory').on('click', function () {
         $('#paHistoryBody').html('<tr><td colspan="7" class="text-center text-muted">جارٍ التحميل…</td></tr>');
