@@ -139,17 +139,41 @@
 </style>
 
 <style>
-/* ── Bulk price adjust ─── */
-.pa-checklist { max-height: 150px; overflow-y: auto; border: 1px solid var(--cx-border, #e2e8f0); border-radius: 10px; padding: .4rem .7rem; }
-.pa-checklist label { display: flex; align-items: center; gap: .4rem; padding: .15rem 0; font-size: .85rem; cursor: pointer; }
-.pa-results { margin-top: .35rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; max-height: 200px; overflow-y: auto; }
-.pa-results button { color: #0f172a; }
-.pa-results button { display: block; width: 100%; text-align: start; padding: .45rem .75rem; border: 0; background: none; font-size: .85rem; }
-.pa-results button:hover { background: #f1f5f9; }
-.pa-chip { display: inline-flex; align-items: center; gap: .4rem; background: #fef2f2; color: #b91c1c; border-radius: 999px; padding: .15rem .65rem; font-size: .8rem; }
-.pa-chip button { border: 0; background: none; color: inherit; padding: 0; line-height: 1; }
-.pa-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: .9rem 1rem; font-size: .85rem; }
-.pa-preview table { font-size: .8rem; margin-top: .5rem; }
+/* ── Bulk price adjust (theme-aware) ─── */
+.pa-intro { display: flex; gap: .6rem; align-items: flex-start; font-size: .83rem; color: var(--text-secondary, #64748b); background: var(--surface-alt, rgba(148,163,184,.1)); border-radius: 12px; padding: .7rem .9rem; margin-bottom: .9rem; }
+.pa-intro i { margin-top: .2rem; color: var(--primary, #c9840f); }
+.pa-card { border: 1px solid var(--border-light, rgba(148,163,184,.25)); border-radius: 14px; padding: .9rem 1rem; margin-bottom: .8rem; background: var(--surface-alt, rgba(148,163,184,.06)); }
+.pa-card__title { font-weight: 700; font-size: .88rem; margin-bottom: .7rem; color: var(--text-heading, inherit); }
+.pa-card__title i { color: var(--primary, #c9840f); margin-inline-end: .35rem; }
+.pa-hint { color: var(--text-muted, #94a3b8); font-weight: 400; }
+.pa-percent { position: relative; }
+.pa-percent .form-control { font-size: 1.25rem; font-weight: 700; padding-inline-end: 2.2rem; text-align: center; }
+.pa-percent span { position: absolute; inset-inline-end: .8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted, #94a3b8); font-weight: 700; }
+.pa-quick { display: flex; gap: .35rem; margin-top: .45rem; flex-wrap: wrap; }
+.pa-quick button { border: 1px solid var(--border-light, rgba(148,163,184,.35)); background: transparent; color: var(--text-secondary, inherit); border-radius: 999px; padding: .1rem .7rem; font-size: .78rem; }
+.pa-quick button:hover { border-color: var(--primary, #c9840f); color: var(--primary, #c9840f); }
+.pa-pills { display: flex; flex-wrap: wrap; gap: .5rem; }
+.pa-pills label { margin: 0; cursor: pointer; }
+.pa-pills input { position: absolute; opacity: 0; pointer-events: none; }
+.pa-pills span { display: inline-block; padding: .35rem .9rem; border-radius: 999px; font-size: .84rem; border: 1px solid var(--border-light, rgba(148,163,184,.4)); color: var(--text-secondary, inherit); transition: all .15s; }
+.pa-pills input:checked + span { background: var(--primary, #c9840f); border-color: var(--primary, #c9840f); color: #fff; font-weight: 600; }
+.pa-pills input:focus-visible + span { outline: 2px solid var(--primary, #c9840f); outline-offset: 2px; }
+.pa-checklist { max-height: 150px; overflow-y: auto; border: 1px solid var(--border-light, rgba(148,163,184,.3)); border-radius: 10px; padding: .4rem .7rem; background: var(--bg-card, transparent); }
+.pa-checklist label { display: flex; align-items: center; gap: .5rem; padding: .2rem 0; font-size: .85rem; cursor: pointer; color: var(--text-primary, inherit); }
+.pa-empty { color: var(--text-muted, #94a3b8); font-size: .82rem; }
+.pa-search { position: relative; }
+.pa-search i { position: absolute; inset-inline-start: .9rem; top: 50%; transform: translateY(-50%); color: var(--text-muted, #94a3b8); pointer-events: none; }
+.pa-search .form-control { padding-inline-start: 2.4rem; }
+.pa-results { margin-top: .4rem; background: var(--bg-card, var(--surface-alt, #fff)); border: 1px solid var(--border-light, rgba(148,163,184,.3)); border-radius: 10px; max-height: 210px; overflow-y: auto; }
+.pa-results button { display: flex; justify-content: space-between; gap: .6rem; width: 100%; text-align: start; padding: .5rem .8rem; border: 0; background: none; font-size: .85rem; color: var(--text-primary, inherit); }
+.pa-results button small { color: var(--text-muted, #94a3b8); }
+.pa-results button:hover { background: var(--surface-alt, rgba(148,163,184,.15)); }
+.pa-results .pa-note { padding: .6rem .8rem; font-size: .8rem; color: var(--text-muted, #94a3b8); }
+.pa-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+.pa-chip { display: inline-flex; align-items: center; gap: .45rem; background: rgba(239,68,68,.14); color: #f87171; border-radius: 999px; padding: .2rem .4rem .2rem .75rem; font-size: .8rem; }
+.pa-chip button { border: 0; background: rgba(239,68,68,.25); color: inherit; width: 1.2rem; height: 1.2rem; border-radius: 50%; padding: 0; line-height: 1; }
+.pa-preview { border: 1px dashed var(--primary, #c9840f); border-radius: 14px; padding: .9rem 1rem; font-size: .86rem; background: var(--surface-alt, rgba(148,163,184,.08)); color: var(--text-primary, inherit); }
+.pa-preview table { font-size: .8rem; margin: .6rem 0 0; color: inherit; --bs-table-bg: transparent; --bs-table-color: inherit; }
 </style>
 {% endblock %}
 
@@ -913,71 +937,89 @@
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content cx-modal">
             <div class="cx-modal-header">
-                <h5 class="cx-modal-title">تعديل عام للأسعار</h5>
+                <h5 class="cx-modal-title"><i class="fas fa-percent me-2"></i>تعديل عام للأسعار</h5>
                 <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
             </div>
             <div class="cx-modal-body" id="paBody">
                 <div class="alert alert-danger d-none" id="paError"></div>
-                <p class="text-muted mb-3" style="font-size:.85rem;">
-                    زيادة (أو تخفيض بنسبة سالبة) تُطبَّق على أسعار المنتجات دفعة واحدة، مثل زيادة الجمارك.
-                    {% if hc_mode %}<br><strong>وضع العملة الصعبة مفعّل:</strong> يُحدَّث السعر بالعملة المحلية والمقابل بالعملة الصعبة ({{ hc_currency }}) معاً بسعر الصرف الحالي ({{ exchange_rate }}).{% endif %}
-                </p>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4">
-                        <label class="cx-label" for="paPercent">النسبة % <sup class="cx-required">*</sup></label>
-                        <input type="text" inputmode="decimal" id="paPercent" class="form-control" placeholder="مثال: 10 أو -5" autocomplete="off">
-                    </div>
-                    <div class="col-md-8">
-                        <label class="cx-label">الأسعار المشمولة</label>
-                        <div class="d-flex flex-wrap gap-3 pt-1">
-                            <label class="d-flex align-items-center gap-1"><input type="checkbox" class="form-check-input mt-0 pa-field" value="selling" checked> سعر البيع</label>
-                            <label class="d-flex align-items-center gap-1"><input type="checkbox" class="form-check-input mt-0 pa-field" value="min" checked> الحد الأدنى للبيع</label>
-                            <label class="d-flex align-items-center gap-1"><input type="checkbox" class="form-check-input mt-0 pa-field" value="cost"> سعر التكلفة</label>
+                <div class="pa-intro">
+                    <i class="fas fa-circle-info"></i>
+                    <span>زيادة (أو تخفيض بنسبة سالبة) على أسعار المنتجات دفعة واحدة، مثل زيادة الجمارك.
+                    {% if hc_mode %}<strong>وضع العملة الصعبة مفعّل:</strong> يتحدّث السعر المحلي ومقابله بالعملة الصعبة ({{ hc_currency }}) معاً بسعر الصرف الحالي.{% endif %}</span>
+                </div>
+
+                <div class="pa-card">
+                    <div class="pa-card__title"><i class="fas fa-sliders"></i> التعديل</div>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-5">
+                            <label class="cx-label" for="paPercent">النسبة % <sup class="cx-required">*</sup></label>
+                            <div class="pa-percent">
+                                <input type="text" inputmode="decimal" id="paPercent" class="form-control" placeholder="10  أو  -5" autocomplete="off" dir="ltr">
+                                <span>%</span>
+                            </div>
+                            <div class="pa-quick">
+                                <button type="button" data-pct="5">+5</button><button type="button" data-pct="10">+10</button>
+                                <button type="button" data-pct="15">+15</button><button type="button" data-pct="20">+20</button>
+                                <button type="button" data-pct="-5">−5</button>
+                            </div>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="cx-label">الأسعار المشمولة</label>
+                            <div class="pa-pills">
+                                <label><input type="checkbox" class="pa-field" value="selling" checked><span>سعر البيع</span></label>
+                                <label><input type="checkbox" class="pa-field" value="min" checked><span>الحد الأدنى للبيع</span></label>
+                                <label><input type="checkbox" class="pa-field" value="cost"><span>سعر التكلفة</span></label>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="cx-form-group-label"><span class="cx-form-group-icon"><i class="fas fa-bullseye"></i></span> النطاق</div>
-                <div class="mb-2 d-flex flex-wrap gap-3">
-                    <label class="d-flex align-items-center gap-1"><input type="radio" name="paScope" class="form-check-input mt-0" value="all" checked> كل المنتجات</label>
-                    <label class="d-flex align-items-center gap-1"><input type="radio" name="paScope" class="form-check-input mt-0" value="cats"> تصنيفات محددة فقط</label>
-                </div>
-                <div class="pa-checklist d-none mb-3" id="paOnlyCatsBox">
-                    {% for c in adjust_categories %}<label><input type="checkbox" class="form-check-input pa-only-cat" value="{{ c.id }}"> {{ c.name }}</label>{% empty %}<span class="text-muted">لا توجد تصنيفات</span>{% endfor %}
+                <div class="pa-card">
+                    <div class="pa-card__title"><i class="fas fa-bullseye"></i> النطاق</div>
+                    <div class="pa-pills">
+                        <label><input type="radio" name="paScope" value="all" checked><span>كل المنتجات</span></label>
+                        <label><input type="radio" name="paScope" value="cats"><span>تصنيفات محددة فقط</span></label>
+                    </div>
+                    <div class="pa-checklist d-none mt-2" id="paOnlyCatsBox">
+                        {% for c in adjust_categories %}<label><input type="checkbox" class="form-check-input pa-only-cat" value="{{ c.id }}"> {{ c.name }}</label>{% empty %}<span class="pa-empty">لا توجد تصنيفات</span>{% endfor %}
+                    </div>
                 </div>
 
-                <div class="cx-form-group-label mt-3"><span class="cx-form-group-icon"><i class="fas fa-ban"></i></span> استثناءات</div>
-                <div class="d-flex flex-wrap gap-3 mb-2">
-                    <label class="d-flex align-items-center gap-1"><input type="checkbox" class="form-check-input mt-0" id="paExclServices" checked> استثناء الخدمات</label>
-                    <label class="d-flex align-items-center gap-1"><input type="checkbox" class="form-check-input mt-0" id="paExclInactive"> استثناء المنتجات الموقوفة</label>
-                </div>
-                <div class="row g-3 mb-2">
-                    <div class="col-md-6">
-                        <label class="cx-label">استثناء تصنيفات <small class="text-muted">(تشمل التصنيفات الفرعية)</small></label>
-                        <div class="pa-checklist">
-                            {% for c in adjust_categories %}<label><input type="checkbox" class="form-check-input pa-excl-cat" value="{{ c.id }}"> {{ c.name }}</label>{% empty %}<span class="text-muted">لا توجد تصنيفات</span>{% endfor %}
+                <div class="pa-card">
+                    <div class="pa-card__title"><i class="fas fa-ban"></i> استثناءات</div>
+                    <div class="pa-pills mb-3">
+                        <label><input type="checkbox" id="paExclServices" checked><span>استثناء الخدمات</span></label>
+                        <label><input type="checkbox" id="paExclInactive"><span>استثناء المنتجات الموقوفة</span></label>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="cx-label">تصنيفات <small class="pa-hint">(تشمل الفرعية)</small></label>
+                            <div class="pa-checklist">
+                                {% for c in adjust_categories %}<label><input type="checkbox" class="form-check-input pa-excl-cat" value="{{ c.id }}"> {{ c.name }}</label>{% empty %}<span class="pa-empty">لا توجد تصنيفات</span>{% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="cx-label">موردون / شركات</label>
+                            <div class="pa-checklist">
+                                {% for s in suppliers %}<label><input type="checkbox" class="form-check-input pa-excl-sup" value="{{ s.id }}"> {{ s.name }}</label>{% empty %}<span class="pa-empty">لا يوجد موردون</span>{% endfor %}
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="cx-label">استثناء موردين / شركات</label>
-                        <div class="pa-checklist">
-                            {% for s in suppliers %}<label><input type="checkbox" class="form-check-input pa-excl-sup" value="{{ s.id }}"> {{ s.name }}</label>{% empty %}<span class="text-muted">لا يوجد موردون</span>{% endfor %}
-                        </div>
+                    <label class="cx-label mt-3">منتجات محددة <small class="pa-hint">(اضغط على الخانة لعرض المنتجات أو اكتب للبحث)</small></label>
+                    <div class="pa-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="paItemSearch" class="form-control" placeholder="ابحث بالاسم أو الباركود أو الرمز…" autocomplete="off">
                     </div>
-                </div>
-                <label class="cx-label">استثناء منتجات محددة <small class="text-muted">(اكتب للبحث ثم اختر)</small></label>
-                <div class="position-relative">
-                    <input type="text" id="paItemSearch" class="form-control" placeholder="اسم المنتج أو الباركود أو الرمز" autocomplete="off">
                     <div id="paItemResults" class="pa-results d-none"></div>
-                </div>
-                <div id="paItemChips" class="d-flex flex-wrap gap-2 mt-2"></div>
-
-                <div class="mt-3">
-                    <label class="cx-label" for="paNote">التعليق / سبب التعديل <sup class="cx-required">*</sup></label>
-                    <textarea id="paNote" class="form-control" rows="2" placeholder="مثال: زيادة الجمارك على الدفعة الأخيرة"></textarea>
+                    <div id="paItemChips" class="pa-chips"></div>
                 </div>
 
-                <div id="paPreview" class="pa-preview d-none mt-3"></div>
+                <div class="pa-card">
+                    <div class="pa-card__title"><i class="fas fa-pen"></i> التعليق <sup class="cx-required">*</sup></div>
+                    <textarea id="paNote" class="form-control" rows="2" placeholder="سبب التعديل، مثال: زيادة الجمارك على الدفعة الأخيرة"></textarea>
+                </div>
+
+                <div id="paPreview" class="pa-preview d-none"></div>
             </div>
             <div class="cx-modal-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
@@ -2018,24 +2060,28 @@
 
     // بحث المنتجات المستثناة
     var searchTimer = null;
-    $('#paItemSearch').on('input', function () {
-        var q = this.value.trim();
+    function runSearch() {
+        var q = $('#paItemSearch').val().trim();
         clearTimeout(searchTimer);
-        if (q.length < 2) { $('#paItemResults').addClass('d-none').empty(); return; }
-        $('#paItemResults').removeClass('d-none').html('<div class="p-2 text-muted" style="font-size:.8rem">جارٍ البحث…</div>');
+        $('#paItemResults').removeClass('d-none').html('<div class="pa-note">جارٍ البحث…</div>');
         searchTimer = setTimeout(function () {
-            $.get(URL_SEARCH, { q: q, types: 'product,service,raw_material,semi_finished' }).fail(function () {
-                $('#paItemResults').removeClass('d-none').html('<div class="p-2 text-danger" style="font-size:.8rem">تعذّر البحث</div>');
+            $.get(URL_SEARCH, { q: q, min_chars: 0, types: 'product,service,raw_material,semi_finished' }).fail(function () {
+                $('#paItemResults').removeClass('d-none').html('<div class="pa-note text-danger">تعذّر البحث</div>');
             }).done(function (resp) {
                 var $box = $('#paItemResults').empty();
                 (resp.results || []).forEach(function (it) {
                     if (excludedItems[it.id]) return;
-                    $('<button type="button">').text(it.name + (it.sku ? '  —  ' + it.sku : '')).data('it', it).appendTo($box);
+                    $('<button type="button">').append($('<span>').text(it.name), $('<small>').text(it.sku || '')).data('it', it).appendTo($box);
                 });
-                if (!$box.children().length) $box.html('<div class="p-2 text-muted" style="font-size:.8rem">لا توجد نتائج</div>');
+                if (!$box.children().length) $box.html('<div class="pa-note">لا توجد نتائج</div>');
             });
         }, 250);
+    }
+    $('#paItemSearch').on('input focus', runSearch);
+    $(document).on('click', function (e) {
+        if (!$(e.target).closest('#paItemSearch, #paItemResults').length) $('#paItemResults').addClass('d-none');
     });
+    $('.pa-quick').on('click', 'button', function () { $('#paPercent').val($(this).data('pct')).trigger('input'); });
     $('#paItemResults').on('click', 'button', function () {
         var it = $(this).data('it');
         excludedItems[it.id] = it.name;
