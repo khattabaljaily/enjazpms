@@ -138,16 +138,19 @@
 .cx-chip-remove:hover { background: #ef4444; color: #fff; }
 </style>
 
+<style>
 /* ── Bulk price adjust ─── */
 .pa-checklist { max-height: 150px; overflow-y: auto; border: 1px solid var(--cx-border, #e2e8f0); border-radius: 10px; padding: .4rem .7rem; }
 .pa-checklist label { display: flex; align-items: center; gap: .4rem; padding: .15rem 0; font-size: .85rem; cursor: pointer; }
-.pa-results { position: absolute; z-index: 5; inset-inline: 0; top: 100%; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+.pa-results { margin-top: .35rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; max-height: 200px; overflow-y: auto; }
+.pa-results button { color: #0f172a; }
 .pa-results button { display: block; width: 100%; text-align: start; padding: .45rem .75rem; border: 0; background: none; font-size: .85rem; }
 .pa-results button:hover { background: #f1f5f9; }
 .pa-chip { display: inline-flex; align-items: center; gap: .4rem; background: #fef2f2; color: #b91c1c; border-radius: 999px; padding: .15rem .65rem; font-size: .8rem; }
 .pa-chip button { border: 0; background: none; color: inherit; padding: 0; line-height: 1; }
 .pa-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: .9rem 1rem; font-size: .85rem; }
 .pa-preview table { font-size: .8rem; margin-top: .5rem; }
+</style>
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -1994,7 +1997,10 @@
             exclude_inactive: $('#paExclInactive').is(':checked') ? '1' : '0'
         };
     }
-    function showError(msg) { $('#paError').text(msg).removeClass('d-none'); }
+    function showError(msg) {
+        var $e = $('#paError').text(msg).removeClass('d-none');
+        $e[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
     function invalidate() { previewKey = null; $('#paApplyBtn').prop('disabled', true); $('#paPreview').addClass('d-none'); }
     function post(url, data) { return $.ajax({ url: url, method: 'POST', data: data, traditional: true }); }
     function errMsg(xhr, fallback) { return (xhr.responseJSON && xhr.responseJSON.message) || fallback; }
@@ -2016,14 +2022,17 @@
         var q = this.value.trim();
         clearTimeout(searchTimer);
         if (q.length < 2) { $('#paItemResults').addClass('d-none').empty(); return; }
+        $('#paItemResults').removeClass('d-none').html('<div class="p-2 text-muted" style="font-size:.8rem">جارٍ البحث…</div>');
         searchTimer = setTimeout(function () {
-            $.get(URL_SEARCH, { q: q, types: 'product,service,raw_material,semi_finished' }, function (resp) {
+            $.get(URL_SEARCH, { q: q, types: 'product,service,raw_material,semi_finished' }).fail(function () {
+                $('#paItemResults').removeClass('d-none').html('<div class="p-2 text-danger" style="font-size:.8rem">تعذّر البحث</div>');
+            }).done(function (resp) {
                 var $box = $('#paItemResults').empty();
                 (resp.results || []).forEach(function (it) {
                     if (excludedItems[it.id]) return;
                     $('<button type="button">').text(it.name + (it.sku ? '  —  ' + it.sku : '')).data('it', it).appendTo($box);
                 });
-                $box.toggleClass('d-none', !$box.children().length);
+                if (!$box.children().length) $box.html('<div class="p-2 text-muted" style="font-size:.8rem">لا توجد نتائج</div>');
             });
         }, 250);
     });
@@ -2051,6 +2060,7 @@
     $('#paPreviewBtn').on('click', function () {
         $('#paError').addClass('d-none');
         var data = payload(), $btn = $(this).prop('disabled', true);
+        $('#paPreview').html('<span class="text-muted">جارٍ الحساب…</span>').removeClass('d-none');
         post(URL_PREVIEW, data).done(function (r) {
             var html = '<strong>' + r.affected + '</strong> منتج سيُعدَّل، و<strong>' + r.excluded + '</strong> مستثنى.';
             if (r.sample.length) {
@@ -2062,7 +2072,7 @@
                 });
                 html += '</tbody></table><div class="text-muted mt-1">عيّنة من أول المنتجات فقط.</div>';
             }
-            $('#paPreview').html(html).removeClass('d-none');
+            $('#paPreview').html(html).removeClass('d-none')[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             if (r.affected > 0) { previewKey = JSON.stringify(data); $('#paApplyBtn').prop('disabled', false); }
             else { showError('لا توجد منتجات بأسعار لتعديلها ضمن هذا النطاق'); }
         }).fail(function (xhr) { invalidate(); showError(errMsg(xhr, 'تعذرت المعاينة')); })
