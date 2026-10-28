@@ -2580,7 +2580,7 @@ def pricing(request):
     """صفحة خطط التسعير"""
     from apps.core.models import PlatformSettings
     from apps.core.pricing import (
-        ENTERPRISE_PER_BRANCH_MONTHLY, PLAN_MONTHLY, annual, usd,
+        ENTERPRISE_INCLUDED_BRANCHES, ENTERPRISE_PER_BRANCH_MONTHLY, PLAN_MONTHLY, annual, usd,
     )
     trial_days = PlatformSettings.get().default_trial_days or 14
 
@@ -2661,6 +2661,7 @@ def pricing(request):
         'enterprise_pricing': {
             'base': int(PLAN_MONTHLY['enterprise']), 'per_branch': int(per_branch),
             'annual_months': int(annual(1)),
+            'included_branches': ENTERPRISE_INCLUDED_BRANCHES,
         },
         'current_subscription_plan_display': tenant.get_subscription_plan_display() if tenant else None,
     })

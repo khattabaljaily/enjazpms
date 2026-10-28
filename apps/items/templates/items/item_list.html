@@ -137,6 +137,17 @@
 }
 .cx-chip-remove:hover { background: #ef4444; color: #fff; }
 </style>
+
+/* ── Bulk price adjust ─── */
+.pa-checklist { max-height: 150px; overflow-y: auto; border: 1px solid var(--cx-border, #e2e8f0); border-radius: 10px; padding: .4rem .7rem; }
+.pa-checklist label { display: flex; align-items: center; gap: .4rem; padding: .15rem 0; font-size: .85rem; cursor: pointer; }
+.pa-results { position: absolute; z-index: 5; inset-inline: 0; top: 100%; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+.pa-results button { display: block; width: 100%; text-align: start; padding: .45rem .75rem; border: 0; background: none; font-size: .85rem; }
+.pa-results button:hover { background: #f1f5f9; }
+.pa-chip { display: inline-flex; align-items: center; gap: .4rem; background: #fef2f2; color: #b91c1c; border-radius: 999px; padding: .15rem .65rem; font-size: .8rem; }
+.pa-chip button { border: 0; background: none; color: inherit; padding: 0; line-height: 1; }
+.pa-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: .9rem 1rem; font-size: .85rem; }
+.pa-preview table { font-size: .8rem; margin-top: .5rem; }
 {% endblock %}
 
 {% block page_header %}{% endblock %}
@@ -163,6 +174,15 @@
                     <i class="fas fa-tags"></i>
                     <span>التصنيفات</span>
                 </a>
+{% endif %}
+{% if not request.branch %}
+                <button type="button" class="cx-btn-secondary" id="btnOpenPriceAdjust" data-require-perm="change_items">
+                    <i class="fas fa-percent"></i>
+                    <span>تعديل عام للأسعار</span>
+                </button>
+                <button type="button" class="cx-btn-secondary" id="btnOpenPriceHistory" data-require-perm="change_items" title="سجل التعديلات العامة للأسعار">
+                    <i class="fas fa-clock-rotate-left"></i>
+                </button>
 {% endif %}
                 <a href="{% url 'items:export_api' %}" class="cx-btn-secondary" data-require-perm="export_items">
                     <i class="fas fa-file-export"></i>
@@ -883,6 +903,109 @@
         </div>
     </div>
 </div>
+
+{% if not request.branch %}
+<!-- ══════════════════════════ PRICE ADJUST MODAL ══════════════════════════ -->
+<div class="modal fade" id="priceAdjustModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-header">
+                <h5 class="cx-modal-title">تعديل عام للأسعار</h5>
+                <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="cx-modal-body" id="paBody">
+                <div class="alert alert-danger d-none" id="paError"></div>
+                <p class="text-muted mb-3" style="font-size:.85rem;">
+                    زيادة (أو تخفيض بنسبة سالبة) تُطبَّق على أسعار المنتجات دفعة واحدة، مثل زيادة الجمارك.
+                    {% if hc_mode %}<br><strong>وضع العملة الصعبة مفعّل:</strong> يُحدَّث السعر بالعملة المحلية والمقابل بالعملة الصعبة ({{ hc_currency }}) معاً بسعر الصرف الحالي ({{ exchange_rate }}).{% endif %}
+                </p>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="cx-label" for="paPercent">النسبة % <sup class="cx-required">*</sup></label>
+                        <input type="text" inputmode="decimal" id="paPercent" class="form-control" placeholder="مثال: 10 أو -5" autocomplete="off">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="cx-label">الأسعار المشمولة</label>
+                        <div class="d-flex flex-wrap gap-3 pt-1">
+                            <label class="d-flex align-items-center gap-1"><input type="checkbox" class="form-check-input mt-0 pa-field" value="selling" checked> سعر البيع</label>
+                            <label class="d-flex align-items-center gap-1"><input type="checkbox" class="form-check-input mt-0 pa-field" value="min" checked> الحد الأدنى للبيع</label>
+                            <label class="d-flex align-items-center gap-1"><input type="checkbox" class="form-check-input mt-0 pa-field" value="cost"> سعر التكلفة</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cx-form-group-label"><span class="cx-form-group-icon"><i class="fas fa-bullseye"></i></span> النطاق</div>
+                <div class="mb-2 d-flex flex-wrap gap-3">
+                    <label class="d-flex align-items-center gap-1"><input type="radio" name="paScope" class="form-check-input mt-0" value="all" checked> كل المنتجات</label>
+                    <label class="d-flex align-items-center gap-1"><input type="radio" name="paScope" class="form-check-input mt-0" value="cats"> تصنيفات محددة فقط</label>
+                </div>
+                <div class="pa-checklist d-none mb-3" id="paOnlyCatsBox">
+                    {% for c in adjust_categories %}<label><input type="checkbox" class="form-check-input pa-only-cat" value="{{ c.id }}"> {{ c.name }}</label>{% empty %}<span class="text-muted">لا توجد تصنيفات</span>{% endfor %}
+                </div>
+
+                <div class="cx-form-group-label mt-3"><span class="cx-form-group-icon"><i class="fas fa-ban"></i></span> استثناءات</div>
+                <div class="d-flex flex-wrap gap-3 mb-2">
+                    <label class="d-flex align-items-center gap-1"><input type="checkbox" class="form-check-input mt-0" id="paExclServices" checked> استثناء الخدمات</label>
+                    <label class="d-flex align-items-center gap-1"><input type="checkbox" class="form-check-input mt-0" id="paExclInactive"> استثناء المنتجات الموقوفة</label>
+                </div>
+                <div class="row g-3 mb-2">
+                    <div class="col-md-6">
+                        <label class="cx-label">استثناء تصنيفات <small class="text-muted">(تشمل التصنيفات الفرعية)</small></label>
+                        <div class="pa-checklist">
+                            {% for c in adjust_categories %}<label><input type="checkbox" class="form-check-input pa-excl-cat" value="{{ c.id }}"> {{ c.name }}</label>{% empty %}<span class="text-muted">لا توجد تصنيفات</span>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="cx-label">استثناء موردين / شركات</label>
+                        <div class="pa-checklist">
+                            {% for s in suppliers %}<label><input type="checkbox" class="form-check-input pa-excl-sup" value="{{ s.id }}"> {{ s.name }}</label>{% empty %}<span class="text-muted">لا يوجد موردون</span>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <label class="cx-label">استثناء منتجات محددة <small class="text-muted">(اكتب للبحث ثم اختر)</small></label>
+                <div class="position-relative">
+                    <input type="text" id="paItemSearch" class="form-control" placeholder="اسم المنتج أو الباركود أو الرمز" autocomplete="off">
+                    <div id="paItemResults" class="pa-results d-none"></div>
+                </div>
+                <div id="paItemChips" class="d-flex flex-wrap gap-2 mt-2"></div>
+
+                <div class="mt-3">
+                    <label class="cx-label" for="paNote">التعليق / سبب التعديل <sup class="cx-required">*</sup></label>
+                    <textarea id="paNote" class="form-control" rows="2" placeholder="مثال: زيادة الجمارك على الدفعة الأخيرة"></textarea>
+                </div>
+
+                <div id="paPreview" class="pa-preview d-none mt-3"></div>
+            </div>
+            <div class="cx-modal-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-secondary" id="paPreviewBtn"><i class="fas fa-eye me-1"></i> معاينة</button>
+                <button type="button" class="cx-btn-primary" id="paApplyBtn" disabled><i class="fas fa-check me-1"></i> تطبيق التعديل</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════ PRICE ADJUST HISTORY MODAL ══════════════════════════ -->
+<div class="modal fade" id="priceAdjustHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-header">
+                <h5 class="cx-modal-title">سجل التعديلات العامة للأسعار</h5>
+                <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="cx-modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>التاريخ</th><th>المستخدم</th><th>النسبة</th><th>الأسعار</th><th>معدّل</th><th>مستثنى</th><th>التعليق</th></tr></thead>
+                        <tbody id="paHistoryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="cx-modal-footer"><button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إغلاق</button></div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- ══════════════════════════ DELETE MODAL ══════════════════════════ -->
 <div class="modal fade" id="deleteItemModal" tabindex="-1" aria-hidden="true">
@@ -1837,6 +1960,142 @@
         });
     })();
 
+})();
+</script>
+
+<script>
+(function () {
+    'use strict';
+    var modalEl = document.getElementById('priceAdjustModal');
+    if (!modalEl) return;
+    var URL_PREVIEW = "{% url 'items:price_adjust_preview_api' %}";
+    var URL_APPLY = "{% url 'items:price_adjust_apply_api' %}";
+    var URL_HISTORY = "{% url 'items:price_adjust_history_api' %}";
+    var URL_SEARCH = "{% url 'items:search_api' %}";
+    var modal = new bootstrap.Modal(modalEl);
+    var historyModal = new bootstrap.Modal(document.getElementById('priceAdjustHistoryModal'));
+    var excludedItems = {};            // id -> name
+    var previewKey = null;             // نسخة المدخلات التي عُرضت معاينتها
+    var HC = {{ hc_mode|yesno:"true,false" }};
+
+    function esc(t) { return $('<div>').text(t == null ? '' : t).html(); }
+    function vals(sel) { return $(sel + ':checked').map(function () { return this.value; }).get(); }
+
+    function payload() {
+        var scopeCats = $('input[name=paScope]:checked').val() === 'cats';
+        return {
+            percent: $('#paPercent').val().trim(),
+            fields: vals('.pa-field'),
+            only_categories: scopeCats ? vals('.pa-only-cat') : [],
+            exclude_categories: vals('.pa-excl-cat'),
+            exclude_suppliers: vals('.pa-excl-sup'),
+            exclude_items: Object.keys(excludedItems),
+            exclude_services: $('#paExclServices').is(':checked') ? '1' : '0',
+            exclude_inactive: $('#paExclInactive').is(':checked') ? '1' : '0'
+        };
+    }
+    function showError(msg) { $('#paError').text(msg).removeClass('d-none'); }
+    function invalidate() { previewKey = null; $('#paApplyBtn').prop('disabled', true); $('#paPreview').addClass('d-none'); }
+    function post(url, data) { return $.ajax({ url: url, method: 'POST', data: data, traditional: true }); }
+    function errMsg(xhr, fallback) { return (xhr.responseJSON && xhr.responseJSON.message) || fallback; }
+
+    $('#btnOpenPriceAdjust').on('click', function () { $('#paError').addClass('d-none'); invalidate(); modal.show(); });
+
+    // أي تغيير في المدخلات يلغي المعاينة ويستلزم معاينة جديدة قبل التطبيق
+    $(modalEl).on('input change', 'input, textarea', function (e) {
+        if (e.target.id === 'paNote' || e.target.id === 'paItemSearch') return;
+        invalidate();
+    });
+    $('input[name=paScope]').on('change', function () {
+        $('#paOnlyCatsBox').toggleClass('d-none', $('input[name=paScope]:checked').val() !== 'cats');
+    });
+
+    // بحث المنتجات المستثناة
+    var searchTimer = null;
+    $('#paItemSearch').on('input', function () {
+        var q = this.value.trim();
+        clearTimeout(searchTimer);
+        if (q.length < 2) { $('#paItemResults').addClass('d-none').empty(); return; }
+        searchTimer = setTimeout(function () {
+            $.get(URL_SEARCH, { q: q, types: 'product,service,raw_material,semi_finished' }, function (resp) {
+                var $box = $('#paItemResults').empty();
+                (resp.results || []).forEach(function (it) {
+                    if (excludedItems[it.id]) return;
+                    $('<button type="button">').text(it.name + (it.sku ? '  —  ' + it.sku : '')).data('it', it).appendTo($box);
+                });
+                $box.toggleClass('d-none', !$box.children().length);
+            });
+        }, 250);
+    });
+    $('#paItemResults').on('click', 'button', function () {
+        var it = $(this).data('it');
+        excludedItems[it.id] = it.name;
+        renderChips();
+        $('#paItemSearch').val('');
+        $('#paItemResults').addClass('d-none').empty();
+        invalidate();
+    });
+    $('#paItemChips').on('click', '.pa-chip button', function () {
+        delete excludedItems[$(this).data('id')];
+        renderChips();
+        invalidate();
+    });
+    function renderChips() {
+        var $c = $('#paItemChips').empty();
+        Object.keys(excludedItems).forEach(function (id) {
+            $('<span class="pa-chip">').text(excludedItems[id])
+                .append($('<button type="button" aria-label="إزالة">').html('&times;').data('id', id)).appendTo($c);
+        });
+    }
+
+    $('#paPreviewBtn').on('click', function () {
+        $('#paError').addClass('d-none');
+        var data = payload(), $btn = $(this).prop('disabled', true);
+        post(URL_PREVIEW, data).done(function (r) {
+            var html = '<strong>' + r.affected + '</strong> منتج سيُعدَّل، و<strong>' + r.excluded + '</strong> مستثنى.';
+            if (r.sample.length) {
+                html += '<table class="table table-sm mb-0"><thead><tr><th>المنتج</th><th>البيع قبل</th><th>البيع بعد</th>' +
+                    (HC ? '<th>بالعملة الصعبة بعد</th>' : '') + '<th>التكلفة بعد</th></tr></thead><tbody>';
+                r.sample.forEach(function (x) {
+                    html += '<tr><td>' + esc(x.name) + '</td><td>' + esc(x.old_selling) + '</td><td>' + esc(x.new_selling) + '</td>' +
+                        (HC ? '<td>' + esc(x.new_selling_hc || '-') + '</td>' : '') + '<td>' + esc(x.new_cost) + '</td></tr>';
+                });
+                html += '</tbody></table><div class="text-muted mt-1">عيّنة من أول المنتجات فقط.</div>';
+            }
+            $('#paPreview').html(html).removeClass('d-none');
+            if (r.affected > 0) { previewKey = JSON.stringify(data); $('#paApplyBtn').prop('disabled', false); }
+            else { showError('لا توجد منتجات بأسعار لتعديلها ضمن هذا النطاق'); }
+        }).fail(function (xhr) { invalidate(); showError(errMsg(xhr, 'تعذرت المعاينة')); })
+          .always(function () { $btn.prop('disabled', false); });
+    });
+
+    $('#paApplyBtn').on('click', function () {
+        $('#paError').addClass('d-none');
+        var data = payload();
+        if (JSON.stringify(data) !== previewKey) { showError('تغيّرت المدخلات — اضغط معاينة أولاً'); invalidate(); return; }
+        data.note = $('#paNote').val().trim();
+        if (data.note.length < 3) { showError('اكتب تعليقاً يوضح سبب التعديل (إلزامي)'); $('#paNote').focus(); return; }
+        if (!confirm('سيتم تعديل الأسعار فعلياً. هل أنت متأكد؟')) return;
+        var $btn = $(this).prop('disabled', true);
+        post(URL_APPLY, data).done(function (r) {
+            modal.hide();
+            Enjaz.toast(r.message, 'success');
+            $('#itemsTable').DataTable().ajax.reload(null, false);
+        }).fail(function (xhr) { showError(errMsg(xhr, 'تعذر التطبيق')); $btn.prop('disabled', false); });
+    });
+
+    $('#btnOpenPriceHistory').on('click', function () {
+        $('#paHistoryBody').html('<tr><td colspan="7" class="text-center text-muted">جارٍ التحميل…</td></tr>');
+        historyModal.show();
+        $.get(URL_HISTORY, function (r) {
+            var rows = (r.results || []).map(function (a) {
+                return '<tr><td>' + esc(a.date) + '</td><td>' + esc(a.user) + '</td><td dir="ltr">' + esc(a.percent) + '%</td><td>' +
+                    esc(a.fields) + (a.hc ? '<br><small class="text-muted">' + esc(a.hc) + '</small>' : '') + '</td><td>' + a.items_count +
+                    '</td><td>' + a.excluded_count + '</td><td>' + esc(a.note) + '</td></tr>';
+            });
+            $('#paHistoryBody').html(rows.join('') || '<tr><td colspan="7" class="text-center text-muted">لا توجد تعديلات سابقة</td></tr>');
+        });
+    });
 })();
 </script>
 {% endblock %}

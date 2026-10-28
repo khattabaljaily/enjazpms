@@ -4,7 +4,7 @@
 - السنوي = 10 أشهر (السعر كما هو؛ لا تُذكر «شهران مجاناً» في صفحة الأسعار).
 - الترخيص الدائم لا يُنشر له سعر: النظام SaaS والاشتراك هو المنشور، وأي طلب شراء/ترخيص دائم
   يُتفاوض عليه بسعر خاص (الصفحة تكتفي بعبارة «يرجى التواصل»).
-- باقة المؤسسات: رسوم أساسية للإدارة والمخزن المركزي + سعر لكل فرع.
+- باقة المؤسسات: السعر الأساسي يشمل الإدارة والمخزن المركزي وفرعاً واحداً؛ يبدأ سعر الفرع الإضافي من الفرع الثاني.
 """
 from decimal import Decimal
 
@@ -18,13 +18,15 @@ PLAN_MONTHLY = {
 }
 ENTERPRISE_PER_BRANCH_MONTHLY = Decimal('20')
 
+ENTERPRISE_INCLUDED_BRANCHES = 1   # الفرع الأول مشمول في السعر الأساسي
+
 
 def annual(monthly):
     return monthly * ANNUAL_MONTHS
 
 
 def enterprise_monthly(branches):
-    return PLAN_MONTHLY['enterprise'] + ENTERPRISE_PER_BRANCH_MONTHLY * max(int(branches), 0)
+    return PLAN_MONTHLY['enterprise'] + ENTERPRISE_PER_BRANCH_MONTHLY * max(int(branches) - ENTERPRISE_INCLUDED_BRANCHES, 0)
 
 
 def tenant_monthly_fee(tenant, branch_count=None):

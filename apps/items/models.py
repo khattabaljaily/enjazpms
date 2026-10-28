@@ -476,3 +476,46 @@ def unit_for_item_unit(tenant, item_unit_id):
     if not name:
         return None
     return Unit.objects.filter(tenant=tenant, name=name).first()
+
+
+# ============================================
+# PRICE ADJUSTMENT (زيادة/تخفيض عام على الأسعار — سجل التدقيق)
+# ============================================
+
+class PriceAdjustment(TenantMixin):
+    """
+    عملية تعديل جماعي لأسعار المنتجات بنسبة مئوية (مثل زيادة الجمارك).
+    التعليق إلزامي، وتُحفظ القيم قبل/بعد لكل منتج متأثر في PriceAdjustmentLine.
+    """
+    percent = models.DecimalField('النسبة %', max_digits=7, decimal_places=2)
+    affect_selling = models.BooleanField('سعر البيع', default=True)
+    affect_min = models.BooleanField('الحد الأدنى للبيع', default=True)
+    affect_cost = models.BooleanField('سعر التكلفة', default=False)
+    note = models.TextField('التعليق')
+    scope_summary = models.TextField('النطاق والاستثناءات', blank=True)
+    items_count = models.PositiveIntegerField('عدد المنتجات المعدّلة', default=0)
+    excluded_count = models.PositiveIntegerField('عدد المنتجات المستثناة', default=0)
+    hard_currency_mode = models.BooleanField('وضع العملة الصعبة', default=False)
+    hard_currency = models.CharField('العملة الصعبة', max_length=10, blank=True)
+    exchange_rate = models.DecimalField('سعر الصرف وقت التعديل', max_digits=14, decimal_places=4, null=True, blank=True)
+
+    class Meta:
+        db_table = 'item_price_adjustments'
+        verbose_name = 'تعديل عام للأسعار'
+        verbose_name_plural = 'تعديلات الأسعار العامة'
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f'{self.percent}% — {self.created_at:%Y-%m-%d}'
+
+
+class PriceAdjustmentLine(models.Model):
+    """القيم قبل/بعد لمنتج واحد ضمن PriceAdjustment (نصوص عشرية، للمراجعة والتراجع اليدوي)."""
+    adjustment = models.ForeignKey(PriceAdjustment, on_delete=models.CASCADE, related_name='lines')
+    item = models.ForeignKey('items.Item', on_delete=models.SET_NULL, null=True, blank=True, related_name='price_adjustment_lines')
+    item_name = models.CharField(max_length=300)
+    old_values = models.JSONField(default=dict)
+    new_values = models.JSONField(default=dict)
+
+    class Meta:
+        db_table = 'item_price_adjustment_lines'

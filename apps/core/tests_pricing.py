@@ -24,8 +24,10 @@ class PricingRulesTests(TenantTestCase):
 
     def test_enterprise_is_base_plus_per_branch(self):
         self.assertEqual(enterprise_monthly(0), Decimal('65'))
-        self.assertEqual(enterprise_monthly(5), Decimal('165'))
-        self.assertEqual(enterprise_monthly(10), Decimal('265'))
+        self.assertEqual(enterprise_monthly(1), Decimal('65'))    # الفرع الأول مشمول في الأساس
+        self.assertEqual(enterprise_monthly(2), Decimal('85'))
+        self.assertEqual(enterprise_monthly(5), Decimal('145'))
+        self.assertEqual(enterprise_monthly(10), Decimal('245'))
 
     def test_tenant_fee_counts_only_active_branches_for_enterprise(self):
         self.tenant.subscription_plan = 'enterprise'
@@ -33,7 +35,7 @@ class PricingRulesTests(TenantTestCase):
         Branch.objects.create(tenant=self.tenant, name='فرع 1')
         Branch.objects.create(tenant=self.tenant, name='فرع 2')
         Branch.objects.create(tenant=self.tenant, name='فرع مغلق', is_active=False)
-        self.assertEqual(tenant_monthly_fee(self.tenant), Decimal('105'))   # 65 + 2 فرعين نشطين × 20
+        self.assertEqual(tenant_monthly_fee(self.tenant), Decimal('85'))   # 65 (يشمل الفرع الأول) + فرع إضافي واحد × 20
 
     def test_tenant_fee_for_flat_plans(self):
         for plan, fee in (('trial', '0'), ('basic', '25'), ('pro', '45')):
@@ -78,6 +80,6 @@ class RevenueReportTests(TenantTestCase):
         self.assertEqual(resp.status_code, 200)
         enterprise = resp.context['plan_revenue']['enterprise']
         self.assertEqual(enterprise['count'], 1)
-        self.assertEqual(enterprise['monthly'], Decimal('125'))
+        self.assertEqual(enterprise['monthly'], Decimal('105'))
         row = next(r for r in resp.context['tenant_stats'] if r['slug'] == self.tenant.slug)
-        self.assertEqual(row['monthly_fee'], Decimal('125'))
+        self.assertEqual(row['monthly_fee'], Decimal('105'))

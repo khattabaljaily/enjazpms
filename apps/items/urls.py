@@ -12,6 +12,9 @@ urlpatterns = [
     path('api/<int:pk>/update/', views.item_update_api, name='update_api'),
     path('api/<int:pk>/delete/', views.item_delete_api, name='delete_api'),
     path('api/search/', views.item_search_api, name='search_api'),
+    path('api/price-adjust/preview/', views.item_price_adjust_preview_api, name='price_adjust_preview_api'),
+    path('api/price-adjust/apply/', views.item_price_adjust_apply_api, name='price_adjust_apply_api'),
+    path('api/price-adjust/history/', views.item_price_adjust_history_api, name='price_adjust_history_api'),
 
     # ------- Categories APIs -------
     path('categories/api/table/', views.category_table_api, name='category_table_api'),

@@ -104,6 +104,7 @@ def item_list(request):
         'local_currency_symbol': currency_symbol(local_cur),
         'exchange_rate': tenant.exchange_rate if tenant.hard_currency_mode else None,
         'currency_symbols_json': CURRENCY_SYMBOLS,
+        'adjust_categories': list(Category.objects.for_tenant(tenant).filter(is_active=True).order_by('name').values('id', 'name')),
         'stats': {
             'total': total,
             'active': active,
@@ -843,6 +844,126 @@ def item_update_api(request, pk):
         'message': 'يرجى التحقق من الحقول',
         'errors': _serialize_errors(form),
     }, status=400)
+
+
+# ============================================================
+# Items: زيادة/تخفيض عام على الأسعار (نسبة مئوية)
+# ============================================================
+
+def _parse_price_adjustment(request, tenant):
+    """يقرأ ويتحقق من مدخلات نافذة «تعديل عام للأسعار»؛ يرفع PriceAdjustmentError برسالة عربية."""
+    from .services import (
+        MAX_PERCENT, MIN_PERCENT, PRICE_FIELD_PAIRS, PriceAdjustmentError,
+        build_price_adjustment_queryset,
+    )
+    post = request.POST
+    try:
+        percent = Decimal(post.get('percent', '').strip().replace(',', '.'))
+    except Exception:
+        raise PriceAdjustmentError('أدخل نسبة صحيحة')
+    if not percent.is_finite() or percent == 0:
+        raise PriceAdjustmentError('النسبة يجب أن تكون رقماً غير الصفر')
+    if percent < MIN_PERCENT or percent > MAX_PERCENT:
+        raise PriceAdjustmentError(f'النسبة يجب أن تكون بين {MIN_PERCENT} و{MAX_PERCENT}')
+    percent = percent.quantize(Decimal('0.01'))
+
+    fields = [k for k in post.getlist('fields') if k in PRICE_FIELD_PAIRS]
+    if not fields:
+        raise PriceAdjustmentError('اختر سعراً واحداً على الأقل للتعديل')
+
+    def ids(name):
+        out = []
+        for v in post.getlist(name):
+            if str(v).strip().isdigit():
+                out.append(int(v))
+        return out
+
+    qs, excluded_count, scope_summary = build_price_adjustment_queryset(
+        tenant,
+        only_category_ids=ids('only_categories'),
+        exclude_category_ids=ids('exclude_categories'),
+        exclude_supplier_ids=ids('exclude_suppliers'),
+        exclude_item_ids=ids('exclude_items'),
+        exclude_services=post.get('exclude_services') == '1',
+        exclude_inactive=post.get('exclude_inactive') == '1',
+    )
+    return percent, fields, qs, excluded_count, scope_summary
+
+
+@login_required
+@require_permission('change_items')
+@require_POST
+@branch_scope_exempt('تعديل الأسعار العام للإدارة المركزية فقط — يُرفض لأي مستخدم مربوط بفرع داخل الـ view')
+def item_price_adjust_preview_api(request):
+    from .services import PriceAdjustmentError, preview_price_adjustment
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    if getattr(request, 'branch', None) is not None:
+        return JsonResponse({'success': False, 'message': 'التعديل العام للأسعار متاح للإدارة المركزية فقط'}, status=403)
+    try:
+        percent, fields, qs, excluded_count, _summary = _parse_price_adjustment(request, tenant)
+        affected, rows = preview_price_adjustment(tenant, percent, fields, qs)
+    except PriceAdjustmentError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    return JsonResponse({
+        'success': True, 'affected': affected, 'excluded': excluded_count, 'sample': rows,
+        'hc_mode': bool(tenant.hard_currency_mode),
+    })
+
+
+@login_required
+@require_permission('change_items')
+@require_POST
+@branch_scope_exempt('تعديل الأسعار العام للإدارة المركزية فقط — يُرفض لأي مستخدم مربوط بفرع داخل الـ view')
+def item_price_adjust_apply_api(request):
+    from .services import PriceAdjustmentError, apply_price_adjustment
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    if getattr(request, 'branch', None) is not None:
+        return JsonResponse({'success': False, 'message': 'التعديل العام للأسعار متاح للإدارة المركزية فقط'}, status=403)
+    note = request.POST.get('note', '').strip()
+    if len(note) < 3:
+        return JsonResponse({'success': False, 'message': 'اكتب تعليقاً يوضح سبب التعديل (إلزامي)'}, status=400)
+    try:
+        percent, fields, qs, excluded_count, scope_summary = _parse_price_adjustment(request, tenant)
+        adj = apply_price_adjustment(tenant, request.user, percent, fields, note, qs, excluded_count, scope_summary)
+    except PriceAdjustmentError as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    if not adj.items_count:
+        adj.delete()
+        return JsonResponse({'success': False, 'message': 'لا توجد منتجات بأسعار لتعديلها ضمن هذا النطاق'}, status=400)
+    log_activity(request, 'تعديل عام للأسعار', f'{percent}% — {adj.items_count} منتج — {note}', 'update')
+    return JsonResponse({
+        'success': True, 'items_count': adj.items_count,
+        'message': f'تم تعديل أسعار {adj.items_count} منتج بنسبة {percent}%',
+    })
+
+
+@login_required
+@require_permission('view_items')
+@branch_scope_exempt('سجل التعديلات العامة للأسعار للإدارة المركزية فقط — يُرفض لأي مستخدم مربوط بفرع داخل الـ view')
+def item_price_adjust_history_api(request):
+    from .models import PriceAdjustment
+    tenant = _ensure_tenant(request)
+    if not tenant:
+        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+    if getattr(request, 'branch', None) is not None:
+        return JsonResponse({'success': False, 'message': 'غير متاح'}, status=403)
+    rows = [
+        {
+            'id': a.id, 'date': a.created_at.strftime('%Y-%m-%d %H:%M'),
+            'user': (a.created_by.get_full_name() or a.created_by.username) if a.created_by else '-',
+            'percent': str(a.percent), 'items_count': a.items_count, 'excluded_count': a.excluded_count,
+            'fields': ' + '.join(
+                lbl for flag, lbl in ((a.affect_selling, 'البيع'), (a.affect_min, 'الحد الأدنى'), (a.affect_cost, 'التكلفة')) if flag),
+            'note': a.note, 'scope': a.scope_summary,
+            'hc': f'{a.hard_currency} @ {a.exchange_rate}' if a.hard_currency_mode else '',
+        }
+        for a in PriceAdjustment.objects.for_tenant(tenant).select_related('created_by')[:50]
+    ]
+    return JsonResponse({'success': True, 'results': rows})
 
 
 # ============================================================
