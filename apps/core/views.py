@@ -517,6 +517,8 @@ PLATFORM_PERMS = [
     ('manage_exchange_rates', 'سعر الصرف المرجعي',       'fa-coins'),
     ('view_notifications','إشعارات النظام',            'fa-bell'),
     ('manage_marketing',  'إدارة التسويق',              'fa-bullhorn'),
+    ('manage_billing',    'المدفوعات والإيصالات',       'fa-receipt'),
+    ('send_broadcasts',   'إرسال إشعارات للمشتركين',    'fa-paper-plane'),
 ]
 
 

@@ -1201,3 +1201,181 @@ class GlobalFxRate(models.Model):
 
     def __str__(self):
         return f'{self.currency} {self.per_usd}/USD'
+
+
+# ============================================
+# SUBSCRIPTION PAYMENTS (مدفوعات الاشتراكات — تسجيل يدوي)
+# ============================================
+
+class SubscriptionPayment(models.Model):
+    """
+    دفعة اشتراك سجّلها مدير المنصة يدوياً لمشترك، وتمدّد اشتراكه عند الحفظ.
+    لكل دفعة رقم إيصال متسلسل سنوياً (ENJ-2026-0001) ويُصدَر لها إيصال PDF بترويسة إنجاز.
+    الإرسال للمشترك يدوي أيضاً: يضغط المدير «إرسال بالبريد» فيُسجَّل وقته هنا.
+    """
+
+    METHOD_CHOICES = [
+        ('cash', 'نقداً'),
+        ('bank', 'تحويل بنكي'),
+        ('wallet', 'محفظة إلكترونية'),
+        ('other', 'أخرى'),
+    ]
+    CURRENCY_CHOICES = [('USD', 'دولار'), ('SDG', 'جنيه (SDG)')]
+
+    tenant = models.ForeignKey(
+        'Tenant', on_delete=models.PROTECT, related_name='subscription_payments',
+        verbose_name='المشترك',
+    )
+    receipt_number = models.CharField('رقم الإيصال', max_length=20, unique=True, editable=False)
+    amount = models.DecimalField('المبلغ', max_digits=12, decimal_places=2)
+    currency = models.CharField('العملة', max_length=3, choices=CURRENCY_CHOICES, default='USD')
+    method = models.CharField('طريقة الدفع', max_length=10, choices=METHOD_CHOICES, default='bank')
+    reference = models.CharField('المرجع (رقم العملية)', max_length=120, blank=True)
+    paid_at = models.DateField('تاريخ الدفع', default=timezone.localdate)
+
+    plan = models.CharField('الباقة', max_length=20, choices=Tenant.SUBSCRIPTION_PLANS)
+    period_days = models.PositiveIntegerField('مدة الاشتراك (أيام)')
+    period_start = models.DateField('بداية الفترة')
+    period_end = models.DateField('نهاية الفترة')
+    notes = models.TextField('ملاحظات', blank=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name='سجّلها',
+    )
+    created_at = models.DateTimeField('تاريخ التسجيل', auto_now_add=True, db_index=True)
+    voided_at = models.DateTimeField('تاريخ الإلغاء', null=True, blank=True)
+    emailed_at = models.DateTimeField('آخر إرسال بالبريد', null=True, blank=True)
+    emailed_to = models.CharField('أُرسل إلى', max_length=254, blank=True)
+
+    class Meta:
+        db_table = 'subscription_payments'
+        verbose_name = 'دفعة اشتراك'
+        verbose_name_plural = 'مدفوعات الاشتراكات'
+        ordering = ['-paid_at', '-id']
+
+    def __str__(self):
+        return f'{self.receipt_number} — {self.tenant}'
+
+    @property
+    def is_void(self):
+        return self.voided_at is not None
+
+    @classmethod
+    def next_receipt_number(cls, year):
+        prefix = f'ENJ-{year}-'
+        last = (cls.objects.select_for_update()
+                .filter(receipt_number__startswith=prefix)
+                .order_by('-receipt_number').values_list('receipt_number', flat=True).first())
+        seq = int(last.rsplit('-', 1)[1]) + 1 if last else 1
+        return f'{prefix}{seq:04d}'
+
+
+# ============================================
+# SUBSCRIPTION INVOICES (مطالبات السداد — تُطبع وتُسلَّم للمشترك)
+# ============================================
+
+class SubscriptionInvoice(models.Model):
+    """
+    مطالبة بسداد اشتراك تُطبع بترويسة إنجاز، فيها آخر موعد للسداد يحدده مدير المنصة.
+    لا تمدّد الاشتراك ولا تُحتسب إيراداً؛ عند استلام المبلغ تُسجَّل دفعة (SubscriptionPayment)
+    وتُربط بالمطالبة فتصير «مسدَّدة».
+    """
+
+    tenant = models.ForeignKey(
+        'Tenant', on_delete=models.PROTECT, related_name='subscription_invoices', verbose_name='المشترك',
+    )
+    invoice_number = models.CharField('رقم المطالبة', max_length=20, unique=True, editable=False)
+    amount = models.DecimalField('المبلغ', max_digits=12, decimal_places=2)
+    currency = models.CharField('العملة', max_length=3, choices=SubscriptionPayment.CURRENCY_CHOICES, default='USD')
+    plan = models.CharField('الباقة', max_length=20, choices=Tenant.SUBSCRIPTION_PLANS)
+    period_days = models.PositiveIntegerField('مدة الاشتراك (أيام)')
+    issue_date = models.DateField('تاريخ الإصدار', default=timezone.localdate)
+    due_date = models.DateField('آخر موعد للسداد')
+    notes = models.TextField('ملاحظات', blank=True)
+    payment = models.OneToOneField(
+        SubscriptionPayment, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='invoice', verbose_name='الدفعة المسدِّدة',
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name='أصدرها',
+    )
+    created_at = models.DateTimeField('تاريخ التسجيل', auto_now_add=True, db_index=True)
+    voided_at = models.DateTimeField('تاريخ الإلغاء', null=True, blank=True)
+
+    class Meta:
+        db_table = 'subscription_invoices'
+        verbose_name = 'مطالبة سداد'
+        verbose_name_plural = 'مطالبات السداد'
+        ordering = ['-issue_date', '-id']
+
+    def __str__(self):
+        return f'{self.invoice_number} — {self.tenant}'
+
+    @property
+    def is_void(self):
+        return self.voided_at is not None
+
+    @property
+    def is_paid(self):
+        return self.payment_id is not None
+
+    @property
+    def is_overdue(self):
+        return not self.is_void and not self.is_paid and self.due_date < timezone.localdate()
+
+    @property
+    def status(self):
+        if self.is_void:
+            return 'void'
+        if self.is_paid:
+            return 'paid'
+        return 'overdue' if self.is_overdue else 'open'
+
+    @classmethod
+    def next_invoice_number(cls, year):
+        prefix = f'ENJ-INV-{year}-'
+        last = (cls.objects.select_for_update()
+                .filter(invoice_number__startswith=prefix)
+                .order_by('-invoice_number').values_list('invoice_number', flat=True).first())
+        seq = int(last.rsplit('-', 1)[1]) + 1 if last else 1
+        return f'{prefix}{seq:04d}'
+
+
+# ============================================
+# PLATFORM BROADCASTS (إشعارات المنصة المرسلة للمشتركين)
+# ============================================
+
+class PlatformBroadcast(models.Model):
+    """سجل إشعار أرسله مدير المنصة لمشتركين (يظهر لكل مستخدمي المشترك في جرس الإشعارات)."""
+
+    AUDIENCE_CHOICES = [
+        ('all', 'كل المشتركين النشطين'),
+        ('plan', 'مشتركو باقة محددة'),
+        ('expiring', 'اشتراكهم ينتهي خلال 7 أيام'),
+        ('selected', 'مشتركون محددون'),
+    ]
+
+    title = models.CharField('العنوان', max_length=200)
+    message = models.TextField('الرسالة')
+    link = models.CharField('الرابط', max_length=300, blank=True)
+    priority = models.CharField('الأولوية', max_length=10, choices=[
+        ('low', 'منخفضة'), ('medium', 'متوسطة'), ('high', 'عالية')], default='medium')
+    audience = models.CharField('الفئة المستهدفة', max_length=10, choices=AUDIENCE_CHOICES, default='all')
+    audience_plan = models.CharField('الباقة', max_length=20, blank=True)
+    recipients_count = models.PositiveIntegerField('عدد المشتركين', default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name='أرسلها',
+    )
+    created_at = models.DateTimeField('تاريخ الإرسال', auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'platform_broadcasts'
+        verbose_name = 'إشعار منصة'
+        verbose_name_plural = 'إشعارات المنصة'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title

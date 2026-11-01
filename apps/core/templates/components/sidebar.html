@@ -169,6 +169,42 @@
         {% endif %}
     </ul>
 
+    <!-- المدفوعات والإيصالات -->
+    {% if user.is_superuser or 'manage_billing' in user.platform_permissions %}
+    <ul class="nav flex-column mt-1">
+        <li class="nav-item">
+            <a class="nav-link{% if request.resolver_match.url_name == 'admin_payments' %} active{% endif %}" href="{% url 'core:admin_payments' %}">
+                <span class="nav-icon"><i class="fas fa-receipt"></i></span>
+                المدفوعات والإيصالات
+            </a>
+        </li>
+    </ul>
+    {% endif %}
+
+    <!-- مطالبات السداد -->
+    {% if user.is_superuser or 'manage_billing' in user.platform_permissions %}
+    <ul class="nav flex-column mt-1">
+        <li class="nav-item">
+            <a class="nav-link{% if request.resolver_match.url_name == 'admin_invoices' %} active{% endif %}" href="{% url 'core:admin_invoices' %}">
+                <span class="nav-icon"><i class="fas fa-file-invoice-dollar"></i></span>
+                مطالبات السداد
+            </a>
+        </li>
+    </ul>
+    {% endif %}
+
+    <!-- إشعارات المشتركين -->
+    {% if user.is_superuser or 'send_broadcasts' in user.platform_permissions %}
+    <ul class="nav flex-column mt-1">
+        <li class="nav-item">
+            <a class="nav-link{% if request.resolver_match.url_name == 'admin_broadcasts' %} active{% endif %}" href="{% url 'core:admin_broadcasts' %}">
+                <span class="nav-icon"><i class="fas fa-bullhorn"></i></span>
+                إشعارات المشتركين
+            </a>
+        </li>
+    </ul>
+    {% endif %}
+
     <!-- الإشعارات -->
     {% if user.is_superuser or 'view_notifications' in user.platform_permissions %}
     <ul class="nav flex-column mt-1">

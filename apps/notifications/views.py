@@ -1,6 +1,7 @@
 import json
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST, require_GET
@@ -44,7 +45,10 @@ _OWNER_HIDDEN_TYPES = ()
 def _visible_notifications(request, tenant):
     """إشعارات المستخدم الحالي: مستخدم الفرع يرى إشعارات فرعه فقط."""
     branch = getattr(request, 'branch', None)
-    qs = Notification.objects.filter(tenant=tenant).for_branch(branch, strict=True)
+    qs = Notification.objects.filter(tenant=tenant)
+    if branch is not None:
+        # إشعارات إدارة المنصة تصل كل مستخدمي المشترك مهما كان فرعهم
+        qs = qs.filter(Q(branch=branch) | Q(notification_type='platform'))
     if getattr(request.user, 'is_tenant_admin', False) and tenant.is_enterprise():
         qs = qs.exclude(notification_type__in=_OWNER_HIDDEN_TYPES)
     return qs
@@ -95,6 +99,7 @@ def notification_api(request):
         'stocktake_done':  'fa-clipboard-check text-success',
         'exchange_rate':   'fa-coins text-warning',
         'agent_request':   'fa-id-badge text-primary',
+        'platform':        'fa-bullhorn text-primary',
         'general':         'fa-bell text-secondary',
     }
 

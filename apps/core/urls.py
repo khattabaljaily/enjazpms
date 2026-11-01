@@ -2,7 +2,7 @@
 Core URLs
 """
 from django.urls import path
-from . import views, survey_views
+from . import views, survey_views, billing_views
 
 app_name = 'core'
 
@@ -72,6 +72,23 @@ urlpatterns = [
     path('system/notifications/api/mark-read/<int:pk>/', views.admin_notifications_mark_read, name='admin_notifications_mark_read'),
     path('system/notifications/api/mark-all-read/', views.admin_notifications_mark_all_read, name='admin_notifications_mark_all_read'),
     path('system/notifications/api/unread/', views.admin_notifications_api, name='admin_notifications_api'),
+
+    # System — Payments (مدفوعات الاشتراكات اليدوية + الإيصالات)
+    path('system/payments/', billing_views.admin_payments, name='admin_payments'),
+    path('system/payments/api/create/', billing_views.admin_payment_create_api, name='admin_payment_create_api'),
+    path('system/payments/<int:pk>/receipt/', billing_views.admin_payment_receipt, name='admin_payment_receipt'),
+    path('system/payments/api/<int:pk>/email/', billing_views.admin_payment_email_api, name='admin_payment_email_api'),
+    path('system/payments/api/<int:pk>/void/', billing_views.admin_payment_void_api, name='admin_payment_void_api'),
+
+    # System — Invoices (مطالبات السداد)
+    path('system/invoices/', billing_views.admin_invoices, name='admin_invoices'),
+    path('system/invoices/api/create/', billing_views.admin_invoice_create_api, name='admin_invoice_create_api'),
+    path('system/invoices/<int:pk>/pdf/', billing_views.admin_invoice_pdf, name='admin_invoice_pdf'),
+    path('system/invoices/api/<int:pk>/void/', billing_views.admin_invoice_void_api, name='admin_invoice_void_api'),
+
+    # System — Broadcasts (إشعارات المنصة للمشتركين)
+    path('system/broadcasts/', billing_views.admin_broadcasts, name='admin_broadcasts'),
+    path('system/broadcasts/api/send/', billing_views.admin_broadcast_send_api, name='admin_broadcast_send_api'),
 
     # System — Audit & Settings
     path('system/audit-log/', views.admin_audit_log, name='admin_audit_log'),

@@ -1,0 +1,309 @@
+{% extends "layouts/dashboard.html" %}
+{% load static humanize %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_reports.css' %}?v=1.1">
+<style>
+    .pay-act { border: 1px solid var(--border-color); background: var(--surface); color: var(--text-secondary);
+               border-radius: 8px; padding: .25rem .55rem; font-size: .78rem; text-decoration: none; cursor: pointer; }
+    .pay-act:hover { background: var(--surface-hover); color: var(--text-primary); }
+    .pay-void { text-decoration: line-through; opacity: .55; }
+    .pay-tag { font-size: .7rem; padding: .1rem .5rem; border-radius: 99px; background: var(--surface-hover); color: var(--text-tertiary); }
+    .pay-tag--ok { background: rgba(22,163,74,.12); color: #16a34a; }
+    .pay-tag--bad { background: rgba(220,38,38,.12); color: #dc2626; }
+    .pay-form label { font-size: .78rem; font-weight: 700; color: var(--text-tertiary); margin-bottom: .2rem; }
+</style>
+{% endblock %}
+
+{% block page_title %}المدفوعات والإيصالات{% endblock %}
+{% block page_description %}تسجيل دفعات الاشتراكات يدوياً وإصدار إيصال بترويسة إنجاز{% endblock %}
+
+{% block content %}
+<div class="rpt-scene">
+
+<div class="rpt-hero">
+    <div class="rpt-hero__orb rpt-hero__orb--1"></div>
+    <div class="rpt-hero__orb rpt-hero__orb--2"></div>
+    <div class="rpt-hero__inner">
+        <div class="rpt-hero__left">
+            <div class="rpt-hero__icon"><i class="fas fa-receipt"></i></div>
+            <div>
+                <div class="rpt-hero__kicker">إدارة المنصة</div>
+                <h2 class="rpt-hero__title">المدفوعات والإيصالات</h2>
+                <p class="rpt-hero__desc">سجّل الدفعة بعد استلامها فيُمدَّد الاشتراك ويصدر الإيصال؛ الإرسال للمشترك يدوي</p>
+            </div>
+        </div>
+        <button type="button" class="btn btn-light fw-bold" id="btnNewPayment">
+            <i class="fas fa-plus me-1"></i> تسجيل دفعة
+        </button>
+    </div>
+</div>
+
+<div class="rpt-alerts">
+    <div class="rpt-alert-card rpt-alert-card--green">
+        <div class="rpt-alert-card__num">${{ month_usd|floatformat:"-2"|intcomma }}</div>
+        <div class="rpt-alert-card__lbl">محصّل هذا الشهر (دولار)</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-dollar-sign"></i></div>
+    </div>
+    <div class="rpt-alert-card rpt-alert-card--amber">
+        <div class="rpt-alert-card__num">{{ month_sdg|floatformat:"-2"|intcomma }}</div>
+        <div class="rpt-alert-card__lbl">محصّل هذا الشهر (جنيه)</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-coins"></i></div>
+    </div>
+    <div class="rpt-alert-card rpt-alert-card--indigo">
+        <div class="rpt-alert-card__num">${{ total_usd|floatformat:"-2"|intcomma }}</div>
+        <div class="rpt-alert-card__lbl">الإجمالي (دولار)</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-sack-dollar"></i></div>
+    </div>
+    <div class="rpt-alert-card rpt-alert-card--muted">
+        <div class="rpt-alert-card__num">{{ payments_count }}</div>
+        <div class="rpt-alert-card__lbl">عدد الإيصالات السارية</div>
+        <div class="rpt-alert-card__icon"><i class="fas fa-file-invoice"></i></div>
+    </div>
+</div>
+
+<div class="rpt-panel">
+    <div class="rpt-panel__hd">
+        <i class="fas fa-list"></i><span>سجل الدفعات</span>
+        <form method="get" class="rpt-search-wrap ms-auto">
+            <i class="fas fa-search rpt-search-icon"></i>
+            <input type="text" name="q" value="{{ q }}" class="rpt-search" placeholder="مشترك، رقم إيصال، مرجع...">
+        </form>
+    </div>
+    <div class="rpt-table-wrap">
+        <table class="rpt-table">
+            <thead>
+                <tr>
+                    <th>الإيصال</th><th>المشترك</th><th>المبلغ</th><th>الباقة / الفترة</th>
+                    <th>الطريقة</th><th>تاريخ الدفع</th><th>الإرسال</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr class="{% if p.is_void %}pay-void{% endif %}">
+                    <td><strong style="color:#c9840f">{{ p.receipt_number }}</strong>
+                        {% if p.is_void %}<span class="pay-tag pay-tag--bad">ملغى</span>{% endif %}</td>
+                    <td>{{ p.tenant.name }}</td>
+                    <td class="rpt-td--num">{% if p.currency == 'USD' %}${{ p.amount|floatformat:"-2"|intcomma }}{% else %}{{ p.amount|floatformat:"-2"|intcomma }} جنيه{% endif %}</td>
+                    <td>{{ p.get_plan_display }}<div class="rpt-tenant-slug">{{ p.period_start|date:"Y-m-d" }} ← {{ p.period_end|date:"Y-m-d" }}</div></td>
+                    <td>{{ p.get_method_display }}{% if p.reference %}<div class="rpt-tenant-slug">{{ p.reference }}</div>{% endif %}</td>
+                    <td>{{ p.paid_at|date:"Y-m-d" }}</td>
+                    <td>{% if p.emailed_at %}<span class="pay-tag pay-tag--ok" title="{{ p.emailed_to }}">أُرسل {{ p.emailed_at|date:"Y-m-d" }}</span>
+                        {% else %}<span class="pay-tag">لم يُرسل</span>{% endif %}</td>
+                    <td style="white-space:nowrap">
+                        <a class="pay-act" href="{% url 'core:admin_payment_receipt' p.pk %}" target="_blank" title="عرض / طباعة"><i class="fas fa-eye"></i></a>
+                        <a class="pay-act" href="{% url 'core:admin_payment_receipt' p.pk %}?download=1" title="تنزيل PDF"><i class="fas fa-download"></i></a>
+                        {% if not p.is_void %}
+                        <button class="pay-act js-email" data-id="{{ p.pk }}" data-num="{{ p.receipt_number }}" data-email="{{ p.tenant.email }}" title="إرسال بالبريد"><i class="fas fa-paper-plane"></i></button>
+                        <button class="pay-act js-void" data-id="{{ p.pk }}" data-num="{{ p.receipt_number }}" title="إلغاء الإيصال"><i class="fas fa-ban"></i></button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="rpt-empty">لا توجد دفعات بعد — اضغط «تسجيل دفعة»</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+
+<!-- تسجيل دفعة -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content cx-confirm-modal">
+            <div class="cx-confirm-body pay-form text-start">
+                <h5 class="cx-confirm-title text-center mb-3">تسجيل دفعة اشتراك</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label>المشترك</label>
+                        <select id="payTenant" class="form-select form-select-sm">
+                            <option value="">— اختر —</option>
+                            {% for t in tenants %}<option value="{{ t.id }}" data-plan="{{ t.subscription_plan }}">{{ t.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label>الباقة</label>
+                        <select id="payPlan" class="form-select form-select-sm">
+                            {% for k, v in plans %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label>المبلغ</label>
+                        <input type="number" id="payAmount" class="form-control form-control-sm" min="0" step="0.01" inputmode="decimal">
+                    </div>
+                    <div class="col-md-4">
+                        <label>العملة</label>
+                        <select id="payCurrency" class="form-select form-select-sm">
+                            {% for k, v in currencies %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label>مدة الاشتراك</label>
+                        <select id="payDays" class="form-select form-select-sm">
+                            <option value="30">شهر (30 يوماً)</option>
+                            <option value="90">3 أشهر (90 يوماً)</option>
+                            <option value="180">6 أشهر (180 يوماً)</option>
+                            <option value="365">سنة (365 يوماً)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label>طريقة الدفع</label>
+                        <select id="payMethod" class="form-select form-select-sm">
+                            {% for k, v in methods %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label>المرجع (رقم العملية)</label>
+                        <input type="text" id="payRef" class="form-control form-control-sm" maxlength="120">
+                    </div>
+                    <div class="col-md-4">
+                        <label>تاريخ الدفع</label>
+                        <input type="date" id="payDate" class="form-control form-control-sm" value="{{ today|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-12">
+                        <label>ملاحظات (تظهر في الإيصال)</label>
+                        <textarea id="payNotes" class="form-control form-control-sm" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="small mt-3" style="color:var(--text-tertiary)">
+                    عند الحفظ يُمدَّد اشتراك المشترك بهذه المدة (من نهاية اشتراكه الحالي إن كان ساريًا، وإلا من اليوم) ويُفعَّل حسابه إن كان موقوفاً.
+                </div>
+                <div id="payError" class="text-danger small mt-2 d-none"></div>
+            </div>
+            <div class="cx-confirm-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" id="btnSavePayment"
+                    style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-weight:600;">
+                    <i class="fas fa-check me-1"></i> حفظ وإصدار الإيصال
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- إرسال الإيصال بالبريد -->
+<div class="modal fade" id="emailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cx-confirm-dialog">
+        <div class="modal-content cx-confirm-modal">
+            <div class="cx-confirm-body pay-form text-start">
+                <h5 class="cx-confirm-title text-center">إرسال الإيصال بالبريد</h5>
+                <p class="cx-confirm-desc text-center">الإيصال <strong id="emailNum"></strong> كملف PDF مرفق</p>
+                <input type="hidden" id="emailPayId">
+                <label>البريد الإلكتروني للمستلم</label>
+                <input type="email" id="emailTo" class="form-control form-control-sm" dir="ltr">
+                <div id="emailError" class="text-danger small mt-2 d-none"></div>
+            </div>
+            <div class="cx-confirm-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" id="btnSendEmail"
+                    style="background:linear-gradient(135deg,#f6a821,#c9840f);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-weight:600;">
+                    <i class="fas fa-paper-plane me-1"></i> إرسال
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if prefill %}{{ prefill|json_script:"prefillData" }}{% endif %}
+<script>
+(function () {
+    const URL_CREATE = "{% url 'core:admin_payment_create_api' %}";
+    const URL_EMAIL  = (id) => "{% url 'core:admin_payment_email_api' 0 %}".replace('/0/', '/' + id + '/');
+    const URL_VOID   = (id) => "{% url 'core:admin_payment_void_api' 0 %}".replace('/0/', '/' + id + '/');
+    const payModal   = new bootstrap.Modal(document.getElementById('paymentModal'));
+    const emailModal = new bootstrap.Modal(document.getElementById('emailModal'));
+
+    function post(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(body || {}),
+        }).then(r => r.json().catch(() => ({ success: false, message: 'استجابة غير صالحة' })));
+    }
+
+    $('#btnNewPayment').on('click', function () {
+        $('#paymentModal input[type=text], #paymentModal input[type=number], #paymentModal textarea').val('');
+        $('#payTenant').val('');
+        $('#payError').addClass('d-none');
+        payModal.show();
+    });
+
+    let invoiceId = null;
+    {% if prefill %}
+    (function (pf) {
+        invoiceId = pf.invoice_id;
+        $('#payTenant').val(pf.tenant_id); $('#payPlan').val(pf.plan); $('#payAmount').val(pf.amount);
+        $('#payCurrency').val(pf.currency); $('#payDays').val(String(pf.days));
+        $('#payRef, #payNotes').val('');
+        $('#payError').addClass('d-none');
+        $('#paymentModal .cx-confirm-title').text('تسجيل دفعة للمطالبة ' + pf.number);
+        payModal.show();
+    })(JSON.parse(document.getElementById('prefillData').textContent));
+    {% endif %}
+
+    $('#payTenant').on('change', function () {
+        const plan = $(this).find(':selected').data('plan');
+        if (plan) $('#payPlan').val(plan);
+    });
+
+    $('#btnSavePayment').on('click', function () {
+        const $btn = $(this), orig = $btn.html();
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> جاري...');
+        post(URL_CREATE, {
+            tenant_id: $('#payTenant').val(), plan: $('#payPlan').val(), amount: $('#payAmount').val(),
+            currency: $('#payCurrency').val(), days: $('#payDays').val(), method: $('#payMethod').val(),
+            reference: $('#payRef').val(), invoice_id: invoiceId, paid_at: $('#payDate').val(), notes: $('#payNotes').val(),
+        }).then(function (resp) {
+            if (resp.success) {
+                payModal.hide();
+                Enjaz.toast(resp.message, 'success');
+                setTimeout(() => location.reload(), 900);
+            } else {
+                $('#payError').removeClass('d-none').text(resp.message || 'حدث خطأ');
+            }
+        }).catch(() => $('#payError').removeClass('d-none').text('حدث خطأ في الاتصال'))
+          .finally(() => $btn.prop('disabled', false).html(orig));
+    });
+
+    $(document).on('click', '.js-email', function () {
+        $('#emailPayId').val($(this).data('id'));
+        $('#emailNum').text($(this).data('num'));
+        $('#emailTo').val($(this).data('email') || '');
+        $('#emailError').addClass('d-none');
+        emailModal.show();
+    });
+
+    $('#btnSendEmail').on('click', function () {
+        const $btn = $(this), orig = $btn.html();
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> جاري الإرسال...');
+        post(URL_EMAIL($('#emailPayId').val()), { email: $('#emailTo').val() }).then(function (resp) {
+            if (resp.success) {
+                emailModal.hide();
+                Enjaz.toast(resp.message, 'success');
+                setTimeout(() => location.reload(), 900);
+            } else {
+                $('#emailError').removeClass('d-none').text(resp.message || 'تعذّر الإرسال');
+            }
+        }).catch(() => $('#emailError').removeClass('d-none').text('حدث خطأ في الاتصال'))
+          .finally(() => $btn.prop('disabled', false).html(orig));
+    });
+
+    $(document).on('click', '.js-void', function () {
+        const id = $(this).data('id'), num = $(this).data('num');
+        Enjaz.confirmAction(
+            'سيُلغى الإيصال ' + num + ' ولن يُحتسب في الإجماليات. لا يتغيّر تاريخ انتهاء اشتراك المشترك تلقائياً.',
+            'إلغاء الإيصال', 'إلغاء الإيصال'
+        ).then(function (ok) {
+            if (!ok) return;
+            post(URL_VOID(id)).then(function (resp) {
+                Enjaz.toast(resp.message || 'تم', resp.success ? 'success' : 'error');
+                if (resp.success) setTimeout(() => location.reload(), 700);
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

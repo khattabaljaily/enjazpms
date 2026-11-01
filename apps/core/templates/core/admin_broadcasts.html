@@ -1,0 +1,161 @@
+{% extends "layouts/dashboard.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_reports.css' %}?v=1.1">
+<style>
+    .bc-form label { font-size: .78rem; font-weight: 700; color: var(--text-tertiary); margin-bottom: .2rem; }
+    .bc-form { padding: 1rem 1.1rem; }
+    .bc-prio { font-size: .7rem; padding: .1rem .5rem; border-radius: 99px; background: var(--surface-hover); color: var(--text-tertiary); }
+    .bc-prio--high { background: rgba(220,38,38,.12); color: #dc2626; }
+</style>
+{% endblock %}
+
+{% block page_title %}إشعارات المشتركين{% endblock %}
+{% block page_description %}أرسل إشعاراً يظهر في جرس كل مستخدمي المشتركين المستهدفين{% endblock %}
+
+{% block content %}
+<div class="rpt-scene">
+
+<div class="rpt-hero">
+    <div class="rpt-hero__orb rpt-hero__orb--1"></div>
+    <div class="rpt-hero__orb rpt-hero__orb--2"></div>
+    <div class="rpt-hero__inner">
+        <div class="rpt-hero__left">
+            <div class="rpt-hero__icon"><i class="fas fa-bullhorn"></i></div>
+            <div>
+                <div class="rpt-hero__kicker">إدارة المنصة</div>
+                <h2 class="rpt-hero__title">إشعارات المشتركين</h2>
+                <p class="rpt-hero__desc">تنبيهات التحديثات والصيانة والتذكير بالتجديد</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="rpt-panels">
+    <div class="rpt-panel" style="flex:1.2;">
+        <div class="rpt-panel__hd"><i class="fas fa-pen"></i><span>إشعار جديد</span></div>
+        <div class="bc-form">
+            <div class="mb-3">
+                <label>العنوان</label>
+                <input type="text" id="bcTitle" class="form-control form-control-sm" maxlength="200">
+            </div>
+            <div class="mb-3">
+                <label>الرسالة</label>
+                <textarea id="bcMessage" class="form-control form-control-sm" rows="4"></textarea>
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label>الفئة المستهدفة</label>
+                    <select id="bcAudience" class="form-select form-select-sm">
+                        {% for k, v in audiences %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label>الأولوية</label>
+                    <select id="bcPriority" class="form-select form-select-sm">
+                        <option value="medium">متوسطة</option>
+                        <option value="high">عالية</option>
+                        <option value="low">منخفضة</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3 d-none" id="bcPlanWrap">
+                <label>الباقة</label>
+                <select id="bcPlan" class="form-select form-select-sm">
+                    {% for k, v in plans %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="mb-3 d-none" id="bcSelectedWrap">
+                <label>المشتركون (يمكن اختيار أكثر من واحد)</label>
+                <select id="bcTenants" class="form-select form-select-sm" multiple size="6">
+                    {% for t in tenants %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>رابط داخلي (اختياري — مثال: /subscription/)</label>
+                <input type="text" id="bcLink" class="form-control form-control-sm" dir="ltr" placeholder="/">
+            </div>
+            <div id="bcError" class="text-danger small mb-2 d-none"></div>
+            <button type="button" class="btn btn-warning fw-bold" id="btnSendBroadcast">
+                <i class="fas fa-paper-plane me-1"></i> إرسال
+            </button>
+        </div>
+    </div>
+
+    <div class="rpt-panel" style="flex:1;">
+        <div class="rpt-panel__hd"><i class="fas fa-clock-rotate-left"></i><span>آخر الإشعارات المرسلة</span></div>
+        <div class="rpt-panel__body">
+            {% for b in broadcasts %}
+            <div style="padding:.65rem 0;border-bottom:1px solid var(--border-light)">
+                <div class="d-flex justify-content-between gap-2">
+                    <strong>{{ b.title }}</strong>
+                    <span class="bc-prio{% if b.priority == 'high' %} bc-prio--high{% endif %}">{{ b.get_priority_display }}</span>
+                </div>
+                <div class="small" style="color:var(--text-secondary)">{{ b.message|truncatechars:120 }}</div>
+                <div class="small" style="color:var(--text-tertiary)">
+                    {{ b.get_audience_display }}{% if b.audience_plan %} ({{ b.audience_plan }}){% endif %}
+                    · {{ b.recipients_count }} مشترك · {{ b.created_at|date:"Y-m-d H:i" }}
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align:center;padding:1.5rem;color:var(--text-tertiary)">لم يُرسل أي إشعار بعد</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const URL_SEND = "{% url 'core:admin_broadcast_send_api' %}";
+
+    function post(body) {
+        return fetch(URL_SEND, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(body),
+        }).then(r => r.json().catch(() => ({ success: false, message: 'استجابة غير صالحة' })));
+    }
+
+    function payload(extra) {
+        return Object.assign({
+            title: $('#bcTitle').val(), message: $('#bcMessage').val(),
+            audience: $('#bcAudience').val(), plan: $('#bcPlan').val(),
+            tenant_ids: $('#bcTenants').val() || [], priority: $('#bcPriority').val(),
+            link: $('#bcLink').val(),
+        }, extra || {});
+    }
+
+    $('#bcAudience').on('change', function () {
+        $('#bcPlanWrap').toggleClass('d-none', this.value !== 'plan');
+        $('#bcSelectedWrap').toggleClass('d-none', this.value !== 'selected');
+    });
+
+    $('#btnSendBroadcast').on('click', function () {
+        const $btn = $(this), orig = $btn.html();
+        $('#bcError').addClass('d-none');
+        post(payload({ dry_run: true })).then(function (pre) {
+            if (!pre.success) { $('#bcError').removeClass('d-none').text(pre.message); return; }
+            Enjaz.confirmAction(
+                'سيُرسل هذا الإشعار إلى ' + pre.count + ' مشترك ويظهر لكل مستخدميهم. لا يمكن سحبه بعد الإرسال.',
+                'تأكيد الإرسال', 'إرسال'
+            ).then(function (ok) {
+                if (!ok) return;
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> جاري...');
+                post(payload()).then(function (resp) {
+                    if (resp.success) {
+                        Enjaz.toast(resp.message, 'success');
+                        setTimeout(() => location.reload(), 900);
+                    } else {
+                        $('#bcError').removeClass('d-none').text(resp.message || 'حدث خطأ');
+                    }
+                }).finally(() => $btn.prop('disabled', false).html(orig));
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

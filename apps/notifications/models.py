@@ -18,6 +18,7 @@ class Notification(TenantMixin):
         ('agent_request',    'طلب مندوب جديد'),
         ('expiry_soon',      'قرب انتهاء صلاحية'),
         ('exchange_rate',    'تغيّر سعر الصرف'),
+        ('platform',         'إشعار من إدارة المنصة'),
         ('general',          'إشعار عام'),
     )
 
