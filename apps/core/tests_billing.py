@@ -265,3 +265,14 @@ class InvoiceTests(_PlatformBase):
         self.client.force_login(self.user)
         self.assertEqual(self.make().status_code, 403)
         self.assertEqual(SubscriptionInvoice.objects.count(), 0)
+
+
+class ChromeLookupTests(TenantTestCase):
+    def test_finds_chrome_even_when_path_is_empty(self):
+        """خدمة gunicorn بـ PATH مختلف: يجب أن يجد Chrome من المسارات الثابتة."""
+        import os
+        from unittest import mock
+        from apps.core import brand_docs
+        with mock.patch.dict(os.environ, {'PATH': '/nonexistent'}), \
+                mock.patch.object(brand_docs.shutil, 'which', return_value=None):
+            self.assertTrue(os.path.exists(brand_docs._chrome()))

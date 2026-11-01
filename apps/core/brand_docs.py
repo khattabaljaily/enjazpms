@@ -30,10 +30,23 @@ class PdfRenderError(RuntimeError):
     pass
 
 
+# مسارات ثابتة: خدمة gunicorn تعمل بـ PATH مختلف عن جلسة SSH فلا يكفي shutil.which وحده.
+CHROME_CANDIDATES = (
+    '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/opt/google/chrome/chrome',
+    '/usr/bin/chromium', '/usr/bin/chromium-browser', '/snap/bin/chromium',
+)
+
+
 def _chrome():
+    configured = getattr(settings, 'CHROME_PATH', '') or ''
+    if configured and Path(configured).exists():
+        return configured
     for name in ('google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser'):
         path = shutil.which(name)
         if path:
+            return path
+    for path in CHROME_CANDIDATES:
+        if Path(path).exists():
             return path
     raise PdfRenderError('لم يُعثر على Chrome لتوليد ملف PDF')
 
