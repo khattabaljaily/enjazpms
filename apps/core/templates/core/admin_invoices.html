@@ -1,169 +1,182 @@
 {% extends "layouts/dashboard.html" %}
 {% load static humanize %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin_reports.css' %}?v=1.1">
-<style>
-    .pay-act { border: 1px solid var(--border-color); background: var(--surface); color: var(--text-secondary);
-               border-radius: 8px; padding: .25rem .55rem; font-size: .78rem; text-decoration: none; cursor: pointer; }
-    .pay-act:hover { background: var(--surface-hover); color: var(--text-primary); }
-    .pay-void { text-decoration: line-through; opacity: .55; }
-    .pay-tag { font-size: .7rem; padding: .1rem .5rem; border-radius: 99px; background: var(--surface-hover); color: var(--text-tertiary); }
-    .pay-tag--ok { background: rgba(22,163,74,.12); color: #16a34a; }
-    .pay-tag--bad { background: rgba(220,38,38,.12); color: #dc2626; }
-    .pay-tag--warn { background: rgba(217,119,6,.14); color: #d97706; }
-    .pay-form label { font-size: .78rem; font-weight: 700; color: var(--text-tertiary); margin-bottom: .2rem; }
-</style>
-{% endblock %}
-
-{% block page_title %}مطالبات السداد{% endblock %}
-{% block page_description %}أصدر مطالبة بترويسة إنجاز لمشترك بآخر موعد سداد تحدده، واطبعها{% endblock %}
+{% block page_header %}{% endblock %}
 
 {% block content %}
-<div class="rpt-scene">
+<div class="cx-scene">
 
-<div class="rpt-hero">
-    <div class="rpt-hero__orb rpt-hero__orb--1"></div>
-    <div class="rpt-hero__orb rpt-hero__orb--2"></div>
-    <div class="rpt-hero__inner">
-        <div class="rpt-hero__left">
-            <div class="rpt-hero__icon"><i class="fas fa-file-invoice-dollar"></i></div>
+<!-- ══════════════════════════ PAGE HERO ══════════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-file-invoice-dollar"></i></div>
             <div>
-                <div class="rpt-hero__kicker">إدارة المنصة</div>
-                <h2 class="rpt-hero__title">مطالبات السداد</h2>
-                <p class="rpt-hero__desc">المطالبة لا تمدّد الاشتراك؛ عند استلام المبلغ سجّل الدفعة منها فتصير «مسدَّدة»</p>
+                <h1 class="cx-hero-title">مطالبات السداد</h1>
+                <p class="cx-hero-desc">أصدر مطالبة مطبوعة بترويسة إنجاز بآخر موعد سداد تحدده؛ وعند استلام المبلغ سجّل الدفعة منها</p>
             </div>
         </div>
-        <button type="button" class="btn btn-light fw-bold" id="btnNewInvoice">
-            <i class="fas fa-plus me-1"></i> مطالبة جديدة
-        </button>
+        <div class="cx-hero-actions">
+            <button type="button" class="cx-btn-add" id="btnNewInvoice">
+                <i class="fas fa-plus"></i>
+                <span>مطالبة جديدة</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="cx-stats-inline">
+        <span class="cx-stat-badge cx-stat-badge--pending">
+            <i class="fas fa-hourglass-half"></i>
+            <strong>{{ open_count }}</strong>
+            <span>مفتوحة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--danger">
+            <i class="fas fa-exclamation-circle"></i>
+            <strong>{{ overdue_count }}</strong>
+            <span>متأخرة</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--primary">
+            <i class="fas fa-dollar-sign"></i>
+            <strong>${{ open_usd|floatformat:"-2"|intcomma }}</strong>
+            <span>مستحق بالدولار</span>
+        </span>
+        <span class="cx-stat-badge cx-stat-badge--muted">
+            <i class="fas fa-coins"></i>
+            <strong>{{ open_sdg|floatformat:"-2"|intcomma }}</strong>
+            <span>مستحق بالجنيه</span>
+        </span>
     </div>
 </div>
 
-<div class="rpt-alerts">
-    <div class="rpt-alert-card rpt-alert-card--amber">
-        <div class="rpt-alert-card__num">{{ open_count }}</div>
-        <div class="rpt-alert-card__lbl">مطالبات مفتوحة</div>
-        <div class="rpt-alert-card__icon"><i class="fas fa-hourglass-half"></i></div>
+<!-- ══════════════════════════ MAIN PANEL ══════════════════════════ -->
+<div class="cx-panel">
+    <div class="cx-toolbar">
+        <div class="cx-toolbar-search">
+            <i class="fas fa-search cx-toolbar-search-icon"></i>
+            <input type="text" id="invSearch" class="cx-search-input" placeholder="ابحث بالمشترك أو رقم المطالبة..." autocomplete="off">
+        </div>
+        <div class="cx-toolbar-end">
+            <div class="cx-filter-tabs" role="group">
+                <button type="button" class="cx-filter-tab active" data-filter="">الكل</button>
+                <button type="button" class="cx-filter-tab" data-filter="open">مفتوحة</button>
+                <button type="button" class="cx-filter-tab" data-filter="overdue">متأخرة</button>
+                <button type="button" class="cx-filter-tab" data-filter="paid">مسدَّدة</button>
+                <button type="button" class="cx-filter-tab" data-filter="void">ملغاة</button>
+            </div>
+        </div>
     </div>
-    <div class="rpt-alert-card rpt-alert-card--danger">
-        <div class="rpt-alert-card__num">{{ overdue_count }}</div>
-        <div class="rpt-alert-card__lbl">متأخرة عن الموعد</div>
-        <div class="rpt-alert-card__icon"><i class="fas fa-triangle-exclamation"></i></div>
-    </div>
-    <div class="rpt-alert-card rpt-alert-card--indigo">
-        <div class="rpt-alert-card__num">${{ open_usd|floatformat:"-2"|intcomma }}</div>
-        <div class="rpt-alert-card__lbl">مستحق (دولار)</div>
-        <div class="rpt-alert-card__icon"><i class="fas fa-dollar-sign"></i></div>
-    </div>
-    <div class="rpt-alert-card rpt-alert-card--muted">
-        <div class="rpt-alert-card__num">{{ open_sdg|floatformat:"-2"|intcomma }}</div>
-        <div class="rpt-alert-card__lbl">مستحق (جنيه)</div>
-        <div class="rpt-alert-card__icon"><i class="fas fa-coins"></i></div>
-    </div>
-</div>
 
-<div class="rpt-panel">
-    <div class="rpt-panel__hd">
-        <i class="fas fa-list"></i><span>سجل المطالبات</span>
-        <form method="get" class="rpt-search-wrap ms-auto">
-            <i class="fas fa-search rpt-search-icon"></i>
-            <input type="text" name="q" value="{{ q }}" class="rpt-search" placeholder="مشترك أو رقم مطالبة...">
-        </form>
-    </div>
-    <div class="rpt-table-wrap">
-        <table class="rpt-table">
+    <div class="cx-table-wrap">
+        <table class="cx-table" id="invTable">
             <thead>
-                <tr><th>المطالبة</th><th>المشترك</th><th>المبلغ</th><th>الباقة / المدة</th><th>آخر موعد للسداد</th><th>الحالة</th><th></th></tr>
+                <tr>
+                    <th>المطالبة</th><th>المشترك</th><th>المبلغ</th><th>الباقة</th>
+                    <th>آخر موعد للسداد</th><th>الحالة</th><th></th>
+                </tr>
             </thead>
             <tbody>
                 {% for i in invoices %}
-                <tr class="{% if i.is_void %}pay-void{% endif %}">
-                    <td><strong style="color:#c9840f">{{ i.invoice_number }}</strong>
-                        <div class="rpt-tenant-slug">{{ i.issue_date|date:"Y-m-d" }}</div></td>
-                    <td>{{ i.tenant.name }}</td>
-                    <td class="rpt-td--num">{% if i.currency == 'USD' %}${{ i.amount|floatformat:"-2"|intcomma }}{% else %}{{ i.amount|floatformat:"-2"|intcomma }} جنيه{% endif %}</td>
-                    <td>{{ i.get_plan_display }}<div class="rpt-tenant-slug">{{ i.period_days }} يوماً</div></td>
+                <tr data-state="{{ i.status }}" data-q="{{ i.tenant.name }} {{ i.invoice_number }}"
+                    {% if i.is_void %}style="opacity:.55"{% endif %}>
+                    <td><span class="cxr-code">{{ i.invoice_number }}</span><div class="cxr-empty small">{{ i.issue_date|date:"Y-m-d" }}</div></td>
+                    <td><span class="cxr-name">{{ i.tenant.name }}</span></td>
+                    <td><strong>{% if i.currency == 'USD' %}${{ i.amount|floatformat:"-2"|intcomma }}{% else %}{{ i.amount|floatformat:"-2"|intcomma }} جنيه{% endif %}</strong></td>
+                    <td>{{ i.get_plan_display }}<div class="cxr-empty small">{{ i.period_days }} يوماً</div></td>
                     <td>{{ i.due_date|date:"Y-m-d" }}</td>
                     <td>
-                        {% if i.status == 'paid' %}<span class="pay-tag pay-tag--ok">مسدَّدة</span>
-                        {% elif i.status == 'void' %}<span class="pay-tag pay-tag--bad">ملغاة</span>
-                        {% elif i.status == 'overdue' %}<span class="pay-tag pay-tag--bad">متأخرة</span>
-                        {% else %}<span class="pay-tag pay-tag--warn">مفتوحة</span>{% endif %}
+                        {% if i.status == 'paid' %}<span class="cxr-status cxr-status--on"><span class="cxr-status-dot"></span>مسدَّدة</span>
+                        {% elif i.status == 'void' %}<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>ملغاة</span>
+                        {% elif i.status == 'overdue' %}<span class="cxr-status" style="background:rgba(239,68,68,.12);color:#ef4444"><span class="cxr-status-dot"></span>متأخرة</span>
+                        {% else %}<span class="cxr-status cxr-status--pending"><span class="cxr-status-dot"></span>مفتوحة</span>{% endif %}
                     </td>
-                    <td style="white-space:nowrap">
-                        <a class="pay-act" href="{% url 'core:admin_invoice_pdf' i.pk %}" target="_blank" title="عرض / طباعة"><i class="fas fa-print"></i></a>
-                        <a class="pay-act" href="{% url 'core:admin_invoice_pdf' i.pk %}?download=1" title="تنزيل PDF"><i class="fas fa-download"></i></a>
-                        {% if i.status == 'open' or i.status == 'overdue' %}
-                        <a class="pay-act" href="{% url 'core:admin_payments' %}?invoice={{ i.pk }}" title="تسجيل الدفع"><i class="fas fa-hand-holding-dollar"></i></a>
-                        <button class="pay-act js-void" data-id="{{ i.pk }}" data-num="{{ i.invoice_number }}" title="إلغاء المطالبة"><i class="fas fa-ban"></i></button>
-                        {% endif %}
+                    <td>
+                        <div class="cxr-actions">
+                            <a class="cxr-act cxr-act--view" href="{% url 'core:admin_invoice_pdf' i.pk %}" target="_blank" title="عرض / طباعة"><i class="fas fa-print"></i></a>
+                            <a class="cxr-act" href="{% url 'core:admin_invoice_pdf' i.pk %}?download=1" title="تنزيل PDF"><i class="fas fa-download"></i></a>
+                            {% if i.status == 'open' or i.status == 'overdue' %}
+                            <a class="cxr-act cxr-act--renew" href="{% url 'core:admin_payments' %}?invoice={{ i.pk }}" title="تسجيل الدفع"><i class="fas fa-hand-holding-dollar"></i></a>
+                            <button type="button" class="cxr-act cxr-act--del js-void" data-id="{{ i.pk }}" data-num="{{ i.invoice_number }}" title="إلغاء المطالبة"><i class="fas fa-ban"></i></button>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
-                {% empty %}
-                <tr><td colspan="7" class="rpt-empty">لا توجد مطالبات بعد — اضغط «مطالبة جديدة»</td></tr>
                 {% endfor %}
+                <tr id="invEmpty" {% if invoices %}style="display:none"{% endif %}><td colspan="7" class="text-center cxr-empty py-4">لا توجد مطالبات — اضغط «مطالبة جديدة»</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 </div>
 
+<!-- ══════════════════════════ مطالبة جديدة ══════════════════════════ -->
 <div class="modal fade" id="invoiceModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content cx-confirm-modal">
-            <div class="cx-confirm-body pay-form text-start">
-                <h5 class="cx-confirm-title text-center mb-3">مطالبة سداد جديدة</h5>
-                <div class="row g-3">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-header">
+                <div>
+                    <h5 class="cx-modal-title">مطالبة سداد جديدة</h5>
+                    <p class="cx-modal-subtitle">تُطبع بترويسة إنجاز وفيها بيانات المشترك وحساب السداد</p>
+                </div>
+                <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="cx-modal-body">
+                <div class="alert alert-danger d-none mb-3" id="invError"></div>
+
+                <div class="cx-form-group-label">
+                    <span class="cx-form-group-icon"><i class="fas fa-building"></i></span> المشترك والباقة
+                </div>
+                <div class="row g-3 mb-4">
                     <div class="col-md-6">
-                        <label>المشترك</label>
-                        <select id="invTenant" class="form-select form-select-sm">
+                        <label class="cx-label" for="invTenant">المشترك <sup class="cx-required">*</sup></label>
+                        <select id="invTenant" class="form-select">
                             <option value="">— اختر —</option>
                             {% for t in tenants %}<option value="{{ t.id }}" data-plan="{{ t.subscription_plan }}">{{ t.name }}</option>{% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <label>الباقة</label>
-                        <select id="invPlan" class="form-select form-select-sm">
+                    <div class="col-md-3">
+                        <label class="cx-label" for="invPlan">الباقة</label>
+                        <select id="invPlan" class="form-select">
                             {% for k, v in plans %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label>المبلغ</label>
-                        <input type="number" id="invAmount" class="form-control form-control-sm" min="0" step="0.01" inputmode="decimal">
-                    </div>
-                    <div class="col-md-4">
-                        <label>العملة</label>
-                        <select id="invCurrency" class="form-select form-select-sm">
-                            {% for k, v in currencies %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label>مدة الاشتراك</label>
-                        <select id="invDays" class="form-select form-select-sm">
+                    <div class="col-md-3">
+                        <label class="cx-label" for="invDays">مدة الاشتراك</label>
+                        <select id="invDays" class="form-select">
                             <option value="30">شهر (30 يوماً)</option>
                             <option value="90">3 أشهر (90 يوماً)</option>
                             <option value="180">6 أشهر (180 يوماً)</option>
                             <option value="365">سنة (365 يوماً)</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <label>آخر موعد للسداد</label>
-                        <input type="date" id="invDue" class="form-control form-control-sm" min="{{ today|date:'Y-m-d' }}">
+                </div>
+
+                <div class="cx-form-group-label">
+                    <span class="cx-form-group-icon"><i class="fas fa-calendar-check"></i></span> المبلغ وموعد السداد
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="cx-label" for="invAmount">المبلغ <sup class="cx-required">*</sup></label>
+                        <input type="number" id="invAmount" class="form-control" min="0" step="0.01" inputmode="decimal">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="cx-label" for="invCurrency">العملة</label>
+                        <select id="invCurrency" class="form-select">
+                            {% for k, v in currencies %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="cx-label" for="invDue">آخر موعد للسداد <sup class="cx-required">*</sup></label>
+                        <input type="date" id="invDue" class="form-control" min="{{ today|date:'Y-m-d' }}">
                     </div>
                     <div class="col-12">
-                        <label>ملاحظات (تظهر في المطالبة — مثل بيانات الحساب للتحويل)</label>
-                        <textarea id="invNotes" class="form-control form-control-sm" rows="3"></textarea>
+                        <label class="cx-label" for="invNotes">ملاحظات (تظهر في المطالبة)</label>
+                        <textarea id="invNotes" class="form-control" rows="3"></textarea>
                     </div>
                 </div>
-                <div id="invError" class="text-danger small mt-2 d-none"></div>
             </div>
-            <div class="cx-confirm-footer">
+            <div class="cx-modal-footer">
                 <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" id="btnSaveInvoice"
-                    style="background:linear-gradient(135deg,#f6a821,#c9840f);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-weight:600;">
-                    <i class="fas fa-print me-1"></i> إصدار وطباعة
-                </button>
+                <button type="button" class="cx-btn-primary" id="btnSaveInvoice"><i class="fas fa-print me-1"></i> إصدار وطباعة</button>
             </div>
         </div>
     </div>
@@ -175,7 +188,10 @@
 (function () {
     const URL_CREATE = "{% url 'core:admin_invoice_create_api' %}";
     const URL_VOID = (id) => "{% url 'core:admin_invoice_void_api' 0 %}".replace('/0/', '/' + id + '/');
-    const modal = new bootstrap.Modal(document.getElementById('invoiceModal'));
+
+    const mEl = document.getElementById('invoiceModal');
+    if (mEl.parentElement !== document.body) document.body.appendChild(mEl);
+    const modal = new bootstrap.Modal(mEl);
 
     function post(url, body) {
         return fetch(url, {
@@ -185,6 +201,25 @@
         }).then(r => r.json().catch(() => ({ success: false, message: 'استجابة غير صالحة' })));
     }
 
+    /* ── بحث وتصفية الجدول ── */
+    let state = '';
+    function applyFilter() {
+        const q = $('#invSearch').val().trim().toLowerCase();
+        let shown = 0;
+        $('#invTable tbody tr[data-state]').each(function () {
+            const ok = (!state || $(this).data('state') === state) && (!q || String($(this).data('q')).toLowerCase().includes(q));
+            $(this).toggle(ok);
+            if (ok) shown++;
+        });
+        $('#invEmpty').toggle(shown === 0);
+    }
+    $('#invSearch').on('input', applyFilter);
+    $('.cx-filter-tab').on('click', function () {
+        $('.cx-filter-tab').removeClass('active'); $(this).addClass('active');
+        state = $(this).data('filter'); applyFilter();
+    });
+
+    /* ── إصدار مطالبة ── */
     $('#btnNewInvoice').on('click', function () {
         $('#invoiceModal input[type=number], #invoiceModal textarea').val('');
         const d = new Date(); d.setDate(d.getDate() + 7);
@@ -193,12 +228,10 @@
         $('#invError').addClass('d-none');
         modal.show();
     });
-
     $('#invTenant').on('change', function () {
         const plan = $(this).find(':selected').data('plan');
         if (plan) $('#invPlan').val(plan);
     });
-
     $('#btnSaveInvoice').on('click', function () {
         const $btn = $(this), orig = $btn.html();
         $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> جاري...');
@@ -219,6 +252,7 @@
           .finally(() => $btn.prop('disabled', false).html(orig));
     });
 
+    /* ── إلغاء مطالبة ── */
     $(document).on('click', '.js-void', function () {
         const id = $(this).data('id'), num = $(this).data('num');
         Enjaz.confirmAction('ستُلغى المطالبة ' + num + ' ولن تعود صالحة للسداد.', 'إلغاء المطالبة', 'إلغاء المطالبة')

@@ -1,0 +1,60 @@
+{% extends "core/docs/base_doc.html" %}
+{% block doc_title %}مطالبة سداد {{ invoice.invoice_number }}{% endblock %}
+{% block body %}
+<h1>مطالبة سداد <span class="ltr" style="font-family:Manrope,sans-serif;color:#d98a28">PAYMENT REQUEST</span></h1>
+<div class="subtitle">إنجاز لتقنية المعلومات — سجل تجاري رقم (120370) — شكراً لتعاملكم معنا</div>
+
+<div class="meta">
+  <div class="box"><b>بيانات المطالبة <span class="bi">Request Details</span></b>
+    رقم المطالبة <span class="muted">No.</span>: <span class="val ltr">{{ invoice.invoice_number }}</span><br>
+    تاريخ الإصدار <span class="muted">Date</span>: <span class="val ltr">{{ invoice.issue_date|date:"Y/m/d" }}</span><br>
+    آخر موعد للسداد <span class="muted">Due</span>: <span class="hl ltr">{{ invoice.due_date|date:"Y/m/d" }}</span>
+  </div>
+  <div class="box"><b>مطالبة إلى <span class="bi">Bill To</span></b>
+    المشترك <span class="muted">Client</span>: <span class="val">{{ tenant.name }}</span><br>
+    {% if address %}العنوان <span class="muted">Address</span>: <span class="val">{{ address }}</span><br>{% endif %}
+    {% if tenant.phone %}الهاتف <span class="muted">Phone</span>: <span class="val ltr">{{ tenant.phone }}</span><br>{% endif %}
+    {% if tenant.email %}البريد <span class="muted">Email</span>: <span class="val ltr">{{ tenant.email }}</span>{% endif %}
+  </div>
+</div>
+
+<table class="data">
+  <tr>
+    <th class="num" style="width:8mm">#</th>
+    <th>البيان<span class="bi">Description</span></th>
+    <th class="num" style="width:24mm">المدة<span class="bi">Period</span></th>
+    <th class="amt" style="width:30mm">سعر الوحدة<span class="bi">Unit Price</span></th>
+    <th class="amt" style="width:32mm">الإجمالي<span class="bi">Amount</span></th>
+  </tr>
+  <tr>
+    <td class="num">1</td>
+    <td>اشتراك باقة {{ invoice.get_plan_display }} في منصة إنجاز</td>
+    <td class="num">{{ invoice.period_days }} يوماً</td>
+    <td class="amt">{{ amount_text }}</td>
+    <td class="amt">{{ amount_text }}</td>
+  </tr>
+  <tr class="total"><td colspan="4">المجموع <span class="muted">Subtotal</span></td><td class="amt">{{ amount_text }}</td></tr>
+  <tr class="grand"><td colspan="4">المبلغ المستحق ({{ currency_name }}) <span class="ltr" style="margin-right:3mm">Amount Due</span></td><td class="amt">{{ amount_text }}</td></tr>
+</table>
+
+{% if invoice.notes %}<p><b>ملاحظات</b> <span class="muted">Notes</span>: {{ invoice.notes|linebreaksbr }}</p>{% endif %}
+
+<h2>طريقة الدفع <span class="bi" style="display:inline">Payment Method</span></h2>
+<table class="data first-bold">
+  {% for label_ar, label_en, value in bank %}
+  <tr><td style="width:50mm">{{ label_ar }} <span class="muted">{{ label_en }}</span></td><td>{{ value }}</td></tr>
+  {% endfor %}
+</table>
+
+<div class="note">
+  يُرجى السداد في موعد أقصاه <b class="hl ltr">{{ invoice.due_date|date:"Y/m/d" }}</b> وذكر رقم المطالبة عند التحويل، ثم إرسال إشعار الدفع إلى <span class="ltr">info@enjaztechnology.com</span> أو واتساب <span class="ltr">+249 110 100 110</span><br>
+  <span class="muted ltr" style="display:block;text-align:left">Please pay by the due date and quote the request number with your payment. Bank charges are borne by the client.</span>
+</div>
+
+<div class="sign" style="margin-top:6mm">
+  <div class="sig-col"><div class="sig-row">التوقيع <span class="muted">Signature</span>:<span class="line" style="width:40mm"></span></div></div>
+  <div class="sig-col"><div class="sig-row">الختم <span class="muted">Stamp</span>:</div></div>
+</div>
+{% if invoice.is_void %}<div style="position:fixed;top:120mm;left:0;right:0;text-align:center;font-size:60pt;font-weight:700;color:rgba(179,38,30,.18);z-index:5">ملغاة</div>
+{% elif invoice.is_paid %}<div style="position:fixed;top:120mm;left:0;right:0;text-align:center;font-size:60pt;font-weight:700;color:rgba(22,130,70,.2);z-index:5">مسدَّدة</div>{% endif %}
+{% endblock %}

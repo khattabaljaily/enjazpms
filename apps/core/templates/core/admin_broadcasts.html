@@ -1,109 +1,129 @@
 {% extends "layouts/dashboard.html" %}
 {% load static %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin_reports.css' %}?v=1.1">
-<style>
-    .bc-form label { font-size: .78rem; font-weight: 700; color: var(--text-tertiary); margin-bottom: .2rem; }
-    .bc-form { padding: 1rem 1.1rem; }
-    .bc-prio { font-size: .7rem; padding: .1rem .5rem; border-radius: 99px; background: var(--surface-hover); color: var(--text-tertiary); }
-    .bc-prio--high { background: rgba(220,38,38,.12); color: #dc2626; }
-</style>
-{% endblock %}
-
-{% block page_title %}إشعارات المشتركين{% endblock %}
-{% block page_description %}أرسل إشعاراً يظهر في جرس كل مستخدمي المشتركين المستهدفين{% endblock %}
+{% block page_header %}{% endblock %}
 
 {% block content %}
-<div class="rpt-scene">
+<div class="cx-scene">
 
-<div class="rpt-hero">
-    <div class="rpt-hero__orb rpt-hero__orb--1"></div>
-    <div class="rpt-hero__orb rpt-hero__orb--2"></div>
-    <div class="rpt-hero__inner">
-        <div class="rpt-hero__left">
-            <div class="rpt-hero__icon"><i class="fas fa-bullhorn"></i></div>
+<!-- ══════════════════════════ PAGE HERO ══════════════════════════ -->
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-bullhorn"></i></div>
             <div>
-                <div class="rpt-hero__kicker">إدارة المنصة</div>
-                <h2 class="rpt-hero__title">إشعارات المشتركين</h2>
-                <p class="rpt-hero__desc">تنبيهات التحديثات والصيانة والتذكير بالتجديد</p>
+                <h1 class="cx-hero-title">إشعارات المشتركين</h1>
+                <p class="cx-hero-desc">أرسل إشعاراً يظهر في جرس كل مستخدمي المشتركين المستهدفين: تحديثات، صيانة، تذكير بالتجديد</p>
             </div>
         </div>
-    </div>
-</div>
-
-<div class="rpt-panels">
-    <div class="rpt-panel" style="flex:1.2;">
-        <div class="rpt-panel__hd"><i class="fas fa-pen"></i><span>إشعار جديد</span></div>
-        <div class="bc-form">
-            <div class="mb-3">
-                <label>العنوان</label>
-                <input type="text" id="bcTitle" class="form-control form-control-sm" maxlength="200">
-            </div>
-            <div class="mb-3">
-                <label>الرسالة</label>
-                <textarea id="bcMessage" class="form-control form-control-sm" rows="4"></textarea>
-            </div>
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label>الفئة المستهدفة</label>
-                    <select id="bcAudience" class="form-select form-select-sm">
-                        {% for k, v in audiences %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label>الأولوية</label>
-                    <select id="bcPriority" class="form-select form-select-sm">
-                        <option value="medium">متوسطة</option>
-                        <option value="high">عالية</option>
-                        <option value="low">منخفضة</option>
-                    </select>
-                </div>
-            </div>
-            <div class="mb-3 d-none" id="bcPlanWrap">
-                <label>الباقة</label>
-                <select id="bcPlan" class="form-select form-select-sm">
-                    {% for k, v in plans %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
-                </select>
-            </div>
-            <div class="mb-3 d-none" id="bcSelectedWrap">
-                <label>المشتركون (يمكن اختيار أكثر من واحد)</label>
-                <select id="bcTenants" class="form-select form-select-sm" multiple size="6">
-                    {% for t in tenants %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
-                </select>
-            </div>
-            <div class="mb-3">
-                <label>رابط داخلي (اختياري — مثال: /subscription/)</label>
-                <input type="text" id="bcLink" class="form-control form-control-sm" dir="ltr" placeholder="/">
-            </div>
-            <div id="bcError" class="text-danger small mb-2 d-none"></div>
-            <button type="button" class="btn btn-warning fw-bold" id="btnSendBroadcast">
-                <i class="fas fa-paper-plane me-1"></i> إرسال
+        <div class="cx-hero-actions">
+            <button type="button" class="cx-btn-add" id="btnNewBroadcast">
+                <i class="fas fa-plus"></i>
+                <span>إشعار جديد</span>
             </button>
         </div>
     </div>
+</div>
 
-    <div class="rpt-panel" style="flex:1;">
-        <div class="rpt-panel__hd"><i class="fas fa-clock-rotate-left"></i><span>آخر الإشعارات المرسلة</span></div>
-        <div class="rpt-panel__body">
-            {% for b in broadcasts %}
-            <div style="padding:.65rem 0;border-bottom:1px solid var(--border-light)">
-                <div class="d-flex justify-content-between gap-2">
-                    <strong>{{ b.title }}</strong>
-                    <span class="bc-prio{% if b.priority == 'high' %} bc-prio--high{% endif %}">{{ b.get_priority_display }}</span>
-                </div>
-                <div class="small" style="color:var(--text-secondary)">{{ b.message|truncatechars:120 }}</div>
-                <div class="small" style="color:var(--text-tertiary)">
-                    {{ b.get_audience_display }}{% if b.audience_plan %} ({{ b.audience_plan }}){% endif %}
-                    · {{ b.recipients_count }} مشترك · {{ b.created_at|date:"Y-m-d H:i" }}
-                </div>
-            </div>
-            {% empty %}
-            <div style="text-align:center;padding:1.5rem;color:var(--text-tertiary)">لم يُرسل أي إشعار بعد</div>
-            {% endfor %}
-        </div>
+<!-- ══════════════════════════ MAIN PANEL ══════════════════════════ -->
+<div class="cx-panel">
+    <div class="cx-table-wrap">
+        <table class="cx-table">
+            <thead>
+                <tr><th>الإشعار</th><th>الفئة المستهدفة</th><th>المشتركون</th><th>الأولوية</th><th>تاريخ الإرسال</th></tr>
+            </thead>
+            <tbody>
+                {% for b in broadcasts %}
+                <tr>
+                    <td><span class="cxr-name">{{ b.title }}</span><div class="cxr-empty small">{{ b.message|truncatechars:90 }}</div></td>
+                    <td>{{ b.get_audience_display }}{% if b.audience_plan %} <span class="cxr-empty">({{ b.audience_plan }})</span>{% endif %}</td>
+                    <td><strong>{{ b.recipients_count }}</strong></td>
+                    <td>
+                        {% if b.priority == 'high' %}<span class="cxr-status" style="background:rgba(239,68,68,.12);color:#ef4444"><span class="cxr-status-dot"></span>عالية</span>
+                        {% elif b.priority == 'low' %}<span class="cxr-status cxr-status--off"><span class="cxr-status-dot"></span>منخفضة</span>
+                        {% else %}<span class="cxr-status cxr-status--pending"><span class="cxr-status-dot"></span>متوسطة</span>{% endif %}
+                    </td>
+                    <td>{{ b.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center cxr-empty py-4">لم يُرسل أي إشعار بعد — اضغط «إشعار جديد»</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
+</div>
+
+<!-- ══════════════════════════ إشعار جديد ══════════════════════════ -->
+<div class="modal fade" id="broadcastModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content cx-modal">
+            <div class="cx-modal-header">
+                <div>
+                    <h5 class="cx-modal-title">إشعار جديد للمشتركين</h5>
+                    <p class="cx-modal-subtitle">يظهر في جرس الإشعارات لكل مستخدمي المشترك</p>
+                </div>
+                <button type="button" class="cx-modal-close" data-bs-dismiss="modal" aria-label="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="cx-modal-body">
+                <div class="alert alert-danger d-none mb-3" id="bcError"></div>
+
+                <div class="cx-form-group-label">
+                    <span class="cx-form-group-icon"><i class="fas fa-pen"></i></span> نص الإشعار
+                </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <label class="cx-label" for="bcTitle">العنوان <sup class="cx-required">*</sup></label>
+                        <input type="text" id="bcTitle" class="form-control" maxlength="200">
+                    </div>
+                    <div class="col-12">
+                        <label class="cx-label" for="bcMessage">الرسالة <sup class="cx-required">*</sup></label>
+                        <textarea id="bcMessage" class="form-control" rows="4"></textarea>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="cx-label" for="bcLink">رابط داخلي (اختياري)</label>
+                        <input type="text" id="bcLink" class="form-control" dir="ltr" placeholder="/subscription/">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="cx-label" for="bcPriority">الأولوية</label>
+                        <select id="bcPriority" class="form-select">
+                            <option value="medium">متوسطة</option>
+                            <option value="high">عالية</option>
+                            <option value="low">منخفضة</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="cx-form-group-label">
+                    <span class="cx-form-group-icon"><i class="fas fa-users"></i></span> الفئة المستهدفة
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="cx-label" for="bcAudience">المستلمون</label>
+                        <select id="bcAudience" class="form-select">
+                            {% for k, v in audiences %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-none" id="bcPlanWrap">
+                        <label class="cx-label" for="bcPlan">الباقة</label>
+                        <select id="bcPlan" class="form-select">
+                            {% for k, v in plans %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 d-none" id="bcSelectedWrap">
+                        <label class="cx-label" for="bcTenants">المشتركون (يمكن اختيار أكثر من واحد)</label>
+                        <select id="bcTenants" class="form-select" multiple size="6">
+                            {% for t in tenants %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="cx-modal-footer">
+                <button type="button" class="cx-btn-ghost" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="cx-btn-primary" id="btnSendBroadcast"><i class="fas fa-paper-plane me-1"></i> إرسال</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -111,6 +131,10 @@
 <script>
 (function () {
     const URL_SEND = "{% url 'core:admin_broadcast_send_api' %}";
+
+    const mEl = document.getElementById('broadcastModal');
+    if (mEl.parentElement !== document.body) document.body.appendChild(mEl);
+    const modal = new bootstrap.Modal(mEl);
 
     function post(body) {
         return fetch(URL_SEND, {
@@ -129,6 +153,13 @@
         }, extra || {});
     }
 
+    $('#btnNewBroadcast').on('click', function () {
+        $('#broadcastModal input[type=text], #broadcastModal textarea').val('');
+        $('#bcTenants').val([]);
+        $('#bcError').addClass('d-none');
+        modal.show();
+    });
+
     $('#bcAudience').on('change', function () {
         $('#bcPlanWrap').toggleClass('d-none', this.value !== 'plan');
         $('#bcSelectedWrap').toggleClass('d-none', this.value !== 'selected');
@@ -139,17 +170,19 @@
         $('#bcError').addClass('d-none');
         post(payload({ dry_run: true })).then(function (pre) {
             if (!pre.success) { $('#bcError').removeClass('d-none').text(pre.message); return; }
+            modal.hide();
             Enjaz.confirmAction(
                 'سيُرسل هذا الإشعار إلى ' + pre.count + ' مشترك ويظهر لكل مستخدميهم. لا يمكن سحبه بعد الإرسال.',
                 'تأكيد الإرسال', 'إرسال'
             ).then(function (ok) {
-                if (!ok) return;
+                if (!ok) { modal.show(); return; }
                 $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> جاري...');
                 post(payload()).then(function (resp) {
                     if (resp.success) {
                         Enjaz.toast(resp.message, 'success');
                         setTimeout(() => location.reload(), 900);
                     } else {
+                        modal.show();
                         $('#bcError').removeClass('d-none').text(resp.message || 'حدث خطأ');
                     }
                 }).finally(() => $btn.prop('disabled', false).html(orig));

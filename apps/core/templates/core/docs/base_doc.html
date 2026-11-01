@@ -1,0 +1,37 @@
+{% comment %}
+أساس مستندات إنجاز المطبوعة: الترويسة الرسمية (الرمز الذهبي + الشعار النصي + QR) والتذييل والشريط البرتقالي،
+مطابقة لقالب الليترهيد في ملفات الشركة. تُطبع بـ Chrome (انظر brand_docs.py).
+{% endcomment %}<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>{% block doc_title %}{% endblock %}</title>
+<link rel="stylesheet" href="{{ brand }}enjaz-doc.css">
+</head>
+<body class="ar">
+<div class="accent-bar"></div>
+<div class="watermark"><img src="{{ brand }}logo.png" alt=""></div>
+<header class="lh-header">
+  <div class="header-top">
+    <div class="brand">
+      <img src="{{ brand }}logo.png" alt="Enjaz" class="logo-icon">
+      <img src="{{ brand }}wordmark-dark.png" alt="Enjaz" class="logo-text">
+    </div>
+    <img src="{{ brand }}qr-website.png" alt="QR" class="qr-code">
+  </div>
+  <div class="rule"></div>
+</header>
+<footer class="lh-footer">
+  <div class="footer-item"><div class="footer-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div><span>enjaztechnology.com</span></div>
+  <div class="footer-item"><div class="footer-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div><span>info@enjaztechnology.com</span></div>
+  <div class="footer-item"><div class="footer-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><span>+249 110 100 110</span></div>
+</footer>
+<table class="layout">
+  <thead><tr><td></td></tr></thead>
+  <tfoot><tr><td></td></tr></tfoot>
+  <tbody><tr><td><div class="doc">
+{% block body %}{% endblock %}
+  </div></td></tr></tbody>
+</table>
+</body>
+</html>

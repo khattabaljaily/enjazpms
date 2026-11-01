@@ -24,7 +24,7 @@ from django.views.decorators.http import require_POST
 from apps.accounts.decorators import branch_scope_exempt
 
 from .models import PlatformBroadcast, SubscriptionInvoice, SubscriptionPayment, Tenant
-from .receipt_pdf import render_invoice_pdf, render_receipt_pdf
+from .brand_docs import PdfRenderError, render_invoice_pdf, render_receipt_pdf
 
 _EXEMPT = 'لوحة إدارة المنصة (platform admin) — عبر كل المشتركين، لا مفهوم فرع هنا أصلاً'
 
@@ -175,7 +175,11 @@ def admin_payment_receipt(request, pk):
     if not request.user.has_platform_perm('manage_billing'):
         return redirect('core:no_permission')
     payment = get_object_or_404(SubscriptionPayment.objects.select_related('tenant'), pk=pk)
-    resp = HttpResponse(render_receipt_pdf(payment), content_type='application/pdf')
+    try:
+        pdf = render_receipt_pdf(payment)
+    except PdfRenderError as exc:
+        return HttpResponse(str(exc), status=500, content_type='text/plain; charset=utf-8')
+    resp = HttpResponse(pdf, content_type='application/pdf')
     disposition = 'attachment' if request.GET.get('download') else 'inline'
     resp['Content-Disposition'] = f'{disposition}; filename="{payment.receipt_number}.pdf"'
     return resp
@@ -203,8 +207,8 @@ def admin_payment_email_api(request, pk):
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[to],
     )
-    mail.attach(f'{payment.receipt_number}.pdf', render_receipt_pdf(payment), 'application/pdf')
     try:
+        mail.attach(f'{payment.receipt_number}.pdf', render_receipt_pdf(payment), 'application/pdf')
         mail.send(fail_silently=False)
     except Exception as exc:  # SMTP غير مضبوط أو رُفض — يُعرض السبب للمدير ولا يُسجَّل كمُرسَل
         return JsonResponse({'success': False, 'message': f'تعذّر الإرسال: {exc}'}, status=502)
@@ -305,7 +309,11 @@ def admin_invoice_pdf(request, pk):
     if not request.user.has_platform_perm('manage_billing'):
         return redirect('core:no_permission')
     invoice = get_object_or_404(SubscriptionInvoice.objects.select_related('tenant'), pk=pk)
-    resp = HttpResponse(render_invoice_pdf(invoice), content_type='application/pdf')
+    try:
+        pdf = render_invoice_pdf(invoice)
+    except PdfRenderError as exc:
+        return HttpResponse(str(exc), status=500, content_type='text/plain; charset=utf-8')
+    resp = HttpResponse(pdf, content_type='application/pdf')
     disposition = 'attachment' if request.GET.get('download') else 'inline'
     resp['Content-Disposition'] = f'{disposition}; filename="{invoice.invoice_number}.pdf"'
     return resp

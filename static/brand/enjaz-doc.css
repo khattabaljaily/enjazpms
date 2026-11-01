@@ -1,0 +1,123 @@
+/* مستندات إنجاز المطبوعة (مطالبة، سند قبض) — مشتق من _build/enjaz.css في ملفات الشركة الرسمية.
+   خط المهند عادي فقط (الغامق يُولَّد تلقائياً: غامق المهند يرسم الجيم كالخاء). */
+@font-face { font-family: 'Al Mohanad'; src: url('almohanad-regular.ttf') format('truetype'); font-weight: 400; unicode-range: U+0020-0040, U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: 'Manrope'; src: url('manrope.ttf') format('truetype'); font-weight: 200 800; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+@page { size: A4; margin: 0; }
+html, body { background: #fff; }
+body {
+    font-family: 'Al Mohanad', 'Cairo', Arial, sans-serif; color: #000;
+    width: 210mm; margin: 0 auto;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+body.en { font-family: 'Manrope', Arial, sans-serif; }
+@media screen { html { background: #e8eaed; } body { box-shadow: 0 30px 70px -20px rgba(0,0,0,.3); } }
+
+/* ── Letterhead chrome, repeated on every printed page ── */
+.accent-bar { position: fixed; top: 0; bottom: 0; right: 0; width: 5mm; background: #F4A135; z-index: 20; }
+body.en .accent-bar { right: auto; left: 0; }
+.watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 120mm; height: 120mm; opacity: .04; z-index: 0; pointer-events: none; }
+.watermark img { width: 100%; height: 100%; object-fit: contain; }
+.lh-header { position: fixed; top: 0; left: 0; right: 0; height: 34mm; padding: 6mm 10mm 0 13mm; background: #fff; z-index: 10; }
+body.en .lh-header { padding: 6mm 13mm 0 10mm; }
+.header-top { display: flex; align-items: center; justify-content: space-between; gap: 10mm; }
+.brand { display: flex; align-items: center; gap: 4mm; }
+.logo-icon { width: 18mm; height: auto; }
+.logo-text { height: 8.6mm; width: auto; }   /* new wordmark: text block ≈ 52% of the mark height */
+.qr-code { width: 14mm; height: 14mm; }
+.rule { margin-top: 5mm; height: 1px; background: linear-gradient(270deg, #F4A135 0%, #F4A135 25%, rgba(244,161,53,0) 100%); }
+body.en .rule { background: linear-gradient(90deg, #F4A135 0%, #F4A135 25%, rgba(244,161,53,0) 100%); }
+.lh-footer { position: fixed; bottom: 0; left: 0; right: 0; height: 16mm; padding: 0 18mm 0 20mm; display: flex; justify-content: space-around; align-items: center; background: #fafafa; border-top: 1px solid #eceef0; z-index: 10; }
+.footer-item { display: flex; align-items: center; gap: 2mm; font-family: 'Manrope', Arial, sans-serif; font-size: 7.5pt; color: #666; direction: ltr; }
+.footer-icon { width: 5mm; height: 5mm; border-radius: 50%; background: #F4A135; display: flex; align-items: center; justify-content: center; padding: 1mm; }
+.footer-icon svg { width: 100%; height: 100%; stroke: #fff; }
+table.layout { table-layout: fixed; width: 100%; border-collapse: collapse; position: relative; z-index: 2; }
+table.layout > thead > tr > td { height: 38mm; }
+table.layout > tfoot > tr > td { height: 22mm; }
+table.layout > tbody > tr > td { padding: 0 20mm 0 18mm; vertical-align: top; }
+body.en table.layout > tbody > tr > td { padding: 0 18mm 0 20mm; }
+
+/* ── Body ── */
+.doc { font-size: 11.5pt; line-height: 1.8; text-align: justify; }
+body.en .doc { font-size: 10pt; line-height: 1.6; }
+h1 { text-align: center; font-size: 18pt; font-weight: 700; color: #0f0f0f; margin: 2mm 0 1mm; }
+body.en h1 { font-family: 'Manrope', sans-serif; font-size: 17pt; font-weight: 800; }
+.subtitle { text-align: center; font-size: 10.5pt; color: #888; margin-bottom: 7mm; }
+body.en .subtitle { font-size: 9.5pt; }
+h2 { font-size: 13pt; font-weight: 700; color: #d98a28; margin: 5mm 0 1.5mm; break-after: avoid; }
+body.en h2 { font-family: 'Manrope', sans-serif; font-size: 11.5pt; }
+h3 { font-size: 12pt; font-weight: 700; color: #0f0f0f; margin: 4mm 0 1mm; break-after: avoid; }
+body.en h3 { font-family: 'Manrope', sans-serif; font-size: 10.5pt; }
+p { margin-bottom: 2mm; }
+strong { color: #0f0f0f; font-weight: 700; }
+ul, ol { padding-right: 6mm; margin-bottom: 2mm; }
+body.en ul, body.en ol { padding-right: 0; padding-left: 6mm; }
+li { margin-bottom: 1mm; break-inside: avoid; }
+li > ul { margin-top: 1mm; list-style: circle; }
+ol.parties { text-align: right; }
+body.en ol.parties { text-align: left; }
+
+table.data { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; font-size: 10.5pt; line-height: 1.55; }
+body.en table.data { font-size: 9pt; }
+table.data tr { break-inside: avoid; }
+table.data th, table.data td { border: 1px solid #e3e3e3; padding: 1.2mm 2.5mm; text-align: right; vertical-align: top; }
+body.en table.data th, body.en table.data td { text-align: left; }
+table.data th { background: #fdf3e6; color: #0f0f0f; font-weight: 700; }
+table.data td.num, table.data th.num { text-align: center !important; }
+table.data td.amt, table.data th.amt { text-align: left !important; direction: ltr; white-space: nowrap; }
+body.en table.data td.amt, body.en table.data th.amt { text-align: right !important; }
+table.data.first-bold td:first-child { font-weight: 700; color: #0f0f0f; }
+table.data.form td { padding-top: 3mm; padding-bottom: 3mm; }
+table.data tr.total td { background: #fdf3e6; font-weight: 700; color: #0f0f0f; }
+table.data tr.grand td { background: #F4A135; color: #fff; font-weight: 700; font-size: 11.5pt; }
+table.data tr.blank td { height: 9mm; }
+
+.keep { break-inside: avoid; }
+.page-break { break-before: page; }
+
+/* meta box: document number / date / client */
+.meta { display: flex; gap: 6mm; margin: 2mm 0 5mm; }
+.meta .box { flex: 1; border: 1px solid #eee; border-top: 2px solid #F4A135; border-radius: 2px; padding: 2.5mm 3.5mm; font-size: 10.5pt; line-height: 1.9; background: #fcfcfc; }
+body.en .meta .box { font-size: 9pt; }
+.meta .box b { color: #d98a28; display: block; font-size: 10pt; margin-bottom: 1mm; }
+.note { border-right: 3px solid #F4A135; background: #fdf8f0; padding: 2.5mm 4mm; margin: 3mm 0; font-size: 10.5pt; }
+body.en .note { border-right: 0; border-left: 3px solid #F4A135; font-size: 9pt; }
+.muted { color: #888; font-size: 9.5pt; }
+
+.sign { display: flex; gap: 10mm; margin-top: 6mm; break-inside: avoid; }
+.sig-col { flex: 1; }
+.sig-title { font-weight: 700; color: #0f0f0f; margin-bottom: 2mm; }
+.sig-row { color: #555; padding-top: 3.5mm; }
+.sig-row span.line { display: inline-block; width: 50mm; border-bottom: 1px dotted #999; margin-right: 2mm; }
+body.en .sig-row span.line { margin-right: 0; margin-left: 2mm; }
+.fill { color: #999; letter-spacing: 1px; overflow-wrap: anywhere; word-break: break-all; }
+.ltr { direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
+.check { font-family: 'Manrope', Arial, sans-serif; }
+
+/* ── عناصر مشتركة بين المطالبة والسند ── */
+.bi{display:block;font-family:Manrope,Arial,sans-serif;font-size:7.5pt;color:#444;font-weight:500;line-height:1.2}
+table.data th .bi{color:#7a5420}
+.muted{color:#333}
+.doc{text-align:right}
+.meta .box{line-height:1.8}
+.val{font-weight:700;color:#000}
+.hl{color:#b3261e;font-weight:700}
+.words{margin:1mm 0 2mm}
+.cb{display:inline-block;width:3.4mm;height:3.4mm;border:1.2px solid #000;border-radius:.6mm;vertical-align:-0.5mm;margin-left:1.2mm;position:relative}
+.cb.on{background:#F4A135;border-color:#F4A135}
+.cb.on::after{content:'';position:absolute;left:1px;top:-.4px;width:1.1mm;height:2.1mm;border:solid #fff;border-width:0 .5mm .5mm 0;transform:rotate(45deg)}
+
+/* ── سند القبض ── */
+.voucher{border:1px solid #eee;border-top:3px solid #F4A135;padding:3mm 6mm 4mm;background:#fff;margin-bottom:5mm}
+.vhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:3mm}
+.vhead h3{margin:0;font-size:16pt}
+.en-t{font-family:Manrope,Arial,sans-serif;color:#d98a28;font-size:11pt;margin-right:2mm}
+.amount{border:2px solid #F4A135;border-radius:2px;padding:1.6mm 5mm;font-family:Manrope,Arial,sans-serif;direction:ltr;min-width:48mm;color:#000;font-size:13pt;font-weight:800;text-align:center}
+table.vt{width:100%;border-collapse:collapse;font-size:11pt}
+table.vt th,table.vt td{border-bottom:1px dashed #d9d9d9;padding:2mm 1.5mm;text-align:right;vertical-align:bottom}
+table.vt th{width:38mm;white-space:nowrap;color:#000;font-weight:700}
+table.vt th small{display:block;font-family:Manrope,Arial,sans-serif;font-weight:500;color:#444;font-size:7pt;line-height:1.1}
+.opt{display:inline-block;margin-left:6mm;font-size:10.5pt}
+.opt small{display:inline;font-family:Manrope,Arial,sans-serif;color:#444;font-size:7pt;margin-right:1mm}
+table.sigs th{width:38mm}
+table.sigs td{height:14mm}
