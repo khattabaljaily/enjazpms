@@ -5,6 +5,7 @@
 الهاتف والبريد والموقع)، ويُطبع إلى PDF بـ Chrome بلا واجهة — كما تبني أداة `_build/build.py` عندكم.
 الأصول (الشعار والخطوط وCSS) في static/brand.
 """
+import os
 import shutil
 import subprocess
 import tempfile
@@ -65,8 +66,10 @@ def _html_to_pdf(html):
         cmd = [_chrome(), '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
                f'--user-data-dir={tmp / "profile"}', '--no-pdf-header-footer', '--allow-file-access-from-files',
                f'--print-to-pdf={out}', src.as_uri()]
+        # غلاف google-chrome سكربت shell يحتاج أوامر النظام؛ و PATH الخدمة يقتصر على مجلد الـ venv.
+        env = {**os.environ, 'PATH': '/usr/local/bin:/usr/bin:/bin', 'HOME': str(tmp)}
         try:
-            subprocess.run(cmd, check=True, capture_output=True, timeout=60)
+            subprocess.run(cmd, check=True, capture_output=True, timeout=60, env=env, stdin=subprocess.DEVNULL)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             raise PdfRenderError(f'تعذّر توليد ملف PDF: {exc}') from exc
         if not out.exists():

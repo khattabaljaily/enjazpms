@@ -276,3 +276,16 @@ class ChromeLookupTests(TenantTestCase):
         with mock.patch.dict(os.environ, {'PATH': '/nonexistent'}), \
                 mock.patch.object(brand_docs.shutil, 'which', return_value=None):
             self.assertTrue(os.path.exists(brand_docs._chrome()))
+
+
+class PdfUnderServicePathTests(_PlatformBase):
+    def test_pdf_renders_when_process_path_is_only_the_venv(self):
+        """خدمة gunicorn تعمل بـ PATH = مجلد الـ venv فقط: يجب أن يتولّد الـ PDF رغم ذلك."""
+        import os
+        from unittest import mock
+        self.pay()
+        p = SubscriptionPayment.objects.get()
+        with mock.patch.dict(os.environ, {'PATH': os.path.dirname(os.sys.executable)}):
+            r = self.client.get(reverse('core:admin_payment_receipt', args=[p.pk]))
+        self.assertEqual(r.status_code, 200, r.content[:200])
+        self.assertTrue(r.content.startswith(b'%PDF'))
