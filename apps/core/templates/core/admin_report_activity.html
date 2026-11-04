@@ -209,7 +209,7 @@
                 {% for log in recent_logins %}
                 <tr>
                     <td>
-                        <div class="rpt-tenant-name">{{ log.user.get_full_name|default:log.user.username }}</div>
+                        <div class="rpt-tenant-name">{{ log.user.get_full_name|default:'—' }}</div>
                         <div class="rpt-tenant-slug">{{ log.user.username }}</div>
                     </td>
                     <td>{{ log.tenant.name }}</td>
@@ -228,7 +228,7 @@
         <div class="rpt-mob-card">
             <div class="rpt-mob-card__header">
                 <div class="rpt-mob-card__title">
-                    <div class="rpt-mob-card__name">{{ log.user.get_full_name|default:log.user.username }}</div>
+                    <div class="rpt-mob-card__name">{{ log.user.get_full_name|default:'—' }}</div>
                     <div class="rpt-mob-card__slug">{{ log.user.username }}</div>
                 </div>
                 <span class="rpt-mob-card__val rpt-mob-card__val--muted" style="font-size:0.75rem;">{{ log.created_at|date:"m/d H:i" }}</span>

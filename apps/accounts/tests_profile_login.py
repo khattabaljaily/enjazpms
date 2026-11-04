@@ -128,6 +128,17 @@ class AdminAuditLogTests(TestCase):
                        {'date_from': 'bad', 'date_to': '2026-13-40'}):
             self.assertEqual(self.client.get(url, params).status_code, 200, params)
 
+    def test_audit_log_with_deleted_user(self):
+        # سبب خطأ 500 في الإنتاج: سجل نشاط حُذف مستخدمه (user = NULL)
+        from apps.core.models import BusinessType, Tenant
+        bt = BusinessType.objects.create(name='bt-audit', name_ar='نشاط', slug='bt-audit')
+        tenant = Tenant.objects.create(name='T audit', business_type=bt)
+        UserActivity.objects.create(tenant=tenant, user=None, title='نشاط بلا مستخدم', action_type='login')
+        for name in ('core:admin_audit_log', 'core:admin_report_activity'):
+            resp = self.client.get(reverse(name))
+            self.assertEqual(resp.status_code, 200, name)
+        self.assertContains(self.client.get(reverse('core:admin_audit_log')), 'نشاط بلا مستخدم')
+
     def test_activity_report_opens(self):
         self.assertEqual(self.client.get(reverse('core:admin_report_activity')).status_code, 200)
 

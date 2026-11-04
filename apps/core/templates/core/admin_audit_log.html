@@ -75,7 +75,7 @@
                     </td>
                     <td>
                         {% if log.user %}
-                        <div style="font-size:0.82rem;font-weight:600;">{{ log.user.get_full_name|default:log.user.username }}</div>
+                        <div style="font-size:0.82rem;font-weight:600;">{{ log.user.get_full_name|default:'—' }}</div>
                         <div class="rpt-tenant-slug">{{ log.user.username }}</div>
                         {% else %}<span class="rpt-td--muted">—</span>{% endif %}
                     </td>
@@ -92,7 +92,7 @@
                             data-action="{{ log.get_action_type_display|escapejs }}"
                             data-action-type="{{ log.action_type }}"
                             data-tenant="{{ log.tenant.name|default:'—'|escapejs }}"
-                            data-user="{{ log.user.get_full_name|default:log.user.username|default:'—'|escapejs }}"
+                            data-user="{{ log.user.get_full_name|default:'—'|default:'—'|escapejs }}"
                             data-username="{{ log.user.username|default:''|escapejs }}"
                             data-ip="{{ log.ip_address|default:'—' }}"
                             data-date="{{ log.created_at|date:'Y-m-d H:i:s' }}"
@@ -116,7 +116,7 @@
             data-action="{{ log.get_action_type_display|escapejs }}"
             data-action-type="{{ log.action_type }}"
             data-tenant="{{ log.tenant.name|default:'—'|escapejs }}"
-            data-user="{{ log.user.get_full_name|default:log.user.username|default:'—'|escapejs }}"
+            data-user="{{ log.user.get_full_name|default:'—'|default:'—'|escapejs }}"
             data-username="{{ log.user.username|default:''|escapejs }}"
             data-ip="{{ log.ip_address|default:'—' }}"
             data-date="{{ log.created_at|date:'Y-m-d H:i:s' }}"
