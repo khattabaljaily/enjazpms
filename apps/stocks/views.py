@@ -23,6 +23,7 @@ from apps.core.utils import dt_ordering, filter_by_branch_via, enforce_branch_ow
 from .forms import StockForm
 from .models import Stock, StockQuantity, StockTransfer, StockTransferLine, Stocktake, StocktakeLine, ManufacturingOrder, StockDestruction, StockDestructionLine
 from .reports import StocksReportGenerator
+from apps.accounts.cost_visibility import can_view_cost
 from .scope import opening_balance_stocks
 from .services import (
     confirm_stock_transfer, cancel_stock_transfer, confirm_stocktake,
@@ -785,7 +786,10 @@ def stocks_summary_report_export(request):
     writer = csv.writer(response)
     writer.writerow(['البند', 'القيمة'])
     
+    show_cost = can_view_cost(request.user)
     for key, value in report_data['summary'].items():
+        if not show_cost and 'value' in key:
+            continue
         writer.writerow([key, value])
 
     return response
@@ -830,7 +834,8 @@ def stocks_by_item_report_export(request):
     response.write('\ufeff')
 
     writer = csv.writer(response)
-    writer.writerow(['المنتج', 'الوحدة', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'])
+    show_cost = can_view_cost(request.user)
+    writer.writerow(['المنتج', 'الوحدة', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'][:None if show_cost else -1])
 
     for item in report_data['data']:
         writer.writerow([
@@ -840,7 +845,7 @@ def stocks_by_item_report_export(request):
             item['total_reserved'],
             item['total_quantity'],
             item['total_value']
-        ])
+        ][:None if show_cost else -1])
 
     return response
 
@@ -884,7 +889,8 @@ def stocks_by_category_report_export(request):
     response.write('\ufeff')
 
     writer = csv.writer(response)
-    writer.writerow(['الفئة', 'عدد المنتجات', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'])
+    show_cost = can_view_cost(request.user)
+    writer.writerow(['الفئة', 'عدد المنتجات', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'][:None if show_cost else -1])
 
     for category in report_data['data']:
         writer.writerow([
@@ -894,7 +900,7 @@ def stocks_by_category_report_export(request):
             category['total_reserved'],
             category['total_quantity'],
             category['total_value']
-        ])
+        ][:None if show_cost else -1])
 
     return response
 
@@ -948,7 +954,8 @@ def stocks_by_stock_report_export(request):
     response.write('\ufeff')
 
     writer = csv.writer(response)
-    writer.writerow(['المخزن', 'عدد المنتجات', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'])
+    show_cost = can_view_cost(request.user)
+    writer.writerow(['المخزن', 'عدد المنتجات', 'الكمية المتاحة', 'الكمية المحجوزة', 'إجمالي الكمية', 'القيمة الإجمالية'][:None if show_cost else -1])
 
     for stock in report_data['data']:
         writer.writerow([
@@ -958,7 +965,7 @@ def stocks_by_stock_report_export(request):
             stock['total_reserved'],
             stock['total_quantity'],
             stock['total_value']
-        ])
+        ][:None if show_cost else -1])
 
     return response
 
@@ -1141,6 +1148,8 @@ def stocks_controlled_substances_report_export(request):
 @login_required
 @require_permission('view_stocks_valuation_report')
 def stocks_valuation_report(request):
+    if not can_view_cost(request.user):
+        return redirect('core:no_permission')
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
@@ -1160,6 +1169,8 @@ def stocks_valuation_report(request):
 @login_required
 @require_permission('view_stocks_valuation_report')
 def stocks_valuation_report_export(request):
+    if not can_view_cost(request.user):
+        return redirect('core:no_permission')
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
@@ -1252,10 +1263,13 @@ def stocks_non_moving_report_export(request):
     writer = csv.writer(response)
     writer.writerow([f'الفترة المرجعية: {start_date} إلى {end_date}'])
     writer.writerow([])
-    writer.writerow(['المنتج', 'الوحدة', 'الفئة', 'الكمية', 'سعر التكلفة', 'القيمة', 'آخر حركة', 'أيام الركود'])
+    show_cost = can_view_cost(request.user)
+    cost_hdr = ['سعر التكلفة', 'القيمة'] if show_cost else []
+    writer.writerow(['المنتج', 'الوحدة', 'الفئة', 'الكمية', *cost_hdr, 'آخر حركة', 'أيام الركود'])
     for row in report['data']:
+        cost_vals = [row['cost_price'], row['total_value']] if show_cost else []
         writer.writerow([row['item_name'], row['item_unit'], row['category_name'],
-                         row['total_qty'], row['cost_price'], row['total_value'],
+                         row['total_qty'], *cost_vals,
                          row['last_movement_date'] or '—', row['days_idle'] or '—'])
     return response
 
@@ -2204,7 +2218,8 @@ def destruction_add_line_ajax(request, pk):
     return JsonResponse({'success': True, 'line': {
         'id': line.id, 'item_name': item.name, 'batch_number': batch_number_snapshot or '—',
         'expiry_date': expiry_date_snapshot.isoformat() if expiry_date_snapshot else None,
-        'quantity': str(line.quantity), 'unit_cost': str(line.unit_cost_snapshot),
+        'quantity': str(line.quantity),
+        **({'unit_cost': str(line.unit_cost_snapshot)} if can_view_cost(request.user) else {}),
         'notes': line.notes,
     }})
 
@@ -2326,6 +2341,8 @@ def manufacturing_table_api(request):
         }
         for o in qs
     ]
+    if not can_view_cost(request.user):
+        data = [{k: v for k, v in row.items() if k != 'cost'} for row in data]
     return JsonResponse({'draw': draw, 'recordsTotal': records_total, 'recordsFiltered': records_filtered, 'data': data})
 
 

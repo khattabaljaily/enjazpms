@@ -8,7 +8,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from apps.core.models import Tenant, TenantQuerySet
 from .permissions import (
-    get_permission_keys, get_branch_supervisor_permission_keys, branch_blocked_keys, BRANCH_ITEM_KEYS,
+    get_permission_keys, get_branch_supervisor_permission_keys, SUPERVISOR_GRANT_ONLY_KEYS, branch_blocked_keys, BRANCH_ITEM_KEYS,
     get_enterprise_owner_permission_keys, load_permission_schema, get_central_mode_admin_only_keys,
 )
 
@@ -152,7 +152,9 @@ class User(AbstractUser):
                 return set(get_enterprise_owner_permission_keys(central))
             return set(get_permission_keys())
         if self.is_branch_supervisor and self.branch_id:
-            keys = set(get_branch_supervisor_permission_keys(central))
+            keys = set(get_branch_supervisor_permission_keys(central)) - SUPERVISOR_GRANT_ONLY_KEYS
+            for group in self.permission_groups.filter(is_active=True):
+                keys.update(set(group.get_permission_keys()) & SUPERVISOR_GRANT_ONLY_KEYS)
         else:
             keys = set()
             enterprise = bool(self.tenant_id and self.tenant.is_enterprise())
@@ -190,6 +192,8 @@ class User(AbstractUser):
         if self.branch_id and central and permission_key in get_central_mode_admin_only_keys():
             return False
         if self.is_branch_supervisor and self.branch_id:
+            if permission_key in SUPERVISOR_GRANT_ONLY_KEYS:
+                return any(g.has_permission(permission_key) for g in self.permission_groups.filter(is_active=True))
             return permission_key in get_branch_supervisor_permission_keys(central)
         if permission_key == 'view_items' and self.branch_id and self._branch_items_allowed():
             # إضافة/تعديل منتجات الفرع تتم من شاشة القائمة، فأي صلاحية منها تمنح عرض القائمة

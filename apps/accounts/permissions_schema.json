@@ -235,7 +235,8 @@
                 {"key": "delete_items", "label": {"ar": "حذف منتج أو خدمة", "en": "Delete product or service"}},
                 {"key": "view_items", "label": {"ar": "عرض قائمة المنتجات والخدمات", "en": "View products and services list"}},
                 {"key": "import_items", "label": {"ar": "استيراد منتجات من ملف", "en": "Import products from file"}},
-                {"key": "export_items", "label": {"ar": "تصدير بيانات المنتجات", "en": "Export product data"}}
+                {"key": "export_items", "label": {"ar": "تصدير بيانات المنتجات", "en": "Export product data"}},
+                {"key": "view_cost_prices", "label": {"ar": "عرض أسعار التكلفة والأرباح في كل النظام", "en": "View cost prices and profits across the system"}}
             ]
         },
         {

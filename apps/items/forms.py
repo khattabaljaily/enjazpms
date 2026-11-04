@@ -165,9 +165,13 @@ class ItemForm(forms.ModelForm):
             'is_purchasable': 'قابل للشراء',
         }
 
-    def __init__(self, *args, tenant=None, capabilities=None, **kwargs):
+    def __init__(self, *args, tenant=None, capabilities=None, hide_cost=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._tenant = tenant
+        # من لا يملك صلاحية عرض التكلفة: لا يُقرأ حقلها أصلاً فتبقى قيمتها المحفوظة كما هي
+        if hide_cost:
+            for name in ('cost_price', 'cost_price_hc'):
+                self.fields.pop(name, None)
 
         # Filter item_type choices based on capabilities
         allowed_types = ['product', 'service']

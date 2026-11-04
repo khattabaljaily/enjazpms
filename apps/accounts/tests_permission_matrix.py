@@ -133,6 +133,8 @@ class PermissionMatrixTests(TenantTestCase):
                 )
 
                 granted_keys = keys if mode == 'all' else keys[:1]
+                # تقارير التكلفة/الربح تتطلب أيضاً صلاحية عرض التكلفة (راجع apps/accounts/cost_visibility.py)
+                granted_keys = tuple(granted_keys) + ('view_cost_prices',)
                 allowed_user = self._make_user(f'allowed-{idx}', permission_keys=granted_keys)
                 self.client.force_login(allowed_user)
                 response = self.client.get(path)

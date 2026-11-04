@@ -62,7 +62,7 @@
                 <tr><th class="text-muted">الكمية المنتجة</th><td><strong>{{ order.quantity|floatformat:"-2" }}</strong></td></tr>
                 <tr><th class="text-muted">المخزن</th><td>{{ order.stock.name }}</td></tr>
                 <tr><th class="text-muted">التاريخ</th><td>{{ order.order_date }}</td></tr>
-                <tr><th class="text-muted">التكلفة الكلية</th><td><strong>{{ order.cost|money }}</strong></td></tr>
+                {% if can_view_cost %}<tr><th class="text-muted">التكلفة الكلية</th><td><strong>{{ order.cost|money }}</strong></td></tr>{% endif %}
                 {% if order.notes %}
                 <tr><th class="text-muted">ملاحظات</th><td>{{ order.notes }}</td></tr>
                 {% endif %}
@@ -86,8 +86,8 @@
                             <th>الكمية لكل وحدة</th>
                             <th>الكمية الإجمالية</th>
                             <th>الوحدة</th>
-                            <th>سعر التكلفة</th>
-                            <th>الإجمالي</th>
+                            {% if can_view_cost %}<th>سعر التكلفة</th>{% endif %}
+                            {% if can_view_cost %}<th>الإجمالي</th>{% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -99,8 +99,8 @@
                             <td>{{ line.quantity|floatformat:"-2" }}</td>
                             <td><strong>{{ line.total_qty|floatformat:"-2" }}</strong></td>
                             <td>{{ line.unit.name|default:"-" }}</td>
-                            <td>{{ line.component.cost_price|money }}</td>
-                            <td>{{ line.total_cost|money }}</td>
+                            {% if can_view_cost %}<td>{{ line.component.cost_price|money }}</td>{% endif %}
+                            {% if can_view_cost %}<td>{{ line.total_cost|money }}</td>{% endif %}
                         </tr>
                         {% empty %}
                         <tr>

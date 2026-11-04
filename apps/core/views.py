@@ -1052,14 +1052,20 @@ def admin_audit_log(request):
 
     qs = UserActivity.objects.select_related('tenant', 'user').order_by('-created_at')
 
-    tenant_id  = request.GET.get('tenant', '')
-    action     = request.GET.get('action', '')
-    date_from  = request.GET.get('date_from', '')
-    date_to    = request.GET.get('date_to', '')
-    search     = request.GET.get('q', '')
+    tenant_id  = request.GET.get('tenant', '').strip()
+    action     = request.GET.get('action', '').strip()
+    date_from  = request.GET.get('date_from', '').strip()
+    date_to    = request.GET.get('date_to', '').strip()
+    search     = request.GET.get('q', '').strip()
+
+    # قيم غير صالحة في الرابط تُتجاهل بدل أن تسبب خطأ 500
+    if not tenant_id.isdigit():
+        tenant_id = ''
+    if action not in dict(UserActivity.ACTION_CHOICES):
+        action = ''
 
     if tenant_id:
-        qs = qs.filter(tenant_id=tenant_id)
+        qs = qs.filter(tenant_id=int(tenant_id))
     if action:
         qs = qs.filter(action_type=action)
     local_tz = dj_timezone.get_current_timezone()
@@ -2886,7 +2892,20 @@ def analytics(request):
                 supplier_debt += _local_bal
     supplier_debt = float(supplier_debt)
 
+    # من لا يرى التكلفة لا يرى الربح (البيع − التكلفة)، ولا «التكلفة» في النمط المركزي (تكلفة البضاعة المباعة)
+    from apps.accounts.cost_visibility import can_view_cost
+    show_profit = can_view_cost(request.user)
+    show_purchases = show_profit or not use_cogs
+    if not show_profit:
+        kpis.pop('profit', None)
+        monthly_profit = []
+    if not show_purchases:
+        kpis.pop('purchases', None)
+        monthly_purchases = []
+
     context = {
+        'show_profit': show_profit,
+        'show_purchases': show_purchases,
         'kpis': kpis,
         'this_month_label': f"{arabic_months[today.month-1]} {today.year}",
         'prev_month_label': f"{arabic_months[last_day_prev.month-1]} {last_day_prev.year}",

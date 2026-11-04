@@ -56,11 +56,13 @@
             <div class="rpt-kpi-value">{{ report.summary.non_moving_count }}</div>
             <div class="rpt-kpi-label">أصناف راكدة</div>
         </div>
+        {% if can_view_cost %}
         <div class="rpt-kpi-card rpt-kpi--red">
             <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
             <div class="rpt-kpi-value">{{ report.summary.total_value }}</div>
             <div class="rpt-kpi-label">قيمة المخزون الراكد</div>
         </div>
+        {% endif %}
     </div>
 
     <div class="rpt-panel">
@@ -78,8 +80,8 @@
                             <th>الوحدة</th>
                             <th>الفئة</th>
                             <th class="text-end">الكمية</th>
-                            <th class="text-end">سعر التكلفة</th>
-                            <th class="text-end">القيمة</th>
+                            {% if can_view_cost %}<th class="text-end">سعر التكلفة</th>{% endif %}
+                            {% if can_view_cost %}<th class="text-end">القيمة</th>{% endif %}
                             <th>آخر حركة</th>
                             <th class="text-center">أيام الركود</th>
                         </tr>
@@ -91,8 +93,8 @@
                             <td class="text-muted">{{ row.item_unit }}</td>
                             <td class="text-muted">{{ row.category_name }}</td>
                             <td class="text-end">{{ row.total_qty }}</td>
-                            <td class="text-end text-muted">{{ row.cost_price }}</td>
-                            <td class="text-end fw-bold" style="color:#f59e0b">{{ row.total_value }}</td>
+                            {% if can_view_cost %}<td class="text-end text-muted">{{ row.cost_price }}</td>{% endif %}
+                            {% if can_view_cost %}<td class="text-end fw-bold" style="color:#f59e0b">{{ row.total_value }}</td>{% endif %}
                             <td class="text-muted">
                                 {% if row.last_movement_date %}{{ row.last_movement_date|date:"Y-m-d" }}{% else %}<span class="text-danger">لا توجد حركة</span>{% endif %}
                             </td>

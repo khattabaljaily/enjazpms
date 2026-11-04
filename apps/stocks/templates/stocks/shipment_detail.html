@@ -54,7 +54,7 @@
         <table class="cx-table table w-100">
             <thead>
                 <tr>
-                    <th>المنتج</th><th>المرسلة</th><th>تكلفة الوحدة</th>
+                    <th>المنتج</th><th>المرسلة</th>{% if can_view_cost %}<th>تكلفة الوحدة</th>{% endif %}
                     <th>المستلَمة</th><th>الفرق</th><th>الدفعات</th>
                 </tr>
             </thead>
@@ -63,7 +63,7 @@
                 <tr>
                     <td><strong>{{ line.item.name }}</strong></td>
                     <td>{{ line.quantity_sent|floatformat:"-2" }}</td>
-                    <td>{{ line.unit_cost|floatformat:2 }}</td>
+                    {% if can_view_cost %}<td>{{ line.unit_cost|floatformat:2 }}</td>{% endif %}
                     <td>
                         {% if can_receive %}
                         <input type="number" class="cx-input recv-qty" style="width:120px" step="0.0001" min="0"

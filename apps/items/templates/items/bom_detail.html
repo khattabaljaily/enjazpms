@@ -54,6 +54,7 @@
             <div class="doc-card-value">{{ recipe.item.name }}</div>
         </div>
     </div>
+    {% if can_view_cost %}
     <div class="doc-card">
         <div class="doc-card-icon doc-card-icon--indigo"><i class="fas fa-coins"></i></div>
         <div class="doc-card-body">
@@ -61,6 +62,8 @@
             <div class="doc-card-value">{{ recipe.total_cost|money }}</div>
         </div>
     </div>
+    {% endif %}
+    {% if can_view_cost %}
     <div class="doc-card">
         <div class="doc-card-icon doc-card-icon--indigo"><i class="fas fa-tag"></i></div>
         <div class="doc-card-body">
@@ -68,6 +71,7 @@
             <div class="doc-card-value">{{ recipe.item.cost_price|money }}</div>
         </div>
     </div>
+    {% endif %}
     <div class="doc-card">
         <div class="doc-card-icon doc-card-icon--indigo"><i class="fas fa-list-ol"></i></div>
         <div class="doc-card-body">
@@ -90,8 +94,8 @@
                     <th>#</th>
                     <th>المكوّن</th>
                     <th class="text-center">الكمية</th>
-                    <th class="text-end">سعر التكلفة</th>
-                    <th class="text-end">الإجمالي</th>
+                    {% if can_view_cost %}<th class="text-end">سعر التكلفة</th>{% endif %}
+                    {% if can_view_cost %}<th class="text-end">الإجمالي</th>{% endif %}
                     <th></th>
                 </tr>
             </thead>
@@ -108,8 +112,8 @@
                         </div>
                     </td>
                     <td class="text-center fw-bold">{{ line.quantity|floatformat:"-2" }}</td>
-                    <td class="text-end">{{ line.component.cost_price|money }}</td>
-                    <td class="text-end doc-line-total">{{ line.line_total|money }}</td>
+                    {% if can_view_cost %}<td class="text-end">{{ line.component.cost_price|money }}</td>{% endif %}
+                    {% if can_view_cost %}<td class="text-end doc-line-total">{{ line.line_total|money }}</td>{% endif %}
                     <td>
                         <div class="cxr-actions">
                             <button class="cxr-act cxr-act--del" title="حذف" onclick="deleteLine({{ line.id }})">

@@ -63,11 +63,6 @@ CLASSIFICATION_FIELDS = [
         'tenant_source': 'category', 'capability': None, 'typical_width': 22,
         'description': 'التصنيف أو القسم أو الفئة',
     },
-    {
-        'field': 'supplier', 'header_ar': 'الشركة الموردة', 'required': False, 'dtype': 'text',
-        'capability': None, 'typical_width': 22,
-        'description': 'اسم الشركة أو المورّد الذي جاء منه هذا الصنف — تُنشأ تلقائياً إن لم تكن موجودة، وتُستخدم للتصفية لاحقاً',
-    },
     # NOTE: units are intentionally free text, not a choice_tenant dropdown from a
     # shared Unit list. The manual "add product" form has no such shared list either —
     # every product defines its own units via ItemUnit (see apps/items/views.py
@@ -125,15 +120,10 @@ PRICING_FIELDS_HC = [
     },
 ]
 
+# أعمدة أُزيلت من القالب لأنها غير ضرورية عند الاستيراد، وتأخذ قيمها الافتراضية من نموذج Item:
+#   الشركة الموردة = لا شيء، الحد الأدنى/الأقصى للمخزون = 0، تتبع الرقم التسلسلي = لا،
+#   قابل للبيع = نعم، قابل للشراء = نعم. (تُعدَّل لاحقاً من شاشة المنتج عند الحاجة.)
 STOCK_TRACKING_FIELDS = [
-    {
-        'field': 'min_quantity', 'header_ar': 'الحد الأدنى للمخزون', 'required': False, 'dtype': 'decimal',
-        'capability': None, 'typical_width': 16, 'description': 'الحد الأدنى للمخزون قبل التنبيه',
-    },
-    {
-        'field': 'max_quantity', 'header_ar': 'الحد الأقصى للمخزون', 'required': False, 'dtype': 'decimal',
-        'capability': None, 'typical_width': 16, 'description': 'الحد الأقصى للمخزون',
-    },
     {
         'field': 'track_expiry', 'header_ar': 'تتبع تاريخ الانتهاء؟', 'required': False, 'dtype': 'bool',
         'capability': 'has_expiry_dates', 'typical_width': 12, 'description': 'هل يتم تتبع تاريخ انتهاء الصلاحية',
@@ -141,18 +131,6 @@ STOCK_TRACKING_FIELDS = [
     {
         'field': 'track_batch', 'header_ar': 'تتبع رقم الدفعة؟', 'required': False, 'dtype': 'bool',
         'capability': 'has_batch_numbers', 'typical_width': 12, 'description': 'هل يتم تتبع رقم الدفعة',
-    },
-    {
-        'field': 'track_serial', 'header_ar': 'تتبع الرقم التسلسلي؟', 'required': False, 'dtype': 'bool',
-        'capability': 'has_serial_numbers', 'typical_width': 12, 'description': 'هل يتم تتبع الرقم التسلسلي',
-    },
-    {
-        'field': 'is_sellable', 'header_ar': 'قابل للبيع؟', 'required': False, 'dtype': 'bool',
-        'capability': None, 'typical_width': 12, 'description': 'هل المنتج قابل للبيع',
-    },
-    {
-        'field': 'is_purchasable', 'header_ar': 'قابل للشراء؟', 'required': False, 'dtype': 'bool',
-        'capability': None, 'typical_width': 12, 'description': 'هل المنتج قابل للشراء',
     },
 ]
 

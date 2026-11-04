@@ -48,6 +48,10 @@
                     </div>
                     <div class="profile-info-row">
                         <div class="profile-info-item">
+                            <span class="profile-info-label">رقم الهاتف</span>
+                            <span class="profile-info-value" dir="ltr">{{ user.phone|default:"-" }}</span>
+                        </div>
+                        <div class="profile-info-item">
                             <span class="profile-info-label">تاريخ الانضمام</span>
                             <span class="profile-info-value">{{ user.date_joined|date:"d/m/Y" }}</span>
                         </div>
@@ -106,7 +110,7 @@
                         <i class="fas fa-edit"></i>
                         <span>تعديل الملف الشخصي</span>
                     </button>
-                    <a href="{% url 'core:dashboard' %}" class="profile-action-btn profile-action-btn--success">
+                    <a href="{% if user.is_superuser %}{% url 'core:admin_dashboard' %}{% else %}{% url 'core:dashboard' %}{% endif %}" class="profile-action-btn profile-action-btn--success">
                         <i class="fas fa-chart-line"></i>
                         <span>الإحصائيات والتقارير</span>
                     </a>
@@ -159,15 +163,30 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="modal-body cx-modal-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    ميزة تغيير كلمة المرور ستكون متاحة قريباً. يرجى التواصل مع مدير النظام للمساعدة.
+            <form method="post" action="{% url 'accounts:profile' %}" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="password">
+                <div class="modal-body cx-modal-body">
+                    {% if password_form.non_field_errors %}
+                    <div class="alert alert-danger">{% for e in password_form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>
+                    {% endif %}
+                    {% for field in password_form %}
+                    <div class="mb-3">
+                        <label class="cx-label" for="{{ field.id_for_label }}">{{ field.label }} <sup class="cx-required">*</sup></label>
+                        {{ field }}
+                        {% for e in field.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    </div>
+                    {% endfor %}
+                    <div class="text-muted small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        8 أحرف على الأقل، ولا تكون أرقاماً فقط أو شائعة أو مشابهة لاسم المستخدم. سيتم تسجيل خروجك من الأجهزة الأخرى.
+                    </div>
                 </div>
-                <div class="text-center mt-3">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <div class="modal-footer cx-modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning"><i class="fas fa-key me-2"></i>تغيير كلمة المرور</button>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 </div>
@@ -185,15 +204,33 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="modal-body cx-modal-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    ميزة تعديل الملف الشخصي ستكون متاحة قريباً. يرجى التواصل مع مدير النظام للمساعدة.
+            <form method="post" action="{% url 'accounts:profile' %}" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="profile">
+                <div class="modal-body cx-modal-body">
+                    {% if profile_form.non_field_errors %}
+                    <div class="alert alert-danger">{% for e in profile_form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="cx-label">اسم المستخدم</label>
+                        <input type="text" class="form-control" value="{{ user.username }}" dir="ltr" disabled>
+                        <div class="text-muted small mt-1">لا يمكن تغيير اسم المستخدم، تواصل مع مدير النشاط إن لزم.</div>
+                    </div>
+                    <div class="row g-3">
+                        {% for field in profile_form %}
+                        <div class="col-md-6">
+                            <label class="cx-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for e in field.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                <div class="text-center mt-3">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <div class="modal-footer cx-modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-check me-2"></i>حفظ</button>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 </div>
@@ -230,4 +267,15 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if open_modal %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('{{ open_modal }}');
+    if (el && window.bootstrap) { bootstrap.Modal.getOrCreateInstance(el).show(); }
+});
+</script>
+{% endif %}
 {% endblock %}

@@ -879,6 +879,13 @@
             "ar": "تصدير بيانات المنتجات",
             "en": "Export product data"
           }
+        },
+        {
+          "key": "view_cost_prices",
+          "label": {
+            "ar": "عرض أسعار التكلفة والأرباح في كل النظام",
+            "en": "View cost prices and profits across the system"
+          }
         }
       ]
     },

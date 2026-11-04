@@ -76,7 +76,7 @@
                             <th class="text-center">المتاح</th>
                             <th class="text-center">المحجوز</th>
                             <th class="text-center">الإجمالي</th>
-                            <th class="text-end">القيمة</th>
+                            {% if can_view_cost %}<th class="text-end">القيمة</th>{% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -94,7 +94,7 @@
                             <td class="text-center fw-bold" style="color:#11998e">{{ item.total_available|floatformat:0 }}</td>
                             <td class="text-center" style="color:#f59e0b">{{ item.total_reserved|floatformat:0 }}</td>
                             <td class="text-center">{{ item.total_quantity|floatformat:0 }}</td>
-                            <td class="text-end text-muted">{{ item.total_value|money }}</td>
+                            {% if can_view_cost %}<td class="text-end text-muted">{{ item.total_value|money }}</td>{% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>

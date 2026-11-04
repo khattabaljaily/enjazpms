@@ -76,11 +76,13 @@
             <div class="rpt-kpi-value">{{ report.summary.low_stock_items }}</div>
             <div class="rpt-kpi-label">منتجات منخفضة</div>
         </div>
+        {% if can_view_cost %}
         <div class="rpt-kpi-card rpt-kpi--purple">
             <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
             <div class="rpt-kpi-value">{{ report.summary.total_value|floatformat:0 }}</div>
             <div class="rpt-kpi-label">القيمة الإجمالية</div>
         </div>
+        {% endif %}
     </div>
 
     <!-- ══ STOCK BREAKDOWN CHART ════════════════════════════════ -->

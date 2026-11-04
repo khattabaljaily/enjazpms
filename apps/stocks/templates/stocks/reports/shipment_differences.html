@@ -54,11 +54,13 @@
             <div class="rpt-kpi-value">{{ report.rows|length }}</div>
             <div class="rpt-kpi-label">بنود فيها فرق</div>
         </div>
+        {% if can_view_cost %}
         <div class="rpt-kpi-card rpt-kpi--red">
             <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
             <div class="rpt-kpi-value">{{ report.total_value|money }}</div>
             <div class="rpt-kpi-label">قيمة الفروقات</div>
         </div>
+        {% endif %}
     </div>
 
     <div class="rpt-panel">
@@ -80,7 +82,7 @@
                             <th class="text-end">المرسل</th>
                             <th class="text-end">المستلَم</th>
                             <th class="text-end">الفرق</th>
-                            <th class="text-end">القيمة</th>
+                            {% if can_view_cost %}<th class="text-end">القيمة</th>{% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -94,7 +96,7 @@
                             <td class="text-end">{{ r.sent|qty }}</td>
                             <td class="text-end">{{ r.received|qty }}</td>
                             <td class="text-end fw-bold text-danger" dir="ltr">{{ r.difference|qty }}</td>
-                            <td class="text-end fw-bold" dir="ltr">{{ r.value|money }}</td>
+                            {% if can_view_cost %}<td class="text-end fw-bold" dir="ltr">{{ r.value|money }}</td>{% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>

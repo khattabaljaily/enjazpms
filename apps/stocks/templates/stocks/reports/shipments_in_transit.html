@@ -38,11 +38,13 @@
             <div class="rpt-kpi-value">{{ report.return_count }}</div>
             <div class="rpt-kpi-label">مرتجعات فروع</div>
         </div>
+        {% if can_view_cost %}
         <div class="rpt-kpi-card rpt-kpi--green">
             <div class="rpt-kpi-icon"><i class="fas fa-coins"></i></div>
             <div class="rpt-kpi-value">{{ report.total_value|money }}</div>
             <div class="rpt-kpi-label">قيمة البضاعة في الطريق</div>
         </div>
+        {% endif %}
     </div>
 
     <div class="rpt-panel">
@@ -61,7 +63,7 @@
                             <th>التاريخ</th>
                             <th class="text-center">أيام في الطريق</th>
                             <th class="text-center">البنود</th>
-                            <th class="text-end">القيمة</th>
+                            {% if can_view_cost %}<th class="text-end">القيمة</th>{% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -75,7 +77,7 @@
                                 <span class="badge {% if r.days > 7 %}bg-danger{% elif r.days > 2 %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">{{ r.days }} يوم</span>
                             </td>
                             <td class="text-center">{{ r.lines }}</td>
-                            <td class="text-end fw-bold">{{ r.value|money }}</td>
+                            {% if can_view_cost %}<td class="text-end fw-bold">{{ r.value|money }}</td>{% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>

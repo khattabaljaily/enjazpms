@@ -151,6 +151,11 @@ def get_scope_excluded_permission_keys(excluded_scope, central=False):
     )
 
 
+# مفاتيح حساسة لا يحصل عليها مشرف الفرع تلقائياً مع بقية صلاحيات فرعه: تُمنح له
+# (ولغيره) صراحةً فقط عبر مجموعة صلاحيات يحددها مدير النشاط.
+SUPERVISOR_GRANT_ONLY_KEYS = frozenset({'view_cost_prices'})
+
+
 def get_branch_supervisor_permission_keys(central=False):
     """
     كل مفاتيح الصلاحيات المتاحة لمشرف الفرع تلقائياً: كل الصلاحيات ما عدا

@@ -715,14 +715,6 @@ def register_step1(request):
     })
 
 
-@login_required
-def profile_view(request):
-    """الملف الشخصي"""
-    return render(request, 'accounts/profile.html', {
-        'user': request.user,
-    })
-
-
 def register_step2(request):
     """الخطوة 2: معلومات النشاط التجاري"""
     _clear_messages(request)
@@ -879,8 +871,8 @@ def register_step3(request):
                         tax_value=form.cleaned_data.get('tax_value', 0),
                     )
                     
-                    # 4. تسجيل دخول المستخدم تلقائياً
-                    login(request, user)
+                    # 4. تسجيل دخول المستخدم تلقائياً (backend صريح: يوجد أكثر من backend في الإعدادات)
+                    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                     
                     # 5. مسح بيانات Session
                     request.session.pop('reg_step1', None)
@@ -1039,11 +1031,11 @@ def login_view(request):
             errors = _serialize_form_errors(form)
             return JsonResponse({
                 'success': False,
-                'message': _first_error_message(errors, default='اسم المستخدم أو كلمة المرور غير صحيحة'),
+                'message': _first_error_message(errors, default='اسم المستخدم/البريد الإلكتروني أو كلمة المرور غير صحيحة'),
                 'errors': errors,
             }, status=400, json_dumps_params={'ensure_ascii': False})
         else:
-            messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة')
+            messages.error(request, 'اسم المستخدم/البريد الإلكتروني أو كلمة المرور غير صحيحة')
     else:
         form = LoginForm()
     
@@ -1131,9 +1123,43 @@ def exit_impersonation(request):
 
 @login_required
 def profile_view(request):
-    """الملف الشخصي"""
+    """الملف الشخصي: عرض البيانات + تعديلها + تغيير كلمة المرور"""
+    from django.contrib.auth import update_session_auth_hash
+    from .forms import ChangePasswordForm, ProfileForm
+
+    user = request.user
+    profile_form = ProfileForm(instance=user)
+    password_form = ChangePasswordForm(user)
+    open_modal = ''
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'profile':
+            profile_form = ProfileForm(request.POST, instance=user)
+            if profile_form.is_valid():
+                changed = profile_form.changed_data
+                profile_form.save()
+                if changed:
+                    log_activity(request, 'تعديل الملف الشخصي', f'المستخدم: {user.get_full_name()}\nالحقول: {", ".join(changed)}', 'update')
+                messages.success(request, 'تم حفظ بيانات الملف الشخصي')
+                return redirect('accounts:profile')
+            open_modal = 'editProfileModal'
+        elif action == 'password':
+            password_form = ChangePasswordForm(user, request.POST)
+            if password_form.is_valid():
+                password_form.save()
+                # إبقاء المستخدم مسجلاً بعد تغيير كلمة المرور (تُبطَل جلساته الأخرى)
+                update_session_auth_hash(request, password_form.user)
+                log_activity(request, 'تغيير كلمة المرور', f'المستخدم: {user.get_full_name()}\nاسم الدخول: {user.username}', 'update')
+                messages.success(request, 'تم تغيير كلمة المرور بنجاح')
+                return redirect('accounts:profile')
+            open_modal = 'changePasswordModal'
+
     return render(request, 'accounts/profile.html', {
-        'user': request.user,
+        'user': user,
+        'profile_form': profile_form,
+        'password_form': password_form,
+        'open_modal': open_modal,
     })
 
 

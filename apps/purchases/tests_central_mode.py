@@ -409,7 +409,12 @@ class CentralModeEndToEndReportsTests(CentralModeBase):
 
 class CentralModeAnalyticsTests(CentralModeBase):
     def test_branch_analytics_uses_cogs_and_hides_supplier_debt(self):
+        from apps.accounts.models import PermissionGroup
         self.client.force_login(self.supervisor)
+        # بلا صلاحية عرض التكلفة: تكلفة البضاعة المباعة لا تظهر لمشرف الفرع
+        self.assertNotContains(self.client.get(reverse('core:analytics')), 'تكلفة البضاعة المباعة')
+        group = PermissionGroup.objects.create(tenant=self.tenant, name='تكلفة', permissions={'view_cost_prices': True})
+        group.users.add(self.supervisor)
         resp = self.client.get(reverse('core:analytics'))
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.context['cost_is_cogs'])

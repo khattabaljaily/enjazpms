@@ -127,6 +127,7 @@ TEMPLATES = [
                 'apps.core.context_processors.platform_context',
                 'apps.core.context_processors.impersonation_context',
                 'apps.core.context_processors.training_context',
+                'apps.core.context_processors.cost_visibility_context',
             ],
         },
     },
@@ -142,6 +143,13 @@ DATABASES = {
 }
 
 AUTH_USER_MODEL = 'accounts.User'
+
+# تسجيل الدخول باسم المستخدم أو البريد الإلكتروني.
+# ModelBackend يبقى لأن الجلسات الحالية وتسجيل الدخول كمشترك (login_as) مسجَّلة به.
+AUTHENTICATION_BACKENDS = [
+    'apps.accounts.backends.UsernameOrEmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

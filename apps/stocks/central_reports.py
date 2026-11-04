@@ -38,6 +38,14 @@ def report_period(request, days=30):
     return parse(request.GET.get('start_date'), today - timedelta(days=days)), parse(request.GET.get('end_date'), today)
 
 
+def _drop_value_column(request, headers, rows):
+    """عمود «القيمة» (بسعر التكلفة) الأخير يُحذف لمن لا يرى التكلفة."""
+    from apps.accounts.cost_visibility import can_view_cost
+    if can_view_cost(request.user):
+        return headers, rows
+    return headers[:-1], [r[:-1] for r in rows]
+
+
 def csv_response(filename, headers, rows):
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="{filename}.csv"'
@@ -106,9 +114,9 @@ def shipments_in_transit_report(request):
 def shipments_in_transit_report_export(request):
     tenant = central_scope_or_404(request)
     rows = shipments_in_transit_data(tenant)['rows']
-    return csv_response('shipments_in_transit',
+    return csv_response('shipments_in_transit', *_drop_value_column(request,
                         ['الرقم', 'النوع', 'الفرع', 'التاريخ', 'الأيام', 'البنود', 'القيمة'],
-                        [[r['number'], r['kind'], r['branch'], r['date'], r['days'], r['lines'], r['value']] for r in rows])
+                        [[r['number'], r['kind'], r['branch'], r['date'], r['days'], r['lines'], r['value']] for r in rows]))
 
 
 @login_required
@@ -127,7 +135,7 @@ def shipment_differences_report_export(request):
     tenant = central_scope_or_404(request)
     start, end = report_period(request)
     rows = shipment_differences_data(tenant, start, end)['rows']
-    return csv_response('shipment_differences',
+    return csv_response('shipment_differences', *_drop_value_column(request,
                         ['الرقم', 'النوع', 'الفرع', 'تاريخ الاستلام', 'الصنف', 'المرسل', 'المستلم', 'الفرق', 'القيمة'],
                         [[r['number'], r['kind'], r['branch'], r['date'], r['item'], r['sent'], r['received'],
-                          r['difference'], r['value']] for r in rows])
+                          r['difference'], r['value']] for r in rows]))

@@ -57,7 +57,7 @@
                     <th>المنتج النهائي</th>
                     <th>SKU</th>
                     <th>عدد المكوّنات</th>
-                    <th>التكلفة الإجمالية</th>
+                    {% if can_view_cost %}<th>التكلفة الإجمالية</th>{% endif %}
                     <th>الحالة</th>
                     <th>إجراءات</th>
                 </tr>
@@ -133,7 +133,7 @@ $(document).ready(function() {
             { data: 'item_name' },
             { data: 'item_sku' },
             { data: 'lines_count', className: 'text-center' },
-            { data: 'total_cost', render: d => parseFloat(d).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) },
+            {% if can_view_cost %}{ data: 'total_cost', render: d => parseFloat(d).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) },{% endif %}
             {
                 data: 'is_active',
                 render: d => d

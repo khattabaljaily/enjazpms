@@ -18,7 +18,6 @@ from django.utils import timezone
 from apps.items.models import Category, Item, ItemBatch
 from apps.items.views import _apply_hc_prices, _save_item_units
 from apps.items.dedup import find_existing_item_match
-from apps.suppliers.models import Supplier
 from apps.stocks.models import Stock, StockQuantity
 from apps.stocks.scope import opening_balance_stocks
 from apps.sales.models import StockMovement
@@ -97,7 +96,6 @@ def import_products(tenant, uploaded_file, user):
 
     categories = _name_lookup(Category.objects.for_tenant(tenant).filter(is_active=True))
     stocks = _name_lookup(opening_balance_stocks(tenant, branch))
-    suppliers = _name_lookup(Supplier.objects.for_tenant(tenant).for_branch(branch).filter(is_active=True))
 
     default_stock = None
     if not has_stock_column:
@@ -129,22 +127,6 @@ def import_products(tenant, uploaded_file, user):
             return stocks[key], None
         return None, f'المخزن "{raw}" غير موجود'
 
-    def resolve_supplier(raw: str):
-        """Unlike category/stock, an unknown supplier name is created on the
-        fly — pricelists rarely have a pre-curated supplier list, and this
-        field exists purely for the tenant's own later filtering."""
-        raw = (raw or '').strip()
-        if not raw:
-            return None
-        key = raw.lower()
-        if key in suppliers:
-            return suppliers[key]
-        if branch is not None and tenant.is_central_purchasing():
-            return None   # في النمط «مركزي» لا موردين لدى الفروع
-        supplier = Supplier.objects.create(tenant=tenant, name=raw, created_by=user, updated_by=user, branch=branch)
-        suppliers[key] = supplier
-        return supplier
-
     created = 0
     updated = 0
     errors = []
@@ -163,9 +145,6 @@ def import_products(tenant, uploaded_file, user):
                 if cat_err:
                     errors.append({'row': i, 'field': 'category', 'message': cat_err})
                     continue
-
-                supplier_raw = smart_get(row, 'supplier', mapping, schema_by_field.get('supplier', {}).get('header_ar', ''), 'الشركة الموردة', 'supplier')
-                supplier = resolve_supplier(supplier_raw)
 
                 base_unit_name = smart_get(row, 'base_unit_name', mapping, schema_by_field.get('base_unit_name', {}).get('header_ar', ''), 'اسم الوحدة الأساسية', 'base_unit_name')
                 large_unit_name = smart_get(row, 'large_unit_name', mapping, schema_by_field.get('large_unit_name', {}).get('header_ar', ''), 'اسم وحدة أكبر', 'large_unit_name')
@@ -194,20 +173,22 @@ def import_products(tenant, uploaded_file, user):
 
                 kwargs = {
                     'tenant': tenant, 'created_by': user, 'updated_by': user, 'branch': branch,
-                    'name': name, 'category': category, 'supplier': supplier,
+                    'name': name, 'category': category,
                     'is_active': True,
                 }
 
                 for spec in schema:
                     field = spec['field']
-                    if field in ('name', 'category', 'supplier', 'base_unit_name', 'large_unit_name', 'large_unit_count',
+                    if field in ('name', 'category', 'base_unit_name', 'large_unit_name', 'large_unit_count',
                                  'opening_quantity', 'stock', 'batch_number', 'expiry_date'):
                         continue
                     raw_value = smart_get(row, field, mapping, spec['header_ar'], field)
                     if spec['dtype'] == 'decimal':
                         kwargs[field] = safe_decimal(raw_value, default=Decimal('0'))
                     elif spec['dtype'] == 'bool':
-                        kwargs[field] = bool_from_str(raw_value) if raw_value else False
+                        # خلية فارغة = القيمة الافتراضية في نموذج Item (لا False دائماً)
+                        if raw_value:
+                            kwargs[field] = bool_from_str(raw_value)
                     elif spec['dtype'] == 'choice_fixed':
                         label_to_value = {label: value for value, label in spec['choices']}
                         kwargs[field] = label_to_value.get(raw_value, spec['choices'][0][0])

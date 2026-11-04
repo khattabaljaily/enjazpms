@@ -356,3 +356,34 @@ class HybridCentralSuppliersImportTests(TenantTestCase):
         from apps.core.models import Tenant
         Tenant.objects.filter(pk=self.tenant.pk).update(purchasing_mode='central')
         self.assertNotContains(self.client.get(reverse('data_import:hub')), 'استيراد الموردين المركزيين')
+
+
+class ProductImportDefaultsTests(TenantTestCase):
+    """الأعمدة المحذوفة من قالب الاستيراد تأخذ القيم الافتراضية للمنتج."""
+    subscription_plan = 'pro'
+
+    def setUp(self):
+        super().setUp()
+        Category.objects.create(tenant=self.tenant, name='عام', is_active=True)
+
+    def test_template_has_no_removed_columns(self):
+        from apps.data_import.schemas import get_product_schema
+        fields = {s['field'] for s in get_product_schema(self.tenant)}
+        for removed in ('supplier', 'min_quantity', 'max_quantity', 'track_serial', 'is_sellable', 'is_purchasable'):
+            self.assertNotIn(removed, fields)
+
+    def test_imported_product_gets_defaults(self):
+        from unittest import mock
+        from apps.data_import import product_importer
+        from apps.items.models import Item
+        csv = 'اسم المنتج *,التصنيف,سعر البيع,الشركة الموردة\nمنتج جديد,عام,150,مورد قديم\n'.encode('utf-8')
+        with mock.patch.object(product_importer, 'smart_map_headers', lambda h, s: {}):
+            result = product_importer.import_products(self.tenant, SimpleUploadedFile('p.csv', csv), self.user)
+        self.assertEqual(result['created'], 1, result)
+        item = Item.objects.get(tenant=self.tenant, name='منتج جديد')
+        self.assertTrue(item.is_sellable)
+        self.assertTrue(item.is_purchasable)
+        self.assertFalse(item.track_serial)
+        self.assertEqual(item.min_quantity, 0)
+        self.assertEqual(item.max_quantity, 0)
+        self.assertIsNone(item.supplier)

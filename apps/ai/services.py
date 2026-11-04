@@ -131,6 +131,14 @@ def _decimal_to_float(value):
     return float(value) if isinstance(value, Decimal) else value
 
 
+def _can_see_cost(user) -> bool:
+    """بدون مستخدم (مهام مجدولة لمدير النشاط) = السلوك السابق."""
+    if user is None:
+        return True
+    from apps.accounts.cost_visibility import can_view_cost
+    return can_view_cost(user)
+
+
 def _is_enterprise_owner(tenant, user) -> bool:
     """
     مدير النشاط (is_tenant_admin) في نسخة المؤسسات مقيّد الآن بصلاحيات إدارية
@@ -474,7 +482,8 @@ def collect_business_context(tenant, user=None) -> dict:
         'monthly_invoice_count': monthly_invoice_count,
         'monthly_purchases': monthly_purchases,
         'monthly_expenses': monthly_expenses,
-        'gross_profit': round(monthly_revenue - monthly_purchases, 2),
+        # الربح يكشف التكلفة: لا يصل للمساعد إلا لمن يملك صلاحية عرض التكلفة
+        **({'gross_profit': round(monthly_revenue - monthly_purchases, 2)} if _can_see_cost(user) else {}),
         'top_selling_items': top_items,
         'low_stock_items': low_stock,
         'top_debtors': top_debtors,
@@ -714,7 +723,8 @@ def _build_owner_context_message(ctx: dict) -> str:
             lines.append("  • أكبر بنود المصروفات: " + '، '.join(
                 f"{e['category']} {m(e['total'])}" for e in b['expense_by_category']))
         lines.append(f"  • مديونية العملاء: {m(b['receivables'])} — مستحقات الموردين: {m(b['payables'])}")
-        lines.append(f"  • قيمة المخزون بسعر التكلفة: {m(b['stock_value'])}")
+        if b.get('stock_value') is not None:
+            lines.append(f"  • قيمة المخزون بسعر التكلفة: {m(b['stock_value'])}")
         lines.append(f"  • أصناف تحت الحد الأدنى: {b['low_stock_count']}")
         for i in b['low_stock_items']:
             lines.append(f"      - {i['item']}: {i['current']:.0f} (الحد {i['min']:.0f}) — {i['stock']}")
@@ -763,8 +773,9 @@ def _build_context_message(context: dict) -> str:
         f"  • عدد الفواتير: {ctx['monthly_invoice_count']}",
         f"  • مشتريات الشهر: {ctx['monthly_purchases']:,.0f} {cur_label}",
         f"  • مصروفات الشهر: {ctx['monthly_expenses']:,.0f} {cur_label}",
-        f"  • إجمالي الربح: {ctx['gross_profit']:,.0f} {cur_label}",
     ]
+    if 'gross_profit' in ctx:
+        lines.append(f"  • إجمالي الربح: {ctx['gross_profit']:,.0f} {cur_label}")
 
     if ctx['top_selling_items']:
         lines.append("\n🏆 أكثر المنتجات مبيعاً:")

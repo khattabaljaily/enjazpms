@@ -2,7 +2,7 @@
 Forms للتسجيل وتسجيل الدخول
 """
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm as DjangoPasswordChangeForm
 from django.core.exceptions import ValidationError
 from apps.core.constants import COUNTRY_CHOICES, DEFAULT_COUNTRY
 from apps.core.models import BusinessType, Tenant, Settings, Branch
@@ -590,21 +590,21 @@ class LoginForm(AuthenticationForm):
     """نموذج تسجيل الدخول"""
 
     error_messages = {
-        'invalid_login': 'اسم المستخدم أو كلمة المرور غير صحيحة',
+        'invalid_login': 'اسم المستخدم/البريد الإلكتروني أو كلمة المرور غير صحيحة',
         'inactive': 'هذا الحساب غير نشط',
     }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         apply_arabic_error_messages(self)
-        self.fields['username'].widget.attrs['autocomplete'] = 'off'
+        self.fields['username'].widget.attrs['autocomplete'] = 'username'
         self.fields['password'].widget.attrs['autocomplete'] = 'new-password'
     
     username = forms.CharField(
         label='اسم المستخدم أو البريد الإلكتروني',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'اسم المستخدم',
+            'placeholder': 'اسم المستخدم أو البريد الإلكتروني',
             'autofocus': True
         })
     )
@@ -689,3 +689,63 @@ class SetPasswordForm(forms.Form):
         if len(password) < 8:
             raise ValidationError('كلمة المرور يجب أن تكون على الأقل 8 أحرف')
         return password
+
+
+class ProfileForm(forms.ModelForm):
+    """تعديل الملف الشخصي (بيانات المستخدم نفسه — بدون اسم الدخول أو الصلاحيات)"""
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'phone']
+        labels = {
+            'first_name': 'الاسم الأول',
+            'last_name': 'اسم العائلة',
+            'email': 'البريد الإلكتروني',
+            'phone': 'رقم الهاتف',
+        }
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'given-name'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'family-name'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'autocomplete': 'email', 'dir': 'ltr'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'tel', 'dir': 'ltr'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_arabic_error_messages(self)
+
+    def clean_email(self):
+        # البريد يُستخدم لتسجيل الدخول ولاستعادة كلمة المرور، فيجب أن يكون فريداً على مستوى النظام
+        email = (self.cleaned_data.get('email') or '').strip()
+        if not email:
+            return email
+        if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise ValidationError('البريد الإلكتروني مستخدم بالفعل')
+        return email
+
+
+class ChangePasswordForm(DjangoPasswordChangeForm):
+    """تغيير كلمة المرور من الملف الشخصي (يتطلب كلمة المرور الحالية)"""
+
+    error_messages = {
+        **DjangoPasswordChangeForm.error_messages,
+        'password_incorrect': 'كلمة المرور الحالية غير صحيحة',
+        'password_mismatch': 'كلمتا المرور الجديدتان غير متطابقتين',
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_arabic_error_messages(self)
+        labels = {
+            'old_password': 'كلمة المرور الحالية',
+            'new_password1': 'كلمة المرور الجديدة',
+            'new_password2': 'تأكيد كلمة المرور الجديدة',
+        }
+        for name, field in self.fields.items():
+            field.label = labels[name]
+            field.help_text = ''
+            field.widget.attrs.update({'class': 'form-control', 'dir': 'ltr'})
+        self.fields['old_password'].widget.attrs['autocomplete'] = 'current-password'
+        self.fields['old_password'].widget.attrs.pop('autofocus', None)
+        self.fields['new_password1'].widget.attrs['autocomplete'] = 'new-password'
+        self.fields['new_password2'].widget.attrs['autocomplete'] = 'new-password'

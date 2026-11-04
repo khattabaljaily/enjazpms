@@ -621,7 +621,7 @@
                         {% if user|has_perm_key:'view_sales_by_customer_report' %}<li><a href="{% url 'reports:by_customer_report' %}" class="nav-sublink"><i class="fas fa-users me-2"></i>حسب العميل</a></li>{% endif %}
                         <li><a href="{% url 'reports:by_item_report' %}" class="nav-sublink"><i class="fas fa-box me-2"></i>حسب المنتج</a></li>
                         <li><a href="{% url 'reports:by_date_report' %}" class="nav-sublink"><i class="fas fa-calendar-days me-2"></i>حسب التاريخ</a></li>
-                        <li><a href="{% url 'reports:profit_margin_report' %}" class="nav-sublink"><i class="fas fa-percent me-2"></i>هامش الربح</a></li>
+                        {% if can_view_cost %}<li><a href="{% url 'reports:profit_margin_report' %}" class="nav-sublink"><i class="fas fa-percent me-2"></i>هامش الربح</a></li>{% endif %}
                         <li><a href="{% url 'reports:by_payment_method_report' %}" class="nav-sublink"><i class="fas fa-credit-card me-2"></i>حسب طريقة الدفع</a></li>
                         {% if user|has_perm_key:'view_sales_by_user_report' %}<li><a href="{% url 'reports:by_user_report' %}" class="nav-sublink"><i class="fas fa-user me-2"></i>حسب المستخدم</a></li>{% endif %}
                     </ul>
@@ -664,7 +664,7 @@
                         <li><a href="{% url 'stocks:reports:by_stock_report' %}" class="nav-sublink"><i class="fas fa-location-dot me-2"></i>حسب الموقع</a></li>
                         <li><a href="{% url 'stocks:reports:item_movement_report' %}" class="nav-sublink"><i class="fas fa-arrows-up-down me-2"></i>حركة الأصناف</a></li>
                         <li><a href="{% url 'stocks:reports:low_stock_report' %}" class="nav-sublink"><i class="fas fa-triangle-exclamation me-2"></i>مخزون منخفض</a></li>
-                        <li><a href="{% url 'stocks:reports:valuation_report' %}" class="nav-sublink"><i class="fas fa-coins me-2"></i>تقييم المخزون</a></li>
+                        {% if can_view_cost %}<li><a href="{% url 'stocks:reports:valuation_report' %}" class="nav-sublink"><i class="fas fa-coins me-2"></i>تقييم المخزون</a></li>{% endif %}
                         <li><a href="{% url 'stocks:reports:non_moving_report' %}" class="nav-sublink"><i class="fas fa-hourglass me-2"></i>الأصناف الراكدة</a></li>
                         {% if current_tenant.has_central_warehouse and not request.branch and user|has_perm_key:'view_central_reports' %}
                         <li><a href="{% url 'stocks:reports:shipments_in_transit_report' %}" class="nav-sublink"><i class="fas fa-truck-fast me-2"></i>الشحنات في الطريق</a></li>
@@ -721,7 +721,7 @@
                         {% if user|has_perm_key:'view_bank_account_statement_report' or user|has_perm_key:'view_head_office_account_reports' %}<li><a href="{% url 'bank_accounts:reports:statement_report' %}" class="nav-sublink"><i class="fas fa-file-invoice-dollar me-2"></i>كشف حساب بنكي</a></li>{% endif %}
                         {% if user|has_perm_key:'view_bank_account_movements_report' or user|has_perm_key:'view_head_office_account_reports' %}<li><a href="{% url 'bank_accounts:reports:movements_report' %}" class="nav-sublink"><i class="fas fa-arrows-left-right me-2"></i>حركة الحسابات البنكية</a></li>{% endif %}
                         {% endif %}
-                        {% if user|has_perm_key:'view_income_statement_report' %}
+                        {% if user|has_perm_key:'view_income_statement_report' and can_view_cost %}
                         <li class="nav-submenu-label">المالية</li>
                         <li><a href="{% url 'reports:income_statement' %}" class="nav-sublink"><i class="fas fa-chart-line me-2"></i>قائمة الدخل (ربح/خسارة)</a></li>
                         {% endif %}

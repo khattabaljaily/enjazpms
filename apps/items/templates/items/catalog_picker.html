@@ -62,7 +62,7 @@
             <thead>
                 <tr>
                     <th></th><th>الاسم التجاري</th><th>الاسم العلمي</th><th>المورد / الوكيل</th><th>الشكل الصيدلاني</th><th>التركيز</th>
-                    <th>سعر التكلفة</th><th>سعر البيع</th><th>الكمية الافتتاحية</th>
+                    {% if can_view_cost %}<th>سعر التكلفة</th>{% endif %}<th>سعر البيع</th><th>الكمية الافتتاحية</th>
                 </tr>
             </thead>
             <tbody id="resultsBody"></tbody>
@@ -105,7 +105,7 @@ $(function () {
             $tr.append('<td>' + esc(r.sudan_agent || '-') + '</td>');
             $tr.append('<td>' + esc(r.dosage_form || '-') + '</td>');
             $tr.append('<td>' + esc(r.strength || '-') + '</td>');
-            $tr.append('<td><input type="number" step="0.01" class="form-control f-cost" style="width:90px"></td>');
+            {% if can_view_cost %}$tr.append('<td><input type="number" step="0.01" class="form-control f-cost" style="width:90px"></td>');{% endif %}
             $tr.append('<td><input type="number" step="0.01" class="form-control f-price" style="width:90px"></td>');
             $tr.append('<td><input type="number" step="0.01" class="form-control f-qty" style="width:90px"></td>');
             $body.append($tr);

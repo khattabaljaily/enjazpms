@@ -21,6 +21,9 @@ from apps.stocks.models import StockQuantity
 from apps.stocks.scope import opening_balance_stocks
 
 
+from apps.accounts.cost_visibility import can_view_cost, can_view_purchase_prices, strip_cost
+
+
 def _ensure_tenant(request):
     return getattr(request, 'tenant', None)
 
@@ -220,6 +223,9 @@ def item_table_api(request):
         'selling_price': 'selling_price', 'cost_price': 'cost_price',
         'is_active': 'is_active', 'created_at': 'created_at',
     }
+    show_cost = can_view_cost(request.user)
+    if not show_cost:
+        allowed.pop('cost_price')
     order_field = allowed.get(col_name, 'name')
     if order_dir == 'desc':
         order_field = f'-{order_field}'
@@ -261,6 +267,8 @@ def item_table_api(request):
         }
         for item in qs
     ]
+    if not show_cost:
+        data = strip_cost(data)
 
     return JsonResponse({
         'draw': draw,
@@ -647,7 +655,8 @@ def item_create_api(request):
         return HttpResponseNotAllowed(['POST'])
 
     from django.db import IntegrityError
-    form = ItemForm(request.POST, request.FILES, tenant=tenant, capabilities=_get_capabilities(tenant))
+    form = ItemForm(request.POST, request.FILES, tenant=tenant, capabilities=_get_capabilities(tenant),
+                    hide_cost=not can_view_cost(request.user))
     if form.is_valid():
         item = form.save(commit=False)
         item.tenant = tenant
@@ -689,9 +698,7 @@ def item_detail_api(request, pk):
         return JsonResponse({'success': False, 'message': 'المنتج غير موجود'}, status=404)
 
     iu_list = list(item.item_units.order_by('factor').values('id', 'name', 'factor'))
-    return JsonResponse({
-        'success': True,
-        'data': {
+    data = {
             'id': item.id,
             'can_manage': _branch_owns(request, item),
             'name': item.name,
@@ -739,8 +746,10 @@ def item_detail_api(request, pk):
                 {'id': u['id'], 'name': u['name'], 'factor': str(u['factor'])}
                 for u in iu_list
             ],
-        },
-    })
+    }
+    if not can_view_cost(request.user):
+        data = strip_cost(data)
+    return JsonResponse({'success': True, 'data': data})
 
 
 @login_required
@@ -828,7 +837,8 @@ def item_update_api(request, pk):
     if not _branch_owns(request, item):
         return JsonResponse({'success': False, 'message': _NOT_OWNER_MSG}, status=403)
 
-    form = ItemForm(request.POST, request.FILES, instance=item, tenant=tenant, capabilities=_get_capabilities(tenant))
+    form = ItemForm(request.POST, request.FILES, instance=item, tenant=tenant, capabilities=_get_capabilities(tenant),
+                    hide_cost=not can_view_cost(request.user))
     if form.is_valid():
         updated = form.save(commit=False)
         updated.updated_by = request.user
@@ -868,6 +878,8 @@ def _parse_price_adjustment(request, tenant):
     percent = percent.quantize(Decimal('0.01'))
 
     fields = [k for k in post.getlist('fields') if k in PRICE_FIELD_PAIRS]
+    if 'cost' in fields and not can_view_cost(request.user):
+        raise PriceAdjustmentError('ليست لديك صلاحية تعديل أسعار التكلفة')
     if not fields:
         raise PriceAdjustmentError('اختر سعراً واحداً على الأقل للتعديل')
 
@@ -906,6 +918,8 @@ def item_price_adjust_preview_api(request):
         affected, rows = preview_price_adjustment(tenant, percent, fields, qs)
     except PriceAdjustmentError as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
+    if not can_view_cost(request.user):
+        rows = strip_cost(rows, ('old_cost', 'new_cost'))
     return JsonResponse({
         'success': True, 'affected': affected, 'excluded': excluded_count, 'sample': rows,
         'hc_mode': bool(tenant.hard_currency_mode),
@@ -1078,6 +1092,8 @@ def item_search_api(request):
             'track_batch': item.track_batch,
             'track_serial': item.track_serial,
         })
+    if not can_view_purchase_prices(request.user):
+        results = strip_cost(results)
     return JsonResponse({'results': results})
 
 
@@ -1401,11 +1417,15 @@ def item_export_api(request):
     response = csv_response('items.csv')
     writer = csv_writer(response)
     hc_mode = bool(tenant.hard_currency_mode)
+    show_cost = can_view_cost(request.user)
     # وضع العملة الصعبة: أعمدة الصعبة (بعناوين قالب الاستيراد) ثم نظيرتها المحلية بعناوين «(محلي)»،
     # كي يعيد الاستيراد المحلي كما هو بالضبط دون انحراف تقريب الصعبة.
     price_headers = (['سعر التكلفة (عملة صعبة)', 'سعر البيع (عملة صعبة)', 'أدنى سعر بيع (عملة صعبة)',
                       'سعر التكلفة (محلي)', 'سعر البيع (محلي)', 'أدنى سعر بيع (محلي)']
                      if hc_mode else ['سعر التكلفة', 'سعر البيع', 'أدنى سعر بيع'])
+    # من لا يرى التكلفة: تُحذف أعمدتها من الملف
+    cost_cols = [i for i, h in enumerate(price_headers) if 'التكلفة' in h] if not show_cost else []
+    price_headers = [h for i, h in enumerate(price_headers) if i not in cost_cols]
     writer.writerow([
         'الاسم', 'الاسم الإنجليزي', 'الرمز (SKU)', 'الباركود',
         'التصنيف', 'الوحدة', 'وحدة الشراء',
@@ -1424,9 +1444,10 @@ def item_export_api(request):
             item.category.name if item.category else '',
             item.base_unit_name,
             '',
-            *((item.cost_price_hc, item.selling_price_hc, item.min_selling_price_hc,
-               item.cost_price, item.selling_price, item.min_selling_price) if hc_mode
-              else (item.cost_price, item.selling_price, item.min_selling_price)),
+            *[v for i, v in enumerate(
+                (item.cost_price_hc, item.selling_price_hc, item.min_selling_price_hc,
+                 item.cost_price, item.selling_price, item.min_selling_price) if hc_mode
+                else (item.cost_price, item.selling_price, item.min_selling_price)) if i not in cost_cols],
             item.min_quantity,
             item.max_quantity,
             'نعم' if item.track_expiry else 'لا',
@@ -1615,6 +1636,8 @@ def bom_recipe_api(request):
         }
         for r in qs
     ]
+    if not can_view_cost(request.user):
+        data = strip_cost(data)
     return JsonResponse({'draw': draw, 'recordsTotal': records_total, 'recordsFiltered': records_filtered, 'data': data})
 
 
@@ -1758,7 +1781,7 @@ def item_meta_api(request, pk):
         units     = []
         unit_id   = None
         unit_name = item.base_unit_name
-    return JsonResponse({
+    meta = {
         'id': item.id,
         'name': item.name,
         'track_expiry': item.track_expiry,
@@ -1769,7 +1792,8 @@ def item_meta_api(request, pk):
         'unit_id': unit_id,
         'unit_name': unit_name,
         'units': units,
-    })
+    }
+    return JsonResponse(meta if can_view_cost(request.user) else strip_cost(meta))
 
 
 # ============================================================

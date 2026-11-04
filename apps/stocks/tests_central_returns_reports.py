@@ -259,6 +259,10 @@ class CentralReportsTests(ShipmentBase):
         self.client.force_login(self.u1)
         for name in names:
             self.assertIn(self.client.get(reverse(name)).status_code, (302, 403, 404), name)
+        from apps.accounts.models import PermissionGroup
+        cost_group = PermissionGroup.objects.create(tenant=self.tenant, name='تكلفة-تقييم',
+                                                    permissions={'view_cost_prices': True, 'view_stocks_valuation_report': True})
+        cost_group.users.add(self.u1)
         page = self.client.get(reverse('stocks:reports:valuation_report'), {'branch': 'central'})
         self.assertNotContains(page, 'value="central"')
         self.tenant.purchasing_mode = 'decentralized'

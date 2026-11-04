@@ -117,3 +117,14 @@ def platform_context(request):
         except Exception:
             ps = {}
     return {'platform_cfg': ps}
+
+
+def cost_visibility_context(request):
+    """can_view_cost / can_view_purchase_prices لإخفاء أعمدة التكلفة في القوالب."""
+    from django.utils.functional import SimpleLazyObject
+    from apps.accounts.cost_visibility import can_view_cost, can_view_purchase_prices
+    user = getattr(request, 'user', None)
+    return {
+        'can_view_cost': SimpleLazyObject(lambda: can_view_cost(user)),
+        'can_view_purchase_prices': SimpleLazyObject(lambda: can_view_purchase_prices(user)),
+    }

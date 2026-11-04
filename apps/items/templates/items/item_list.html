@@ -282,7 +282,7 @@
                     <th>الـ SKU</th>
                     <th>التصنيف</th>
                     <th>وحدة البيع</th>
-                    <th>سعر التكلفة</th>
+                    {% if can_view_cost %}<th>سعر التكلفة</th>{% endif %}
                     <th>سعر البيع</th>
                     {% if hc_mode %}<th>السعر ({{ hc_currency_symbol }})</th>{% endif %}
                     <th>الحالة</th>
@@ -420,10 +420,12 @@
 
                         {% if hc_mode %}
                         <div class="row g-3 mb-3">
+                            {% if can_view_cost %}
                             <div class="col-md-4">
                                 <label class="cx-label" for="id_cost_price">سعر التكلفة ({{ local_currency_symbol }})</label>
                                 {{ item_form.cost_price }}
                             </div>
+                            {% endif %}
                             <div class="col-md-4">
                                 <label class="cx-label" for="id_selling_price">سعر البيع ({{ local_currency_symbol }}) <sup class="cx-required">*</sup></label>
                                 {{ item_form.selling_price }}
@@ -434,12 +436,14 @@
                             </div>
                         </div>
                         <div class="row g-3 mb-4">
+                            {% if can_view_cost %}
                             <div class="col-md-4">
                                 <label class="cx-label text-muted">سعر التكلفة ({{ hc_currency_symbol }}) — تلقائي</label>
                                 <input type="text" class="form-control" id="id_cost_price_hc_display" readonly>
                                 <input type="hidden" id="id_cost_price_hc" name="cost_price_hc">
                                 <div class="cx-hc-calc-hint" id="hint_cost_price_hc"></div>
                             </div>
+                            {% endif %}
                             <div class="col-md-4">
                                 <label class="cx-label text-muted">سعر البيع ({{ hc_currency_symbol }}) — تلقائي</label>
                                 <input type="text" class="form-control" id="id_selling_price_hc_display" readonly>
@@ -455,10 +459,12 @@
                         </div>
                         {% else %}
                         <div class="row g-3 mb-4">
+                            {% if can_view_cost %}
                             <div class="col-md-4">
                                 <label class="cx-label" for="id_cost_price">{{ item_form.cost_price.label }}</label>
                                 {{ item_form.cost_price }}
                             </div>
+                            {% endif %}
                             <div class="col-md-4">
                                 <label class="cx-label" for="id_selling_price">{{ item_form.selling_price.label }} <sup class="cx-required">*</sup></label>
                                 {{ item_form.selling_price }}
@@ -775,6 +781,7 @@
                 <div class="cx-view-section">
                     <div class="cx-view-section-title"><i class="fas fa-money-bill-wave"></i> التسعير</div>
                     <div class="cx-info-grid">
+                        {% if can_view_cost %}
                         <div class="cx-info-card cx-info-card--money">
                             <div class="cx-info-card-icon cx-info-icon--balance"><i class="fas fa-arrow-down"></i></div>
                             <div class="cx-info-card-content">
@@ -782,6 +789,7 @@
                                 <span class="cx-info-card-value cx-info-card-value--money" id="viewItemCostPrice"></span>
                             </div>
                         </div>
+                        {% endif %}
                         <div class="cx-info-card cx-info-card--money">
                             <div class="cx-info-card-icon cx-info-icon--credit"><i class="fas fa-arrow-up"></i></div>
                             <div class="cx-info-card-content">
@@ -968,7 +976,7 @@
                             <div class="pa-pills">
                                 <label><input type="checkbox" class="pa-field" value="selling" checked><span>سعر البيع</span></label>
                                 <label><input type="checkbox" class="pa-field" value="min" checked><span>الحد الأدنى للبيع</span></label>
-                                <label><input type="checkbox" class="pa-field" value="cost"><span>سعر التكلفة</span></label>
+                                {% if can_view_cost %}<label><input type="checkbox" class="pa-field" value="cost"><span>سعر التكلفة</span></label>{% endif %}
                             </div>
                         </div>
                     </div>
@@ -1144,6 +1152,7 @@
     });
     {% endif %}
 
+    const CAN_COST       = {% if can_view_cost %}true{% else %}false{% endif %};
     const urlTable       = "{% url 'items:table_api' %}";
     const urlCreate      = "{% url 'items:create_api' %}";
     const urlDetail      = "{% url 'items:detail_api' 0 %}";
@@ -1365,10 +1374,12 @@
                     ? `<span class="cxr-empty">—</span>`
                     : `<span>${u}</span>`
             },
+            {% if can_view_cost %}
             {
                 data: 'cost_price',
                 render: v => `<span class="cxr-bal">${Enjaz.formatMoney(v)}</span>`
             },
+            {% endif %}
             {
                 data: 'selling_price',
                 render: v => `<span class="cxr-bal cxr-bal--pos">${Enjaz.formatMoney(v)}</span>`
@@ -2010,6 +2021,7 @@
 
 <script>
 (function () {
+    var CAN_COST = {% if can_view_cost %}true{% else %}false{% endif %};
     'use strict';
     var modalEl = document.getElementById('priceAdjustModal');
     if (!modalEl) return;
@@ -2111,10 +2123,10 @@
             var html = '<strong>' + r.affected + '</strong> منتج سيُعدَّل، و<strong>' + r.excluded + '</strong> مستثنى.';
             if (r.sample.length) {
                 html += '<table class="table table-sm mb-0"><thead><tr><th>المنتج</th><th>البيع قبل</th><th>البيع بعد</th>' +
-                    (HC ? '<th>بالعملة الصعبة بعد</th>' : '') + '<th>التكلفة بعد</th></tr></thead><tbody>';
+                    (HC ? '<th>بالعملة الصعبة بعد</th>' : '') + (CAN_COST ? '<th>التكلفة بعد</th>' : '') + '</tr></thead><tbody>';
                 r.sample.forEach(function (x) {
                     html += '<tr><td>' + esc(x.name) + '</td><td>' + esc(x.old_selling) + '</td><td>' + esc(x.new_selling) + '</td>' +
-                        (HC ? '<td>' + esc(x.new_selling_hc || '-') + '</td>' : '') + '<td>' + esc(x.new_cost) + '</td></tr>';
+                        (HC ? '<td>' + esc(x.new_selling_hc || '-') + '</td>' : '') + (CAN_COST ? '<td>' + esc(x.new_cost) + '</td>' : '') + '</tr>';
                 });
                 html += '</tbody></table><div class="text-muted mt-1">عيّنة من أول المنتجات فقط.</div>';
             }

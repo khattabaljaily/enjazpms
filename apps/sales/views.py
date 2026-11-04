@@ -72,6 +72,7 @@ from .services import (
 )
 from .reports import SalesReportGenerator
 from apps.accounts.activity_service import log_activity
+from apps.accounts.cost_visibility import can_view_cost, strip_cost
 
 
 # ─────────────────────────────────────────────
@@ -448,7 +449,7 @@ def invoice_edit(request, pk):
 
     context = {
         'invoice': invoice,
-        'existing_lines': json.dumps(existing_lines, ensure_ascii=False),
+        'existing_lines': json.dumps(existing_lines if can_view_cost(request.user) else strip_cost(existing_lines), ensure_ascii=False),
         'existing_insurance': json.dumps(existing_insurance, ensure_ascii=False),
         'customers': customers,
         'stocks': stocks,
@@ -496,6 +497,10 @@ def _process_invoice_post(request, tenant, invoice):
             })
         except (KeyError, InvalidOperation, ValueError) as e:
             return _json_error(f'خطأ في بيانات البنود: {e}')
+    if not can_view_cost(request.user):
+        # لا يرى التكلفة فلا تصله ولا تُقبل منه: تُؤخذ من المنتج في الخادم
+        for ld in lines_data:
+            ld.pop('cost_price_snapshot', None)
 
     try:
         stock = Stock.objects.get(id=header.get('stock_id'), tenant=tenant)
@@ -582,7 +587,7 @@ def _process_invoice_post(request, tenant, invoice):
                             tenant=tenant, invoice=invoice, item=item,
                             quantity=ld['quantity'], unit_price=ld['unit_price'],
                             discount_percent=ld['discount_percent'], tax_rate=ld['tax_rate'],
-                            cost_price_snapshot=ld['cost_price_snapshot'],
+                            cost_price_snapshot=ld.get('cost_price_snapshot', item.cost_price),
                             batch_number=ld.get('batch_number', ''),
                             serial_number=ld.get('serial_number', ''),
                             expiry_date=ld.get('expiry_date'),
@@ -1210,7 +1215,7 @@ def item_info_api(request):
             'batches': batches,
             'selling_price': str(item.selling_price),
             'min_selling_price': str(item.min_selling_price),
-            'cost_price': str(item.cost_price),
+            **({'cost_price': str(item.cost_price)} if can_view_cost(request.user) else {}),
             'tax_rate': str(item.tax_rate),
             'track_batch': item.track_batch,
             'track_serial': item.track_serial,
@@ -1325,6 +1330,8 @@ def stock_items_api(request):
             'is_service': is_service,
             'available_qty': None if is_service else float(sq_map.get(item.id, 0)),
         })
+    if not can_view_cost(request.user):
+        data = strip_cost(data)
 
     return JsonResponse({'success': True, 'items': data}, json_dumps_params={'ensure_ascii': False})
 
@@ -2378,6 +2385,9 @@ def sales_by_user_report_export(request):
 @login_required
 @require_permission('view_income_statement_report')
 def income_statement_report(request):
+    if not can_view_cost(request.user):
+        # التقرير قائم على التكلفة والربح
+        return redirect('core:no_permission')
     from .reports import IncomeStatementGenerator
     tenant = _ensure_tenant(request)
     if not tenant:
@@ -2403,6 +2413,9 @@ def income_statement_report(request):
 @login_required
 @require_permission('view_income_statement_report')
 def income_statement_report_export(request):
+    if not can_view_cost(request.user):
+        # التقرير قائم على التكلفة والربح
+        return redirect('core:no_permission')
     import csv
     from django.http import HttpResponse
     from .reports import IncomeStatementGenerator
@@ -2440,6 +2453,9 @@ def income_statement_report_export(request):
 @login_required
 @require_permission('view_sales_profit_margin_report')
 def sales_profit_margin_report(request):
+    if not can_view_cost(request.user):
+        # التقرير قائم على التكلفة والربح
+        return redirect('core:no_permission')
     tenant = _ensure_tenant(request)
     if not tenant:
         return redirect('core:no_tenant')
@@ -2473,6 +2489,9 @@ def sales_profit_margin_report(request):
 @login_required
 @require_permission('view_sales_profit_margin_report')
 def sales_profit_margin_report_export(request):
+    if not can_view_cost(request.user):
+        # التقرير قائم على التكلفة والربح
+        return redirect('core:no_permission')
     import csv
     from django.http import HttpResponse
     tenant = _ensure_tenant(request)
@@ -2673,6 +2692,8 @@ def pos_items_api(request):
             'is_insurance_excluded': item.is_insurance_excluded,
         })
 
+    if not can_view_cost(request.user):
+        items = strip_cost(items)
     return JsonResponse({'items': items}, json_dumps_params={'ensure_ascii': False})
 
 
@@ -2805,6 +2826,9 @@ def pos_checkout_api(request):
             'tax_rate': ln.get('tax_rate', 0),
             'cost_price_snapshot': ln.get('cost_price', 0),
         })
+    if not can_view_cost(request.user):
+        for ld in lines_data:
+            ld.pop('cost_price_snapshot', None)
 
     invoice_data = {
         'invoice_date': timezone.localdate(),
