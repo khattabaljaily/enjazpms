@@ -44,8 +44,10 @@ def _write_instructions_sheet(wb, sheet_title, schema, instructions):
         '• الحقول المميزة بعلامة (*) في اسم العمود مطلوبة، والباقي اختياري.',
         '• أي خلية تُترك فارغة تأخذ قيمة افتراضية مناسبة تلقائياً.',
         '• حالة "نشط" ليست عموداً في هذا الملف — كل منتج يُستورد يكون نشطاً تلقائياً.',
-        '• الأعمدة التي تحتوي على قائمة منسدلة (▼) يجب اختيار قيمة منها مباشرة وليس كتابتها يدوياً.',
+        '• الأعمدة التي تحتوي على قائمة منسدلة (▼) يُفضّل الاختيار منها مباشرة.',
         '• الصف الثاني في شيت البيانات هو صف مثال — احذفه قبل إدخال بياناتك الحقيقية.',
+        '• لديك ملف من نظامك السابق؟ ارفعه كما هو دون نقل بياناته لهذا القالب: النظام يتعرّف على الأعمدة '
+        'والورقة وصف العناوين تلقائياً، ويعرض عليك معاينة لتراجعها قبل الاستيراد.',
     ]
     if instructions:
         lines += ['', 'ملاحظات إضافية:'] + [f'• {line}' for line in instructions]
@@ -83,6 +85,7 @@ def build_import_template(schema: list, tenant_lists: dict, sheet_title: str, in
     sheet_title: Arabic sheet/tab name, e.g. "المنتجات"
     instructions: optional extra bullet lines for the instructions sheet
     """
+    schema = [s for s in schema if s.get('template', True)]   # حقول الاستيراد فقط لا تُكتب في القالب
     wb = Workbook()
     _write_instructions_sheet(wb, sheet_title, schema, instructions)
 

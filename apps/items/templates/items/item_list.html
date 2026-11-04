@@ -413,12 +413,13 @@
                             {% if hc_mode %}
                             <span class="badge bg-warning text-dark ms-2" style="font-size:.7rem;">
                                 <i class="fas fa-exchange-alt me-1"></i>
-                                وضع {{ hc_currency_symbol }} — 1 {{ hc_currency_symbol }} = {{ exchange_rate|stringformat:".2f"|intcomma }} {{ local_currency_symbol }}
+                                وضع {{ hc_currency_symbol }} — 1 {{ hc_currency_symbol }} = <span id="hcRateBadgeValue">{{ exchange_rate|stringformat:".2f"|intcomma }}</span> {{ local_currency_symbol }}
                             </span>
                             {% endif %}
                         </div>
 
                         {% if hc_mode %}
+                        {% include "components/exchange_rate_alert.html" with xr_hint="اكتب الأسعار بالعملة المحلية، وما يعادلها بالعملة الصعبة يُحسب بهذا السعر." %}
                         <div class="row g-3 mb-3">
                             {% if can_view_cost %}
                             <div class="col-md-4">
@@ -1093,7 +1094,15 @@
     function curSym(code) { return CURRENCY_SYMBOLS[(code || '').toUpperCase()] || code || ''; }
 
     {% if hc_mode %}
-    const HC_EXCHANGE_RATE = {{ exchange_rate|stringformat:".4f" }};
+    let HC_EXCHANGE_RATE = {{ exchange_rate|stringformat:".4f" }};
+    // تحديث سعر الصرف من تنبيه النموذج: تُعاد حسابات الصعبة بالسعر الجديد دون إعادة تحميل الصفحة
+    document.addEventListener('enjaz:exchange-rate-updated', function (ev) {
+        if (!(ev.detail && ev.detail.rate > 0)) return;
+        HC_EXCHANGE_RATE = ev.detail.rate;
+        var badge = document.getElementById('hcRateBadgeValue');
+        if (badge) badge.textContent = HC_EXCHANGE_RATE.toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        _syncHcPrices();
+    });
     const LOCAL_SYM = '{{ local_currency_symbol }}';
     const HC_SYM = '{{ hc_currency_symbol }}';
 

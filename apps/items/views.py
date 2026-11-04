@@ -94,6 +94,7 @@ def item_list(request):
 
     caps = _get_capabilities(tenant)
     from apps.core.utils import currency_symbol, CURRENCY_SYMBOLS
+    from apps.core.market_rates import exchange_rate_alert, can_update_exchange_rate
     from apps.suppliers.models import Supplier
     hc_cur = tenant.hard_currency if tenant.hard_currency_mode else ''
     local_cur = tenant.currency or 'SDG'
@@ -106,6 +107,8 @@ def item_list(request):
         'local_currency': local_cur,
         'local_currency_symbol': currency_symbol(local_cur),
         'exchange_rate': tenant.exchange_rate if tenant.hard_currency_mode else None,
+        'xr_alert': exchange_rate_alert(tenant),
+        'xr_can_update': can_update_exchange_rate(request),
         'currency_symbols_json': CURRENCY_SYMBOLS,
         'adjust_categories': list(Category.objects.for_tenant(tenant).filter(is_active=True).order_by('name').values('id', 'name')),
         'stats': {

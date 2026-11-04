@@ -9,7 +9,10 @@ urlpatterns = [
 
     path('products/', views.product_import_page, name='product_page'),
     path('products/template/', views.product_template_download, name='product_template'),
+    path('products/analyze/', views.product_import_analyze, name='product_analyze'),
+    path('products/suggest-categories/', views.product_suggest_categories, name='product_suggest_categories'),
     path('products/commit/', views.product_import_commit, name='product_commit'),
+    path('products/errors-file/', views.product_import_errors_file, name='product_errors_file'),
 
     path('customers/', views.customer_import_page, name='customer_page'),
     path('customers/template/', views.customer_template_download, name='customer_template'),

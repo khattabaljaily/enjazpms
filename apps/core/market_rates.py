@@ -312,3 +312,61 @@ def pending_suggestion(now=None):
     now = now or timezone.now()
     s = MarketRateSuggestion.objects.filter(status='pending').order_by('-published_at').first()
     return s if s and now - s.published_at <= SUGGESTION_MAX_AGE else None
+
+
+def exchange_rate_alert(tenant):
+    """
+    تنبيه «حدّث سعر الصرف قبل إدخال الأسعار» لمشتركي وضع العملة الصعبة فقط (None لغيرهم أو إن كان
+    السعر سليماً). يُعرض في استيراد المنتجات وشاشة إضافة منتج، لأن الأسعار تُكتب بالعملة المحلية
+    وتُحفظ معادلتها بالعملة الصعبة بسعر الصرف الحالي — سعر قديم يعني أسعاراً صعبة خاطئة.
+
+    إن أدخلت إدارة المنصة سعر السوق لليوم: نُنبّه فقط عند اختلاف سعر المشترك عنه بالعتبة المعتادة.
+    وإلا: نُنبّه إن لم يُحدَّث السعر اليوم.
+    """
+    if not (tenant and tenant.hard_currency_mode):
+        return None
+    from apps.core.utils import currency_symbol
+    rate = Decimal(str(tenant.exchange_rate or 0))
+    hc_symbol = currency_symbol(tenant.hard_currency or 'USD')
+    local_symbol = currency_symbol(tenant.currency or 'SDG')
+    updated_at = tenant.exchange_rate_updated_at
+    today = timezone.localdate()
+    updated_on = timezone.localdate(updated_at) if updated_at else None
+    alert = {
+        'rate': rate, 'rate_display': fmt_money(rate), 'hc_symbol': hc_symbol, 'local_symbol': local_symbol,
+        'updated_on': updated_on.isoformat() if updated_on else '', 'market_rate': '', 'reason': '',
+    }
+    if rate <= 0:
+        alert['reason'] = 'missing'
+        alert['message'] = 'لم يُحدَّد سعر الصرف بعد، فلن تُحسب الأسعار بالعملة الصعبة.'
+        return alert
+
+    ref = get_reference_rate(tenant.hard_currency) if tenant.hard_currency else None
+    if ref is not None:
+        pct = deviation_percent(rate, ref.rate)
+        if pct is None or abs(pct) < DEFAULT_THRESHOLD_PERCENT:
+            return None
+        alert.update(reason='market', market_rate=fmt_money(ref.rate))
+        alert['message'] = (f'سعر الصرف في نظامك (1 {hc_symbol} = {fmt_money(rate)} {local_symbol}) يختلف عن سعر '
+                            f'السوق اليوم ({fmt_money(ref.rate)} {local_symbol}) بنسبة {pct:+.1f}%.')
+        return alert
+
+    if updated_on and updated_on >= today:
+        return None
+    alert['reason'] = 'stale'
+    if updated_on:
+        days = (today - updated_on).days
+        when = 'أمس' if days == 1 else f'قبل {days} يوم'
+        alert['message'] = (f'آخر تحديث لسعر الصرف كان {when} ({updated_on:%Y-%m-%d}): '
+                            f'1 {hc_symbol} = {fmt_money(rate)} {local_symbol}.')
+    else:
+        alert['message'] = f'لم يُسجَّل تاريخ تحديث لسعر الصرف الحالي (1 {hc_symbol} = {fmt_money(rate)} {local_symbol}).'
+    return alert
+
+
+def can_update_exchange_rate(request) -> bool:
+    """نفس شروط exchange_rate_update_api: مدير النشاط (بلا فرع) بصلاحية إعدادات النشاط."""
+    user = request.user
+    if user.is_superuser:
+        return True
+    return bool(not getattr(request, 'branch', None) and user.has_perm_key('change_tenant_settings'))

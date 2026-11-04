@@ -1,0 +1,80 @@
+{% comment %}
+تنبيه تحديث سعر الصرف (وضع العملة الصعبة فقط). المتغيرات: xr_alert (من market_rates.exchange_rate_alert)،
+xr_can_update، xr_hint (سطر يشرح أثر السعر في هذه الشاشة). عند نجاح التحديث يُطلق الحدث
+«enjaz:exchange-rate-updated» على document مع detail.rate لتحدّث الشاشة حساباتها دون إعادة تحميل.
+{% endcomment %}
+{% if xr_alert %}
+<div class="xr-alert" data-xr-alert role="alert">
+    <div class="xr-alert-icon"><i class="fas fa-triangle-exclamation"></i></div>
+    <div class="xr-alert-body">
+        <div class="xr-alert-title">حدّث سعر الصرف قبل إدخال الأسعار</div>
+        <div class="xr-alert-text">{{ xr_alert.message }}{% if xr_hint %} {{ xr_hint }}{% endif %}</div>
+        {% if xr_can_update %}
+        <div class="xr-alert-form">
+            <span class="xr-alert-label">1 {{ xr_alert.hc_symbol }} =</span>
+            <input type="text" inputmode="decimal" class="form-control form-control-sm" data-xr-input
+                   value="{% if xr_alert.market_rate %}{{ xr_alert.market_rate }}{% else %}{{ xr_alert.rate|stringformat:'.2f' }}{% endif %}">
+            <span class="xr-alert-label">{{ xr_alert.local_symbol }}</span>
+            <button type="button" class="cx-btn-primary btn-sm" data-xr-save>
+                <i class="fas fa-check me-1"></i> تحديث السعر
+            </button>
+            <a href="{% url 'core:exchange_rate_page' %}" target="_blank" class="xr-alert-link">صفحة سعر الصرف</a>
+        </div>
+        <div class="xr-alert-msg" data-xr-msg></div>
+        {% else %}
+        <div class="xr-alert-text mt-1"><strong>اطلب من مدير النشاط تحديث سعر الصرف</strong>، أو تابع بالسعر الحالي.</div>
+        {% endif %}
+    </div>
+</div>
+<style>
+.xr-alert { display:flex; gap:.75rem; align-items:flex-start; background:rgba(245,158,11,.10); border:1px solid rgba(245,158,11,.40);
+  color:#92400e; border-radius:12px; padding:.8rem 1rem; margin-bottom:1rem; font-size:.86rem; }
+.xr-alert-icon { font-size:1.1rem; padding-top:.1rem; }
+.xr-alert-body { flex:1; }
+.xr-alert-title { font-weight:700; margin-bottom:.15rem; }
+.xr-alert-form { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; margin-top:.5rem; }
+.xr-alert-form input { width:130px; direction:ltr; text-align:center; }
+.xr-alert-label { font-weight:600; }
+.xr-alert-link { font-size:.8rem; margin-inline-start:.4rem; }
+.xr-alert-msg { font-size:.8rem; margin-top:.35rem; }
+.xr-alert.xr-done { background:rgba(16,185,129,.10); border-color:rgba(16,185,129,.40); color:#065f46; }
+</style>
+<script>
+(function () {
+    if (window.__enjazXrAlert) return;
+    window.__enjazXrAlert = true;
+    function csrf() {
+        var el = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (el) return el.value;
+        var m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+        return m ? decodeURIComponent(m[1]) : '';
+    }
+    document.addEventListener('click', function (ev) {
+        var btn = ev.target.closest('[data-xr-save]');
+        if (!btn) return;
+        var box = btn.closest('[data-xr-alert]');
+        var input = box.querySelector('[data-xr-input]');
+        var msg = box.querySelector('[data-xr-msg]');
+        var rate = (input.value || '').replace(/,/g, '').trim();
+        if (!rate || !(parseFloat(rate) > 0)) { msg.textContent = 'أدخل سعر صرف صحيح'; return; }
+        btn.disabled = true;
+        fetch("{% url 'core:exchange_rate_update_api' %}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()},
+            body: JSON.stringify({exchange_rate: rate})
+        }).then(function (r) { return r.json(); }).then(function (d) {
+            btn.disabled = false;
+            if (!d.success) { msg.textContent = d.message || 'تعذّر تحديث السعر'; return; }
+            document.querySelectorAll('[data-xr-alert]').forEach(function (el) {
+                el.classList.add('xr-done');
+                el.querySelector('.xr-alert-title').textContent = 'تم تحديث سعر الصرف';
+                el.querySelector('.xr-alert-text').textContent = d.message;
+                var form = el.querySelector('.xr-alert-form'); if (form) form.remove();
+                var m = el.querySelector('[data-xr-msg]'); if (m) m.textContent = '';
+            });
+            document.dispatchEvent(new CustomEvent('enjaz:exchange-rate-updated', {detail: {rate: parseFloat(d.new_rate)}}));
+        }).catch(function () { btn.disabled = false; msg.textContent = 'تعذّر الاتصال بالخادم'; });
+    });
+})();
+</script>
+{% endif %}

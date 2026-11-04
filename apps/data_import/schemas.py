@@ -20,6 +20,9 @@ Each field spec:
     capability:     TenantCapabilities attribute name gating inclusion, or None
     typical_width:  hint used by xlsx_builder for column width
     description:    short Arabic description fed to the AI header-mapper
+    aliases:        other column titles meaning this field (other systems' exports, English,
+                    abbreviations) — matched after Arabic normalisation, before asking the AI
+    template:       False = accepted on import but not written to the downloadable template
 """
 from apps.items.models import Item
 
@@ -29,31 +32,43 @@ BASIC_FIELDS = [
         'field': 'name', 'header_ar': 'اسم المنتج *', 'required': True, 'dtype': 'text',
         'capability': None, 'typical_width': 30,
         'description': 'اسم المنتج أو الصنف أو السلعة',
+        'aliases': ('اسم المنتج', 'الاسم', 'اسم الصنف', 'الصنف', 'المنتج', 'اسم السلعة', 'السلعة', 'البيان',
+                    'اسم المادة', 'المادة', 'اسم الدواء', 'الدواء', 'الاسم التجاري', 'الاسم بالعربي', 'الاسم العربي', 'item', 'item name', 'product',
+                    'product name', 'name', 'description ar', 'arabic name', 'name ar', 'trade name', 'brand name',
+                    'drug name'),
     },
     {
         'field': 'name_en', 'header_ar': 'الاسم بالإنجليزية', 'required': False, 'dtype': 'text',
         'capability': None, 'typical_width': 26,
         'description': 'الاسم بالإنجليزية للمنتج',
+        'aliases': ('الاسم بالانجليزي', 'الاسم الانجليزي', 'اسم انجليزي', 'english name', 'name en',
+                    'english', 'en name', 'latin name'),
     },
     {
         'field': 'sku', 'header_ar': 'الرمز (SKU) — اتركه فارغاً للتوليد التلقائي', 'required': False, 'dtype': 'text',
         'capability': None, 'typical_width': 22,
-        'description': 'رمز المنتج SKU',
+        'description': 'رمز المنتج SKU أو كود الصنف الداخلي',
+        'aliases': ('الرمز', 'رمز المنتج', 'رمز الصنف', 'الكود', 'كود', 'كود الصنف', 'كود المنتج', 'رقم الصنف',
+                    'رقم المنتج', 'sku', 'code', 'item code', 'product code', 'item no', 'item number', 'ref'),
     },
     {
         'field': 'barcode', 'header_ar': 'الباركود', 'required': False, 'dtype': 'text',
         'capability': None, 'typical_width': 18,
         'description': 'الباركود أو رمز الشريط',
+        'aliases': ('باركود', 'الباركود', 'بار كود', 'رمز الشريط', 'barcode', 'bar code', 'ean', 'upc', 'gtin',
+                    'ean13'),
     },
     {
         'field': 'item_type', 'header_ar': 'نوع الصنف', 'required': False, 'dtype': 'choice_fixed',
         'choices': list(Item.ITEM_TYPE_CHOICES), 'capability': None, 'typical_width': 14,
-        'description': 'نوع الصنف: منتج، خدمة، مادة خام...',
+        'description': 'نوع الصنف: منتج أو خدمة',
+        'aliases': ('نوع الصنف', 'نوع المنتج', 'item type', 'type'),
     },
     {
         'field': 'description', 'header_ar': 'الوصف', 'required': False, 'dtype': 'text',
         'capability': None, 'typical_width': 40,
         'description': 'وصف المنتج',
+        'aliases': ('الوصف', 'وصف', 'وصف المنتج', 'تفاصيل', 'description', 'details'),
     },
 ]
 
@@ -61,7 +76,9 @@ CLASSIFICATION_FIELDS = [
     {
         'field': 'category', 'header_ar': 'التصنيف', 'required': False, 'dtype': 'choice_tenant',
         'tenant_source': 'category', 'capability': None, 'typical_width': 22,
-        'description': 'التصنيف أو القسم أو الفئة',
+        'description': 'التصنيف أو القسم أو الفئة أو المجموعة',
+        'aliases': ('التصنيف', 'تصنيف', 'الفئه', 'الفئة', 'القسم', 'المجموعه', 'المجموعة', 'مجموعة الاصناف',
+                    'category', 'group', 'item group', 'family', 'department', 'class'),
     },
     # NOTE: units are intentionally free text, not a choice_tenant dropdown from a
     # shared Unit list. The manual "add product" form has no such shared list either —
@@ -73,52 +90,74 @@ CLASSIFICATION_FIELDS = [
         'field': 'base_unit_name', 'header_ar': 'اسم الوحدة الأساسية (الأصغر)', 'required': False, 'dtype': 'text',
         'capability': None, 'typical_width': 22,
         'description': 'اسم وحدة البيع الأساسية أو الأصغر، مثل حبة أو قطعة أو كيلو',
+        'aliases': ('الوحدة', 'وحدة', 'الوحده', 'وحدة القياس', 'الوحدة الاساسية', 'الوحدة الصغرى', 'وحدة البيع',
+                    'الحبة', 'unit', 'uom', 'base unit', 'unit of measure'),
     },
     {
         'field': 'large_unit_name', 'header_ar': 'اسم وحدة أكبر (اختياري)', 'required': False, 'dtype': 'text',
         'capability': None, 'typical_width': 20,
         'description': 'اسم وحدة أكبر تحتوي على عدة وحدات أساسية، مثل كرتون أو طرد',
+        'aliases': ('الوحدة الكبرى', 'الوحدة الكبيرة', 'وحدة اكبر', 'وحدة الجملة', 'العبوة', 'العبوة الكبرى',
+                    'large unit', 'pack unit', 'box unit'),
     },
     {
         'field': 'large_unit_count', 'header_ar': 'كم وحدة أساسية داخل الوحدة الأكبر؟', 'required': False, 'dtype': 'decimal',
         'capability': None, 'typical_width': 18,
         'description': 'عدد الوحدات الأساسية داخل الوحدة الأكبر، مطلوب فقط إذا حُددت وحدة أكبر',
+        'aliases': ('عدد الوحدات', 'التعبئة', 'التعبئه', 'محتوى العبوة', 'عدد الحبات', 'عدد القطع بالكرتون',
+                    'معامل التحويل', 'pack size', 'units per pack', 'conversion', 'factor', 'qty per box'),
     },
 ]
 
+# عناوين الأسعار تحمل رمز العملة المحلية (تُضاف في get_product_schema): «سعر التكلفة (ج.س)».
 PRICING_FIELDS_NORMAL = [
     {
         'field': 'cost_price', 'header_ar': 'سعر التكلفة', 'required': False, 'dtype': 'decimal',
-        'capability': None, 'typical_width': 14, 'description': 'سعر التكلفة أو سعر الشراء',
+        'capability': None, 'typical_width': 16, 'description': 'سعر التكلفة أو سعر الشراء',
+        'aliases': ('سعر التكلفة', 'التكلفة', 'تكلفة', 'سعر الشراء', 'الشراء', 'سعر التكلفة محلي', 'cost',
+                    'cost price', 'purchase price', 'buy price', 'unit cost'),
     },
     {
         'field': 'selling_price', 'header_ar': 'سعر البيع', 'required': False, 'dtype': 'decimal',
-        'capability': None, 'typical_width': 14, 'description': 'سعر البيع أو السعر',
+        'capability': None, 'typical_width': 16, 'description': 'سعر البيع أو السعر',
+        'aliases': ('سعر البيع', 'السعر', 'سعر', 'سعر التجزئة', 'سعر القطاعي', 'سعر المستهلك', 'سعر البيع محلي',
+                    'price', 'sale price', 'selling price', 'retail price', 'unit price', 'sales price'),
     },
     {
         'field': 'min_selling_price', 'header_ar': 'أدنى سعر بيع', 'required': False, 'dtype': 'decimal',
-        'capability': None, 'typical_width': 14, 'description': 'أدنى سعر بيع مسموح',
+        'capability': None, 'typical_width': 16, 'description': 'أدنى سعر بيع مسموح',
+        'aliases': ('ادنى سعر بيع', 'اقل سعر', 'اقل سعر بيع', 'الحد الادنى للسعر', 'ادنى سعر', 'ادنى سعر بيع محلي',
+                    'min price', 'minimum price', 'min selling price'),
     },
     {
         'field': 'tax_rate', 'header_ar': 'نسبة الضريبة %', 'required': False, 'dtype': 'decimal',
         'capability': None, 'typical_width': 14, 'description': 'نسبة الضريبة',
+        'aliases': ('الضريبة', 'نسبة الضريبة', 'ضريبة', 'ضريبة القيمة المضافة', 'tax', 'vat', 'tax rate'),
     },
 ]
 
+# وضع العملة الصعبة: القالب يطلب الأسعار بالعملة المحلية (الجنيه) والنظام يحسب ما يعادلها بالعملة
+# الصعبة بسعر الصرف الحالي. أعمدة العملة الصعبة تبقى مقبولة عند الاستيراد (تصدير النظام والقوالب
+# القديمة) لكنها لا تُكتب في القالب الجديد.
 PRICING_FIELDS_HC = [
     {
         'field': 'cost_price_hc', 'header_ar': 'سعر التكلفة (عملة صعبة)', 'required': False, 'dtype': 'decimal',
-        'capability': None, 'typical_width': 20, 'description': 'سعر التكلفة بالعملة الصعبة',
+        'capability': None, 'typical_width': 20, 'description': 'سعر التكلفة بالعملة الصعبة (دولار)',
+        'template': False,
     },
     {
         'field': 'selling_price_hc', 'header_ar': 'سعر البيع (عملة صعبة)', 'required': False, 'dtype': 'decimal',
-        'capability': None, 'typical_width': 20, 'description': 'سعر البيع بالعملة الصعبة',
+        'capability': None, 'typical_width': 20, 'description': 'سعر البيع بالعملة الصعبة (دولار)',
+        'template': False,
     },
     {
         'field': 'min_selling_price_hc', 'header_ar': 'أدنى سعر بيع (عملة صعبة)', 'required': False, 'dtype': 'decimal',
-        'capability': None, 'typical_width': 22, 'description': 'أدنى سعر بيع بالعملة الصعبة',
+        'capability': None, 'typical_width': 22, 'description': 'أدنى سعر بيع بالعملة الصعبة (دولار)',
+        'template': False,
     },
 ]
+
+LOCAL_PRICE_FIELDS = ('cost_price', 'selling_price', 'min_selling_price')
 
 # أعمدة أُزيلت من القالب لأنها غير ضرورية عند الاستيراد، وتأخذ قيمها الافتراضية من نموذج Item:
 #   الشركة الموردة = لا شيء، الحد الأدنى/الأقصى للمخزون = 0، تتبع الرقم التسلسلي = لا،
@@ -138,27 +177,35 @@ PHARMA_FIELDS = [
     {
         'field': 'generic_name', 'header_ar': 'الاسم العلمي / المادة الفعالة', 'required': False, 'dtype': 'text',
         'capability': 'has_drug_classification', 'typical_width': 28, 'description': 'الاسم العلمي أو المادة الفعالة',
+        'aliases': ('الاسم العلمي', 'المادة الفعالة', 'المادة الفعاله', 'التركيبة', 'generic', 'generic name',
+                    'active ingredient', 'scientific name', 'inn'),
     },
     {
         'field': 'manufacturer', 'header_ar': 'الشركة المصنعة', 'required': False, 'dtype': 'text',
         'capability': 'has_drug_classification', 'typical_width': 22, 'description': 'الشركة المصنعة',
+        'aliases': ('الشركة المصنعة', 'الشركه المصنعه', 'المصنع', 'الشركة المنتجة', 'الماركة', 'manufacturer',
+                    'brand', 'mfr', 'producer'),
     },
     {
         'field': 'dosage_form', 'header_ar': 'الشكل الصيدلاني', 'required': False, 'dtype': 'text',
         'capability': 'has_drug_classification', 'typical_width': 18,
         'description': 'الشكل الصيدلاني مثل أقراص أو شراب أو حقن',
+        'aliases': ('الشكل الصيدلاني', 'الشكل', 'الشكل الدوائي', 'نوع الدواء', 'dosage form', 'form', 'pharmaceutical form'),
     },
     {
         'field': 'strength', 'header_ar': 'التركيز', 'required': False, 'dtype': 'text',
         'capability': 'has_drug_classification', 'typical_width': 14, 'description': 'التركيز مثل 500 مجم',
+        'aliases': ('التركيز', 'القوة', 'العيار', 'strength', 'dose', 'concentration'),
     },
     {
         'field': 'requires_prescription', 'header_ar': 'يُصرف بوصفة طبية؟', 'required': False, 'dtype': 'bool',
         'capability': 'has_drug_classification', 'typical_width': 14, 'description': 'هل يُصرف بوصفة طبية',
+        'aliases': ('بوصفة', 'وصفة طبية', 'يصرف بوصفة', 'prescription', 'rx', 'prescription only'),
     },
     {
         'field': 'is_controlled_substance', 'header_ar': 'خاضع للرقابة / مخدرات؟', 'required': False, 'dtype': 'bool',
         'capability': 'has_drug_classification', 'typical_width': 16, 'description': 'هل هو خاضع للرقابة',
+        'aliases': ('خاضع للرقابة', 'مخدرات', 'مراقب', 'controlled', 'controlled substance', 'narcotic'),
     },
     {
         'field': 'is_insurance_excluded', 'header_ar': 'غير مغطى بالتأمين؟', 'required': False, 'dtype': 'bool',
@@ -169,28 +216,57 @@ PHARMA_FIELDS = [
 OPENING_STOCK_FIELDS = [
     {
         'field': 'opening_quantity', 'header_ar': 'الكمية الافتتاحية', 'required': False, 'dtype': 'decimal',
-        'capability': None, 'typical_width': 16, 'description': 'الكمية الافتتاحية عند الاستيراد',
+        'capability': None, 'typical_width': 16,
+        'description': 'الكمية الموجودة حالياً في المخزن (الرصيد أو الكمية المتوفرة)',
+        'aliases': ('الكمية الافتتاحية', 'الكمية', 'كمية', 'الرصيد', 'رصيد', 'رصيد اول المدة', 'الكمية المتوفرة',
+                    'الكمية الحالية', 'المخزون', 'الموجود', 'qty', 'quantity', 'stock qty', 'on hand', 'balance',
+                    'opening qty', 'opening quantity', 'stock'),
     },
     {
         'field': 'stock', 'header_ar': 'المخزن', 'required': False, 'dtype': 'choice_tenant',
         'tenant_source': 'stock', 'capability': None, 'typical_width': 18,
         'description': 'المخزن الذي تُضاف إليه الكمية الافتتاحية',
+        'aliases': ('المخزن', 'مخزن', 'المستودع', 'مستودع', 'الموقع', 'warehouse', 'store', 'location'),
     },
     {
         'field': 'batch_number', 'header_ar': 'رقم الدفعة', 'required': False, 'dtype': 'text',
-        'capability': 'has_batch_numbers', 'typical_width': 16, 'description': 'رقم الدفعة',
+        'capability': 'has_batch_numbers', 'typical_width': 16, 'description': 'رقم الدفعة أو التشغيلة',
+        'aliases': ('رقم الدفعة', 'الدفعة', 'رقم التشغيلة', 'التشغيلة', 'رقم الباتش', 'الباتش', 'batch', 'batch no',
+                    'batch number', 'lot', 'lot no', 'lot number'),
     },
     {
         'field': 'expiry_date', 'header_ar': 'تاريخ الانتهاء (yyyy-mm-dd)', 'required': False, 'dtype': 'date',
         'capability': 'has_expiry_dates', 'typical_width': 20, 'description': 'تاريخ انتهاء الصلاحية',
+        'aliases': ('تاريخ الانتهاء', 'الانتهاء', 'تاريخ الصلاحية', 'الصلاحية', 'انتهاء الصلاحية', 'ينتهي في',
+                    'expiry', 'expiry date', 'exp', 'exp date', 'expiration', 'expiration date', 'best before'),
     },
 ]
+
+
+def _local_pricing_fields(tenant):
+    """حقول الأسعار بالعملة المحلية، وعناوينها تحمل رمزها: «سعر البيع (ج.س)»."""
+    from apps.core.utils import currency_symbol
+    symbol = currency_symbol(tenant.currency or 'SDG')
+    fields = []
+    for spec in PRICING_FIELDS_NORMAL:
+        if spec['field'] in LOCAL_PRICE_FIELDS:
+            spec = dict(spec, header_ar=f"{spec['header_ar']} ({symbol})")
+            if tenant.hard_currency_mode:
+                spec['description'] += ' بالعملة المحلية (الجنيه)'
+        fields.append(spec)
+    return fields
+
+
+def template_fields(schema):
+    """الحقول التي تُكتب في القالب القابل للتنزيل (بعض الحقول مقبولة عند الاستيراد فقط)."""
+    return [s for s in schema if s.get('template', True)]
 
 
 def get_product_schema(tenant):
     """
     Resolve the full, ordered field list for THIS tenant:
-    - pricing section depends on tenant.hard_currency_mode
+    - prices are always in the local currency; in hard-currency mode the hard-currency price
+      columns are also accepted (import only — see PRICING_FIELDS_HC)
     - capability-gated fields depend on tenant.capabilities
     - the `stock` column only appears when the tenant has more than one active stock
     """
@@ -204,7 +280,9 @@ def get_product_schema(tenant):
         return bool(getattr(capabilities, cap_name, False))
 
     schema = list(BASIC_FIELDS) + list(CLASSIFICATION_FIELDS)
-    schema += PRICING_FIELDS_HC if tenant.hard_currency_mode else PRICING_FIELDS_NORMAL
+    schema += _local_pricing_fields(tenant)
+    if tenant.hard_currency_mode:
+        schema += PRICING_FIELDS_HC
     schema += STOCK_TRACKING_FIELDS
     schema += PHARMA_FIELDS
     schema += OPENING_STOCK_FIELDS

@@ -24,10 +24,11 @@ logger = logging.getLogger(__name__)
 # DeepSeek API call
 # ──────────────────────────────────────────────────────────────
 
-def _post_deepseek(payload: dict, timeout: float = 60):
+def _post_deepseek(payload: dict, timeout: float = 60, attempts: int = 2):
     """
     يرسل payload إلى DeepSeek مع محاولة ثانية عند التعثر المؤقت.
     يرجع (message_dict, None) عند النجاح أو (None, رسالة_خطأ_للمستخدم).
+    attempts=1 لاستدعاءات داخل طلب مستخدم لها ميزانية وقت محدودة (مثل معاينة الاستيراد).
     """
     api_key = settings.DEEPSEEK_API_KEY
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -35,11 +36,11 @@ def _post_deepseek(payload: dict, timeout: float = 60):
     # محاولة ثانية واحدة عند تعثر مؤقت (مهلة/انقطاع/خطأ 5xx من المزوّد) بدل
     # إظهار فشل للمستخدم من أول محاولة.
     last_error = None
-    for attempt in range(2):
+    for attempt in range(attempts):
         try:
             response = requests.post(settings.DEEPSEEK_API_URL, headers=headers, json=payload,
                                      timeout=timeout)
-            if response.status_code >= 500 and attempt == 0:
+            if response.status_code >= 500 and attempt < attempts - 1:
                 logger.warning("DeepSeek API %s — retrying", response.status_code)
                 continue
             response.raise_for_status()
@@ -997,6 +998,129 @@ def smart_map_headers(actual_headers: list, field_schema: list) -> dict:
         logger.warning("smart_map_headers: failed to parse AI response: %s", raw[:200])
 
     return {}
+
+
+def _ask_json(system: str, prompt: str, max_tokens: int = 800, timeout: float = 15):
+    """
+    سؤال يجب أن يكون جوابه JSON (وضع JSON في DeepSeek، حرارة 0، محاولة واحدة بمهلة قصيرة).
+    يرجع الكائن المفكوك أو None عند غياب المفتاح أو أي فشل — المستدعي يكمل بدونه دائماً.
+    """
+    if not settings.DEEPSEEK_API_KEY:
+        return None
+    payload = {
+        "model": settings.DEEPSEEK_MODEL,
+        "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
+        "max_tokens": max_tokens,
+        "temperature": 0,
+        "response_format": {"type": "json_object"},
+    }
+    try:
+        message, error = _post_deepseek(payload, timeout=timeout, attempts=1)
+    except Exception as exc:   # لا يجوز أن يوقف الذكاء الاصطناعي عملية استيراد
+        logger.warning("DeepSeek JSON call failed: %s", exc)
+        return None
+    if error:
+        return None
+    raw = (message.get("content") or "").strip()
+    raw = __import__('re').sub(r'^```(?:json)?|```$', '', raw).strip()
+    try:
+        return json.loads(raw)
+    except ValueError:
+        logger.warning("DeepSeek JSON parse failed: %s", raw[:200])
+        return None
+
+
+def smart_map_columns(columns: list, field_schema: list) -> dict:
+    """
+    تعيين أعمدة ملف (من أي نظام) إلى حقول النظام بالمعنى، اعتماداً على العنوان وعيّنة من القيم.
+
+    columns: [{"index": int, "header": str, "samples": [str, ...]}]
+    field_schema: [{"field": str, "description": str, "required": bool}]
+    Returns: {column_index: field} — حقل واحد لكل عمود، والأعمدة غير المفهومة لا تُدرج.
+    """
+    if not columns or not field_schema:
+        return {}
+    fields_text = "\n".join(
+        f'- {f["field"]}: {f["description"]}{" (مطلوب)" if f.get("required") else ""}' for f in field_schema
+    )
+    columns_text = "\n".join(
+        f'- index {c["index"]}: العنوان "{c["header"]}" — أمثلة: {" | ".join(c.get("samples", [])[:5]) or "لا يوجد"}'
+        for c in columns
+    )
+    prompt = (
+        "ملف منتجات/بيانات مصدَّر من نظام آخر. عيّن كل عمود إلى حقل نظامنا المناسب بالمعنى، "
+        "معتمداً على العنوان والقيم معاً (العناوين قد تكون عربية أو إنجليزية أو مختصرة أو بلهجة).\n\n"
+        f"حقول نظامنا:\n{fields_text}\n\nأعمدة الملف:\n{columns_text}\n\n"
+        "قواعد: لا تعيّن حقلاً لأكثر من عمود إلا عند الضرورة القصوى. العمود الذي لا يناسب أي حقل اجعل حقله null. "
+        "أعمدة الحد الأدنى/الأقصى للمخزون أو حد إعادة الطلب كميات وليست أسعاراً، فلا تعيّنها لحقل سعر. "
+        "لا تخمّن: إن لم تكن واثقاً اجعل الحقل null.\n"
+        'أجب بـ JSON فقط بالشكل: {"columns": [{"index": 0, "field": "name"}, {"index": 1, "field": null}]}'
+    )
+    data = _ask_json("أنت خبير ترحيل بيانات بين الأنظمة المحاسبية وأنظمة المخزون. أجب بـ JSON صحيح فقط.",
+                     prompt, max_tokens=900, timeout=15)
+    if not isinstance(data, dict):
+        return {}
+    valid_fields = {f["field"] for f in field_schema}
+    valid_indexes = {c["index"] for c in columns}
+    result = {}
+    for entry in data.get("columns") or []:
+        if not isinstance(entry, dict):
+            continue
+        idx, field = entry.get("index"), entry.get("field")
+        if isinstance(idx, int) and idx in valid_indexes and field in valid_fields:
+            result[idx] = field
+    return result
+
+
+def match_category_names_batch(written_names: list, existing_names: list) -> dict:
+    """
+    مطابقة دفعة من أسماء التصنيفات المكتوبة في ملف مع تصنيفات النظام في استدعاء واحد.
+    Returns: {written_name: existing_name} للأسماء التي لها مقابل مؤكد فقط.
+    """
+    if not written_names or not existing_names:
+        return {}
+    prompt = (
+        f"تصنيفات نظامنا: {json.dumps(existing_names[:150], ensure_ascii=False)}\n"
+        f"تصنيفات مكتوبة في ملف العميل: {json.dumps(written_names[:150], ensure_ascii=False)}\n\n"
+        "لكل تصنيف من الملف: إن كان يعني نفس أحد تصنيفات نظامنا (مرادف، اختصار، خطأ إملائي، مفرد/جمع، "
+        "عربي/إنجليزي) فاكتب الاسم الدقيق من تصنيفات نظامنا، وإلا null. لا تطابق تصنيفين مختلفين في المعنى.\n"
+        'أجب بـ JSON فقط: {"matches": {"اسم من الملف": "اسم من نظامنا أو null"}}'
+    )
+    data = _ask_json("أنت نظام مطابقة أسماء دقيق. أجب بـ JSON صحيح فقط.", prompt, max_tokens=1200, timeout=12)
+    matches = (data or {}).get("matches") if isinstance(data, dict) else None
+    if not isinstance(matches, dict):
+        return {}
+    existing = {n.strip().lower(): n for n in existing_names}
+    written = set(written_names)
+    return {k: existing[v.strip().lower()] for k, v in matches.items()
+            if k in written and isinstance(v, str) and v.strip().lower() in existing}
+
+
+def suggest_product_categories(products: list, category_names: list) -> dict:
+    """
+    اقتراح تصنيف لمنتجات بلا تصنيف من اسمها، من بين تصنيفات معروفة فقط.
+    products: [{"key": str, "name": str}] (حتى 80 في الاستدعاء)
+    Returns: {key: category_name}
+    """
+    if not products or not category_names:
+        return {}
+    items = [{"key": str(p["key"]), "name": str(p["name"])[:120]} for p in products[:80]]
+    prompt = (
+        f"التصنيفات المتاحة: {json.dumps(category_names[:150], ensure_ascii=False)}\n"
+        f"المنتجات: {json.dumps(items, ensure_ascii=False)}\n\n"
+        "اختر لكل منتج التصنيف الأنسب من التصنيفات المتاحة فقط بناءً على اسمه. "
+        "إن لم يناسبه أي تصنيف بوضوح فاجعل قيمته null.\n"
+        'أجب بـ JSON فقط: {"suggestions": {"key": "اسم التصنيف أو null"}}'
+    )
+    data = _ask_json("أنت خبير تصنيف منتجات المتاجر والصيدليات. أجب بـ JSON صحيح فقط.",
+                     prompt, max_tokens=1800, timeout=20)
+    suggestions = (data or {}).get("suggestions") if isinstance(data, dict) else None
+    if not isinstance(suggestions, dict):
+        return {}
+    names = {n.strip().lower(): n for n in category_names}
+    keys = {i["key"] for i in items}
+    return {k: names[v.strip().lower()] for k, v in suggestions.items()
+            if k in keys and isinstance(v, str) and v.strip().lower() in names}
 
 
 def enrich_notification(notification_type: str, raw_message: str, tenant, user=None) -> str:

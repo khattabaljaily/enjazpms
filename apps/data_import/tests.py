@@ -173,16 +173,16 @@ class HardCurrencyRoundTripTests(TenantTestCase):
         from unittest import mock
         from apps.data_import import product_importer
 
-        def fake_map(headers, schema):
+        def fake_map(columns, schema):
             if not ai_maps_local_to_hc:
                 return {}
             # ما قد يفعله الذكاء الاصطناعي: «سعر البيع» (محلي) → أقرب حقل سعر متاح = العملة الصعبة
             guess = {'سعر التكلفة': 'cost_price_hc', 'سعر البيع': 'selling_price_hc', 'أدنى سعر بيع': 'min_selling_price_hc',
-                     'سعر التكلفة (عملة صعبة)': 'cost_price_hc', 'سعر البيع (عملة صعبة)': 'selling_price_hc',
-                     'أدنى سعر بيع (عملة صعبة)': 'min_selling_price_hc', 'الاسم': 'name'}
-            return {h: guess[h] for h in headers if h in guess}
+                     'سعر التكلفة (محلي)': 'cost_price_hc', 'سعر البيع (محلي)': 'selling_price_hc',
+                     'أدنى سعر بيع (محلي)': 'min_selling_price_hc', 'الاسم': 'name'}
+            return {c['index']: guess[c['header']] for c in columns if c['header'] in guess}
 
-        with mock.patch.object(product_importer, 'smart_map_headers', fake_map):
+        with mock.patch.object(product_importer, 'smart_map_columns', fake_map):
             return product_importer.import_products(self.tenant, SimpleUploadedFile('items.csv', raw), self.user)
 
     def _prices(self):
@@ -377,7 +377,7 @@ class ProductImportDefaultsTests(TenantTestCase):
         from apps.data_import import product_importer
         from apps.items.models import Item
         csv = 'اسم المنتج *,التصنيف,سعر البيع,الشركة الموردة\nمنتج جديد,عام,150,مورد قديم\n'.encode('utf-8')
-        with mock.patch.object(product_importer, 'smart_map_headers', lambda h, s: {}):
+        with mock.patch.object(product_importer, 'smart_map_columns', lambda c, s: {}):
             result = product_importer.import_products(self.tenant, SimpleUploadedFile('p.csv', csv), self.user)
         self.assertEqual(result['created'], 1, result)
         item = Item.objects.get(tenant=self.tenant, name='منتج جديد')
