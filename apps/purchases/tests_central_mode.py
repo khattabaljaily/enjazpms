@@ -250,8 +250,9 @@ class CentralModeSidebarTests(CentralModeBase):
         self.assertIn('شحنات الفروع ومرتجعاتها', html)
 
     def test_owner_standard_blocks_keep_the_standard_order(self):
+        # الترتيب المعتمد: «الموردين» مباشرة قبل «المشتريات» (للإدارة والفروع)
         html = self.sidebar(self.user)
-        order = [html.index(t) for t in ('>\n                المشتريات', '>\n                الموردين')]
+        order = [html.index(t) for t in ('>\n                الموردين', '>\n                المشتريات\n')]
         self.assertEqual(order, sorted(order))
 
     def test_branch_sidebar_has_no_purchasing_or_supplier_entries(self):

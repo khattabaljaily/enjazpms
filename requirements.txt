@@ -12,6 +12,7 @@ humanize==4.15.0
 idna==3.17
 mysqlclient==2.2.0
 openpyxl==3.1.2
+xlrd==2.0.1
 packaging==26.2
 pillow==12.2.0
 PyJWT==2.12.1

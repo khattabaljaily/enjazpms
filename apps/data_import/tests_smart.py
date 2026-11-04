@@ -269,3 +269,21 @@ class InFileMergeReportTests(TenantTestCase):
         result = product_importer.import_products(self.tenant, SimpleUploadedFile('p.xlsx', data), self.user)
         self.assertEqual((result['created'], result['updated'], result['merged']), (1, 0, 1), result)
         self.assertTrue(any('الصف 2' in w['message'] for w in result['warnings'] if w['row'] == 3))
+
+
+@override_settings(DEEPSEEK_API_KEY='')
+class OldXlsFormatTests(TenantTestCase):
+    """ملفات Excel القديمة (.xls) من الأنظمة السابقة تُقرأ مباشرة دون تحويلها إلى xlsx."""
+
+    def setUp(self):
+        super().setUp()
+        Category.objects.create(tenant=self.tenant, name='عام', is_active=True)
+
+    def test_xls_file_from_old_system(self):
+        from pathlib import Path
+        data = (Path(__file__).parent / 'test_files' / 'old_system.xls').read_bytes()
+        result = product_importer.import_products(self.tenant, SimpleUploadedFile('old_system.xls', data), self.user)
+        self.assertEqual(result['created'], 2, result)
+        rice = Item.objects.get(tenant=self.tenant, name='أرز بسمتي')
+        self.assertEqual((rice.barcode, rice.selling_price), ('6291041500213', Decimal('2500')))
+        self.assertEqual(Item.objects.get(tenant=self.tenant, name='زيت طعام').selling_price, Decimal('3750'))

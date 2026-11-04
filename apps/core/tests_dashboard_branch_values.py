@@ -77,11 +77,15 @@ class DashboardBranchValuesTests(TenantTestCase):
         self.assertEqual((k(), k(self.b1), k(self.b2)), (6100.0, 100.0, 1000.0))
 
     def test_total_products_follows_branch(self):
+        # منتجات الكتالوج النشطة المتاحة لمخازن الفرع، حتى بلا رصيد (وإلا ظهر 0 لفرع بلا أرصدة)
         from apps.stocks.models import StockQuantity
         item2 = make_item(self.tenant, name='صنف آخر')
         StockQuantity.objects.filter(tenant=self.tenant, stock=self.s1, item=self.item).update(quantity=5)
-        StockQuantity.objects.filter(tenant=self.tenant, stock=self.s2, item=item2).update(quantity=3)
         self.assertEqual(self._stats('/')['stats']['total_products'], 2)
+        self.assertEqual(self._stats('/', self.b1)['stats']['total_products'], 2)
+        self.assertEqual(self._stats('/', self.b2)['stats']['total_products'], 2)
+        item2.is_active = False
+        item2.save(update_fields=['is_active'])
         self.assertEqual(self._stats('/', self.b1)['stats']['total_products'], 1)
         self.assertEqual(self._stats('/', self.b2)['stats']['total_products'], 1)
 
