@@ -215,9 +215,10 @@ class StockQuantity(TenantMixin):
     @property
     def is_low_stock(self):
         """هل الكمية أقل من حد الطلب الأدنى؟"""
-        threshold = self.min_quantity or self.item.min_quantity
-        if threshold <= 0:
+        if self.item.item_type == 'service':
             return False
+        threshold = self.min_quantity or self.item.min_quantity or 0
+        # حد 0 يعني التنبيه عند نفاد الكمية (≤ 0)
         return self.quantity <= threshold
 
     @classmethod

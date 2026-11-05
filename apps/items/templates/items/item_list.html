@@ -1703,8 +1703,8 @@
                 _syncHcPrices();
                 {% endif %}
                 $('#id_tax_rate').val(Enjaz.parseNumber(d.tax_rate) || '');
-                $('#id_min_quantity').val(Enjaz.parseNumber(d.min_quantity) || '');
-                $('#id_max_quantity').val(Enjaz.parseNumber(d.max_quantity) || '');
+                $('#id_min_quantity').val(Enjaz.parseNumber(d.min_quantity));
+                $('#id_max_quantity').val(Enjaz.parseNumber(d.max_quantity));
                 $('#id_track_expiry').prop('checked', !!d.track_expiry);
                 $('#id_track_batch').prop('checked', !!d.track_batch);
                 $('#id_track_serial').prop('checked', !!d.track_serial);

@@ -317,12 +317,13 @@ class StocksReportGenerator(BranchLabelMixin):
         """تنبيهات المخزون المنخفض — المنتجات التي وصلت أو تجاوزت حد الحد الأدنى"""
         quantities = self._scoped(StockQuantity.objects.filter(
             tenant=self.tenant,
-            min_quantity__gt=0,
-        ), 'stock__branch').select_related('item', 'stock').prefetch_related('item__item_units').order_by('item__name', 'stock__name')
+            stock__is_active=True,
+        ).exclude(item__item_type='service'), 'stock__branch').select_related('item', 'stock').prefetch_related('item__item_units').order_by('item__name', 'stock__name')
 
         data = []
         for sq in quantities:
             if sq.is_low_stock:
+                threshold = sq.min_quantity or sq.item.min_quantity or 0
                 data.append({
                     'item_name': sq.item.name,
                     'item_unit': sq.item.base_unit_name,
@@ -330,8 +331,8 @@ class StocksReportGenerator(BranchLabelMixin):
                     'quantity': format_number(float(sq.quantity), 2),
                     'available': format_number(float(sq.available_quantity), 2),
                     'reserved': format_number(float(sq.reserved_quantity), 2),
-                    'min_quantity': format_number(float(sq.min_quantity), 2),
-                    'shortage': format_number(max(0, float(sq.min_quantity) - float(sq.available_quantity)), 2),
+                    'min_quantity': format_number(float(threshold), 2),
+                    'shortage': format_number(max(0, float(threshold) - float(sq.available_quantity)), 2),
                 })
 
         return {

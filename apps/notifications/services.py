@@ -39,9 +39,7 @@ def generate_low_stock_notifications(tenant):
 
     count = 0
     for sq in low_items:
-        threshold = sq.min_quantity or sq.item.min_quantity
-        if threshold <= 0:
-            continue
+        threshold = sq.min_quantity or sq.item.min_quantity or 0
         if sq.quantity > threshold:
             continue
 

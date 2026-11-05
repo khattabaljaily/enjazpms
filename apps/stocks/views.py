@@ -657,8 +657,8 @@ def stock_quantities_table_api(request):
 
         data = []
         for sq in qs:
-            threshold = sq.min_quantity or sq.item.min_quantity
-            is_low = threshold > 0 and sq.quantity <= threshold
+            threshold = sq.min_quantity or sq.item.min_quantity or 0
+            is_low = sq.item.item_type != 'service' and sq.quantity <= threshold
             is_zero = sq.quantity == Decimal('0')
             data.append({
                 'item_name': sq.item.name,

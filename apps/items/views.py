@@ -90,7 +90,11 @@ def item_list(request):
     qs = Item.objects.for_tenant(tenant)
     total = qs.count()
     active = qs.filter(is_active=True).count()
-    out_of_stock = qs.filter(is_active=True, min_quantity__gt=0).count()
+    out_of_stock = (
+        StockQuantity.objects.filter(tenant=tenant, item__is_active=True)
+        .exclude(item__item_type='service')
+        .values('item').annotate(total=Sum('quantity')).filter(total__lte=0).count()
+    )
 
     caps = _get_capabilities(tenant)
     from apps.core.utils import currency_symbol, CURRENCY_SYMBOLS

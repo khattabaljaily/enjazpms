@@ -201,8 +201,8 @@ def _collect_owner_overview(tenant) -> dict:
         ).aggregate(t=Sum('total_returned'))['t'] or 0
 
         low_qs = (filter_by_branch_strict(StockQuantity.objects.filter(
-            tenant=tenant, item__is_active=True, item__min_quantity__gt=0,
-            quantity__lte=F('item__min_quantity')), b, field='stock__branch')
+            tenant=tenant, item__is_active=True,
+            quantity__lte=F('item__min_quantity')).exclude(item__item_type='service'), b, field='stock__branch')
             .select_related('item', 'stock').order_by('quantity'))
         low_stock_items = [
             {'item': sq.item.name, 'current': f(sq.quantity), 'min': f(sq.item.min_quantity), 'stock': sq.stock.name}
@@ -388,7 +388,8 @@ def collect_business_context(tenant, user=None) -> dict:
     low_stock_qs = (
         filter_by_branch_strict(
             StockQuantity.objects
-            .filter(tenant=tenant, item__is_active=True, item__min_quantity__gt=0)
+            .filter(tenant=tenant, item__is_active=True)
+            .exclude(item__item_type='service')
             .filter(quantity__lte=F('item__min_quantity')),
             branch, field='stock__branch')
         .select_related('item', 'stock')
