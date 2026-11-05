@@ -1096,6 +1096,7 @@ def login_as_tenant_api(request, tenant_id):
 
     impersonator_id = request.user.pk
     target_user.backend = 'django.contrib.auth.backends.ModelBackend'
+    request._impersonating = True  # لا يُسجَّل تسجيل الدخول هذا في سجل النشاط
     login(request, target_user)
     request.session['_impersonator_id'] = impersonator_id
 

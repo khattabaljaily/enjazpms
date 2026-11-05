@@ -16,6 +16,11 @@ def log_activity(request, title: str, details: str = '', action_type: str = 'oth
         tenant = getattr(request, 'tenant', None)
         if not tenant:
             return
+        # المشرف يتصفح كصاحب نشاط (وضع انتحال الهوية): لا يُسجَّل له أي نشاط
+        session = getattr(request, 'session', None)
+        if getattr(request, '_impersonating', False) or (session is not None and session.get('_impersonator_id')):
+            request._activity_logged = True
+            return
         forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
         ip = forwarded.split(',')[0].strip() if forwarded else request.META.get('REMOTE_ADDR', '') or None
         UserActivity.objects.create(

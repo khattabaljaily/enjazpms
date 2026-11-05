@@ -230,6 +230,8 @@ def on_user_logged_in(sender, request, user, **kwargs):
     tenant = getattr(user, 'tenant', None)
     if not tenant:
         return
+    if getattr(request, '_impersonating', False):
+        return
     _log(
         tenant=tenant, user=user, action='login',
         description=f'تسجيل دخول: {user.get_full_name() or user.username}',
