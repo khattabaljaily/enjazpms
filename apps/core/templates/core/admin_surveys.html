@@ -116,23 +116,26 @@ function svCopy(text, btn) {
   const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select();
   document.execCommand('copy'); t.remove(); done();
 }
-function svPost(url, confirmMsg, reload) {
-  if (!confirm(confirmMsg)) return;
+async function svPost(url, confirmMsg, reload) {
+  if (!(await Enjaz.confirmAction(confirmMsg, 'تأكيد'))) return;
   fetch(url, {method: 'POST', headers: {'X-CSRFToken': SV_CSRF}})
-    .then(r => r.json()).then(d => { alert(d.message || (d.success ? 'تم' : 'فشل')); if (d.success && reload) location.reload(); else if (d.success) location.reload(); })
-    .catch(() => alert('تعذّر الاتصال بالخادم'));
+    .then(r => r.json()).then(d => {
+      Enjaz.toast(d.message || (d.success ? 'تم' : 'فشل'), d.success ? 'success' : 'error');
+      if (d.success) setTimeout(() => location.reload(), 1200);
+    })
+    .catch(() => Enjaz.toast('تعذّر الاتصال بالخادم', 'error'));
 }
 document.getElementById('svCreate').addEventListener('submit', function (e) {
   e.preventDefault();
   fetch('{% url "core:admin_survey_create" %}', {method: 'POST', headers: {'X-CSRFToken': SV_CSRF}, body: new FormData(this)})
     .then(r => r.json()).then(d => {
-      if (!d.success) { alert(d.message || 'فشل الإنشاء'); return; }
+      if (!d.success) { Enjaz.toast(d.message || 'فشل الإنشاء', 'error'); return; }
       const phone = (this.client_phone.value || '').replace(/[^0-9]/g, '');
       document.getElementById('svNewUrl').textContent = d.url;
       document.getElementById('svNewWa').href = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(d.url);
       document.getElementById('svNew').style.display = 'block';
       this.reset();
-    }).catch(() => alert('تعذّر الاتصال بالخادم'));
+    }).catch(() => Enjaz.toast('تعذّر الاتصال بالخادم', 'error'));
 });
 </script>
 {% endblock %}
