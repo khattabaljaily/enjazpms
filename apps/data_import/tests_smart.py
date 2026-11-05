@@ -287,3 +287,92 @@ class OldXlsFormatTests(TenantTestCase):
         rice = Item.objects.get(tenant=self.tenant, name='أرز بسمتي')
         self.assertEqual((rice.barcode, rice.selling_price), ('6291041500213', Decimal('2500')))
         self.assertEqual(Item.objects.get(tenant=self.tenant, name='زيت طعام').selling_price, Decimal('3750'))
+
+
+@override_settings(DEEPSEEK_API_KEY='')
+class InFileCategoryVariantsTests(TenantTestCase):
+    """كتابات متقاربة لنفس التصنيف داخل الملف تنتج تصنيفاً واحداً (طبية/طبيه، همزات، ال التعريف)."""
+    subscription_plan = 'pro'
+
+    def test_variants_become_one_new_category(self):
+        Category.objects.create(tenant=self.tenant, name='مشروبات', is_active=True)  # الاستيراد يشترط وجود تصنيف
+        data = xlsx(('المنتجات', [['الاسم', 'التصنيف'],
+                                  ['قفازات', 'مستلزمات طبية'], ['شاش', 'مستلزمات طبيه'],
+                                  ['حقن', 'المستلزمات الطبية'], ['كمامة', 'مستلزمات طبية']]))
+        result = product_importer.import_products(self.tenant, SimpleUploadedFile('c.xlsx', data), self.user)
+        self.assertEqual(result['created'], 4, result)
+        self.assertEqual(Category.objects.filter(tenant=self.tenant).exclude(name='مشروبات').count(), 1)
+        self.assertTrue(Category.objects.filter(tenant=self.tenant, name='مستلزمات طبية').exists())
+
+
+@override_settings(DEEPSEEK_API_KEY='')
+class SudanAgentImportTests(TenantTestCase):
+    """«الوكيل في السودان» حقل استيراد مستقل عن الشركة المصنعة، ويُستخرج من «الشركة/الوكيل/الموزع»."""
+    subscription_plan = 'pro'
+
+    def setUp(self):
+        super().setUp()
+        from apps.core.models import TenantCapabilities
+        TenantCapabilities.objects.update_or_create(tenant=self.tenant, defaults={'has_drug_classification': True})
+        self.tenant.refresh_from_db()
+
+    def _run(self, header):
+        data = xlsx(('الأدوية', [['اسم الدواء', header[0], header[1], 'سعر البيع'],
+                                 ['بنادول', 'GSK', 'الشركة السودانية للأدوية', 100]]))
+        Category.objects.get_or_create(tenant=self.tenant, name='أدوية', defaults={'is_active': True})
+        return product_importer.import_products(self.tenant, SimpleUploadedFile('p.xlsx', data), self.user)
+
+    def test_agent_column_in_new_template_header(self):
+        from apps.data_import.schemas import get_product_schema
+        self.assertIn('sudan_agent', [s['field'] for s in get_product_schema(self.tenant)])
+
+    def test_company_header_is_agent_not_manufacturer(self):
+        self._run(('الشركة المصنعة', 'الشركة'))
+        item = Item.objects.get(tenant=self.tenant, name='بنادول')
+        self.assertEqual(item.manufacturer, 'GSK')
+        self.assertEqual(item.sudan_agent, 'الشركة السودانية للأدوية')
+
+    def test_other_agent_headers(self):
+        for header in ('الوكيل', 'الموزع', 'الوكيل في السودان'):
+            Item.objects.filter(tenant=self.tenant).delete()
+            self._run(('الشركة المصنعة', header))
+            self.assertEqual(Item.objects.get(tenant=self.tenant, name='بنادول').sudan_agent,
+                             'الشركة السودانية للأدوية', header)
+
+
+class AgentNameNormalisationTests(TenantTestCase):
+    """أسماء الوكلاء بكتابات يدوية مختلفة تُوحَّد في اسم واحد."""
+
+    def _canon(self, names, existing=()):
+        from apps.data_import.agent_names import canonical_agent_map
+        return canonical_agent_map(names, existing)
+
+    def test_dot_ta_marbuta_ltd_and_company_variants(self):
+        names = ['الشركة السودانية للأدوية', 'الشركه السودانية للأدوية.', 'السودانية للأدوية', 'الشركة السودانية للادوية']
+        self.assertEqual(len(set(self._canon(names).values())), 1)
+        names = ['Pharma Plus Ltd', 'Pharma Plus Ltd.', 'PHARMA PLUS', 'Pharma Plus Co. Ltd', 'pharma plus limited']
+        self.assertEqual(len(set(self._canon(names).values())), 1)
+
+    def test_different_agents_stay_separate(self):
+        result = self._canon(['Alpha Pharma', 'Beta Pharma', 'Alfa Medical'])
+        self.assertEqual(len(set(result.values())), 3)
+
+    def test_existing_spelling_wins_then_most_frequent(self):
+        result = self._canon(['Pharma Plus', 'Pharma Plus.', 'pharma plus'], existing=['Pharma Plus Ltd'])
+        self.assertEqual(set(result.values()), {'Pharma Plus Ltd'})
+        result = self._canon(['Delta Co', 'Delta Co.', 'Delta Co'])
+        self.assertEqual(set(result.values()), {'Delta Co'})
+
+    @override_settings(DEEPSEEK_API_KEY='')
+    def test_import_stores_one_agent_spelling(self):
+        from apps.core.models import TenantCapabilities
+        TenantCapabilities.objects.update_or_create(tenant=self.tenant, defaults={'has_drug_classification': True})
+        self.tenant.refresh_from_db()
+        Category.objects.create(tenant=self.tenant, name='أدوية', is_active=True)
+        data = xlsx(('الأدوية', [['اسم الدواء', 'الوكيل في السودان'],
+                                 ['دواء 1', 'شركة النيل للأدوية'], ['دواء 2', 'شركه النيل للادويه.'],
+                                 ['دواء 3', 'النيل للأدوية المحدودة'], ['دواء 4', 'الأمل الطبية']]))
+        result = product_importer.import_products(self.tenant, SimpleUploadedFile('a.xlsx', data), self.user)
+        self.assertEqual(result['created'], 4, result)
+        agents = set(Item.objects.filter(tenant=self.tenant).values_list('sudan_agent', flat=True))
+        self.assertEqual(len(agents), 2, agents)

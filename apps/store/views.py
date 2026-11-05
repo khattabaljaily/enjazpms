@@ -347,10 +347,8 @@ def price_list(request, slug):
 
     for item in products:
         item.expiry_date = earliest_expiry.get(item.id)
-        item.pack_qty = (
-            item.purchase_unit.conversion_factor
-            if item.purchase_unit_id else None
-        )
+        # القيمة من حقل «حجم العبوة» في شاشة المنتج (كان يُقرأ من معامل وحدة الشراء فيظهر فارغاً)
+        item.pack_qty = (item.pack_size or '').strip() or None
         # وحدة السعر المعروض: أصغر وحدة من وحدات الصنف (حيث تُحفظ وحدات الأصناف الحالية)،
         # وإلا حقل «وحدة البيع» القديم. قراءة item.unit وحده كانت تترك العمود فارغاً.
         units = sorted(item.item_units.all(), key=lambda u: u.factor)

@@ -183,8 +183,20 @@ PHARMA_FIELDS = [
     {
         'field': 'manufacturer', 'header_ar': 'الشركة المصنعة', 'required': False, 'dtype': 'text',
         'capability': 'has_drug_classification', 'typical_width': 22, 'description': 'الشركة المصنعة',
-        'aliases': ('الشركة المصنعة', 'الشركه المصنعه', 'المصنع', 'الشركة المنتجة', 'الماركة', 'manufacturer',
-                    'brand', 'mfr', 'producer'),
+        'aliases': ('الشركة المصنعة', 'الشركه المصنعه', 'شركة مصنعة', 'شركه مصنعه', 'المصنع', 'مصنع', 'الشركة المنتجة',
+                    'الشركه المنتجه', 'الماركة', 'manufacturer', 'manufacturing company', 'brand', 'mfr',
+                    'mfg', 'producer', 'maker'),
+    },
+    {
+        # الحقل الذي تُجمَّع به قائمة أسعار المتجر — يختلف عن الشركة المصنعة (الوكيل يستورد/يوزّع محلياً).
+        'field': 'sudan_agent', 'header_ar': 'الوكيل في السودان', 'required': False, 'dtype': 'text',
+        'capability': 'has_drug_classification', 'typical_width': 24,
+        'description': 'الوكيل أو الموزع المحلي في السودان الذي يبيع المنتج (يسمّى غالباً الوكيل أو الشركة أو الموزع) — '
+                       'وهو غير الشركة المصنعة الأجنبية',
+        'aliases': ('الوكيل في السودان', 'الوكيل أو الموزع في السودان', 'الوكيل', 'وكيل', 'الوكيل المحلي', 'الوكيل المعتمد',
+                    'الموزع', 'موزع', 'الموزع في السودان', 'الموزع المعتمد', 'الشركة', 'الشركه', 'شركة', 'شركه',
+                    'الشركة الموزعة', 'الشركه الموزعه', 'الشركة الوكيلة', 'اسم الوكيل', 'اسم الموزع', 'اسم الشركة',
+                    'agent', 'sudan agent', 'local agent', 'distributor', 'dist', 'importer'),
     },
     {
         'field': 'dosage_form', 'header_ar': 'الشكل الصيدلاني', 'required': False, 'dtype': 'text',

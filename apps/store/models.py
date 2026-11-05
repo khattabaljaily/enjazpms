@@ -131,7 +131,7 @@ class StoreSettings(TenantMixin):
         ('generic',   'الاسم العلمي (Generic Name)'),
         ('unit',      'الوحدة (Unit)'),
         ('retail',    'السعر (Price)'),
-        ('pack',      'الكمية في العبوة (Q/Box)'),
+        ('pack',      'العبوة (Pack)'),
         ('expiry',    'تاريخ الانتهاء (Exp Date)'),
         ('qty',       'عمود الكمية (Quantity)'),
     )

@@ -85,6 +85,11 @@ class PriceListUnitAndQtyColumnTests(TenantTestCase):
         self.assertContains(r, '<td class="pl-col-unit">قطعة</td>')
         self.assertNotContains(r, '<td class="pl-col-unit">-</td>')
 
+    def test_pack_column_shows_pack_size_field(self):
+        make_item(self.tenant, name='صنف عبوة', pack_size='علبة 30 قرص')
+        r = self.client.get(self.url)
+        self.assertContains(r, '<td class="pl-col-pack">علبة 30 قرص</td>')
+
     def test_unit_falls_back_to_legacy_unit_field(self):
         from apps.items.models import Unit
         make_item(self.tenant, name='صنف قديم', unit=Unit.objects.create(tenant=self.tenant, name='لتر'))

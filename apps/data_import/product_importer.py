@@ -27,6 +27,7 @@ from django.utils import timezone
 from apps.items.models import Category, Item, ItemBatch
 from apps.items.views import _apply_hc_prices, _save_item_units
 from apps.items.dedup import find_existing_item_match
+from apps.data_import.agent_names import canonical_agent_map
 from apps.stocks.models import StockQuantity
 from apps.stocks.scope import opening_balance_stocks
 from apps.sales.models import StockMovement
@@ -301,7 +302,31 @@ def _category_decisions(ctx, plan, options, meta):
             decisions[raw] = {'action': 'new' if ctx.can_create_categories else 'none', 'source': 'auto'}
     for raw, decision in decisions.items():
         decision['count'] = raws[raw]
+    # تجميع الأسماء الجديدة المتقاربة داخل الملف نفسه (همزة/تاء مربوطة/ال التعريف/خطأ إملائي بسيط)
+    canonical = []
+    for raw in sorted((r for r, d in decisions.items() if d['action'] == 'new'), key=lambda r: (-raws[r], r)):
+        match = sr.closest_name(raw, canonical)
+        if match:
+            decisions[raw]['canonical'] = match
+        else:
+            canonical.append(raw)
     return decisions
+
+
+def _agent_names(ctx, plan):
+    """{كتابة الوكيل في الملف: الاسم الموحّد} — يمنع تكرار اسم الوكيل بكتابات مختلفة."""
+    if 'sudan_agent' not in plan['field_columns']:
+        return {}
+    raws = []
+    for _, row in plan['data_rows']:
+        text = sr.parse_text(_raw(plan, row, 'sudan_agent')[0])
+        if text:
+            raws.append(text)
+    if not raws:
+        return {}
+    existing = (Item.objects.for_tenant(ctx.tenant).exclude(sudan_agent='')
+                .values_list('sudan_agent', flat=True).distinct())
+    return canonical_agent_map(raws, list(existing))
 
 
 def _parse_choice(spec, value):
@@ -325,6 +350,7 @@ def prepare_rows(ctx, plan, options=None, meta=None):
     options = options or {}
     meta = meta if meta is not None else {}
     decisions = _category_decisions(ctx, plan, options, meta)
+    agent_map = _agent_names(ctx, plan)
     default_category = None
     default_id = str(options.get('default_category') or '')
     if default_id.isdigit():
@@ -401,6 +427,8 @@ def prepare_rows(ctx, plan, options=None, meta=None):
                 entry['values'][field] = choice
             else:
                 text = sr.parse_text(value)
+                if field == 'sudan_agent' and text:
+                    text = agent_map.get(text.strip(), text)
                 if field in ('barcode', 'sku') and isinstance(value, str) and 'e+' in value.lower():
                     warn(field, 'الرقم مكتوب بصيغة علمية (مثل 6.29E+12) وقد فقد خاناته — نسّق العمود كنص في Excel',
                          value, col)
@@ -424,7 +452,8 @@ def prepare_rows(ctx, plan, options=None, meta=None):
             elif decision and decision['action'] == 'existing':
                 entry['category'] = ('existing', ctx.category_by_id[decision['category_id']])
             elif decision and decision['action'] == 'new':
-                entry['category'] = ('new', cat_text)
+                # الكتابات المتقاربة («طبية»/«طبيه») تُوحَّد في تصنيف واحد باسم أكثرها تكراراً
+                entry['category'] = ('new', decision.get('canonical') or cat_text)
             else:
                 fallback = default_category
                 entry['category'] = ('existing', fallback) if fallback else None
@@ -700,6 +729,9 @@ def commit_products(ctx, plan, prepared, decisions):
                         _apply_local_prices(existing, tenant, local_prices)
                         update_fields += ['cost_price', 'selling_price', 'min_selling_price',
                                           'cost_price_hc', 'selling_price_hc', 'min_selling_price_hc']
+                    if values.get('sudan_agent') and not existing.sudan_agent:
+                        existing.sudan_agent = values['sudan_agent']
+                        update_fields.append('sudan_agent')
                     existing.save(update_fields=list(set(update_fields)))
                     if merged_into:
                         # المنتج أُنشئ من صف سابق في نفس الملف: ليس «منتجاً موجوداً مسبقاً»
