@@ -130,8 +130,7 @@ class StoreSettings(TenantMixin):
         ('name',      'الاسم التجاري (Trade Name)'),
         ('generic',   'الاسم العلمي (Generic Name)'),
         ('unit',      'الوحدة (Unit)'),
-        ('wholesale', 'سعر الجملة (W. Price)'),
-        ('retail',    'سعر التجزئة (R. Price)'),
+        ('retail',    'السعر (Price)'),
         ('pack',      'الكمية في العبوة (Q/Box)'),
         ('expiry',    'تاريخ الانتهاء (Exp Date)'),
         ('qty',       'عمود الكمية (Quantity)'),
@@ -149,7 +148,7 @@ class StoreSettings(TenantMixin):
         chosen = [k for k in (self.price_list_columns or []) if k in all_keys]
         keys = set(chosen) if chosen else set(all_keys)
         if not self.show_prices:
-            keys -= {'wholesale', 'retail'}
+            keys -= {'retail'}
         return keys
 
     def for_branch(self, branch):

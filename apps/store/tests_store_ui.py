@@ -40,14 +40,16 @@ class PriceListColumnsTests(TenantTestCase):
 
     def test_default_shows_all_columns(self):
         r = self.client.get(reverse('store:price_list', args=[self.store.slug]))
-        for h in ('Trade Name', 'Generic Name', 'W. Price', 'R. Price', 'Exp Date'):
+        for h in ('Trade Name', 'Generic Name', 'Price', 'Exp Date'):
             self.assertContains(r, h)
+        self.assertNotContains(r, 'W. Price')
+        self.assertNotContains(r, 'R. Price')
 
     def test_selected_columns_only(self):
         self.store.price_list_columns = ['name', 'retail']
         self.store.save()
         r = self.client.get(reverse('store:price_list', args=[self.store.slug]))
-        self.assertContains(r, 'R. Price')
+        self.assertContains(r, '>Price<')
         self.assertNotContains(r, 'W. Price')
         self.assertNotContains(r, 'Generic Name')
         self.assertNotContains(r, 'Exp Date')
@@ -101,12 +103,12 @@ class PriceListUnitAndQtyColumnTests(TenantTestCase):
 
         self._save_columns(['name', 'unit', 'retail'])
         r = self.client.get(self.url)
-        self.assertContains(r, 'R. Price')                # الصفحة موجودة فعلاً
+        self.assertContains(r, '>Price<')                # الصفحة موجودة فعلاً
         self.assertNotContains(r, '>Quantity<')
 
         self._save_columns(['name', 'unit', 'retail', 'qty'])
         r = self.client.get(self.url)
-        self.assertContains(r, 'R. Price')
+        self.assertContains(r, '>Price<')
         self.assertContains(r, '>Quantity<')
 
 
