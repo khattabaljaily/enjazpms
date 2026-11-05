@@ -443,12 +443,16 @@ $(function () {
     });
 
     /* ── الاستيراد ───────────────────────────────────────────── */
-    $(document).on('click', '#diCommitBtn', function () {
+    $(document).on('click', '#diCommitBtn', async function () {
         const $alert = $('[data-xr-alert]:not(.xr-done)');
-        if (state.analysis.hc_mode && $alert.length &&
-            !confirm('سعر الصرف لم يُحدَّث، والأسعار بالعملة الصعبة ستُحسب بالسعر الحالي. متابعة الاستيراد؟')) {
-            $alert[0].scrollIntoView({behavior: 'smooth', block: 'center'});
-            return;
+        if (state.analysis.hc_mode && $alert.length) {
+            const ok = await Enjaz.confirmAction(
+                'سعر الصرف لم يُحدَّث، والأسعار بالعملة الصعبة ستُحسب بالسعر الحالي. متابعة الاستيراد؟',
+                'تأكيد الاستيراد', 'نعم، استورد');
+            if (!ok) {
+                $alert[0].scrollIntoView({behavior: 'smooth', block: 'center'});
+                return;
+            }
         }
         const $btn = $(this);
         const fd = new FormData();
