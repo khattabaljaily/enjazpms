@@ -619,8 +619,9 @@
         border: 1pt solid #d1d5db !important;
         box-shadow: none !important;
         overflow: visible !important;
-        break-inside: avoid;
-        page-break-inside: avoid;
+        /* الجداول الطويلة يجب أن تنقسم على الصفحات (وإلا تُدفع كاملة لصفحة جديدة وتبدو الصفحة فارغة) */
+        break-inside: auto;
+        page-break-inside: auto;
         margin-bottom: 1.1rem !important;
         border-radius: 4pt !important;
     }
@@ -753,7 +754,9 @@
     .rpt-empty { color: #777 !important; padding: 1.5rem !important; }
 
     /* ── 13. Page break helpers ─────────────────────────────── */
-    .rpt-panel { page-break-inside: avoid; }
+    .rpt-panel { page-break-inside: auto; }
+    .rpt-panel .table thead { display: table-header-group; }
+    .rpt-panel .table tr { break-inside: avoid; page-break-inside: avoid; }
     .rpt-kpi-grid { page-break-inside: avoid; }
     h1, h2, h3 { page-break-after: avoid; }
     table { page-break-inside: auto; }

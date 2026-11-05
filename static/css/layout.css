@@ -932,3 +932,13 @@
     .page-head-subtitle { font-size: 0.73rem; }
     .app-footer { padding: 0.4rem 0.75rem; font-size: 0.72rem; }
 }
+
+
+/* ── الطباعة: إخفاء العناصر العائمة وشريط انتحال الهوية من كل الصفحات ── */
+@media print {
+    .pf-banner,
+    .help-fab, .help-panel,
+    .training-fab, .training-panel,
+    .ai-fab, .ai-panel,
+    #global-alerts { display: none !important; }
+}
