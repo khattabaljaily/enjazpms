@@ -12,7 +12,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission, branch_scope_exempt
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from django.http import HttpResponseNotAllowed, JsonResponse, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -617,6 +617,29 @@ def stock_quantities_list(request):
         'default_stock': default_stock,
     })
 
+# ترتيب أعمدة جدول أرصدة المخزون (فهرس العمود في الجدول → حقل الترتيب)
+_QTY_ORDER_SINGLE = {
+    0: 'item__name', 1: 'item__sku', 2: 'item__barcode', 3: 'stock__name',
+    4: 'item__unit__name', 5: 'quantity', 6: 'reserved_quantity', 7: 'available_sort',
+}
+_QTY_ORDER_AGG = {
+    0: 'item__name', 1: 'item__sku', 2: 'item__barcode',
+    4: 'item__unit__name', 5: 'total_quantity', 6: 'total_reserved', 7: 'available_sort',
+}
+
+
+def _qty_ordering(request, mapping, default):
+    """يحوّل order[0][column]/dir القادمين من DataTables إلى قائمة order_by آمنة."""
+    try:
+        field = mapping.get(int(request.GET.get('order[0][column]', '')))
+    except (TypeError, ValueError):
+        field = None
+    if not field:
+        return [default]
+    prefix = '-' if request.GET.get('order[0][dir]', 'asc') == 'desc' else ''
+    return [prefix + field, default]
+
+
 
 @login_required
 @require_permission('view_stock_quantities')
@@ -653,7 +676,8 @@ def stock_quantities_table_api(request):
             )
 
         filtered = qs.count()
-        qs = qs.order_by('-id')[start:start + length]
+        qs = qs.annotate(available_sort=F('quantity') - F('reserved_quantity'))
+        qs = qs.order_by(*_qty_ordering(request, _QTY_ORDER_SINGLE, '-id'))[start:start + length]
 
         data = []
         for sq in qs:
@@ -701,7 +725,8 @@ def stock_quantities_table_api(request):
             )
 
         total = filtered = agg_qs.count()
-        agg_page = list(agg_qs.order_by('-item_id')[start:start + length])
+        agg_qs = agg_qs.annotate(available_sort=F('total_quantity') - F('total_reserved'))
+        agg_page = list(agg_qs.order_by(*_qty_ordering(request, _QTY_ORDER_AGG, '-item_id'))[start:start + length])
 
         item_ids = [r['item_id'] for r in agg_page]
         items_map = {
@@ -718,7 +743,7 @@ def stock_quantities_table_api(request):
             reserved = row['total_reserved'] or Decimal('0')
             available = qty - reserved
             threshold = item.min_quantity or Decimal('0')
-            is_low = threshold > 0 and qty <= threshold
+            is_low = qty <= threshold
             is_zero = qty == Decimal('0')
             data.append({
                 'item_name': item.name,
