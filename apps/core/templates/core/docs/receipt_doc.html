@@ -10,7 +10,7 @@
     <tr><th>رقم السند <small>No.</small></th><td class="val ltr" style="text-align:right">{{ payment.receipt_number }}</td><th>التاريخ <small>Date</small></th><td class="val ltr" style="text-align:right">{{ payment.paid_at|date:"Y/m/d" }}</td></tr>
     <tr><th>استلمنا من <small>Received from</small></th><td colspan="3" class="val">{{ tenant.name }}</td></tr>
     <tr><th>مبلغاً وقدره <small>The sum of</small></th><td colspan="3" class="val">{{ amount_text }} ({{ currency_name }})</td></tr>
-    <tr><th>وذلك عن <small>Being for</small></th><td colspan="3" class="val">اشتراك باقة {{ payment.get_plan_display }} في منصة إنجاز — {{ payment.period_days }} يوماً</td></tr>
+    <tr><th>وذلك عن <small>Being for</small></th><td colspan="3" class="val">اشتراك باقة «{{ payment.get_plan_display }}» في منصة إنجاز — {{ payment.period_days }} يوماً</td></tr>
     <tr><th>مرجع المطالبة <small>Request Ref.</small></th><td colspan="3" class="val ltr" style="text-align:right">{% if invoice %}{{ invoice.invoice_number }}{% else %}—{% endif %}</td></tr>
     <tr><th>طريقة الدفع <small>Paid by</small></th><td colspan="3">
       <span class="opt"><span class="cb{% if payment.method == 'cash' %} on{% endif %}"></span>نقداً <small>Cash</small></span>
@@ -20,7 +20,7 @@
     </td></tr>
     {% if payment.reference %}<tr><th>رقم العملية <small>Reference</small></th><td colspan="3" class="val ltr" style="text-align:right">{{ payment.reference }}</td></tr>{% endif %}
   </table>
-  <table class="vt sigs"><tr><th>المستلم <small>Received by</small></th><td></td><th>التوقيع والختم <small>Signature &amp; Stamp</small></th><td></td></tr></table>
+  <table class="vt sigs"><tr><th>المستلم <small>Received by</small></th><td></td></tr></table>
 </div>
 
 <div class="meta">

@@ -20,7 +20,7 @@ BRAND_DIR = Path(settings.BASE_DIR) / 'static' / 'brand'
 # حساب استلام المدفوعات المطبوع في مطالبة السداد
 BANK_DETAILS = [
     ('البنك', 'Bank', 'بنك الخرطوم'),
-    ('اسم الحساب', 'Account Name', 'خطاب الجيلي احمد محمد'),
+    ('اسم الحساب', 'Account Name', 'خطاب الجيلي أحمد محمد'),
     ('رقم الحساب', 'Account No.', '1578628'),
 ]
 
@@ -87,7 +87,7 @@ def render_invoice_pdf(invoice):
     tenant = invoice.tenant
     return _render(
         'core/docs/invoice_doc.html', invoice=invoice, tenant=tenant, bank=BANK_DETAILS,
-        address='، '.join(x for x in (tenant.address, tenant.city, tenant.country) if x),
+        address='، '.join(dict.fromkeys(x.strip() for x in (tenant.address, tenant.city, tenant.country) if x and x.strip())),   # بلا تكرار (الخرطوم، الخرطوم)
         amount_text=_money(invoice.amount, invoice.currency),
         currency_name=CURRENCY_NAMES.get(invoice.currency, invoice.currency))
 

@@ -28,7 +28,7 @@
   </tr>
   <tr>
     <td class="num">1</td>
-    <td>اشتراك باقة {{ invoice.get_plan_display }} في منصة إنجاز</td>
+    <td>اشتراك باقة «{{ invoice.get_plan_display }}» في منصة إنجاز</td>
     <td class="num">{{ invoice.period_days }} يوماً</td>
     <td class="amt">{{ amount_text }}</td>
     <td class="amt">{{ amount_text }}</td>
@@ -48,13 +48,9 @@
 
 <div class="note">
   يُرجى السداد في موعد أقصاه <b class="hl ltr">{{ invoice.due_date|date:"Y/m/d" }}</b> وذكر رقم المطالبة عند التحويل، ثم إرسال إشعار الدفع إلى <span class="ltr">info@enjaztechnology.com</span> أو واتساب <span class="ltr">+249 110 100 110</span><br>
-  <span class="muted ltr" style="display:block;text-align:left">Please pay by the due date and quote the request number with your payment. Bank charges are borne by the client.</span>
+  <span class="muted ltr" style="display:block;text-align:left;white-space:normal;overflow-wrap:anywhere">Please pay by the due date and quote the request number with your payment. Bank charges are borne by the client.</span>
 </div>
 
-<div class="sign" style="margin-top:6mm">
-  <div class="sig-col"><div class="sig-row">التوقيع <span class="muted">Signature</span>:<span class="line" style="width:40mm"></span></div></div>
-  <div class="sig-col"><div class="sig-row">الختم <span class="muted">Stamp</span>:</div></div>
-</div>
 {% if invoice.is_void %}<div style="position:fixed;top:120mm;left:0;right:0;text-align:center;font-size:60pt;font-weight:700;color:rgba(179,38,30,.18);z-index:5">ملغاة</div>
 {% elif invoice.is_paid %}<div style="position:fixed;top:120mm;left:0;right:0;text-align:center;font-size:60pt;font-weight:700;color:rgba(22,130,70,.2);z-index:5">مسدَّدة</div>{% endif %}
 {% endblock %}
