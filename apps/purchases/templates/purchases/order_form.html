@@ -327,6 +327,7 @@ function searchItems() {
                         <div>
                             <div class="sale-item-result__name">${item.name}</div>
                             <div class="sale-item-result__sku">${item.sku || '—'}</div>
+                ${item.category_name ? `<div class="sale-item-result__cat">${item.category_name}</div>` : ''}
                         </div>
                         <div class="sale-item-result__meta">
                             <div class="sale-item-result__price">${Enjaz.formatMoney(item.cost_price || 0)}</div>

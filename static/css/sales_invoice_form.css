@@ -121,6 +121,13 @@
   color: var(--text-secondary);
 }
 
+.sale-item-result__cat {
+  font-size: 0.72rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin-top: 0.1rem;
+}
+
 .sale-item-result__meta {
   text-align: left;
 }

@@ -1323,6 +1323,7 @@ def stock_items_api(request):
             'id': item.id,
             'name': item.name,
             'sku': item.sku,
+            'category_name': item.category.name if item.category_id else '',
             'selling_price': str(item.selling_price),
             'cost_price': str(item.cost_price),
             'tax_rate': str(item.tax_rate),

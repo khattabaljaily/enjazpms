@@ -1062,9 +1062,9 @@ def item_search_api(request):
             Q(barcode__icontains=q) |
             Q(sku__icontains=q) |
             Q(generic_name__icontains=q)
-        ).prefetch_related('item_units')[:limit]
+        ).select_related('category').prefetch_related('item_units')[:limit]
     else:
-        qs = base_qs.order_by('name').prefetch_related('item_units')[:limit]
+        qs = base_qs.order_by('name').select_related('category').prefetch_related('item_units')[:limit]
 
     results = []
     for item in qs:
@@ -1086,6 +1086,7 @@ def item_search_api(request):
             'id': item.id,
             'name': item.name,
             'sku': item.sku,
+            'category_name': item.category.name if item.category_id else '',
             'barcode': item.barcode,
             'item_type': item.item_type,
             'item_type_label': item.get_item_type_display(),
