@@ -324,6 +324,8 @@ class VerifyDocumentTests(_PlatformBase):
         self.assertContains(r, 'سند قبض')
         self.assertContains(r, self.payment.receipt_number)
         self.assertContains(r, self.tenant.name)
+        self.assertContains(r, 'تم تجديد الاشتراك حتى')
+        self.assertContains(r, f'{self.payment.period_end:%Y/%m/%d}')
 
     def test_forged_or_unknown_documents_are_not_found(self):
         number = self.invoice.invoice_number

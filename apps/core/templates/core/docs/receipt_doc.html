@@ -24,12 +24,11 @@
 </div>
 
 <div class="meta">
-  <div class="box"><b>فترة التمديد <span class="bi">Extension Period</span></b>
+  <div class="box"><b>تجديد الاشتراك <span class="bi">Subscription Renewal</span></b>
     الباقة <span class="muted">Plan</span>: <span class="val">{{ payment.get_plan_display }}</span><br>
-    من <span class="muted">From</span>: <span class="val ltr">{{ payment.period_start|date:"Y/m/d" }}</span><br>
-    إلى <span class="muted">To</span>: <span class="val ltr">{{ payment.period_end|date:"Y/m/d" }}</span><br>
     المدة <span class="muted">Duration</span>: <span class="val">{{ payment.period_days }} يوماً</span><br>
-    <span class="muted">يبدأ التمديد من نهاية الاشتراك السابقة إن كان ساريًا، وإلا من تاريخ الدفع.</span>
+    <span class="val">تم تجديد الاشتراك حتى <span class="ltr">{{ payment.period_end|date:"Y/m/d" }}</span></span><br>
+    <span class="muted ltr" style="display:block;text-align:left;white-space:normal">Subscription renewed until {{ payment.period_end|date:"Y/m/d" }}</span>
   </div>
   {% if payment.notes %}<div class="box"><b>ملاحظات <span class="bi">Notes</span></b>{{ payment.notes|linebreaksbr }}</div>{% endif %}
 </div>
