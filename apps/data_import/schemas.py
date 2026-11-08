@@ -395,13 +395,107 @@ SUPPLIER_IMPORT_SCHEMA = [
 
 
 def get_customer_schema(tenant):
-    return list(CUSTOMER_IMPORT_SCHEMA)
+    return _with_aliases(CUSTOMER_IMPORT_SCHEMA, 'customers')
 
 
 def get_supplier_schema(tenant):
     from apps.core.constants import CURRENCY_CHOICES
-    schema = list(SUPPLIER_IMPORT_SCHEMA)
+    schema = _with_aliases(SUPPLIER_IMPORT_SCHEMA, 'suppliers')
     for spec in schema:
         if spec['field'] == 'currency':
             spec['choices'] = CURRENCY_CHOICES
     return schema
+
+
+# ============================================================
+# أسماء بديلة (عربي/إنجليزي/تصدير أنظمة أخرى) لحقول العملاء والموردين والمناديب والتصنيفات،
+# وتعريف حقول المناديب والتصنيفات — يستعملها المستورد الذكي (entity_importer) نفسه للجميع.
+# ============================================================
+
+_COMMON_ALIASES = {
+    'phone': ('الهاتف', 'رقم الهاتف', 'رقم الجوال', 'الجوال', 'جوال', 'موبايل', 'المحمول', 'رقم الموبايل', 'تلفون',
+              'رقم التلفون', 'التليفون', 'واتساب', 'phone', 'mobile', 'tel', 'telephone', 'phone number', 'cell'),
+    'email': ('البريد', 'البريد الالكتروني', 'الايميل', 'ايميل', 'email', 'e-mail', 'mail', 'email address'),
+    'city': ('المدينة', 'المدينه', 'المنطقة', 'المنطقه', 'البلد', 'الولاية', 'city', 'town', 'area', 'region'),
+    'address': ('العنوان', 'عنوان', 'الموقع', 'address', 'location', 'street'),
+    'opening_balance': ('المديونية الافتتاحية', 'الرصيد الافتتاحي', 'رصيد افتتاحي', 'رصيد اول المدة', 'رصيد بداية المدة',
+                        'الرصيد', 'الرصيد الحالي', 'المديونية', 'المستحقات الافتتاحية', 'المستحقات', 'الدين',
+                        'opening balance', 'balance', 'opening_balance', 'debt'),
+    'credit_limit': ('الحد الائتماني', 'حد الائتمان', 'سقف الدين', 'سقف الائتمان', 'الحد الاقصى للدين', 'credit limit',
+                     'credit_limit', 'limit'),
+    'notes': ('ملاحظات', 'الملاحظات', 'ملاحظة', 'تعليق', 'notes', 'note', 'remarks', 'comment'),
+}
+
+_NAME_ALIASES = {
+    'customers': ('الاسم', 'اسم العميل', 'العميل', 'اسم الزبون', 'الزبون', 'الاسم بالكامل', 'name', 'customer',
+                  'customer name', 'client', 'client name'),
+    'suppliers': ('الاسم', 'اسم المورد', 'المورد', 'اسم الشركة', 'الشركة', 'name', 'supplier', 'supplier name',
+                  'vendor', 'vendor name', 'company'),
+    'agents': ('الاسم', 'اسم المندوب', 'المندوب', 'مندوب', 'اسم المندوب المبيعات', 'مندوب المبيعات', 'name', 'agent',
+               'agent name', 'rep', 'sales rep', 'salesman'),
+}
+
+_SUPPLIER_EXTRA = {
+    'currency': ('العملة', 'عملة المورد', 'عملة التعامل', 'currency', 'cur'),
+}
+
+
+def _with_aliases(schema, entity):
+    result = []
+    for spec in schema:
+        spec = dict(spec)
+        field = spec['field']
+        aliases = _COMMON_ALIASES.get(field, ())
+        if field == 'name':
+            aliases = _NAME_ALIASES[entity]
+        if entity == 'suppliers':
+            aliases = aliases + _SUPPLIER_EXTRA.get(field, ())
+        spec['aliases'] = tuple(aliases) + tuple(spec.get('aliases', ()))
+        result.append(spec)
+    return result
+
+
+AGENT_IMPORT_SCHEMA = [
+    {'field': 'name', 'header_ar': 'اسم المندوب *', 'required': True, 'dtype': 'text',
+     'typical_width': 24, 'description': 'اسم المندوب أو مندوب المبيعات'},
+    {'field': 'phone', 'header_ar': 'رقم الهاتف', 'required': False, 'dtype': 'text',
+     'typical_width': 16, 'description': 'رقم الهاتف أو الجوال'},
+    {'field': 'email', 'header_ar': 'البريد الإلكتروني', 'required': False, 'dtype': 'text',
+     'typical_width': 24, 'description': 'البريد الإلكتروني'},
+    {'field': 'city', 'header_ar': 'المدينة', 'required': False, 'dtype': 'text',
+     'typical_width': 16, 'description': 'المدينة أو المنطقة'},
+    {'field': 'address', 'header_ar': 'العنوان', 'required': False, 'dtype': 'text',
+     'typical_width': 30, 'description': 'العنوان التفصيلي'},
+    {'field': 'opening_balance', 'header_ar': 'المستحقات الافتتاحية', 'required': False, 'dtype': 'decimal',
+     'typical_width': 18, 'description': 'المستحقات الافتتاحية أو رصيد البداية للمندوب'},
+    {'field': 'notes', 'header_ar': 'ملاحظات', 'required': False, 'dtype': 'text',
+     'typical_width': 30, 'description': 'ملاحظات'},
+]
+
+CATEGORY_IMPORT_SCHEMA = [
+    {'field': 'name', 'header_ar': 'اسم التصنيف *', 'required': True, 'dtype': 'text', 'typical_width': 26,
+     'description': 'اسم التصنيف أو القسم أو الفئة',
+     'aliases': ('الاسم', 'اسم التصنيف', 'التصنيف', 'القسم', 'اسم القسم', 'الفئة', 'اسم الفئة', 'المجموعة',
+                 'اسم المجموعة', 'name', 'category', 'category name', 'group', 'department')},
+    {'field': 'parent', 'header_ar': 'التصنيف الرئيسي', 'required': False, 'dtype': 'text', 'typical_width': 24,
+     'description': 'التصنيف الرئيسي أو الأب أو التصنيف الأعلى (اتركه فارغاً للتصنيف الرئيسي)',
+     'aliases': ('التصنيف الرئيسي', 'التصنيف الاب', 'التصنيف الاعلى', 'الاب', 'القسم الرئيسي', 'القسم الاب', 'الفئة الرئيسية',
+                 'تابع ل', 'يتبع', 'parent', 'parent category', 'main category')},
+    {'field': 'description', 'header_ar': 'الوصف', 'required': False, 'dtype': 'text', 'typical_width': 30,
+     'description': 'وصف التصنيف أو تفاصيله',
+     'aliases': ('الوصف', 'وصف', 'التفاصيل', 'description', 'desc', 'details')},
+    {'field': 'display_order', 'header_ar': 'الترتيب', 'required': False, 'dtype': 'number', 'typical_width': 10,
+     'description': 'ترتيب العرض أو الأولوية',
+     'aliases': ('الترتيب', 'ترتيب العرض', 'الاولوية', 'order', 'display order', 'sort', 'sort order', 'priority')},
+    {'field': 'is_active', 'header_ar': 'نشط؟', 'required': False, 'dtype': 'bool', 'typical_width': 10,
+     'description': 'هل التصنيف نشط أو مفعّل (نعم/لا)',
+     'aliases': ('نشط', 'الحالة', 'مفعل', 'فعال', 'active', 'is active', 'status', 'enabled')},
+]
+
+
+def get_agent_schema(tenant):
+    return _with_aliases(AGENT_IMPORT_SCHEMA, 'agents')
+
+
+def get_category_schema(tenant):
+    return list(CATEGORY_IMPORT_SCHEMA)

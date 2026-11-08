@@ -59,21 +59,101 @@ class ImportCommitTests(TenantTestCase):
 
     def test_category_import_through_hub_page(self):
         page = self.client.get(reverse('data_import:category_page'))
-        self.assertContains(page, reverse('items:category_import_api'))
+        self.assertContains(page, reverse('data_import:category_analyze'))
         csv = 'الاسم,التصنيف الرئيسي\nمشروبات,\nعصائر,مشروبات\n'.encode('utf-8')
-        resp = self.client.post(reverse('items:category_import_api'),
+        resp = self.client.post(reverse('data_import:category_commit'),
                                 {'file': SimpleUploadedFile('c.csv', csv)})
-        self.assertEqual(resp.json()['imported'], 2)
+        self.assertEqual(resp.json()['created'], 2)
         self.assertEqual(Category.objects.get(tenant=self.tenant, name='عصائر').parent.name, 'مشروبات')
 
     def test_agent_import_through_hub_page(self):
         self.tenant.capabilities.has_agents_module = True
         self.tenant.capabilities.save()
         page = self.client.get(reverse('data_import:agent_page'))
-        self.assertContains(page, reverse('agents:import_api'))
+        self.assertContains(page, reverse('data_import:agent_analyze'))
         csv = 'الاسم,الهاتف\nأحمد,0912345678\n'.encode('utf-8')
-        resp = self.client.post(reverse('agents:import_api'), {'file': SimpleUploadedFile('a.csv', csv)})
-        self.assertEqual(resp.json()['imported'], 1)
+        resp = self.client.post(reverse('data_import:agent_commit'), {'file': SimpleUploadedFile('a.csv', csv)})
+        self.assertEqual(resp.json()['created'], 1)
+
+
+class SmartEntityImportTests(TenantTestCase):
+    """العملاء/الموردون/المناديب/التصنيفات: معاينة ذكية (ورقة وصف عناوين وأسماء أعمدة مختلفة) ثم استيراد بالـ token."""
+    subscription_plan = 'pro'
+
+    def _xlsx(self, rows, sheet='data'):
+        import io
+        import openpyxl
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = sheet
+        for r in rows:
+            ws.append(r)
+        buf = io.BytesIO()
+        wb.save(buf)
+        return SimpleUploadedFile('f.xlsx', buf.getvalue())
+
+    def _analyze(self, url, rows):
+        resp = self.client.post(reverse(url), {'file': self._xlsx(rows)})
+        self.assertEqual(resp.status_code, 200, resp.content)
+        return resp.json()
+
+    def test_customers_foreign_headers_and_title_rows(self):
+        rows = [['تقرير العملاء', None, None], [None, None, None],
+                ['Customer Name', 'Mobile', 'Balance'],
+                ['شركة النور', '0912 345 678', '1,500.50'],
+                ['متجر الأمل', None, 200],
+                ['شركة النور', '0912345678', 5],
+                ['الإجمالي', None, 1700]]
+        data = self._analyze('data_import:customer_analyze', rows)
+        a = data['analysis']
+        self.assertEqual(a['header_row'], 2)
+        self.assertEqual({c['field'] for c in a['columns']}, {'name', 'phone', 'opening_balance'})
+        self.assertEqual(a['summary']['new'], 2)
+        self.assertEqual(a['summary']['duplicate'], 1)
+        resp = self.client.post(reverse('data_import:customer_commit'), {'token': data['token']})
+        self.assertEqual(resp.json()['created'], 2)
+        from apps.customers.models import Customer
+        c = Customer.objects.get(tenant=self.tenant, name='شركة النور')
+        self.assertEqual(str(c.opening_balance), '1500.50')
+        self.assertEqual(c.phone, '0912345678')
+
+    def test_existing_customer_skipped_not_duplicated(self):
+        from apps.customers.models import Customer
+        Customer.objects.create(tenant=self.tenant, name='متجر الأمل', phone='0911111111')
+        data = self._analyze('data_import:customer_analyze', [['الاسم', 'الهاتف'], ['متجر الأمل', None], ['آخر', None]])
+        self.assertEqual(data['analysis']['summary']['exists'], 1)
+        resp = self.client.post(reverse('data_import:customer_commit'), {'token': data['token']}).json()
+        self.assertEqual((resp['created'], resp['skipped']), (1, 1))
+        self.assertEqual(Customer.objects.filter(tenant=self.tenant, name='متجر الأمل').count(), 1)
+
+    def test_user_mapping_override_and_missing_name(self):
+        from unittest import mock
+        with mock.patch('apps.data_import.entity_importer.smart_map_columns', return_value={}):   # بلا ذكاء اصطناعي: حتمي
+            data = self._analyze('data_import:supplier_analyze', [['col a', 'col b'], ['مورد 1', '0900000001']])
+        self.assertTrue(data['analysis']['missing_required'])
+        import json
+        resp = self.client.post(reverse('data_import:supplier_commit'), {
+            'token': data['token'], 'options': json.dumps({'mapping': {'0': 'name', '1': 'phone'}})})
+        self.assertEqual(resp.json()['created'], 1)
+
+    def test_categories_upsert_and_auto_parent(self):
+        Category.objects.create(tenant=self.tenant, name='مشروبات', is_active=True, description='قديم')
+        rows = [['Category', 'Parent', 'Description'], ['عصائر', 'مشروبات', None], ['مشروبات', None, 'جديد'],
+                ['ألبان', 'غذائية', None]]
+        data = self._analyze('data_import:category_analyze', rows)
+        self.assertEqual((data['analysis']['summary']['new'], data['analysis']['summary']['update']), (2, 1))
+        resp = self.client.post(reverse('data_import:category_commit'), {'token': data['token']}).json()
+        self.assertEqual((resp['created'], resp['updated']), (2, 1))
+        self.assertEqual(Category.objects.get(tenant=self.tenant, name='عصائر').parent.name, 'مشروبات')
+        self.assertEqual(Category.objects.get(tenant=self.tenant, name='مشروبات').description, 'جديد')
+        self.assertEqual(Category.objects.get(tenant=self.tenant, name='ألبان').parent.name, 'غذائية')
+
+    def test_templates_download_for_all(self):
+        self.tenant.capabilities.has_agents_module = True
+        self.tenant.capabilities.save()
+        for name in ('customer', 'supplier', 'agent', 'category'):
+            resp = self.client.get(reverse(f'data_import:{name}_template'))
+            self.assertEqual(resp.status_code, 200, name)
 
 
 class SidebarPlacementTests(TenantTestCase):

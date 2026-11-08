@@ -32,7 +32,7 @@ def _column_width(spec) -> float:
     return max(MIN_COL_WIDTH, min(MAX_COL_WIDTH, max(header_len, typical)))
 
 
-def _write_instructions_sheet(wb, sheet_title, schema, instructions):
+def _write_instructions_sheet(wb, sheet_title, schema, instructions, subject='منتج'):
     ws = wb.active
     ws.title = 'تعليمات'
     ws.sheet_view.rightToLeft = True
@@ -43,7 +43,7 @@ def _write_instructions_sheet(wb, sheet_title, schema, instructions):
         '',
         '• الحقول المميزة بعلامة (*) في اسم العمود مطلوبة، والباقي اختياري.',
         '• أي خلية تُترك فارغة تأخذ قيمة افتراضية مناسبة تلقائياً.',
-        '• حالة "نشط" ليست عموداً في هذا الملف — كل منتج يُستورد يكون نشطاً تلقائياً.',
+        f'• حالة "نشط" ليست عموداً في هذا الملف — كل {subject} يُستورد يكون نشطاً تلقائياً.',
         '• الأعمدة التي تحتوي على قائمة منسدلة (▼) يُفضّل الاختيار منها مباشرة.',
         '• الصف الثاني في شيت البيانات هو صف مثال — احذفه قبل إدخال بياناتك الحقيقية.',
         '• لديك ملف من نظامك السابق؟ ارفعه كما هو دون نقل بياناته لهذا القالب: النظام يتعرّف على الأعمدة '
@@ -78,7 +78,8 @@ def _add_hidden_lists_sheet(wb, tenant_lists: dict):
     return column_ranges
 
 
-def build_import_template(schema: list, tenant_lists: dict, sheet_title: str, instructions: list = None):
+def build_import_template(schema: list, tenant_lists: dict, sheet_title: str, instructions: list = None,
+                         subject: str = 'منتج', examples: dict = None):
     """
     schema: resolved field-spec list (see apps/data_import/schemas.py)
     tenant_lists: {tenant_source_key: [names...]} e.g. {'category': [...], 'unit': [...], 'stock': [...]}
@@ -87,7 +88,7 @@ def build_import_template(schema: list, tenant_lists: dict, sheet_title: str, in
     """
     schema = [s for s in schema if s.get('template', True)]   # حقول الاستيراد فقط لا تُكتب في القالب
     wb = Workbook()
-    _write_instructions_sheet(wb, sheet_title, schema, instructions)
+    _write_instructions_sheet(wb, sheet_title, schema, instructions, subject)
 
     ws = wb.create_sheet(sheet_title)
     ws.sheet_view.rightToLeft = True
@@ -130,12 +131,12 @@ def build_import_template(schema: list, tenant_lists: dict, sheet_title: str, in
             ws.add_data_validation(dv)
             dv.add(data_range)
 
-    _write_example_row(ws, schema, tenant_lists)
+    _write_example_row(ws, schema, tenant_lists, examples)
     wb.active = 1
     return wb
 
 
-def _write_example_row(ws, schema, tenant_lists):
+def _write_example_row(ws, schema, tenant_lists, examples=None):
     """Row 2: one illustrative, clearly-marked example row (mirrors the old CSV template's convention)."""
     samples = {
         'name': 'منتج تجريبي — احذف هذا الصف',
@@ -146,6 +147,8 @@ def _write_example_row(ws, schema, tenant_lists):
         'min_selling_price': 0,
         'opening_quantity': 0,
     }
+    if examples is not None:
+        samples = examples
     for col_idx, spec in enumerate(schema, start=1):
         field = spec['field']
         value = samples.get(field, '')

@@ -18,12 +18,14 @@ from apps.stocks.models import Stock
 from apps.stocks.scope import opening_balance_stocks
 
 from .gating import products_import_blocked_reason, BLOCKED_MESSAGES
-from .schemas import get_product_schema, get_customer_schema, get_supplier_schema
+from .schemas import get_product_schema
 from .xlsx_builder import build_import_template
 from .product_importer import import_products, run_import, build_errors_workbook
 from . import smart_reader
 from apps.core.market_rates import exchange_rate_alert, can_update_exchange_rate
-from .simple_importer import import_simple_entities
+from . import entity_importer
+
+CATEGORIES_CENTRAL_ONLY = True
 
 
 def _ensure_tenant(request):
@@ -338,147 +340,164 @@ def product_import_commit(request):
 
 
 # ============================================================
-# Customers & Suppliers — simple entities, no gating, shared helpers
+# الاستيراد الذكي الموحّد: العملاء، الموردون، المناديب، التصنيفات
+# (رفع → معاينة وتعيين الأعمدة → تأكيد) — المنطق في entity_importer
 # ============================================================
 
-def _simple_template_download(tenant, schema_fn, sheet_title, filename):
-    schema = schema_fn(tenant)
-    wb = build_import_template(schema, tenant_lists={}, sheet_title=sheet_title)
-    buffer = io.BytesIO()
-    wb.save(buffer)
-    response = xlsx_response(filename)
-    response.write(buffer.getvalue())
-    return response
+_ENTITY_EXAMPLES = {
+    'customers': {'name': 'عميل تجريبي — احذف هذا الصف', 'phone': '0900000000', 'opening_balance': 0, 'credit_limit': 0},
+    'suppliers': {'name': 'مورد تجريبي — احذف هذا الصف', 'phone': '0900000000', 'opening_balance': 0, 'credit_limit': 0},
+    'agents': {'name': 'مندوب تجريبي — احذف هذا الصف', 'phone': '0900000000', 'opening_balance': 0},
+    'categories': {'name': 'تصنيف تجريبي — احذف هذا الصف', 'display_order': 1},
+}
 
 
-def _simple_import_commit(request, tenant, schema_fn, model, entity_label):
-    if 'file' not in request.FILES:
-        return JsonResponse({'success': False, 'message': 'لم يتم رفع أي ملف'}, status=400)
-
-    schema = schema_fn(tenant)
-    result = import_simple_entities(tenant, request.FILES['file'], request.user, model, schema, entity_label)
-
-    msg = f"تم استيراد {result['created']} {entity_label} بنجاح"
-    if result['errors']:
-        msg += f". {len(result['errors'])} صف به أخطاء"
-
-    return JsonResponse({
-        'success': True,
-        'message': msg,
-        'created': result['created'],
-        'errors': result['errors'],
-    })
-
-
-@login_required
-@require_permission('import_customers')
-@require_permission('add_customers')
-def customer_import_page(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    return render(request, 'data_import/simple_import.html', {
-        'title': 'استيراد العملاء',
-        'icon': 'fa-users',
-        'template_url': 'data_import:customer_template',
-        'commit_url': 'data_import:customer_commit',
-        'hub_url': 'data_import:hub',
-    })
+def _entity_access(entity):
+    """نفس صلاحيات صفحة كل نوع قبل التوحيد (الموردون: المركزي/العادي، المناديب: الوحدة والباقة...)."""
+    def decorate(view):
+        if entity == 'customers':
+            chain = [require_permission('add_customers'), require_permission('import_customers')]
+        elif entity == 'suppliers':
+            chain = [supplier_import_access]
+        elif entity == 'agents':
+            chain = [require_permission('add_agents'), require_permission('import_agents'),
+                     require_plan_feature('agents'), require_capability('has_agents_module')]
+        else:
+            chain = [require_permission('add_categories')]
+        for dec in chain:
+            view = dec(view)
+        return login_required(view)
+    return decorate
 
 
-@login_required
-@require_permission('import_customers')
-@require_permission('add_customers')
-def customer_template_download(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    return _simple_template_download(tenant, get_customer_schema, 'العملاء', 'قالب_استيراد_العملاء.xlsx')
-
-
-@login_required
-@require_permission('import_customers')
-@require_permission('add_customers')
-def customer_import_commit(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
-    from apps.customers.models import Customer
-    return _simple_import_commit(request, tenant, get_customer_schema, Customer, 'عميل')
-
-
-@login_required
-@supplier_import_access
-def supplier_import_page(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    central = not request.user.is_superuser and not _regular_supplier_import(request.user)
-    return render(request, 'data_import/simple_import.html', {
-        'title': 'استيراد الموردين المركزيين' if central else 'استيراد الموردين',
-        'icon': 'fa-truck',
-        'template_url': 'data_import:supplier_template',
-        'commit_url': 'data_import:supplier_commit',
-        'hub_url': 'data_import:hub',
-    })
-
-
-@login_required
-@supplier_import_access
-def supplier_template_download(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    return _simple_template_download(tenant, get_supplier_schema, 'الموردين', 'قالب_استيراد_الموردين.xlsx')
-
-
-@login_required
-@supplier_import_access
-def supplier_import_commit(request):
-    tenant = _ensure_tenant(request)
-    if not tenant:
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    if request.method != 'POST':
-        return HttpResponseNotAllowed(['POST'])
-    from apps.suppliers.models import Supplier
-    return _simple_import_commit(request, tenant, get_supplier_schema, Supplier, 'مورد')
-
-
-# ============================================================
-# Categories & Agents — صفحات الاستيراد الموحّدة؛ المنطق والقوالب في
-# items.category_import_api / agents.import_api (استجابة JSON تفهمها simple_import.html)
-# ============================================================
-
-@login_required
-@require_permission('add_categories')
-def category_import_page(request):
-    if not _ensure_tenant(request):
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    if getattr(request, 'branch', None):
+def _entity_blocked(request, entity):
+    """التصنيفات في pms تُدار من الإدارة فقط (بلا فرع)."""
+    if entity == 'categories' and CATEGORIES_CENTRAL_ONLY and getattr(request, 'branch', None):
         return redirect('data_import:hub')
-    return render(request, 'data_import/simple_import.html', {
-        'title': 'استيراد التصنيفات',
-        'icon': 'fa-tags',
-        'template_url': 'items:category_template_api',
-        'commit_url': 'items:category_import_api',
-        'hub_url': 'data_import:hub',
-    })
+    return None
 
 
-@login_required
-@require_capability('has_agents_module')
-@require_plan_feature('agents')
-@require_permission('import_agents')
-@require_permission('add_agents')
-def agent_import_page(request):
-    if not _ensure_tenant(request):
-        return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
-    return render(request, 'data_import/simple_import.html', {
-        'title': 'استيراد المناديب',
-        'icon': 'fa-id-badge',
-        'template_url': 'agents:download_template',
-        'commit_url': 'agents:import_api',
-        'hub_url': 'data_import:hub',
-    })
+def make_entity_views(entity):
+    cfg = entity_importer.ENTITIES[entity]
+    access = _entity_access(entity)
+
+    @access
+    def page(request):
+        tenant = _ensure_tenant(request)
+        if not tenant:
+            return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        blocked = _entity_blocked(request, entity)
+        if blocked:
+            return blocked
+        title = f"استيراد {cfg['plural']}"
+        if entity == 'suppliers' and not request.user.is_superuser and not _regular_supplier_import(request.user):
+            title = 'استيراد الموردين المركزيين'
+        return render(request, 'data_import/simple_import.html', {
+            'title': title, 'entity': entity, 'label': cfg['label'], 'plural': cfg['plural'],
+            'icon': {'customers': 'fa-users', 'suppliers': 'fa-truck', 'agents': 'fa-id-badge',
+                     'categories': 'fa-tags'}[entity],
+            'hub_url': 'data_import:hub',
+            'template_url': f'data_import:{cfg["slug"]}_template', 'analyze_url': f'data_import:{cfg["slug"]}_analyze',
+            'commit_url': f'data_import:{cfg["slug"]}_commit', 'errors_url': f'data_import:{cfg["slug"]}_errors_file',
+        })
+
+    @access
+    def template(request):
+        tenant = _ensure_tenant(request)
+        if not tenant:
+            return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        schema = cfg['schema'](tenant)
+        wb = build_import_template(schema, tenant_lists={}, sheet_title=cfg['plural'], subject=cfg['label'],
+                                   examples=_ENTITY_EXAMPLES[entity])
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        response = xlsx_response(f"قالب_استيراد_{cfg['plural']}.xlsx")
+        response.write(buffer.getvalue())
+        return response
+
+    @access
+    def analyze(request):
+        tenant = _ensure_tenant(request)
+        if not tenant:
+            return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        if request.method != 'POST':
+            return HttpResponseNotAllowed(['POST'])
+        upload = request.FILES.get('file')
+        if upload:
+            if upload.size > MAX_IMPORT_FILE_BYTES:
+                return JsonResponse({'success': False, 'message': 'حجم الملف أكبر من 15 ميجابايت. قسّمه إلى ملفين.'}, status=400)
+            data, filename = upload.read(), upload.name
+            token = smart_reader.stash_save(tenant.id, request.user.id, data, filename)
+            meta = {'filename': filename}
+        else:
+            stashed = _stashed_file(request, tenant)
+            if not stashed:
+                return JsonResponse({'success': False, 'message': 'انتهت صلاحية الملف المرفوع. ارفعه مرة أخرى.',
+                                     'expired': True}, status=400)
+            data, meta, token = stashed
+            filename = meta.get('filename', 'file.xlsx')
+        analysis, _ = entity_importer.run_import(entity, tenant, request.user, data, filename,
+                                                 _import_options(request), meta, analyze_only=True)
+        smart_reader.stash_update_meta(tenant.id, request.user.id, token, meta)
+        if 'fatal' in analysis:
+            return JsonResponse({'success': False, 'message': analysis['fatal']}, status=400)
+        return JsonResponse({'success': True, 'token': token, 'analysis': analysis})
+
+    @access
+    def commit(request):
+        tenant = _ensure_tenant(request)
+        if not tenant:
+            return JsonResponse({'success': False, 'message': 'لا يوجد نشاط تجاري'}, status=400)
+        if request.method != 'POST':
+            return HttpResponseNotAllowed(['POST'])
+        stashed = None if 'file' in request.FILES else _stashed_file(request, tenant)
+        if 'file' not in request.FILES and not stashed:
+            if request.POST.get('token'):
+                return JsonResponse({'success': False, 'message': 'انتهت صلاحية الملف المرفوع. ارفعه مرة أخرى.',
+                                     'expired': True}, status=400)
+            return JsonResponse({'success': False, 'message': 'لم يتم رفع أي ملف'}, status=400)
+
+        errors_url = ''
+        if stashed:
+            data, meta, token = stashed
+            result, plan = entity_importer.run_import(entity, tenant, request.user, data,
+                                                      meta.get('filename', 'file.xlsx'), _import_options(request), meta)
+            if 'fatal' in result:
+                return JsonResponse({'success': False, 'message': result['fatal']}, status=400)
+            if result['errors'] and plan:
+                smart_reader.stash_write_file(tenant.id, request.user.id, token, 'errors.xlsx',
+                                              build_errors_workbook(plan, result))
+                errors_url = reverse(f'data_import:{cfg["slug"]}_errors_file') + f'?token={token}'
+        else:
+            result = entity_importer.import_entities(entity, tenant, request.FILES['file'], request.user)
+
+        failed = len({e['row'] for e in result['errors']})
+        msg = f"تم استيراد {result['created']} {cfg['label']} جديد"
+        if result.get('updated'):
+            msg += f"، وتحديث {result['updated']} موجود مسبقاً"
+        if result.get('skipped'):
+            msg += f"، وتخطّي {result['skipped']} (موجود مسبقاً أو مكرر)"
+        if failed:
+            msg += f". {failed} صف لم يُستورد بسبب أخطاء موضحة أدناه"
+        return JsonResponse({
+            'success': True, 'message': msg, 'created': result['created'], 'updated': result.get('updated', 0),
+            'skipped': result.get('skipped', 0), 'errors': result['errors'],
+            'warnings': result.get('warnings', [])[:500], 'errors_url': errors_url,
+        })
+
+    @access
+    def errors_file(request):
+        tenant = _ensure_tenant(request)
+        if not tenant:
+            raise Http404
+        content = smart_reader.stash_read_file(tenant.id, request.user.id, request.GET.get('token', ''), 'errors.xlsx')
+        if content is None:
+            raise Http404
+        response = xlsx_response('صفوف_لم_تستورد.xlsx')
+        response.write(content)
+        return response
+
+    return {'page': page, 'template': template, 'analyze': analyze, 'commit': commit, 'errors_file': errors_file}
+
+
+ENTITY_VIEWS = {entity: make_entity_views(entity) for entity in entity_importer.ENTITIES}

@@ -9,13 +9,41 @@
 .di-step { border:1px solid var(--border-light,#e5e7eb); border-radius:14px; padding:1.25rem; background:var(--surface,#fff); }
 .di-step-num {
   display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px;
-  border-radius:50%; background:var(--indigo-500,#c9840f); color:#fff; font-weight:700; font-size:.8rem; margin-left:.5rem;
+  border-radius:50%; background:var(--indigo-500,var(--primary)); color:#fff; font-weight:700; font-size:.8rem; margin-left:.5rem;
 }
 .di-step-title { font-weight:700; font-size:.95rem; display:flex; align-items:center; margin-bottom:.6rem; }
-.di-results-table-wrap { max-height:300px; overflow-y:auto; border:1px solid var(--border-light,#e5e7eb); border-radius:8px; }
+.di-drop { border:2px dashed var(--border-light,#d1d5db); border-radius:12px; padding:1.1rem; text-align:center; cursor:pointer;
+  transition:.15s; font-size:.85rem; color:var(--text-muted,#6b7280); }
+.di-drop:hover, .di-drop.di-over { border-color:var(--primary,#4f46e5); background:rgba(79,70,229,.04); }
+.di-drop i { font-size:1.6rem; display:block; margin-bottom:.35rem; color:var(--primary,#4f46e5); }
+.di-drop-file { font-weight:700; color:var(--text-primary,#111827); margin-top:.35rem; word-break:break-all; }
+.di-hint { font-size:.78rem; color:var(--text-muted,#6b7280); margin-top:.5rem; }
+.di-results-table-wrap { max-height:320px; overflow:auto; border:1px solid var(--border-light,#e5e7eb); border-radius:8px; }
 .di-results-table { width:100%; font-size:.82rem; border-collapse:collapse; }
-.di-results-table th, .di-results-table td { padding:.5rem .7rem; border-bottom:1px solid var(--border-light,#e5e7eb); text-align:right; }
-.di-results-table th { position:sticky; top:0; background:var(--surface-alt,#f9fafb); }
+.di-results-table th, .di-results-table td { padding:.45rem .65rem; border-bottom:1px solid var(--border-light,#e5e7eb); text-align:right; vertical-align:middle; }
+.di-results-table th { position:sticky; top:0; background:var(--surface-alt,#f9fafb); z-index:1; white-space:nowrap; }
+.di-section { border:1px solid var(--border-light,#e5e7eb); border-radius:12px; padding:1rem; margin-bottom:1rem; background:var(--surface,#fff); }
+.di-section-title { font-weight:700; font-size:.92rem; margin-bottom:.7rem; display:flex; align-items:center; gap:.45rem; flex-wrap:wrap; }
+.di-section-title .di-sub { font-weight:400; font-size:.78rem; color:var(--text-muted,#6b7280); }
+.di-chips { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem; }
+.di-chip { border-radius:999px; padding:.3rem .8rem; font-size:.8rem; font-weight:600; background:var(--surface-alt,#f3f4f6); }
+.di-chip.ok { background:rgba(16,185,129,.12); color:#047857; }
+.di-chip.err { background:rgba(239,68,68,.12); color:#b91c1c; }
+.di-chip.warn { background:rgba(245,158,11,.14); color:#b45309; }
+.di-chip.info { background:rgba(59,130,246,.12); color:#1d4ed8; }
+.di-src { font-size:.7rem; border-radius:6px; padding:.1rem .4rem; white-space:nowrap; }
+.di-src.exact { background:rgba(16,185,129,.12); color:#047857; }
+.di-src.ai { background:rgba(139,92,246,.14); color:#6d28d9; }
+.di-src.partial, .di-src.conflict { background:rgba(245,158,11,.14); color:#b45309; }
+.di-src.user { background:rgba(59,130,246,.12); color:#1d4ed8; }
+.di-samples { font-size:.75rem; color:var(--text-muted,#6b7280); max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.di-results-table select { min-width:170px; font-size:.8rem; }
+.di-row-error td { background:rgba(239,68,68,.06); }
+.di-row-exists td, .di-row-duplicate td, .di-row-summary td { color:var(--text-muted,#9ca3af); }
+.di-actions { display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+.di-busy { display:none; align-items:center; gap:.5rem; font-size:.85rem; color:var(--text-muted,#6b7280); }
+.di-busy.on { display:flex; }
+details.di-details summary { cursor:pointer; font-weight:600; font-size:.85rem; margin-bottom:.5rem; }
 </style>
 {% endblock %}
 
@@ -31,7 +59,7 @@
             </div>
             <div>
                 <h1 class="cx-hero-title">{{ title }}</h1>
-                <p class="cx-hero-desc">حمّل القالب، عبّئه، ثم ارفعه لإضافة بياناتك دفعة واحدة</p>
+                <p class="cx-hero-desc">ارفع قالبنا أو ملف {{ plural }} من نظامك السابق كما هو — نتعرّف على الأعمدة تلقائياً ونعرض عليك معاينة قبل الحفظ</p>
             </div>
         </div>
         <div class="cx-hero-right">
@@ -47,23 +75,26 @@
 
 <div class="di-steps">
     <div class="di-step">
-        <div class="di-step-title"><span class="di-step-num">١</span>حمّل القالب</div>
-        <p class="cx-hero-desc mb-3">قالب Excel جاهز بكل الحقول المناسبة.</p>
-        <a href="{% url template_url %}" class="cx-btn-primary" data-no-spinner>
+        <div class="di-step-title"><span class="di-step-num">١</span>القالب (اختياري)</div>
+        <p class="cx-hero-desc mb-3">قالب Excel جاهز بكل الحقول المناسبة. لست مضطراً لاستخدامه إن كان لديك ملف جاهز.</p>
+        <a href="{% url template_url %}" class="cx-btn-secondary" data-no-spinner>
             <i class="fas fa-download me-1"></i> تحميل القالب
         </a>
     </div>
     <div class="di-step">
-        <div class="di-step-title"><span class="di-step-num">٢</span>ارفع الملف المعبأ</div>
-        <div class="mb-3">
-            <input type="file" class="form-control" id="simpleImportFile" accept=".xlsx,.xls,.csv">
-        </div>
-        <button type="button" class="cx-btn-primary" id="confirmSimpleImportBtn">
-            <i class="fas fa-upload me-1"></i> استيراد
-        </button>
+        <div class="di-step-title"><span class="di-step-num">٢</span>ارفع ملفك</div>
+        <label class="di-drop" id="diDrop" for="simpleImportFile">
+            <i class="fas fa-file-excel"></i>
+            اسحب الملف هنا أو اضغط للاختيار — Excel ‏(xlsx / xls) أو CSV
+            <div class="di-drop-file" id="diDropFile"></div>
+        </label>
+        <input type="file" class="d-none" id="simpleImportFile" accept=".xlsx,.xlsm,.xls,.csv">
+        <div class="di-hint">لا بأس إن كانت البيانات في ورقة غير الأولى، أو تبدأ بعد أسطر عنوان، أو بأسماء أعمدة مختلفة.</div>
+        <div class="di-busy mt-2" id="diUploadBusy"><i class="fas fa-spinner fa-spin"></i><span>جاري قراءة الملف وفهم أعمدته...</span></div>
     </div>
 </div>
 
+<div id="diAnalysis" class="d-none"></div>
 <div id="simpleImportResult" class="cx-panel d-none" style="padding:1.25rem"></div>
 
 </div>
@@ -72,54 +103,217 @@
 {% block extra_js %}
 <script>
 $(function () {
-    $('#confirmSimpleImportBtn').on('click', function () {
-        const file = $('#simpleImportFile')[0].files[0];
-        if (!file) { Enjaz.toast('الرجاء اختيار ملف', 'error'); return; }
+    const URLS = {analyze: "{% url analyze_url %}", commit: "{% url commit_url %}"};
+    const LABEL = "{{ label }}";
+    const SRC_LABEL = {exact: 'مطابقة مؤكدة', ai: 'ذكاء اصطناعي', partial: 'تخمين — راجعه', conflict: 'مكرر — حدده', user: 'اختيارك'};
+    const STATUS_CLASS = {error: 'di-row-error', exists: 'di-row-exists', duplicate: 'di-row-duplicate', summary: 'di-row-summary'};
+    let state = {token: '', analysis: null, options: {}};
+    let analyzeXhr = null;
 
+    function csrf() { return $('[name=csrfmiddlewaretoken]').first().val(); }
+    function esc(v) { return $('<div>').text(v == null ? '' : String(v)).html(); }
+    function fmt(n) { return Number(n || 0).toLocaleString('en-US'); }
+
+    /* ── رفع الملف ───────────────────────────────────────────── */
+    const $drop = $('#diDrop');
+    $drop.on('dragover', function (e) { e.preventDefault(); $drop.addClass('di-over'); });
+    $drop.on('dragleave drop', function () { $drop.removeClass('di-over'); });
+    $drop.on('drop', function (e) {
+        e.preventDefault();
+        const file = e.originalEvent.dataTransfer.files[0];
+        if (file) startAnalysis(file);
+    });
+    $('#simpleImportFile').on('change', function () {
+        const file = this.files[0];
+        if (file) startAnalysis(file);
+        this.value = '';
+    });
+
+    function startAnalysis(file) {
+        $('#diDropFile').text(file.name);
+        state = {token: '', analysis: null, options: {}};
+        $('#simpleImportResult').addClass('d-none').empty();
         const fd = new FormData();
         fd.append('file', file);
-        fd.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').first().val());
+        analyze(fd, $('#diUploadBusy'));
+    }
 
-        const $btn = $(this);
-        Enjaz.showLoading($btn);
+    function reanalyze() {
+        const fd = new FormData();
+        fd.append('token', state.token);
+        fd.append('options', JSON.stringify(state.options));
+        analyze(fd, $('#diReBusy'));
+    }
 
-        $.ajax({
-            url: "{% url commit_url %}",
-            type: 'POST',
-            data: fd,
-            processData: false,
-            contentType: false,
+    function analyze(fd, $busy) {
+        fd.append('csrfmiddlewaretoken', csrf());
+        if (analyzeXhr) analyzeXhr.abort();
+        $busy.addClass('on');
+        $('#diCommitBtn').prop('disabled', true);
+        analyzeXhr = $.ajax({
+            url: URLS.analyze, type: 'POST', data: fd, processData: false, contentType: false,
             success: function (resp) {
-                Enjaz.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
-                renderResult(resp);
+                $busy.removeClass('on');
+                state.token = resp.token;
+                state.analysis = resp.analysis;
+                renderAnalysis();
             },
+            error: function (xhr, status) {
+                if (status === 'abort') return;
+                $busy.removeClass('on');
+                $('#diCommitBtn').prop('disabled', false);
+                const resp = xhr.responseJSON || {};
+                Enjaz.toast(resp.message || 'تعذّر تحليل الملف', 'error');
+                if (resp.expired) { $('#diAnalysis').addClass('d-none').empty(); }
+            }
+        });
+    }
+
+    /* ── عرض المعاينة ────────────────────────────────────────── */
+    function fieldOptions(selected) {
+        let html = '<option value="">— تجاهل هذا العمود —</option>';
+        state.analysis.fields.forEach(function (f) {
+            html += `<option value="${f.field}" ${f.field === selected ? 'selected' : ''}>${esc(f.label)}${f.required ? ' *' : ''}</option>`;
+        });
+        return html;
+    }
+
+    function renderAnalysis() {
+        const a = state.analysis, s = a.summary;
+        let html = '';
+
+        html += '<div class="di-chips">';
+        html += `<span class="di-chip">${fmt(s.total_rows)} صف في الملف</span>`;
+        if (s.new) html += `<span class="di-chip ok">${fmt(s.new)} ${esc(LABEL)} جديد</span>`;
+        if (s.update) html += `<span class="di-chip info">${fmt(s.update)} سيُحدَّث</span>`;
+        if (s.exists) html += `<span class="di-chip warn">${fmt(s.exists)} موجود مسبقاً (سيُتخطّى)</span>`;
+        if (s.duplicate) html += `<span class="di-chip warn">${fmt(s.duplicate)} مكرر في الملف (سيُتخطّى)</span>`;
+        if (s.with_errors) html += `<span class="di-chip err">${fmt(s.with_errors)} فيه أخطاء (لن يُستورد)</span>`;
+        if (s.with_warnings) html += `<span class="di-chip warn">${fmt(s.with_warnings)} فيه تنبيهات</span>`;
+        html += '</div>';
+
+        if (a.missing_required.length) {
+            html += `<div class="alert alert-danger">لم نتعرّف على العمود المطلوب: <strong>${a.missing_required.map(esc).join('، ')}</strong> — حدّده من جدول الأعمدة أدناه.</div>`;
+        }
+
+        /* الورقة وصف العناوين */
+        html += '<div class="di-section"><div class="di-section-title"><i class="fas fa-table"></i>الورقة وصف العناوين</div>';
+        html += '<div class="row g-2">';
+        if (a.sheets.length > 1) {
+            html += '<div class="col-md-5"><label class="form-label small mb-1">الورقة</label><select class="form-select form-select-sm" id="diSheet">';
+            a.sheets.forEach(function (sh) {
+                html += `<option value="${sh.index}" ${sh.index === a.sheet ? 'selected' : ''}>${esc(sh.name)} (${fmt(sh.data_rows)} صف)</option>`;
+            });
+            html += '</select></div>';
+        }
+        html += '<div class="col-md-7"><label class="form-label small mb-1">صف العناوين</label><select class="form-select form-select-sm" id="diHeaderRow">';
+        a.header_candidates.forEach(function (h) {
+            html += `<option value="${h.index}" ${h.index === a.header_row ? 'selected' : ''}>صف ${h.row}: ${esc(h.text)}</option>`;
+        });
+        html += '</select></div></div>';
+        html += '<div class="di-busy mt-2" id="diReBusy"><i class="fas fa-spinner fa-spin"></i><span>جاري إعادة التحليل...</span></div></div>';
+
+        /* الأعمدة */
+        html += '<div class="di-section"><div class="di-section-title"><i class="fas fa-columns"></i>أعمدة ملفك'
+            + '<span class="di-sub">راجع تعيين كل عمود وغيّره إن أخطأنا</span></div>';
+        html += '<div class="di-results-table-wrap"><table class="di-results-table"><thead><tr><th>العمود</th><th>عيّنة من قيمه</th><th>يُستورد كـ</th></tr></thead><tbody>';
+        a.columns.forEach(function (c) {
+            const src = c.field && c.source ? `<span class="di-src ${c.source}">${SRC_LABEL[c.source] || ''}</span>` : '';
+            html += `<tr><td><strong>${esc(c.header)}</strong> <span class="text-muted small">(${c.letter})</span></td>`
+                + `<td><div class="di-samples">${c.samples.map(esc).join(' ، ')}</div></td>`
+                + `<td><div class="d-flex align-items-center gap-2"><select class="form-select form-select-sm di-map" data-col="${c.index}">${fieldOptions(c.field)}</select>${src}</div></td></tr>`;
+        });
+        html += '</tbody></table></div></div>';
+
+        /* معاينة الصفوف */
+        if (a.preview.rows.length) {
+            html += '<div class="di-section"><div class="di-section-title"><i class="fas fa-eye"></i>معاينة أول الصفوف</div>';
+            html += '<div class="di-results-table-wrap"><table class="di-results-table"><thead><tr><th>الصف</th>';
+            a.preview.labels.forEach(function (l) { html += `<th>${esc(l)}</th>`; });
+            html += '<th>الحالة</th></tr></thead><tbody>';
+            a.preview.rows.forEach(function (r) {
+                html += `<tr class="${STATUS_CLASS[r.status] || ''}"><td>${r.row}</td>`;
+                r.cells.forEach(function (c) { html += `<td>${esc(c)}</td>`; });
+                html += `<td>${esc(r.status_label)}</td></tr>`;
+            });
+            html += '</tbody></table></div></div>';
+        }
+
+        /* الأخطاء والتنبيهات */
+        function issueTable(title, icon, list) {
+            if (!list.length) return '';
+            let t = `<details class="di-details di-section"><summary><i class="fas ${icon} me-1"></i>${title} (${fmt(list.length)})</summary>`
+                + '<div class="di-results-table-wrap"><table class="di-results-table"><thead><tr><th>الصف</th><th>العمود</th><th>القيمة</th><th>الملاحظة</th></tr></thead><tbody>';
+            list.forEach(function (e) {
+                t += `<tr><td>${e.row || '-'}</td><td>${esc(e.header || e.field_label || '-')}</td><td>${esc(e.value) || '<span class="text-muted">فارغ</span>'}</td><td>${esc(e.message)}</td></tr>`;
+            });
+            return t + '</tbody></table></div></details>';
+        }
+        html += issueTable('أخطاء — هذه الصفوف لن تُستورد', 'fa-circle-xmark text-danger', a.errors);
+        html += issueTable('تنبيهات', 'fa-triangle-exclamation text-warning', a.warnings);
+
+        html += '<div class="di-actions"><div class="di-hint mb-0">لن يُحفظ شيء قبل ضغط «استيراد».</div>'
+            + `<button type="button" class="cx-btn-primary" id="diCommitBtn" ${!s.importable || a.missing_required.length ? 'disabled' : ''}>`
+            + `<i class="fas fa-upload me-1"></i> استيراد ${fmt(s.importable)} ${esc(LABEL)}</button></div>`;
+
+        $('#diAnalysis').removeClass('d-none').html(html);
+    }
+
+    $('#diAnalysis').on('change', '#diSheet', function () {
+        state.options.sheet = parseInt(this.value, 10);
+        delete state.options.header_row; delete state.options.mapping;
+        reanalyze();
+    });
+    $('#diAnalysis').on('change', '#diHeaderRow', function () {
+        state.options.header_row = parseInt(this.value, 10);
+        delete state.options.mapping;
+        reanalyze();
+    });
+    $('#diAnalysis').on('change', '.di-map', function () {
+        const mapping = {};
+        $('#diAnalysis .di-map').each(function () { if (this.value) mapping[$(this).data('col')] = this.value; });
+        state.options.mapping = mapping;
+        reanalyze();
+    });
+
+    /* ── الاستيراد ───────────────────────────────────────────── */
+    $('#diAnalysis').on('click', '#diCommitBtn', function () {
+        const $btn = $(this);
+        const fd = new FormData();
+        fd.append('token', state.token);
+        fd.append('options', JSON.stringify(state.options));
+        fd.append('csrfmiddlewaretoken', csrf());
+        const label = $btn.html();
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> جاري الاستيراد...');
+        $.ajax({
+            url: URLS.commit, type: 'POST', data: fd, processData: false, contentType: false,
+            success: function (resp) { $btn.prop('disabled', false).html(label); renderResult(resp); },
             error: function (xhr) {
-                Enjaz.hideLoading($btn, '<i class="fas fa-upload me-1"></i> استيراد');
+                $btn.prop('disabled', false).html(label);
                 const resp = xhr.responseJSON;
-                if (resp) { renderResult(resp); }
-                else { Enjaz.toast('حدث خطأ أثناء الاستيراد', 'error'); }
+                if (resp) { renderResult(resp); } else { Enjaz.toast('حدث خطأ أثناء الاستيراد', 'error'); }
             }
         });
     });
 
     function renderResult(resp) {
-        const alertClass = resp.success ? 'alert-success' : 'alert-danger';
-        let html = `<div class="alert ${alertClass} mb-3">${resp.message}</div>`;
-
+        let html = `<div class="alert ${resp.success ? 'alert-success' : 'alert-danger'} mb-3">${esc(resp.message)}</div>`;
         if (resp.errors && resp.errors.length) {
-            html += '<div class="di-results-table-wrap"><table class="di-results-table">';
-            html += '<thead><tr><th>الصف</th><th>الحقل</th><th>السبب</th></tr></thead><tbody>';
+            html += '<div class="di-results-table-wrap"><table class="di-results-table">'
+                + '<thead><tr><th>الصف</th><th>الحقل</th><th>السبب</th></tr></thead><tbody>';
             resp.errors.forEach(function (e) {
-                // بعض الواجهات ترجع الخطأ نصًا («الصف 3: ...») بدل كائن
                 if (typeof e === 'string') { e = {message: e}; }
-                html += `<tr><td>${e.row || '-'}</td><td>${e.field || '-'}</td><td>${e.message}</td></tr>`;
+                html += `<tr><td>${e.row || '-'}</td><td>${esc(e.field_label || e.field || '-')}</td><td>${esc(e.message)}</td></tr>`;
             });
             html += '</tbody></table></div>';
+            if (resp.errors_url) {
+                html += `<div class="mt-3"><a class="cx-btn-secondary" href="${resp.errors_url}" data-no-spinner><i class="fas fa-download me-1"></i> تنزيل الصفوف التي لم تُستورد لتصحيحها</a></div>`;
+            }
         }
-
         $('#simpleImportResult').removeClass('d-none').html(html);
-        if (resp.success && (resp.created || resp.imported) > 0) {
-            Enjaz.toast(resp.message, 'success');
+        if (resp.success) {
+            $('#diAnalysis').addClass('d-none').empty();
+            if (resp.created || resp.updated) Enjaz.toast(resp.message, 'success');
         }
     }
 });
