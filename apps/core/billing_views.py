@@ -435,7 +435,7 @@ def _verify_context(kind, number):
             ('تاريخ الدفع', doc.paid_at.strftime('%Y/%m/%d'), True),
             ('المشترك', doc.tenant.name, False),
             ('المبلغ', f'{_money(doc.amount, doc.currency)} ({CURRENCY_NAMES.get(doc.currency, doc.currency)})', False),
-            ('الفترة', f'{doc.period_start:%Y/%m/%d} → {doc.period_end:%Y/%m/%d}', True)]
+            ('فترة التمديد', f'{doc.period_start:%Y/%m/%d} → {doc.period_end:%Y/%m/%d}', True)]
     return {'is_void': doc.is_void, 'state': 'receipt', 'rows': rows}
 
 
