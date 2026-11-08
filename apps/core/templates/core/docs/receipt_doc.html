@@ -36,5 +36,11 @@
 <div class="note">
   شكراً لثقتكم بإنجاز. هذا السند صادر من منصة إنجاز، وللاستفسار: <span class="ltr">info@enjaztechnology.com</span> أو واتساب <span class="ltr">+249 110 100 110</span>
 </div>
+{% if verify_qr %}<div class="verify" style="display:flex;align-items:center;gap:4mm;margin-top:1mm;break-inside:avoid">
+  <div style="width:19mm;height:19mm;flex:none">{{ verify_qr|safe }}</div>
+  <div class="muted" style="line-height:1.6">للتحقق من صحة هذا المستند امسح الرمز أو افتح الرابط:<br>
+    <span class="ltr" style="font-size:7.5pt;color:#555">{{ verify_url }}</span><br>
+    <span class="ltr" style="display:block;text-align:left;white-space:normal;overflow-wrap:anywhere">Scan to verify this document.</span></div>
+</div>{% endif %}
 {% if payment.is_void %}<div style="position:fixed;top:120mm;left:0;right:0;text-align:center;font-size:60pt;font-weight:700;color:rgba(179,38,30,.18);z-index:5">ملغى</div>{% endif %}
 {% endblock %}

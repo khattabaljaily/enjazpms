@@ -15,6 +15,8 @@ from pathlib import Path
 from django.conf import settings
 from django.template.loader import render_to_string
 
+from . import doc_verify
+
 BRAND_DIR = Path(settings.BASE_DIR) / 'static' / 'brand'
 
 # حساب استلام المدفوعات المطبوع في مطالبة السداد
@@ -82,6 +84,12 @@ def _render(template, **ctx):
     return _html_to_pdf(render_to_string(template, ctx))
 
 
+def _verification(kind, number):
+    """رمز QR ورابط التحقق المطبوعان في المستند (لا رمز إن لم تتوفر المكتبة)."""
+    url = doc_verify.verify_url(kind, number)
+    return {'verify_url': url, 'verify_qr': doc_verify.qr_svg(url)}
+
+
 def render_invoice_pdf(invoice):
     """مطالبة سداد (SubscriptionInvoice) تُطبع وتُسلَّم للمشترك."""
     tenant = invoice.tenant
@@ -89,7 +97,8 @@ def render_invoice_pdf(invoice):
         'core/docs/invoice_doc.html', invoice=invoice, tenant=tenant, bank=BANK_DETAILS,
         address='، '.join(dict.fromkeys(x.strip() for x in (tenant.address, tenant.city, tenant.country) if x and x.strip())),   # بلا تكرار (الخرطوم، الخرطوم)
         amount_text=_money(invoice.amount, invoice.currency),
-        currency_name=CURRENCY_NAMES.get(invoice.currency, invoice.currency))
+        currency_name=CURRENCY_NAMES.get(invoice.currency, invoice.currency),
+        **_verification(doc_verify.INVOICE, invoice.invoice_number))
 
 
 def render_receipt_pdf(payment):
@@ -98,4 +107,5 @@ def render_receipt_pdf(payment):
     return _render(
         'core/docs/receipt_doc.html', payment=payment, tenant=payment.tenant, invoice=invoice,
         amount_text=_money(payment.amount, payment.currency),
-        currency_name=CURRENCY_NAMES.get(payment.currency, payment.currency))
+        currency_name=CURRENCY_NAMES.get(payment.currency, payment.currency),
+        **_verification(doc_verify.RECEIPT, payment.receipt_number))

@@ -93,6 +93,7 @@ class TenantMiddleware:
                     '/ai/',
                     '/store/',
                     '/catalog/',
+                    '/verify/',
                 ]
                 if not any(request.path.startswith(path) for path in safe_paths):
                     return redirect(admin_dashboard_path)
@@ -108,6 +109,7 @@ class TenantMiddleware:
                             '/accounts/logout/',
                             '/static/',
                             '/media/',
+                            '/verify/',
                         )
                         if not any(request.path.startswith(p) for p in _pending_allowed):
                             return redirect('/pending-approval/')
@@ -118,6 +120,7 @@ class TenantMiddleware:
                             '/accounts/logout/',
                             '/static/',
                             '/media/',
+                            '/verify/',
                         )
                         if not any(request.path.startswith(p) for p in _expired_allowed):
                             return redirect('/subscription/')
@@ -180,6 +183,7 @@ class ActiveTenantMiddleware:
             '/subscription-expired/',
             '/no-tenant/',
             '/store/',
+            '/verify/',
         ]
     
     def __call__(self, request):
@@ -308,6 +312,7 @@ class TermsMiddleware:
         '/pending-approval/',
         '/sw.js',
         '/manifest.json',
+        '/verify/',
     )
 
     def __init__(self, get_response):

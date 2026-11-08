@@ -289,3 +289,72 @@ class PdfUnderServicePathTests(_PlatformBase):
             r = self.client.get(reverse('core:admin_payment_receipt', args=[p.pk]))
         self.assertEqual(r.status_code, 200, r.content[:200])
         self.assertTrue(r.content.startswith(b'%PDF'))
+
+
+class VerifyDocumentTests(_PlatformBase):
+    """رمز QR المطبوع في مطالبة السداد وسند القبض يفتح صفحة تحقق عامة موقَّعة الرابط."""
+
+    def setUp(self):
+        super().setUp()
+        InvoiceTests.make(self)
+        self.pay()
+        self.invoice = SubscriptionInvoice.objects.get()
+        self.payment = SubscriptionPayment.objects.get()
+        self.client.logout()                       # من يفحص الرمز لا يملك حساباً
+
+    def url(self, kind, number, sig=None):
+        from apps.core import doc_verify
+        return reverse('core:verify_document', args=[kind, number, sig or doc_verify.sign(kind, number)])
+
+    def test_the_link_in_the_qr_is_signed_and_opens_for_anyone(self):
+        from apps.core import doc_verify
+        link = doc_verify.verify_url('invoice', self.invoice.invoice_number)
+        self.assertTrue(link.startswith('https://') and link.endswith('/'))
+        r = self.client.get(self.url('invoice', self.invoice.invoice_number))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, self.invoice.invoice_number)
+        self.assertContains(r, 'مطالبة سداد')
+        self.assertContains(r, 'بانتظار السداد')
+        self.assertContains(r, '$45')
+        self.assertEqual(r['X-Robots-Tag'], 'noindex, nofollow')
+
+    def test_a_receipt_shows_its_period_and_amount(self):
+        r = self.client.get(self.url('receipt', self.payment.receipt_number))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'سند قبض')
+        self.assertContains(r, self.payment.receipt_number)
+        self.assertContains(r, self.tenant.name)
+
+    def test_forged_or_unknown_documents_are_not_found(self):
+        number = self.invoice.invoice_number
+        self.assertEqual(self.client.get(self.url('invoice', number, 'a' * 20)).status_code, 404)           # wrong signature
+        self.assertEqual(self.client.get(self.url('receipt', number)).status_code, 404)                    # right signature, wrong kind
+        self.assertEqual(self.client.get(self.url('invoice', 'ENJ-INV-2026-9999')).status_code, 404)       # signed but not issued
+        self.assertEqual(self.client.get(self.url('contract', number)).status_code, 404)                   # unknown kind
+
+    def test_a_void_document_says_so(self):
+        SubscriptionInvoice.objects.filter(pk=self.invoice.pk).update(voided_at=timezone.now())
+        r = self.client.get(self.url('invoice', self.invoice.invoice_number))
+        self.assertContains(r, 'ملغى')
+        self.assertNotContains(r, 'مستند صحيح')
+
+    def test_a_subscriber_with_an_expired_subscription_can_still_open_it(self):
+        user = User.objects.create_user(username='late-payer', password='secret123', tenant=self.tenant)
+        Tenant.objects.filter(pk=self.tenant.pk).update(subscription_expires=self.today - timedelta(days=30))
+        self.client.force_login(user)
+        r = self.client.get(self.url('receipt', self.payment.receipt_number))
+        self.assertEqual(r.status_code, 200)
+
+    def test_both_printed_documents_carry_the_qr_and_the_link(self):
+        from apps.core import brand_docs, doc_verify
+        from django.template.loader import render_to_string
+        for name, ctx, kind, number in (
+                ('core/docs/invoice_doc.html', dict(invoice=self.invoice), 'invoice', self.invoice.invoice_number),
+                ('core/docs/receipt_doc.html', dict(payment=self.payment, invoice=None), 'receipt', self.payment.receipt_number)):
+            ctx.update(tenant=self.tenant, bank=brand_docs.BANK_DETAILS, address='', amount_text='$45', currency_name='دولار',
+                       brand='/static/brand/', **brand_docs._verification(kind, number))
+            html = render_to_string(name, ctx)
+            self.assertIn('<svg', html)
+            self.assertIn(doc_verify.verify_url(kind, number), html)
+            self.assertNotIn('Stamp', html)
+            self.assertNotIn('الختم', html)

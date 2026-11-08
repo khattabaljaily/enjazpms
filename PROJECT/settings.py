@@ -285,3 +285,6 @@ SESSION_COOKIE_SECURE = False
 
 # ── Terms of Service ───────────────────────────────────────────
 TERMS_VERSION = '2026-06'
+
+# عنوان الموقع العام: يُبنى منه رابط رمز QR في مطالبات السداد وسندات القبض (يُغيَّر بمفتاح PUBLIC_BASE_URL في secrets.json)
+PUBLIC_BASE_URL = get_secret('PUBLIC_BASE_URL', 'https://pms.enjaztechnology.com')

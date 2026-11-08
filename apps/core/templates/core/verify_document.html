@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>التحقق من مستند — إنجاز لتقنية المعلومات</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: #f6f3ee; color: #1f1f1f; font-family: Tahoma, 'Segoe UI', 'Noto Sans Arabic', Arial, sans-serif; font-size: 17px; display: flex; justify-content: center; padding: 24px 14px; }
+.card { width: 100%; max-width: 480px; background: #fff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,.08); overflow: hidden; align-self: flex-start; }
+.top { height: 6px; background: #F4A135; }
+.head { padding: 22px 22px 10px; text-align: center; }
+.head b { display: block; font-size: 21px; color: #1f1f1f; }
+.head span { color: #F4A135; font-size: 12px; letter-spacing: 2px; font-weight: 700; }
+.ok, .bad { margin: 14px 22px 4px; padding: 12px 14px; border-radius: 12px; font-weight: 700; text-align: center; }
+.ok { background: #e8f6ee; color: #14683b; }
+.ok.paid { background: #e8f6ee; }
+.ok.open { background: #fdf3df; color: #8a5a00; }
+.bad { background: #fdecea; color: #a1281e; }
+dl { margin: 12px 22px 8px; }
+.row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px dashed #ddd; }
+.row:last-child { border-bottom: 0; }
+dt { color: #777; }
+dd { margin: 0; font-weight: 700; text-align: left; }
+dd.ltr { direction: ltr; unicode-bidi: isolate; }
+.note { margin: 6px 22px 22px; color: #888; font-size: 14px; text-align: center; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top"></div>
+  <div class="head"><b>إنجاز لتقنية المعلومات</b><span>ENJAZ INFORMATION TECHNOLOGY</span></div>
+  {% if doc.is_void %}<div class="bad">هذا المستند ملغى ولا يُعتدّ به</div>
+  {% elif doc.state == 'open' %}<div class="ok open">مستند صحيح صادر من إنجاز — بانتظار السداد</div>
+  {% elif doc.state == 'overdue' %}<div class="ok open">مستند صحيح صادر من إنجاز — تجاوز موعد السداد</div>
+  {% else %}<div class="ok paid">مستند صحيح صادر من إنجاز{% if doc.state == 'paid' %} — مسدَّد{% endif %}</div>{% endif %}
+  <dl>
+    {% for label, value, ltr in doc.rows %}<div class="row"><dt>{{ label }}</dt><dd{% if ltr %} class="ltr"{% endif %}>{{ value }}</dd></div>{% endfor %}
+  </dl>
+  <p class="note">هذه الصفحة تعرض بيانات المستند كما سُجّلت في نظام إنجاز. إن اختلفت عن المستند الذي بين يديك فتواصل معنا: info@enjaztechnology.com</p>
+</div>
+</body>
+</html>

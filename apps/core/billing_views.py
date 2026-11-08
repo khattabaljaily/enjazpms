@@ -19,10 +19,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone as dj_timezone
 from django.utils.dateparse import parse_date
-from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_GET, require_POST
 
 from apps.accounts.decorators import branch_scope_exempt
 
+from . import doc_verify
 from .models import PlatformBroadcast, SubscriptionInvoice, SubscriptionPayment, Tenant
 from .brand_docs import PdfRenderError, render_invoice_pdf, render_receipt_pdf
 
@@ -409,3 +411,42 @@ def admin_broadcast_send_api(request):
             for t in tenants
         ])
     return JsonResponse({'success': True, 'message': f'أُرسل الإشعار إلى {len(tenants)} مشترك', 'id': broadcast.pk})
+
+
+# ───────────────────────── التحقق العام من المستند (رمز QR) ─────────────────────────
+
+def _verify_context(kind, number):
+    """بيانات صفحة التحقق، أو None إن لم يوجد المستند. تُعرض كما هي مطبوعة في المستند."""
+    from .brand_docs import CURRENCY_NAMES, _money
+    if kind == doc_verify.INVOICE:
+        doc = SubscriptionInvoice.objects.select_related('tenant').filter(invoice_number=number).first()
+        if doc is None:
+            return None
+        rows = [('المستند', 'مطالبة سداد', False), ('الرقم', doc.invoice_number, True),
+                ('تاريخ الإصدار', doc.issue_date.strftime('%Y/%m/%d'), True),
+                ('آخر موعد للسداد', doc.due_date.strftime('%Y/%m/%d'), True),
+                ('المشترك', doc.tenant.name, False),
+                ('المبلغ', f'{_money(doc.amount, doc.currency)} ({CURRENCY_NAMES.get(doc.currency, doc.currency)})', False)]
+        return {'is_void': doc.is_void, 'state': doc.status, 'rows': rows}
+    doc = SubscriptionPayment.objects.select_related('tenant').filter(receipt_number=number).first()
+    if doc is None:
+        return None
+    rows = [('المستند', 'سند قبض', False), ('الرقم', doc.receipt_number, True),
+            ('تاريخ الدفع', doc.paid_at.strftime('%Y/%m/%d'), True),
+            ('المشترك', doc.tenant.name, False),
+            ('المبلغ', f'{_money(doc.amount, doc.currency)} ({CURRENCY_NAMES.get(doc.currency, doc.currency)})', False),
+            ('الفترة', f'{doc.period_start:%Y/%m/%d} → {doc.period_end:%Y/%m/%d}', True)]
+    return {'is_void': doc.is_void, 'state': 'receipt', 'rows': rows}
+
+
+@never_cache
+@require_GET
+def verify_document(request, kind, number, sig):
+    """صفحة عامة بلا تسجيل دخول يفتحها رمز QR المطبوع. التوقيع في الرابط يمنع تخمين مستندات أخرى."""
+    context = _verify_context(kind, number) if doc_verify.is_valid(kind, number, sig) else None
+    if context is None:
+        return HttpResponse('المستند غير موجود أو الرابط غير صحيح', status=404, content_type='text/plain; charset=utf-8')
+    resp = render(request, 'core/verify_document.html', {'doc': context})
+    resp['X-Robots-Tag'] = 'noindex, nofollow'
+    resp['Referrer-Policy'] = 'no-referrer'
+    return resp

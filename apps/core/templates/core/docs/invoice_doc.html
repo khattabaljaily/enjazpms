@@ -51,6 +51,12 @@
   <span class="muted ltr" style="display:block;text-align:left;white-space:normal;overflow-wrap:anywhere">Please pay by the due date and quote the request number with your payment. Bank charges are borne by the client.</span>
 </div>
 
+{% if verify_qr %}<div class="verify" style="display:flex;align-items:center;gap:5mm;margin-top:6mm;break-inside:avoid">
+  <div style="width:24mm;height:24mm;flex:none">{{ verify_qr|safe }}</div>
+  <div class="muted" style="line-height:1.6">للتحقق من صحة هذا المستند امسح الرمز أو افتح الرابط:<br>
+    <span class="ltr" style="font-size:7.5pt;color:#555">{{ verify_url }}</span><br>
+    <span class="ltr" style="display:block;text-align:left;white-space:normal;overflow-wrap:anywhere">Scan to verify this document.</span></div>
+</div>{% endif %}
 {% if invoice.is_void %}<div style="position:fixed;top:120mm;left:0;right:0;text-align:center;font-size:60pt;font-weight:700;color:rgba(179,38,30,.18);z-index:5">ملغاة</div>
 {% elif invoice.is_paid %}<div style="position:fixed;top:120mm;left:0;right:0;text-align:center;font-size:60pt;font-weight:700;color:rgba(22,130,70,.2);z-index:5">مسدَّدة</div>{% endif %}
 {% endblock %}
