@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% load doc_assets %}<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -7,12 +7,13 @@
 <meta name="referrer" content="no-referrer">
 <title>التحقق من مستند — إنجاز لتقنية المعلومات</title>
 <style>
+{% brand_font_url as font_url %}{% if font_url %}@font-face { font-family: 'Al Mohanad'; src: url("{{ font_url }}") format('truetype'); font-weight: 400; unicode-range: U+0020-0040, U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF; }{% endif %}
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100vh; background: #f6f3ee; color: #1f1f1f; font-family: Tahoma, 'Segoe UI', 'Noto Sans Arabic', Arial, sans-serif; font-size: 17px; display: flex; justify-content: center; padding: 24px 14px; }
+body { margin: 0; min-height: 100vh; background: #f6f3ee; color: #1f1f1f; font-family: 'Al Mohanad', 'Cairo', Tahoma, Arial, sans-serif; font-size: 20px; display: flex; justify-content: center; padding: 24px 14px; }
 .card { width: 100%; max-width: 480px; background: #fff; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,.08); overflow: hidden; align-self: flex-start; }
 .top { height: 6px; background: #F4A135; }
 .head { padding: 22px 22px 10px; text-align: center; }
-.head b { display: block; font-size: 21px; color: #1f1f1f; }
+.head b { display: block; font-size: 25px; color: #1f1f1f; }
 .head span { color: #F4A135; font-size: 12px; letter-spacing: 2px; font-weight: 700; }
 .ok, .bad { margin: 14px 22px 4px; padding: 12px 14px; border-radius: 12px; font-weight: 700; text-align: center; }
 .ok { background: #e8f6ee; color: #14683b; }
@@ -25,7 +26,7 @@ dl { margin: 12px 22px 8px; }
 dt { color: #777; }
 dd { margin: 0; font-weight: 700; text-align: left; }
 dd.ltr { direction: ltr; unicode-bidi: isolate; }
-.note { margin: 6px 22px 22px; color: #888; font-size: 14px; text-align: center; line-height: 1.7; }
+.note { margin: 6px 22px 22px; color: #888; font-size: 16px; text-align: center; line-height: 1.7; }
 </style>
 </head>
 <body>
