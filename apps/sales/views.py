@@ -810,12 +810,12 @@ def _publish_sale_risks(request, invoice, cust):
         if ln.cost_price_snapshot and ln.unit_price < ln.cost_price_snapshot * factor:
             below.append(ln.item.name)
         if ln.discount_percent and ln.discount_percent > limit:
-            discounted.append(f'{ln.item.name} ({ln.discount_percent:g}%)')
+            discounted.append(f'{ln.item.name} ({ln.discount_percent:g}٪)')
     if below:
         publish_simple(request, 'sale.below_cost', 'باع بأقل من التكلفة في الفاتورة', f'{invoice.invoice_number} — {cust}',
                        extra='الأصناف: ' + '، '.join(below[:5]))
     if discounted:
-        publish_simple(request, 'sale.big_discount', f'منح خصماً فوق {limit}% في الفاتورة', f'{invoice.invoice_number} — {cust}',
+        publish_simple(request, 'sale.big_discount', f'منح خصماً فوق {limit}٪ في الفاتورة', f'{invoice.invoice_number} — {cust}',
                        extra='الأصناف: ' + '، '.join(discounted[:5]))
 
 

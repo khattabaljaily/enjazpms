@@ -29,6 +29,7 @@ EVENTS = {
     'payment.customer_cancel': (RED, 'إلغاء دفعة عميل'),
     'payment.supplier_cancel': (RED, 'إلغاء دفعة مورد'),
     'expense.cancel': (YELLOW, 'إلغاء مصروف'),
+    'transfer.cancel': (YELLOW, 'إلغاء تحويل أموال'),
     # المبيعات والمشتريات
     'sale.below_cost': (RED, 'بيع بأقل من التكلفة'),
     'sale.big_discount': (YELLOW, 'خصم كبير على فاتورة'),

@@ -2,6 +2,7 @@ import json
 from decimal import Decimal, InvalidOperation
 
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_simple
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission, require_any_permission, require_account_report, branch_scope_exempt
 from django.db.models import Q
@@ -550,6 +551,9 @@ def treasury_transfer_cancel_api(request, pk):
         f'من: {transfer.from_treasury.name} ({transfer.from_amount}) → إلى: {transfer.to_treasury.name} ({transfer.to_amount})',
         'cancel',
     )
+    publish_simple(request, 'transfer.cancel', 'ألغى تحويلاً بين خزائن',
+                   f'{transfer.from_treasury.name} ← {transfer.to_treasury.name}',
+                   extra=f'المبلغ: {transfer.from_amount}')
     return JsonResponse({'success': True, 'message': 'تم إلغاء التحويل بنجاح'})
 
 

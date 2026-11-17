@@ -975,7 +975,7 @@ def item_price_adjust_apply_api(request):
         adj.delete()
         return JsonResponse({'success': False, 'message': 'لا توجد منتجات بأسعار لتعديلها ضمن هذا النطاق'}, status=400)
     log_activity(request, 'تعديل عام للأسعار', f'{percent}% — {adj.items_count} منتج — {note}', 'update')
-    publish_simple(request, 'item.price_adjust', 'أجرى تعديلاً عاماً على الأسعار', f'{percent}% على {adj.items_count} منتج',
+    publish_simple(request, 'item.price_adjust', 'أجرى تعديلاً عاماً على الأسعار', f'{percent}٪ على {adj.items_count} منتج',
                    extra=f'السبب: {note}')
     return JsonResponse({
         'success': True, 'items_count': adj.items_count,

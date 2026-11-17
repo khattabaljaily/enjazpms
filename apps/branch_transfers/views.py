@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_simple
 from apps.accounts.decorators import _deny
 from apps.bank_accounts.models import BankAccount
 from apps.core.models import Branch
@@ -246,4 +247,5 @@ def transfer_cancel(request, pk):
     except ValueError as exc:
         return _err(str(exc))
     log_activity(request, 'إلغاء تحويل فروع', transfer.number, 'delete')
+    publish_simple(request, 'transfer.cancel', 'ألغى تحويلاً بين الفروع', transfer.number)
     return JsonResponse({'success': True, 'message': 'تم إلغاء التحويل وعاد المبلغ إلى المصدر'})

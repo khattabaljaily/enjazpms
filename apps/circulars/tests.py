@@ -134,3 +134,17 @@ class CircularLoginAlertTests(TenantTestCase):
     def test_yellow_circular_does_not_trigger_banner(self):
         publish_circular(event_key='expense.cancel', message='ن', tenant=self.tenant, user=self.user)
         self.assertNotIn('تعميم خطير غير مقروء', self.client.get(reverse('core:dashboard')).content.decode())
+
+    def test_treasury_transfer_cancel_publishes(self):
+        from apps.treasury.models import Treasury, TreasuryTransfer
+        a = Treasury.objects.create(tenant=self.tenant, name='خزينة أ', current_balance=Decimal('1000'))
+        b = Treasury.objects.create(tenant=self.tenant, name='خزينة ب', current_balance=Decimal('1000'))
+        resp = self.client.post('/treasury/api/transfer/', json.dumps({
+            'from_treasury': a.pk, 'to_treasury': b.pk, 'from_amount': '100', 'to_amount': '100',
+            'exchange_rate': '1', 'transfer_date': '2026-10-11'}), content_type='application/json')
+        self.assertEqual(resp.status_code, 200, resp.content)
+        tr = TreasuryTransfer.objects.get()
+        resp = self.client.post(reverse('treasury:transfer_cancel_api', args=[tr.pk]))
+        self.assertEqual(resp.status_code, 200, resp.content)
+        c = Circular.objects.get(event_key='transfer.cancel')
+        self.assertIn('خزينة أ', c.message)
