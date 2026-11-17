@@ -2863,16 +2863,20 @@ def analytics(request):
                            .aggregate(t=Sum('current_balance'))['t'] or 0)
 
     # ── Outstanding balances ────────────────────────────────────────
-    # customer debt = sum of unpaid portions of confirmed credit/mixed sales invoices
-    from apps.sales.models import SaleInvoice
-    from django.db.models import F
-    customer_debt = float(
-        filter_by_branch_strict(SaleInvoice.objects.filter(
-            tenant=tenant,
-            status__in=('confirmed', 'partially_returned'),
-            payment_method__in=('credit', 'mixed'),
-        ), branch).aggregate(t=Sum(F('grand_total') - F('paid_amount')))['t'] or 0
-    )
+    # مستحقات العملاء = مجموع أرصدة العملاء المدينين (الرصيد الافتتاحي + قيود دفتر العميل: فواتير
+    # وتحصيل ومرتجعات). نفس قاعدة شاشة العملاء وتقرير الأرصدة، فتشمل الافتتاحي المُدخل بلا فواتير.
+    # الأرصدة الدائنة لا تُطرح من مدينين آخرين.
+    from apps.customers.models import Customer as _Customer
+    from django.db.models.functions import Coalesce
+    _balances = _Customer.objects.for_tenant(tenant).for_branch(branch, strict=True).annotate(
+        _ledger=Coalesce(Sum('ledger_entries__amount'), Value(0),
+                         output_field=DecimalField(max_digits=14, decimal_places=2)),
+    ).values_list('opening_balance', '_ledger')
+    customer_debt = float(sum(
+        (opening or Decimal('0')) + ledger
+        for opening, ledger in _balances
+        if (opening or Decimal('0')) + ledger > 0
+    ))
     # supplier debt — calculated per-supplier to handle HC vs local correctly
     from apps.purchases.models import SupplierLedger
     from apps.suppliers.models import Supplier as SupplierModel
