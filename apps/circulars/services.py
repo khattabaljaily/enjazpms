@@ -156,3 +156,7 @@ def publish_simple(request, event_key, noun, label, extra='', **kwargs):
     """تعميم لإجراء بلا قيمة قبل/بعد (إلغاء، حذف، إنشاء...): «فعل {who} {noun} «{label}»»."""
     msg = f'{who(request)}: {noun} «{label}»' + (f' — {extra}' if extra else '')
     return publish_circular(request, event_key=event_key, object_label=str(label), message=msg, **kwargs)
+
+
+def red_unread_count(request):
+    return visible_circulars(request).filter(level=RED).exclude(reads__user=request.user).count()

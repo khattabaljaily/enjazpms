@@ -53,6 +53,14 @@
             
             <!-- Messages -->
             {% include "components/messages.html" %}
+
+            <!-- تعاميم خطيرة غير مقروءة: تنبيه حتى يُفتح صندوق التعاميم -->
+            {% if circulars_red_unread and request.resolver_match.app_name != 'circulars' %}
+            <a href="{% url 'circulars:list' %}?level=red" class="alert alert-danger d-flex align-items-center gap-2" style="text-decoration:none">
+                <i class="fas fa-bullhorn"></i>
+                <span>لديك <strong>{{ circulars_red_unread }}</strong> تعميم خطير غير مقروء — اضغط للاطلاع</span>
+            </a>
+            {% endif %}
             
             <!-- Page Content -->
             <div class="content">

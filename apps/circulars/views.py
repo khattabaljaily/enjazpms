@@ -19,6 +19,11 @@ def circular_list(request):
         user=request.user, circular__in=[c.pk for c in page]).values_list('circular_id', flat=True))
     for c in page:
         c.is_read = c.pk in read_ids
+    # فتح الصفحة = اطّلاع على ما فيها: يُعلَّم مقروءًا بعد حساب التمييز (يظهر هذه المرة كجديد)
+    tenant = getattr(request, 'tenant', None)
+    CircularRead.objects.bulk_create(
+        [CircularRead(tenant=tenant, circular=c, user=request.user) for c in page if not c.is_read],
+        ignore_conflicts=True)
     return render(request, 'circulars/circular_list.html', {'page': page, 'level': level})
 
 

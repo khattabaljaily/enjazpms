@@ -121,3 +121,16 @@ class CircularEventsTests(TenantTestCase):
         self.assertEqual(resp.status_code, 200, resp.content)
         c = Circular.objects.get(event_key='stock.stocktake_shortage')
         self.assertIn('نقص 3', c.message)
+
+
+class CircularLoginAlertTests(TenantTestCase):
+    def test_red_unread_banner_shows_until_list_is_opened(self):
+        publish_circular(event_key='user.delete', message='حذف', tenant=self.tenant, user=self.user)
+        page = self.client.get(reverse('core:dashboard')).content.decode()
+        self.assertIn('تعميم خطير غير مقروء', page)
+        self.client.get(reverse('circulars:list'))  # فتح الصندوق يعلّم ما فيه مقروءًا
+        self.assertNotIn('تعميم خطير غير مقروء', self.client.get(reverse('core:dashboard')).content.decode())
+
+    def test_yellow_circular_does_not_trigger_banner(self):
+        publish_circular(event_key='expense.cancel', message='ن', tenant=self.tenant, user=self.user)
+        self.assertNotIn('تعميم خطير غير مقروء', self.client.get(reverse('core:dashboard')).content.decode())
