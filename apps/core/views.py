@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator
 from apps.accounts.decorators import require_permission, deny_branch_scoped, branch_scope_exempt
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_changes, publish_simple, snap, discount_threshold
 from django.db.models import ProtectedError, Sum, Count, Q, F, Case, When, Value, CharField, DecimalField
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
@@ -1598,6 +1599,8 @@ def tenant_settings_update_api(request):
         return JsonResponse({'success': False, 'message': 'نوع التحديث غير مدعوم'}, status=400)
 
     if section == 'business':
+        biz_labels = {'name': 'اسم النشاط', 'currency': 'العملة', 'country': 'الدولة'}
+        biz_before = snap(tenant, biz_labels)
         tenant.name = str(data.get('name', tenant.name)).strip() or tenant.name
         tenant.email = str(data.get('email', tenant.email)).strip()
         tenant.phone = str(data.get('phone', tenant.phone)).strip()
@@ -1610,6 +1613,7 @@ def tenant_settings_update_api(request):
         tenant.timezone = timezone_value
         tenant.currency = str(data.get('currency', tenant.currency)).strip() or tenant.currency
         tenant.save(update_fields=['name', 'email', 'phone', 'city', 'country', 'address', 'timezone', 'currency', 'updated_at'])
+        publish_changes(request, 'system.settings_edit', tenant, biz_before, biz_labels, 'بيانات النشاط')
         return JsonResponse({'success': True, 'message': 'تم تحديث بيانات المتجر بنجاح'})
 
     settings_obj, _ = Settings.objects.get_or_create(tenant=tenant)
@@ -1632,6 +1636,9 @@ def tenant_settings_update_api(request):
         except (TypeError, ValueError):
             return fallback
 
+    sys_labels = {'invoice_prefix': 'بادئة الفواتير', 'tax_enabled': 'تفعيل الضريبة',
+                  'tax_value': 'نسبة الضريبة', 'tax_number': 'الرقم الضريبي'}
+    sys_before = snap(settings_obj, sys_labels)
     settings_obj.invoice_prefix = str(data.get('invoice_prefix', settings_obj.invoice_prefix)).strip()[:10] or 'INV'
     settings_obj.invoice_footer = str(data.get('invoice_footer', settings_obj.invoice_footer)).strip()
     raw_color = str(data.get('invoice_color', settings_obj.invoice_color)).strip()
@@ -1654,6 +1661,7 @@ def tenant_settings_update_api(request):
             data.get('branches_can_manage_items', settings_obj.branches_can_manage_items)
         )
     settings_obj.save()
+    publish_changes(request, 'system.settings_edit', settings_obj, sys_before, sys_labels, 'إعدادات النظام')
 
     return JsonResponse({'success': True, 'message': 'تم تحديث إعدادات النظام بنجاح'})
 

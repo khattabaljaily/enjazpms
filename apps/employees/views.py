@@ -13,6 +13,9 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_changes, publish_simple, snap, discount_threshold
+
+SALARY_LABELS = {'salary_type': 'نوع الراتب', 'base_salary': 'الراتب الأساسي'}
 from apps.accounts.decorators import require_permission, branch_scope_exempt
 from apps.core.utils import convert_arabic_numerals, filter_by_branch_via, enforce_branch_ownership, operational_money_accounts
 from apps.treasury.models import Treasury
@@ -171,6 +174,7 @@ def employee_update(request, pk):
     if not name:
         return _err('اسم الموظف مطلوب')
 
+    salary_before = snap(emp, SALARY_LABELS)
     emp.name        = name
     emp.phone       = (data.get('phone') or '').strip()
     emp.position    = (data.get('position') or '').strip()
@@ -183,6 +187,7 @@ def employee_update(request, pk):
     emp.updated_by  = request.user
     emp.save()
     log_activity(request, 'update', f'تعديل موظف: {emp.name}')
+    publish_changes(request, 'employee.salary_edit', emp, salary_before, SALARY_LABELS, 'راتب الموظف')
     return JsonResponse({'success': True})
 
 
@@ -412,6 +417,7 @@ def advance_cancel(request, pk):
         return _err('السلفة ملغاة مسبقاً')
     adv.cancel()
     log_activity(request, 'cancel', f'إلغاء سلفة: {adv.employee.name} — {adv.amount}')
+    publish_simple(request, 'employee.advance_cancel', 'ألغى سلفة للموظف', adv.employee.name, extra=f'المبلغ: {adv.amount}')
     return JsonResponse({'success': True})
 
 
@@ -597,6 +603,7 @@ def salary_cancel(request, pk):
         return _err('الكشف ملغى مسبقاً')
     sp.cancel()
     log_activity(request, 'cancel', f'إلغاء راتب: {sp.employee.name} — {sp.period_start}')
+    publish_simple(request, 'employee.salary_cancel', 'ألغى كشف راتب للموظف', sp.employee.name, extra=f'الفترة: {sp.period_start}')
     return JsonResponse({'success': True})
 
 

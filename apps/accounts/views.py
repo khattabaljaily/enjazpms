@@ -27,6 +27,7 @@ from django.utils import timezone as _tz
 from apps.core.models import Tenant, Settings
 from .models import UserActivity
 from .activity_service import log_activity
+from apps.circulars.services import publish_changes, publish_simple, snap, discount_threshold
 from apps.core.constants import COUNTRY_TIMEZONE_MAP, COUNTRY_CURRENCY_MAP, TIMEZONE_CURRENCY_MAP, CURRENCY_AR, DEFAULT_COUNTRY, get_timezone_for_country
 from .models import PermissionGroup, User
 from .forms import Step1UserForm, Step2BusinessForm, Step3SettingsForm, RegistrationRequestForm, LoginForm, UserManagementForm, PasswordResetForm, SetPasswordForm
@@ -267,6 +268,8 @@ def user_create_api(request):
     user = form.save()
     log_activity(request, 'إضافة مستخدم جديد',
                  f"المستخدم: {user.get_full_name()}\nاسم الدخول: {user.username}", 'create')
+    publish_simple(request, 'user.create', 'أضاف مستخدماً جديداً', user.username,
+                   extra='مدير نشاط' if user.is_tenant_admin else '')
 
     return _json_ok({'id': user.id}, 'تم إضافة المستخدم بنجاح')
 
@@ -318,6 +321,10 @@ def user_update_api(request, pk):
             f'لا يمكن تفعيل المستخدم: وصلت للحد الأقصى من المستخدمين النشطين ({tenant.max_users}). '
             'عطّل مستخدماً آخر أو رقِّ الباقة.', status=403)
 
+    user_labels = {'is_active': 'نشط', 'is_tenant_admin': 'مدير نشاط', 'is_branch_supervisor': 'مشرف فرع',
+                   'branch': 'الفرع'}
+    user_before = snap(user, user_labels)
+    groups_before = sorted(user.permission_groups.values_list('name', flat=True))
     form = _user_form(request, tenant, request.POST, instance=user)
     if not form.is_valid():
         return JsonResponse({
@@ -327,6 +334,12 @@ def user_update_api(request, pk):
         }, status=400, json_dumps_params={'ensure_ascii': False})
     
     user_obj = form.save()
+    groups_after = sorted(user_obj.permission_groups.values_list('name', flat=True))
+    if groups_before != groups_after:
+        user_labels['_groups'] = 'مجموعات الصلاحيات'
+        user_before['_groups'] = '، '.join(groups_before) or '—'
+        user_obj._groups = '، '.join(groups_after) or '—'
+    publish_changes(request, 'user.update', user_obj, user_before, user_labels, 'المستخدم')
     
     return _json_ok(None, 'تم تحديث بيانات المستخدم بنجاح')
 
@@ -349,7 +362,9 @@ def user_delete_api(request, pk):
         return protected
     if hasattr(user, 'agent_profile'):
         return _json_error('لا يمكن حذف هذا المستخدم لأنه مرتبط بمندوب. احذف المندوب أولاً أو افصل الحساب منه.')
+    deleted_username = user.username
     user.delete()
+    publish_simple(request, 'user.delete', 'حذف المستخدم', deleted_username)
     return _json_ok(None, 'تم حذف المستخدم بنجاح')
 
 
@@ -531,6 +546,8 @@ def permission_group_create_api(request):
     )
 
     enabled_count = sum(1 for p in sanitized_permissions.values() if p)
+    publish_simple(request, 'permission_group.create', 'أنشأ مجموعة صلاحيات', group.name,
+                   extra=f'{enabled_count} صلاحية مفعّلة')
     log_activity(request, 'إنشاء مجموعة صلاحيات جديدة',
                  f"المجموعة: {group.name}\nعدد الصلاحيات المفعّلة: {enabled_count}", 'create')
     return _json_ok({
@@ -575,12 +592,26 @@ def permission_group_update_api(request, pk):
         for key in valid_keys
     }
 
+    old_name = group.name
+    old_enabled = {k for k, v in (group.permissions or {}).items() if v}
     group.name = name
     group.description = description
     group.scope = scope if tenant.is_enterprise() else ''
     group.permissions = sanitized_permissions
     group.is_active = request.POST.get('is_active') == 'on'
     group.save()
+    new_enabled = {k for k, v in sanitized_permissions.items() if v}
+    added, removed = sorted(new_enabled - old_enabled), sorted(old_enabled - new_enabled)
+    if added or removed or old_name != name:
+        bits = []
+        if old_name != name:
+            bits.append(f'الاسم من «{old_name}» إلى «{name}»')
+        if added:
+            bits.append('أُضيفت: ' + '، '.join(added[:8]) + (f' و{len(added) - 8} أخرى' if len(added) > 8 else ''))
+        if removed:
+            bits.append('أُزيلت: ' + '، '.join(removed[:8]) + (f' و{len(removed) - 8} أخرى' if len(removed) > 8 else ''))
+        publish_simple(request, 'permission_group.update', 'عدّل مجموعة الصلاحيات', name, extra='؛ '.join(bits),
+                       before={'permissions': len(old_enabled)}, after={'permissions': len(new_enabled)})
 
     # العضوية لا تُعدَّل من هنا: تُسند المجموعات للمستخدم من شاشة إدارة المستخدمين.
 
@@ -603,7 +634,9 @@ def permission_group_delete_api(request, pk):
         return _json_error('الطريقة غير مسموحة', status=405)
 
     group = get_object_or_404(_manageable_groups(tenant), pk=pk)
+    group_name = group.name
     group.delete()
+    publish_simple(request, 'permission_group.delete', 'حذف مجموعة الصلاحيات', group_name)
     return _json_ok(None, 'تم حذف المجموعة بنجاح')
 
 

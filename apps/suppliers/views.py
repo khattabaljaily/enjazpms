@@ -1,4 +1,5 @@
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_changes, publish_simple, snap, discount_threshold
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import DecimalField, Exists, OuterRef, Q, Sum, Value
@@ -859,6 +860,7 @@ def supplier_update_api(request, pk):
 
     supplier = get_object_or_404(scoped_suppliers(request, tenant), pk=pk)
     enforce_branch_ownership(request, supplier)
+    before = snap(supplier, {'opening_balance': 'الرصيد الافتتاحي'})
     form = SupplierForm(request.POST, instance=supplier, tenant=tenant, branch=getattr(request, 'branch', None), central=is_central_request(request))
 
     if form.is_valid():
@@ -866,6 +868,8 @@ def supplier_update_api(request, pk):
         supplier.updated_by = request.user
         supplier.save()
         log_activity(request, 'تعديل مورد', supplier.name, 'update')
+        publish_changes(request, 'supplier.opening_edit', supplier, before, {'opening_balance': 'الرصيد الافتتاحي'},
+                        'الرصيد الافتتاحي للمورد', branch=supplier.branch)
         return JsonResponse({
             'success': True,
             'message': 'تم تعديل بيانات المورد بنجاح',

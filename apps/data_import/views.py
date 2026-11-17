@@ -8,6 +8,7 @@ from django.urls import reverse
 
 from functools import wraps
 
+from apps.circulars.services import publish_simple
 from apps.accounts.decorators import (
     _deny,
     require_permission, require_any_permission, require_capability, require_plan_feature,
@@ -312,6 +313,9 @@ def product_import_commit(request):
         result = import_products(tenant, request.FILES['file'], request.user)
 
     failed = len({e['row'] for e in result['errors']})
+    if result['created'] or result.get('updated'):
+        publish_simple(request, 'system.import', 'استورد منتجات من ملف', f"{result['created']} جديد",
+                       extra=f"وتحديث {result.get('updated', 0)} موجود")
     msg = f"تم استيراد {result['created']} منتج جديد"
     if result.get('updated'):
         msg += f"، وتحديث {result['updated']} منتج موجود مسبقاً"

@@ -787,6 +787,17 @@
     </ul>
     {% endif %}
 
+    <!-- ── Circulars (التعاميم): يراها كل المستخدمين ── -->
+    <ul class="nav flex-column mt-1">
+        <li class="nav-item">
+            <a class="nav-link{% if request.resolver_match.app_name == 'circulars' %} active{% endif %}" href="{% url 'circulars:list' %}">
+                <span class="nav-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;"><i class="fas fa-bullhorn"></i></span>
+                التعاميم
+                {% if circulars_unread %}<span class="badge bg-danger" style="margin-inline-start:auto">{{ circulars_unread }}</span>{% endif %}
+            </a>
+        </li>
+    </ul>
+
     <!-- ── Notifications ── -->
     {% if user|has_perm_key:'view_notifications' %}
     <ul class="nav flex-column mt-1">

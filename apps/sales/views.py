@@ -72,6 +72,7 @@ from .services import (
 )
 from .reports import SalesReportGenerator
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_changes, publish_simple, snap, discount_threshold
 from apps.accounts.cost_visibility import can_view_cost, strip_cost
 
 
@@ -388,7 +389,10 @@ def invoice_edit(request, pk):
     bank_accounts = operational_money_accounts(BankAccount.objects.for_tenant(tenant), request).filter(is_active=True)
 
     if request.method == 'POST':
+        was_confirmed = invoice.status == 'confirmed'
         result = _process_invoice_post(request, tenant, invoice=invoice)
+        if was_confirmed and isinstance(result, SaleInvoice):
+            publish_simple(request, 'sale.invoice_edit', 'عدّل فاتورة مبيعات مؤكدة', result.invoice_number)
         if isinstance(result, SaleInvoice):
             return redirect('sales:invoice_detail', pk=result.id)
         if isinstance(result, JsonResponse):
@@ -789,11 +793,30 @@ def invoice_confirm_ajax(request, pk):
                 insurance_services.create_claim_from_sale(invoice, tenant, None, request.user)
         cust = invoice.customer.name if invoice.customer else 'زبون عابر'
         log_activity(request, 'تأكيد فاتورة مبيعات', f'{invoice.invoice_number} — {cust}', 'create')
+        _publish_sale_risks(request, invoice, cust)
         return _json_ok(msg='تم تأكيد الفاتورة بنجاح')
     except ValueError as e:
         return _json_error(str(e))
     except Exception as e:
         return _json_error(f'حدث خطأ: {str(e)}')
+
+
+def _publish_sale_risks(request, invoice, cust):
+    """بيع بأقل من التكلفة أو بخصم فوق الحد: يُنشر تعميم بعد التأكيد."""
+    below, discounted = [], []
+    limit = discount_threshold()
+    for ln in invoice.lines.select_related('item'):
+        factor = ln.unit_factor or 1
+        if ln.cost_price_snapshot and ln.unit_price < ln.cost_price_snapshot * factor:
+            below.append(ln.item.name)
+        if ln.discount_percent and ln.discount_percent > limit:
+            discounted.append(f'{ln.item.name} ({ln.discount_percent:g}%)')
+    if below:
+        publish_simple(request, 'sale.below_cost', 'باع بأقل من التكلفة في الفاتورة', f'{invoice.invoice_number} — {cust}',
+                       extra='الأصناف: ' + '، '.join(below[:5]))
+    if discounted:
+        publish_simple(request, 'sale.big_discount', f'منح خصماً فوق {limit}% في الفاتورة', f'{invoice.invoice_number} — {cust}',
+                       extra='الأصناف: ' + '، '.join(discounted[:5]))
 
 
 @login_required
@@ -816,6 +839,8 @@ def invoice_cancel_ajax(request, pk):
         cancel_sale_invoice(invoice, request.user, reason)
         cust = invoice.customer.name if invoice.customer else 'زبون عابر'
         log_activity(request, 'إلغاء فاتورة مبيعات', f'{invoice.invoice_number} — {cust}', 'delete')
+        publish_simple(request, 'sale.invoice_cancel', 'ألغى فاتورة مبيعات', f'{invoice.invoice_number} — {cust}',
+                       extra=f'السبب: {reason}' if reason else '')
         return _json_ok(msg='تم إلغاء الفاتورة')
     except ValueError as e:
         return _json_error(str(e))

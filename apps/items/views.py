@@ -3,6 +3,7 @@ Items Views - عمليات CRUD للمنتجات والتصنيفات والوح
 كل العمليات عبر JSON API (AJAX) + صفحة واحدة لكل قسم
 """
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_changes, publish_simple, snap, discount_threshold
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q, Sum
@@ -860,6 +861,7 @@ def item_update_api(request, pk):
     if not _branch_owns(request, item):
         return JsonResponse({'success': False, 'message': _NOT_OWNER_MSG}, status=403)
 
+    cost_before = snap(item, {'cost_price': 'سعر التكلفة'})
     form = ItemForm(request.POST, request.FILES, instance=item, tenant=tenant, capabilities=_get_capabilities(tenant),
                     hide_cost=not can_view_cost(request.user))
     if form.is_valid():
@@ -870,6 +872,7 @@ def item_update_api(request, pk):
         form.save_m2m()
         _save_item_units(item, request.POST.get('units_json', ''), tenant)
         log_activity(request, 'تعديل منتج', updated.name, 'update')
+        publish_changes(request, 'item.cost_edit', updated, cost_before, {'cost_price': 'سعر التكلفة'}, 'تكلفة المنتج')
         return JsonResponse({'success': True, 'message': 'تم تحديث المنتج بنجاح'})
 
     return JsonResponse({
@@ -972,6 +975,8 @@ def item_price_adjust_apply_api(request):
         adj.delete()
         return JsonResponse({'success': False, 'message': 'لا توجد منتجات بأسعار لتعديلها ضمن هذا النطاق'}, status=400)
     log_activity(request, 'تعديل عام للأسعار', f'{percent}% — {adj.items_count} منتج — {note}', 'update')
+    publish_simple(request, 'item.price_adjust', 'أجرى تعديلاً عاماً على الأسعار', f'{percent}% على {adj.items_count} منتج',
+                   extra=f'السبب: {note}')
     return JsonResponse({
         'success': True, 'items_count': adj.items_count,
         'message': f'تم تعديل أسعار {adj.items_count} منتج بنسبة {percent}%',
@@ -1026,6 +1031,7 @@ def item_delete_api(request, pk):
         return JsonResponse({'success': False, 'message': _NOT_OWNER_MSG}, status=403)
 
     name = item.name
+    had_stock = item.stock_quantities.filter(quantity__gt=0).exists()
     try:
         # BOMLine.component uses PROTECT; safe to remove before deletion
         # (BOM lines are recipe definitions, not transactional records)
@@ -1036,6 +1042,8 @@ def item_delete_api(request, pk):
         logging.getLogger(__name__).error('item_delete_api error pk=%s: %s', pk, e, exc_info=True)
         return JsonResponse({'success': False, 'message': 'تعذر الحذف: المنتج مرتبط بسجلات لا يمكن حذفها (فواتير، تحويلات، جرد)'}, status=400)
     log_activity(request, 'حذف منتج', name, 'delete')
+    if had_stock:
+        publish_simple(request, 'item.delete', 'حذف المنتج', name, extra='كان له رصيد في المخزون')
     return JsonResponse({'success': True, 'message': f'تم حذف المنتج "{name}" بنجاح'})
 
 

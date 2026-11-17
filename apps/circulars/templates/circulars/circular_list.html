@@ -1,0 +1,84 @@
+{% extends "layouts/dashboard.html" %}
+{% load humanize %}
+
+{% block extra_css %}
+<style>
+.crc-item { display:flex; gap:1rem; padding:1.1rem 1.4rem; border-bottom:1px solid var(--border-light); position:relative; }
+.crc-item:last-child { border-bottom:none; }
+.crc-item--unread { background:var(--bg-secondary); }
+.crc-item--unread::before { content:''; position:absolute; right:0; top:0; bottom:0; width:3px; border-radius:0 4px 4px 0; }
+.crc-item--red.crc-item--unread::before { background:#ef4444; }
+.crc-item--yellow.crc-item--unread::before { background:#f59e0b; }
+.crc-icon { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.crc-icon--red { background:rgba(239,68,68,.12); color:#ef4444; }
+.crc-icon--yellow { background:rgba(245,158,11,.12); color:#f59e0b; }
+.crc-title { font-weight:700; margin:0 0 .2rem; }
+.crc-msg { margin:0 0 .35rem; line-height:1.7; }
+.crc-meta { font-size:.78rem; color:var(--text-muted); display:flex; gap:.9rem; flex-wrap:wrap; }
+.crc-note { padding:.8rem 1.4rem; font-size:.82rem; color:var(--text-muted); border-bottom:1px solid var(--border-light); }
+.crc-empty { text-align:center; padding:3rem 1rem; color:var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="cx-scene">
+<div class="cx-hero">
+    <div class="cx-hero-inner">
+        <div class="cx-hero-left">
+            <div class="cx-hero-icon-wrap"><i class="fas fa-bullhorn"></i></div>
+            <div>
+                <h1 class="cx-hero-title">التعاميم</h1>
+                <p class="cx-hero-desc">الإجراءات الحساسة التي نُفّذت في النظام: من نفّذها ومتى وكيف كانت وكيف أصبحت</p>
+            </div>
+        </div>
+        <div class="cx-hero-right">
+            <div class="cx-hero-actions">
+                <a class="cx-btn-secondary" href="?level=red"><i class="fas fa-circle-exclamation"></i><span>الخطير فقط</span></a>
+                <a class="cx-btn-secondary" href="?"><i class="fas fa-list"></i><span>الكل</span></a>
+                <button class="cx-btn-secondary" id="btnCircMarkAll"><i class="fas fa-check-double"></i><span>تعليم الكل كمقروء</span></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cx-panel">
+    <div class="crc-note"><i class="fas fa-eye"></i> يظهر كل تعميم لجميع المستخدمين، بمن فيهم مدير النشاط. لا يمكن تعديله ولا حذفه.</div>
+    {% for c in page %}
+    <div class="crc-item crc-item--{{ c.level }}{% if not c.is_read %} crc-item--unread{% endif %}">
+        <div class="crc-icon crc-icon--{{ c.level }}"><i class="fas {% if c.level == 'red' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i></div>
+        <div>
+            <p class="crc-title">{{ c.title }}{% if c.object_label %} — {{ c.object_label }}{% endif %}</p>
+            <p class="crc-msg">{{ c.message }}</p>
+            <div class="crc-meta">
+                <span><i class="fas fa-user"></i> {{ c.actor_name|default:"—" }}</span>
+                <span><i class="fas fa-clock"></i> {{ c.created_at|date:"Y-m-d H:i" }}</span>
+                {% if c.branch %}<span><i class="fas fa-code-branch"></i> {{ c.branch }}</span>{% endif %}
+                {% if c.link %}<a href="{{ c.link }}">عرض</a>{% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="crc-empty"><i class="fas fa-bullhorn fa-2x"></i><p>لا توجد تعاميم</p></div>
+    {% endfor %}
+</div>
+
+{% if page.has_other_pages %}
+<div style="display:flex;gap:.5rem;justify-content:center;margin-top:1rem">
+    {% if page.has_previous %}<a class="cx-btn-secondary" href="?page={{ page.previous_page_number }}{% if level %}&level={{ level }}{% endif %}">السابق</a>{% endif %}
+    <span>{{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="cx-btn-secondary" href="?page={{ page.next_page_number }}{% if level %}&level={{ level }}{% endif %}">التالي</a>{% endif %}
+</div>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('btnCircMarkAll')?.addEventListener('click', function () {
+    fetch("{% url 'circulars:mark_all_read' %}", {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}})
+        .then(function () { location.reload(); });
+});
+</script>
+{% endblock %}

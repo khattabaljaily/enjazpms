@@ -3,6 +3,7 @@ import re
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_changes, publish_simple, snap, discount_threshold
 
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import require_permission, require_scoped_permission, branch_scope_exempt
@@ -647,6 +648,8 @@ def order_cancel_ajax(request, pk):
         cancel_purchase_invoice(invoice, request.user, reason)
         supplier_name = invoice.supplier.name if invoice.supplier else 'مورد محذوف'
         log_activity(request, 'إلغاء أمر شراء', f'{invoice.invoice_number} — {supplier_name}', 'delete')
+        publish_simple(request, 'purchase.order_cancel', 'ألغى أمر شراء', f'{invoice.invoice_number} — {supplier_name}',
+                       extra=f'السبب: {reason}' if reason else '')
         return JsonResponse({'success': True, 'message': 'تم إلغاء أمر الشراء'}, json_dumps_params={'ensure_ascii': False})
     except ValueError as e:
         return _json_error(str(e))

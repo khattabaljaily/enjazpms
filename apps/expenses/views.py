@@ -2,6 +2,7 @@ import json
 from decimal import Decimal, InvalidOperation
 
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_changes, publish_simple, snap, discount_threshold
 from django.contrib.auth.decorators import login_required
 from functools import wraps
 
@@ -445,6 +446,7 @@ def expense_cancel_ajax(request, pk):
     except ValueError as e:
         return _err(str(e))
 
+    publish_simple(request, 'expense.cancel', 'ألغى مصروفاً', str(expense))
     return JsonResponse({'success': True, 'message': 'تم إلغاء المصروف'})
 
 

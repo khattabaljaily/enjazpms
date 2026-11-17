@@ -4,6 +4,7 @@ import json
 from django.db.models.deletion import ProtectedError
 from decimal import Decimal
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_changes, publish_simple, snap, text, discount_threshold
 
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -657,6 +658,8 @@ def customer_payment_cancel_api(request, pk):
         return _json_error(str(e), status=400)
 
     log_activity(request, 'إلغاء دفعة عميل', f'{payment.customer.name}', 'delete')
+    publish_simple(request, 'payment.customer_cancel', 'ألغى دفعة للعميل', payment.customer.name,
+                   extra=f'المبلغ: {text(abs(payment.amount))}')
     return _json_ok(msg='تم إلغاء الدفعة واستعادة مديونية العميل')
 
 
@@ -672,6 +675,7 @@ def customer_update_api(request, pk):
 
     customer = get_object_or_404(Customer.objects.for_tenant(tenant), pk=pk)
     enforce_branch_ownership(request, customer)
+    before = snap(customer, {'opening_balance': 'الرصيد الافتتاحي'})
     form = CustomerForm(request.POST, instance=customer, tenant=tenant, branch=getattr(request, 'branch', None))
 
     if form.is_valid():
@@ -679,6 +683,8 @@ def customer_update_api(request, pk):
         customer.updated_by = request.user
         customer.save()
         log_activity(request, 'تعديل عميل', customer.name, 'update')
+        publish_changes(request, 'customer.opening_edit', customer, before, {'opening_balance': 'الرصيد الافتتاحي'},
+                        'الرصيد الافتتاحي للعميل', branch=customer.branch)
         return JsonResponse({
             'success': True,
             'message': 'تم تعديل بيانات العميل بنجاح',

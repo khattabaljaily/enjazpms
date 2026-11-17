@@ -1,4 +1,5 @@
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_circular
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import DecimalField, Exists, OuterRef, Q, Sum, Value
@@ -287,12 +288,22 @@ def agent_update_api(request, pk):
 
     agent = get_object_or_404(Agent.objects.for_tenant(tenant), pk=pk)
     enforce_branch_ownership(request, agent)
+    old_opening = agent.opening_balance or Decimal('0')  # قبل أن يعدّل النموذج الكائن
     form = AgentForm(request.POST, instance=agent, tenant=tenant, branch=getattr(request, 'branch', None))
     if form.is_valid():
         agent = form.save(commit=False)
         agent.updated_by = request.user
         agent.save()
         log_activity(request, 'تعديل مندوب', agent.name, 'update')
+        new_opening = agent.opening_balance or Decimal('0')
+        if new_opening != old_opening:
+            who = request.user.get_full_name() or request.user.username
+            publish_circular(
+                request, event_key='agent.opening_edit', object_label=agent.name,
+                branch=agent.branch,
+                message=f'عدّل {who} الرصيد الافتتاحي للمندوب «{agent.name}» من {old_opening:,.2f} إلى {new_opening:,.2f}',
+                before={'opening_balance': str(old_opening)}, after={'opening_balance': str(new_opening)},
+            )
         return _json_ok(msg='تم تعديل بيانات المندوب بنجاح')
 
     return JsonResponse({'success': False, 'message': 'يرجى التحقق من الحقول المطلوبة',

@@ -7,6 +7,7 @@ import csv
 from django.db.models.deletion import ProtectedError
 from datetime import timedelta
 from apps.accounts.activity_service import log_activity
+from apps.circulars.services import publish_simple
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.contrib.auth.decorators import login_required
@@ -17,6 +18,7 @@ from django.http import HttpResponseNotAllowed, JsonResponse, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
+from apps.circulars.services import publish_circular
 from apps.sales.models import StockMovement
 from apps.core.utils import dt_ordering, filter_by_branch_via, enforce_branch_ownership, resolve_report_scope
 
@@ -521,6 +523,7 @@ def opening_balance_save_api(request):
         return JsonResponse({'success': False, 'message': 'لا توجد تعديلات للحفظ'}, status=400)
 
     updated_count = 0
+    corrections = []  # تعديلات على كمية افتتاحية سبق إدخالها: تُنشر في التعاميم
     for row in rows:
         try:
             item_id = int(row.get('item_id'))
@@ -563,6 +566,10 @@ def opening_balance_save_api(request):
             # Correction: shift stock by the difference from old opening qty.
             delta = new_qty - old_opening
             sq.quantity = current_qty + delta
+            corrections.append({
+                'item': sq.item.name, 'old': old_opening, 'new': new_qty,
+                'qty_before': current_qty, 'qty_after': sq.quantity,
+            })
             movement_type = 'opening_correction'
             notes = f'تصحيح الكمية الافتتاحية: {old_opening:g} ← {new_qty:g}'
 
@@ -591,11 +598,35 @@ def opening_balance_save_api(request):
 
         updated_count += 1
 
+    if corrections:
+        publish_circular(
+            request, event_key='stock.opening_edit', object_label=stock.name,
+            message=_opening_edit_message(request, stock, corrections),
+            before={c['item']: _qty_text(c['old']) for c in corrections},
+            after={c['item']: _qty_text(c['new']) for c in corrections},
+        )
+
     return JsonResponse({
         'success': True,
         'message': f'تم حفظ {updated_count} بند بنجاح',
         'updated_count': updated_count,
     })
+
+
+def _qty_text(value):
+    """كمية بلا أصفار زائدة (10.0000 ← 10)."""
+    return format(Decimal(value).normalize(), 'f')
+
+
+def _opening_edit_message(request, stock, corrections):
+    who = request.user.get_full_name() or request.user.username
+    lines = [
+        f'{c["item"]}: الافتتاحية من {_qty_text(c["old"])} إلى {_qty_text(c["new"])} '
+        f'(الرصيد الحالي من {_qty_text(c["qty_before"])} إلى {_qty_text(c["qty_after"])})'
+        for c in corrections[:5]
+    ]
+    more = f' و{len(corrections) - 5} أصناف أخرى' if len(corrections) > 5 else ''
+    return f'عدّل {who} الكمية الافتتاحية في المخزن «{stock.name}»: ' + '؛ '.join(lines) + more
 
 
 # ============================================================
@@ -2004,6 +2035,17 @@ def stocktake_confirm_ajax(request, pk):
         stocktake = Stocktake.objects.for_tenant(tenant).select_related('stock').get(pk=pk)
         enforce_branch_ownership(request, stocktake, field='stock__branch')
         confirm_stocktake(stocktake)
+        shortages = [
+            (ln.item.name, ln.system_quantity - ln.counted_quantity)
+            for ln in stocktake.lines.select_related('item')
+            if ln.counted_quantity < ln.system_quantity and getattr(ln.item, 'item_type', None) != 'service'
+        ]
+        if shortages:
+            shown = '؛ '.join(f'{n}: نقص {_qty_text(q)}' for n, q in shortages[:5])
+            more = f' و{len(shortages) - 5} أصناف أخرى' if len(shortages) > 5 else ''
+            publish_simple(request, 'stock.stocktake_shortage', 'أكّد جرداً بنقص في المخزن',
+                           f'{stocktake.stock.name} / {stocktake.stocktake_number}', extra=shown + more,
+                           before={n: '' for n, _ in shortages[:20]}, after={n: f'-{_qty_text(q)}' for n, q in shortages[:20]})
         return JsonResponse({'success': True, 'message': 'تم تأكيد الجرد وتطبيق التعديلات'})
     except Stocktake.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'الجرد غير موجود'}, status=404)
@@ -2276,6 +2318,8 @@ def destruction_confirm_ajax(request, pk):
         enforce_branch_ownership(request, destruction, field='stock__branch')
         confirm_stock_destruction(destruction, request.user)
         log_activity(request, 'تأكيد سجل إتلاف', destruction.destruction_number, 'update')
+        publish_simple(request, 'stock.destruction', 'أكّد إتلاف مخزون في المخزن',
+                       f'{destruction.stock.name} / {destruction.destruction_number}')
         return JsonResponse({'success': True, 'message': 'تم تأكيد الإتلاف وتطبيقه على المخزون'})
     except StockDestruction.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'السجل غير موجود'}, status=404)
