@@ -226,7 +226,7 @@ def item_table_api(request):
     order_dir = request.GET.get('order[0][dir]', 'asc')
     col_name = request.GET.get(f'columns[{order_col}][data]', 'name')
     allowed = {
-        'sku': 'sku', 'name': 'name', 'barcode': 'barcode',
+        'sku': 'sku', 'name': 'name', 'barcode': 'barcode', 'category': 'category__name',
         'selling_price': 'selling_price', 'cost_price': 'cost_price',
         'is_active': 'is_active', 'created_at': 'created_at',
     }
