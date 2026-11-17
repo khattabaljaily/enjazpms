@@ -254,6 +254,12 @@
             <input type="text" id="itemSearchInput" class="cx-search-input" placeholder="ابحث بالاسم أو الـ SKU أو الباركود...">
         </div>
         <div class="cx-toolbar-end">
+            <select id="categoryFilter" class="form-select form-select-sm" style="width:auto">
+                <option value="">كل التصنيفات</option>
+                {% for c in adjust_categories %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
             <select id="supplierFilter" class="form-select form-select-sm" style="width:auto">
                 <option value="">كل الشركات الموردة</option>
                 {% for s in suppliers %}
@@ -1349,7 +1355,7 @@
         },
         ajax: {
             url : urlTable,
-            data: function (d) { d.status = activeStatus; d.supplier = $('#supplierFilter').val(); if ($('#mineFilter').is(':checked')) d.mine = 1; }
+            data: function (d) { d.status = activeStatus; d.supplier = $('#supplierFilter').val(); d.category = $('#categoryFilter').val(); if ($('#mineFilter').is(':checked')) d.mine = 1; }
         },
         drawCallback: function () {
             renderMobileItemCards(dt.rows({ page: 'current' }).data().toArray());
@@ -1437,7 +1443,7 @@
         activeStatus = $(this).data('status');
         dt.ajax.reload();
     });
-    $('#supplierFilter, #mineFilter').on('change', function () { dt.ajax.reload(); });
+    $('#categoryFilter, #supplierFilter, #mineFilter').on('change', function () { dt.ajax.reload(); });
 
     /* ── Reset form ────────────────────────────────────────── */
     /* ══════════════════════════════════════════════════════════

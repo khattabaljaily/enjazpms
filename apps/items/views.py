@@ -177,6 +177,22 @@ def unit_list(request):
 # Items: جدول API
 # ============================================================
 
+def _category_with_descendants(tenant, category_id):
+    """معرّف التصنيف + كل تصنيفاته الفرعية (اختيار الأب يعرض منتجات الفروع تحته أيضًا)."""
+    if not str(category_id).isdigit():
+        return []
+    children = {}
+    for cid, parent_id in Category.objects.for_tenant(tenant).values_list('id', 'parent_id'):
+        children.setdefault(parent_id, []).append(cid)
+    ids, stack = [], [int(category_id)]
+    while stack:
+        cid = stack.pop()
+        if cid not in ids:
+            ids.append(cid)
+            stack.extend(children.get(cid, []))
+    return ids
+
+
 @login_required
 @require_permission('view_items')
 def item_table_api(request):
@@ -206,7 +222,7 @@ def item_table_api(request):
         qs = qs.filter(is_active=False)
 
     if category_id:
-        qs = qs.filter(category_id=category_id)
+        qs = qs.filter(category_id__in=_category_with_descendants(tenant, category_id))
 
     if supplier_id:
         qs = qs.filter(supplier_id=supplier_id)
